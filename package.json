@@ -1,0 +1,30 @@
+{
+  "name": "lead-magnet-ai-platform",
+  "version": "1.0.0",
+  "description": "Multi-tenant AI-powered lead magnet generation platform",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend/api",
+    "backend/worker",
+    "infrastructure"
+  ],
+  "scripts": {
+    "install:all": "npm install && cd frontend && npm install && cd ../backend/api && npm install && cd ../worker && npm install && cd ../../infrastructure && npm install",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build:frontend": "cd frontend && npm run build",
+    "deploy:infra": "cd infrastructure && npm run deploy",
+    "test:all": "npm run test --workspaces",
+    "lint:all": "npm run lint --workspaces"
+  },
+  "keywords": [
+    "lead-magnet",
+    "ai",
+    "openai",
+    "aws",
+    "serverless"
+  ],
+  "author": "",
+  "license": "MIT"
+}
+

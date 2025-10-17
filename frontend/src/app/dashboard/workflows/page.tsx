@@ -1,0 +1,158 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { api } from '@/lib/api'
+import { FiPlus, FiEdit, FiTrash2, FiEye } from 'react-icons/fi'
+
+export default function WorkflowsPage() {
+  const router = useRouter()
+  const [workflows, setWorkflows] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    loadWorkflows()
+  }, [])
+
+  const loadWorkflows = async () => {
+    try {
+      const data = await api.getWorkflows()
+      setWorkflows(data.workflows || [])
+    } catch (error) {
+      console.error('Failed to load workflows:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this workflow?')) {
+      return
+    }
+
+    try {
+      await api.deleteWorkflow(id)
+      await loadWorkflows()
+    } catch (error) {
+      console.error('Failed to delete workflow:', error)
+      alert('Failed to delete workflow')
+    }
+  }
+
+  const getStatusBadge = (status: string) => {
+    const colors: Record<string, string> = {
+      active: 'bg-green-100 text-green-800',
+      inactive: 'bg-gray-100 text-gray-800',
+      draft: 'bg-yellow-100 text-yellow-800',
+    }
+    return (
+      <span className={`px-2 py-1 text-xs font-medium rounded-full ${colors[status] || 'bg-gray-100 text-gray-800'}`}>
+        {status}
+      </span>
+    )
+  }
+
+  if (loading) {
+    return <div className="text-center py-12">Loading workflows...</div>
+  }
+
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Workflows</h1>
+          <p className="text-gray-600">Manage your lead magnet workflows</p>
+        </div>
+        <button
+          onClick={() => router.push('/dashboard/workflows/new')}
+          className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+        >
+          <FiPlus className="w-5 h-5 mr-2" />
+          New Workflow
+        </button>
+      </div>
+
+      {workflows.length === 0 ? (
+        <div className="bg-white rounded-lg shadow p-12 text-center">
+          <p className="text-gray-600 mb-4">No workflows yet</p>
+          <button
+            onClick={() => router.push('/dashboard/workflows/new')}
+            className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          >
+            <FiPlus className="w-5 h-5 mr-2" />
+            Create your first workflow
+          </button>
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Name
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  AI Model
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Created
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {workflows.map((workflow) => (
+                <tr key={workflow.workflow_id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">{workflow.workflow_name}</div>
+                    {workflow.workflow_description && (
+                      <div className="text-sm text-gray-500">{workflow.workflow_description}</div>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {getStatusBadge(workflow.status)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {workflow.ai_model}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {new Date(workflow.created_at).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button
+                      onClick={() => router.push(`/dashboard/workflows/${workflow.workflow_id}`)}
+                      className="text-primary-600 hover:text-primary-900 mr-3"
+                      title="View"
+                    >
+                      <FiEye className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => router.push(`/dashboard/workflows/${workflow.workflow_id}/edit`)}
+                      className="text-primary-600 hover:text-primary-900 mr-3"
+                      title="Edit"
+                    >
+                      <FiEdit className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(workflow.workflow_id)}
+                      className="text-red-600 hover:text-red-900"
+                      title="Delete"
+                    >
+                      <FiTrash2 className="w-5 h-5" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
+

@@ -1,0 +1,59 @@
+name: Deploy API Lambda
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+    paths:
+      - 'backend/api/**'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      AWS_REGION: us-east-1
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install dependencies
+        working-directory: backend/api
+        run: npm ci
+      
+      - name: Build
+        working-directory: backend/api
+        run: npm run build
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Package Lambda
+        working-directory: backend/api
+        run: |
+          cd dist
+          zip -r ../api.zip .
+          cd ..
+          cd node_modules
+          zip -r ../api.zip .
+      
+      - name: Deploy to Lambda
+        working-directory: backend/api
+        run: |
+          aws lambda update-function-code \
+            --function-name leadmagnet-api-handler \
+            --zip-file fileb://api.zip
+
