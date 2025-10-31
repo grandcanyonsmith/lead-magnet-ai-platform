@@ -45,6 +45,7 @@ export default function NewFormPage() {
 
   useEffect(() => {
     loadWorkflows()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const loadWorkflows = async (retryCount = 0) => {

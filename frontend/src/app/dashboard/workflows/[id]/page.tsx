@@ -19,6 +19,7 @@ export default function WorkflowDetailPage() {
     if (workflowId) {
       Promise.all([loadWorkflow(), loadJobs()])
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workflowId])
 
   const loadWorkflow = async () => {

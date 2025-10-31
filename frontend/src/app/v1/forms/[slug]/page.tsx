@@ -32,6 +32,7 @@ export default function PublicFormPage() {
     if (slug) {
       loadForm()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug])
 
   const loadForm = async () => {

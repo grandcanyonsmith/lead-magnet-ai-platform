@@ -38,6 +38,7 @@ export default function EditWorkflowPage() {
     if (workflowId) {
       Promise.all([loadTemplates(), loadWorkflow()])
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workflowId])
 
   const loadTemplates = async (retryCount = 0) => {

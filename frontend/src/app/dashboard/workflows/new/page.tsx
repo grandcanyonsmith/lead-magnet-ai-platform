@@ -33,6 +33,7 @@ export default function NewWorkflowPage() {
 
   useEffect(() => {
     loadTemplates()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const loadTemplates = async (retryCount = 0) => {

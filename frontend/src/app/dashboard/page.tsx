@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { isAuthenticated } from '@/lib/auth'
-import { FiActivity, FiCheckCircle, FiXCircle, FiClock, FiTrendingUp } from 'react-icons/fi'
+import { FiActivity, FiCheckCircle, FiXCircle, FiClock, FiTrendingUp, FiFileText, FiLayout } from 'react-icons/fi'
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -43,7 +43,20 @@ export default function DashboardPage() {
   }
 
   if (loading) {
-    return <div className="text-center py-12">Loading...</div>
+    return (
+      <div className="space-y-6">
+        <div className="h-8 bg-gray-200 rounded w-48 animate-pulse"></div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="bg-white rounded-lg shadow p-6">
+              <div className="h-12 bg-gray-200 rounded w-12 mb-4 animate-pulse"></div>
+              <div className="h-8 bg-gray-200 rounded w-24 mb-2 animate-pulse"></div>
+              <div className="h-4 bg-gray-200 rounded w-32 animate-pulse"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
   }
 
   const overview = analytics?.overview || {}
@@ -108,39 +121,42 @@ export default function DashboardPage() {
         {stats.map((stat) => {
           const Icon = stat.icon
           return (
-            <div key={stat.label} className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between mb-2">
-                <div className={`p-2 rounded-lg ${colorMap[stat.color]}`}>
+            <div key={stat.label} className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 border border-gray-100 group">
+              <div className="flex items-center justify-between mb-4">
+                <div className={`p-3 rounded-xl ${colorMap[stat.color]} group-hover:scale-110 transition-transform`}>
                   <Icon className="w-6 h-6" />
                 </div>
               </div>
-              <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-              <p className="text-sm text-gray-600">{stat.label}</p>
+              <p className="text-3xl font-bold text-gray-900 mb-1">{stat.value}</p>
+              <p className="text-sm text-gray-600 font-medium">{stat.label}</p>
             </div>
           )
         })}
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white rounded-lg shadow p-6 mb-8">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-8">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <a
             href="/dashboard/workflows/new"
-            className="flex items-center justify-center px-4 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+            className="flex items-center justify-center px-4 py-3 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg hover:from-primary-700 hover:to-primary-800 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
           >
+            <FiActivity className="w-5 h-5 mr-2" />
             Create Workflow
           </a>
           <a
             href="/dashboard/forms/new"
-            className="flex items-center justify-center px-4 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+            className="flex items-center justify-center px-4 py-3 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg hover:from-primary-700 hover:to-primary-800 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
           >
+            <FiFileText className="w-5 h-5 mr-2" />
             Create Form
           </a>
           <a
             href="/dashboard/templates/new"
-            className="flex items-center justify-center px-4 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+            className="flex items-center justify-center px-4 py-3 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg hover:from-primary-700 hover:to-primary-800 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
           >
+            <FiLayout className="w-5 h-5 mr-2" />
             Create Template
           </a>
         </div>
@@ -148,28 +164,32 @@ export default function DashboardPage() {
 
       {/* Additional Information */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">System Overview</h2>
-          <div className="space-y-3">
-            <div className="flex justify-between">
+          <div className="space-y-4">
+            <div className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
               <span className="text-gray-600">Total Submissions</span>
-              <span className="font-medium">{overview.total_submissions || 0}</span>
+              <span className="font-semibold text-gray-900">{overview.total_submissions || 0}</span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
               <span className="text-gray-600">Total Workflows</span>
-              <span className="font-medium">{overview.total_workflows || 0}</span>
+              <span className="font-semibold text-gray-900">{overview.total_workflows || 0}</span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
               <span className="text-gray-600">Active Workflows</span>
-              <span className="font-medium">{overview.active_workflows || 0}</span>
+              <span className="font-semibold text-green-600">{overview.active_workflows || 0}</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
-          <p className="text-gray-600 text-sm">
-            Monitor your recent jobs and submissions in the Jobs section.
+          <p className="text-gray-600 text-sm leading-relaxed">
+            Monitor your recent jobs and submissions in the{' '}
+            <a href="/dashboard/jobs" className="text-primary-600 hover:text-primary-700 font-medium">
+              Jobs section
+            </a>
+            .
           </p>
         </div>
       </div>

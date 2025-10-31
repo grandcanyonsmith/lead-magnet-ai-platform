@@ -50,6 +50,7 @@ export default function EditFormPage() {
     if (formId) {
       Promise.all([loadForm(), loadWorkflows()])
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formId])
 
   const loadForm = async () => {

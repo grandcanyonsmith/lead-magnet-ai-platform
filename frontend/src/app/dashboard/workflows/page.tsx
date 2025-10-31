@@ -53,7 +53,18 @@ export default function WorkflowsPage() {
   }
 
   if (loading) {
-    return <div className="text-center py-12">Loading workflows...</div>
+    return (
+      <div className="space-y-4">
+        <div className="h-8 bg-gray-200 rounded w-48 animate-pulse"></div>
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-16 bg-gray-100 rounded animate-pulse"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -65,7 +76,7 @@ export default function WorkflowsPage() {
         </div>
         <button
           onClick={() => router.push('/dashboard/workflows/new')}
-          className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          className="flex items-center px-4 py-2.5 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg hover:from-primary-700 hover:to-primary-800 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
         >
           <FiPlus className="w-5 h-5 mr-2" />
           New Workflow
@@ -84,72 +95,76 @@ export default function WorkflowsPage() {
           </button>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  AI Model
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Created
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {workflows.map((workflow) => (
-                <tr key={workflow.workflow_id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{workflow.workflow_name}</div>
-                    {workflow.workflow_description && (
-                      <div className="text-sm text-gray-500">{workflow.workflow_description}</div>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {getStatusBadge(workflow.status)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {workflow.ai_model}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(workflow.created_at).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
-                      onClick={() => router.push(`/dashboard/workflows/${workflow.workflow_id}`)}
-                      className="text-primary-600 hover:text-primary-900 mr-3"
-                      title="View"
-                    >
-                      <FiEye className="w-5 h-5" />
-                    </button>
-                    <button
-                      onClick={() => router.push(`/dashboard/workflows/${workflow.workflow_id}/edit`)}
-                      className="text-primary-600 hover:text-primary-900 mr-3"
-                      title="Edit"
-                    >
-                      <FiEdit className="w-5 h-5" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(workflow.workflow_id)}
-                      className="text-red-600 hover:text-red-900"
-                      title="Delete"
-                    >
-                      <FiTrash2 className="w-5 h-5" />
-                    </button>
-                  </td>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Name
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    AI Model
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Created
+                  </th>
+                  <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-100">
+                {workflows.map((workflow) => (
+                  <tr key={workflow.workflow_id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="text-sm font-semibold text-gray-900">{workflow.workflow_name}</div>
+                      {workflow.workflow_description && (
+                        <div className="text-sm text-gray-500 mt-1">{workflow.workflow_description}</div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {getStatusBadge(workflow.status)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-sm text-gray-700 font-medium">{workflow.ai_model}</span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {new Date(workflow.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                      <div className="flex items-center justify-end space-x-2">
+                        <button
+                          onClick={() => router.push(`/dashboard/workflows/${workflow.workflow_id}`)}
+                          className="p-2 text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition-all"
+                          title="View"
+                        >
+                          <FiEye className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() => router.push(`/dashboard/workflows/${workflow.workflow_id}/edit`)}
+                          className="p-2 text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition-all"
+                          title="Edit"
+                        >
+                          <FiEdit className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(workflow.workflow_id)}
+                          className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all"
+                          title="Delete"
+                        >
+                          <FiTrash2 className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

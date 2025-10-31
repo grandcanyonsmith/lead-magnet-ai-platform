@@ -45,7 +45,18 @@ export default function FormsPage() {
   }
 
   if (loading) {
-    return <div className="text-center py-12">Loading forms...</div>
+    return (
+      <div className="space-y-4">
+        <div className="h-8 bg-gray-200 rounded w-48 animate-pulse"></div>
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-16 bg-gray-100 rounded animate-pulse"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -57,7 +68,7 @@ export default function FormsPage() {
         </div>
         <button
           onClick={() => router.push('/dashboard/forms/new')}
-          className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          className="flex items-center px-4 py-2.5 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg hover:from-primary-700 hover:to-primary-800 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
         >
           <FiPlus className="w-5 h-5 mr-2" />
           New Form

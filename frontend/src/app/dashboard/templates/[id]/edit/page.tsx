@@ -26,6 +26,7 @@ export default function EditTemplatePage() {
     if (templateId) {
       loadTemplate()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [templateId])
 
   const loadTemplate = async () => {
