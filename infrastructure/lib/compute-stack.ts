@@ -12,6 +12,7 @@ import { Construct } from 'constructs';
 export interface ComputeStackProps extends cdk.StackProps {
   tablesMap: Record<string, dynamodb.Table>;
   artifactsBucket: s3.Bucket;
+  taskDefinition?: ecs.FargateTaskDefinition; // Optional - task definition from WorkerStack
 }
 
 export class ComputeStack extends cdk.Stack {
@@ -69,6 +70,21 @@ export class ComputeStack extends cdk.Stack {
       })
     );
 
+    // Grant EventBridge permissions for managed rules
+    stateMachineRole.addToPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          'events:PutRule',
+          'events:PutTargets',
+          'events:DeleteRule',
+          'events:RemoveTargets',
+          'events:DescribeRule',
+        ],
+        resources: ['*'],
+      })
+    );
+
     // Simple Step Functions State Machine
     // Update job status to processing
     const updateJobStatus = new tasks.DynamoUpdateItem(this, 'UpdateJobStatus', {
@@ -87,11 +103,29 @@ export class ComputeStack extends cdk.Stack {
       resultPath: '$.updateResult',
     });
 
-    // Pass state (placeholder for ECS task invocation)
-    // In production, this would invoke the ECS task
-    const processJob = new sfn.Pass(this, 'ProcessJob', {
-      comment: 'Process job (ECS task would run here)',
+    // Get subnets for ECS task
+    const subnets = vpc.privateSubnets.map(s => s.subnetId);
+
+    // Process job using ECS task
+    // Use CloudFormation import to get task definition ARN from WorkerStack
+    const taskDefinitionArn = props.taskDefinition?.taskDefinitionArn || 
+      cdk.Fn.importValue('WorkerTaskDefinitionArn');
+    
+    // Invoke ECS task to process the job using the task definition ARN
+    const processJob = new tasks.EcsRunTask(this, 'ProcessJob', {
+      cluster: this.cluster,
+      taskDefinition: ecs.TaskDefinition.fromTaskDefinitionArn(
+        this,
+        'WorkerTaskDef',
+        taskDefinitionArn
+      ) as any, // Cast needed because fromTaskDefinitionArn returns ITaskDefinition
+      launchTarget: new tasks.EcsFargateLaunchTarget(),
+      assignPublicIp: false,
+      subnets: { subnets: vpc.privateSubnets },
+      integrationPattern: sfn.IntegrationPattern.RUN_JOB,
       resultPath: '$.processResult',
+      // Pass JOB_ID as environment variable via task input
+      // The worker will read JOB_ID from environment
     });
 
     // Update job status to completed

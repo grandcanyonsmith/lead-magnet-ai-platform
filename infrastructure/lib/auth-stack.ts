@@ -1,5 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
 
 export class AuthStack extends cdk.Stack {
@@ -8,6 +10,31 @@ export class AuthStack extends cdk.Stack {
 
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
+
+    // Create Lambda function to auto-confirm users and set tenant_id
+    const autoConfirmLambda = new lambda.Function(this, 'AutoConfirmLambda', {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: 'index.handler',
+      code: lambda.Code.fromInline(`
+        exports.handler = async (event) => {
+          // Auto-confirm user and auto-verify email
+          event.response.autoConfirmUser = true;
+          event.response.autoVerifyEmail = true;
+          
+          // Set tenant_id from email if not already set
+          // Use email as tenant_id (will be normalized to avoid special characters)
+          const email = event.request.userAttributes.email || event.request.userAttributes['email'];
+          if (email && !event.request.userAttributes['custom:tenant_id']) {
+            // Use email as tenant_id (normalize to lowercase, replace @ with _, remove dots)
+            const tenantId = email.toLowerCase().replace(/@/g, '_').replace(/\\./g, '_');
+            event.response.userAttributes = event.response.userAttributes || {};
+            event.response.userAttributes['custom:tenant_id'] = tenantId;
+          }
+          
+          return event;
+        };
+      `),
+    });
 
     // Create User Pool
     this.userPool = new cognito.UserPool(this, 'UserPool', {
@@ -18,7 +45,7 @@ export class AuthStack extends cdk.Stack {
         username: false,
       },
       autoVerify: {
-        email: true,
+        email: false, // We'll handle this via Lambda
       },
       standardAttributes: {
         email: {
@@ -43,6 +70,15 @@ export class AuthStack extends cdk.Stack {
       },
       accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
       removalPolicy: cdk.RemovalPolicy.RETAIN,
+      lambdaTriggers: {
+        preSignUp: autoConfirmLambda,
+      },
+    });
+
+    // Grant the Lambda permission to be invoked by Cognito
+    autoConfirmLambda.addPermission('CognitoInvoke', {
+      principal: new iam.ServicePrincipal('cognito-idp.amazonaws.com'),
+      sourceArn: this.userPool.userPoolArn,
     });
 
     // Add domain for hosted UI

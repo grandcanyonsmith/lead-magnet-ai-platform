@@ -7,6 +7,7 @@ import {
 
 // Initialize pool lazily to avoid build-time errors
 let userPool: CognitoUserPool | null = null
+let clientId: string | null = null
 
 const getUserPool = () => {
   if (!userPool) {
@@ -20,6 +21,7 @@ const getUserPool = () => {
       throw new Error('Cognito configuration missing')
     }
     
+    clientId = poolData.ClientId
     userPool = new CognitoUserPool(poolData)
   }
   return userPool
@@ -50,19 +52,22 @@ export const signIn = async (email: string, password: string): Promise<AuthRespo
 
       const cognitoUser = new CognitoUser(userData)
 
-    cognitoUser.authenticateUser(authenticationDetails, {
-      onSuccess: (session) => {
-        // Store tokens
-        localStorage.setItem('access_token', session.getAccessToken().getJwtToken())
-        localStorage.setItem('id_token', session.getIdToken().getJwtToken())
-        localStorage.setItem('refresh_token', session.getRefreshToken().getToken())
+      cognitoUser.authenticateUser(authenticationDetails, {
+        onSuccess: (session) => {
+          // Store tokens
+          localStorage.setItem('access_token', session.getAccessToken().getJwtToken())
+          localStorage.setItem('id_token', session.getIdToken().getJwtToken())
+          localStorage.setItem('refresh_token', session.getRefreshToken().getToken())
+          
+          // Store username for getCurrentUser to work
+          localStorage.setItem('cognito_username', email)
 
-        resolve({ success: true, session })
-      },
-      onFailure: (err) => {
-        resolve({ success: false, error: err.message })
-      },
-    })
+          resolve({ success: true, session })
+        },
+        onFailure: (err) => {
+          resolve({ success: false, error: err.message })
+        },
+      })
     } catch (error: any) {
       resolve({ success: false, error: error.message })
     }
@@ -117,6 +122,7 @@ export const signOut = () => {
   localStorage.removeItem('access_token')
   localStorage.removeItem('id_token')
   localStorage.removeItem('refresh_token')
+  localStorage.removeItem('cognito_username')
 }
 
 export const getCurrentUser = (): CognitoUser | null => {
@@ -132,11 +138,39 @@ export const getSession = (): Promise<CognitoUserSession | null> => {
   return new Promise((resolve) => {
     try {
       const pool = getUserPool()
-      const cognitoUser = pool.getCurrentUser()
-
+      
+      // First try to get current user from Cognito SDK
+      let cognitoUser = pool.getCurrentUser()
+      
+      // If no current user, try to get the username from Cognito's storage
       if (!cognitoUser) {
-        resolve(null)
-        return
+        // Ensure pool is initialized to get clientId
+        getUserPool()
+        if (!clientId) {
+          resolve(null)
+          return
+        }
+        const lastAuthUser = localStorage.getItem(`CognitoIdentityServiceProvider.${clientId}.LastAuthUser`)
+        
+        if (lastAuthUser) {
+          // Use the stored username (could be UUID or email)
+          cognitoUser = new CognitoUser({
+            Username: lastAuthUser,
+            Pool: pool,
+          })
+        } else {
+          // Fallback to stored email
+          const username = localStorage.getItem('cognito_username')
+          if (username) {
+            cognitoUser = new CognitoUser({
+              Username: username,
+              Pool: pool,
+            })
+          } else {
+            resolve(null)
+            return
+          }
+        }
       }
 
       cognitoUser.getSession((err: Error | null, session: CognitoUserSession | null) => {
@@ -148,13 +182,53 @@ export const getSession = (): Promise<CognitoUserSession | null> => {
         resolve(session)
       })
     } catch (error) {
+      console.error('Error in getSession:', error)
       resolve(null)
     }
   })
 }
 
 export const isAuthenticated = async (): Promise<boolean> => {
-  const session = await getSession()
-  return session?.isValid() || false
+  try {
+    // First check if we have Cognito tokens stored
+    getUserPool() // Ensure pool is initialized
+    if (!clientId) {
+      return false
+    }
+    
+    // Check for Cognito's LastAuthUser key
+    const lastAuthUser = localStorage.getItem(`CognitoIdentityServiceProvider.${clientId}.LastAuthUser`)
+    if (!lastAuthUser) {
+      return false
+    }
+    
+    // Check if tokens exist
+    const idToken = localStorage.getItem(`CognitoIdentityServiceProvider.${clientId}.${lastAuthUser}.idToken`)
+    const accessToken = localStorage.getItem(`CognitoIdentityServiceProvider.${clientId}.${lastAuthUser}.accessToken`)
+    
+    if (!idToken || !accessToken) {
+      return false
+    }
+
+    // If we have tokens, consider authenticated
+    // We'll let the API handle token expiration/refresh
+    // Try to get session but don't fail if it's expired
+    try {
+      const session = await getSession()
+      if (session) {
+        return true
+      }
+    } catch (sessionError) {
+      // Session might be expired but tokens exist - still consider authenticated
+      // The API will handle token refresh if needed
+      console.log('Session check failed but tokens exist:', sessionError)
+    }
+    
+    // If tokens exist, we're authenticated
+    return true
+  } catch (error) {
+    console.error('Error checking authentication:', error)
+    return false
+  }
 }
 

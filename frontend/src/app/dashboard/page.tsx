@@ -1,23 +1,42 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
+import { isAuthenticated } from '@/lib/auth'
 import { FiActivity, FiCheckCircle, FiXCircle, FiClock, FiTrendingUp } from 'react-icons/fi'
 
 export default function DashboardPage() {
+  const router = useRouter()
   const [analytics, setAnalytics] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [authChecked, setAuthChecked] = useState(false)
 
   useEffect(() => {
-    loadAnalytics()
-  }, [])
+    const checkAndLoad = async () => {
+      // Wait a bit for auth to be ready
+      await new Promise(resolve => setTimeout(resolve, 150))
+      
+      const authenticated = await isAuthenticated()
+      if (!authenticated) {
+        router.push('/auth/login')
+        return
+      }
+      
+      setAuthChecked(true)
+      await loadAnalytics()
+    }
+    
+    checkAndLoad()
+  }, [router])
 
   const loadAnalytics = async () => {
     try {
       const data = await api.getAnalytics({ days: 30 })
       setAnalytics(data)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load analytics:', error)
+      // Don't redirect on API errors - just show empty state
     } finally {
       setLoading(false)
     }

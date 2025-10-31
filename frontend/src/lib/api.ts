@@ -2,6 +2,26 @@ import axios, { AxiosInstance, AxiosRequestConfig } from 'axios'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
+// Helper to get token from Cognito storage or fallback
+const getAuthToken = (): string | null => {
+  // First try custom storage keys
+  let token = localStorage.getItem('access_token') || localStorage.getItem('id_token')
+  if (token) return token
+
+  // Then try Cognito SDK storage format
+  const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID || ''
+  if (!clientId) return null
+
+  const lastAuthUser = localStorage.getItem(`CognitoIdentityServiceProvider.${clientId}.LastAuthUser`)
+  if (!lastAuthUser) return null
+
+  // Get access token or id token from Cognito storage
+  token = localStorage.getItem(`CognitoIdentityServiceProvider.${clientId}.${lastAuthUser}.accessToken`) ||
+          localStorage.getItem(`CognitoIdentityServiceProvider.${clientId}.${lastAuthUser}.idToken`)
+  
+  return token
+}
+
 class ApiClient {
   private client: AxiosInstance
 
@@ -15,7 +35,7 @@ class ApiClient {
 
     // Add auth token to requests
     this.client.interceptors.request.use((config) => {
-      const token = localStorage.getItem('id_token')
+      const token = getAuthToken()
       if (token) {
         config.headers.Authorization = `Bearer ${token}`
       }
@@ -27,11 +47,51 @@ class ApiClient {
       (response) => response,
       (error) => {
         if (error.response?.status === 401) {
-          // Redirect to login
-          localStorage.removeItem('access_token')
-          localStorage.removeItem('id_token')
-          localStorage.removeItem('refresh_token')
-          window.location.href = '/auth/login'
+          // Log the error but don't clear tokens automatically
+          // Let the authentication check in the layout handle token clearing
+          console.warn('API returned 401 Unauthorized:', {
+            url: error.config?.url,
+            message: error.response?.data?.message || error.message,
+            hasToken: !!getAuthToken()
+          })
+          
+          // Only clear tokens if explicitly an auth error AND we have a clear error message
+          const errorData = error.response?.data || {}
+          const errorMessage = typeof errorData === 'string' ? errorData.toLowerCase() : JSON.stringify(errorData).toLowerCase()
+          
+          // Only clear tokens if it's a clear authentication error, not just any 401
+          // API Gateway might return 401 for various reasons
+          const isAuthError = errorMessage.includes('invalid token') || 
+                             errorMessage.includes('token expired') || 
+                             errorMessage.includes('jwt') ||
+                             (errorMessage.includes('unauthorized') && errorMessage.includes('authentication'))
+          
+          if (isAuthError) {
+            console.warn('Authentication token invalid, clearing tokens')
+            
+            // Clear all auth tokens (both custom and Cognito format)
+            localStorage.removeItem('access_token')
+            localStorage.removeItem('id_token')
+            localStorage.removeItem('refresh_token')
+            localStorage.removeItem('cognito_username')
+            
+            // Clear Cognito SDK tokens
+            const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID || ''
+            if (clientId) {
+              const lastAuthUser = localStorage.getItem(`CognitoIdentityServiceProvider.${clientId}.LastAuthUser`)
+              if (lastAuthUser) {
+                localStorage.removeItem(`CognitoIdentityServiceProvider.${clientId}.LastAuthUser`)
+                localStorage.removeItem(`CognitoIdentityServiceProvider.${clientId}.${lastAuthUser}.idToken`)
+                localStorage.removeItem(`CognitoIdentityServiceProvider.${clientId}.${lastAuthUser}.accessToken`)
+                localStorage.removeItem(`CognitoIdentityServiceProvider.${clientId}.${lastAuthUser}.refreshToken`)
+              }
+            }
+            
+            // Only redirect if we're not already on login page
+            if (typeof window !== 'undefined' && !window.location.pathname.includes('/auth/login')) {
+              window.location.href = '/auth/login'
+            }
+          }
         }
         return Promise.reject(error)
       }

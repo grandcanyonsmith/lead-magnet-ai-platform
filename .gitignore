@@ -68,3 +68,4 @@ docker-compose.override.yml
 *.zip
 lambda-package/
 backend/api/package/
+backend/api/bundle/

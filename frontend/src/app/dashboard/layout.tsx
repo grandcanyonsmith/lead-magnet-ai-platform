@@ -28,11 +28,21 @@ export default function DashboardLayout({
 
   useEffect(() => {
     const checkAuth = async () => {
-      const authenticated = await isAuthenticated()
-      if (!authenticated) {
+      // Small delay to ensure localStorage and Cognito SDK are ready
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      try {
+        const authenticated = await isAuthenticated()
+        if (!authenticated) {
+          console.log('Not authenticated, redirecting to login')
+          router.push('/auth/login')
+        } else {
+          console.log('Authenticated, showing dashboard')
+          setLoading(false)
+        }
+      } catch (error) {
+        console.error('Auth check error:', error)
         router.push('/auth/login')
-      } else {
-        setLoading(false)
       }
     }
     checkAuth()
@@ -49,6 +59,7 @@ export default function DashboardLayout({
     { href: '/dashboard/forms', label: 'Forms', icon: FiFileText },
     { href: '/dashboard/templates', label: 'Templates', icon: FiLayout },
     { href: '/dashboard/jobs', label: 'Jobs', icon: FiBarChart2 },
+    { href: '/dashboard/artifacts', label: 'Artifacts', icon: FiFileText },
     { href: '/dashboard/settings', label: 'Settings', icon: FiSettings },
   ]
 

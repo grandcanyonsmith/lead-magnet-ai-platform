@@ -20,13 +20,33 @@ export default function LoginPage() {
     try {
       const result = await signIn(email, password)
       if (result.success) {
+        // Wait a bit longer to ensure tokens are stored in localStorage
+        // Cognito SDK stores tokens asynchronously
+        await new Promise(resolve => setTimeout(resolve, 300))
+        
+        // Verify tokens are stored before redirecting
+        const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID || ''
+        if (clientId) {
+          const lastAuthUser = localStorage.getItem(`CognitoIdentityServiceProvider.${clientId}.LastAuthUser`)
+          if (lastAuthUser) {
+            const idToken = localStorage.getItem(`CognitoIdentityServiceProvider.${clientId}.${lastAuthUser}.idToken`)
+            if (idToken) {
+              // Use router.push instead of window.location to preserve state
+              router.push('/dashboard')
+              return
+            }
+          }
+        }
+        
+        // If Cognito tokens aren't ready, try again after a delay
+        await new Promise(resolve => setTimeout(resolve, 200))
         router.push('/dashboard')
       } else {
         setError(result.error || 'Failed to sign in')
+        setLoading(false)
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred')
-    } finally {
       setLoading(false)
     }
   }

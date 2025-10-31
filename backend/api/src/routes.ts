@@ -21,7 +21,6 @@ export const router = async (
   const method = event.requestContext.http.method;
   const path = event.rawPath;
   const body = event.body ? JSON.parse(event.body) : undefined;
-  const pathParams = event.pathParameters || {};
   const queryParams = event.queryStringParameters || {};
 
   // Extract path segments for catch-all routing

@@ -67,6 +67,10 @@ const workerStack = new WorkerStack(app, 'LeadMagnetWorkerStack', {
   artifactsBucket: storageStack.artifactsBucket,
 });
 
+// Update compute stack with task definition
+// We need to redeploy compute stack after worker stack is created
+// For now, the compute stack will use Pass state until updated
+
 // Add dependencies
 computeStack.addDependency(databaseStack);
 computeStack.addDependency(storageStack);

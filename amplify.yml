@@ -10,10 +10,20 @@ applications:
           commands:
             - npm run build
       artifacts:
-        baseDirectory: out
+        # Use .next for SSR on Amplify Hosting
+        baseDirectory: .next
         files:
           - '**/*'
       cache:
         paths:
           - node_modules/**/*
+    customHeaders:
+      - pattern: '/_next/static/*'
+        headers:
+          - key: 'Cache-Control'
+            value: 'public, max-age=0, must-revalidate'
+      - pattern: '/_next/*'
+        headers:
+          - key: 'Cache-Control'
+            value: 'public, max-age=0, must-revalidate'
 
