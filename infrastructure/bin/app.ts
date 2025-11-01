@@ -36,13 +36,14 @@ const storageStack = new StorageStack(app, 'LeadMagnetStorageStack', {
   description: 'S3 buckets and CloudFront for artifact storage',
 });
 
-// Stack 4: Compute (Step Functions + ECS Cluster)
+// Stack 4: Compute (Step Functions + Lambda)
 const computeStack = new ComputeStack(app, 'LeadMagnetComputeStack', {
   env,
   stackName: 'leadmagnet-compute',
-  description: 'Step Functions state machine and ECS cluster',
+  description: 'Step Functions state machine and Lambda function for job processing',
   tablesMap: databaseStack.tablesMap,
   artifactsBucket: storageStack.artifactsBucket,
+  cloudfrontDomain: storageStack.distribution.distributionDomainName,
 });
 
 // Stack 5: API Gateway + Lambda
@@ -57,19 +58,16 @@ const apiStack = new ApiStack(app, 'LeadMagnetApiStack', {
   artifactsBucket: storageStack.artifactsBucket,
 });
 
-// Stack 6: Worker (ECS Task Definition)
+// Stack 6: Worker (ECR Repository - Optional, kept for potential future use)
+// Note: Worker is now implemented as Lambda function in ComputeStack
+// ECR repository may be kept for potential future containerized workloads
 const workerStack = new WorkerStack(app, 'LeadMagnetWorkerStack', {
   env,
   stackName: 'leadmagnet-worker',
-  description: 'ECS Fargate task for AI worker',
-  cluster: computeStack.cluster,
+  description: 'ECR repository for worker images (optional, Lambda is now primary)',
   tablesMap: databaseStack.tablesMap,
   artifactsBucket: storageStack.artifactsBucket,
 });
-
-// Update compute stack with task definition
-// We need to redeploy compute stack after worker stack is created
-// For now, the compute stack will use Pass state until updated
 
 // Add dependencies
 computeStack.addDependency(databaseStack);
@@ -77,7 +75,6 @@ computeStack.addDependency(storageStack);
 apiStack.addDependency(databaseStack);
 apiStack.addDependency(authStack);
 apiStack.addDependency(computeStack);
-workerStack.addDependency(computeStack);
 workerStack.addDependency(databaseStack);
 workerStack.addDependency(storageStack);
 

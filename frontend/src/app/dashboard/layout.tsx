@@ -58,7 +58,7 @@ export default function DashboardLayout({
     { href: '/dashboard/workflows', label: 'Workflows', icon: FiList },
     { href: '/dashboard/forms', label: 'Forms', icon: FiFileText },
     { href: '/dashboard/templates', label: 'Templates', icon: FiLayout },
-    { href: '/dashboard/jobs', label: 'Jobs', icon: FiBarChart2 },
+    { href: '/dashboard/jobs', label: 'Lead Magnets', icon: FiBarChart2 },
     { href: '/dashboard/artifacts', label: 'Artifacts', icon: FiFileText },
     { href: '/dashboard/settings', label: 'Settings', icon: FiSettings },
   ]

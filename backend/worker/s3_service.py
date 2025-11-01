@@ -19,6 +19,9 @@ class S3Service:
         """Initialize S3 client."""
         self.s3_client = boto3.client('s3', region_name=os.environ.get('AWS_REGION', 'us-east-1'))
         self.bucket_name = os.environ['ARTIFACTS_BUCKET']
+        # CloudFront distribution domain (optional, falls back to presigned URLs)
+        cloudfront_domain = os.environ.get('CLOUDFRONT_DOMAIN', '').strip()
+        self.cloudfront_domain = cloudfront_domain if cloudfront_domain else None
     
     def upload_artifact(
         self,
@@ -48,9 +51,8 @@ class S3Service:
                 'ContentType': content_type,
             }
             
-            # Add public ACL if requested
-            if public:
-                put_params['ACL'] = 'public-read'
+            # Note: We don't set ACL='public-read' because the bucket blocks public ACLs.
+            # Public access is handled via CloudFront distribution.
             
             # Upload to S3
             self.s3_client.put_object(**put_params)
@@ -58,18 +60,22 @@ class S3Service:
             # Generate URLs
             s3_url = f"s3://{self.bucket_name}/{key}"
             
-            if public:
-                # Public HTTPS URL
-                public_url = f"https://{self.bucket_name}.s3.amazonaws.com/{key}"
+            if public and self.cloudfront_domain:
+                # Use CloudFront URL for public access (recommended)
+                public_url = f"https://{self.cloudfront_domain}/{key}"
+                logger.info(f"Using CloudFront URL for public artifact: {public_url}")
             else:
-                # Generate presigned URL (valid for 24 hours)
+                # Generate presigned URL (valid for 7 days)
+                # Presigned URLs work regardless of ACL settings
                 public_url = self.s3_client.generate_presigned_url(
                     'get_object',
                     Params={'Bucket': self.bucket_name, 'Key': key},
-                    ExpiresIn=86400
+                    ExpiresIn=604800  # 7 days
                 )
+                if public:
+                    logger.warning(f"CloudFront domain not configured, using presigned URL instead")
             
-            logger.info(f"Uploaded artifact to S3: {s3_url}")
+            logger.info(f"Uploaded artifact to S3: {s3_url}, public_url: {public_url[:80]}...")
             return s3_url, public_url
             
         except ClientError as e:
