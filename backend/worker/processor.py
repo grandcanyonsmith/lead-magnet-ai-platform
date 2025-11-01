@@ -63,7 +63,10 @@ class JobProcessor:
             
             # Step 1: Generate AI report
             logger.info("Step 1: Generating AI report")
-            report_content = self.generate_report(workflow, submission)
+            try:
+                report_content = self.generate_report(workflow, submission)
+            except Exception as e:
+                raise Exception(f"Failed to generate AI report: {str(e)}") from e
             
             # Store report as artifact
             report_artifact_id = self.store_artifact(
@@ -76,23 +79,35 @@ class JobProcessor:
             
             # Step 2: Get and prepare template
             logger.info("Step 2: Preparing HTML template")
-            template = self.db.get_template(
-                workflow['template_id'],
-                workflow.get('template_version', 0)
-            )
-            if not template:
-                raise ValueError(f"Template {workflow['template_id']} not found")
+            try:
+                template = self.db.get_template(
+                    workflow['template_id'],
+                    workflow.get('template_version', 0)
+                )
+                if not template:
+                    raise ValueError(f"Template {workflow['template_id']} (version {workflow.get('template_version', 0)}) not found. Please check that the template exists and is published.")
+                
+                # Check if template is published
+                if not template.get('is_published', False):
+                    raise ValueError(f"Template {workflow['template_id']} (version {workflow.get('template_version', 0)}) exists but is not published. Please publish the template before using it in a workflow.")
+            except ValueError:
+                raise
+            except Exception as e:
+                raise Exception(f"Failed to load template: {str(e)}") from e
             
             # Step 3: Render template with report content
             logger.info("Step 3: Rendering HTML template")
-            initial_html = self.template_service.render_template(
-                template['html_content'],
-                {
-                    'REPORT_CONTENT': report_content,
-                    'DATE': datetime.utcnow().strftime('%Y-%m-%d'),
-                    **submission.get('submission_data', {})
-                }
-            )
+            try:
+                initial_html = self.template_service.render_template(
+                    template['html_content'],
+                    {
+                        'REPORT_CONTENT': report_content,
+                        'DATE': datetime.utcnow().strftime('%Y-%m-%d'),
+                        **submission.get('submission_data', {})
+                    }
+                )
+            except Exception as e:
+                raise Exception(f"Failed to render HTML template: {str(e)}") from e
             
             # Store initial HTML
             initial_html_artifact_id = self.store_artifact(
@@ -107,25 +122,39 @@ class JobProcessor:
             final_html = initial_html
             if workflow.get('rewrite_enabled', False):
                 logger.info("Step 4: AI rewriting HTML")
-                final_html = self.ai_service.rewrite_html(
-                    initial_html,
-                    workflow.get('rewrite_model', 'gpt-4o')
-                )
+                try:
+                    final_html = self.ai_service.rewrite_html(
+                        initial_html,
+                        workflow.get('rewrite_model', 'gpt-4o')
+                    )
+                except Exception as e:
+                    logger.warning(f"AI rewrite failed, using original HTML: {e}")
+                    # Continue with original HTML if rewrite fails
+                    final_html = initial_html
             
             # Step 5: Store final HTML
             logger.info("Step 5: Storing final HTML")
-            final_html_artifact_id = self.store_artifact(
-                tenant_id=job['tenant_id'],
-                job_id=job_id,
-                artifact_type='html_final',
-                content=final_html,
-                filename='final.html',
-                public=True
-            )
-            
-            # Get public URL for final artifact
-            final_artifact = self.db.get_artifact(final_html_artifact_id)
-            public_url = final_artifact.get('public_url')
+            try:
+                final_html_artifact_id = self.store_artifact(
+                    tenant_id=job['tenant_id'],
+                    job_id=job_id,
+                    artifact_type='html_final',
+                    content=final_html,
+                    filename='final.html',
+                    public=True
+                )
+                
+                # Get public URL for final artifact
+                final_artifact = self.db.get_artifact(final_html_artifact_id)
+                public_url = final_artifact.get('public_url')
+                
+                if not public_url:
+                    logger.error(f"Final artifact {final_html_artifact_id} has no public_url. Artifact data: {final_artifact}")
+                    raise ValueError("Failed to generate public URL for final artifact")
+                
+                logger.info(f"Final artifact stored with URL: {public_url[:80]}...")
+            except Exception as e:
+                raise Exception(f"Failed to store final document: {str(e)}") from e
             
             # Step 6: Update job as completed
             logger.info("Step 6: Finalizing job")
@@ -161,11 +190,38 @@ class JobProcessor:
         except Exception as e:
             logger.exception(f"Error processing job {job_id}")
             
+            # Create descriptive error message
+            error_type = type(e).__name__
+            error_message = str(e)
+            
+            # Build context-aware error message
+            if not error_message or error_message == error_type:
+                error_message = f"{error_type}: {error_message}" if error_message else error_type
+            
+            # Add common error context
+            descriptive_error = error_message
+            
+            # Handle specific error types with better messages
+            if isinstance(e, ValueError):
+                if "not found" in error_message.lower():
+                    descriptive_error = f"Resource not found: {error_message}"
+                else:
+                    descriptive_error = f"Invalid configuration: {error_message}"
+            elif isinstance(e, KeyError):
+                descriptive_error = f"Missing required field: {error_message}"
+            elif "OpenAI" in str(type(e)) or "API" in error_type:
+                descriptive_error = f"AI service error: {error_message}"
+            elif "Connection" in error_type or "Timeout" in error_type:
+                descriptive_error = f"Network error: {error_message}"
+            elif "Permission" in error_type or "Access" in error_type:
+                descriptive_error = f"Access denied: {error_message}"
+            
             # Update job status to failed
             try:
                 self.db.update_job(job_id, {
                     'status': 'failed',
-                    'error_message': str(e),
+                    'error_message': descriptive_error,
+                    'error_type': error_type,
                     'updated_at': datetime.utcnow().isoformat()
                 })
             except Exception as update_error:
@@ -173,7 +229,8 @@ class JobProcessor:
             
             return {
                 'success': False,
-                'error': str(e)
+                'error': descriptive_error,
+                'error_type': error_type
             }
     
     def generate_report(self, workflow: Dict[str, Any], submission: Dict[str, Any]) -> str:
@@ -221,6 +278,7 @@ class JobProcessor:
         )
         
         # Create artifact record
+        # Always store public_url (either CloudFront URL or presigned URL) so artifacts are accessible
         artifact = {
             'artifact_id': artifact_id,
             'tenant_id': tenant_id,
@@ -229,7 +287,8 @@ class JobProcessor:
             'artifact_name': filename,
             's3_key': s3_key,
             's3_url': s3_url,
-            'public_url': public_url if public else None,
+            'public_url': public_url,  # Always store URL (CloudFront or presigned)
+            'is_public': public,  # Flag to indicate if it's truly public vs presigned
             'file_size_bytes': len(content.encode('utf-8')),
             'mime_type': self.get_content_type(filename),
             'created_at': datetime.utcnow().isoformat()

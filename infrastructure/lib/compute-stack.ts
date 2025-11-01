@@ -4,86 +4,93 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as tasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
 import * as iam from 'aws-cdk-lib/aws-iam';
-import * as ecs from 'aws-cdk-lib/aws-ecs';
-import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import { Construct } from 'constructs';
 
 export interface ComputeStackProps extends cdk.StackProps {
   tablesMap: Record<string, dynamodb.Table>;
   artifactsBucket: s3.Bucket;
-  taskDefinition?: ecs.FargateTaskDefinition; // Optional - task definition from WorkerStack
+  cloudfrontDomain?: string;  // Optional CloudFront distribution domain
 }
 
 export class ComputeStack extends cdk.Stack {
   public readonly stateMachine: sfn.StateMachine;
   public readonly stateMachineArn: string;
-  public readonly cluster: ecs.Cluster;
+  public readonly jobProcessorLambda: lambda.Function;
 
   constructor(scope: Construct, id: string, props: ComputeStackProps) {
     super(scope, id, props);
 
-    // Create VPC for ECS
-    const vpc = new ec2.Vpc(this, 'Vpc', {
-      maxAzs: 2,
-      natGateways: 1,
+    // Create Lambda function for job processing
+    const logGroup = new logs.LogGroup(this, 'JobProcessorLogGroup', {
+      logGroupName: '/aws/lambda/leadmagnet-job-processor',
+      retention: logs.RetentionDays.ONE_WEEK,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    // Create ECS Cluster
-    this.cluster = new ecs.Cluster(this, 'Cluster', {
-      clusterName: 'leadmagnet-cluster',
-      vpc,
-      containerInsights: true,
+    this.jobProcessorLambda = new lambda.Function(this, 'JobProcessorLambda', {
+      runtime: lambda.Runtime.PYTHON_3_11,
+      handler: 'lambda_handler.lambda_handler',
+      code: lambda.Code.fromAsset('../backend/worker', {
+        bundling: {
+          image: lambda.Runtime.PYTHON_3_11.bundlingImage,
+          command: [
+            'bash', '-c',
+            'pip install --platform manylinux2014_x86_64 --implementation cp --python-version 3.11 --only-binary=:all: --upgrade --target /asset-output -r requirements.txt && cp -r /asset-input/* /asset-output/'
+          ],
+        },
+      }),
+      timeout: cdk.Duration.minutes(15),
+      memorySize: 2048,
+      environment: {
+        WORKFLOWS_TABLE: props.tablesMap.workflows.tableName,
+        FORMS_TABLE: props.tablesMap.forms.tableName,
+        SUBMISSIONS_TABLE: props.tablesMap.submissions.tableName,
+        JOBS_TABLE: props.tablesMap.jobs.tableName,
+        ARTIFACTS_TABLE: props.tablesMap.artifacts.tableName,
+        TEMPLATES_TABLE: props.tablesMap.templates.tableName,
+        ARTIFACTS_BUCKET: props.artifactsBucket.bucketName,
+        CLOUDFRONT_DOMAIN: props.cloudfrontDomain || '',
+        OPENAI_SECRET_NAME: 'leadmagnet/openai-api-key',
+        LOG_LEVEL: 'info',
+        AWS_REGION: this.region,
+      },
+      logGroup: logGroup,
     });
+
+    // Grant DynamoDB permissions
+    Object.values(props.tablesMap).forEach((table) => {
+      table.grantReadWriteData(this.jobProcessorLambda);
+    });
+
+    // Grant S3 permissions
+    props.artifactsBucket.grantReadWrite(this.jobProcessorLambda);
+
+    // Grant Secrets Manager permissions
+    const openaiSecret = secretsmanager.Secret.fromSecretNameV2(
+      this,
+      'OpenAISecret',
+      'leadmagnet/openai-api-key'
+    );
+    openaiSecret.grantRead(this.jobProcessorLambda);
 
     // Create IAM role for Step Functions
     const stateMachineRole = new iam.Role(this, 'StateMachineRole', {
       assumedBy: new iam.ServicePrincipal('states.amazonaws.com'),
     });
 
-    // Grant DynamoDB permissions
+    // Grant DynamoDB permissions to Step Functions
     Object.values(props.tablesMap).forEach((table) => {
       table.grantReadWriteData(stateMachineRole);
     });
 
-    // Grant S3 permissions
+    // Grant S3 permissions to Step Functions
     props.artifactsBucket.grantReadWrite(stateMachineRole);
 
-    // Grant ECS permissions
-    stateMachineRole.addToPolicy(
-      new iam.PolicyStatement({
-        effect: iam.Effect.ALLOW,
-        actions: [
-          'ecs:RunTask',
-          'ecs:StopTask',
-          'ecs:DescribeTasks',
-        ],
-        resources: ['*'],
-      })
-    );
-
-    stateMachineRole.addToPolicy(
-      new iam.PolicyStatement({
-        effect: iam.Effect.ALLOW,
-        actions: ['iam:PassRole'],
-        resources: ['*'],
-      })
-    );
-
-    // Grant EventBridge permissions for managed rules
-    stateMachineRole.addToPolicy(
-      new iam.PolicyStatement({
-        effect: iam.Effect.ALLOW,
-        actions: [
-          'events:PutRule',
-          'events:PutTargets',
-          'events:DeleteRule',
-          'events:RemoveTargets',
-          'events:DescribeRule',
-        ],
-        resources: ['*'],
-      })
-    );
+    // Grant Lambda invoke permissions to Step Functions
+    this.jobProcessorLambda.grantInvoke(stateMachineRole);
 
     // Simple Step Functions State Machine
     // Update job status to processing
@@ -103,29 +110,37 @@ export class ComputeStack extends cdk.Stack {
       resultPath: '$.updateResult',
     });
 
-    // Get subnets for ECS task
-    const subnets = vpc.privateSubnets.map(s => s.subnetId);
+    // Update job status to failed
+    const handleFailure = new tasks.DynamoUpdateItem(this, 'HandleFailure', {
+      table: props.tablesMap.jobs,
+      key: {
+        job_id: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.job_id')),
+      },
+      updateExpression: 'SET #status = :status, error_message = :error, updated_at = :updated_at',
+      expressionAttributeNames: {
+        '#status': 'status',
+      },
+      expressionAttributeValues: {
+        ':status': tasks.DynamoAttributeValue.fromString('failed'),
+        ':error': tasks.DynamoAttributeValue.fromString('Error occurred'),
+        ':updated_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
+      },
+    });
 
-    // Process job using ECS task
-    // Use CloudFormation import to get task definition ARN from WorkerStack
-    const taskDefinitionArn = props.taskDefinition?.taskDefinitionArn || 
-      cdk.Fn.importValue('WorkerTaskDefinitionArn');
-    
-    // Invoke ECS task to process the job using the task definition ARN
-    const processJob = new tasks.EcsRunTask(this, 'ProcessJob', {
-      cluster: this.cluster,
-      taskDefinition: ecs.TaskDefinition.fromTaskDefinitionArn(
-        this,
-        'WorkerTaskDef',
-        taskDefinitionArn
-      ) as any, // Cast needed because fromTaskDefinitionArn returns ITaskDefinition
-      launchTarget: new tasks.EcsFargateLaunchTarget(),
-      assignPublicIp: false,
-      subnets: { subnets: vpc.privateSubnets },
-      integrationPattern: sfn.IntegrationPattern.RUN_JOB,
+    // Process job using Lambda function
+    const processJob = new tasks.LambdaInvoke(this, 'ProcessJob', {
+      lambdaFunction: this.jobProcessorLambda,
+      payload: sfn.TaskInput.fromObject({
+        'job_id': sfn.JsonPath.stringAt('$.job_id'),
+      }),
       resultPath: '$.processResult',
-      // Pass JOB_ID as environment variable via task input
-      // The worker will read JOB_ID from environment
+      retryOnServiceExceptions: false,
+    });
+    
+    // Add error handling for Lambda failures
+    processJob.addCatch(handleFailure, {
+      resultPath: '$.error',
+      errors: ['States.ALL'],
     });
 
     // Update job status to completed
@@ -145,36 +160,9 @@ export class ComputeStack extends cdk.Stack {
       },
     });
 
-    // Update job status to failed
-    const handleFailure = new tasks.DynamoUpdateItem(this, 'HandleFailure', {
-      table: props.tablesMap.jobs,
-      key: {
-        job_id: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.job_id')),
-      },
-      updateExpression: 'SET #status = :status, error_message = :error, updated_at = :updated_at',
-      expressionAttributeNames: {
-        '#status': 'status',
-      },
-      expressionAttributeValues: {
-        ':status': tasks.DynamoAttributeValue.fromString('failed'),
-        ':error': tasks.DynamoAttributeValue.fromString('Error occurred'),
-        ':updated_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
-      },
-    });
-
-    // Define workflow with error handling
-    // Wrap the process in a parallel state for error handling
-    const tryProcess = new sfn.Parallel(this, 'TryProcess', {
-      resultPath: '$.parallelResult',
-    });
-    
-    tryProcess.branch(processJob);
-    tryProcess.addCatch(handleFailure, {
-      resultPath: '$.error',
-    });
-
+    // Define workflow: Update status -> Process job -> Handle success
     const definition = updateJobStatus
-      .next(tryProcess)
+      .next(processJob)
       .next(handleSuccess);
 
     // Create State Machine
@@ -202,14 +190,9 @@ export class ComputeStack extends cdk.Stack {
       exportName: 'StateMachineArn',
     });
 
-    new cdk.CfnOutput(this, 'ClusterName', {
-      value: this.cluster.clusterName,
-      exportName: 'ClusterName',
-    });
-
-    new cdk.CfnOutput(this, 'VpcId', {
-      value: vpc.vpcId,
-      exportName: 'VpcId',
+    new cdk.CfnOutput(this, 'JobProcessorLambdaArn', {
+      value: this.jobProcessorLambda.functionArn,
+      exportName: 'JobProcessorLambdaArn',
     });
   }
 }
