@@ -103,8 +103,22 @@ class AIService:
             return report
             
         except Exception as e:
-            logger.error(f"Error generating report: {e}")
-            raise
+            error_type = type(e).__name__
+            error_message = str(e)
+            
+            # Provide more descriptive error messages
+            if "API key" in error_message or "authentication" in error_message.lower():
+                raise Exception(f"OpenAI API authentication failed. Please check your API key configuration: {error_message}")
+            elif "rate limit" in error_message.lower() or "quota" in error_message.lower():
+                raise Exception(f"OpenAI API rate limit exceeded. Please try again later: {error_message}")
+            elif "model" in error_message.lower() and "not found" in error_message.lower():
+                raise Exception(f"Invalid AI model specified. Please check your workflow configuration: {error_message}")
+            elif "timeout" in error_message.lower():
+                raise Exception(f"OpenAI API request timed out. The request took too long to complete: {error_message}")
+            elif "connection" in error_message.lower():
+                raise Exception(f"Unable to connect to OpenAI API. Please check your network connection: {error_message}")
+            else:
+                raise Exception(f"OpenAI API error ({error_type}): {error_message}")
     
     def rewrite_html(
         self,
@@ -169,7 +183,18 @@ class AIService:
             return enhanced_html
             
         except Exception as e:
-            logger.error(f"Error rewriting HTML: {e}")
-            # Return original HTML if rewriting fails
-            return html_content
+            error_type = type(e).__name__
+            error_message = str(e)
+            
+            # Provide more descriptive error messages for HTML rewriting
+            if "API key" in error_message or "authentication" in error_message.lower():
+                raise Exception(f"OpenAI API authentication failed during HTML rewrite: {error_message}")
+            elif "rate limit" in error_message.lower() or "quota" in error_message.lower():
+                raise Exception(f"OpenAI API rate limit exceeded during HTML rewrite: {error_message}")
+            elif "timeout" in error_message.lower():
+                raise Exception(f"OpenAI API request timed out during HTML rewrite: {error_message}")
+            else:
+                # For HTML rewrite, we return original HTML on error (handled in processor.py)
+                logger.error(f"Error rewriting HTML: {e}")
+                raise Exception(f"HTML rewrite failed ({error_type}): {error_message}")
 

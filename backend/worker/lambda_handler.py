@@ -1,15 +1,13 @@
-#!/usr/bin/env python3
 """
-Lead Magnet AI Worker
+Lambda Handler for Lead Magnet AI Worker
 Processes jobs by generating AI reports and rendering HTML templates.
 """
 
 import os
-import sys
 import json
 import logging
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 from processor import JobProcessor
 from db_service import DynamoDBService
@@ -17,23 +15,34 @@ from s3_service import S3Service
 
 # Setup logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[logging.StreamHandler(sys.stdout)]
+    level=os.environ.get('LOG_LEVEL', 'INFO').upper(),
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
 
-def main():
-    """Main entry point for the worker."""
+def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+    """
+    Lambda handler for processing lead magnet jobs.
     
-    # Get job_id from environment variable (passed by Step Functions)
-    job_id = os.environ.get('JOB_ID')
+    Args:
+        event: Step Functions event containing 'job_id'
+        context: Lambda context object
+        
+    Returns:
+        Dictionary with success status and optional error
+    """
+    # Extract job_id from event
+    job_id = event.get('job_id')
     if not job_id:
-        logger.error("JOB_ID environment variable not set")
-        sys.exit(1)
+        logger.error("job_id not provided in event")
+        return {
+            'success': False,
+            'error': 'job_id not provided in event',
+            'error_type': 'ValueError'
+        }
     
-    logger.info(f"Starting worker for job: {job_id}")
+    logger.info(f"Starting Lambda handler for job: {job_id}")
     
     try:
         # Initialize services
@@ -46,10 +55,10 @@ def main():
         
         if result['success']:
             logger.info(f"Job {job_id} completed successfully")
-            sys.exit(0)
+            return result
         else:
             logger.error(f"Job {job_id} failed: {result.get('error')}")
-            sys.exit(1)
+            return result
             
     except Exception as e:
         logger.exception(f"Fatal error processing job {job_id}")
@@ -75,9 +84,9 @@ def main():
         except Exception as update_error:
             logger.error(f"Failed to update job status: {update_error}")
         
-        sys.exit(1)
-
-
-if __name__ == '__main__':
-    main()
+        return {
+            'success': False,
+            'error': descriptive_error,
+            'error_type': error_type
+        }
 
