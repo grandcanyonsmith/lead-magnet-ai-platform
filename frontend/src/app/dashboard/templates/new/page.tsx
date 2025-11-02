@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
-import { FiArrowLeft, FiSave, FiSparkles } from 'react-icons/fi'
+import { FiArrowLeft, FiSave, FiZap } from 'react-icons/fi'
 
 export default function NewTemplatePage() {
   const router = useRouter()
@@ -134,7 +134,7 @@ export default function NewTemplatePage() {
         <div className="flex items-start justify-between mb-4">
           <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center">
-              <FiSparkles className="w-5 h-5 mr-2 text-purple-600" />
+              <FiZap className="w-5 h-5 mr-2 text-purple-600" />
               Generate with AI
             </h3>
             <p className="text-sm text-gray-600">
@@ -158,7 +158,7 @@ export default function NewTemplatePage() {
             disabled={generating || !aiDescription.trim()}
             className="flex items-center px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <FiSparkles className="w-5 h-5 mr-2" />
+            <FiZap className="w-5 h-5 mr-2" />
             {generating ? 'Generating...' : 'Generate Template'}
           </button>
         </div>
