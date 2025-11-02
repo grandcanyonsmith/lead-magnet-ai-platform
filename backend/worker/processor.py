@@ -61,71 +61,126 @@ class JobProcessor:
             if not submission:
                 raise ValueError(f"Submission {job['submission_id']} not found")
             
-            # Step 1: Generate AI report
-            logger.info("Step 1: Generating AI report")
-            try:
-                report_content = self.generate_report(workflow, submission)
-            except Exception as e:
-                raise Exception(f"Failed to generate AI report: {str(e)}") from e
+            # Check workflow settings
+            research_enabled = workflow.get('research_enabled', True)
+            html_enabled = workflow.get('html_enabled', True)
             
-            # Store report as artifact
-            report_artifact_id = self.store_artifact(
-                tenant_id=job['tenant_id'],
-                job_id=job_id,
-                artifact_type='report_markdown',
-                content=report_content,
-                filename='report.md'
-            )
+            logger.info(f"Workflow settings: research_enabled={research_enabled}, html_enabled={html_enabled}")
             
-            # Step 2: Get and prepare template
-            logger.info("Step 2: Preparing HTML template")
-            try:
-                template = self.db.get_template(
-                    workflow['template_id'],
-                    workflow.get('template_version', 0)
-                )
-                if not template:
-                    raise ValueError(f"Template {workflow['template_id']} (version {workflow.get('template_version', 0)}) not found. Please check that the template exists and is published.")
+            # Step 1: Generate AI report (if research enabled)
+            report_content = ""
+            report_artifact_id = None
+            
+            if research_enabled:
+                logger.info("Step 1: Generating AI report")
+                try:
+                    report_content = self.generate_report(workflow, submission)
+                except Exception as e:
+                    raise Exception(f"Failed to generate AI report: {str(e)}") from e
                 
-                # Check if template is published
-                if not template.get('is_published', False):
-                    raise ValueError(f"Template {workflow['template_id']} (version {workflow.get('template_version', 0)}) exists but is not published. Please publish the template before using it in a workflow.")
-            except ValueError:
-                raise
-            except Exception as e:
-                raise Exception(f"Failed to load template: {str(e)}") from e
-            
-            # Step 3: Generate styled HTML from research + template
-            logger.info("Step 3: Generating styled HTML document")
-            try:
-                final_html = self.ai_service.generate_styled_html(
-                    research_content=report_content,
-                    template_html=template['html_content'],
-                    template_style=template.get('style_description', ''),
-                    submission_data=submission.get('submission_data', {}),
-                    model=workflow.get('rewrite_model', 'gpt-4o')
-                )
-                logger.info("Styled HTML generated successfully")
-            except Exception as e:
-                raise Exception(f"Failed to generate styled HTML: {str(e)}") from e
-            
-            # Step 4: Store final HTML
-            try:
-                final_html_artifact_id = self.store_artifact(
+                # Store report as artifact
+                report_artifact_id = self.store_artifact(
                     tenant_id=job['tenant_id'],
                     job_id=job_id,
-                    artifact_type='html_final',
-                    content=final_html,
-                    filename='final.html',
+                    artifact_type='report_markdown',
+                    content=report_content,
+                    filename='report.md'
+                )
+            else:
+                logger.info("Step 1: Research disabled, skipping report generation")
+            
+            # Step 2: Get and prepare template (only if HTML enabled)
+            template = None
+            if html_enabled:
+                logger.info("Step 2: Preparing HTML template")
+                try:
+                    template_id = workflow.get('template_id')
+                    if not template_id:
+                        raise ValueError("Template ID is required when HTML generation is enabled")
+                    
+                    template = self.db.get_template(
+                        template_id,
+                        workflow.get('template_version', 0)
+                    )
+                    if not template:
+                        raise ValueError(f"Template {template_id} (version {workflow.get('template_version', 0)}) not found. Please check that the template exists and is published.")
+                    
+                    # Check if template is published
+                    if not template.get('is_published', False):
+                        raise ValueError(f"Template {template_id} (version {workflow.get('template_version', 0)}) exists but is not published. Please publish the template before using it in a workflow.")
+                except ValueError:
+                    raise
+                except Exception as e:
+                    raise Exception(f"Failed to load template: {str(e)}") from e
+            else:
+                logger.info("Step 2: HTML disabled, skipping template loading")
+            
+            # Step 3: Generate final content (HTML or markdown/text)
+            final_content = ""
+            final_artifact_type = ""
+            final_filename = ""
+            
+            if html_enabled:
+                # Generate HTML document
+                logger.info("Step 3: Generating styled HTML document")
+                try:
+                    if research_enabled:
+                        # Use research content + template
+                        final_content = self.ai_service.generate_styled_html(
+                            research_content=report_content,
+                            template_html=template['html_content'],
+                            template_style=template.get('style_description', ''),
+                            submission_data=submission.get('submission_data', {}),
+                            model=workflow.get('rewrite_model', 'gpt-4o')
+                        )
+                    else:
+                        # Generate HTML directly from submission data + template
+                        final_content = self.ai_service.generate_html_from_submission(
+                            submission_data=submission.get('submission_data', {}),
+                            template_html=template['html_content'],
+                            template_style=template.get('style_description', ''),
+                            ai_instructions=workflow.get('ai_instructions', ''),
+                            model=workflow.get('rewrite_model', 'gpt-4o')
+                        )
+                    logger.info("Styled HTML generated successfully")
+                    final_artifact_type = 'html_final'
+                    final_filename = 'final.html'
+                except Exception as e:
+                    raise Exception(f"Failed to generate styled HTML: {str(e)}") from e
+            else:
+                # Store markdown/text content
+                logger.info("Step 3: Generating markdown/text content")
+                if research_enabled:
+                    # Use research content
+                    final_content = report_content
+                    final_artifact_type = 'markdown_final'
+                    final_filename = 'final.md'
+                else:
+                    # Generate simple content from submission data
+                    final_content = self.generate_content_from_submission(
+                        workflow,
+                        submission
+                    )
+                    final_artifact_type = 'text_final'
+                    final_filename = 'final.txt'
+            
+            # Step 4: Store final artifact
+            try:
+                final_artifact_id = self.store_artifact(
+                    tenant_id=job['tenant_id'],
+                    job_id=job_id,
+                    artifact_type=final_artifact_type,
+                    content=final_content,
+                    filename=final_filename,
                     public=True
                 )
                 
                 # Get public URL for final artifact
-                final_artifact = self.db.get_artifact(final_html_artifact_id)
+                final_artifact = self.db.get_artifact(final_artifact_id)
                 public_url = final_artifact.get('public_url')
                 
                 if not public_url:
-                    logger.error(f"Final artifact {final_html_artifact_id} has no public_url. Artifact data: {final_artifact}")
+                    logger.error(f"Final artifact {final_artifact_id} has no public_url. Artifact data: {final_artifact}")
                     raise ValueError("Failed to generate public URL for final artifact")
                 
                 logger.info(f"Final artifact stored with URL: {public_url[:80]}...")
@@ -134,8 +189,11 @@ class JobProcessor:
             
             # Step 5: Update job as completed
             logger.info("Step 5: Finalizing job")
-            # Build artifacts list (only report and final HTML)
-            artifacts_list = [report_artifact_id, final_html_artifact_id]
+            # Build artifacts list
+            artifacts_list = []
+            if report_artifact_id:
+                artifacts_list.append(report_artifact_id)
+            artifacts_list.append(final_artifact_id)
             
             self.db.update_job(job_id, {
                 'status': 'completed',
@@ -208,6 +266,21 @@ class JobProcessor:
                 'error_type': error_type
             }
     
+    def generate_content_from_submission(
+        self,
+        workflow: Dict[str, Any],
+        submission: Dict[str, Any]
+    ) -> str:
+        """Generate simple text content from submission data without research."""
+        submission_data = submission.get('submission_data', {})
+        
+        # Format submission data as simple text
+        content_lines = []
+        for key, value in submission_data.items():
+            content_lines.append(f"{key}: {value}")
+        
+        return "\n".join(content_lines)
+    
     def generate_report(self, workflow: Dict[str, Any], submission: Dict[str, Any]) -> str:
         """Generate AI report content."""
         ai_model = workflow.get('ai_model', 'gpt-4o')
@@ -228,7 +301,6 @@ class JobProcessor:
         )
         
         return report
-    
     def store_artifact(
         self,
         tenant_id: str,

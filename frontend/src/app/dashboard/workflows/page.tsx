@@ -71,27 +71,27 @@ export default function WorkflowsPage() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Workflows</h1>
-          <p className="text-gray-600">Manage your lead magnet workflows</p>
+          <h1 className="text-2xl font-bold text-gray-900">Lead Magnets</h1>
+          <p className="text-gray-600">Manage your AI lead magnets</p>
         </div>
         <button
           onClick={() => router.push('/dashboard/workflows/new')}
           className="flex items-center px-4 py-2.5 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg hover:from-primary-700 hover:to-primary-800 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
         >
           <FiPlus className="w-5 h-5 mr-2" />
-          New Workflow
+          Create Lead Magnet
         </button>
       </div>
 
       {workflows.length === 0 ? (
         <div className="bg-white rounded-lg shadow p-12 text-center">
-          <p className="text-gray-600 mb-4">No workflows yet</p>
+          <p className="text-gray-600 mb-4">No lead magnets yet</p>
           <button
             onClick={() => router.push('/dashboard/workflows/new')}
             className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
           >
             <FiPlus className="w-5 h-5 mr-2" />
-            Create your first workflow
+            Create your first lead magnet
           </button>
         </div>
       ) : (
@@ -101,13 +101,16 @@ export default function WorkflowsPage() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Name
+                    Lead Magnet Name
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Status
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    AI Model
+                    Research Model
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Features
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Created
@@ -131,6 +134,25 @@ export default function WorkflowsPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-sm text-gray-700 font-medium">{workflow.ai_model}</span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex gap-2">
+                        {workflow.research_enabled && (
+                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                            Research
+                          </span>
+                        )}
+                        {workflow.html_enabled && (
+                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                            HTML
+                          </span>
+                        )}
+                        {!workflow.research_enabled && !workflow.html_enabled && (
+                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
+                            Text
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                       {new Date(workflow.created_at).toLocaleDateString()}
