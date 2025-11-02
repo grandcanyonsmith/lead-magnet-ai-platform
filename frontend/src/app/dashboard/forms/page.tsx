@@ -63,15 +63,15 @@ export default function FormsPage() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Forms</h1>
-          <p className="text-gray-600">Manage your lead capture forms</p>
+          <h1 className="text-2xl font-bold text-gray-900">Lead Capture Forms</h1>
+          <p className="text-gray-600">Forms that collect lead information and trigger AI lead magnet generation</p>
         </div>
         <button
           onClick={() => router.push('/dashboard/forms/new')}
           className="flex items-center px-4 py-2.5 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg hover:from-primary-700 hover:to-primary-800 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
         >
           <FiPlus className="w-5 h-5 mr-2" />
-          New Form
+          New Lead Capture Form
         </button>
       </div>
 

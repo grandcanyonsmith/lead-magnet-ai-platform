@@ -120,6 +120,125 @@ class AIService:
             else:
                 raise Exception(f"OpenAI API error ({error_type}): {error_message}")
     
+    def generate_html_from_submission(
+        self,
+        submission_data: dict,
+        template_html: str,
+        template_style: str = '',
+        ai_instructions: str = '',
+        model: str = 'gpt-4o',
+        max_tokens: int = 8000
+    ) -> str:
+        """
+        Generate HTML document directly from submission data and template.
+        
+        Used when research is disabled but HTML generation is enabled.
+        Takes submission data and generates HTML styled to match the template.
+        
+        Args:
+            submission_data: Form submission data
+            template_html: The HTML template to style the output after
+            template_style: Optional style description/guidance
+            ai_instructions: AI instructions from workflow
+            model: OpenAI model to use
+            max_tokens: Maximum tokens to generate
+            
+        Returns:
+            Styled HTML document matching the template
+        """
+        logger.info(f"Generating HTML from submission with model: {model}")
+        
+        # Format submission data for context
+        submission_context = "\n".join([
+            f"- {key}: {value}"
+            for key, value in submission_data.items()
+        ])
+        
+        # Build system instructions
+        instructions = f"""You are an expert web developer and content designer.
+
+Your task is to create a beautifully styled HTML document based on user submission data and a template design.
+
+Requirements:
+1. Use the submission data provided as the basis for the document
+2. Style the HTML to match the design and structure of the provided template
+3. Apply the template's styling, layout, and visual design
+4. Ensure semantic HTML structure
+5. Include proper headings, sections, and formatting
+6. Make it visually appealing and professional
+7. Personalize the content based on the submission data
+
+{('Template Style Notes: ' + template_style) if template_style else ''}
+
+{('Additional Instructions: ' + ai_instructions) if ai_instructions else ''}
+
+Return ONLY the complete HTML document, with no additional commentary or markdown code blocks."""
+        
+        # Build user message with submission data and template
+        user_message = f"""Given this submission data:
+
+{submission_context}
+
+And this template to style it after:
+
+{template_html}
+
+Generate a complete HTML document that:
+- Contains personalized content based on the submission data
+- Matches the template's design, layout, and styling
+- Is ready to use as a final document"""
+        
+        try:
+            response = self.client.chat.completions.create(
+                model=model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": instructions
+                    },
+                    {
+                        "role": "user",
+                        "content": user_message
+                    }
+                ],
+                max_tokens=max_tokens,
+                temperature=0.6,  # Balanced creativity and structure
+            )
+            
+            html_content = response.choices[0].message.content
+            
+            # Log token usage
+            usage = response.usage
+            logger.info(
+                f"HTML generation from submission completed. "
+                f"Tokens: {usage.total_tokens} "
+                f"(prompt: {usage.prompt_tokens}, completion: {usage.completion_tokens})"
+            )
+            
+            # Clean up markdown code blocks if present
+            if html_content.startswith('```html'):
+                html_content = html_content.replace('```html', '').replace('```', '').strip()
+            elif html_content.startswith('```'):
+                html_content = html_content.split('```')[1].strip()
+                if html_content.startswith('html'):
+                    html_content = html_content[4:].strip()
+            
+            return html_content
+            
+        except Exception as e:
+            error_type = type(e).__name__
+            error_message = str(e)
+            
+            # Provide descriptive error messages
+            if "API key" in error_message or "authentication" in error_message.lower():
+                raise Exception(f"OpenAI API authentication failed: {error_message}")
+            elif "rate limit" in error_message.lower() or "quota" in error_message.lower():
+                raise Exception(f"OpenAI API rate limit exceeded: {error_message}")
+            elif "model" in error_message.lower() and "not found" in error_message.lower():
+                raise Exception(f"Invalid AI model specified: {error_message}")
+            else:
+                raise Exception(f"OpenAI API error ({error_type}): {error_message}")
+
     def generate_styled_html(
         self,
         research_content: str,
