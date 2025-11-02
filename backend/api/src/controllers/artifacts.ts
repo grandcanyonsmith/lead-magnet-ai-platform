@@ -7,7 +7,7 @@ import { RouteResponse } from '../routes';
 const ARTIFACTS_TABLE = process.env.ARTIFACTS_TABLE!;
 const ARTIFACTS_BUCKET = process.env.ARTIFACTS_BUCKET!;
 
-const s3Client = new S3Client({ region: process.env.AWS_REGION });
+const s3Client = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
 
 class ArtifactsController {
   async list(tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {
@@ -45,11 +45,74 @@ class ArtifactsController {
       );
     }
 
+    // Ensure all artifacts have accessible URLs
+    // Generate presigned URLs for artifacts that don't have public_url or expired URLs
+    const artifactsWithUrls = await Promise.all(
+      artifacts.map(async (artifact: any) => {
+        // Check if artifact has a valid public_url
+        const hasValidUrl = artifact.public_url && 
+          (!artifact.url_expires_at || new Date(artifact.url_expires_at) > new Date());
+        
+        if (hasValidUrl && artifact.s3_key) {
+          // Return artifact with public_url as object_url for frontend compatibility
+          return {
+            ...artifact,
+            object_url: artifact.public_url,
+            file_name: artifact.artifact_name || artifact.file_name,
+            size_bytes: artifact.file_size_bytes ? parseInt(artifact.file_size_bytes) : artifact.size_bytes,
+          };
+        }
+        
+        // Generate presigned URL if missing or expired
+        if (artifact.s3_key) {
+          try {
+            const command = new GetObjectCommand({
+              Bucket: ARTIFACTS_BUCKET,
+              Key: artifact.s3_key,
+            });
+            
+            const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+            const expiresAt = new Date(Date.now() + 3600 * 1000).toISOString();
+            
+            // Update artifact in database with new presigned URL
+            await db.update(ARTIFACTS_TABLE, { artifact_id: artifact.artifact_id }, {
+              public_url: presignedUrl,
+              url_expires_at: expiresAt,
+            });
+            
+            return {
+              ...artifact,
+              object_url: presignedUrl,
+              public_url: presignedUrl,
+              url_expires_at: expiresAt,
+              file_name: artifact.artifact_name || artifact.file_name,
+              size_bytes: artifact.file_size_bytes ? parseInt(artifact.file_size_bytes) : artifact.size_bytes,
+            };
+          } catch (error) {
+            console.error(`Error generating presigned URL for artifact ${artifact.artifact_id}:`, error);
+            return {
+              ...artifact,
+              object_url: null,
+              file_name: artifact.artifact_name || artifact.file_name,
+              size_bytes: artifact.file_size_bytes ? parseInt(artifact.file_size_bytes) : artifact.size_bytes,
+            };
+          }
+        }
+        
+        return {
+          ...artifact,
+          object_url: artifact.public_url || null,
+          file_name: artifact.artifact_name || artifact.file_name,
+          size_bytes: artifact.file_size_bytes ? parseInt(artifact.file_size_bytes) : artifact.size_bytes,
+        };
+      })
+    );
+
     return {
       statusCode: 200,
       body: {
-        artifacts,
-        count: artifacts.length,
+        artifacts: artifactsWithUrls,
+        count: artifactsWithUrls.length,
       },
     };
   }
