@@ -7,7 +7,7 @@ import logging
 import json
 from datetime import datetime
 from typing import Dict, Any, Optional
-from ulid import ulid
+from ulid import new as ulid
 
 from ai_service import AIService
 from template_service import TemplateService
@@ -95,13 +95,25 @@ class JobProcessor:
             except Exception as e:
                 raise Exception(f"Failed to load template: {str(e)}") from e
             
-            # Step 3: Render template with report content
-            logger.info("Step 3: Rendering HTML template")
+            # Step 3: Convert markdown report to HTML
+            logger.info("Step 3: Converting markdown report to HTML")
+            try:
+                import markdown
+                report_html = markdown.markdown(report_content, extensions=['extra', 'nl2br'])
+                logger.info("Markdown converted to HTML successfully")
+            except Exception as e:
+                logger.warning(f"Markdown conversion failed, using raw content: {e}")
+                # Fallback: escape HTML and wrap in <pre> tags
+                import html
+                report_html = f"<pre>{html.escape(report_content)}</pre>"
+            
+            # Step 4: Render template with report content
+            logger.info("Step 4: Rendering HTML template")
             try:
                 initial_html = self.template_service.render_template(
                     template['html_content'],
                     {
-                        'REPORT_CONTENT': report_content,
+                        'REPORT_CONTENT': report_html,
                         'DATE': datetime.utcnow().strftime('%Y-%m-%d'),
                         **submission.get('submission_data', {})
                     }
@@ -109,20 +121,23 @@ class JobProcessor:
             except Exception as e:
                 raise Exception(f"Failed to render HTML template: {str(e)}") from e
             
-            # Store initial HTML
-            initial_html_artifact_id = self.store_artifact(
-                tenant_id=job['tenant_id'],
-                job_id=job_id,
-                artifact_type='html_initial',
-                content=initial_html,
-                filename='initial.html'
-            )
-            
-            # Step 4: AI rewrite (if enabled)
+            # Step 5: AI rewrite (if enabled)
             final_html = initial_html
-            if workflow.get('rewrite_enabled', False):
+            rewrite_enabled = workflow.get('rewrite_enabled', False)
+            initial_html_artifact_id = None
+            
+            if rewrite_enabled:
                 logger.info("Step 4: AI rewriting HTML")
                 try:
+                    # Store initial HTML before rewrite for comparison/debugging
+                    initial_html_artifact_id = self.store_artifact(
+                        tenant_id=job['tenant_id'],
+                        job_id=job_id,
+                        artifact_type='html_initial',
+                        content=initial_html,
+                        filename='initial.html'
+                    )
+                    
                     final_html = self.ai_service.rewrite_html(
                         initial_html,
                         workflow.get('rewrite_model', 'gpt-4o')
@@ -132,8 +147,8 @@ class JobProcessor:
                     # Continue with original HTML if rewrite fails
                     final_html = initial_html
             
-            # Step 5: Store final HTML
-            logger.info("Step 5: Storing final HTML")
+            # Step 6: Store final HTML
+            logger.info("Step 6: Storing final HTML")
             try:
                 final_html_artifact_id = self.store_artifact(
                     tenant_id=job['tenant_id'],
@@ -156,23 +171,24 @@ class JobProcessor:
             except Exception as e:
                 raise Exception(f"Failed to store final document: {str(e)}") from e
             
-            # Step 6: Update job as completed
-            logger.info("Step 6: Finalizing job")
+            # Step 7: Update job as completed
+            logger.info("Step 7: Finalizing job")
+            # Build artifacts list (only include initial_html if it was created)
+            artifacts_list = [report_artifact_id, final_html_artifact_id]
+            if initial_html_artifact_id:
+                artifacts_list.insert(1, initial_html_artifact_id)  # Insert between report and final
+            
             self.db.update_job(job_id, {
                 'status': 'completed',
                 'completed_at': datetime.utcnow().isoformat(),
                 'updated_at': datetime.utcnow().isoformat(),
                 'output_url': public_url,
-                'artifacts': [
-                    report_artifact_id,
-                    initial_html_artifact_id,
-                    final_html_artifact_id
-                ]
+                'artifacts': artifacts_list
             })
             
-            # Step 7: Deliver via webhook if configured
+            # Step 8: Deliver via webhook if configured
             if workflow.get('delivery_webhook_url'):
-                logger.info("Step 7: Sending webhook notification")
+                logger.info("Step 8: Sending webhook notification")
                 self.send_webhook_notification(
                     workflow['delivery_webhook_url'],
                     job_id,
