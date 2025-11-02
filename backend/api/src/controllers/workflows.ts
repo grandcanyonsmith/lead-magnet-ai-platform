@@ -1,10 +1,38 @@
 import { ulid } from 'ulid';
+import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
+import OpenAI from 'openai';
 import { db } from '../utils/db';
 import { validate, createWorkflowSchema, updateWorkflowSchema } from '../utils/validation';
 import { ApiError } from '../utils/errors';
 import { RouteResponse } from '../routes';
 
 const WORKFLOWS_TABLE = process.env.WORKFLOWS_TABLE!;
+const OPENAI_SECRET_NAME = process.env.OPENAI_SECRET_NAME || 'leadmagnet/openai-api-key';
+const secretsClient = new SecretsManagerClient({ region: process.env.AWS_REGION || 'us-east-1' });
+
+async function getOpenAIClient(): Promise<OpenAI> {
+  const command = new GetSecretValueCommand({ SecretId: OPENAI_SECRET_NAME });
+  const response = await secretsClient.send(command);
+  
+  if (!response.SecretString) {
+    throw new ApiError('OpenAI API key not found in secret', 500);
+  }
+
+  let apiKey: string;
+  
+  try {
+    const parsed = JSON.parse(response.SecretString);
+    apiKey = parsed.OPENAI_API_KEY || parsed.apiKey || response.SecretString;
+  } catch {
+    apiKey = response.SecretString;
+  }
+  
+  if (!apiKey || apiKey.trim().length === 0) {
+    throw new ApiError('OpenAI API key is empty', 500);
+  }
+
+  return new OpenAI({ apiKey });
+}
 
 class WorkflowsController {
   async list(tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {
@@ -125,6 +153,114 @@ class WorkflowsController {
       statusCode: 204,
       body: {},
     };
+  }
+
+  async refineInstructions(tenantId: string, body: any): Promise<RouteResponse> {
+    const { current_instructions, edit_prompt, model = 'gpt-4o' } = body;
+
+    if (!current_instructions || !current_instructions.trim()) {
+      throw new ApiError('Current instructions are required', 400);
+    }
+
+    if (!edit_prompt || !edit_prompt.trim()) {
+      throw new ApiError('Edit prompt is required', 400);
+    }
+
+    console.log('[Workflow Instructions Refinement] Starting refinement', {
+      tenantId,
+      model,
+      currentInstructionsLength: current_instructions.length,
+      editPromptLength: edit_prompt.length,
+      timestamp: new Date().toISOString(),
+    });
+
+    try {
+      const openai = await getOpenAIClient();
+      console.log('[Workflow Instructions Refinement] OpenAI client initialized');
+
+      const prompt = `You are an expert AI prompt engineer. Modify the following research instructions for an AI lead magnet generator based on these requests: "${edit_prompt}"
+
+Current Instructions:
+${current_instructions}
+
+Requirements:
+1. Apply the requested changes while maintaining clarity and effectiveness
+2. Keep the overall structure and format unless specifically asked to change it
+3. Ensure the instructions remain actionable and specific
+4. Preserve any field references like [field_name] syntax
+5. Return only the modified instructions, no markdown formatting, no explanations
+
+Return ONLY the modified instructions, no markdown formatting, no explanations.`;
+
+      console.log('[Workflow Instructions Refinement] Calling OpenAI for refinement...', {
+        model,
+        promptLength: prompt.length,
+      });
+
+      const refineStartTime = Date.now();
+      const completion = await openai.chat.completions.create({
+        model,
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert AI prompt engineer. Return only the modified instructions without markdown formatting.',
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 2000,
+      });
+
+      const refineDuration = Date.now() - refineStartTime;
+      console.log('[Workflow Instructions Refinement] Refinement completed', {
+        duration: `${refineDuration}ms`,
+        tokensUsed: completion.usage?.total_tokens,
+        model: completion.model,
+      });
+
+      const instructionsContent = completion.choices[0]?.message?.content || '';
+      console.log('[Workflow Instructions Refinement] Refined instructions received', {
+        instructionsLength: instructionsContent.length,
+        firstChars: instructionsContent.substring(0, 100),
+      });
+      
+      // Clean up markdown code blocks if present
+      let cleanedInstructions = instructionsContent.trim();
+      if (cleanedInstructions.startsWith('```')) {
+        cleanedInstructions = cleanedInstructions.replace(/^```\w*\s*/i, '').replace(/\s*```$/i, '');
+        console.log('[Workflow Instructions Refinement] Removed ``` markers');
+      }
+
+      const totalDuration = Date.now() - refineStartTime;
+      console.log('[Workflow Instructions Refinement] Success!', {
+        tenantId,
+        instructionsLength: cleanedInstructions.length,
+        totalDuration: `${totalDuration}ms`,
+        timestamp: new Date().toISOString(),
+      });
+
+      return {
+        statusCode: 200,
+        body: {
+          instructions: cleanedInstructions,
+        },
+      };
+    } catch (error: any) {
+      console.error('[Workflow Instructions Refinement] Error occurred', {
+        tenantId,
+        errorMessage: error.message,
+        errorName: error.name,
+        errorStack: error.stack,
+        timestamp: new Date().toISOString(),
+      });
+      throw new ApiError(
+        error.message || 'Failed to refine instructions with AI',
+        500
+      );
+    }
   }
 }
 

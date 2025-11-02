@@ -60,6 +60,11 @@ export const router = async (
     return await workflowsController.create(tenantId, body);
   }
 
+  if (path === '/admin/workflows/refine-instructions' && method === 'POST') {
+    console.log('[Router] Matched /admin/workflows/refine-instructions route');
+    return await workflowsController.refineInstructions(tenantId, body);
+  }
+
   if (path.match(/^\/admin\/workflows\/[^/]+$/) && method === 'GET') {
     const id = pathSegments[2];
     return await workflowsController.get(tenantId, id);
@@ -82,6 +87,16 @@ export const router = async (
 
   if (path === '/admin/forms' && method === 'POST') {
     return await formsController.create(tenantId, body);
+  }
+
+  if (path === '/admin/forms/generate-css' && method === 'POST') {
+    console.log('[Router] Matched /admin/forms/generate-css route');
+    return await formsController.generateCSS(tenantId, body);
+  }
+
+  if (path === '/admin/forms/refine-css' && method === 'POST') {
+    console.log('[Router] Matched /admin/forms/refine-css route');
+    return await formsController.refineCSS(tenantId, body);
   }
 
   if (path.match(/^\/admin\/forms\/[^/]+$/) && method === 'GET') {

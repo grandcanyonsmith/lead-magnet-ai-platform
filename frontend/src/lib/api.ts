@@ -193,6 +193,42 @@ class ApiClient {
     return response.data
   }
 
+  async generateFormCSS(formFieldsSchema: any, cssPrompt: string, model: string = 'gpt-4o') {
+    const response = await this.client.post('/admin/forms/generate-css', {
+      form_fields_schema: formFieldsSchema,
+      css_prompt: cssPrompt,
+      model,
+    })
+    return response.data
+  }
+
+  async refineFormCSS(currentCss: string, cssPrompt: string, model: string = 'gpt-4o') {
+    const response = await this.client.post('/admin/forms/refine-css', {
+      current_css: currentCss,
+      css_prompt: cssPrompt,
+      model,
+    })
+    return response.data
+  }
+
+  async refineWorkflowInstructions(workflowId: string, currentInstructions: string, editPrompt: string, model: string = 'gpt-4o') {
+    const response = await this.client.post(`/admin/workflows/${workflowId}/refine-instructions`, {
+      current_instructions: currentInstructions,
+      edit_prompt: editPrompt,
+      model,
+    })
+    return response.data
+  }
+
+  async refineInstructions(currentInstructions: string, editPrompt: string, model: string = 'gpt-4o') {
+    const response = await this.client.post('/admin/workflows/refine-instructions', {
+      current_instructions: currentInstructions,
+      edit_prompt: editPrompt,
+      model,
+    })
+    return response.data
+  }
+
   // Jobs
   async getJobs(params?: any) {
     const response = await this.client.get('/admin/jobs', { params })
