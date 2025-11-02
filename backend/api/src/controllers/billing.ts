@@ -83,13 +83,13 @@ class BillingController {
     });
 
     // Query usage records by tenant_id and date range
-    // Use >= and <= instead of BETWEEN for better compatibility
+    // DynamoDB requires BETWEEN for sort key range queries
     let usageRecords: any[] = [];
     try {
       usageRecords = await db.query(
         USAGE_RECORDS_TABLE,
         'gsi_tenant_date',
-        'tenant_id = :tenant_id AND created_at >= :start_date AND created_at <= :end_date',
+        'tenant_id = :tenant_id AND created_at BETWEEN :start_date AND :end_date',
         {
           ':tenant_id': tenantId,
           ':start_date': startDateStr,
