@@ -66,9 +66,7 @@ export const handler = async (
       statusCode: result.statusCode || 200,
       headers: {
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-        'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,PATCH,OPTIONS',
+        // CORS headers are handled by API Gateway corsPreflight configuration
       },
       body: JSON.stringify(result.body),
     };
@@ -81,7 +79,7 @@ export const handler = async (
       statusCode: errorResponse.statusCode,
       headers: {
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
+        // CORS headers are handled by API Gateway corsPreflight configuration
       },
       body: JSON.stringify(errorResponse.body),
     };
