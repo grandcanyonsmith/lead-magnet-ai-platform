@@ -45,12 +45,23 @@ class BillingController {
     let endDate: Date = new Date(now);
 
     if (queryParams.start_date && queryParams.end_date) {
-      startDate = new Date(queryParams.start_date);
-      endDate = new Date(queryParams.end_date);
+      // Parse dates - if they're in YYYY-MM-DD format, set to start/end of day
+      const startDateStr = queryParams.start_date;
+      const endDateStr = queryParams.end_date;
+      
+      // Parse and set to start of day (00:00:00)
+      startDate = new Date(startDateStr);
+      startDate.setHours(0, 0, 0, 0);
+      
+      // Parse and set to end of day (23:59:59.999)
+      endDate = new Date(endDateStr);
+      endDate.setHours(23, 59, 59, 999);
     } else {
       // Default to current month
       startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      startDate.setHours(0, 0, 0, 0);
       endDate = new Date(now);
+      endDate.setHours(23, 59, 59, 999);
     }
 
     // Validate dates
@@ -72,16 +83,35 @@ class BillingController {
     });
 
     // Query usage records by tenant_id and date range
-    const usageRecords = await db.query(
-      USAGE_RECORDS_TABLE,
-      'gsi_tenant_date',
-      'tenant_id = :tenant_id AND created_at BETWEEN :start_date AND :end_date',
-      {
-        ':tenant_id': tenantId,
-        ':start_date': startDateStr,
-        ':end_date': endDateStr,
+    // Use >= and <= instead of BETWEEN for better compatibility
+    let usageRecords: any[] = [];
+    try {
+      usageRecords = await db.query(
+        USAGE_RECORDS_TABLE,
+        'gsi_tenant_date',
+        'tenant_id = :tenant_id AND created_at >= :start_date AND created_at <= :end_date',
+        {
+          ':tenant_id': tenantId,
+          ':start_date': startDateStr,
+          ':end_date': endDateStr,
+        }
+      );
+    } catch (error: any) {
+      // If table doesn't exist yet, return empty results
+      if (error.name === 'ResourceNotFoundException' || error.message?.includes('not found')) {
+        console.warn('[Billing] Usage records table does not exist yet', {
+          table: USAGE_RECORDS_TABLE,
+          message: 'Table needs to be created via CDK deployment',
+        });
+        usageRecords = [];
+      } else {
+        console.error('[Billing] Error querying usage records', {
+          error: error.message,
+          errorName: error.name,
+        });
+        throw new ApiError(`Failed to fetch usage records: ${error.message}`, 500);
       }
-    );
+    }
 
     console.log('[Billing] Found usage records', {
       tenantId,

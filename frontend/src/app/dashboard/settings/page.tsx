@@ -21,10 +21,26 @@ export default function SettingsPage() {
     
     setLoadingUsage(true)
     try {
+      console.log('[Billing] Loading usage data', { startDate, endDate })
       const data = await api.getUsage(startDate, endDate)
+      console.log('[Billing] Usage data received', data)
       setUsageData(data)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load usage:', error)
+      // Set empty data structure so UI can show "no data" message
+      setUsageData({
+        openai: {
+          by_service: {},
+          total_actual: 0,
+          total_upcharge: 0,
+        },
+        summary: {
+          total_calls: 0,
+          total_tokens: 0,
+          total_input_tokens: 0,
+          total_output_tokens: 0,
+        },
+      })
     } finally {
       setLoadingUsage(false)
     }
@@ -352,11 +368,17 @@ export default function SettingsPage() {
                 </div>
               ) : (
                 <div className="text-center py-12 text-gray-500">
-                  No usage data found for the selected date range.
+                  <p className="text-lg font-medium mb-2">No usage data found</p>
+                  <p className="text-sm">No OpenAI API calls were recorded for the selected date range.</p>
+                  <p className="text-sm mt-2">Try generating a template, form CSS, or workflow instruction to see usage data.</p>
                 </div>
               )}
             </>
-          ) : null}
+          ) : (
+            <div className="text-center py-12 text-gray-500">
+              <p>Select a date range to view usage data</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
