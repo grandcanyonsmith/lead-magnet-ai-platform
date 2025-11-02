@@ -20,6 +20,7 @@
     "@aws-sdk/s3-request-presigner": "^3.911.0",
     "@aws-sdk/util-dynamodb": "^3.470.0",
     "aws-lambda": "^1.0.7",
+    "openai": "^1.30.0",
     "ulid": "^2.3.0",
     "zod": "^3.22.4"
   },

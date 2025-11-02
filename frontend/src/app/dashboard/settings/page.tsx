@@ -113,6 +113,47 @@ export default function SettingsPage() {
           </div>
 
           <div className="pt-4 border-t">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Delivery Settings</h3>
+            
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  GHL Webhook URL
+                  <span className="ml-2 text-xs text-gray-500" title="Your GoHighLevel webhook endpoint for SMS/Email delivery">
+                    ℹ️
+                  </span>
+                </label>
+                <input
+                  type="url"
+                  value={settings.ghl_webhook_url || ''}
+                  onChange={(e) => setSettings({ ...settings, ghl_webhook_url: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  placeholder="https://api.gohighlevel.com/webhook/..."
+                />
+                <p className="mt-1 text-sm text-gray-500">
+                  Your GoHighLevel webhook endpoint for SMS/Email delivery
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Lead Phone Number Field
+                </label>
+                <input
+                  type="text"
+                  value={settings.lead_phone_field || ''}
+                  onChange={(e) => setSettings({ ...settings, lead_phone_field: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  placeholder="phone"
+                />
+                <p className="mt-1 text-sm text-gray-500">
+                  Phone number field name from your form (e.g., &quot;phone&quot; or &quot;phone_number&quot;)
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-4 border-t">
             <button
               type="submit"
               disabled={saving}
