@@ -544,6 +544,12 @@ export default function NewFormPage() {
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono"
             placeholder="contact-form"
             pattern="[a-z0-9-]+"
+            onInvalid={(e) => {
+              const target = e.target as HTMLInputElement;
+              if (!target.validity.valid) {
+                setError('Public slug must contain only lowercase letters, numbers, and hyphens')
+              }
+            }}
             required
           />
           <p className="mt-1 text-sm text-gray-500">
