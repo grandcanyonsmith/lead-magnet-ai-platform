@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { api } from '@/lib/api'
 import { FiSave, FiDollarSign, FiActivity, FiTrendingUp, FiFileText } from 'react-icons/fi'
 
@@ -16,25 +16,7 @@ export default function SettingsPage() {
   const [startDate, setStartDate] = useState<string>('')
   const [endDate, setEndDate] = useState<string>('')
 
-  useEffect(() => {
-    loadSettings()
-    initializeDateRange()
-  }, [])
-
-  useEffect(() => {
-    if (startDate && endDate) {
-      loadUsage()
-    }
-  }, [startDate, endDate])
-
-  const initializeDateRange = () => {
-    const now = new Date()
-    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-    setStartDate(firstDayOfMonth.toISOString().split('T')[0])
-    setEndDate(now.toISOString().split('T')[0])
-  }
-
-  const loadUsage = async () => {
+  const loadUsage = useCallback(async () => {
     if (!startDate || !endDate) return
     
     setLoadingUsage(true)
@@ -46,6 +28,24 @@ export default function SettingsPage() {
     } finally {
       setLoadingUsage(false)
     }
+  }, [startDate, endDate])
+
+  useEffect(() => {
+    loadSettings()
+    initializeDateRange()
+  }, [])
+
+  useEffect(() => {
+    if (startDate && endDate) {
+      loadUsage()
+    }
+  }, [startDate, endDate, loadUsage])
+
+  const initializeDateRange = () => {
+    const now = new Date()
+    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    setStartDate(firstDayOfMonth.toISOString().split('T')[0])
+    setEndDate(now.toISOString().split('T')[0])
   }
 
   const loadSettings = async () => {
@@ -328,7 +328,7 @@ export default function SettingsPage() {
                       {Object.values(usageData.openai.by_service).map((service: any) => (
                         <tr key={service.service_type}>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {service.service_type.replace(/openai_/g, '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                            {service.service_type.replace(/openai_/g, '').replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
                             {service.calls.toLocaleString()}
