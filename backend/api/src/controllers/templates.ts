@@ -5,8 +5,10 @@ import { db } from '../utils/db';
 import { validate, createTemplateSchema, updateTemplateSchema } from '../utils/validation';
 import { ApiError } from '../utils/errors';
 import { RouteResponse } from '../routes';
+import { calculateOpenAICost } from '../services/costService';
 
 const TEMPLATES_TABLE = process.env.TEMPLATES_TABLE!;
+const USAGE_RECORDS_TABLE = process.env.USAGE_RECORDS_TABLE || 'leadmagnet-usage-records';
 const OPENAI_SECRET_NAME = process.env.OPENAI_SECRET_NAME || 'leadmagnet/openai-api-key';
 const secretsClient = new SecretsManagerClient({ region: process.env.AWS_REGION || 'us-east-1' });
 
@@ -34,6 +36,53 @@ async function getOpenAIClient(): Promise<OpenAI> {
   }
 
   return new OpenAI({ apiKey });
+}
+
+/**
+ * Helper function to store usage record in DynamoDB.
+ * This is called after each OpenAI API call to track costs.
+ */
+async function storeUsageRecord(
+  tenantId: string,
+  serviceType: string,
+  model: string,
+  inputTokens: number,
+  outputTokens: number,
+  costUsd: number,
+  jobId?: string
+): Promise<void> {
+  try {
+    const usageId = `usage_${ulid()}`;
+    const usageRecord = {
+      usage_id: usageId,
+      tenant_id: tenantId,
+      job_id: jobId || null,
+      service_type: serviceType,
+      model,
+      input_tokens: inputTokens,
+      output_tokens: outputTokens,
+      cost_usd: costUsd,
+      created_at: new Date().toISOString(),
+    };
+
+    await db.put(USAGE_RECORDS_TABLE, usageRecord);
+    console.log('[Usage Tracking] Usage record stored', {
+      usageId,
+      tenantId,
+      serviceType,
+      model,
+      inputTokens,
+      outputTokens,
+      costUsd,
+    });
+  } catch (error: any) {
+    // Don't fail the request if usage tracking fails
+    console.error('[Usage Tracking] Failed to store usage record', {
+      error: error.message,
+      tenantId,
+      serviceType,
+    });
+  }
 }
 
 class TemplatesController {
@@ -286,6 +335,23 @@ Return ONLY the modified HTML code, no markdown formatting, no explanations.`;
         model: completion.model,
       });
 
+      // Track usage
+      const usage = completion.usage;
+      if (usage) {
+        const inputTokens = usage.prompt_tokens || 0;
+        const outputTokens = usage.completion_tokens || 0;
+        const costData = calculateOpenAICost(model, inputTokens, outputTokens);
+        
+        await storeUsageRecord(
+          tenantId,
+          'openai_template_refine',
+          model,
+          inputTokens,
+          outputTokens,
+          costData.cost_usd
+        );
+      }
+
       const htmlContent = completion.choices[0]?.message?.content || '';
       console.log('[Template Refinement] Refined HTML received', {
         htmlLength: htmlContent.length,
@@ -400,6 +466,23 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
         model: completion.model,
       });
 
+      // Track usage
+      const usage = completion.usage;
+      if (usage) {
+        const inputTokens = usage.prompt_tokens || 0;
+        const outputTokens = usage.completion_tokens || 0;
+        const costData = calculateOpenAICost(model, inputTokens, outputTokens);
+        
+        await storeUsageRecord(
+          tenantId,
+          'openai_template_generate',
+          model,
+          inputTokens,
+          outputTokens,
+          costData.cost_usd
+        );
+      }
+
       const htmlContent = completion.choices[0]?.message?.content || '';
       console.log('[Template Generation] Raw HTML received', {
         htmlLength: htmlContent.length,
@@ -449,6 +532,23 @@ Return JSON format: {"name": "...", "description": "..."}`;
         duration: `${nameDuration}ms`,
         tokensUsed: nameCompletion.usage?.total_tokens,
       });
+
+      // Track usage for name/description generation
+      const nameUsage = nameCompletion.usage;
+      if (nameUsage) {
+        const inputTokens = nameUsage.prompt_tokens || 0;
+        const outputTokens = nameUsage.completion_tokens || 0;
+        const costData = calculateOpenAICost(model, inputTokens, outputTokens);
+        
+        await storeUsageRecord(
+          tenantId,
+          'openai_template_generate',
+          model,
+          inputTokens,
+          outputTokens,
+          costData.cost_usd
+        );
+      }
 
       const nameContent = nameCompletion.choices[0]?.message?.content || '';
       let templateName = 'Generated Template';

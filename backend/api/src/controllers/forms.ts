@@ -7,11 +7,13 @@ import { validate, createFormSchema, updateFormSchema, submitFormSchema } from '
 import { ApiError } from '../utils/errors';
 import { RouteResponse } from '../routes';
 import { logger } from '../utils/logger';
+import { calculateOpenAICost } from '../services/costService';
 
 const FORMS_TABLE = process.env.FORMS_TABLE!;
 const SUBMISSIONS_TABLE = process.env.SUBMISSIONS_TABLE!;
 const JOBS_TABLE = process.env.JOBS_TABLE!;
 const STEP_FUNCTIONS_ARN = process.env.STEP_FUNCTIONS_ARN!;
+const USAGE_RECORDS_TABLE = process.env.USAGE_RECORDS_TABLE || 'leadmagnet-usage-records';
 const OPENAI_SECRET_NAME = process.env.OPENAI_SECRET_NAME || 'leadmagnet/openai-api-key';
 
 const sfnClient = new SFNClient({ region: process.env.AWS_REGION });
@@ -39,6 +41,51 @@ async function getOpenAIClient(): Promise<OpenAI> {
   }
 
   return new OpenAI({ apiKey });
+}
+
+/**
+ * Helper function to store usage record in DynamoDB.
+ */
+async function storeUsageRecord(
+  tenantId: string,
+  serviceType: string,
+  model: string,
+  inputTokens: number,
+  outputTokens: number,
+  costUsd: number,
+  jobId?: string
+): Promise<void> {
+  try {
+    const usageId = `usage_${ulid()}`;
+    const usageRecord = {
+      usage_id: usageId,
+      tenant_id: tenantId,
+      job_id: jobId || null,
+      service_type: serviceType,
+      model,
+      input_tokens: inputTokens,
+      output_tokens: outputTokens,
+      cost_usd: costUsd,
+      created_at: new Date().toISOString(),
+    };
+
+    await db.put(USAGE_RECORDS_TABLE, usageRecord);
+    console.log('[Usage Tracking] Usage record stored', {
+      usageId,
+      tenantId,
+      serviceType,
+      model,
+      inputTokens,
+      outputTokens,
+      costUsd,
+    });
+  } catch (error: any) {
+    console.error('[Usage Tracking] Failed to store usage record', {
+      error: error.message,
+      tenantId,
+      serviceType,
+    });
+  }
 }
 
 class FormsController {
@@ -380,6 +427,23 @@ Return ONLY the CSS code, no markdown formatting, no explanations.`;
         model: completion.model,
       });
 
+      // Track usage
+      const usage = completion.usage;
+      if (usage) {
+        const inputTokens = usage.prompt_tokens || 0;
+        const outputTokens = usage.completion_tokens || 0;
+        const costData = calculateOpenAICost(model, inputTokens, outputTokens);
+        
+        await storeUsageRecord(
+          tenantId,
+          'openai_form_css',
+          model,
+          inputTokens,
+          outputTokens,
+          costData.cost_usd
+        );
+      }
+
       const cssContent = completion.choices[0]?.message?.content || '';
       console.log('[Form CSS Generation] Raw CSS received', {
         cssLength: cssContent.length,
@@ -489,6 +553,23 @@ Return ONLY the modified CSS code, no markdown formatting, no explanations.`;
         tokensUsed: completion.usage?.total_tokens,
         model: completion.model,
       });
+
+      // Track usage
+      const usage = completion.usage;
+      if (usage) {
+        const inputTokens = usage.prompt_tokens || 0;
+        const outputTokens = usage.completion_tokens || 0;
+        const costData = calculateOpenAICost(model, inputTokens, outputTokens);
+        
+        await storeUsageRecord(
+          tenantId,
+          'openai_form_css_refine',
+          model,
+          inputTokens,
+          outputTokens,
+          costData.cost_usd
+        );
+      }
 
       const cssContent = completion.choices[0]?.message?.content || '';
       console.log('[Form CSS Refinement] Refined CSS received', {

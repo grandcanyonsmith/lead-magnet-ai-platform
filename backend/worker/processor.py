@@ -6,7 +6,7 @@ Handles the complete workflow of generating AI reports and rendering HTML.
 import logging
 import json
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Tuple
 from ulid import new as ulid
 
 from ai_service import AIService
@@ -74,7 +74,9 @@ class JobProcessor:
             if research_enabled:
                 logger.info("Step 1: Generating AI report")
                 try:
-                    report_content = self.generate_report(workflow, submission)
+                    report_content, usage_info = self.generate_report(workflow, submission)
+                    # Store usage record
+                    self.store_usage_record(job['tenant_id'], job_id, usage_info)
                 except Exception as e:
                     raise Exception(f"Failed to generate AI report: {str(e)}") from e
                 
@@ -126,22 +128,26 @@ class JobProcessor:
                 try:
                     if research_enabled:
                         # Use research content + template
-                        final_content = self.ai_service.generate_styled_html(
+                        final_content, html_usage_info = self.ai_service.generate_styled_html(
                             research_content=report_content,
                             template_html=template['html_content'],
                             template_style=template.get('style_description', ''),
                             submission_data=submission.get('submission_data', {}),
                             model=workflow.get('rewrite_model', 'gpt-4o')
                         )
+                        # Store usage record
+                        self.store_usage_record(job['tenant_id'], job_id, html_usage_info)
                     else:
                         # Generate HTML directly from submission data + template
-                        final_content = self.ai_service.generate_html_from_submission(
+                        final_content, html_usage_info = self.ai_service.generate_html_from_submission(
                             submission_data=submission.get('submission_data', {}),
                             template_html=template['html_content'],
                             template_style=template.get('style_description', ''),
                             ai_instructions=workflow.get('ai_instructions', ''),
                             model=workflow.get('rewrite_model', 'gpt-4o')
                         )
+                        # Store usage record
+                        self.store_usage_record(job['tenant_id'], job_id, html_usage_info)
                     logger.info("Styled HTML generated successfully")
                     final_artifact_type = 'html_final'
                     final_filename = 'final.html'
@@ -286,7 +292,7 @@ class JobProcessor:
         
         return "\n".join(content_lines)
     
-    def generate_report(self, workflow: Dict[str, Any], submission: Dict[str, Any]) -> str:
+    def generate_report(self, workflow: Dict[str, Any], submission: Dict[str, Any]) -> Tuple[str, Dict]:
         """Generate AI report content."""
         ai_model = workflow.get('ai_model', 'gpt-4o')
         ai_instructions = workflow['ai_instructions']
@@ -299,13 +305,35 @@ class JobProcessor:
         ])
         
         # Generate report
-        report = self.ai_service.generate_report(
+        report, usage_info = self.ai_service.generate_report(
             model=ai_model,
             instructions=ai_instructions,
             context=context
         )
         
-        return report
+        return report, usage_info
+    
+    def store_usage_record(self, tenant_id: str, job_id: str, usage_info: Dict[str, Any]):
+        """Store usage record for billing tracking."""
+        try:
+            usage_id = f"usage_{ulid()}"
+            usage_record = {
+                'usage_id': usage_id,
+                'tenant_id': tenant_id,
+                'job_id': job_id,
+                'service_type': usage_info.get('service_type', 'unknown'),
+                'model': usage_info.get('model', 'unknown'),
+                'input_tokens': usage_info.get('input_tokens', 0),
+                'output_tokens': usage_info.get('output_tokens', 0),
+                'cost_usd': usage_info.get('cost_usd', 0.0),
+                'created_at': datetime.utcnow().isoformat(),
+            }
+            self.db.put_usage_record(usage_record)
+            logger.debug(f"Stored usage record {usage_id} for job {job_id}")
+        except Exception as e:
+            logger.error(f"Failed to store usage record: {e}")
+            # Don't fail the job if usage tracking fails
+            pass
     def store_artifact(
         self,
         tenant_id: str,

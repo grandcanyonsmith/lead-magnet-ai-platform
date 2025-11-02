@@ -5,8 +5,10 @@ import { db } from '../utils/db';
 import { validate, createWorkflowSchema, updateWorkflowSchema } from '../utils/validation';
 import { ApiError } from '../utils/errors';
 import { RouteResponse } from '../routes';
+import { calculateOpenAICost } from '../services/costService';
 
 const WORKFLOWS_TABLE = process.env.WORKFLOWS_TABLE!;
+const USAGE_RECORDS_TABLE = process.env.USAGE_RECORDS_TABLE || 'leadmagnet-usage-records';
 const OPENAI_SECRET_NAME = process.env.OPENAI_SECRET_NAME || 'leadmagnet/openai-api-key';
 const secretsClient = new SecretsManagerClient({ region: process.env.AWS_REGION || 'us-east-1' });
 
@@ -32,6 +34,51 @@ async function getOpenAIClient(): Promise<OpenAI> {
   }
 
   return new OpenAI({ apiKey });
+}
+
+/**
+ * Helper function to store usage record in DynamoDB.
+ */
+async function storeUsageRecord(
+  tenantId: string,
+  serviceType: string,
+  model: string,
+  inputTokens: number,
+  outputTokens: number,
+  costUsd: number,
+  jobId?: string
+): Promise<void> {
+  try {
+    const usageId = `usage_${ulid()}`;
+    const usageRecord = {
+      usage_id: usageId,
+      tenant_id: tenantId,
+      job_id: jobId || null,
+      service_type: serviceType,
+      model,
+      input_tokens: inputTokens,
+      output_tokens: outputTokens,
+      cost_usd: costUsd,
+      created_at: new Date().toISOString(),
+    };
+
+    await db.put(USAGE_RECORDS_TABLE, usageRecord);
+    console.log('[Usage Tracking] Usage record stored', {
+      usageId,
+      tenantId,
+      serviceType,
+      model,
+      inputTokens,
+      outputTokens,
+      costUsd,
+    });
+  } catch (error: any) {
+    console.error('[Usage Tracking] Failed to store usage record', {
+      error: error.message,
+      tenantId,
+      serviceType,
+    });
+  }
 }
 
 class WorkflowsController {
@@ -220,6 +267,23 @@ Return ONLY the modified instructions, no markdown formatting, no explanations.`
         tokensUsed: completion.usage?.total_tokens,
         model: completion.model,
       });
+
+      // Track usage
+      const usage = completion.usage;
+      if (usage) {
+        const inputTokens = usage.prompt_tokens || 0;
+        const outputTokens = usage.completion_tokens || 0;
+        const costData = calculateOpenAICost(model, inputTokens, outputTokens);
+        
+        await storeUsageRecord(
+          tenantId,
+          'openai_workflow_refine',
+          model,
+          inputTokens,
+          outputTokens,
+          costData.cost_usd
+        );
+      }
 
       const instructionsContent = completion.choices[0]?.message?.content || '';
       console.log('[Workflow Instructions Refinement] Refined instructions received', {
