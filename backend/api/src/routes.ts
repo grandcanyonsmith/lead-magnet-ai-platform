@@ -23,6 +23,15 @@ export const router = async (
   const body = event.body ? JSON.parse(event.body) : undefined;
   const queryParams = event.queryStringParameters || {};
 
+  // Debug logging for route matching
+  console.log('[Router] Request received', {
+    method,
+    path,
+    rawPath: event.rawPath,
+    pathParameters: event.pathParameters,
+    tenantId,
+  });
+
   // Extract path segments for catch-all routing
   const pathSegments = path.split('/').filter(s => s);
 
@@ -100,6 +109,7 @@ export const router = async (
   }
 
   if (path === '/admin/templates/generate' && method === 'POST') {
+    console.log('[Router] Matched /admin/templates/generate route');
     return await templatesController.generateWithAI(tenantId, body);
   }
 
