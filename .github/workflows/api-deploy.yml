@@ -29,7 +29,7 @@ jobs:
       
       - name: Install dependencies
         working-directory: backend/api
-        run: npm ci
+        run: npm install
       
       - name: Build
         working-directory: backend/api
