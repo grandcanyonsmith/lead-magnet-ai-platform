@@ -99,6 +99,10 @@ export const router = async (
     return await templatesController.create(tenantId, body);
   }
 
+  if (path === '/admin/templates/generate' && method === 'POST') {
+    return await templatesController.generateWithAI(tenantId, body);
+  }
+
   if (path.match(/^\/admin\/templates\/[^/]+$/) && method === 'GET') {
     const id = pathSegments[2];
     return await templatesController.get(tenantId, id);
@@ -112,10 +116,6 @@ export const router = async (
   if (path.match(/^\/admin\/templates\/[^/]+$/) && method === 'DELETE') {
     const id = pathSegments[2];
     return await templatesController.delete(tenantId, id);
-  }
-
-  if (path === '/admin/templates/generate' && method === 'POST') {
-    return await templatesController.generateWithAI(tenantId, body);
   }
 
   // Admin routes - Jobs

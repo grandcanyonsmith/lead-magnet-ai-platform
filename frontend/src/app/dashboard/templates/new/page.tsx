@@ -9,6 +9,7 @@ export default function NewTemplatePage() {
   const router = useRouter()
   const [submitting, setSubmitting] = useState(false)
   const [generating, setGenerating] = useState(false)
+  const [generationStatus, setGenerationStatus] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [aiDescription, setAiDescription] = useState('')
   const [detectedPlaceholders, setDetectedPlaceholders] = useState<string[]>([])
@@ -79,11 +80,34 @@ export default function NewTemplatePage() {
       return
     }
 
+    console.log('[Template Generation] Starting AI generation...', {
+      description: aiDescription.trim(),
+      timestamp: new Date().toISOString(),
+    })
+
     setGenerating(true)
     setError(null)
+    setGenerationStatus('Initializing AI generation...')
 
     try {
+      const startTime = Date.now()
+      console.log('[Template Generation] Calling API...')
+      setGenerationStatus('Generating HTML template...')
+
       const result = await api.generateTemplateWithAI(aiDescription.trim())
+      
+      const duration = Date.now() - startTime
+      console.log('[Template Generation] Success!', {
+        duration: `${duration}ms`,
+        templateName: result.template_name,
+        templateDescription: result.template_description,
+        htmlLength: result.html_content?.length || 0,
+        placeholderCount: result.placeholder_tags?.length || 0,
+        placeholders: result.placeholder_tags,
+        timestamp: new Date().toISOString(),
+      })
+
+      setGenerationStatus('Template generated successfully!')
       
       setFormData({
         template_name: result.template_name || 'Generated Template',
@@ -97,9 +121,23 @@ export default function NewTemplatePage() {
       
       // Clear the description after successful generation
       setAiDescription('')
+      
+      // Clear status after a short delay
+      setTimeout(() => {
+        setGenerationStatus(null)
+      }, 2000)
     } catch (error: any) {
-      console.error('Failed to generate template:', error)
+      const errorDetails = {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        timestamp: new Date().toISOString(),
+      }
+      console.error('[Template Generation] Failed:', errorDetails)
+      console.error('[Template Generation] Full error:', error)
+      
       setError(error.response?.data?.message || error.message || 'Failed to generate template with AI')
+      setGenerationStatus(null)
     } finally {
       setGenerating(false)
     }
@@ -130,11 +168,11 @@ export default function NewTemplatePage() {
       )}
 
       {/* AI Generation Section */}
-      <div className="mb-6 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-6">
+      <div className={`mb-6 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-6 ${generating ? 'opacity-75' : ''}`}>
         <div className="flex items-start justify-between mb-4">
           <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center">
-              <FiZap className="w-5 h-5 mr-2 text-purple-600" />
+              <FiZap className={`w-5 h-5 mr-2 text-purple-600 ${generating ? 'animate-pulse' : ''}`} />
               Generate with AI
             </h3>
             <p className="text-sm text-gray-600">
@@ -147,19 +185,36 @@ export default function NewTemplatePage() {
           <textarea
             value={aiDescription}
             onChange={(e) => setAiDescription(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
             placeholder="e.g., A modern, professional email template for course idea validation reports with a clean header, content sections, and call-to-action buttons. Use a blue and white color scheme."
             rows={4}
             disabled={generating}
           />
+          
+          {generationStatus && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-3"></div>
+              <span className="text-sm text-blue-800 font-medium">{generationStatus}</span>
+            </div>
+          )}
+          
           <button
             type="button"
             onClick={handleGenerateWithAI}
             disabled={generating || !aiDescription.trim()}
-            className="flex items-center px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center justify-center px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <FiZap className="w-5 h-5 mr-2" />
-            {generating ? 'Generating...' : 'Generate Template'}
+            {generating ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                <span>Generating...</span>
+              </>
+            ) : (
+              <>
+                <FiZap className="w-5 h-5 mr-2" />
+                <span>Generate Template</span>
+              </>
+            )}
           </button>
         </div>
       </div>
