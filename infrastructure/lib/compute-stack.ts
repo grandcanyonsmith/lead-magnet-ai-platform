@@ -34,6 +34,9 @@ export class ComputeStack extends cdk.Stack {
       runtime: lambda.Runtime.PYTHON_3_11,
       handler: 'lambda_handler.lambda_handler',
       code: lambda.Code.fromAsset('../backend/worker', {
+        // Use bundling without Docker if available, otherwise skip bundling
+        // If Docker is not available, you can pre-build the package using:
+        // ./scripts/build-lambda-worker.sh
         bundling: {
           image: lambda.Runtime.PYTHON_3_11.bundlingImage,
           command: [
@@ -41,6 +44,9 @@ export class ComputeStack extends cdk.Stack {
             'pip install --platform manylinux2014_x86_64 --implementation cp --python-version 3.11 --only-binary=:all: --upgrade --target /asset-output -r requirements.txt && cp -r /asset-input/* /asset-output/'
           ],
         },
+        // If Docker is not available during CDK synth, you can:
+        // 1. Pre-build using: ./scripts/build-lambda-worker.sh
+        // 2. Use the zip file directly: lambda.Code.fromAsset('path/to/pre-built.zip')
       }),
       timeout: cdk.Duration.minutes(15),
       memorySize: 2048,
