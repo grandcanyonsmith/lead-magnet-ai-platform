@@ -195,13 +195,19 @@ export default function NewTemplatePage() {
 
       setGenerationStatus('Template refined successfully!')
       
+      const newHtml = result.html_content || formData.html_content
       setFormData(prev => ({
         ...prev,
-        html_content: result.html_content || prev.html_content,
+        html_content: newHtml,
       }))
       
       const placeholders = result.placeholder_tags || []
       setDetectedPlaceholders(placeholders)
+      
+      // Ensure preview is shown after refinement
+      if (!showPreview) {
+        setShowPreview(true)
+      }
       
       // Clear the edit prompt
       setEditPrompt('')
@@ -377,11 +383,11 @@ export default function NewTemplatePage() {
             {showPreview && (
               <div className="bg-white border-t border-gray-200" style={{ height: '600px' }}>
                 <iframe
-                  key={formData.html_content.slice(0, 100)} // Force re-render when HTML changes
+                  key={`preview-${formData.html_content.length}-${formData.html_content.slice(0, 50)}`} // Force re-render when HTML changes
                   srcDoc={getPreviewHtml()}
                   className="w-full h-full border-0"
                   title="HTML Preview"
-                  sandbox="allow-same-origin"
+                  sandbox="allow-same-origin allow-scripts"
                 />
               </div>
             )}
