@@ -356,7 +356,7 @@ export default function NewWorkflowPage() {
                 placeholder="+1234567890"
               />
               <p className="mt-1 text-sm text-gray-500">
-                Phone number field name from your form (e.g., "phone" or "phone_number")
+                Phone number field name from your form (e.g., &quot;phone&quot; or &quot;phone_number&quot;)
               </p>
             </div>
           </div>
