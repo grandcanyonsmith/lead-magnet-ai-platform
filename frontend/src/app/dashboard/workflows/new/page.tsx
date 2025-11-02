@@ -28,8 +28,6 @@ export default function NewWorkflowPage() {
     html_enabled: true,
     template_id: '',
     template_version: 0,
-    delivery_webhook_url: '',
-    delivery_phone: '',
   })
 
   useEffect(() => {
@@ -96,8 +94,6 @@ export default function NewWorkflowPage() {
         html_enabled: formData.html_enabled,
         template_id: formData.template_id || undefined,
         template_version: formData.template_version,
-        delivery_webhook_url: formData.delivery_webhook_url.trim() || undefined,
-        delivery_phone: formData.delivery_phone.trim() || undefined,
       })
 
       router.push('/dashboard/workflows')
@@ -321,46 +317,6 @@ export default function NewWorkflowPage() {
             </p>
           </div>
         )}
-
-        <div className="border-t pt-6">
-          <h3 className="text-sm font-semibold text-gray-900 mb-4">Delivery Settings</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                GHL Webhook URL
-                <span className="ml-2 text-xs text-gray-500" title="Your GoHighLevel webhook endpoint for SMS/Email delivery">
-                  ℹ️
-                </span>
-              </label>
-              <input
-                type="url"
-                value={formData.delivery_webhook_url}
-                onChange={(e) => handleChange('delivery_webhook_url', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                placeholder="https://api.gohighlevel.com/webhook/..."
-              />
-              <p className="mt-1 text-sm text-gray-500">
-                Your GoHighLevel webhook endpoint for SMS/Email delivery
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Lead Phone Number
-              </label>
-              <input
-                type="tel"
-                value={formData.delivery_phone}
-                onChange={(e) => handleChange('delivery_phone', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                placeholder="+1234567890"
-              />
-              <p className="mt-1 text-sm text-gray-500">
-                Phone number field name from your form (e.g., &quot;phone&quot; or &quot;phone_number&quot;)
-              </p>
-            </div>
-          </div>
-        </div>
 
         <div className="flex justify-end space-x-4 pt-4 border-t">
           <button

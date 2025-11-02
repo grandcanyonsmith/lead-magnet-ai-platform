@@ -26,6 +26,7 @@ class DynamoDBService:
         self.jobs_table = self.dynamodb.Table(os.environ['JOBS_TABLE'])
         self.artifacts_table = self.dynamodb.Table(os.environ['ARTIFACTS_TABLE'])
         self.templates_table = self.dynamodb.Table(os.environ['TEMPLATES_TABLE'])
+        self.user_settings_table = self.dynamodb.Table(os.environ.get('USER_SETTINGS_TABLE', 'user_settings'))
     
     def get_job(self, job_id: str) -> Optional[Dict[str, Any]]:
         """Get job by ID."""
@@ -114,4 +115,13 @@ class DynamoDBService:
         except Exception as e:
             logger.error(f"Error getting artifact {artifact_id}: {e}")
             raise
+    
+    def get_settings(self, tenant_id: str) -> Optional[Dict[str, Any]]:
+        """Get user settings by tenant ID."""
+        try:
+            response = self.user_settings_table.get_item(Key={'tenant_id': tenant_id})
+            return response.get('Item')
+        except Exception as e:
+            logger.error(f"Error getting settings for tenant {tenant_id}: {e}")
+            return None
 
