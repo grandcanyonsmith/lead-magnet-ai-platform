@@ -158,6 +158,23 @@ export class DatabaseStack extends cdk.Stack {
       encryption: dynamodb.TableEncryption.AWS_MANAGED,
     });
 
+    // Table 8: Usage Records (for billing/usage tracking)
+    const usageRecordsTable = new dynamodb.Table(this, 'UsageRecordsTable', {
+      tableName: 'leadmagnet-usage-records',
+      partitionKey: { name: 'usage_id', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      pointInTimeRecovery: true,
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      encryption: dynamodb.TableEncryption.AWS_MANAGED,
+    });
+
+    usageRecordsTable.addGlobalSecondaryIndex({
+      indexName: 'gsi_tenant_date',
+      partitionKey: { name: 'tenant_id', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'created_at', type: dynamodb.AttributeType.STRING },
+      projectionType: dynamodb.ProjectionType.ALL,
+    });
+
     // Export table names and references
     this.tablesMap = {
       workflows: workflowsTable,
@@ -167,6 +184,7 @@ export class DatabaseStack extends cdk.Stack {
       artifacts: artifactsTable,
       templates: templatesTable,
       userSettings: userSettingsTable,
+      usageRecords: usageRecordsTable,
     };
 
     // CloudFormation outputs

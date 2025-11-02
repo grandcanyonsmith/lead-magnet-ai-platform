@@ -273,6 +273,15 @@ class ApiClient {
     return response.data
   }
 
+  // Billing & Usage
+  async getUsage(startDate?: string, endDate?: string) {
+    const params: any = {}
+    if (startDate) params.start_date = startDate
+    if (endDate) params.end_date = endDate
+    const response = await this.client.get('/admin/billing/usage', { params })
+    return response.data
+  }
+
   // Analytics
   async getAnalytics(params?: any) {
     const response = await this.client.get('/admin/analytics', { params })
