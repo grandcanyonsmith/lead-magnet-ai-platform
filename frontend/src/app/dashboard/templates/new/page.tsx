@@ -396,7 +396,7 @@ export default function NewTemplatePage() {
               Refine Template
             </h3>
             <p className="text-sm text-gray-600 mb-4">
-              Want changes? Describe what you'd like to modify, and AI will update the HTML for you.
+              Want changes? Describe what you&apos;d like to modify, and AI will update the HTML for you.
             </p>
             
             <div className="space-y-4">

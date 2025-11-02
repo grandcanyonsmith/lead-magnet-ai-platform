@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
-import { FiArrowLeft, FiSave, FiPlus, FiTrash2, FiMove } from 'react-icons/fi'
+import { FiArrowLeft, FiSave, FiPlus, FiTrash2, FiMove, FiEye, FiEdit2, FiZap } from 'react-icons/fi'
 
 type Workflow = {
   workflow_id: string
@@ -26,7 +26,12 @@ export default function NewFormPage() {
   const [workflows, setWorkflows] = useState<Workflow[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const [generating, setGenerating] = useState(false)
+  const [refining, setRefining] = useState(false)
+  const [generationStatus, setGenerationStatus] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [showPreview, setShowPreview] = useState(false)
+  const [cssPrompt, setCssPrompt] = useState('')
   
   const [formData, setFormData] = useState({
     workflow_id: '',
@@ -200,6 +205,254 @@ export default function NewFormPage() {
 
   const handleChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }))
+    // Auto-show preview when fields are added
+    if (field === 'form_fields_schema' && value.fields?.length > 0 && !showPreview) {
+      setShowPreview(true)
+    }
+  }
+
+  const handleGenerateCSS = async () => {
+    if (!cssPrompt.trim()) {
+      setError('Please describe what styling you want')
+      return
+    }
+
+    if (formData.form_fields_schema.fields.length === 0) {
+      setError('Please add at least one form field first')
+      return
+    }
+
+    console.log('[Form CSS Generation] Starting CSS generation...', {
+      cssPrompt: cssPrompt.trim(),
+      fieldCount: formData.form_fields_schema.fields.length,
+      timestamp: new Date().toISOString(),
+    })
+
+    setGenerating(true)
+    setError(null)
+    setGenerationStatus('Generating custom CSS...')
+
+    try {
+      const startTime = Date.now()
+      const result = await api.generateFormCSS(formData.form_fields_schema, cssPrompt.trim(), 'gpt-4o')
+      
+      const duration = Date.now() - startTime
+      console.log('[Form CSS Generation] Success!', {
+        duration: `${duration}ms`,
+        cssLength: result.css?.length || 0,
+        timestamp: new Date().toISOString(),
+      })
+
+      setGenerationStatus('CSS generated successfully!')
+      
+      setFormData(prev => ({
+        ...prev,
+        custom_css: result.css || prev.custom_css,
+      }))
+      
+      setCssPrompt('')
+      
+      setTimeout(() => {
+        setGenerationStatus(null)
+      }, 2000)
+    } catch (error: any) {
+      console.error('[Form CSS Generation] Failed:', error)
+      setError(error.response?.data?.message || error.message || 'Failed to generate CSS with AI')
+      setGenerationStatus(null)
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  const handleRefineCSS = async () => {
+    if (!cssPrompt.trim()) {
+      setError('Please describe what changes you want to make to the CSS')
+      return
+    }
+
+    if (!formData.custom_css.trim()) {
+      setError('No CSS to refine. Please generate CSS first or enter custom CSS.')
+      return
+    }
+
+    console.log('[Form CSS Refinement] Starting refinement...', {
+      cssPrompt: cssPrompt.trim(),
+      currentCssLength: formData.custom_css.length,
+      timestamp: new Date().toISOString(),
+    })
+
+    setRefining(true)
+    setError(null)
+    setGenerationStatus('Refining CSS based on your feedback...')
+
+    try {
+      const startTime = Date.now()
+      const result = await api.refineFormCSS(formData.custom_css, cssPrompt.trim(), 'gpt-4o')
+      
+      const duration = Date.now() - startTime
+      console.log('[Form CSS Refinement] Success!', {
+        duration: `${duration}ms`,
+        cssLength: result.css?.length || 0,
+        timestamp: new Date().toISOString(),
+      })
+
+      setGenerationStatus('CSS refined successfully!')
+      
+      setFormData(prev => ({
+        ...prev,
+        custom_css: result.css || prev.custom_css,
+      }))
+      
+      setCssPrompt('')
+      
+      setTimeout(() => {
+        setGenerationStatus(null)
+      }, 2000)
+    } catch (error: any) {
+      console.error('[Form CSS Refinement] Failed:', error)
+      setError(error.response?.data?.message || error.message || 'Failed to refine CSS with AI')
+      setGenerationStatus(null)
+    } finally {
+      setRefining(false)
+    }
+  }
+
+  // Generate preview HTML for the form
+  const getPreviewHtml = () => {
+    const fields = formData.form_fields_schema.fields || []
+    if (fields.length === 0) return ''
+
+    let html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${formData.form_name || 'Form Preview'}</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background-color: #f9fafb;
+      padding: 2rem;
+      margin: 0;
+    }
+    .form-container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    h1 {
+      font-size: 1.875rem;
+      font-weight: bold;
+      margin-bottom: 1rem;
+      color: #111827;
+    }
+    .form-field {
+      margin-bottom: 1.5rem;
+    }
+    label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+      color: #374151;
+    }
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"],
+    input[type="number"],
+    textarea,
+    select {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 0.5rem;
+      font-size: 1rem;
+      box-sizing: border-box;
+    }
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+    .required {
+      color: #ef4444;
+    }
+    button {
+      width: 100%;
+      padding: 0.75rem;
+      background-color: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 0.5rem;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      margin-top: 1rem;
+    }
+    button:hover {
+      background-color: #2563eb;
+    }
+    ${formData.custom_css || ''}
+  </style>
+</head>
+<body>
+  <div class="form-container">
+    <h1>${formData.form_name || 'Form Preview'}</h1>
+    <form>
+`
+
+    fields.forEach((field: FormField) => {
+      if (field.field_type !== 'checkbox') {
+        html += `      <div class="form-field">
+        <label for="${field.field_id}">
+          ${field.label}${field.required ? ' <span class="required">*</span>' : ''}
+        </label>\n`
+      }
+
+      switch (field.field_type) {
+        case 'textarea':
+          html += `        <textarea id="${field.field_id}" placeholder="${field.placeholder || ''}" ${field.required ? 'required' : ''} ${field.max_length ? `maxlength="${field.max_length}"` : ''}></textarea>\n`
+          break
+        case 'select':
+          html += `        <select id="${field.field_id}" ${field.required ? 'required' : ''}>\n          <option value="">Select an option...</option>\n`
+          field.options?.forEach(opt => {
+            html += `          <option value="${opt}">${opt}</option>\n`
+          })
+          html += `        </select>\n`
+          break
+        case 'checkbox':
+          html += `      <div class="form-field">
+        <label>
+          <input type="checkbox" id="${field.field_id}" ${field.required ? 'required' : ''} />
+          ${field.label}${field.required ? ' <span class="required">*</span>' : ''}
+        </label>
+      </div>\n`
+          break
+        default:
+          const inputType = field.field_type === 'email' ? 'email' : field.field_type === 'tel' ? 'tel' : field.field_type === 'number' ? 'number' : 'text'
+          html += `        <input type="${inputType}" id="${field.field_id}" placeholder="${field.placeholder || ''}" ${field.required ? 'required' : ''} ${field.max_length ? `maxlength="${field.max_length}"` : ''} ${field.validation_regex ? `pattern="${field.validation_regex}"` : ''} />\n`
+      }
+
+      if (field.field_type !== 'checkbox') {
+        html += `      </div>\n`
+      }
+    })
+
+    html += `      <button type="submit">Submit</button>
+    </form>
+  </div>
+</body>
+</html>`
+
+    return html
   }
 
   if (loading) {
@@ -545,6 +798,73 @@ export default function NewFormPage() {
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Custom CSS
           </label>
+          
+          {/* CSS Generation Section */}
+          <div className="mb-4 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-4">
+            <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center">
+              <FiZap className="w-4 h-4 mr-2 text-purple-600" />
+              Generate CSS with AI
+            </h4>
+            <div className="space-y-3">
+              <textarea
+                value={cssPrompt}
+                onChange={(e) => setCssPrompt(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                placeholder="e.g., Make the form modern with a gradient background, rounded inputs, and a blue submit button..."
+                rows={2}
+                disabled={generating || refining}
+              />
+              
+              {generationStatus && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 flex items-center">
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 mr-2"></div>
+                  <span className="text-xs text-blue-800 font-medium">{generationStatus}</span>
+                </div>
+              )}
+              
+              <div className="flex gap-2">
+                {formData.custom_css ? (
+                  <button
+                    type="button"
+                    onClick={handleRefineCSS}
+                    disabled={refining || generating || !cssPrompt.trim()}
+                    className="flex-1 flex items-center justify-center px-4 py-2 bg-gradient-to-r from-green-600 to-teal-600 text-white rounded-lg hover:from-green-700 hover:to-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                  >
+                    {refining ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        <span>Refining...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FiEdit2 className="w-4 h-4 mr-2" />
+                        <span>Refine CSS</span>
+                      </>
+                    )}
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={handleGenerateCSS}
+                  disabled={generating || refining || !cssPrompt.trim() || formData.form_fields_schema.fields.length === 0}
+                  className="flex-1 flex items-center justify-center px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                >
+                  {generating ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      <span>Generating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FiZap className="w-4 h-4 mr-2" />
+                      <span>Generate CSS</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+
           <textarea
             value={formData.custom_css}
             onChange={(e) => handleChange('custom_css', e.target.value)}
@@ -556,6 +876,36 @@ export default function NewFormPage() {
             Optional CSS to customize the form appearance
           </p>
         </div>
+
+        {/* Form Preview Section */}
+        {formData.form_fields_schema.fields.length > 0 && (
+          <div className="border border-gray-200 rounded-lg overflow-hidden">
+            <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-gray-900 flex items-center">
+                <FiEye className="w-4 h-4 mr-2" />
+                Form Preview
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowPreview(!showPreview)}
+                className="text-sm text-gray-600 hover:text-gray-900"
+              >
+                {showPreview ? 'Hide Preview' : 'Show Preview'}
+              </button>
+            </div>
+            {showPreview && (
+              <div className="bg-white border-t border-gray-200" style={{ height: '600px' }}>
+                <iframe
+                  key={`${formData.form_fields_schema.fields.length}-${formData.custom_css?.slice(0, 50)}`}
+                  srcDoc={getPreviewHtml()}
+                  className="w-full h-full border-0"
+                  title="Form Preview"
+                  sandbox="allow-same-origin"
+                />
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="flex justify-end space-x-4 pt-4 border-t">
           <button
