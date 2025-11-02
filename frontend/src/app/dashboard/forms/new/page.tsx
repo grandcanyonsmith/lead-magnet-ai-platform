@@ -220,8 +220,8 @@ export default function NewFormPage() {
           <FiArrowLeft className="w-4 h-4 mr-2" />
           Back
         </button>
-        <h1 className="text-2xl font-bold text-gray-900">Create Form</h1>
-        <p className="text-gray-600">Configure a new lead capture form</p>
+        <h1 className="text-2xl font-bold text-gray-900">Create Lead Capture Form</h1>
+        <p className="text-gray-600">Configure a form that collects lead information and triggers AI lead magnet generation</p>
       </div>
 
       {error && (
@@ -229,6 +229,13 @@ export default function NewFormPage() {
           {error}
         </div>
       )}
+
+      {/* Info Box */}
+      <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <p className="text-sm text-blue-800">
+          <strong>How it works:</strong> When leads submit this form, your AI lead magnet will be automatically generated and sent to them via your configured webhook (GoHighLevel).
+        </p>
+      </div>
 
       <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -564,7 +571,7 @@ export default function NewFormPage() {
             className="flex items-center px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <FiSave className="w-5 h-5 mr-2" />
-            {submitting ? 'Creating...' : 'Create Form'}
+            {submitting ? 'Creating...' : 'Create Lead Capture Form'}
           </button>
         </div>
       </form>

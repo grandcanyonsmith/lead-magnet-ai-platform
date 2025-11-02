@@ -63,7 +63,7 @@ export default function DashboardPage() {
   
   const stats = [
     {
-      label: 'Total Jobs',
+      label: 'Lead Magnets Generated',
       value: overview.total_jobs || 0,
       icon: FiActivity,
       color: 'blue',
@@ -113,7 +113,7 @@ export default function DashboardPage() {
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600">Overview of your lead magnet platform</p>
+        <p className="text-gray-600">Create and manage AI-powered lead magnets that convert leads 10x better</p>
       </div>
 
       {/* Stats Grid */}
@@ -143,14 +143,14 @@ export default function DashboardPage() {
             className="flex items-center justify-center px-4 py-3 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg hover:from-primary-700 hover:to-primary-800 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
           >
             <FiActivity className="w-5 h-5 mr-2" />
-            Create Workflow
+            Create Lead Magnet
           </a>
           <a
             href="/dashboard/forms/new"
             className="flex items-center justify-center px-4 py-3 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg hover:from-primary-700 hover:to-primary-800 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
           >
             <FiFileText className="w-5 h-5 mr-2" />
-            Create Form
+            Create Lead Capture Form
           </a>
           <a
             href="/dashboard/templates/new"
@@ -164,6 +164,16 @@ export default function DashboardPage() {
 
       {/* Additional Information */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-sm border border-blue-100 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-3">What Are AI Lead Magnets?</h2>
+          <p className="text-sm text-gray-700 mb-3 leading-relaxed">
+            AI lead magnets are personalized resources that use artificial intelligence to create custom content for each lead. Instead of sending a generic PDF, you send a personalized report generated specifically for that lead.
+          </p>
+          <p className="text-sm text-gray-700 font-semibold">
+            🚀 This approach is <strong>10x more effective</strong> at converting leads because it solves their specific problems!
+          </p>
+        </div>
+
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">System Overview</h2>
           <div className="space-y-4">
