@@ -230,17 +230,28 @@ class TemplatesController {
       const openai = await getOpenAIClient();
       console.log('[Template Refinement] OpenAI client initialized');
 
+      // Check if user wants to remove placeholders
+      const shouldRemovePlaceholders = edit_prompt.toLowerCase().includes('remove placeholder') || 
+                                       edit_prompt.toLowerCase().includes('no placeholder') ||
+                                       edit_prompt.toLowerCase().includes('dont use placeholder') ||
+                                       edit_prompt.toLowerCase().includes('don\'t use placeholder');
+      
       const prompt = `You are an expert HTML template designer. Modify the following HTML template based on these instructions: "${edit_prompt}"
 
 Current HTML:
 ${current_html}
 
 Requirements:
-1. Keep all placeholder syntax {{PLACEHOLDER_NAME}} exactly as they are
+${shouldRemovePlaceholders 
+  ? '1. REMOVE all placeholder syntax {{PLACEHOLDER_NAME}} and replace with actual content or remove the elements containing them'
+  : '1. Keep all placeholder syntax {{PLACEHOLDER_NAME}} exactly as they are'}
 2. Apply the requested changes while maintaining the overall structure
 3. Ensure the HTML remains valid and well-formed
 4. Keep modern, clean CSS styling
 5. Maintain responsiveness and mobile-friendliness
+${shouldRemovePlaceholders 
+  ? '6. Use real values instead of placeholders - replace {{TITLE}} with actual text, {{COLORS}} with real color values (e.g., #2d8659 for green), etc.'
+  : ''}
 
 Return ONLY the modified HTML code, no markdown formatting, no explanations.`;
 
@@ -255,7 +266,9 @@ Return ONLY the modified HTML code, no markdown formatting, no explanations.`;
         messages: [
           {
             role: 'system',
-            content: 'You are an expert HTML template designer. Return only valid HTML code without markdown formatting. Preserve all placeholder syntax {{PLACEHOLDER_NAME}} exactly.',
+            content: shouldRemovePlaceholders 
+              ? 'You are an expert HTML template designer. Return only valid HTML code without markdown formatting. REMOVE all placeholder syntax {{PLACEHOLDER_NAME}} and replace with actual content or real values (e.g., replace {{BRAND_COLORS}} with actual color codes like #2d8659).'
+              : 'You are an expert HTML template designer. Return only valid HTML code without markdown formatting. Preserve all placeholder syntax {{PLACEHOLDER_NAME}} exactly.',
           },
           {
             role: 'user',
