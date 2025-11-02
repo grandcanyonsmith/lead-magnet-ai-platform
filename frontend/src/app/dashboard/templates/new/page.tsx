@@ -3,12 +3,14 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
-import { FiArrowLeft, FiSave } from 'react-icons/fi'
+import { FiArrowLeft, FiSave, FiSparkles } from 'react-icons/fi'
 
 export default function NewTemplatePage() {
   const router = useRouter()
   const [submitting, setSubmitting] = useState(false)
+  const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [aiDescription, setAiDescription] = useState('')
   const [detectedPlaceholders, setDetectedPlaceholders] = useState<string[]>([])
   
   const [formData, setFormData] = useState({
@@ -71,6 +73,38 @@ export default function NewTemplatePage() {
     }
   }
 
+  const handleGenerateWithAI = async () => {
+    if (!aiDescription.trim()) {
+      setError('Please describe what you want the template to look like')
+      return
+    }
+
+    setGenerating(true)
+    setError(null)
+
+    try {
+      const result = await api.generateTemplateWithAI(aiDescription.trim())
+      
+      setFormData({
+        template_name: result.template_name || 'Generated Template',
+        template_description: result.template_description || '',
+        html_content: result.html_content || '',
+        is_published: false,
+      })
+      
+      const placeholders = result.placeholder_tags || []
+      setDetectedPlaceholders(placeholders)
+      
+      // Clear the description after successful generation
+      setAiDescription('')
+    } catch (error: any) {
+      console.error('Failed to generate template:', error)
+      setError(error.response?.data?.message || error.message || 'Failed to generate template with AI')
+    } finally {
+      setGenerating(false)
+    }
+  }
+
   const handleChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
@@ -94,6 +128,41 @@ export default function NewTemplatePage() {
           {error}
         </div>
       )}
+
+      {/* AI Generation Section */}
+      <div className="mb-6 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-6">
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center">
+              <FiSparkles className="w-5 h-5 mr-2 text-purple-600" />
+              Generate with AI
+            </h3>
+            <p className="text-sm text-gray-600">
+              Describe what you want your template to look like, and AI will generate the name, description, and HTML for you.
+            </p>
+          </div>
+        </div>
+        
+        <div className="space-y-4">
+          <textarea
+            value={aiDescription}
+            onChange={(e) => setAiDescription(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+            placeholder="e.g., A modern, professional email template for course idea validation reports with a clean header, content sections, and call-to-action buttons. Use a blue and white color scheme."
+            rows={4}
+            disabled={generating}
+          />
+          <button
+            type="button"
+            onClick={handleGenerateWithAI}
+            disabled={generating || !aiDescription.trim()}
+            className="flex items-center px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <FiSparkles className="w-5 h-5 mr-2" />
+            {generating ? 'Generating...' : 'Generate Template'}
+          </button>
+        </div>
+      </div>
 
       <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 space-y-6">
         <div>

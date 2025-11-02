@@ -12,8 +12,6 @@ export const createWorkflowSchema = z.object({
   html_enabled: z.boolean().default(true),
   template_id: z.string().optional(),
   template_version: z.number().default(0),
-  delivery_webhook_url: z.string().url().optional(),
-  delivery_phone: z.string().optional(),
 });
 
 export const updateWorkflowSchema = createWorkflowSchema.partial();
@@ -72,6 +70,8 @@ export const updateSettingsSchema = z.object({
     .optional(),
   default_ai_model: z.string().optional(),
   webhooks: z.array(z.string().url()).optional(),
+  ghl_webhook_url: z.string().url().optional(),
+  lead_phone_field: z.string().optional(),
 });
 
 // Form submission schema

@@ -203,15 +203,20 @@ class JobProcessor:
                 'artifacts': artifacts_list
             })
             
-            # Step 6: Deliver via webhook if configured
-            if workflow.get('delivery_webhook_url'):
+            # Step 6: Deliver via webhook if configured (from settings)
+            settings = self.db.get_settings(job['tenant_id'])
+            webhook_url = settings.get('ghl_webhook_url') if settings else None
+            
+            if webhook_url:
                 logger.info("Step 6: Sending webhook notification")
                 self.send_webhook_notification(
-                    workflow['delivery_webhook_url'],
+                    webhook_url,
                     job_id,
                     public_url,
                     submission
                 )
+            else:
+                logger.info("Step 6: No webhook URL configured in settings, skipping delivery")
             
             logger.info(f"Job {job_id} completed successfully")
             return {

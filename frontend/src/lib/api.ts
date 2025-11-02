@@ -176,6 +176,14 @@ class ApiClient {
     return response.data
   }
 
+  async generateTemplateWithAI(description: string, model: string = 'gpt-4o') {
+    const response = await this.client.post('/admin/templates/generate', {
+      description,
+      model,
+    })
+    return response.data
+  }
+
   // Jobs
   async getJobs(params?: any) {
     const response = await this.client.get('/admin/jobs', { params })

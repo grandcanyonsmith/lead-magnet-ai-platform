@@ -114,6 +114,10 @@ export const router = async (
     return await templatesController.delete(tenantId, id);
   }
 
+  if (path === '/admin/templates/generate' && method === 'POST') {
+    return await templatesController.generateWithAI(tenantId, body);
+  }
+
   // Admin routes - Jobs
   if (path === '/admin/jobs' && method === 'GET') {
     return await jobsController.list(tenantId, queryParams);
