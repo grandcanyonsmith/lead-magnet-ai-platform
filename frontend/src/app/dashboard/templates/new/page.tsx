@@ -3,15 +3,18 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
-import { FiArrowLeft, FiSave, FiZap } from 'react-icons/fi'
+import { FiArrowLeft, FiSave, FiZap, FiEdit2, FiEye } from 'react-icons/fi'
 
 export default function NewTemplatePage() {
   const router = useRouter()
   const [submitting, setSubmitting] = useState(false)
   const [generating, setGenerating] = useState(false)
+  const [refining, setRefining] = useState(false)
   const [generationStatus, setGenerationStatus] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [aiDescription, setAiDescription] = useState('')
+  const [editPrompt, setEditPrompt] = useState('')
+  const [showPreview, setShowPreview] = useState(false)
   const [detectedPlaceholders, setDetectedPlaceholders] = useState<string[]>([])
   
   const [formData, setFormData] = useState({
@@ -35,6 +38,10 @@ export default function NewTemplatePage() {
     setFormData(prev => ({ ...prev, html_content: html }))
     const placeholders = extractPlaceholders(html)
     setDetectedPlaceholders(placeholders)
+    // Auto-show preview when HTML is added
+    if (html.trim() && !showPreview) {
+      setShowPreview(true)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -94,7 +101,7 @@ export default function NewTemplatePage() {
       console.log('[Template Generation] Calling API...')
       setGenerationStatus('Generating HTML template...')
 
-      const result = await api.generateTemplateWithAI(aiDescription.trim())
+      const result = await api.generateTemplateWithAI(aiDescription.trim(), 'gpt-4o')
       
       const duration = Date.now() - startTime
       console.log('[Template Generation] Success!', {
@@ -118,6 +125,9 @@ export default function NewTemplatePage() {
       
       const placeholders = result.placeholder_tags || []
       setDetectedPlaceholders(placeholders)
+      
+      // Auto-show preview after generation
+      setShowPreview(true)
       
       // Clear the description after successful generation
       setAiDescription('')
@@ -145,6 +155,105 @@ export default function NewTemplatePage() {
 
   const handleChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }))
+    if (field === 'html_content') {
+      handleHtmlChange(value)
+    }
+  }
+
+  const handleRefine = async () => {
+    if (!editPrompt.trim()) {
+      setError('Please describe what changes you want to make')
+      return
+    }
+
+    if (!formData.html_content.trim()) {
+      setError('No HTML content to refine. Please generate a template first.')
+      return
+    }
+
+    console.log('[Template Refinement] Starting refinement...', {
+      editPrompt: editPrompt.trim(),
+      currentHtmlLength: formData.html_content.length,
+      timestamp: new Date().toISOString(),
+    })
+
+    setRefining(true)
+    setError(null)
+    setGenerationStatus('Refining template based on your feedback...')
+
+    try {
+      const startTime = Date.now()
+      const result = await api.refineTemplateWithAI(formData.html_content, editPrompt.trim(), 'gpt-4o')
+      
+      const duration = Date.now() - startTime
+      console.log('[Template Refinement] Success!', {
+        duration: `${duration}ms`,
+        htmlLength: result.html_content?.length || 0,
+        placeholderCount: result.placeholder_tags?.length || 0,
+        timestamp: new Date().toISOString(),
+      })
+
+      setGenerationStatus('Template refined successfully!')
+      
+      setFormData(prev => ({
+        ...prev,
+        html_content: result.html_content || prev.html_content,
+      }))
+      
+      const placeholders = result.placeholder_tags || []
+      setDetectedPlaceholders(placeholders)
+      
+      // Clear the edit prompt
+      setEditPrompt('')
+      
+      // Clear status after a short delay
+      setTimeout(() => {
+        setGenerationStatus(null)
+      }, 2000)
+    } catch (error: any) {
+      const errorDetails = {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        timestamp: new Date().toISOString(),
+      }
+      console.error('[Template Refinement] Failed:', errorDetails)
+      console.error('[Template Refinement] Full error:', error)
+      
+      setError(error.response?.data?.message || error.message || 'Failed to refine template with AI')
+      setGenerationStatus(null)
+    } finally {
+      setRefining(false)
+    }
+  }
+
+  // Generate preview HTML with sample data
+  const getPreviewHtml = () => {
+    if (!formData.html_content.trim()) return ''
+    
+    let previewHtml = formData.html_content
+    
+    // Replace placeholders with sample data
+    const sampleData: Record<string, string> = {
+      TITLE: 'Sample Lead Magnet Title',
+      CONTENT: 'This is sample content that will be replaced with your actual lead magnet content when the template is used.',
+      AUTHOR_NAME: 'John Doe',
+      COMPANY_NAME: 'Your Company',
+      DATE: new Date().toLocaleDateString(),
+      EMAIL: 'user@example.com',
+      PHONE: '+1 (555) 123-4567',
+    }
+    
+    // Replace all placeholders
+    Object.keys(sampleData).forEach(key => {
+      const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g')
+      previewHtml = previewHtml.replace(regex, sampleData[key])
+    })
+    
+    // Replace any remaining placeholders with generic text
+    previewHtml = previewHtml.replace(/\{\{([A-Z_]+)\}\}/g, '[$1]')
+    
+    return previewHtml
   }
 
   return (
@@ -248,6 +357,79 @@ export default function NewTemplatePage() {
             maxLength={1000}
           />
         </div>
+
+        {/* Preview Section */}
+        {formData.html_content.trim() && (
+          <div className="border border-gray-200 rounded-lg overflow-hidden">
+            <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-gray-900 flex items-center">
+                <FiEye className="w-4 h-4 mr-2" />
+                HTML Preview
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowPreview(!showPreview)}
+                className="text-sm text-gray-600 hover:text-gray-900"
+              >
+                {showPreview ? 'Hide Preview' : 'Show Preview'}
+              </button>
+            </div>
+            {showPreview && (
+              <div className="bg-white border-t border-gray-200" style={{ height: '600px' }}>
+                <iframe
+                  key={formData.html_content.slice(0, 100)} // Force re-render when HTML changes
+                  srcDoc={getPreviewHtml()}
+                  className="w-full h-full border-0"
+                  title="HTML Preview"
+                  sandbox="allow-same-origin"
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Edit/Refine Section */}
+        {formData.html_content.trim() && (
+          <div className="bg-gradient-to-r from-green-50 to-teal-50 border border-green-200 rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center">
+              <FiEdit2 className="w-5 h-5 mr-2 text-green-600" />
+              Refine Template
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Want changes? Describe what you'd like to modify, and AI will update the HTML for you.
+            </p>
+            
+            <div className="space-y-4">
+              <textarea
+                value={editPrompt}
+                onChange={(e) => setEditPrompt(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                placeholder="e.g., Make the colors more vibrant, add a footer section, make the header larger, change the font to a sans-serif typeface..."
+                rows={3}
+                disabled={refining}
+              />
+              
+              <button
+                type="button"
+                onClick={handleRefine}
+                disabled={refining || !editPrompt.trim()}
+                className="flex items-center justify-center px-6 py-2 bg-gradient-to-r from-green-600 to-teal-600 text-white rounded-lg hover:from-green-700 hover:to-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {refining ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    <span>Refining...</span>
+                  </>
+                ) : (
+                  <>
+                    <FiEdit2 className="w-5 h-5 mr-2" />
+                    <span>Apply Changes</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">

@@ -113,6 +113,11 @@ export const router = async (
     return await templatesController.generateWithAI(tenantId, body);
   }
 
+  if (path === '/admin/templates/refine' && method === 'POST') {
+    console.log('[Router] Matched /admin/templates/refine route');
+    return await templatesController.refineWithAI(tenantId, body);
+  }
+
   if (path.match(/^\/admin\/templates\/[^/]+$/) && method === 'GET') {
     const id = pathSegments[2];
     return await templatesController.get(tenantId, id);

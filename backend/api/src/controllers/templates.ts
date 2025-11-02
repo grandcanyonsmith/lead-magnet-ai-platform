@@ -207,6 +207,126 @@ class TemplatesController {
     return Array.from(placeholders);
   }
 
+  async refineWithAI(tenantId: string, body: any): Promise<RouteResponse> {
+    const { current_html, edit_prompt, model = 'gpt-4o' } = body;
+
+    if (!current_html || !current_html.trim()) {
+      throw new ApiError('Current HTML content is required', 400);
+    }
+
+    if (!edit_prompt || !edit_prompt.trim()) {
+      throw new ApiError('Edit prompt is required', 400);
+    }
+
+    console.log('[Template Refinement] Starting refinement', {
+      tenantId,
+      model,
+      currentHtmlLength: current_html.length,
+      editPromptLength: edit_prompt.length,
+      timestamp: new Date().toISOString(),
+    });
+
+    try {
+      const openai = await getOpenAIClient();
+      console.log('[Template Refinement] OpenAI client initialized');
+
+      const prompt = `You are an expert HTML template designer. Modify the following HTML template based on these instructions: "${edit_prompt}"
+
+Current HTML:
+${current_html}
+
+Requirements:
+1. Keep all placeholder syntax {{PLACEHOLDER_NAME}} exactly as they are
+2. Apply the requested changes while maintaining the overall structure
+3. Ensure the HTML remains valid and well-formed
+4. Keep modern, clean CSS styling
+5. Maintain responsiveness and mobile-friendliness
+
+Return ONLY the modified HTML code, no markdown formatting, no explanations.`;
+
+      console.log('[Template Refinement] Calling OpenAI for refinement...', {
+        model,
+        promptLength: prompt.length,
+      });
+
+      const refineStartTime = Date.now();
+      const completion = await openai.chat.completions.create({
+        model,
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert HTML template designer. Return only valid HTML code without markdown formatting. Preserve all placeholder syntax {{PLACEHOLDER_NAME}} exactly.',
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 4000,
+      });
+
+      const refineDuration = Date.now() - refineStartTime;
+      console.log('[Template Refinement] Refinement completed', {
+        duration: `${refineDuration}ms`,
+        tokensUsed: completion.usage?.total_tokens,
+        model: completion.model,
+      });
+
+      const htmlContent = completion.choices[0]?.message?.content || '';
+      console.log('[Template Refinement] Refined HTML received', {
+        htmlLength: htmlContent.length,
+        firstChars: htmlContent.substring(0, 100),
+      });
+      
+      // Clean up markdown code blocks if present
+      let cleanedHtml = htmlContent.trim();
+      if (cleanedHtml.startsWith('```html')) {
+        cleanedHtml = cleanedHtml.replace(/^```html\s*/i, '').replace(/\s*```$/i, '');
+        console.log('[Template Refinement] Removed ```html markers');
+      } else if (cleanedHtml.startsWith('```')) {
+        cleanedHtml = cleanedHtml.replace(/^```\s*/i, '').replace(/\s*```$/i, '');
+        console.log('[Template Refinement] Removed ``` markers');
+      }
+
+      // Extract placeholder tags
+      const placeholderTags = this.extractPlaceholders(cleanedHtml);
+      console.log('[Template Refinement] Extracted placeholders', {
+        placeholderCount: placeholderTags.length,
+        placeholders: placeholderTags,
+      });
+
+      const totalDuration = Date.now() - refineStartTime;
+      console.log('[Template Refinement] Success!', {
+        tenantId,
+        htmlLength: cleanedHtml.length,
+        placeholderCount: placeholderTags.length,
+        totalDuration: `${totalDuration}ms`,
+        timestamp: new Date().toISOString(),
+      });
+
+      return {
+        statusCode: 200,
+        body: {
+          html_content: cleanedHtml,
+          placeholder_tags: placeholderTags,
+        },
+      };
+    } catch (error: any) {
+      console.error('[Template Refinement] Error occurred', {
+        tenantId,
+        errorMessage: error.message,
+        errorName: error.name,
+        errorStack: error.stack,
+        timestamp: new Date().toISOString(),
+      });
+      throw new ApiError(
+        error.message || 'Failed to refine template with AI',
+        500
+      );
+    }
+  }
+
   async generateWithAI(tenantId: string, body: any): Promise<RouteResponse> {
     const { description, model = 'gpt-4o' } = body;
 

@@ -184,6 +184,15 @@ class ApiClient {
     return response.data
   }
 
+  async refineTemplateWithAI(currentHtml: string, editPrompt: string, model: string = 'gpt-4o') {
+    const response = await this.client.post('/admin/templates/refine', {
+      current_html: currentHtml,
+      edit_prompt: editPrompt,
+      model,
+    })
+    return response.data
+  }
+
   // Jobs
   async getJobs(params?: any) {
     const response = await this.client.get('/admin/jobs', { params })
