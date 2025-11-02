@@ -13,10 +13,24 @@ const secretsClient = new SecretsManagerClient({ region: process.env.AWS_REGION 
 async function getOpenAIClient(): Promise<OpenAI> {
   const command = new GetSecretValueCommand({ SecretId: OPENAI_SECRET_NAME });
   const response = await secretsClient.send(command);
-  const apiKey = JSON.parse(response.SecretString || '{}').OPENAI_API_KEY || response.SecretString;
   
-  if (!apiKey) {
-    throw new ApiError('OpenAI API key not found', 500);
+  if (!response.SecretString) {
+    throw new ApiError('OpenAI API key not found in secret', 500);
+  }
+
+  let apiKey: string;
+  
+  // Try to parse as JSON first (if secret is stored as {"OPENAI_API_KEY": "..."})
+  try {
+    const parsed = JSON.parse(response.SecretString);
+    apiKey = parsed.OPENAI_API_KEY || parsed.apiKey || response.SecretString;
+  } catch {
+    // If not JSON, use the secret string directly
+    apiKey = response.SecretString;
+  }
+  
+  if (!apiKey || apiKey.trim().length === 0) {
+    throw new ApiError('OpenAI API key is empty', 500);
   }
 
   return new OpenAI({ apiKey });
