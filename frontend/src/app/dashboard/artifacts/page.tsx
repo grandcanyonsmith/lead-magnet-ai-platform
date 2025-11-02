@@ -100,7 +100,19 @@ export default function ArtifactsPage() {
                     <div className="flex items-center">
                       <FiFileText className="w-4 h-4 text-gray-500 mr-2" />
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{a.file_name || a.artifact_id}</div>
+                        {a.object_url ? (
+                          <a
+                            href={a.object_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm font-medium text-primary-600 hover:text-primary-900 hover:underline"
+                            title="Click to preview"
+                          >
+                            {a.file_name || a.artifact_id}
+                          </a>
+                        ) : (
+                          <div className="text-sm font-medium text-gray-900">{a.file_name || a.artifact_id}</div>
+                        )}
                         {a.content_type && (
                           <div className="text-xs text-gray-500">{a.content_type}</div>
                         )}
@@ -123,42 +135,44 @@ export default function ArtifactsPage() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {a.created_at ? new Date(a.created_at).toLocaleString() : '-'}
                   </td>
-                  <td className="px-6 py-4 text-sm max-w-md truncate">
+                  <td className="px-6 py-4 text-sm max-w-md">
                     {a.object_url ? (
                       <a
                         href={a.object_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-primary-600 hover:text-primary-900 break-all"
+                        className="text-primary-600 hover:text-primary-900 break-all hover:underline"
                         title={a.object_url}
                       >
-                        {a.object_url}
+                        <span className="truncate block max-w-md">{a.object_url}</span>
                       </a>
                     ) : (
                       <span className="text-gray-400">-</span>
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    {a.object_url && (
+                    {a.object_url ? (
                       <div className="flex items-center justify-end space-x-3">
                         <a
                           href={a.object_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-primary-600 hover:text-primary-900"
-                          title="Open"
+                          className="text-primary-600 hover:text-primary-900 p-1 rounded hover:bg-gray-100"
+                          title="Preview in new tab"
                         >
                           <FiExternalLink className="w-5 h-5" />
                         </a>
                         <a
                           href={a.object_url}
-                          download
-                          className="text-primary-600 hover:text-primary-900"
+                          download={a.file_name || `${a.artifact_id}.${a.content_type?.split('/')[1] || 'txt'}`}
+                          className="text-primary-600 hover:text-primary-900 p-1 rounded hover:bg-gray-100"
                           title="Download"
                         >
                           <FiDownload className="w-5 h-5" />
                         </a>
                       </div>
+                    ) : (
+                      <span className="text-gray-400">-</span>
                     )}
                   </td>
                 </tr>
