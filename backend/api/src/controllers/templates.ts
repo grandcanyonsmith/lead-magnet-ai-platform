@@ -200,8 +200,16 @@ class TemplatesController {
       throw new ApiError('Description is required', 400);
     }
 
+    console.log('[Template Generation] Starting AI generation', {
+      tenantId,
+      model,
+      descriptionLength: description.length,
+      timestamp: new Date().toISOString(),
+    });
+
     try {
       const openai = await getOpenAIClient();
+      console.log('[Template Generation] OpenAI client initialized');
 
       const prompt = `You are an expert HTML template designer for lead magnets. Create a professional HTML template based on this description: "${description}"
 
@@ -216,6 +224,12 @@ Requirements:
 
 Return ONLY the HTML code, no markdown formatting, no explanations.`;
 
+      console.log('[Template Generation] Calling OpenAI for HTML generation...', {
+        model,
+        promptLength: prompt.length,
+      });
+
+      const htmlStartTime = Date.now();
       const completion = await openai.chat.completions.create({
         model,
         messages: [
@@ -232,18 +246,35 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
         max_tokens: 4000,
       });
 
+      const htmlDuration = Date.now() - htmlStartTime;
+      console.log('[Template Generation] HTML generation completed', {
+        duration: `${htmlDuration}ms`,
+        tokensUsed: completion.usage?.total_tokens,
+        model: completion.model,
+      });
+
       const htmlContent = completion.choices[0]?.message?.content || '';
+      console.log('[Template Generation] Raw HTML received', {
+        htmlLength: htmlContent.length,
+        firstChars: htmlContent.substring(0, 100),
+      });
       
       // Clean up markdown code blocks if present
       let cleanedHtml = htmlContent.trim();
       if (cleanedHtml.startsWith('```html')) {
         cleanedHtml = cleanedHtml.replace(/^```html\s*/i, '').replace(/\s*```$/i, '');
+        console.log('[Template Generation] Removed ```html markers');
       } else if (cleanedHtml.startsWith('```')) {
         cleanedHtml = cleanedHtml.replace(/^```\s*/i, '').replace(/\s*```$/i, '');
+        console.log('[Template Generation] Removed ``` markers');
       }
 
       // Extract placeholder tags
       const placeholderTags = this.extractPlaceholders(cleanedHtml);
+      console.log('[Template Generation] Extracted placeholders', {
+        placeholderCount: placeholderTags.length,
+        placeholders: placeholderTags,
+      });
 
       // Generate template name and description
       const namePrompt = `Based on this template description: "${description}", generate:
@@ -252,6 +283,8 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
 
 Return JSON format: {"name": "...", "description": "..."}`;
 
+      console.log('[Template Generation] Calling OpenAI for name/description generation...');
+      const nameStartTime = Date.now();
       const nameCompletion = await openai.chat.completions.create({
         model,
         messages: [
@@ -262,6 +295,12 @@ Return JSON format: {"name": "...", "description": "..."}`;
         ],
         temperature: 0.5,
         max_tokens: 200,
+      });
+
+      const nameDuration = Date.now() - nameStartTime;
+      console.log('[Template Generation] Name/description generation completed', {
+        duration: `${nameDuration}ms`,
+        tokensUsed: nameCompletion.usage?.total_tokens,
       });
 
       const nameContent = nameCompletion.choices[0]?.message?.content || '';
@@ -275,11 +314,29 @@ Return JSON format: {"name": "...", "description": "..."}`;
           const parsed = JSON.parse(jsonMatch[0]);
           templateName = parsed.name || templateName;
           templateDescription = parsed.description || templateDescription;
+          console.log('[Template Generation] Parsed name/description from JSON', {
+            templateName,
+            templateDescriptionLength: templateDescription.length,
+          });
         }
       } catch (e) {
         // If JSON parsing fails, use defaults
         templateName = description.split(' ').slice(0, 3).join(' ') + ' Template';
+        console.log('[Template Generation] JSON parsing failed, using fallback', {
+          error: e instanceof Error ? e.message : String(e),
+          fallbackName: templateName,
+        });
       }
+
+      const totalDuration = Date.now() - htmlStartTime;
+      console.log('[Template Generation] Success!', {
+        tenantId,
+        templateName,
+        htmlLength: cleanedHtml.length,
+        placeholderCount: placeholderTags.length,
+        totalDuration: `${totalDuration}ms`,
+        timestamp: new Date().toISOString(),
+      });
 
       return {
         statusCode: 200,
@@ -291,7 +348,13 @@ Return JSON format: {"name": "...", "description": "..."}`;
         },
       };
     } catch (error: any) {
-      console.error('Failed to generate template with AI:', error);
+      console.error('[Template Generation] Error occurred', {
+        tenantId,
+        errorMessage: error.message,
+        errorName: error.name,
+        errorStack: error.stack,
+        timestamp: new Date().toISOString(),
+      });
       throw new ApiError(
         error.message || 'Failed to generate template with AI',
         500
