@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
-import { FiArrowLeft, FiSave } from 'react-icons/fi'
+import { FiArrowLeft, FiSave, FiEdit2, FiZap } from 'react-icons/fi'
 
 type Template = {
   template_id: string
@@ -16,7 +16,10 @@ export default function NewWorkflowPage() {
   const [templates, setTemplates] = useState<Template[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const [refining, setRefining] = useState(false)
+  const [generationStatus, setGenerationStatus] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [instructionPrompt, setInstructionPrompt] = useState('')
   
   const [formData, setFormData] = useState({
     workflow_name: '',
@@ -107,6 +110,64 @@ export default function NewWorkflowPage() {
 
   const handleChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }))
+  }
+
+  const handleRefineInstructions = async () => {
+    if (!instructionPrompt.trim()) {
+      setError('Please describe what changes you want to make to the instructions')
+      return
+    }
+
+    if (!formData.ai_instructions.trim()) {
+      setError('No instructions to refine. Please enter research instructions first.')
+      return
+    }
+
+    console.log('[Workflow Instructions Refinement] Starting refinement...', {
+      instructionPrompt: instructionPrompt.trim(),
+      currentInstructionsLength: formData.ai_instructions.length,
+      timestamp: new Date().toISOString(),
+    })
+
+    setRefining(true)
+    setError(null)
+    setGenerationStatus('Refining instructions based on your feedback...')
+
+    try {
+      const startTime = Date.now()
+      // Use a general instruction refinement endpoint that doesn't require workflow_id
+      const result = await api.refineInstructions(
+        formData.ai_instructions,
+        instructionPrompt.trim(),
+        'gpt-4o'
+      )
+      
+      const duration = Date.now() - startTime
+      console.log('[Workflow Instructions Refinement] Success!', {
+        duration: `${duration}ms`,
+        instructionsLength: result.instructions?.length || 0,
+        timestamp: new Date().toISOString(),
+      })
+
+      setGenerationStatus('Instructions refined successfully!')
+      
+      setFormData(prev => ({
+        ...prev,
+        ai_instructions: result.instructions || prev.ai_instructions,
+      }))
+      
+      setInstructionPrompt('')
+      
+      setTimeout(() => {
+        setGenerationStatus(null)
+      }, 2000)
+    } catch (error: any) {
+      console.error('[Workflow Instructions Refinement] Failed:', error)
+      setError(error.response?.data?.message || error.message || 'Failed to refine instructions with AI')
+      setGenerationStatus(null)
+    } finally {
+      setRefining(false)
+    }
   }
 
   // Update template_version when template_id changes
@@ -241,6 +302,53 @@ export default function NewWorkflowPage() {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Research Instructions <span className="text-red-500">*</span>
             </label>
+            
+            {/* Refine Instructions Section */}
+            {formData.ai_instructions.trim() && (
+              <div className="mb-4 bg-gradient-to-r from-green-50 to-teal-50 border border-green-200 rounded-lg p-4">
+                <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center">
+                  <FiEdit2 className="w-4 h-4 mr-2 text-green-600" />
+                  Refine Instructions
+                </h4>
+                <div className="space-y-3">
+                  <textarea
+                    value={instructionPrompt}
+                    onChange={(e) => setInstructionPrompt(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    placeholder="e.g., Make it more detailed, add a section about pricing, focus more on competition analysis..."
+                    rows={2}
+                    disabled={refining}
+                  />
+                  
+                  {generationStatus && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 flex items-center">
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 mr-2"></div>
+                      <span className="text-xs text-blue-800 font-medium">{generationStatus}</span>
+                    </div>
+                  )}
+                  
+                  <button
+                    type="button"
+                    onClick={handleRefineInstructions}
+                    disabled={refining || !instructionPrompt.trim()}
+                    className="w-full flex items-center justify-center px-4 py-2 bg-gradient-to-r from-green-600 to-teal-600 text-white rounded-lg hover:from-green-700 hover:to-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                  >
+                    {refining ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        <span>Refining...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FiEdit2 className="w-4 h-4 mr-2" />
+                        <span>Apply Changes</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+            
             <textarea
               value={formData.ai_instructions}
               onChange={(e) => handleChange('ai_instructions', e.target.value)}
