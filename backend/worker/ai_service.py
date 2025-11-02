@@ -5,10 +5,13 @@ Handles OpenAI API interactions for report generation and HTML rewriting.
 
 import os
 import logging
-from typing import Optional
+from typing import Optional, Dict, Tuple
 import boto3
 import json
+from datetime import datetime
+from ulid import new as ulid
 from openai import OpenAI
+from cost_service import calculate_openai_cost
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +61,7 @@ class AIService:
         instructions: str,
         context: str,
         max_tokens: int = 4000
-    ) -> str:
+    ) -> Tuple[str, Dict]:
         """
         Generate a report using OpenAI.
         
@@ -69,7 +72,7 @@ class AIService:
             max_tokens: Maximum tokens to generate
             
         Returns:
-            Generated report content
+            Tuple of (generated report content, usage info dict)
         """
         logger.info(f"Generating report with model: {model}")
         
@@ -100,7 +103,23 @@ class AIService:
                 f"(prompt: {usage.prompt_tokens}, completion: {usage.completion_tokens})"
             )
             
-            return report
+            # Calculate cost
+            cost_data = calculate_openai_cost(
+                model,
+                usage.prompt_tokens or 0,
+                usage.completion_tokens or 0
+            )
+            
+            usage_info = {
+                'model': model,
+                'input_tokens': usage.prompt_tokens or 0,
+                'output_tokens': usage.completion_tokens or 0,
+                'total_tokens': usage.total_tokens or 0,
+                'cost_usd': cost_data['cost_usd'],
+                'service_type': 'openai_worker_report',
+            }
+            
+            return report, usage_info
             
         except Exception as e:
             error_type = type(e).__name__
@@ -128,7 +147,7 @@ class AIService:
         ai_instructions: str = '',
         model: str = 'gpt-4o',
         max_tokens: int = 8000
-    ) -> str:
+    ) -> Tuple[str, Dict]:
         """
         Generate HTML document directly from submission data and template.
         
@@ -215,6 +234,22 @@ Generate a complete HTML document that:
                 f"(prompt: {usage.prompt_tokens}, completion: {usage.completion_tokens})"
             )
             
+            # Calculate cost
+            cost_data = calculate_openai_cost(
+                model,
+                usage.prompt_tokens or 0,
+                usage.completion_tokens or 0
+            )
+            
+            usage_info = {
+                'model': model,
+                'input_tokens': usage.prompt_tokens or 0,
+                'output_tokens': usage.completion_tokens or 0,
+                'total_tokens': usage.total_tokens or 0,
+                'cost_usd': cost_data['cost_usd'],
+                'service_type': 'openai_worker_html',
+            }
+            
             # Clean up markdown code blocks if present
             if html_content.startswith('```html'):
                 html_content = html_content.replace('```html', '').replace('```', '').strip()
@@ -223,7 +258,7 @@ Generate a complete HTML document that:
                 if html_content.startswith('html'):
                     html_content = html_content[4:].strip()
             
-            return html_content
+            return html_content, usage_info
             
         except Exception as e:
             error_type = type(e).__name__
@@ -247,7 +282,7 @@ Generate a complete HTML document that:
         submission_data: dict = None,
         model: str = 'gpt-4o',
         max_tokens: int = 8000
-    ) -> str:
+    ) -> Tuple[str, Dict]:
         """
         Generate styled HTML document from research content and template.
         
@@ -335,6 +370,22 @@ Generate a complete HTML document that:
                 f"(prompt: {usage.prompt_tokens}, completion: {usage.completion_tokens})"
             )
             
+            # Calculate cost
+            cost_data = calculate_openai_cost(
+                model,
+                usage.prompt_tokens or 0,
+                usage.completion_tokens or 0
+            )
+            
+            usage_info = {
+                'model': model,
+                'input_tokens': usage.prompt_tokens or 0,
+                'output_tokens': usage.completion_tokens or 0,
+                'total_tokens': usage.total_tokens or 0,
+                'cost_usd': cost_data['cost_usd'],
+                'service_type': 'openai_worker_html',
+            }
+            
             # Clean up markdown code blocks if present
             if html_content.startswith('```html'):
                 html_content = html_content.replace('```html', '').replace('```', '').strip()
@@ -343,7 +394,7 @@ Generate a complete HTML document that:
                 if html_content.startswith('html'):
                     html_content = html_content[4:].strip()
             
-            return html_content
+            return html_content, usage_info
             
         except Exception as e:
             error_type = type(e).__name__

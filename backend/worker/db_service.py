@@ -27,6 +27,7 @@ class DynamoDBService:
         self.artifacts_table = self.dynamodb.Table(os.environ['ARTIFACTS_TABLE'])
         self.templates_table = self.dynamodb.Table(os.environ['TEMPLATES_TABLE'])
         self.user_settings_table = self.dynamodb.Table(os.environ.get('USER_SETTINGS_TABLE', 'user_settings'))
+        self.usage_records_table = self.dynamodb.Table(os.environ.get('USAGE_RECORDS_TABLE', 'leadmagnet-usage-records'))
     
     def get_job(self, job_id: str) -> Optional[Dict[str, Any]]:
         """Get job by ID."""
@@ -124,4 +125,14 @@ class DynamoDBService:
         except Exception as e:
             logger.error(f"Error getting settings for tenant {tenant_id}: {e}")
             return None
+    
+    def put_usage_record(self, usage_record: Dict[str, Any]):
+        """Create usage record for billing tracking."""
+        try:
+            self.usage_records_table.put_item(Item=usage_record)
+            logger.debug(f"Created usage record {usage_record.get('usage_id')}")
+        except Exception as e:
+            logger.error(f"Error creating usage record: {e}")
+            # Don't fail the job if usage tracking fails
+            pass
 

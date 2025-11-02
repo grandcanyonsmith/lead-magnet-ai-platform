@@ -7,6 +7,7 @@ import { submissionsController } from './controllers/submissions';
 import { artifactsController } from './controllers/artifacts';
 import { settingsController } from './controllers/settings';
 import { analyticsController } from './controllers/analytics';
+import { billingController } from './controllers/billing';
 import { ApiError } from './utils/errors';
 
 export interface RouteResponse {
@@ -185,6 +186,11 @@ export const router = async (
 
   if (path === '/admin/settings' && method === 'PUT') {
     return await settingsController.update(tenantId, body);
+  }
+
+  // Admin routes - Billing
+  if (path === '/admin/billing/usage' && method === 'GET') {
+    return await billingController.getUsage(tenantId, queryParams);
   }
 
   // Admin routes - Analytics

@@ -58,6 +58,7 @@ export class ComputeStack extends cdk.Stack {
         ARTIFACTS_TABLE: props.tablesMap.artifacts.tableName,
         TEMPLATES_TABLE: props.tablesMap.templates.tableName,
         USER_SETTINGS_TABLE: props.tablesMap.userSettings.tableName,
+        USAGE_RECORDS_TABLE: props.tablesMap.usageRecords.tableName,
         ARTIFACTS_BUCKET: props.artifactsBucket.bucketName,
         CLOUDFRONT_DOMAIN: props.cloudfrontDomain || '',
         OPENAI_SECRET_NAME: 'leadmagnet/openai-api-key',

@@ -87,6 +87,7 @@ export class ApiStack extends cdk.Stack {
         ARTIFACTS_TABLE: props.tablesMap.artifacts.tableName,
         TEMPLATES_TABLE: props.tablesMap.templates.tableName,
         USER_SETTINGS_TABLE: props.tablesMap.userSettings.tableName,
+        USAGE_RECORDS_TABLE: props.tablesMap.usageRecords.tableName,
         STEP_FUNCTIONS_ARN: props.stateMachineArn,
         ARTIFACTS_BUCKET: props.artifactsBucket.bucketName,
         LOG_LEVEL: 'info',
