@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
-import { FiArrowLeft, FiSave, FiZap } from 'react-icons/fi'
+import { FiArrowLeft, FiSave, FiZap, FiEye } from 'react-icons/fi'
 
 export default function NewWorkflowPage() {
   const router = useRouter()
@@ -14,6 +14,7 @@ export default function NewWorkflowPage() {
   const [error, setError] = useState<string | null>(null)
   const [prompt, setPrompt] = useState('')
   const [generatedTemplateId, setGeneratedTemplateId] = useState<string | null>(null)
+  const [showPreview, setShowPreview] = useState(false)
   
   const [formData, setFormData] = useState({
     workflow_name: '',
@@ -34,6 +35,16 @@ export default function NewWorkflowPage() {
     placeholder_tags: [] as string[],
   })
 
+  const [formFieldsData, setFormFieldsData] = useState({
+    form_name: '',
+    public_slug: '',
+    form_fields_schema: {
+      fields: [] as any[],
+    },
+  })
+
+  const [showFormPreview, setShowFormPreview] = useState(false)
+
   const handleGenerateWithAI = async () => {
     if (!prompt.trim()) {
       setError('Please describe what you want to build a lead magnet for')
@@ -51,13 +62,14 @@ export default function NewWorkflowPage() {
 
     try {
       const startTime = Date.now()
-      const result = await api.generateWorkflowWithAI(prompt.trim(), 'gpt-5')
+      const result = await api.generateWorkflowWithAI(prompt.trim(), 'gpt-4o')
       const duration = Date.now() - startTime
 
       console.log('[Workflow Generation] Success!', {
         duration: `${duration}ms`,
         workflow: result.workflow,
         template: result.template,
+        form: result.form,
         timestamp: new Date().toISOString(),
       })
 
@@ -78,6 +90,24 @@ export default function NewWorkflowPage() {
         html_content: result.template.html_content || '',
         placeholder_tags: result.template.placeholder_tags || [],
       })
+
+      // Populate form fields
+      if (result.form) {
+        setFormFieldsData({
+          form_name: result.form.form_name || '',
+          public_slug: result.form.public_slug || '',
+          form_fields_schema: result.form.form_fields_schema || { fields: [] },
+        })
+        // Auto-show form preview when form is generated
+        if (result.form.form_fields_schema?.fields?.length > 0) {
+          setShowFormPreview(true)
+        }
+      }
+
+      // Auto-show preview when HTML is generated
+      if (result.template.html_content) {
+        setShowPreview(true)
+      }
 
       // Move to form step
       setStep('form')
@@ -145,7 +175,7 @@ export default function NewWorkflowPage() {
       }
 
       // Then create the workflow
-      await api.createWorkflow({
+      const workflow = await api.createWorkflow({
         workflow_name: formData.workflow_name.trim(),
         workflow_description: formData.workflow_description.trim() || undefined,
         ai_model: formData.ai_model,
@@ -156,6 +186,19 @@ export default function NewWorkflowPage() {
         template_id: templateId || undefined,
         template_version: formData.template_version,
       })
+
+      // Create the form if form fields are provided
+      if (formFieldsData.form_fields_schema.fields.length > 0) {
+        await api.createForm({
+          workflow_id: workflow.workflow_id,
+          form_name: formFieldsData.form_name || `Form for ${formData.workflow_name}`,
+          public_slug: formFieldsData.public_slug || formData.workflow_name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+          form_fields_schema: formFieldsData.form_fields_schema,
+          rate_limit_enabled: true,
+          rate_limit_per_hour: 10,
+          captcha_enabled: false,
+        })
+      }
 
       router.push('/dashboard/workflows')
     } catch (error: any) {
@@ -172,6 +215,61 @@ export default function NewWorkflowPage() {
 
   const handleTemplateChange = (field: string, value: any) => {
     setTemplateData(prev => ({ ...prev, [field]: value }))
+    // Auto-show preview when HTML content is added
+    if (field === 'html_content' && value.trim() && !showPreview) {
+      setShowPreview(true)
+    }
+  }
+
+  // Generate preview HTML with sample data
+  const getPreviewHtml = () => {
+    if (!templateData.html_content.trim()) return ''
+    
+    let previewHtml = templateData.html_content
+    
+    // Replace placeholders with sample data
+    const sampleData: Record<string, string> = {
+      TITLE: 'Sample Lead Magnet Title',
+      CONTENT: 'This is sample content that will be replaced with your actual lead magnet content when the template is used.',
+      AUTHOR_NAME: 'John Doe',
+      COMPANY_NAME: 'Your Company',
+      DATE: new Date().toLocaleDateString(),
+      EMAIL: 'user@example.com',
+      PHONE: '+1 (555) 123-4567',
+      CURRENT_YEAR: new Date().getFullYear().toString(),
+    }
+    
+    // Replace all placeholders
+    Object.keys(sampleData).forEach(key => {
+      const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g')
+      previewHtml = previewHtml.replace(regex, sampleData[key])
+    })
+    
+    // Replace any remaining placeholders with generic text
+    previewHtml = previewHtml.replace(/\{\{([A-Z_]+)\}\}/g, '[$1]')
+    
+    return previewHtml
+  }
+
+  const handleFormFieldChange = (fieldIndex: number, field: string, value: any) => {
+    setFormFieldsData(prev => {
+      const newFields = [...prev.form_fields_schema.fields]
+      newFields[fieldIndex] = { ...newFields[fieldIndex], [field]: value }
+      return {
+        ...prev,
+        form_fields_schema: {
+          fields: newFields,
+        },
+      }
+    })
+  }
+
+  const handleFormNameChange = (field: string, value: any) => {
+    setFormFieldsData(prev => ({ ...prev, [field]: value }))
+    // Auto-show preview when form name is set
+    if (field === 'form_name' && value.trim() && !showFormPreview) {
+      setShowFormPreview(true)
+    }
   }
 
   // Prompt Step
@@ -451,6 +549,37 @@ export default function NewWorkflowPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 HTML Content <span className="text-red-500">*</span>
               </label>
+              
+              {/* Preview Section */}
+              {templateData.html_content.trim() && (
+                <div className="mb-4 border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-gray-900 flex items-center">
+                      <FiEye className="w-4 h-4 mr-2" />
+                      HTML Preview
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => setShowPreview(!showPreview)}
+                      className="text-sm text-gray-600 hover:text-gray-900"
+                    >
+                      {showPreview ? 'Hide Preview' : 'Show Preview'}
+                    </button>
+                  </div>
+                  {showPreview && (
+                    <div className="bg-white border-t border-gray-200" style={{ height: '600px' }}>
+                      <iframe
+                        key={`preview-${templateData.html_content.length}-${templateData.html_content.slice(0, 50)}`}
+                        srcDoc={getPreviewHtml()}
+                        className="w-full h-full border-0"
+                        title="HTML Preview"
+                        sandbox="allow-same-origin allow-scripts"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+              
               <textarea
                 value={templateData.html_content}
                 onChange={(e) => handleTemplateChange('html_content', e.target.value)}
@@ -475,6 +604,187 @@ export default function NewWorkflowPage() {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Form Fields */}
+        {formFieldsData.form_fields_schema.fields.length > 0 && (
+          <div className="space-y-6 pt-6 border-t">
+            <h2 className="text-xl font-semibold text-gray-900 border-b pb-2">Lead Capture Form</h2>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Form Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formFieldsData.form_name}
+                onChange={(e) => handleFormNameChange('form_name', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                placeholder="Lead Capture Form"
+                maxLength={200}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Public Slug <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formFieldsData.public_slug}
+                onChange={(e) => handleFormNameChange('public_slug', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono"
+                placeholder="lead-capture-form"
+                pattern="[a-z0-9\-]+"
+                required
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                URL-friendly identifier (lowercase, hyphens only). Forms will be accessible at /v1/forms/{formFieldsData.public_slug || '[slug]'}
+              </p>
+            </div>
+
+            {/* Form Preview */}
+            {formFieldsData.form_fields_schema.fields.length > 0 && (
+              <div className="border border-gray-200 rounded-lg overflow-hidden">
+                <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-gray-900 flex items-center">
+                    <FiEye className="w-4 h-4 mr-2" />
+                    Form Preview
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowFormPreview(!showFormPreview)}
+                    className="text-sm text-gray-600 hover:text-gray-900"
+                  >
+                    {showFormPreview ? 'Hide Preview' : 'Show Preview'}
+                  </button>
+                </div>
+                {showFormPreview && (
+                  <div className="bg-white p-6">
+                    <h3 className="text-lg font-semibold mb-4">{formFieldsData.form_name || 'Form Preview'}</h3>
+                    <div className="space-y-4">
+                      {formFieldsData.form_fields_schema.fields.map((field: any, index: number) => (
+                        <div key={field.field_id || index}>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            {field.label || `Field ${index + 1}`}
+                            {field.required && <span className="text-red-500 ml-1">*</span>}
+                          </label>
+                          {field.field_type === 'textarea' ? (
+                            <textarea
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                              placeholder={field.placeholder || ''}
+                              rows={4}
+                              disabled
+                            />
+                          ) : field.field_type === 'select' && field.options ? (
+                            <select
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                              disabled
+                            >
+                              <option value="">Select {field.label}</option>
+                              {field.options.map((option: string, optIndex: number) => (
+                                <option key={optIndex} value={option}>{option}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <input
+                              type={field.field_type === 'email' ? 'email' : field.field_type === 'tel' ? 'tel' : field.field_type === 'number' ? 'number' : 'text'}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                              placeholder={field.placeholder || ''}
+                              disabled
+                            />
+                          )}
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        className="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                        disabled
+                      >
+                        Submit
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Form Fields List */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Form Fields ({formFieldsData.form_fields_schema.fields.length})
+              </label>
+              <div className="space-y-4">
+                {formFieldsData.form_fields_schema.fields.map((field: any, index: number) => (
+                  <div key={field.field_id || index} className="border border-gray-200 rounded-lg p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Label</label>
+                        <input
+                          type="text"
+                          value={field.label || ''}
+                          onChange={(e) => handleFormFieldChange(index, 'label', e.target.value)}
+                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          placeholder="Field Label"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Type</label>
+                        <select
+                          value={field.field_type || 'text'}
+                          onChange={(e) => handleFormFieldChange(index, 'field_type', e.target.value)}
+                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                        >
+                          <option value="text">Text</option>
+                          <option value="email">Email</option>
+                          <option value="tel">Phone</option>
+                          <option value="textarea">Textarea</option>
+                          <option value="select">Select</option>
+                          <option value="number">Number</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Placeholder</label>
+                        <input
+                          type="text"
+                          value={field.placeholder || ''}
+                          onChange={(e) => handleFormFieldChange(index, 'placeholder', e.target.value)}
+                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          placeholder="Placeholder text"
+                        />
+                      </div>
+                      <div className="flex items-center">
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={field.required || false}
+                            onChange={(e) => handleFormFieldChange(index, 'required', e.target.checked)}
+                            className="mr-2"
+                          />
+                          <span className="text-xs font-medium text-gray-600">Required</span>
+                        </label>
+                      </div>
+                    </div>
+                    {field.field_type === 'select' && (
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Options (comma-separated)</label>
+                        <input
+                          type="text"
+                          value={field.options?.join(', ') || ''}
+                          onChange={(e) => handleFormFieldChange(index, 'options', e.target.value.split(',').map((o: string) => o.trim()).filter(Boolean))}
+                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          placeholder="Option 1, Option 2, Option 3"
+                        />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
