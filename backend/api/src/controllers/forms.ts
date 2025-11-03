@@ -421,7 +421,7 @@ class FormsController {
   }
 
   async generateCSS(tenantId: string, body: any): Promise<RouteResponse> {
-    const { form_fields_schema, css_prompt, model = 'gpt-4o' } = body;
+    const { form_fields_schema, css_prompt, model = 'gpt-5' } = body;
 
     if (!form_fields_schema || !form_fields_schema.fields || form_fields_schema.fields.length === 0) {
       throw new ApiError('Form fields schema is required', 400);
@@ -467,21 +467,16 @@ Return ONLY the CSS code, no markdown formatting, no explanations.`;
       });
 
       const cssStartTime = Date.now();
-      const completion = await openai.chat.completions.create({
+      const completionParams: any = {
         model,
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an expert CSS designer. Return only valid CSS code without markdown formatting.',
-          },
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-        temperature: 0.7,
-        max_tokens: 2000,
-      });
+        instructions: 'You are an expert CSS designer. Return only valid CSS code without markdown formatting.',
+        input: prompt,
+      };
+      // GPT-5 only supports default temperature (1), don't set custom temperature
+      if (model !== 'gpt-5') {
+        completionParams.temperature = 0.7;
+      }
+      const completion = await openai.responses.create(completionParams);
 
       const cssDuration = Date.now() - cssStartTime;
       console.log('[Form CSS Generation] CSS generation completed', {
@@ -493,8 +488,8 @@ Return ONLY the CSS code, no markdown formatting, no explanations.`;
       // Track usage
       const usage = completion.usage;
       if (usage) {
-        const inputTokens = usage.prompt_tokens || 0;
-        const outputTokens = usage.completion_tokens || 0;
+        const inputTokens = usage.input_tokens || 0;
+        const outputTokens = usage.output_tokens || 0;
         const costData = calculateOpenAICost(model, inputTokens, outputTokens);
         
         await storeUsageRecord(
@@ -507,7 +502,7 @@ Return ONLY the CSS code, no markdown formatting, no explanations.`;
         );
       }
 
-      const cssContent = completion.choices[0]?.message?.content || '';
+      const cssContent = completion.output_text || '';
       console.log('[Form CSS Generation] Raw CSS received', {
         cssLength: cssContent.length,
         firstChars: cssContent.substring(0, 100),
@@ -553,7 +548,7 @@ Return ONLY the CSS code, no markdown formatting, no explanations.`;
   }
 
   async refineCSS(tenantId: string, body: any): Promise<RouteResponse> {
-    const { current_css, css_prompt, model = 'gpt-4o' } = body;
+    const { current_css, css_prompt, model = 'gpt-5' } = body;
 
     if (!current_css || !current_css.trim()) {
       throw new ApiError('Current CSS is required', 400);
@@ -594,21 +589,16 @@ Return ONLY the modified CSS code, no markdown formatting, no explanations.`;
       });
 
       const refineStartTime = Date.now();
-      const completion = await openai.chat.completions.create({
+      const completionParams: any = {
         model,
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an expert CSS designer. Return only valid CSS code without markdown formatting.',
-          },
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-        temperature: 0.7,
-        max_tokens: 2000,
-      });
+        instructions: 'You are an expert CSS designer. Return only valid CSS code without markdown formatting.',
+        input: prompt,
+      };
+      // GPT-5 only supports default temperature (1), don't set custom temperature
+      if (model !== 'gpt-5') {
+        completionParams.temperature = 0.7;
+      }
+      const completion = await openai.responses.create(completionParams);
 
       const refineDuration = Date.now() - refineStartTime;
       console.log('[Form CSS Refinement] Refinement completed', {
@@ -620,8 +610,8 @@ Return ONLY the modified CSS code, no markdown formatting, no explanations.`;
       // Track usage
       const usage = completion.usage;
       if (usage) {
-        const inputTokens = usage.prompt_tokens || 0;
-        const outputTokens = usage.completion_tokens || 0;
+        const inputTokens = usage.input_tokens || 0;
+        const outputTokens = usage.output_tokens || 0;
         const costData = calculateOpenAICost(model, inputTokens, outputTokens);
         
         await storeUsageRecord(
@@ -634,7 +624,7 @@ Return ONLY the modified CSS code, no markdown formatting, no explanations.`;
         );
       }
 
-      const cssContent = completion.choices[0]?.message?.content || '';
+      const cssContent = completion.output_text || '';
       console.log('[Form CSS Refinement] Refined CSS received', {
         cssLength: cssContent.length,
         firstChars: cssContent.substring(0, 100),

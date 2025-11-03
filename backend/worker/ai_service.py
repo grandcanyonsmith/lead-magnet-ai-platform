@@ -66,10 +66,10 @@ class AIService:
         Generate a report using OpenAI.
         
         Args:
-            model: OpenAI model to use (e.g., 'gpt-4o')
+            model: OpenAI model to use (e.g., 'gpt-5')
             instructions: System instructions for the AI
             context: User context/data to generate report from
-            max_tokens: Maximum tokens to generate
+            max_tokens: Maximum tokens to generate (deprecated, kept for compatibility)
             
         Returns:
             Tuple of (generated report content, usage info dict)
@@ -77,43 +77,38 @@ class AIService:
         logger.info(f"Generating report with model: {model}")
         
         try:
-            response = self.client.chat.completions.create(
-                model=model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": instructions
-                    },
-                    {
-                        "role": "user",
-                        "content": f"Generate a report based on the following information:\n\n{context}"
-                    }
-                ],
-                max_tokens=max_tokens,
-                temperature=0.7,
-            )
+            params = {
+                "model": model,
+                "instructions": instructions,
+                "input": f"Generate a report based on the following information:\n\n{context}",
+            }
+            # GPT-5 only supports default temperature (1), don't set custom temperature
+            if model != 'gpt-5':
+                params["temperature"] = 0.7
             
-            report = response.choices[0].message.content
+            response = self.client.responses.create(**params)
+            
+            report = response.output_text
             
             # Log token usage for cost tracking
             usage = response.usage
             logger.info(
                 f"Report generation completed. "
                 f"Tokens: {usage.total_tokens} "
-                f"(prompt: {usage.prompt_tokens}, completion: {usage.completion_tokens})"
+                f"(input: {usage.input_tokens}, output: {usage.output_tokens})"
             )
             
             # Calculate cost
             cost_data = calculate_openai_cost(
                 model,
-                usage.prompt_tokens or 0,
-                usage.completion_tokens or 0
+                usage.input_tokens or 0,
+                usage.output_tokens or 0
             )
             
             usage_info = {
                 'model': model,
-                'input_tokens': usage.prompt_tokens or 0,
-                'output_tokens': usage.completion_tokens or 0,
+                'input_tokens': usage.input_tokens or 0,
+                'output_tokens': usage.output_tokens or 0,
                 'total_tokens': usage.total_tokens or 0,
                 'cost_usd': cost_data['cost_usd'],
                 'service_type': 'openai_worker_report',
@@ -145,7 +140,7 @@ class AIService:
         template_html: str,
         template_style: str = '',
         ai_instructions: str = '',
-        model: str = 'gpt-4o',
+        model: str = 'gpt-5',
         max_tokens: int = 8000
     ) -> Tuple[str, Dict]:
         """
@@ -186,6 +181,7 @@ Requirements:
 5. Include proper headings, sections, and formatting
 6. Make it visually appealing and professional
 7. Personalize the content based on the submission data
+8. DO NOT use placeholder syntax like {{PLACEHOLDER_NAME}} - generate complete, personalized content directly
 
 {('Template Style Notes: ' + template_style) if template_style else ''}
 
@@ -208,43 +204,38 @@ Generate a complete HTML document that:
 - Is ready to use as a final document"""
         
         try:
-            response = self.client.chat.completions.create(
-                model=model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": instructions
-                    },
-                    {
-                        "role": "user",
-                        "content": user_message
-                    }
-                ],
-                max_tokens=max_tokens,
-                temperature=0.6,  # Balanced creativity and structure
-            )
+            params = {
+                "model": model,
+                "instructions": instructions,
+                "input": user_message,
+            }
+            # GPT-5 only supports default temperature (1), don't set custom temperature
+            if model != 'gpt-5':
+                params["temperature"] = 0.6
             
-            html_content = response.choices[0].message.content
+            response = self.client.responses.create(**params)
+            
+            html_content = response.output_text
             
             # Log token usage
             usage = response.usage
             logger.info(
                 f"HTML generation from submission completed. "
                 f"Tokens: {usage.total_tokens} "
-                f"(prompt: {usage.prompt_tokens}, completion: {usage.completion_tokens})"
+                f"(input: {usage.input_tokens}, output: {usage.output_tokens})"
             )
             
             # Calculate cost
             cost_data = calculate_openai_cost(
                 model,
-                usage.prompt_tokens or 0,
-                usage.completion_tokens or 0
+                usage.input_tokens or 0,
+                usage.output_tokens or 0
             )
             
             usage_info = {
                 'model': model,
-                'input_tokens': usage.prompt_tokens or 0,
-                'output_tokens': usage.completion_tokens or 0,
+                'input_tokens': usage.input_tokens or 0,
+                'output_tokens': usage.output_tokens or 0,
                 'total_tokens': usage.total_tokens or 0,
                 'cost_usd': cost_data['cost_usd'],
                 'service_type': 'openai_worker_html',
@@ -280,7 +271,7 @@ Generate a complete HTML document that:
         template_html: str,
         template_style: str = '',
         submission_data: dict = None,
-        model: str = 'gpt-4o',
+        model: str = 'gpt-5',
         max_tokens: int = 8000
     ) -> Tuple[str, Dict]:
         """
@@ -323,6 +314,8 @@ Requirements:
 5. Ensure semantic HTML structure
 6. Include proper headings, sections, and formatting
 7. Make it visually appealing and professional
+8. DO NOT use placeholder syntax like {{PLACEHOLDER_NAME}} - generate complete, personalized content directly
+9. Personalize all content based on the research and submission data provided
 
 {('Template Style Notes: ' + template_style) if template_style else ''}
 
@@ -344,43 +337,38 @@ Generate a complete HTML document that:
 - Is ready to use as a final document"""
         
         try:
-            response = self.client.chat.completions.create(
-                model=model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": instructions
-                    },
-                    {
-                        "role": "user",
-                        "content": user_message
-                    }
-                ],
-                max_tokens=max_tokens,
-                temperature=0.6,  # Balanced creativity and structure
-            )
+            params = {
+                "model": model,
+                "instructions": instructions,
+                "input": user_message,
+            }
+            # GPT-5 only supports default temperature (1), don't set custom temperature
+            if model != 'gpt-5':
+                params["temperature"] = 0.6
             
-            html_content = response.choices[0].message.content
+            response = self.client.responses.create(**params)
+            
+            html_content = response.output_text
             
             # Log token usage
             usage = response.usage
             logger.info(
                 f"Styled HTML generation completed. "
                 f"Tokens: {usage.total_tokens} "
-                f"(prompt: {usage.prompt_tokens}, completion: {usage.completion_tokens})"
+                f"(input: {usage.input_tokens}, output: {usage.output_tokens})"
             )
             
             # Calculate cost
             cost_data = calculate_openai_cost(
                 model,
-                usage.prompt_tokens or 0,
-                usage.completion_tokens or 0
+                usage.input_tokens or 0,
+                usage.output_tokens or 0
             )
             
             usage_info = {
                 'model': model,
-                'input_tokens': usage.prompt_tokens or 0,
-                'output_tokens': usage.completion_tokens or 0,
+                'input_tokens': usage.input_tokens or 0,
+                'output_tokens': usage.output_tokens or 0,
                 'total_tokens': usage.total_tokens or 0,
                 'cost_usd': cost_data['cost_usd'],
                 'service_type': 'openai_worker_html',
@@ -413,7 +401,7 @@ Generate a complete HTML document that:
     def rewrite_html(
         self,
         html_content: str,
-        model: str = 'gpt-4o',
+        model: str = 'gpt-5',
         max_tokens: int = 6000
     ) -> str:
         """
@@ -440,30 +428,25 @@ Generate a complete HTML document that:
         Return ONLY the enhanced HTML, with no additional commentary."""
         
         try:
-            response = self.client.chat.completions.create(
-                model=model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": instructions
-                    },
-                    {
-                        "role": "user",
-                        "content": f"Enhance this HTML document:\n\n{html_content}"
-                    }
-                ],
-                max_tokens=max_tokens,
-                temperature=0.5,
-            )
+            params = {
+                "model": model,
+                "instructions": instructions,
+                "input": f"Enhance this HTML document:\n\n{html_content}",
+            }
+            # GPT-5 only supports default temperature (1), don't set custom temperature
+            if model != 'gpt-5':
+                params["temperature"] = 0.5
             
-            enhanced_html = response.choices[0].message.content
+            response = self.client.responses.create(**params)
+            
+            enhanced_html = response.output_text
             
             # Log token usage
             usage = response.usage
             logger.info(
                 f"HTML rewriting completed. "
                 f"Tokens: {usage.total_tokens} "
-                f"(prompt: {usage.prompt_tokens}, completion: {usage.completion_tokens})"
+                f"(input: {usage.input_tokens}, output: {usage.output_tokens})"
             )
             
             # Clean up markdown code blocks if present

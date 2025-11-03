@@ -246,18 +246,13 @@ class TemplatesController {
     };
   }
 
-  private extractPlaceholders(html: string): string[] {
-    const regex = /\{\{([A-Z_]+)\}\}/g;
-    const matches = html.matchAll(regex);
-    const placeholders = new Set<string>();
-    for (const match of matches) {
-      placeholders.add(match[1]);
-    }
-    return Array.from(placeholders);
+  private extractPlaceholders(_html: string): string[] {
+    // Placeholder extraction disabled - no longer using placeholder syntax
+    return [];
   }
 
   async refineWithAI(tenantId: string, body: any): Promise<RouteResponse> {
-    const { current_html, edit_prompt, model = 'gpt-4o' } = body;
+    const { current_html, edit_prompt, model = 'gpt-5' } = body;
 
     if (!current_html || !current_html.trim()) {
       throw new ApiError('Current HTML content is required', 400);
@@ -310,23 +305,18 @@ Return ONLY the modified HTML code, no markdown formatting, no explanations.`;
       });
 
       const refineStartTime = Date.now();
-      const completion = await openai.chat.completions.create({
+      const completionParams: any = {
         model,
-        messages: [
-          {
-            role: 'system',
-            content: shouldRemovePlaceholders 
-              ? 'You are an expert HTML template designer. Return only valid HTML code without markdown formatting. REMOVE all placeholder syntax {{PLACEHOLDER_NAME}} and replace with actual content or real values (e.g., replace {{BRAND_COLORS}} with actual color codes like #2d8659).'
-              : 'You are an expert HTML template designer. Return only valid HTML code without markdown formatting. Preserve all placeholder syntax {{PLACEHOLDER_NAME}} exactly.',
-          },
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-        temperature: 0.7,
-        max_completion_tokens: 4000,
-      });
+        instructions: shouldRemovePlaceholders 
+          ? 'You are an expert HTML template designer. Return only valid HTML code without markdown formatting. REMOVE all placeholder syntax {{PLACEHOLDER_NAME}} and replace with actual content or real values (e.g., replace {{BRAND_COLORS}} with actual color codes like #2d8659).'
+          : 'You are an expert HTML template designer. Return only valid HTML code without markdown formatting. Preserve all placeholder syntax {{PLACEHOLDER_NAME}} exactly.',
+        input: prompt,
+      };
+      // GPT-5 only supports default temperature (1), don't set custom temperature
+      if (model !== 'gpt-5') {
+        completionParams.temperature = 0.7;
+      }
+      const completion = await openai.responses.create(completionParams);
 
       const refineDuration = Date.now() - refineStartTime;
       console.log('[Template Refinement] Refinement completed', {
@@ -338,8 +328,8 @@ Return ONLY the modified HTML code, no markdown formatting, no explanations.`;
       // Track usage
       const usage = completion.usage;
       if (usage) {
-        const inputTokens = usage.prompt_tokens || 0;
-        const outputTokens = usage.completion_tokens || 0;
+        const inputTokens = usage.input_tokens || 0;
+        const outputTokens = usage.output_tokens || 0;
         const costData = calculateOpenAICost(model, inputTokens, outputTokens);
         
         await storeUsageRecord(
@@ -352,7 +342,7 @@ Return ONLY the modified HTML code, no markdown formatting, no explanations.`;
         );
       }
 
-      const htmlContent = completion.choices[0]?.message?.content || '';
+      const htmlContent = completion.output_text || '';
       console.log('[Template Refinement] Refined HTML received', {
         htmlLength: htmlContent.length,
         firstChars: htmlContent.substring(0, 100),
@@ -368,8 +358,8 @@ Return ONLY the modified HTML code, no markdown formatting, no explanations.`;
         console.log('[Template Refinement] Removed ``` markers');
       }
 
-      // Extract placeholder tags
-      const placeholderTags = this.extractPlaceholders(cleanedHtml);
+      // Extract placeholder tags (disabled - no longer using placeholder syntax)
+      const placeholderTags: string[] = [];
       console.log('[Template Refinement] Extracted placeholders', {
         placeholderCount: placeholderTags.length,
         placeholders: placeholderTags,
@@ -407,7 +397,7 @@ Return ONLY the modified HTML code, no markdown formatting, no explanations.`;
   }
 
   async generateWithAI(tenantId: string, body: any): Promise<RouteResponse> {
-    const { description, model = 'gpt-4o' } = body;
+    const { description, model = 'gpt-5' } = body;
 
     if (!description || !description.trim()) {
       throw new ApiError('Description is required', 400);
@@ -444,21 +434,16 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
       });
 
       const htmlStartTime = Date.now();
-      const completion = await openai.chat.completions.create({
+      const completionParams: any = {
         model,
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an expert HTML template designer. Return only valid HTML code without markdown formatting.',
-          },
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-        temperature: 0.7,
-        max_completion_tokens: 4000,
-      });
+        instructions: 'You are an expert HTML template designer. Return only valid HTML code without markdown formatting.',
+        input: prompt,
+      };
+      // GPT-5 only supports default temperature (1), don't set custom temperature
+      if (model !== 'gpt-5') {
+        completionParams.temperature = 0.7;
+      }
+      const completion = await openai.responses.create(completionParams);
 
       const htmlDuration = Date.now() - htmlStartTime;
       console.log('[Template Generation] HTML generation completed', {
@@ -470,8 +455,8 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
       // Track usage
       const usage = completion.usage;
       if (usage) {
-        const inputTokens = usage.prompt_tokens || 0;
-        const outputTokens = usage.completion_tokens || 0;
+        const inputTokens = usage.input_tokens || 0;
+        const outputTokens = usage.output_tokens || 0;
         const costData = calculateOpenAICost(model, inputTokens, outputTokens);
         
         await storeUsageRecord(
@@ -484,7 +469,7 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
         );
       }
 
-      const htmlContent = completion.choices[0]?.message?.content || '';
+      const htmlContent = completion.output_text || '';
       console.log('[Template Generation] Raw HTML received', {
         htmlLength: htmlContent.length,
         firstChars: htmlContent.substring(0, 100),
@@ -500,8 +485,8 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
         console.log('[Template Generation] Removed ``` markers');
       }
 
-      // Extract placeholder tags
-      const placeholderTags = this.extractPlaceholders(cleanedHtml);
+      // Extract placeholder tags (disabled - no longer using placeholder syntax)
+      const placeholderTags: string[] = [];
       console.log('[Template Generation] Extracted placeholders', {
         placeholderCount: placeholderTags.length,
         placeholders: placeholderTags,
@@ -516,17 +501,15 @@ Return JSON format: {"name": "...", "description": "..."}`;
 
       console.log('[Template Generation] Calling OpenAI for name/description generation...');
       const nameStartTime = Date.now();
-      const nameCompletion = await openai.chat.completions.create({
+      const nameCompletionParams: any = {
         model,
-        messages: [
-          {
-            role: 'user',
-            content: namePrompt,
-          },
-        ],
-        temperature: 0.5,
-        max_completion_tokens: 200,
-      });
+        input: namePrompt,
+      };
+      // GPT-5 only supports default temperature (1), don't set custom temperature
+      if (model !== 'gpt-5') {
+        nameCompletionParams.temperature = 0.5;
+      }
+      const nameCompletion = await openai.responses.create(nameCompletionParams);
 
       const nameDuration = Date.now() - nameStartTime;
       console.log('[Template Generation] Name/description generation completed', {
@@ -537,8 +520,8 @@ Return JSON format: {"name": "...", "description": "..."}`;
       // Track usage for name/description generation
       const nameUsage = nameCompletion.usage;
       if (nameUsage) {
-        const inputTokens = nameUsage.prompt_tokens || 0;
-        const outputTokens = nameUsage.completion_tokens || 0;
+        const inputTokens = nameUsage.input_tokens || 0;
+        const outputTokens = nameUsage.output_tokens || 0;
         const costData = calculateOpenAICost(model, inputTokens, outputTokens);
         
         await storeUsageRecord(
@@ -551,7 +534,7 @@ Return JSON format: {"name": "...", "description": "..."}`;
         );
       }
 
-      const nameContent = nameCompletion.choices[0]?.message?.content || '';
+      const nameContent = nameCompletion.output_text || '';
       let templateName = 'Generated Template';
       let templateDescription = description;
 

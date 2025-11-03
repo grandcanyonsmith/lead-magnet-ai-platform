@@ -279,7 +279,7 @@ export default function NewFormPage() {
 
     try {
       const startTime = Date.now()
-      const result = await api.generateFormCSS(formData.form_fields_schema, cssPrompt.trim(), 'gpt-4o')
+      const result = await api.generateFormCSS(formData.form_fields_schema, cssPrompt.trim(), 'gpt-5')
       
       const duration = Date.now() - startTime
       console.log('[Form CSS Generation] Success!', {
@@ -332,7 +332,7 @@ export default function NewFormPage() {
 
     try {
       const startTime = Date.now()
-      const result = await api.refineFormCSS(formData.custom_css, cssPrompt.trim(), 'gpt-4o')
+      const result = await api.refineFormCSS(formData.custom_css, cssPrompt.trim(), 'gpt-5')
       
       const duration = Date.now() - startTime
       console.log('[Form CSS Refinement] Success!', {

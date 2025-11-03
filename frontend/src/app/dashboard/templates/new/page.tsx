@@ -15,7 +15,6 @@ export default function NewTemplatePage() {
   const [aiDescription, setAiDescription] = useState('')
   const [editPrompt, setEditPrompt] = useState('')
   const [showPreview, setShowPreview] = useState(false)
-  const [detectedPlaceholders, setDetectedPlaceholders] = useState<string[]>([])
   
   const [formData, setFormData] = useState({
     template_name: '',
@@ -24,20 +23,8 @@ export default function NewTemplatePage() {
     is_published: false,
   })
 
-  const extractPlaceholders = (html: string): string[] => {
-    const regex = /\{\{([A-Z_]+)\}\}/g
-    const matches = html.matchAll(regex)
-    const placeholders = new Set<string>()
-    for (const match of matches) {
-      placeholders.add(match[1])
-    }
-    return Array.from(placeholders).sort()
-  }
-
   const handleHtmlChange = (html: string) => {
     setFormData(prev => ({ ...prev, html_content: html }))
-    const placeholders = extractPlaceholders(html)
-    setDetectedPlaceholders(placeholders)
     // Auto-show preview when HTML is added
     if (html.trim() && !showPreview) {
       setShowPreview(true)
@@ -62,13 +49,11 @@ export default function NewTemplatePage() {
     setSubmitting(true)
 
     try {
-      const placeholders = extractPlaceholders(formData.html_content)
-      
       await api.createTemplate({
         template_name: formData.template_name.trim(),
         template_description: formData.template_description.trim() || undefined,
         html_content: formData.html_content.trim(),
-        placeholder_tags: placeholders.length > 0 ? placeholders : undefined,
+        placeholder_tags: undefined,
         is_published: formData.is_published,
       })
 
@@ -101,7 +86,7 @@ export default function NewTemplatePage() {
       console.log('[Template Generation] Calling API...')
       setGenerationStatus('Generating HTML template...')
 
-      const result = await api.generateTemplateWithAI(aiDescription.trim(), 'gpt-4o')
+      const result = await api.generateTemplateWithAI(aiDescription.trim(), 'gpt-5')
       
       const duration = Date.now() - startTime
       console.log('[Template Generation] Success!', {
@@ -122,9 +107,6 @@ export default function NewTemplatePage() {
         html_content: result.html_content || '',
         is_published: false,
       })
-      
-      const placeholders = result.placeholder_tags || []
-      setDetectedPlaceholders(placeholders)
       
       // Auto-show preview after generation
       setShowPreview(true)
@@ -183,7 +165,7 @@ export default function NewTemplatePage() {
 
     try {
       const startTime = Date.now()
-      const result = await api.refineTemplateWithAI(formData.html_content, editPrompt.trim(), 'gpt-4o')
+      const result = await api.refineTemplateWithAI(formData.html_content, editPrompt.trim(), 'gpt-5')
       
       const duration = Date.now() - startTime
       console.log('[Template Refinement] Success!', {
@@ -200,9 +182,6 @@ export default function NewTemplatePage() {
         ...prev,
         html_content: newHtml,
       }))
-      
-      const placeholders = result.placeholder_tags || []
-      setDetectedPlaceholders(placeholders)
       
       // Ensure preview is shown after refinement
       if (!showPreview) {
@@ -451,8 +430,8 @@ export default function NewTemplatePage() {
   <title>Lead Magnet</title>
 </head>
 <body>
-  <h1>{{TITLE}}</h1>
-  <div>{{CONTENT}}</div>
+  <h1>Your Content Here</h1>
+  <div>Complete HTML template with actual content</div>
 </body>
 </html>`}
             rows={20}
@@ -460,26 +439,8 @@ export default function NewTemplatePage() {
           />
           <div className="mt-2 space-y-2">
             <p className="text-sm text-gray-500">
-              Use <code className="px-1 py-0.5 bg-gray-100 rounded text-xs">&#123;&#123;PLACEHOLDER_NAME&#125;&#125;</code> syntax for dynamic content.
+              Enter complete HTML content. AI will personalize it based on form submission data.
             </p>
-            {detectedPlaceholders.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                <span className="text-sm font-medium text-gray-700">Detected placeholders:</span>
-                {detectedPlaceholders.map((placeholder) => (
-                  <span
-                    key={placeholder}
-                    className="px-2 py-1 bg-primary-50 text-primary-700 rounded text-xs font-mono"
-                  >
-                    {`{{${placeholder}}}`}
-                  </span>
-                ))}
-              </div>
-            )}
-            {detectedPlaceholders.length === 0 && formData.html_content.trim() && (
-              <p className="text-sm text-yellow-600">
-                No placeholders detected. Use <code className="px-1 py-0.5 bg-yellow-100 rounded text-xs">&#123;&#123;PLACEHOLDER_NAME&#125;&#125;</code> format.
-              </p>
-            )}
           </div>
         </div>
 

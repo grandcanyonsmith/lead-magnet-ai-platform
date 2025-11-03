@@ -24,9 +24,9 @@ export default function EditWorkflowPage() {
   const [formData, setFormData] = useState({
     workflow_name: '',
     workflow_description: '',
-    ai_model: 'gpt-4o',
+    ai_model: 'gpt-5',
     ai_instructions: '',
-    rewrite_model: 'gpt-4o',
+    rewrite_model: 'gpt-5',
     research_enabled: true,
     html_enabled: true,
     template_id: '',
@@ -69,9 +69,9 @@ export default function EditWorkflowPage() {
       setFormData({
         workflow_name: workflow.workflow_name || '',
         workflow_description: workflow.workflow_description || '',
-        ai_model: workflow.ai_model || 'gpt-4o',
+        ai_model: workflow.ai_model || 'gpt-5',
         ai_instructions: workflow.ai_instructions || '',
-        rewrite_model: workflow.rewrite_model || 'gpt-4o',
+        rewrite_model: workflow.rewrite_model || 'gpt-5',
         research_enabled: workflow.research_enabled !== undefined ? workflow.research_enabled : true,
         html_enabled: workflow.html_enabled !== undefined ? workflow.html_enabled : true,
         template_id: workflow.template_id || '',
@@ -228,6 +228,7 @@ export default function EditWorkflowPage() {
               required
               disabled={!formData.research_enabled}
             >
+              <option value="gpt-5">GPT-5</option>
               <option value="gpt-4o">GPT-4o</option>
               <option value="gpt-4-turbo">GPT-4 Turbo</option>
               <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
@@ -250,6 +251,7 @@ export default function EditWorkflowPage() {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
               disabled={!formData.html_enabled}
             >
+              <option value="gpt-5">GPT-5</option>
               <option value="gpt-4o">GPT-4o</option>
               <option value="gpt-4-turbo">GPT-4 Turbo</option>
               <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>

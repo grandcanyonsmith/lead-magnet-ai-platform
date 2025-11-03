@@ -136,7 +136,7 @@ class JobProcessor:
                             template_html=template['html_content'],
                             template_style=template.get('style_description', ''),
                             submission_data=submission.get('submission_data', {}),
-                            model=workflow.get('rewrite_model', 'gpt-4o')
+                            model=workflow.get('rewrite_model', 'gpt-5')
                         )
                         # Store usage record
                         self.store_usage_record(job['tenant_id'], job_id, html_usage_info)
@@ -147,7 +147,7 @@ class JobProcessor:
                             template_html=template['html_content'],
                             template_style=template.get('style_description', ''),
                             ai_instructions=workflow.get('ai_instructions', ''),
-                            model=workflow.get('rewrite_model', 'gpt-4o')
+                            model=workflow.get('rewrite_model', 'gpt-5')
                         )
                         # Store usage record
                         self.store_usage_record(job['tenant_id'], job_id, html_usage_info)
@@ -313,7 +313,7 @@ class JobProcessor:
     
     def generate_report(self, workflow: Dict[str, Any], submission: Dict[str, Any]) -> Tuple[str, Dict]:
         """Generate AI report content."""
-        ai_model = workflow.get('ai_model', 'gpt-4o')
+        ai_model = workflow.get('ai_model', 'gpt-5')
         ai_instructions = workflow['ai_instructions']
         submission_data = submission.get('submission_data', {})
         
@@ -522,23 +522,35 @@ class JobProcessor:
         submission_data = submission.get('submission_data', {})
         phone_number = submission_data.get('phone')
         
+        logger.info(f"SMS Notification: Starting for job {job_id}, phone: {phone_number[:10] if phone_number else 'N/A'}...")
+        
         if not phone_number:
-            logger.error("No phone number in submission data, cannot send SMS")
+            logger.error(f"SMS Notification: No phone number in submission data for job {job_id}. Submission data keys: {list(submission_data.keys())}")
+            return
+        
+        # Validate phone number format
+        if not phone_number or len(phone_number.strip()) < 10:
+            logger.error(f"SMS Notification: Invalid phone number format: {phone_number}")
             return
         
         # Get SMS message
         sms_message = None
         if workflow.get('delivery_sms_ai_generated', False):
             # Generate SMS via AI
-            logger.info("Generating AI SMS message")
-            sms_message = self.generate_sms_message(
-                workflow,
-                tenant_id,
-                job_id,
-                submission_data,
-                output_url,
-                research_content
-            )
+            logger.info(f"SMS Notification: Generating AI SMS message for job {job_id}")
+            try:
+                sms_message = self.generate_sms_message(
+                    workflow,
+                    tenant_id,
+                    job_id,
+                    submission_data,
+                    output_url,
+                    research_content
+                )
+                logger.info(f"SMS Notification: AI message generated successfully, length: {len(sms_message) if sms_message else 0}")
+            except Exception as e:
+                logger.error(f"SMS Notification: Failed to generate AI message: {e}")
+                sms_message = f"Thank you! Your personalized report is ready: {output_url}"
         else:
             # Use manual message or default
             sms_message = workflow.get('delivery_sms_message', '')
@@ -552,25 +564,31 @@ class JobProcessor:
                 sms_message = sms_message.replace('{job_id}', job_id)
         
         if not sms_message:
-            logger.error("No SMS message generated, cannot send SMS")
+            logger.error(f"SMS Notification: No SMS message generated for job {job_id}, cannot send SMS")
             return
+        
+        logger.info(f"SMS Notification: Prepared message (length: {len(sms_message)}) for job {job_id}")
         
         # Get Twilio credentials from Secrets Manager
         try:
+            logger.info(f"SMS Notification: Retrieving Twilio credentials...")
             twilio_creds = self._get_twilio_credentials()
             twilio_account_sid = twilio_creds['account_sid']
             twilio_auth_token = twilio_creds['auth_token']
             twilio_from_number = twilio_creds['from_number']
             
             if not twilio_account_sid or not twilio_auth_token or not twilio_from_number:
-                logger.error("Twilio credentials not found in secret, cannot send SMS")
+                logger.error(f"SMS Notification: Twilio credentials incomplete - account_sid: {'present' if twilio_account_sid else 'missing'}, auth_token: {'present' if twilio_auth_token else 'missing'}, from_number: {'present' if twilio_from_number else 'missing'}")
                 return
+            
+            logger.info(f"SMS Notification: Twilio credentials retrieved successfully, from_number: {twilio_from_number[:5]}...")
         except Exception as e:
-            logger.error(f"Failed to retrieve Twilio credentials: {e}")
+            logger.error(f"SMS Notification: Failed to retrieve Twilio credentials: {e}", exc_info=True)
             return
         
         try:
             # Send SMS via Twilio API
+            logger.info(f"SMS Notification: Sending SMS to {phone_number} via Twilio...")
             response = requests.post(
                 f'https://api.twilio.com/2010-04-01/Accounts/{twilio_account_sid}/Messages.json',
                 auth=(twilio_account_sid, twilio_auth_token),
@@ -582,9 +600,12 @@ class JobProcessor:
                 timeout=10
             )
             response.raise_for_status()
-            logger.info(f"SMS sent successfully to {phone_number}")
+            response_data = response.json()
+            logger.info(f"SMS Notification: SMS sent successfully to {phone_number}. Twilio SID: {response_data.get('sid', 'N/A')}, Status: {response_data.get('status', 'N/A')}")
+        except requests.exceptions.HTTPError as e:
+            logger.error(f"SMS Notification: HTTP error sending SMS: {e}. Response: {e.response.text if e.response else 'N/A'}")
         except Exception as e:
-            logger.error(f"Failed to send SMS: {e}")
+            logger.error(f"SMS Notification: Failed to send SMS: {e}", exc_info=True)
     
     def generate_sms_message(
         self,
@@ -619,7 +640,7 @@ Generate ONLY the SMS message text, no explanations, no markdown."""
         
         try:
             response, usage_info = self.ai_service.generate_report(
-                model=workflow.get('ai_model', 'gpt-4o'),
+                model=workflow.get('ai_model', 'gpt-5'),
                 instructions=prompt,
                 context=""
             )
