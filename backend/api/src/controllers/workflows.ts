@@ -302,11 +302,12 @@ Return JSON format:
 Requirements:
 1. Generate a complete, valid HTML5 document
 2. Include modern, clean CSS styling (inline or in <style> tag)
-3. Use placeholder syntax {{PLACEHOLDER_NAME}} for dynamic content (use ALL_CAPS with underscores)
-4. Include common placeholders like {{TITLE}}, {{CONTENT}}, {{AUTHOR_NAME}}, {{DATE}}, etc.
-5. Make it responsive and mobile-friendly
-6. Use professional color scheme and typography
-7. Design it to beautifully display the generated research content
+3. DO NOT use placeholder syntax - use actual sample content and descriptive text
+4. Make it responsive and mobile-friendly
+5. Use professional color scheme and typography
+6. Design it to beautifully display lead magnet content
+7. Include actual text content that demonstrates the design - use sample headings, paragraphs, and sections
+8. The HTML should be ready to use with real content filled in manually or via code
 
 Return ONLY the HTML code, no markdown formatting, no explanations.`;
 
@@ -364,7 +365,7 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
         cleanedHtml = cleanedHtml.replace(/^```\s*/i, '').replace(/\s*```$/i, '');
       }
 
-      // Extract placeholder tags
+      // Extract placeholder tags (for backward compatibility, but templates won't have placeholders)
       const placeholderRegex = /\{\{([A-Z_]+)\}\}/g;
       const placeholderMatches = cleanedHtml.matchAll(placeholderRegex);
       const placeholders = new Set<string>();

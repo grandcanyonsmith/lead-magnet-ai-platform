@@ -18,6 +18,7 @@ export default function EditTemplatePage() {
   const [editPrompt, setEditPrompt] = useState('')
   const [showPreview, setShowPreview] = useState(false)
   const [detectedPlaceholders, setDetectedPlaceholders] = useState<string[]>([])
+  const [previewKey, setPreviewKey] = useState(0)
   
   const [formData, setFormData] = useState({
     template_name: '',
@@ -50,6 +51,8 @@ export default function EditTemplatePage() {
         // Auto-show preview when HTML is loaded
         if (template.html_content.trim() && !showPreview) {
           setShowPreview(true)
+          // Initialize preview key
+          setPreviewKey(1)
         }
       }
     } catch (error: any) {
@@ -74,6 +77,8 @@ export default function EditTemplatePage() {
     setFormData(prev => ({ ...prev, html_content: html }))
     const placeholders = extractPlaceholders(html)
     setDetectedPlaceholders(placeholders)
+    // Force preview re-render when HTML changes manually
+    setPreviewKey(prev => prev + 1)
     // Auto-show preview when HTML is added
     if (html.trim() && !showPreview) {
       setShowPreview(true)
@@ -125,6 +130,9 @@ export default function EditTemplatePage() {
       
       const placeholders = result.placeholder_tags || []
       setDetectedPlaceholders(placeholders)
+      
+      // Force preview re-render by incrementing previewKey
+      setPreviewKey(prev => prev + 1)
       
       // Ensure preview is shown after refinement
       if (!showPreview) {
@@ -302,7 +310,7 @@ export default function EditTemplatePage() {
             {showPreview && (
               <div className="bg-white border-t border-gray-200" style={{ height: '600px' }}>
                 <iframe
-                  key={`preview-${formData.html_content.length}-${formData.html_content.slice(0, 50)}`}
+                  key={`preview-${previewKey}-${formData.html_content.length}`}
                   srcDoc={getPreviewHtml()}
                   className="w-full h-full border-0"
                   title="HTML Preview"
