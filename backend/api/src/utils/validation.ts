@@ -12,6 +12,14 @@ export const createWorkflowSchema = z.object({
   html_enabled: z.boolean().default(true),
   template_id: z.string().optional(),
   template_version: z.number().default(0),
+  // Delivery configuration
+  delivery_method: z.enum(['webhook', 'sms', 'none']).default('none'),
+  delivery_webhook_url: z.string().url().optional(),
+  delivery_webhook_headers: z.record(z.string()).optional(),
+  delivery_sms_enabled: z.boolean().default(false),
+  delivery_sms_message: z.string().optional(), // Manual SMS message
+  delivery_sms_ai_generated: z.boolean().default(false), // If true, AI will generate SMS
+  delivery_sms_ai_instructions: z.string().optional(), // Instructions for AI SMS generation
 });
 
 export const updateWorkflowSchema = createWorkflowSchema.partial();
@@ -77,7 +85,15 @@ export const updateSettingsSchema = z.object({
 
 // Form submission schema
 export const submitFormSchema = z.object({
-  submission_data: z.record(z.any()),
+  submission_data: z.record(z.any()).refine(
+    (data) => {
+      // Ensure name, email, and phone are always present
+      return data.name && data.email && data.phone;
+    },
+    {
+      message: 'Form submission must include name, email, and phone fields',
+    }
+  ),
 });
 
 export const validate = <T>(schema: z.ZodSchema<T>, data: unknown): T => {

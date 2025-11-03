@@ -121,11 +121,11 @@ class ArtifactsController {
     const artifact = await db.get(ARTIFACTS_TABLE, { artifact_id: artifactId });
 
     if (!artifact) {
-      throw new ApiError('Artifact not found', 404);
+      throw new ApiError('This file doesn\'t exist', 404);
     }
 
     if (artifact.tenant_id !== tenantId) {
-      throw new ApiError('Unauthorized', 403);
+      throw new ApiError('You don\'t have permission to access this file', 403);
     }
 
     // Generate presigned URL if not already public

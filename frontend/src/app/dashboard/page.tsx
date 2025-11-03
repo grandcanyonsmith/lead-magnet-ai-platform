@@ -69,19 +69,19 @@ export default function DashboardPage() {
       color: 'blue',
     },
     {
-      label: 'Completed Jobs',
+      label: 'Completed Lead Magnets',
       value: overview.completed_jobs || 0,
       icon: FiCheckCircle,
       color: 'green',
     },
     {
-      label: 'Failed Jobs',
+      label: 'Failed Lead Magnets',
       value: overview.failed_jobs || 0,
       icon: FiXCircle,
       color: 'red',
     },
     {
-      label: 'Pending Jobs',
+      label: 'Pending Lead Magnets',
       value: overview.pending_jobs || 0,
       icon: FiClock,
       color: 'yellow',
@@ -182,11 +182,11 @@ export default function DashboardPage() {
               <span className="font-semibold text-gray-900">{overview.total_submissions || 0}</span>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
-              <span className="text-gray-600">Total Workflows</span>
+              <span className="text-gray-600">Total Lead Magnets</span>
               <span className="font-semibold text-gray-900">{overview.total_workflows || 0}</span>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
-              <span className="text-gray-600">Active Workflows</span>
+              <span className="text-gray-600">Active Lead Magnets</span>
               <span className="font-semibold text-green-600">{overview.active_workflows || 0}</span>
             </div>
           </div>
@@ -195,9 +195,9 @@ export default function DashboardPage() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
           <p className="text-gray-600 text-sm leading-relaxed">
-            Monitor your recent jobs and submissions in the{' '}
+            Monitor your generated lead magnets and form submissions in the{' '}
             <a href="/dashboard/jobs" className="text-primary-600 hover:text-primary-700 font-medium">
-              Jobs section
+              Generated Lead Magnets section
             </a>
             .
           </p>
