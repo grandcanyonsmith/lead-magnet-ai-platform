@@ -43,7 +43,7 @@ def calculate_openai_cost(model: str, input_tokens: int, output_tokens: int) -> 
     Returns:
         Dictionary with input_tokens, output_tokens, and cost_usd
     """
-    pricing = OPENAI_PRICING.get(model, OPENAI_PRICING['gpt-4o'])  # Default to gpt-4o if unknown
+    pricing = OPENAI_PRICING.get(model, OPENAI_PRICING['gpt-5'])  # Default to gpt-5 if unknown
     
     # Calculate cost with Decimal precision
     input_cost = Decimal(str(input_tokens)) / Decimal('1000') * pricing['input_per_1k_tokens_usd']

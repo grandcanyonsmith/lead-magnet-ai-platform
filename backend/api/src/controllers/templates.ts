@@ -6,6 +6,7 @@ import { validate, createTemplateSchema, updateTemplateSchema } from '../utils/v
 import { ApiError } from '../utils/errors';
 import { RouteResponse } from '../routes';
 import { calculateOpenAICost } from '../services/costService';
+import { callResponsesWithTimeout } from '../utils/openaiHelpers';
 
 const TEMPLATES_TABLE = process.env.TEMPLATES_TABLE!;
 const USAGE_RECORDS_TABLE = process.env.USAGE_RECORDS_TABLE || 'leadmagnet-usage-records';
@@ -305,44 +306,74 @@ Return ONLY the modified HTML code, no markdown formatting, no explanations.`;
       });
 
       const refineStartTime = Date.now();
-      const completionParams: any = {
-        model,
-        instructions: shouldRemovePlaceholders 
-          ? 'You are an expert HTML template designer. Return only valid HTML code without markdown formatting. REMOVE all placeholder syntax {{PLACEHOLDER_NAME}} and replace with actual content or real values (e.g., replace {{BRAND_COLORS}} with actual color codes like #2d8659).'
-          : 'You are an expert HTML template designer. Return only valid HTML code without markdown formatting. Preserve all placeholder syntax {{PLACEHOLDER_NAME}} exactly.',
-        input: prompt,
-      };
-      // GPT-5 only supports default temperature (1), don't set custom temperature
-      if (model !== 'gpt-5') {
-        completionParams.temperature = 0.7;
+      let completion;
+      try {
+        const completionParams: any = {
+          model,
+          instructions: shouldRemovePlaceholders 
+            ? 'You are an expert HTML template designer. Return only valid HTML code without markdown formatting. REMOVE all placeholder syntax {{PLACEHOLDER_NAME}} and replace with actual content or real values (e.g., replace {{BRAND_COLORS}} with actual color codes like #2d8659).'
+            : 'You are an expert HTML template designer. Return only valid HTML code without markdown formatting. Preserve all placeholder syntax {{PLACEHOLDER_NAME}} exactly.',
+          input: prompt,
+        };
+        // GPT-5 only supports default temperature (1), don't set custom temperature
+        if (model !== 'gpt-5') {
+          completionParams.temperature = 0.7;
+        }
+        completion = await callResponsesWithTimeout(
+          () => openai.responses.create(completionParams),
+          'template refinement'
+        );
+      } catch (apiError: any) {
+        console.error('[Template Refinement] Responses API error, attempting fallback', {
+          error: apiError?.message,
+          errorType: apiError?.constructor?.name,
+          isTimeout: apiError?.message?.includes('timed out'),
+        });
+        // Fallback to chat.completions
+        completion = await openai.chat.completions.create({
+          model: model === 'gpt-5' ? 'gpt-4o' : model,
+          messages: [
+            {
+              role: 'system',
+              content: shouldRemovePlaceholders 
+                ? 'You are an expert HTML template designer. Return only valid HTML code without markdown formatting. REMOVE all placeholder syntax {{PLACEHOLDER_NAME}} and replace with actual content or real values (e.g., replace {{BRAND_COLORS}} with actual color codes like #2d8659).'
+                : 'You are an expert HTML template designer. Return only valid HTML code without markdown formatting. Preserve all placeholder syntax {{PLACEHOLDER_NAME}} exactly.',
+            },
+            {
+              role: 'user',
+              content: prompt,
+            },
+          ],
+          temperature: model === 'gpt-5' ? undefined : 0.7,
+        });
       }
-      const completion = await openai.responses.create(completionParams);
 
       const refineDuration = Date.now() - refineStartTime;
+      const refinementModelUsed = (completion as any).model || model;
       console.log('[Template Refinement] Refinement completed', {
         duration: `${refineDuration}ms`,
         tokensUsed: completion.usage?.total_tokens,
-        model: completion.model,
+        model: refinementModelUsed,
       });
 
-      // Track usage
+      // Track usage - handle both response formats
       const usage = completion.usage;
       if (usage) {
-        const inputTokens = usage.input_tokens || 0;
-        const outputTokens = usage.output_tokens || 0;
-        const costData = calculateOpenAICost(model, inputTokens, outputTokens);
+        const inputTokens = ('input_tokens' in usage ? usage.input_tokens : usage.prompt_tokens) || 0;
+        const outputTokens = ('output_tokens' in usage ? usage.output_tokens : usage.completion_tokens) || 0;
+        const costData = calculateOpenAICost(refinementModelUsed, inputTokens, outputTokens);
         
         await storeUsageRecord(
           tenantId,
           'openai_template_refine',
-          model,
+          refinementModelUsed,
           inputTokens,
           outputTokens,
           costData.cost_usd
         );
       }
 
-      const htmlContent = completion.output_text || '';
+      const htmlContent = ('output_text' in completion ? completion.output_text : completion.choices?.[0]?.message?.content) || '';
       console.log('[Template Refinement] Refined HTML received', {
         htmlLength: htmlContent.length,
         firstChars: htmlContent.substring(0, 100),
@@ -434,42 +465,70 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
       });
 
       const htmlStartTime = Date.now();
-      const completionParams: any = {
-        model,
-        instructions: 'You are an expert HTML template designer. Return only valid HTML code without markdown formatting.',
-        input: prompt,
-      };
-      // GPT-5 only supports default temperature (1), don't set custom temperature
-      if (model !== 'gpt-5') {
-        completionParams.temperature = 0.7;
+      let completion;
+      try {
+        const completionParams: any = {
+          model,
+          instructions: 'You are an expert HTML template designer. Return only valid HTML code without markdown formatting.',
+          input: prompt,
+        };
+        // GPT-5 only supports default temperature (1), don't set custom temperature
+        if (model !== 'gpt-5') {
+          completionParams.temperature = 0.7;
+        }
+        completion = await callResponsesWithTimeout(
+          () => openai.responses.create(completionParams),
+          'template HTML generation'
+        );
+      } catch (apiError: any) {
+        console.error('[Template Generation] Responses API error, attempting fallback', {
+          error: apiError?.message,
+          errorType: apiError?.constructor?.name,
+          isTimeout: apiError?.message?.includes('timed out'),
+        });
+        // Fallback to chat.completions
+        completion = await openai.chat.completions.create({
+          model: model === 'gpt-5' ? 'gpt-4o' : model,
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an expert HTML template designer. Return only valid HTML code without markdown formatting.',
+            },
+            {
+              role: 'user',
+              content: prompt,
+            },
+          ],
+          temperature: model === 'gpt-5' ? undefined : 0.7,
+        });
       }
-      const completion = await openai.responses.create(completionParams);
 
       const htmlDuration = Date.now() - htmlStartTime;
+      const htmlModelUsed = (completion as any).model || model;
       console.log('[Template Generation] HTML generation completed', {
         duration: `${htmlDuration}ms`,
         tokensUsed: completion.usage?.total_tokens,
-        model: completion.model,
+        model: htmlModelUsed,
       });
 
-      // Track usage
+      // Track usage - handle both response formats
       const usage = completion.usage;
       if (usage) {
-        const inputTokens = usage.input_tokens || 0;
-        const outputTokens = usage.output_tokens || 0;
-        const costData = calculateOpenAICost(model, inputTokens, outputTokens);
+        const inputTokens = ('input_tokens' in usage ? usage.input_tokens : usage.prompt_tokens) || 0;
+        const outputTokens = ('output_tokens' in usage ? usage.output_tokens : usage.completion_tokens) || 0;
+        const costData = calculateOpenAICost(htmlModelUsed, inputTokens, outputTokens);
         
         await storeUsageRecord(
           tenantId,
           'openai_template_generate',
-          model,
+          htmlModelUsed,
           inputTokens,
           outputTokens,
           costData.cost_usd
         );
       }
 
-      const htmlContent = completion.output_text || '';
+      const htmlContent = ('output_text' in completion ? completion.output_text : completion.choices?.[0]?.message?.content) || '';
       console.log('[Template Generation] Raw HTML received', {
         htmlLength: htmlContent.length,
         firstChars: htmlContent.substring(0, 100),
@@ -501,40 +560,65 @@ Return JSON format: {"name": "...", "description": "..."}`;
 
       console.log('[Template Generation] Calling OpenAI for name/description generation...');
       const nameStartTime = Date.now();
-      const nameCompletionParams: any = {
-        model,
-        input: namePrompt,
-      };
-      // GPT-5 only supports default temperature (1), don't set custom temperature
-      if (model !== 'gpt-5') {
-        nameCompletionParams.temperature = 0.5;
+      let nameCompletion;
+      try {
+        const nameCompletionParams: any = {
+          model,
+          input: namePrompt,
+        };
+        // GPT-5 only supports default temperature (1), don't set custom temperature
+        if (model !== 'gpt-5') {
+          nameCompletionParams.temperature = 0.5;
+        }
+        nameCompletion = await callResponsesWithTimeout(
+          () => openai.responses.create(nameCompletionParams),
+          'template name generation'
+        );
+      } catch (apiError: any) {
+        console.error('[Template Generation] Responses API error for name, attempting fallback', {
+          error: apiError?.message,
+          errorType: apiError?.constructor?.name,
+          isTimeout: apiError?.message?.includes('timed out'),
+        });
+        // Fallback to chat.completions
+        nameCompletion = await openai.chat.completions.create({
+          model: model === 'gpt-5' ? 'gpt-4o' : model,
+          messages: [
+            {
+              role: 'user',
+              content: namePrompt,
+            },
+          ],
+          temperature: model === 'gpt-5' ? undefined : 0.5,
+        });
       }
-      const nameCompletion = await openai.responses.create(nameCompletionParams);
 
       const nameDuration = Date.now() - nameStartTime;
+      const namingModelUsed = (nameCompletion as any).model || model;
       console.log('[Template Generation] Name/description generation completed', {
         duration: `${nameDuration}ms`,
         tokensUsed: nameCompletion.usage?.total_tokens,
+        modelUsed: namingModelUsed,
       });
 
-      // Track usage for name/description generation
+      // Track usage for name/description generation - handle both response formats
       const nameUsage = nameCompletion.usage;
       if (nameUsage) {
-        const inputTokens = nameUsage.input_tokens || 0;
-        const outputTokens = nameUsage.output_tokens || 0;
-        const costData = calculateOpenAICost(model, inputTokens, outputTokens);
+        const inputTokens = ('input_tokens' in nameUsage ? nameUsage.input_tokens : nameUsage.prompt_tokens) || 0;
+        const outputTokens = ('output_tokens' in nameUsage ? nameUsage.output_tokens : nameUsage.completion_tokens) || 0;
+        const costData = calculateOpenAICost(namingModelUsed, inputTokens, outputTokens);
         
         await storeUsageRecord(
           tenantId,
           'openai_template_generate',
-          model,
+          namingModelUsed,
           inputTokens,
           outputTokens,
           costData.cost_usd
         );
       }
 
-      const nameContent = nameCompletion.output_text || '';
+      const nameContent = ('output_text' in nameCompletion ? nameCompletion.output_text : nameCompletion.choices?.[0]?.message?.content) || '';
       let templateName = 'Generated Template';
       let templateDescription = description;
 

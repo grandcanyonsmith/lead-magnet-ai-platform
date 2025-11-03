@@ -52,7 +52,7 @@ class ArtifactsController {
         // Check if artifact has a valid public_url
         const hasValidUrl = artifact.public_url && 
           artifact.s3_key &&
-          (!artifact.url_expires_at || new Date(artifact.url_expires_at) > new Date());
+          (!artifact.url_expires_at || new Date(artifact.url_expires_at) > new Date(Date.now() + 3600000)); // Regenerate if expires within 1 hour
         
         if (hasValidUrl && artifact.s3_key) {
           // Return artifact with public_url as object_url for frontend compatibility

@@ -6,6 +6,7 @@ import { validate, createWorkflowSchema, updateWorkflowSchema } from '../utils/v
 import { ApiError } from '../utils/errors';
 import { RouteResponse } from '../routes';
 import { calculateOpenAICost } from '../services/costService';
+import { callResponsesWithTimeout } from '../utils/openaiHelpers';
 
 const WORKFLOWS_TABLE = process.env.WORKFLOWS_TABLE!;
 const USAGE_RECORDS_TABLE = process.env.USAGE_RECORDS_TABLE || 'leadmagnet-usage-records';
@@ -237,41 +238,73 @@ Return JSON format:
 
       console.log('[Workflow Generation] Calling OpenAI for workflow generation...');
       const workflowStartTime = Date.now();
-      const workflowCompletionParams: any = {
-        model,
-        instructions: 'You are an expert at creating AI-powered lead magnets. Return only valid JSON without markdown formatting.',
-        input: workflowPrompt,
-      };
-      // GPT-5 only supports default temperature (1), don't set custom temperature
-      if (model !== 'gpt-5') {
-        workflowCompletionParams.temperature = 0.7;
+      
+      let workflowCompletion;
+      try {
+        const workflowCompletionParams: any = {
+          model,
+          instructions: 'You are an expert at creating AI-powered lead magnets. Return only valid JSON without markdown formatting.',
+          input: workflowPrompt,
+        };
+        // GPT-5 only supports default temperature (1), don't set custom temperature
+        if (model !== 'gpt-5') {
+          workflowCompletionParams.temperature = 0.7;
+        }
+        workflowCompletion = await callResponsesWithTimeout(
+          () => openai.responses.create(workflowCompletionParams),
+          'workflow generation'
+        );
+      } catch (apiError: any) {
+        console.error('[Workflow Generation] Responses API error, attempting fallback', {
+          error: apiError?.message,
+          errorType: apiError?.constructor?.name,
+          hasResponses: !!openai.responses,
+          isTimeout: apiError?.message?.includes('timed out'),
+        });
+        // Fallback to chat.completions if responses API fails
+        workflowCompletion = await openai.chat.completions.create({
+          model: model === 'gpt-5' ? 'gpt-4o' : model, // Fallback gpt-5 to gpt-4o
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an expert at creating AI-powered lead magnets. Return only valid JSON without markdown formatting.',
+            },
+            {
+              role: 'user',
+              content: workflowPrompt,
+            },
+          ],
+          temperature: model === 'gpt-5' ? undefined : 0.7,
+        });
       }
-      const workflowCompletion = await openai.responses.create(workflowCompletionParams);
 
       const workflowDuration = Date.now() - workflowStartTime;
+      const workflowUsedModel = (workflowCompletion as any).model || model;
       console.log('[Workflow Generation] Workflow generation completed', {
         duration: `${workflowDuration}ms`,
         tokensUsed: workflowCompletion.usage?.total_tokens,
+        modelUsed: workflowUsedModel,
       });
 
-      // Track usage
+      // Track usage - handle both responses API and chat.completions formats
       const workflowUsage = workflowCompletion.usage;
       if (workflowUsage) {
-        const inputTokens = workflowUsage.input_tokens || 0;
-        const outputTokens = workflowUsage.output_tokens || 0;
-        const costData = calculateOpenAICost(model, inputTokens, outputTokens);
+        const inputTokens = ('input_tokens' in workflowUsage ? workflowUsage.input_tokens : workflowUsage.prompt_tokens) || 0;
+        const outputTokens = ('output_tokens' in workflowUsage ? workflowUsage.output_tokens : workflowUsage.completion_tokens) || 0;
+        const costData = calculateOpenAICost(workflowUsedModel, inputTokens, outputTokens);
         
         await storeUsageRecord(
           tenantId,
           'openai_workflow_generate',
-          model,
+          workflowUsedModel,
           inputTokens,
           outputTokens,
           costData.cost_usd
         );
       }
 
-      const workflowContent = workflowCompletion.output_text || '';
+      // Handle both response formats
+      const workflowContent = ('output_text' in workflowCompletion ? workflowCompletion.output_text : workflowCompletion.choices?.[0]?.message?.content) || '';
       let workflowData = {
         workflow_name: 'Generated Lead Magnet',
         workflow_description: description,
@@ -304,41 +337,71 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
 
       console.log('[Workflow Generation] Calling OpenAI for template HTML generation...');
       const templateStartTime = Date.now();
-      const templateCompletionParams: any = {
-        model,
-        instructions: 'You are an expert HTML template designer. Return only valid HTML code without markdown formatting.',
-        input: templatePrompt,
-      };
-      // GPT-5 only supports default temperature (1), don't set custom temperature
-      if (model !== 'gpt-5') {
-        templateCompletionParams.temperature = 0.7;
+      
+      let templateCompletion;
+      try {
+        const templateCompletionParams: any = {
+          model,
+          instructions: 'You are an expert HTML template designer. Return only valid HTML code without markdown formatting.',
+          input: templatePrompt,
+        };
+        // GPT-5 only supports default temperature (1), don't set custom temperature
+        if (model !== 'gpt-5') {
+          templateCompletionParams.temperature = 0.7;
+        }
+        templateCompletion = await callResponsesWithTimeout(
+          () => openai.responses.create(templateCompletionParams),
+          'template HTML generation'
+        );
+      } catch (apiError: any) {
+        console.error('[Workflow Generation] Responses API error for template, attempting fallback', {
+          error: apiError?.message,
+          errorType: apiError?.constructor?.name,
+          isTimeout: apiError?.message?.includes('timed out'),
+        });
+        // Fallback to chat.completions
+        templateCompletion = await openai.chat.completions.create({
+          model: model === 'gpt-5' ? 'gpt-4o' : model,
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an expert HTML template designer. Return only valid HTML code without markdown formatting.',
+            },
+            {
+              role: 'user',
+              content: templatePrompt,
+            },
+          ],
+          temperature: model === 'gpt-5' ? undefined : 0.7,
+        });
       }
-      const templateCompletion = await openai.responses.create(templateCompletionParams);
 
       const templateDuration = Date.now() - templateStartTime;
+      const templateModelUsed = (templateCompletion as any).model || model;
       console.log('[Workflow Generation] Template HTML generation completed', {
         duration: `${templateDuration}ms`,
         tokensUsed: templateCompletion.usage?.total_tokens,
+        modelUsed: templateModelUsed,
       });
 
-      // Track usage
+      // Track usage - handle both response formats
       const templateUsage = templateCompletion.usage;
       if (templateUsage) {
-        const inputTokens = templateUsage.input_tokens || 0;
-        const outputTokens = templateUsage.output_tokens || 0;
-        const costData = calculateOpenAICost(model, inputTokens, outputTokens);
+        const inputTokens = ('input_tokens' in templateUsage ? templateUsage.input_tokens : templateUsage.prompt_tokens) || 0;
+        const outputTokens = ('output_tokens' in templateUsage ? templateUsage.output_tokens : templateUsage.completion_tokens) || 0;
+        const costData = calculateOpenAICost(templateModelUsed, inputTokens, outputTokens);
         
         await storeUsageRecord(
           tenantId,
           'openai_template_generate',
-          model,
+          templateModelUsed,
           inputTokens,
           outputTokens,
           costData.cost_usd
         );
       }
 
-      let cleanedHtml = templateCompletion.output_text || '';
+      let cleanedHtml = ('output_text' in templateCompletion ? templateCompletion.output_text : templateCompletion.choices?.[0]?.message?.content) || '';
       
       // Clean up markdown code blocks if present
       if (cleanedHtml.startsWith('```html')) {
@@ -359,39 +422,65 @@ Return JSON format: {"name": "...", "description": "..."}`;
 
       console.log('[Workflow Generation] Calling OpenAI for template name/description generation...');
       const templateNameStartTime = Date.now();
-      const templateNameCompletionParams: any = {
-        model,
-        input: templateNamePrompt,
-      };
-      // GPT-5 only supports default temperature (1), don't set custom temperature
-      if (model !== 'gpt-5') {
-        templateNameCompletionParams.temperature = 0.5;
+      
+      let templateNameCompletion;
+      try {
+        const templateNameCompletionParams: any = {
+          model,
+          input: templateNamePrompt,
+        };
+        // GPT-5 only supports default temperature (1), don't set custom temperature
+        if (model !== 'gpt-5') {
+          templateNameCompletionParams.temperature = 0.5;
+        }
+        templateNameCompletion = await callResponsesWithTimeout(
+          () => openai.responses.create(templateNameCompletionParams),
+          'template name generation'
+        );
+      } catch (apiError: any) {
+        console.error('[Workflow Generation] Responses API error for name, attempting fallback', {
+          error: apiError?.message,
+          errorType: apiError?.constructor?.name,
+          isTimeout: apiError?.message?.includes('timed out'),
+        });
+        // Fallback to chat.completions
+        templateNameCompletion = await openai.chat.completions.create({
+          model: model === 'gpt-5' ? 'gpt-4o' : model,
+          messages: [
+            {
+              role: 'user',
+              content: templateNamePrompt,
+            },
+          ],
+          temperature: model === 'gpt-5' ? undefined : 0.5,
+        });
       }
-      const templateNameCompletion = await openai.responses.create(templateNameCompletionParams);
 
       const templateNameDuration = Date.now() - templateNameStartTime;
+      const templateNameModel = (templateNameCompletion as any).model || model;
       console.log('[Workflow Generation] Template name/description generation completed', {
         duration: `${templateNameDuration}ms`,
+        modelUsed: templateNameModel,
       });
 
-      // Track usage
+      // Track usage - handle both response formats
       const templateNameUsage = templateNameCompletion.usage;
       if (templateNameUsage) {
-        const inputTokens = templateNameUsage.input_tokens || 0;
-        const outputTokens = templateNameUsage.output_tokens || 0;
-        const costData = calculateOpenAICost(model, inputTokens, outputTokens);
+        const inputTokens = ('input_tokens' in templateNameUsage ? templateNameUsage.input_tokens : templateNameUsage.prompt_tokens) || 0;
+        const outputTokens = ('output_tokens' in templateNameUsage ? templateNameUsage.output_tokens : templateNameUsage.completion_tokens) || 0;
+        const costData = calculateOpenAICost(templateNameModel, inputTokens, outputTokens);
         
         await storeUsageRecord(
           tenantId,
           'openai_template_generate',
-          model,
+          templateNameModel,
           inputTokens,
           outputTokens,
           costData.cost_usd
         );
       }
 
-      const templateNameContent = templateNameCompletion.output_text || '';
+      const templateNameContent = ('output_text' in templateNameCompletion ? templateNameCompletion.output_text : templateNameCompletion.choices?.[0]?.message?.content) || '';
       let templateName = 'Generated Template';
       let templateDescription = 'A professional HTML template for displaying lead magnet content';
 
@@ -436,41 +525,71 @@ The public_slug should be URL-friendly (lowercase, hyphens only, no spaces).`;
 
       console.log('[Workflow Generation] Calling OpenAI for form generation...');
       const formStartTime = Date.now();
-      const formCompletionParams: any = {
-        model,
-        instructions: 'You are an expert at creating lead capture forms. Return only valid JSON without markdown formatting.',
-        input: formPrompt,
-      };
-      // GPT-5 only supports default temperature (1), don't set custom temperature
-      if (model !== 'gpt-5') {
-        formCompletionParams.temperature = 0.7;
+      
+      let formCompletion;
+      try {
+        const formCompletionParams: any = {
+          model,
+          instructions: 'You are an expert at creating lead capture forms. Return only valid JSON without markdown formatting.',
+          input: formPrompt,
+        };
+        // GPT-5 only supports default temperature (1), don't set custom temperature
+        if (model !== 'gpt-5') {
+          formCompletionParams.temperature = 0.7;
+        }
+        formCompletion = await callResponsesWithTimeout(
+          () => openai.responses.create(formCompletionParams),
+          'form generation'
+        );
+      } catch (apiError: any) {
+        console.error('[Workflow Generation] Responses API error for form, attempting fallback', {
+          error: apiError?.message,
+          errorType: apiError?.constructor?.name,
+          isTimeout: apiError?.message?.includes('timed out'),
+        });
+        // Fallback to chat.completions
+        formCompletion = await openai.chat.completions.create({
+          model: model === 'gpt-5' ? 'gpt-4o' : model,
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an expert at creating lead capture forms. Return only valid JSON without markdown formatting.',
+            },
+            {
+              role: 'user',
+              content: formPrompt,
+            },
+          ],
+          temperature: model === 'gpt-5' ? undefined : 0.7,
+        });
       }
-      const formCompletion = await openai.responses.create(formCompletionParams);
 
       const formDuration = Date.now() - formStartTime;
+      const formModelUsed = (formCompletion as any).model || model;
       console.log('[Workflow Generation] Form generation completed', {
         duration: `${formDuration}ms`,
         tokensUsed: formCompletion.usage?.total_tokens,
+        modelUsed: formModelUsed,
       });
 
-      // Track usage
+      // Track usage - handle both response formats
       const formUsage = formCompletion.usage;
       if (formUsage) {
-        const inputTokens = formUsage.input_tokens || 0;
-        const outputTokens = formUsage.output_tokens || 0;
-        const costData = calculateOpenAICost(model, inputTokens, outputTokens);
+        const inputTokens = ('input_tokens' in formUsage ? formUsage.input_tokens : formUsage.prompt_tokens) || 0;
+        const outputTokens = ('output_tokens' in formUsage ? formUsage.output_tokens : formUsage.completion_tokens) || 0;
+        const costData = calculateOpenAICost(formModelUsed, inputTokens, outputTokens);
         
         await storeUsageRecord(
           tenantId,
           'openai_workflow_generate',
-          model,
+          formModelUsed,
           inputTokens,
           outputTokens,
           costData.cost_usd
         );
       }
 
-      const formContent = formCompletion.output_text || '';
+      const formContent = ('output_text' in formCompletion ? formCompletion.output_text : formCompletion.choices?.[0]?.message?.content) || '';
       let formData = {
         form_name: `Form for ${workflowData.workflow_name}`,
         public_slug: workflowData.workflow_name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
@@ -600,42 +719,70 @@ Return ONLY the modified instructions, no markdown formatting, no explanations.`
       });
 
       const refineStartTime = Date.now();
-      const completionParams: any = {
-        model,
-        instructions: 'You are an expert AI prompt engineer. Return only the modified instructions without markdown formatting.',
-        input: prompt,
-      };
-      // GPT-5 only supports default temperature (1), don't set custom temperature
-      if (model !== 'gpt-5') {
-        completionParams.temperature = 0.7;
+      let completion;
+      try {
+        const completionParams: any = {
+          model,
+          instructions: 'You are an expert AI prompt engineer. Return only the modified instructions without markdown formatting.',
+          input: prompt,
+        };
+        // GPT-5 only supports default temperature (1), don't set custom temperature
+        if (model !== 'gpt-5') {
+          completionParams.temperature = 0.7;
+        }
+        completion = await callResponsesWithTimeout(
+          () => openai.responses.create(completionParams),
+          'workflow instructions refinement'
+        );
+      } catch (apiError: any) {
+        console.error('[Workflow Instructions Refinement] Responses API error, attempting fallback', {
+          error: apiError?.message,
+          errorType: apiError?.constructor?.name,
+          isTimeout: apiError?.message?.includes('timed out'),
+        });
+        // Fallback to chat.completions
+        completion = await openai.chat.completions.create({
+          model: model === 'gpt-5' ? 'gpt-4o' : model,
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an expert AI prompt engineer. Return only the modified instructions without markdown formatting.',
+            },
+            {
+              role: 'user',
+              content: prompt,
+            },
+          ],
+          temperature: model === 'gpt-5' ? undefined : 0.7,
+        });
       }
-      const completion = await openai.responses.create(completionParams);
 
       const refineDuration = Date.now() - refineStartTime;
+      const refinementModel = (completion as any).model || model;
       console.log('[Workflow Instructions Refinement] Refinement completed', {
         duration: `${refineDuration}ms`,
         tokensUsed: completion.usage?.total_tokens,
-        model: completion.model,
+        model: refinementModel,
       });
 
-      // Track usage
+      // Track usage - handle both response formats
       const usage = completion.usage;
       if (usage) {
-        const inputTokens = usage.input_tokens || 0;
-        const outputTokens = usage.output_tokens || 0;
-        const costData = calculateOpenAICost(model, inputTokens, outputTokens);
+        const inputTokens = ('input_tokens' in usage ? usage.input_tokens : usage.prompt_tokens) || 0;
+        const outputTokens = ('output_tokens' in usage ? usage.output_tokens : usage.completion_tokens) || 0;
+        const costData = calculateOpenAICost(refinementModel, inputTokens, outputTokens);
         
         await storeUsageRecord(
           tenantId,
           'openai_workflow_refine',
-          model,
+          refinementModel,
           inputTokens,
           outputTokens,
           costData.cost_usd
         );
       }
 
-      const instructionsContent = completion.output_text || '';
+      const instructionsContent = ('output_text' in completion ? completion.output_text : completion.choices?.[0]?.message?.content) || '';
       console.log('[Workflow Instructions Refinement] Refined instructions received', {
         instructionsLength: instructionsContent.length,
         firstChars: instructionsContent.substring(0, 100),
