@@ -25,6 +25,7 @@ export const handler = async (
       hasCustomTenantId: !!claims['custom:tenant_id'],
       hasEmail: !!claims.email,
       hasSub: !!claims.sub,
+      rawClaims: claims, // Log all claims for debugging
     });
     
     // Try to get tenant_id from custom attribute
@@ -55,8 +56,32 @@ export const handler = async (
         logger.error('No tenant_id available and no fallback values found', {
           claims: Object.keys(claims),
           path: event.rawPath,
+          authorizer: authorizer ? Object.keys(authorizer) : 'none',
         });
       }
+    }
+    
+    // If still no tenantId and this is an admin route, return 401
+    // But only for admin routes - public routes don't need tenantId
+    const isAdminRoute = event.rawPath.startsWith('/admin');
+    if (!tenantId && isAdminRoute) {
+      logger.error('Admin route accessed without tenantId', {
+        path: event.rawPath,
+        claims: Object.keys(claims),
+        hasAuthorizer: !!authorizer,
+        email: claims.email,
+        sub: claims.sub,
+      });
+      return {
+        statusCode: 401,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          error: 'Unauthorized',
+          message: 'Please sign in to access this page',
+        }),
+      };
     }
     
     // Route the request
