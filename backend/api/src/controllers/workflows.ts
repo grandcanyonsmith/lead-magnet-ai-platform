@@ -1,5 +1,6 @@
 import { ulid } from 'ulid';
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
+import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
 import OpenAI from 'openai';
 import { db } from '../utils/db';
 import { validate, createWorkflowSchema, updateWorkflowSchema } from '../utils/validation';
@@ -9,9 +10,12 @@ import { calculateOpenAICost } from '../services/costService';
 import { callResponsesWithTimeout } from '../utils/openaiHelpers';
 
 const WORKFLOWS_TABLE = process.env.WORKFLOWS_TABLE!;
+const JOBS_TABLE = process.env.JOBS_TABLE || 'leadmagnet-jobs';
 const USAGE_RECORDS_TABLE = process.env.USAGE_RECORDS_TABLE || 'leadmagnet-usage-records';
 const OPENAI_SECRET_NAME = process.env.OPENAI_SECRET_NAME || 'leadmagnet/openai-api-key';
+const LAMBDA_FUNCTION_NAME = process.env.LAMBDA_FUNCTION_NAME || 'leadmagnet-api-handler';
 const secretsClient = new SecretsManagerClient({ region: process.env.AWS_REGION || 'us-east-1' });
+const lambdaClient = new LambdaClient({ region: process.env.AWS_REGION || 'us-east-1' });
 
 async function getOpenAIClient(): Promise<OpenAI> {
   const command = new GetSecretValueCommand({ SecretId: OPENAI_SECRET_NAME });
@@ -254,7 +258,562 @@ class WorkflowsController {
       throw new ApiError('Description is required', 400);
     }
 
-    console.log('[Workflow Generation] Starting AI generation', {
+    console.log('[Workflow Generation] Starting async generation', {
+      tenantId,
+      model,
+      descriptionLength: description.length,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Create workflow generation job record
+    const jobId = `wfgen_${ulid()}`;
+    const job = {
+      job_id: jobId,
+      tenant_id: tenantId,
+      job_type: 'workflow_generation',
+      status: 'pending',
+      description,
+      model,
+      result: null,
+      error_message: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    await db.put(JOBS_TABLE, job);
+    console.log('[Workflow Generation] Created job record', { jobId });
+
+    // Invoke Lambda asynchronously to process workflow generation
+    try {
+      const functionArn = `arn:aws:lambda:${process.env.AWS_REGION || 'us-east-1'}:${process.env.AWS_ACCOUNT_ID || '471112574622'}:function:${LAMBDA_FUNCTION_NAME}`;
+      
+      const invokeCommand = new InvokeCommand({
+        FunctionName: functionArn, // Use full ARN for better compatibility
+        InvocationType: 'Event', // Async invocation
+        Payload: JSON.stringify({
+          source: 'workflow-generation-job',
+          job_id: jobId,
+          tenant_id: tenantId,
+          description,
+          model,
+        }),
+      });
+
+      await lambdaClient.send(invokeCommand);
+      console.log('[Workflow Generation] Triggered async processing', { jobId, functionArn });
+    } catch (error: any) {
+      console.error('[Workflow Generation] Failed to trigger async processing', {
+        error: error.message,
+        jobId,
+      });
+      // Update job status to failed
+      await db.update(JOBS_TABLE, { job_id: jobId }, {
+        status: 'failed',
+        error_message: 'Failed to start processing',
+        updated_at: new Date().toISOString(),
+      });
+      throw new ApiError('Failed to start workflow generation', 500);
+    }
+
+    // Return immediately with job_id
+    return {
+      statusCode: 202, // Accepted
+      body: {
+        job_id: jobId,
+        status: 'pending',
+        message: 'Workflow generation started. Poll /admin/workflows/generation-status/:jobId for status.',
+      },
+    };
+  }
+
+  async processWorkflowGenerationJob(jobId: string, tenantId: string, description: string, model: string): Promise<void> {
+    console.log('[Workflow Generation] Processing job', { jobId, tenantId });
+
+    try {
+      // Update job status to processing
+      await db.update(JOBS_TABLE, { job_id: jobId }, {
+        status: 'processing',
+        updated_at: new Date().toISOString(),
+      });
+
+      // Generate workflow (existing logic)
+      const openai = await getOpenAIClient();
+      console.log('[Workflow Generation] OpenAI client initialized');
+
+      // Generate workflow configuration
+      const workflowPrompt = `You are an expert at creating AI-powered lead magnets. Based on this description: "${description}", generate a complete lead magnet configuration.
+
+Generate:
+1. Lead Magnet Name (short, catchy, 2-4 words)
+2. Lead Magnet Description (1-2 sentences explaining what it does)
+3. Research Instructions (detailed instructions for AI to generate personalized research based on form submission data. Use [field_name] to reference form fields)
+
+Return JSON format:
+{
+  "workflow_name": "...",
+  "workflow_description": "...",
+  "research_instructions": "..."
+}`;
+
+      console.log('[Workflow Generation] Calling OpenAI for workflow generation...');
+      const workflowStartTime = Date.now();
+      
+      let workflowCompletion;
+      try {
+        const workflowCompletionParams: any = {
+          model,
+          instructions: 'You are an expert at creating AI-powered lead magnets. Return only valid JSON without markdown formatting.',
+          input: workflowPrompt,
+        };
+        if (model !== 'gpt-5') {
+          workflowCompletionParams.temperature = 0.7;
+        }
+        workflowCompletion = await callResponsesWithTimeout(
+          () => openai.responses.create(workflowCompletionParams),
+          'workflow generation'
+        );
+      } catch (apiError: any) {
+        console.error('[Workflow Generation] Responses API error, attempting fallback', {
+          error: apiError?.message,
+        });
+        workflowCompletion = await openai.chat.completions.create({
+          model: model === 'gpt-5' ? 'gpt-4o' : model,
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an expert at creating AI-powered lead magnets. Return only valid JSON without markdown formatting.',
+            },
+            {
+              role: 'user',
+              content: workflowPrompt,
+            },
+          ],
+          temperature: model === 'gpt-5' ? undefined : 0.7,
+        });
+      }
+
+      const workflowDuration = Date.now() - workflowStartTime;
+      const workflowUsedModel = (workflowCompletion as any).model || model;
+      console.log('[Workflow Generation] Workflow generation completed', {
+        duration: `${workflowDuration}ms`,
+        tokensUsed: workflowCompletion.usage?.total_tokens,
+        modelUsed: workflowUsedModel,
+      });
+
+      // Track usage
+      const workflowUsage = workflowCompletion.usage;
+      if (workflowUsage) {
+        const inputTokens = ('input_tokens' in workflowUsage ? workflowUsage.input_tokens : workflowUsage.prompt_tokens) || 0;
+        const outputTokens = ('output_tokens' in workflowUsage ? workflowUsage.output_tokens : workflowUsage.completion_tokens) || 0;
+        const costData = calculateOpenAICost(workflowUsedModel, inputTokens, outputTokens);
+        
+        await storeUsageRecord(
+          tenantId,
+          'openai_workflow_generate',
+          workflowUsedModel,
+          inputTokens,
+          outputTokens,
+          costData.cost_usd
+        );
+      }
+
+      const workflowContent = ('output_text' in workflowCompletion ? workflowCompletion.output_text : workflowCompletion.choices?.[0]?.message?.content) || '';
+      let workflowData = {
+        workflow_name: 'Generated Lead Magnet',
+        workflow_description: description,
+        research_instructions: `Generate a personalized report based on form submission data. Use [field_name] to reference form fields.`,
+      };
+
+      try {
+        const jsonMatch = workflowContent.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          workflowData = JSON.parse(jsonMatch[0]);
+        }
+      } catch (e) {
+        console.warn('[Workflow Generation] Failed to parse workflow JSON, using defaults', e);
+      }
+
+      // Generate template HTML
+      const templatePrompt = `You are an expert HTML template designer for lead magnets. Create a professional HTML template for: "${description}"
+
+Requirements:
+1. Generate a complete, valid HTML5 document
+2. Include modern, clean CSS styling (inline or in <style> tag)
+3. DO NOT use placeholder syntax - use actual sample content and descriptive text
+4. Make it responsive and mobile-friendly
+5. Use professional color scheme and typography
+6. Design it to beautifully display lead magnet content
+7. Include actual text content that demonstrates the design - use sample headings, paragraphs, and sections
+8. The HTML should be ready to use with real content filled in manually or via code
+
+Return ONLY the HTML code, no markdown formatting, no explanations.`;
+
+      console.log('[Workflow Generation] Calling OpenAI for template HTML generation...');
+      const templateStartTime = Date.now();
+      
+      let templateCompletion;
+      try {
+        const templateCompletionParams: any = {
+          model,
+          instructions: 'You are an expert HTML template designer. Return only valid HTML code without markdown formatting.',
+          input: templatePrompt,
+        };
+        if (model !== 'gpt-5') {
+          templateCompletionParams.temperature = 0.7;
+        }
+        templateCompletion = await callResponsesWithTimeout(
+          () => openai.responses.create(templateCompletionParams),
+          'template HTML generation'
+        );
+      } catch (apiError: any) {
+        console.error('[Workflow Generation] Responses API error for template, attempting fallback', {
+          error: apiError?.message,
+        });
+        templateCompletion = await openai.chat.completions.create({
+          model: model === 'gpt-5' ? 'gpt-4o' : model,
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an expert HTML template designer. Return only valid HTML code without markdown formatting.',
+            },
+            {
+              role: 'user',
+              content: templatePrompt,
+            },
+          ],
+          temperature: model === 'gpt-5' ? undefined : 0.7,
+        });
+      }
+
+      const templateDuration = Date.now() - templateStartTime;
+      const templateModelUsed = (templateCompletion as any).model || model;
+      console.log('[Workflow Generation] Template HTML generation completed', {
+        duration: `${templateDuration}ms`,
+        tokensUsed: templateCompletion.usage?.total_tokens,
+        modelUsed: templateModelUsed,
+      });
+
+      // Track usage
+      const templateUsage = templateCompletion.usage;
+      if (templateUsage) {
+        const inputTokens = ('input_tokens' in templateUsage ? templateUsage.input_tokens : templateUsage.prompt_tokens) || 0;
+        const outputTokens = ('output_tokens' in templateUsage ? templateUsage.output_tokens : templateUsage.completion_tokens) || 0;
+        const costData = calculateOpenAICost(templateModelUsed, inputTokens, outputTokens);
+        
+        await storeUsageRecord(
+          tenantId,
+          'openai_template_generate',
+          templateModelUsed,
+          inputTokens,
+          outputTokens,
+          costData.cost_usd
+        );
+      }
+
+      let cleanedHtml = ('output_text' in templateCompletion ? templateCompletion.output_text : templateCompletion.choices?.[0]?.message?.content) || '';
+      
+      // Clean up markdown code blocks if present
+      if (cleanedHtml.startsWith('```html')) {
+        cleanedHtml = cleanedHtml.replace(/^```html\s*/i, '').replace(/\s*```$/i, '');
+      } else if (cleanedHtml.startsWith('```')) {
+        cleanedHtml = cleanedHtml.replace(/^```\s*/i, '').replace(/\s*```$/i, '');
+      }
+
+      const placeholderTags: string[] = [];
+
+      // Generate template name and description
+      const templateNamePrompt = `Based on this lead magnet: "${description}", generate:
+1. A short, descriptive template name (2-4 words max)
+2. A brief template description (1-2 sentences)
+
+Return JSON format: {"name": "...", "description": "..."}`;
+
+      console.log('[Workflow Generation] Calling OpenAI for template name/description generation...');
+      const templateNameStartTime = Date.now();
+      
+      let templateNameCompletion;
+      try {
+        const templateNameCompletionParams: any = {
+          model,
+          input: templateNamePrompt,
+        };
+        if (model !== 'gpt-5') {
+          templateNameCompletionParams.temperature = 0.5;
+        }
+        templateNameCompletion = await callResponsesWithTimeout(
+          () => openai.responses.create(templateNameCompletionParams),
+          'template name generation'
+        );
+      } catch (apiError: any) {
+        console.error('[Workflow Generation] Responses API error for name, attempting fallback', {
+          error: apiError?.message,
+        });
+        templateNameCompletion = await openai.chat.completions.create({
+          model: model === 'gpt-5' ? 'gpt-4o' : model,
+          messages: [
+            {
+              role: 'user',
+              content: templateNamePrompt,
+            },
+          ],
+          temperature: model === 'gpt-5' ? undefined : 0.5,
+        });
+      }
+
+      const templateNameDuration = Date.now() - templateNameStartTime;
+      const templateNameModel = (templateNameCompletion as any).model || model;
+      console.log('[Workflow Generation] Template name/description generation completed', {
+        duration: `${templateNameDuration}ms`,
+        modelUsed: templateNameModel,
+      });
+
+      // Track usage
+      const templateNameUsage = templateNameCompletion.usage;
+      if (templateNameUsage) {
+        const inputTokens = ('input_tokens' in templateNameUsage ? templateNameUsage.input_tokens : templateNameUsage.prompt_tokens) || 0;
+        const outputTokens = ('output_tokens' in templateNameUsage ? templateNameUsage.output_tokens : templateNameUsage.completion_tokens) || 0;
+        const costData = calculateOpenAICost(templateNameModel, inputTokens, outputTokens);
+        
+        await storeUsageRecord(
+          tenantId,
+          'openai_template_generate',
+          templateNameModel,
+          inputTokens,
+          outputTokens,
+          costData.cost_usd
+        );
+      }
+
+      const templateNameContent = ('output_text' in templateNameCompletion ? templateNameCompletion.output_text : templateNameCompletion.choices?.[0]?.message?.content) || '';
+      let templateName = 'Generated Template';
+      let templateDescription = 'A professional HTML template for displaying lead magnet content';
+
+      try {
+        const jsonMatch = templateNameContent.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          templateName = parsed.name || templateName;
+          templateDescription = parsed.description || templateDescription;
+        }
+      } catch (e) {
+        console.warn('[Workflow Generation] Failed to parse template name JSON, using defaults', e);
+      }
+
+      // Generate form fields
+      const formPrompt = `You are an expert at creating lead capture forms. Based on this lead magnet: "${description}", generate appropriate form fields.
+
+The form should collect all necessary information needed to personalize the lead magnet. Think about what data would be useful for:
+- Personalizing the AI-generated content
+- Contacting the lead
+- Understanding their needs
+
+Generate 3-6 form fields. Common field types: text, email, tel, textarea, select, number.
+
+Return JSON format:
+{
+  "form_name": "...",
+  "public_slug": "...",
+  "fields": [
+    {
+      "field_id": "field_1",
+      "field_type": "text|email|tel|textarea|select|number",
+      "label": "...",
+      "placeholder": "...",
+      "required": true|false,
+      "options": ["option1", "option2"] // only for select fields
+    }
+  ]
+}
+
+The public_slug should be URL-friendly (lowercase, hyphens only, no spaces).`;
+
+      console.log('[Workflow Generation] Calling OpenAI for form generation...');
+      const formStartTime = Date.now();
+      
+      let formCompletion;
+      try {
+        const formCompletionParams: any = {
+          model,
+          instructions: 'You are an expert at creating lead capture forms. Return only valid JSON without markdown formatting.',
+          input: formPrompt,
+        };
+        if (model !== 'gpt-5') {
+          formCompletionParams.temperature = 0.7;
+        }
+        formCompletion = await callResponsesWithTimeout(
+          () => openai.responses.create(formCompletionParams),
+          'form generation'
+        );
+      } catch (apiError: any) {
+        console.error('[Workflow Generation] Responses API error for form, attempting fallback', {
+          error: apiError?.message,
+        });
+        formCompletion = await openai.chat.completions.create({
+          model: model === 'gpt-5' ? 'gpt-4o' : model,
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an expert at creating lead capture forms. Return only valid JSON without markdown formatting.',
+            },
+            {
+              role: 'user',
+              content: formPrompt,
+            },
+          ],
+          temperature: model === 'gpt-5' ? undefined : 0.7,
+        });
+      }
+
+      const formDuration = Date.now() - formStartTime;
+      const formModelUsed = (formCompletion as any).model || model;
+      console.log('[Workflow Generation] Form generation completed', {
+        duration: `${formDuration}ms`,
+        tokensUsed: formCompletion.usage?.total_tokens,
+        modelUsed: formModelUsed,
+      });
+
+      // Track usage
+      const formUsage = formCompletion.usage;
+      if (formUsage) {
+        const inputTokens = ('input_tokens' in formUsage ? formUsage.input_tokens : formUsage.prompt_tokens) || 0;
+        const outputTokens = ('output_tokens' in formUsage ? formUsage.output_tokens : formUsage.completion_tokens) || 0;
+        const costData = calculateOpenAICost(formModelUsed, inputTokens, outputTokens);
+        
+        await storeUsageRecord(
+          tenantId,
+          'openai_workflow_generate',
+          formModelUsed,
+          inputTokens,
+          outputTokens,
+          costData.cost_usd
+        );
+      }
+
+      const formContent = ('output_text' in formCompletion ? formCompletion.output_text : formCompletion.choices?.[0]?.message?.content) || '';
+      let formData = {
+        form_name: `Form for ${workflowData.workflow_name}`,
+        public_slug: workflowData.workflow_name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+        fields: [
+          {
+            field_id: 'field_1',
+            field_type: 'email',
+            label: 'Email Address',
+            placeholder: 'your@email.com',
+            required: true,
+          },
+          {
+            field_id: 'field_2',
+            field_type: 'text',
+            label: 'Name',
+            placeholder: 'Your Name',
+            required: true,
+          },
+        ],
+      };
+
+      try {
+        const jsonMatch = formContent.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          formData = JSON.parse(jsonMatch[0]);
+        }
+      } catch (e) {
+        console.warn('[Workflow Generation] Failed to parse form JSON, using defaults', e);
+      }
+
+      // Ensure field_id is generated for each field if missing
+      formData.fields = formData.fields.map((field: any, index: number) => ({
+        ...field,
+        field_id: field.field_id || `field_${index + 1}`,
+      }));
+
+      const totalDuration = Date.now() - workflowStartTime;
+      console.log('[Workflow Generation] Success!', {
+        tenantId,
+        workflowName: workflowData.workflow_name,
+        templateName,
+        htmlLength: cleanedHtml.length,
+        placeholderCount: placeholderTags.length,
+        formFieldsCount: formData.fields.length,
+        totalDuration: `${totalDuration}ms`,
+        timestamp: new Date().toISOString(),
+      });
+
+      const result = {
+        workflow: {
+          workflow_name: workflowData.workflow_name,
+          workflow_description: workflowData.workflow_description,
+          research_instructions: workflowData.research_instructions,
+        },
+        template: {
+          template_name: templateName,
+          template_description: templateDescription,
+          html_content: cleanedHtml.trim(),
+          placeholder_tags: placeholderTags,
+        },
+        form: {
+          form_name: formData.form_name,
+          public_slug: formData.public_slug,
+          form_fields_schema: {
+            fields: formData.fields,
+          },
+        },
+      };
+
+      // Update job with result
+      await db.update(JOBS_TABLE, { job_id: jobId }, {
+        status: 'completed',
+        result: result,
+        updated_at: new Date().toISOString(),
+      });
+
+      console.log('[Workflow Generation] Job completed successfully', { jobId });
+    } catch (error: any) {
+      console.error('[Workflow Generation] Job failed', {
+        jobId,
+        error: error.message,
+      });
+      await db.update(JOBS_TABLE, { job_id: jobId }, {
+        status: 'failed',
+        error_message: error.message || 'Unknown error',
+        updated_at: new Date().toISOString(),
+      });
+      throw error;
+    }
+  }
+
+  async getGenerationStatus(tenantId: string, jobId: string): Promise<RouteResponse> {
+    const job = await db.get(JOBS_TABLE, { job_id: jobId });
+
+    if (!job) {
+      throw new ApiError('Job not found', 404);
+    }
+
+    if (job.tenant_id !== tenantId) {
+      throw new ApiError('Unauthorized', 403);
+    }
+
+    return {
+      statusCode: 200,
+      body: {
+        job_id: jobId,
+        status: job.status,
+        result: job.result,
+        error_message: job.error_message,
+        created_at: job.created_at,
+        updated_at: job.updated_at,
+      },
+    };
+  }
+
+  // Keep the old synchronous method for backward compatibility (but it will timeout)
+  async generateWithAISync(tenantId: string, body: any): Promise<RouteResponse> {
+    const { description, model = 'gpt-5' } = body;
+
+    if (!description || !description.trim()) {
+      throw new ApiError('Description is required', 400);
+    }
+
+    console.log('[Workflow Generation] Starting AI generation (sync)', {
       tenantId,
       model,
       descriptionLength: description.length,

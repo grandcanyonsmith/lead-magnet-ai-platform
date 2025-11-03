@@ -62,6 +62,15 @@ export class ApiStack extends cdk.Stack {
       })
     );
 
+    // Grant Lambda invoke permissions for async workflow generation
+    lambdaRole.addToPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ['lambda:InvokeFunction'],
+        resources: ['*'], // Allow invoking itself for async workflow generation
+      })
+    );
+
     // Create API Lambda function
     // Note: Initially deploying with placeholder code, will update after building the app
     this.apiFunction = new lambda.Function(this, 'ApiFunction', {
@@ -90,6 +99,8 @@ export class ApiStack extends cdk.Stack {
         USAGE_RECORDS_TABLE: props.tablesMap.usageRecords.tableName,
         STEP_FUNCTIONS_ARN: props.stateMachineArn,
         ARTIFACTS_BUCKET: props.artifactsBucket.bucketName,
+        LAMBDA_FUNCTION_NAME: 'leadmagnet-api-handler',
+        AWS_REGION: this.region,
         LOG_LEVEL: 'info',
       },
       tracing: lambda.Tracing.ACTIVE,
