@@ -47,6 +47,12 @@ export const router = async (
     return await formsController.submitForm(slug, body, event.requestContext.http.sourceIp);
   }
 
+  // Public job status endpoint (for form submissions)
+  if (path.match(/^\/v1\/jobs\/[^/]+\/status$/) && method === 'GET') {
+    const jobId = pathSegments[2]; // /v1/jobs/{jobId}/status
+    return await jobsController.getPublicStatus(jobId);
+  }
+
   // All admin routes require tenantId
   if (!tenantId) {
     throw new ApiError('Please sign in to access this page', 401);

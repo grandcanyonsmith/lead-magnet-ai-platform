@@ -45,6 +45,12 @@ class ArtifactsController {
       );
     }
 
+    // Filter out report.md artifacts - they're for internal use only
+    artifacts = artifacts.filter((artifact: any) => {
+      const fileName = artifact.artifact_name || artifact.file_name || '';
+      return !fileName.includes('report.md') && artifact.artifact_type !== 'report_markdown';
+    });
+
     // Ensure all artifacts have accessible URLs
     // Generate presigned URLs for artifacts that don't have public_url or expired URLs
     const artifactsWithUrls = await Promise.all(
@@ -128,6 +134,12 @@ class ArtifactsController {
 
     if (artifact.tenant_id !== tenantId) {
       throw new ApiError('You don\'t have permission to access this file', 403);
+    }
+
+    // Don't allow access to report.md files through the API
+    const fileName = artifact.artifact_name || artifact.file_name || '';
+    if (fileName.includes('report.md') || artifact.artifact_type === 'report_markdown') {
+      throw new ApiError('This file is not available for download', 404);
     }
 
     // Generate presigned URL if not already public or expired

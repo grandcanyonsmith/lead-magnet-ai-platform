@@ -62,7 +62,7 @@ class AIService:
         context: str,
     ) -> Tuple[str, Dict]:
         """
-        Generate a report using OpenAI.
+        Generate a report using OpenAI with web search preview enabled.
         
         Args:
             model: OpenAI model to use (e.g., 'gpt-5')
@@ -72,13 +72,15 @@ class AIService:
         Returns:
             Tuple of (generated report content, usage info dict)
         """
-        logger.info(f"Generating report with model: {model}")
+        logger.info(f"Generating report with model: {model} (with web search preview)")
         
         try:
             params = {
                 "model": model,
                 "instructions": instructions,
                 "input": f"Generate a report based on the following information:\n\n{context}",
+                "tools": [{"type": "web_search_preview"}],
+                "reasoning_level": "medium",
             }
             
             response = self.client.responses.create(**params)
@@ -114,6 +116,47 @@ class AIService:
         except Exception as e:
             error_type = type(e).__name__
             error_message = str(e)
+            
+            # If reasoning_level is not supported, retry without it
+            if "reasoning_level" in error_message.lower() or "unsupported" in error_message.lower():
+                logger.warning(f"reasoning_level parameter not supported, retrying without it: {error_message}")
+                try:
+                    params_no_reasoning = {
+                        "model": model,
+                        "instructions": instructions,
+                        "input": f"Generate a report based on the following information:\n\n{context}",
+                        "tools": [{"type": "web_search_preview"}],
+                    }
+                    response = self.client.responses.create(**params_no_reasoning)
+                    report = response.output_text
+                    usage = response.usage
+                    
+                    logger.info(
+                        f"Report generation completed (without reasoning_level). "
+                        f"Tokens: {usage.total_tokens} "
+                        f"(input: {usage.input_tokens}, output: {usage.output_tokens})"
+                    )
+                    
+                    cost_data = calculate_openai_cost(
+                        model,
+                        usage.input_tokens or 0,
+                        usage.output_tokens or 0
+                    )
+                    
+                    usage_info = {
+                        'model': model,
+                        'input_tokens': usage.input_tokens or 0,
+                        'output_tokens': usage.output_tokens or 0,
+                        'total_tokens': usage.total_tokens or 0,
+                        'cost_usd': cost_data['cost_usd'],
+                        'service_type': 'openai_worker_report',
+                    }
+                    
+                    return report, usage_info
+                except Exception as retry_error:
+                    # If retry also fails, continue with original error
+                    error_message = str(retry_error)
+                    error_type = type(retry_error).__name__
             
             # Provide more descriptive error messages
             if "API key" in error_message or "authentication" in error_message.lower():
