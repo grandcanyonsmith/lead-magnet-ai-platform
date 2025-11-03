@@ -8,6 +8,7 @@ import { ApiError } from '../utils/errors';
 import { RouteResponse } from '../routes';
 import { logger } from '../utils/logger';
 import { calculateOpenAICost } from '../services/costService';
+import { callResponsesWithTimeout } from '../utils/openaiHelpers';
 
 const FORMS_TABLE = process.env.FORMS_TABLE!;
 const SUBMISSIONS_TABLE = process.env.SUBMISSIONS_TABLE!;
@@ -467,42 +468,70 @@ Return ONLY the CSS code, no markdown formatting, no explanations.`;
       });
 
       const cssStartTime = Date.now();
-      const completionParams: any = {
-        model,
-        instructions: 'You are an expert CSS designer. Return only valid CSS code without markdown formatting.',
-        input: prompt,
-      };
-      // GPT-5 only supports default temperature (1), don't set custom temperature
-      if (model !== 'gpt-5') {
-        completionParams.temperature = 0.7;
+      let completion;
+      try {
+        const completionParams: any = {
+          model,
+          instructions: 'You are an expert CSS designer. Return only valid CSS code without markdown formatting.',
+          input: prompt,
+        };
+        // GPT-5 only supports default temperature (1), don't set custom temperature
+        if (model !== 'gpt-5') {
+          completionParams.temperature = 0.7;
+        }
+        completion = await callResponsesWithTimeout(
+          () => openai.responses.create(completionParams),
+          'form CSS generation'
+        );
+      } catch (apiError: any) {
+        console.error('[Form CSS Generation] Responses API error, attempting fallback', {
+          error: apiError?.message,
+          errorType: apiError?.constructor?.name,
+          isTimeout: apiError?.message?.includes('timed out'),
+        });
+        // Fallback to chat.completions
+        completion = await openai.chat.completions.create({
+          model: model === 'gpt-5' ? 'gpt-4o' : model,
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an expert CSS designer. Return only valid CSS code without markdown formatting.',
+            },
+            {
+              role: 'user',
+              content: prompt,
+            },
+          ],
+          temperature: model === 'gpt-5' ? undefined : 0.7,
+        });
       }
-      const completion = await openai.responses.create(completionParams);
 
       const cssDuration = Date.now() - cssStartTime;
+      const cssModelUsed = (completion as any).model || model;
       console.log('[Form CSS Generation] CSS generation completed', {
         duration: `${cssDuration}ms`,
         tokensUsed: completion.usage?.total_tokens,
-        model: completion.model,
+        model: cssModelUsed,
       });
 
-      // Track usage
+      // Track usage - handle both response formats
       const usage = completion.usage;
       if (usage) {
-        const inputTokens = usage.input_tokens || 0;
-        const outputTokens = usage.output_tokens || 0;
-        const costData = calculateOpenAICost(model, inputTokens, outputTokens);
+        const inputTokens = ('input_tokens' in usage ? usage.input_tokens : usage.prompt_tokens) || 0;
+        const outputTokens = ('output_tokens' in usage ? usage.output_tokens : usage.completion_tokens) || 0;
+        const costData = calculateOpenAICost(cssModelUsed, inputTokens, outputTokens);
         
         await storeUsageRecord(
           tenantId,
           'openai_form_css',
-          model,
+          cssModelUsed,
           inputTokens,
           outputTokens,
           costData.cost_usd
         );
       }
 
-      const cssContent = completion.output_text || '';
+      const cssContent = ('output_text' in completion ? completion.output_text : completion.choices?.[0]?.message?.content) || '';
       console.log('[Form CSS Generation] Raw CSS received', {
         cssLength: cssContent.length,
         firstChars: cssContent.substring(0, 100),
@@ -589,42 +618,70 @@ Return ONLY the modified CSS code, no markdown formatting, no explanations.`;
       });
 
       const refineStartTime = Date.now();
-      const completionParams: any = {
-        model,
-        instructions: 'You are an expert CSS designer. Return only valid CSS code without markdown formatting.',
-        input: prompt,
-      };
-      // GPT-5 only supports default temperature (1), don't set custom temperature
-      if (model !== 'gpt-5') {
-        completionParams.temperature = 0.7;
+      let completion;
+      try {
+        const completionParams: any = {
+          model,
+          instructions: 'You are an expert CSS designer. Return only valid CSS code without markdown formatting.',
+          input: prompt,
+        };
+        // GPT-5 only supports default temperature (1), don't set custom temperature
+        if (model !== 'gpt-5') {
+          completionParams.temperature = 0.7;
+        }
+        completion = await callResponsesWithTimeout(
+          () => openai.responses.create(completionParams),
+          'form CSS refinement'
+        );
+      } catch (apiError: any) {
+        console.error('[Form CSS Refinement] Responses API error, attempting fallback', {
+          error: apiError?.message,
+          errorType: apiError?.constructor?.name,
+          isTimeout: apiError?.message?.includes('timed out'),
+        });
+        // Fallback to chat.completions
+        completion = await openai.chat.completions.create({
+          model: model === 'gpt-5' ? 'gpt-4o' : model,
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an expert CSS designer. Return only valid CSS code without markdown formatting.',
+            },
+            {
+              role: 'user',
+              content: prompt,
+            },
+          ],
+          temperature: model === 'gpt-5' ? undefined : 0.7,
+        });
       }
-      const completion = await openai.responses.create(completionParams);
 
       const refineDuration = Date.now() - refineStartTime;
+      const refineCssModel = (completion as any).model || model;
       console.log('[Form CSS Refinement] Refinement completed', {
         duration: `${refineDuration}ms`,
         tokensUsed: completion.usage?.total_tokens,
-        model: completion.model,
+        model: refineCssModel,
       });
 
-      // Track usage
+      // Track usage - handle both response formats
       const usage = completion.usage;
       if (usage) {
-        const inputTokens = usage.input_tokens || 0;
-        const outputTokens = usage.output_tokens || 0;
-        const costData = calculateOpenAICost(model, inputTokens, outputTokens);
+        const inputTokens = ('input_tokens' in usage ? usage.input_tokens : usage.prompt_tokens) || 0;
+        const outputTokens = ('output_tokens' in usage ? usage.output_tokens : usage.completion_tokens) || 0;
+        const costData = calculateOpenAICost(refineCssModel, inputTokens, outputTokens);
         
         await storeUsageRecord(
           tenantId,
           'openai_form_css_refine',
-          model,
+          refineCssModel,
           inputTokens,
           outputTokens,
           costData.cost_usd
         );
       }
 
-      const cssContent = completion.output_text || '';
+      const cssContent = ('output_text' in completion ? completion.output_text : completion.choices?.[0]?.message?.content) || '';
       console.log('[Form CSS Refinement] Refined CSS received', {
         cssLength: cssContent.length,
         firstChars: cssContent.substring(0, 100),
