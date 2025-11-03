@@ -4,12 +4,42 @@ import { handleError } from './utils/errors';
 import { logger } from './utils/logger';
 
 export const handler = async (
-  event: APIGatewayProxyEventV2,
+  event: APIGatewayProxyEventV2 | any,
   context: Context
 ): Promise<APIGatewayProxyResultV2> => {
+  // Check if this is a workflow generation job (async invocation)
+  if (event.source === 'workflow-generation-job' && event.job_id) {
+    console.log('[Handler] Processing workflow generation job', {
+      jobId: event.job_id,
+      tenantId: event.tenant_id,
+    });
+    
+    try {
+      const { workflowsController } = await import('./controllers/workflows');
+      await workflowsController.processWorkflowGenerationJob(
+        event.job_id,
+        event.tenant_id,
+        event.description,
+        event.model || 'gpt-5'
+      );
+      
+      return {
+        statusCode: 200,
+        body: JSON.stringify({ message: 'Workflow generation job processed' }),
+      };
+    } catch (error: any) {
+      console.error('[Handler] Error processing workflow generation job', {
+        error: error.message,
+        jobId: event.job_id,
+      });
+      throw error;
+    }
+  }
+
+  // Normal API Gateway request
   logger.info('Incoming request', {
-    path: event.rawPath,
-    method: event.requestContext.http.method,
+    path: (event as APIGatewayProxyEventV2).rawPath,
+    method: (event as APIGatewayProxyEventV2).requestContext?.http?.method,
     requestId: context.awsRequestId,
   });
 
