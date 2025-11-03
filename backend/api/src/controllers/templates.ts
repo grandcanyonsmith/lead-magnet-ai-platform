@@ -325,7 +325,7 @@ Return ONLY the modified HTML code, no markdown formatting, no explanations.`;
           },
         ],
         temperature: 0.7,
-        max_tokens: 4000,
+        max_completion_tokens: 4000,
       });
 
       const refineDuration = Date.now() - refineStartTime;
@@ -429,11 +429,12 @@ Return ONLY the modified HTML code, no markdown formatting, no explanations.`;
 Requirements:
 1. Generate a complete, valid HTML5 document
 2. Include modern, clean CSS styling (inline or in <style> tag)
-3. Use placeholder syntax {{PLACEHOLDER_NAME}} for dynamic content (use ALL_CAPS with underscores)
-4. Include common placeholders like {{TITLE}}, {{CONTENT}}, {{AUTHOR_NAME}}, etc.
-5. Make it responsive and mobile-friendly
-6. Use professional color scheme and typography
-7. Ensure it's suitable for email delivery (if applicable)
+3. DO NOT use placeholder syntax - use actual sample content and descriptive text
+4. Make it responsive and mobile-friendly
+5. Use professional color scheme and typography
+6. Design it to beautifully display lead magnet content
+7. Include actual text content that demonstrates the design - use sample headings, paragraphs, and sections
+8. The HTML should be ready to use with real content filled in manually or via code
 
 Return ONLY the HTML code, no markdown formatting, no explanations.`;
 
@@ -456,7 +457,7 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
           },
         ],
         temperature: 0.7,
-        max_tokens: 4000,
+        max_completion_tokens: 4000,
       });
 
       const htmlDuration = Date.now() - htmlStartTime;
@@ -524,7 +525,7 @@ Return JSON format: {"name": "...", "description": "..."}`;
           },
         ],
         temperature: 0.5,
-        max_tokens: 200,
+        max_completion_tokens: 200,
       });
 
       const nameDuration = Date.now() - nameStartTime;
