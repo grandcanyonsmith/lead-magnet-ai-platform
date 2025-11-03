@@ -72,8 +72,9 @@ class ArtifactsController {
               Key: artifact.s3_key,
             });
             
-            const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
-            const expiresAt = new Date(Date.now() + 3600 * 1000).toISOString();
+            // Use 7 days expiration to match worker (604800 seconds)
+            const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 604800 });
+            const expiresAt = new Date(Date.now() + 604800 * 1000).toISOString();
             
             // Update artifact in database with new presigned URL
             await db.update(ARTIFACTS_TABLE, { artifact_id: artifact.artifact_id }, {
@@ -137,8 +138,9 @@ class ArtifactsController {
         Key: artifact.s3_key,
       });
 
-      const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
-      const expiresAt = new Date(Date.now() + 3600 * 1000).toISOString();
+      // Use 7 days expiration to match worker (604800 seconds)
+      const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 604800 });
+      const expiresAt = new Date(Date.now() + 604800 * 1000).toISOString();
 
       // Update artifact with new presigned URL
       await db.update(ARTIFACTS_TABLE, { artifact_id: artifactId }, {
