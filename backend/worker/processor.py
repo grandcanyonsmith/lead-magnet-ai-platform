@@ -5,9 +5,12 @@ Handles the complete workflow of generating AI reports and rendering HTML.
 
 import logging
 import json
+import os
 from datetime import datetime
+from decimal import Decimal
 from typing import Dict, Any, Optional, Tuple
 from ulid import new as ulid
+import boto3
 
 from ai_service import AIService
 from template_service import TemplateService
@@ -209,20 +212,36 @@ class JobProcessor:
                 'artifacts': artifacts_list
             })
             
-            # Step 6: Deliver via webhook if configured (from settings)
-            settings = self.db.get_settings(job['tenant_id'])
-            webhook_url = settings.get('ghl_webhook_url') if settings else None
+            # Step 6: Deliver based on workflow configuration
+            delivery_method = workflow.get('delivery_method', 'none')
             
-            if webhook_url:
-                logger.info("Step 6: Sending webhook notification")
-                self.send_webhook_notification(
-                    webhook_url,
+            if delivery_method == 'webhook':
+                webhook_url = workflow.get('delivery_webhook_url')
+                if webhook_url:
+                    logger.info("Step 6: Sending webhook notification")
+                    webhook_headers = workflow.get('delivery_webhook_headers', {})
+                    self.send_webhook_notification(
+                        webhook_url,
+                        webhook_headers,
+                        job_id,
+                        public_url,
+                        submission,
+                        job
+                    )
+                else:
+                    logger.warning("Step 6: Webhook delivery enabled but no webhook URL configured")
+            elif delivery_method == 'sms':
+                logger.info("Step 6: Sending SMS notification")
+                self.send_sms_notification(
+                    workflow,
+                    job['tenant_id'],
                     job_id,
                     public_url,
-                    submission
+                    submission,
+                    report_content if research_enabled else None
                 )
             else:
-                logger.info("Step 6: No webhook URL configured in settings, skipping delivery")
+                logger.info("Step 6: No delivery method configured, skipping delivery")
             
             logger.info(f"Job {job_id} completed successfully")
             return {
@@ -317,6 +336,13 @@ class JobProcessor:
         """Store usage record for billing tracking."""
         try:
             usage_id = f"usage_{ulid()}"
+            # Convert cost_usd to Decimal for DynamoDB compatibility
+            cost_usd = usage_info.get('cost_usd', 0.0)
+            if isinstance(cost_usd, float):
+                cost_usd = Decimal(str(cost_usd))
+            elif not isinstance(cost_usd, Decimal):
+                cost_usd = Decimal(str(cost_usd))
+            
             usage_record = {
                 'usage_id': usage_id,
                 'tenant_id': tenant_id,
@@ -325,7 +351,7 @@ class JobProcessor:
                 'model': usage_info.get('model', 'unknown'),
                 'input_tokens': usage_info.get('input_tokens', 0),
                 'output_tokens': usage_info.get('output_tokens', 0),
-                'cost_usd': usage_info.get('cost_usd', 0.0),
+                'cost_usd': cost_usd,
                 'created_at': datetime.utcnow().isoformat(),
             }
             self.db.put_usage_record(usage_record)
@@ -395,19 +421,37 @@ class JobProcessor:
     def send_webhook_notification(
         self,
         webhook_url: str,
+        webhook_headers: Dict[str, str],
         job_id: str,
         output_url: str,
-        submission: Dict[str, Any]
+        submission: Dict[str, Any],
+        job: Dict[str, Any]
     ):
-        """Send webhook notification about completed job."""
+        """Send webhook notification about completed job with dynamic payload."""
         import requests
         
+        # Build payload with dynamic values from submission data
+        submission_data = submission.get('submission_data', {})
         payload = {
             'job_id': job_id,
             'status': 'completed',
             'output_url': output_url,
-            'submission_data': submission.get('submission_data', {}),
-            'completed_at': datetime.utcnow().isoformat()
+            'submission_data': submission_data,
+            'lead_name': submission_data.get('name'),
+            'lead_email': submission_data.get('email'),
+            'lead_phone': submission_data.get('phone'),
+            'completed_at': datetime.utcnow().isoformat(),
+            'workflow_id': job.get('workflow_id'),
+        }
+        
+        # Merge with any additional dynamic values from submission
+        for key, value in submission_data.items():
+            if key not in payload:
+                payload[f'submission_{key}'] = value
+        
+        headers = {
+            'Content-Type': 'application/json',
+            **webhook_headers
         }
         
         try:
@@ -415,10 +459,198 @@ class JobProcessor:
                 webhook_url,
                 json=payload,
                 timeout=10,
-                headers={'Content-Type': 'application/json'}
+                headers=headers
             )
             response.raise_for_status()
             logger.info(f"Webhook notification sent successfully to {webhook_url}")
         except Exception as e:
             logger.error(f"Failed to send webhook notification: {e}")
+    
+    def _get_twilio_credentials(self) -> Dict[str, str]:
+        """Get Twilio credentials from AWS Secrets Manager."""
+        secret_name = os.environ.get('TWILIO_SECRET_NAME', 'leadmagnet/twilio-credentials')
+        # Twilio secret is stored in us-west-2
+        region = 'us-west-2'
+        
+        # Create a Secrets Manager client
+        session = boto3.session.Session()
+        client = session.client(
+            service_name='secretsmanager',
+            region_name=region
+        )
+        
+        try:
+            response = client.get_secret_value(SecretId=secret_name)
+            
+            # Parse the secret value
+            if 'SecretString' in response:
+                secret = response['SecretString']
+                # Handle both plain string and JSON format
+                try:
+                    secret_dict = json.loads(secret)
+                    return {
+                        'account_sid': secret_dict.get('TWILIO_ACCOUNT_SID', ''),
+                        'auth_token': secret_dict.get('TWILIO_AUTH_TOKEN', ''),
+                        'from_number': secret_dict.get('TWILIO_FROM_NUMBER', '')
+                    }
+                except json.JSONDecodeError:
+                    # If not JSON, try to parse as plain string (fallback)
+                    return {
+                        'account_sid': '',
+                        'auth_token': '',
+                        'from_number': ''
+                    }
+            else:
+                raise ValueError("Secret binary format not supported")
+                
+        except Exception as e:
+            logger.error(f"Failed to retrieve Twilio credentials: {e}")
+            raise
+    
+    def send_sms_notification(
+        self,
+        workflow: Dict[str, Any],
+        tenant_id: str,
+        job_id: str,
+        output_url: str,
+        submission: Dict[str, Any],
+        research_content: Optional[str] = None
+    ):
+        """Send SMS notification using Twilio or AI-generated message."""
+        import requests
+        
+        submission_data = submission.get('submission_data', {})
+        phone_number = submission_data.get('phone')
+        
+        if not phone_number:
+            logger.error("No phone number in submission data, cannot send SMS")
+            return
+        
+        # Get SMS message
+        sms_message = None
+        if workflow.get('delivery_sms_ai_generated', False):
+            # Generate SMS via AI
+            logger.info("Generating AI SMS message")
+            sms_message = self.generate_sms_message(
+                workflow,
+                tenant_id,
+                job_id,
+                submission_data,
+                output_url,
+                research_content
+            )
+        else:
+            # Use manual message or default
+            sms_message = workflow.get('delivery_sms_message', '')
+            if not sms_message:
+                # Default message
+                sms_message = f"Thank you! Your personalized report is ready: {output_url}"
+            else:
+                # Replace placeholders in manual message
+                sms_message = sms_message.replace('{output_url}', output_url)
+                sms_message = sms_message.replace('{name}', submission_data.get('name', 'there'))
+                sms_message = sms_message.replace('{job_id}', job_id)
+        
+        if not sms_message:
+            logger.error("No SMS message generated, cannot send SMS")
+            return
+        
+        # Get Twilio credentials from Secrets Manager
+        try:
+            twilio_creds = self._get_twilio_credentials()
+            twilio_account_sid = twilio_creds['account_sid']
+            twilio_auth_token = twilio_creds['auth_token']
+            twilio_from_number = twilio_creds['from_number']
+            
+            if not twilio_account_sid or not twilio_auth_token or not twilio_from_number:
+                logger.error("Twilio credentials not found in secret, cannot send SMS")
+                return
+        except Exception as e:
+            logger.error(f"Failed to retrieve Twilio credentials: {e}")
+            return
+        
+        try:
+            # Send SMS via Twilio API
+            response = requests.post(
+                f'https://api.twilio.com/2010-04-01/Accounts/{twilio_account_sid}/Messages.json',
+                auth=(twilio_account_sid, twilio_auth_token),
+                data={
+                    'From': twilio_from_number,
+                    'To': phone_number,
+                    'Body': sms_message
+                },
+                timeout=10
+            )
+            response.raise_for_status()
+            logger.info(f"SMS sent successfully to {phone_number}")
+        except Exception as e:
+            logger.error(f"Failed to send SMS: {e}")
+    
+    def generate_sms_message(
+        self,
+        workflow: Dict[str, Any],
+        tenant_id: str,
+        job_id: str,
+        submission_data: Dict[str, Any],
+        output_url: str,
+        research_content: Optional[str] = None
+    ) -> str:
+        """Generate SMS message using AI based on context."""
+        sms_instructions = workflow.get('delivery_sms_ai_instructions', '')
+        
+        # Build context for SMS generation
+        context_parts = []
+        if research_content:
+            context_parts.append(f"Research Content: {research_content[:500]}...")  # Truncate for SMS context
+        
+        context_parts.append(f"Form Submission: {json.dumps(submission_data)}")
+        context_parts.append(f"Lead Magnet URL: {output_url}")
+        
+        context = "\n".join(context_parts)
+        
+        prompt = f"""Generate a friendly, concise SMS message (max 160 characters) to send to a lead with their personalized lead magnet.
+
+{sms_instructions if sms_instructions else "Keep it friendly, include the URL, and make it personal."}
+
+Context:
+{context}
+
+Generate ONLY the SMS message text, no explanations, no markdown."""
+        
+        try:
+            response, usage_info = self.ai_service.generate_report(
+                model=workflow.get('ai_model', 'gpt-4o'),
+                instructions=prompt,
+                context=""
+            )
+            # Store usage record
+            self.store_usage_record(
+                tenant_id,
+                job_id,
+                {
+                    'service_type': 'openai_sms_generation',
+                    'model': workflow.get('ai_model', 'gpt-4o'),
+                    'input_tokens': usage_info.get('input_tokens', 0),
+                    'output_tokens': usage_info.get('output_tokens', 0),
+                    'cost_usd': usage_info.get('cost_usd', 0.0)
+                }
+            )
+            
+            # Clean up the response
+            sms_text = response.strip()
+            # Remove quotes if wrapped
+            if sms_text.startswith('"') and sms_text.endswith('"'):
+                sms_text = sms_text[1:-1]
+            if sms_text.startswith("'") and sms_text.endswith("'"):
+                sms_text = sms_text[1:-1]
+            
+            # Ensure it fits in SMS (160 chars)
+            if len(sms_text) > 160:
+                sms_text = sms_text[:157] + "..."
+            
+            return sms_text
+        except Exception as e:
+            logger.error(f"Failed to generate SMS message: {e}")
+            # Fallback to default message
+            return f"Thank you! Your personalized report is ready: {output_url}"
 

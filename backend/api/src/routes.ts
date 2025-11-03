@@ -49,7 +49,7 @@ export const router = async (
 
   // All admin routes require tenantId
   if (!tenantId) {
-    throw new ApiError('Unauthorized', 401);
+    throw new ApiError('Please sign in to access this page', 401);
   }
 
   // Admin routes - Workflows
@@ -204,6 +204,6 @@ export const router = async (
   }
 
   // Route not found
-  throw new ApiError('Route not found', 404);
+  throw new ApiError('This page doesn\'t exist', 404);
 };
 

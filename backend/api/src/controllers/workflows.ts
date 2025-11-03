@@ -123,11 +123,11 @@ class WorkflowsController {
     const workflow = await db.get(WORKFLOWS_TABLE, { workflow_id: workflowId });
 
     if (!workflow || workflow.deleted_at) {
-      throw new ApiError('Workflow not found', 404);
+      throw new ApiError('This lead magnet doesn\'t exist or has been removed', 404);
     }
 
     if (workflow.tenant_id !== tenantId) {
-      throw new ApiError('Unauthorized', 403);
+      throw new ApiError('You don\'t have permission to access this lead magnet', 403);
     }
 
     return {
@@ -160,11 +160,11 @@ class WorkflowsController {
     const existing = await db.get(WORKFLOWS_TABLE, { workflow_id: workflowId });
 
     if (!existing || existing.deleted_at) {
-      throw new ApiError('Workflow not found', 404);
+      throw new ApiError('This lead magnet doesn\'t exist or has been removed', 404);
     }
 
     if (existing.tenant_id !== tenantId) {
-      throw new ApiError('Unauthorized', 403);
+      throw new ApiError('You don\'t have permission to access this lead magnet', 403);
     }
 
     const data = validate(updateWorkflowSchema, body);
@@ -184,11 +184,11 @@ class WorkflowsController {
     const existing = await db.get(WORKFLOWS_TABLE, { workflow_id: workflowId });
 
     if (!existing || existing.deleted_at) {
-      throw new ApiError('Workflow not found', 404);
+      throw new ApiError('This lead magnet doesn\'t exist or has been removed', 404);
     }
 
     if (existing.tenant_id !== tenantId) {
-      throw new ApiError('Unauthorized', 403);
+      throw new ApiError('You don\'t have permission to access this lead magnet', 403);
     }
 
     // Soft delete

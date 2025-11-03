@@ -43,11 +43,11 @@ class SubmissionsController {
     const submission = await db.get(SUBMISSIONS_TABLE, { submission_id: submissionId });
 
     if (!submission) {
-      throw new ApiError('Submission not found', 404);
+      throw new ApiError('This form submission doesn\'t exist', 404);
     }
 
     if (submission.tenant_id !== tenantId) {
-      throw new ApiError('Unauthorized', 403);
+      throw new ApiError('You don\'t have permission to access this submission', 403);
     }
 
     return {

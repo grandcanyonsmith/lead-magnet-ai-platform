@@ -26,7 +26,7 @@ export default function WorkflowsPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this workflow?')) {
+    if (!confirm('Are you sure you want to delete this lead magnet?')) {
       return
     }
 
@@ -35,7 +35,7 @@ export default function WorkflowsPage() {
       await loadWorkflows()
     } catch (error) {
       console.error('Failed to delete workflow:', error)
-      alert('Failed to delete workflow')
+      alert('Failed to delete lead magnet')
     }
   }
 

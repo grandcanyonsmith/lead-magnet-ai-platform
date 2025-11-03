@@ -30,6 +30,31 @@ export default function EditFormClient() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   
+  // Required fields that are always present
+  const REQUIRED_FIELDS: FormField[] = [
+    {
+      field_id: 'name',
+      field_type: 'text',
+      label: 'Name',
+      placeholder: 'Your name',
+      required: true,
+    },
+    {
+      field_id: 'email',
+      field_type: 'email',
+      label: 'Email',
+      placeholder: 'your@email.com',
+      required: true,
+    },
+    {
+      field_id: 'phone',
+      field_type: 'tel',
+      label: 'Phone',
+      placeholder: 'Your phone number',
+      required: true,
+    },
+  ]
+  
   const [formData, setFormData] = useState({
     workflow_id: '',
     form_name: '',
@@ -76,6 +101,10 @@ export default function EditFormClient() {
     }
   }
 
+  const isRequiredField = (fieldId: string): boolean => {
+    return REQUIRED_FIELDS.some(rf => rf.field_id === fieldId)
+  }
+
   const addField = () => {
     const newField: FormField = {
       field_id: `field_${Date.now()}`,
@@ -83,15 +112,26 @@ export default function EditFormClient() {
       label: '',
       required: false,
     }
-    setFormData(prev => ({
-      ...prev,
-      form_fields_schema: {
-        fields: [...prev.form_fields_schema.fields, newField]
+    setFormData(prev => {
+      // Keep required fields at the top, add new field after them
+      const requiredFields = prev.form_fields_schema.fields.filter(f => isRequiredField(f.field_id))
+      const customFields = prev.form_fields_schema.fields.filter(f => !isRequiredField(f.field_id))
+      return {
+        ...prev,
+        form_fields_schema: {
+          fields: [...requiredFields, ...customFields, newField]
+        }
       }
-    }))
+    })
   }
 
   const removeField = (index: number) => {
+    // Prevent removal of required fields
+    const field = formData.form_fields_schema.fields[index]
+    if (field && REQUIRED_FIELDS.some(rf => rf.field_id === field.field_id)) {
+      return // Don't allow deletion of required fields
+    }
+    
     setFormData(prev => ({
       ...prev,
       form_fields_schema: {
@@ -121,9 +161,8 @@ export default function EditFormClient() {
     e.preventDefault()
     setError(null)
 
-    // Validation
     if (!formData.workflow_id) {
-      setError('Workflow is required')
+      setError('Lead magnet is required')
       return
     }
 
@@ -133,17 +172,23 @@ export default function EditFormClient() {
     }
 
     if (!formData.public_slug.trim()) {
-      setError('Public slug is required')
+      setError('Form URL is required')
       return
     }
 
     if (!validateSlug(formData.public_slug)) {
-      setError('Public slug must contain only lowercase letters, numbers, and hyphens')
+      setError('Form URL can only contain lowercase letters, numbers, and hyphens')
       return
     }
 
-    if (formData.form_fields_schema.fields.length === 0) {
-      setError('At least one form field is required')
+    // Required fields are always present, so we only need to check if there are any custom fields
+    // But we still validate that required fields exist
+    const requiredFieldIds = REQUIRED_FIELDS.map(f => f.field_id)
+    const existingFieldIds = formData.form_fields_schema.fields.map(f => f.field_id)
+    const missingRequiredFields = requiredFieldIds.filter(id => !existingFieldIds.includes(id))
+    
+    if (missingRequiredFields.length > 0) {
+      setError(`Required fields missing: ${missingRequiredFields.join(', ')}`)
       return
     }
 
@@ -151,7 +196,7 @@ export default function EditFormClient() {
     for (let i = 0; i < formData.form_fields_schema.fields.length; i++) {
       const field = formData.form_fields_schema.fields[i]
       if (!field.field_id.trim()) {
-        setError(`Field ${i + 1}: Field ID is required`)
+        setError(`Field ${i + 1}: Field name is required`)
         return
       }
       if (!field.label.trim()) {
@@ -236,11 +281,11 @@ export default function EditFormClient() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Workflow <span className="text-red-500">*</span>
+              Lead Magnet <span className="text-red-500">*</span>
             </label>
             {workflows.length === 0 && !loading ? (
               <div className="text-sm text-gray-500 mb-2">
-                No workflows available. <a href="/dashboard/workflows/new" className="text-primary-600 hover:text-primary-900">Create one first</a>.
+                No lead magnets available. <a href="/dashboard/workflows/new" className="text-primary-600 hover:text-primary-900">Create one first</a>.
               </div>
             ) : (
               <select
@@ -249,7 +294,7 @@ export default function EditFormClient() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                 required
               >
-                <option value="">Select a workflow...</option>
+                <option value="">Select a lead magnet...</option>
                 {workflows.map((workflow) => (
                   <option key={workflow.workflow_id} value={workflow.workflow_id}>
                     {workflow.workflow_name || workflow.workflow_id}
@@ -277,7 +322,7 @@ export default function EditFormClient() {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Public Slug <span className="text-red-500">*</span>
+            Form URL <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
@@ -289,7 +334,7 @@ export default function EditFormClient() {
             required
           />
           <p className="mt-1 text-sm text-gray-500">
-            URL-friendly identifier (lowercase letters, numbers, and hyphens only)
+            The URL-friendly identifier for your form (lowercase letters, numbers, and hyphens only)
           </p>
         </div>
 
@@ -323,21 +368,33 @@ export default function EditFormClient() {
             </div>
           ) : (
             <div className="space-y-4">
-              {formData.form_fields_schema.fields.map((field, index) => (
-                <div key={field.field_id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+              {formData.form_fields_schema.fields.map((field, index) => {
+                const isRequired = isRequiredField(field.field_id)
+                return (
+                <div key={field.field_id} className={`border rounded-lg p-4 ${isRequired ? 'border-blue-300 bg-blue-50' : 'border-gray-200 bg-gray-50'}`}>
+                  {isRequired && (
+                    <div className="mb-2 flex items-center text-xs text-blue-700">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-medium">
+                        Required Field
+                      </span>
+                    </div>
+                  )}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Field ID <span className="text-red-500">*</span>
+                        Field Name <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
                         value={field.field_id}
                         onChange={(e) => updateField(index, { field_id: e.target.value })}
-                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono"
+                        className={`w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono ${isRequired ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                         placeholder="field_name"
                         required
+                        disabled={isRequired}
+                        readOnly={isRequired}
                       />
+                      <p className="mt-1 text-xs text-gray-500">Internal identifier (lowercase, underscores, no spaces)</p>
                     </div>
 
                     <div>
@@ -347,8 +404,9 @@ export default function EditFormClient() {
                       <select
                         value={field.field_type}
                         onChange={(e) => updateField(index, { field_type: e.target.value as FormField['field_type'] })}
-                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        className={`w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500 ${isRequired ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                         required
+                        disabled={isRequired}
                       >
                         <option value="text">Text</option>
                         <option value="textarea">Textarea</option>
@@ -454,14 +512,20 @@ export default function EditFormClient() {
                     <button
                       type="button"
                       onClick={() => removeField(index)}
-                      className="flex items-center px-3 py-1 text-sm text-red-600 hover:text-red-900 hover:bg-red-50 rounded transition-colors"
+                      disabled={isRequired}
+                      className={`flex items-center px-3 py-1 text-sm rounded transition-colors ${
+                        isRequired 
+                          ? 'text-gray-400 cursor-not-allowed' 
+                          : 'text-red-600 hover:text-red-900 hover:bg-red-50'
+                      }`}
+                      title={isRequired ? 'Required fields cannot be removed' : 'Remove field'}
                     >
                       <FiTrash2 className="w-4 h-4 mr-1" />
                       Remove
                     </button>
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
           )}
         </div>
