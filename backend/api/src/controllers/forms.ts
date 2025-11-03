@@ -13,6 +13,7 @@ const FORMS_TABLE = process.env.FORMS_TABLE!;
 const SUBMISSIONS_TABLE = process.env.SUBMISSIONS_TABLE!;
 const JOBS_TABLE = process.env.JOBS_TABLE!;
 const STEP_FUNCTIONS_ARN = process.env.STEP_FUNCTIONS_ARN!;
+const USER_SETTINGS_TABLE = process.env.USER_SETTINGS_TABLE!;
 const USAGE_RECORDS_TABLE = process.env.USAGE_RECORDS_TABLE || 'leadmagnet-usage-records';
 const OPENAI_SECRET_NAME = process.env.OPENAI_SECRET_NAME || 'leadmagnet/openai-api-key';
 
@@ -154,6 +155,16 @@ class FormsController {
         throw new ApiError('Form not found', 404);
       }
 
+      // Fetch user settings to get logo URL
+      let logoUrl: string | undefined;
+      try {
+        const settings = await db.get(USER_SETTINGS_TABLE, { tenant_id: form.tenant_id });
+        logoUrl = settings?.logo_url;
+      } catch (error) {
+        console.warn('Failed to fetch user settings for logo:', error);
+        // Continue without logo if settings fetch fails
+      }
+
       // Return only public fields
       return {
         statusCode: 200,
@@ -165,6 +176,7 @@ class FormsController {
           captcha_enabled: form.captcha_enabled,
           custom_css: form.custom_css,
           thank_you_message: form.thank_you_message,
+          logo_url: logoUrl,
         },
       };
     } catch (error) {
