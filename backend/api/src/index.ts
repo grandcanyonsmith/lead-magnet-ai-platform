@@ -87,6 +87,13 @@ export const handler = async (
     // Route the request
     const result = await router(event, tenantId);
     
+    console.log('[Handler] Router returned result', {
+      statusCode: result.statusCode,
+      bodyType: typeof result.body,
+      bodyKeys: result.body && typeof result.body === 'object' ? Object.keys(result.body) : 'not object',
+      path: event.rawPath,
+    });
+    
     return {
       statusCode: result.statusCode || 200,
       headers: {

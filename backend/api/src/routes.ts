@@ -54,7 +54,14 @@ export const router = async (
 
   // Admin routes - Workflows
   if (path === '/admin/workflows' && method === 'GET') {
-    return await workflowsController.list(tenantId, queryParams);
+    console.log('[Router] Matched /admin/workflows GET route');
+    const result = await workflowsController.list(tenantId, queryParams);
+    console.log('[Router] Workflows list result', {
+      statusCode: result.statusCode,
+      hasBody: !!result.body,
+      bodyKeys: result.body ? Object.keys(result.body) : null,
+    });
+    return result;
   }
 
   if (path === '/admin/workflows' && method === 'POST') {
@@ -200,7 +207,14 @@ export const router = async (
 
   // Admin routes - Analytics
   if (path === '/admin/analytics' && method === 'GET') {
-    return await analyticsController.getAnalytics(tenantId, queryParams);
+    console.log('[Router] Matched /admin/analytics GET route');
+    const result = await analyticsController.getAnalytics(tenantId, queryParams);
+    console.log('[Router] Analytics result', {
+      statusCode: result.statusCode,
+      hasBody: !!result.body,
+      bodyKeys: result.body ? Object.keys(result.body) : null,
+    });
+    return result;
   }
 
   // Route not found
