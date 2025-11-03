@@ -250,7 +250,7 @@ Return JSON format:
           },
         ],
         temperature: 0.7,
-        max_tokens: 1000,
+        max_completion_tokens: 1000,
       });
 
       const workflowDuration = Date.now() - workflowStartTime;
@@ -321,7 +321,7 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
           },
         ],
         temperature: 0.7,
-        max_tokens: 4000,
+        max_completion_tokens: 4000,
       });
 
       const templateDuration = Date.now() - templateStartTime;
@@ -383,7 +383,7 @@ Return JSON format: {"name": "...", "description": "..."}`;
           },
         ],
         temperature: 0.5,
-        max_tokens: 200,
+        max_completion_tokens: 200,
       });
 
       const templateNameDuration = Date.now() - templateNameStartTime;
@@ -521,7 +521,7 @@ Return ONLY the modified instructions, no markdown formatting, no explanations.`
           },
         ],
         temperature: 0.7,
-        max_tokens: 2000,
+        max_completion_tokens: 2000,
       });
 
       const refineDuration = Date.now() - refineStartTime;
