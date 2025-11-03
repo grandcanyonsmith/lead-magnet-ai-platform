@@ -11,12 +11,30 @@ class Logger {
   private log(level: LogLevel, message: string, meta?: any): void {
     if (!this.shouldLog(level)) return;
 
-    const logEntry = {
+    const logEntry: any = {
       timestamp: new Date().toISOString(),
       level,
       message,
-      ...meta,
     };
+
+    if (meta) {
+      // Handle circular references in error objects
+      try {
+        JSON.stringify(meta);
+        Object.assign(logEntry, meta);
+      } catch (e) {
+        // If circular reference, extract safe properties
+        if (meta instanceof Error) {
+          logEntry.error = {
+            name: meta.name,
+            message: meta.message,
+            stack: meta.stack,
+          };
+        } else {
+          logEntry.meta = { error: 'Circular reference detected' };
+        }
+      }
+    }
 
     console.log(JSON.stringify(logEntry));
   }
