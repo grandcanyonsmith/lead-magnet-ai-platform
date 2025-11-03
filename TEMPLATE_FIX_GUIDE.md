@@ -36,3 +36,4 @@ The user wants to remove Stripe checkout logic and replace it with direct redire
 
 Run the fix script: `python3 scripts/fix-template-stripe.py <input_file> templates/sample-template.html`
 
+

@@ -65,6 +65,27 @@ class JobsController {
       body: job,
     };
   }
+
+  async getPublicStatus(jobId: string): Promise<RouteResponse> {
+    const job = await db.get(JOBS_TABLE, { job_id: jobId });
+
+    if (!job) {
+      throw new ApiError('Job not found', 404);
+    }
+
+    // Return only status and output_url for public access
+    return {
+      statusCode: 200,
+      body: {
+        job_id: job.job_id,
+        status: job.status,
+        output_url: job.output_url || null,
+        error_message: job.error_message || null,
+        created_at: job.created_at,
+        completed_at: job.completed_at,
+      },
+    };
+  }
 }
 
 export const jobsController = new JobsController();
