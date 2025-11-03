@@ -249,14 +249,14 @@ fi
 # Test 10: Verify Twilio secret exists
 echo -e "${YELLOW}Test $TEST_NUM: Verify Twilio secret exists in Secrets Manager${NC}"
 TWILIO_SECRET=$(aws secretsmanager get-secret-value \
-  --region us-west-2 \
+  --region us-east-1 \
   --secret-id leadmagnet/twilio-credentials \
   --query 'SecretString' \
   --output text 2>/dev/null || echo "")
 
 if [ -n "$TWILIO_SECRET" ] && [ "$TWILIO_SECRET" != "None" ]; then
     test_result 0 "Twilio secret found in Secrets Manager"
-    echo "  Secret exists in us-west-2"
+    echo "  Secret exists in us-east-1"
     
     # Verify secret structure
     HAS_ACCOUNT_SID=$(echo "$TWILIO_SECRET" | jq -r '.TWILIO_ACCOUNT_SID // ""' 2>/dev/null || echo "")

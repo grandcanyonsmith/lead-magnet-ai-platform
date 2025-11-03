@@ -458,7 +458,6 @@ class JobProcessor:
             response = requests.post(
                 webhook_url,
                 json=payload,
-                timeout=10,
                 headers=headers
             )
             response.raise_for_status()
@@ -469,8 +468,8 @@ class JobProcessor:
     def _get_twilio_credentials(self) -> Dict[str, str]:
         """Get Twilio credentials from AWS Secrets Manager."""
         secret_name = os.environ.get('TWILIO_SECRET_NAME', 'leadmagnet/twilio-credentials')
-        # Twilio secret is stored in us-west-2
-        region = 'us-west-2'
+        # Twilio secret is stored in us-east-1
+        region = os.environ.get('AWS_REGION', 'us-east-1')
         
         # Create a Secrets Manager client
         session = boto3.session.Session()
@@ -596,8 +595,7 @@ class JobProcessor:
                     'From': twilio_from_number,
                     'To': phone_number,
                     'Body': sms_message
-                },
-                timeout=10
+                }
             )
             response.raise_for_status()
             response_data = response.json()
