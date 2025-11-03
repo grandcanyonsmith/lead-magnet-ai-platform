@@ -84,40 +84,84 @@ async function storeUsageRecord(
 
 class WorkflowsController {
   async list(tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {
-    const status = queryParams.status;
-    const limit = queryParams.limit ? parseInt(queryParams.limit) : 50;
+    try {
+      const status = queryParams.status;
+      const limit = queryParams.limit ? parseInt(queryParams.limit) : 50;
 
-    let workflows;
-    if (status) {
-      workflows = await db.query(
-        WORKFLOWS_TABLE,
-        'gsi_tenant_status',
-        'tenant_id = :tenant_id AND #status = :status',
-        { ':tenant_id': tenantId, ':status': status },
-        { '#status': 'status' },
-        limit
-      );
-    } else {
-      workflows = await db.query(
-        WORKFLOWS_TABLE,
-        'gsi_tenant_status',
-        'tenant_id = :tenant_id',
-        { ':tenant_id': tenantId },
-        undefined,
-        limit
-      );
+      console.log('[Workflows List] Starting query', { tenantId, status, limit });
+
+      let workflows: any[] = [];
+      try {
+        if (status) {
+          workflows = await db.query(
+            WORKFLOWS_TABLE,
+            'gsi_tenant_status',
+            'tenant_id = :tenant_id AND #status = :status',
+            { ':tenant_id': tenantId, ':status': status },
+            { '#status': 'status' },
+            limit
+          );
+        } else {
+          workflows = await db.query(
+            WORKFLOWS_TABLE,
+            'gsi_tenant_status',
+            'tenant_id = :tenant_id',
+            { ':tenant_id': tenantId },
+            undefined,
+            limit
+          );
+        }
+      } catch (dbError: any) {
+        console.error('[Workflows List] Database query error', {
+          error: dbError.message,
+          errorName: dbError.name,
+          table: WORKFLOWS_TABLE,
+          tenantId,
+        });
+        // Return empty array if table doesn't exist or permissions issue
+        if (
+          dbError.name === 'ResourceNotFoundException' ||
+          dbError.name === 'AccessDeniedException'
+        ) {
+          workflows = [];
+        } else {
+          throw dbError;
+        }
+      }
+
+      // Filter out soft-deleted items
+      workflows = workflows.filter((w: any) => !w.deleted_at);
+
+      console.log('[Workflows List] Query completed', {
+        tenantId,
+        workflowsFound: workflows.length,
+      });
+
+      const response = {
+        statusCode: 200,
+        body: {
+          workflows,
+          count: workflows.length,
+        },
+      };
+
+      console.log('[Workflows List] Returning response', {
+        statusCode: response.statusCode,
+        bodyKeys: Object.keys(response.body),
+        workflowsCount: response.body.count,
+        workflowsLength: response.body.workflows?.length,
+      });
+
+      return response;
+    } catch (error: any) {
+      console.error('[Workflows List] Error', {
+        error: error.message,
+        errorName: error.name,
+        stack: error.stack,
+        tenantId,
+      });
+      throw error;
     }
-
-    // Filter out soft-deleted items
-    workflows = workflows.filter((w: any) => !w.deleted_at);
-
-    return {
-      statusCode: 200,
-      body: {
-        workflows,
-        count: workflows.length,
-      },
-    };
   }
 
   async get(tenantId: string, workflowId: string): Promise<RouteResponse> {

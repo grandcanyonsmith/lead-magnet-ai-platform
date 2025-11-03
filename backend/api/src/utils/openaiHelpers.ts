@@ -1,4 +1,4 @@
-const DEFAULT_TIMEOUT_MS = parseInt(process.env.OPENAI_RESPONSES_TIMEOUT_MS || '25000', 10);
+const DEFAULT_TIMEOUT_MS = parseInt(process.env.OPENAI_RESPONSES_TIMEOUT_MS || '840000', 10); // 14 minutes (840s) - leave buffer for Lambda timeout
 
 export async function callResponsesWithTimeout<T>(
   promiseFactory: () => Promise<T>,

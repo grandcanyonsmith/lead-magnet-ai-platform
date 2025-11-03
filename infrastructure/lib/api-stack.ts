@@ -77,7 +77,7 @@ export class ApiStack extends cdk.Stack {
         };
       `),
       memorySize: 2048,
-      timeout: cdk.Duration.seconds(30),
+      timeout: cdk.Duration.seconds(900),
       role: lambdaRole,
       environment: {
         WORKFLOWS_TABLE: props.tablesMap.workflows.tableName,
