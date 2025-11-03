@@ -103,11 +103,11 @@ export default function EditTemplatePage() {
 
     try {
       const startTime = Date.now()
-      const result = await api.refineTemplateWithAI({
-        current_html: formData.html_content,
-        edit_prompt: editPrompt.trim(),
-        model: 'gpt-5',
-      })
+      const result = await api.refineTemplateWithAI(
+        formData.html_content,
+        editPrompt.trim(),
+        'gpt-5'
+      )
       const duration = Date.now() - startTime
 
       console.log('[Template Refinement] Success!', {
