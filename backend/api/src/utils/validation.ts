@@ -4,9 +4,9 @@ import { z } from 'zod';
 export const createWorkflowSchema = z.object({
   workflow_name: z.string().min(1).max(200),
   workflow_description: z.string().max(1000).optional(),
-  ai_model: z.string().default('gpt-4o'),
+  ai_model: z.string().default('gpt-5'),
   ai_instructions: z.string().min(1),
-  rewrite_model: z.string().default('gpt-4o'),
+  rewrite_model: z.string().default('gpt-5'),
   rewrite_enabled: z.boolean().default(true),
   research_enabled: z.boolean().default(true),
   html_enabled: z.boolean().default(true),

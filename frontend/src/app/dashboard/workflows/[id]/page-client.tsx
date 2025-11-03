@@ -164,12 +164,12 @@ export default function WorkflowDetailPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">AI Model</label>
-            <p className="text-sm text-gray-900">{workflow.ai_model || 'gpt-4o'}</p>
+            <p className="text-sm text-gray-900">{workflow.ai_model || 'gpt-5'}</p>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Rewrite Model</label>
-            <p className="text-sm text-gray-900">{workflow.rewrite_model || 'gpt-4o'}</p>
+            <p className="text-sm text-gray-900">{workflow.rewrite_model || 'gpt-5'}</p>
           </div>
 
           <div>

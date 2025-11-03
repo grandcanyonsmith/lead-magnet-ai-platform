@@ -51,6 +51,7 @@ class ArtifactsController {
       artifacts.map(async (artifact: any) => {
         // Check if artifact has a valid public_url
         const hasValidUrl = artifact.public_url && 
+          artifact.s3_key &&
           (!artifact.url_expires_at || new Date(artifact.url_expires_at) > new Date());
         
         if (hasValidUrl && artifact.s3_key) {
@@ -128,8 +129,9 @@ class ArtifactsController {
       throw new ApiError('You don\'t have permission to access this file', 403);
     }
 
-    // Generate presigned URL if not already public
-    if (!artifact.public_url || artifact.url_expires_at < new Date().toISOString()) {
+    // Generate presigned URL if not already public or expired
+    if (!artifact.public_url || !artifact.s3_key || 
+        (artifact.url_expires_at && new Date(artifact.url_expires_at) < new Date())) {
       const command = new GetObjectCommand({
         Bucket: ARTIFACTS_BUCKET,
         Key: artifact.s3_key,

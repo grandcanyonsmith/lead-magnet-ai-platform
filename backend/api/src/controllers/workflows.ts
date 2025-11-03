@@ -203,7 +203,7 @@ class WorkflowsController {
   }
 
   async generateWithAI(tenantId: string, body: any): Promise<RouteResponse> {
-    const { description, model = 'gpt-4o' } = body;
+    const { description, model = 'gpt-5' } = body;
 
     if (!description || !description.trim()) {
       throw new ApiError('Description is required', 400);
@@ -239,23 +239,14 @@ Return JSON format:
       const workflowStartTime = Date.now();
       const workflowCompletionParams: any = {
         model,
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an expert at creating AI-powered lead magnets. Return only valid JSON without markdown formatting.',
-          },
-          {
-            role: 'user',
-            content: workflowPrompt,
-          },
-        ],
-        max_completion_tokens: 1000,
+        instructions: 'You are an expert at creating AI-powered lead magnets. Return only valid JSON without markdown formatting.',
+        input: workflowPrompt,
       };
       // GPT-5 only supports default temperature (1), don't set custom temperature
       if (model !== 'gpt-5') {
         workflowCompletionParams.temperature = 0.7;
       }
-      const workflowCompletion = await openai.chat.completions.create(workflowCompletionParams);
+      const workflowCompletion = await openai.responses.create(workflowCompletionParams);
 
       const workflowDuration = Date.now() - workflowStartTime;
       console.log('[Workflow Generation] Workflow generation completed', {
@@ -266,8 +257,8 @@ Return JSON format:
       // Track usage
       const workflowUsage = workflowCompletion.usage;
       if (workflowUsage) {
-        const inputTokens = workflowUsage.prompt_tokens || 0;
-        const outputTokens = workflowUsage.completion_tokens || 0;
+        const inputTokens = workflowUsage.input_tokens || 0;
+        const outputTokens = workflowUsage.output_tokens || 0;
         const costData = calculateOpenAICost(model, inputTokens, outputTokens);
         
         await storeUsageRecord(
@@ -280,7 +271,7 @@ Return JSON format:
         );
       }
 
-      const workflowContent = workflowCompletion.choices[0]?.message?.content || '';
+      const workflowContent = workflowCompletion.output_text || '';
       let workflowData = {
         workflow_name: 'Generated Lead Magnet',
         workflow_description: description,
@@ -315,23 +306,14 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
       const templateStartTime = Date.now();
       const templateCompletionParams: any = {
         model,
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an expert HTML template designer. Return only valid HTML code without markdown formatting.',
-          },
-          {
-            role: 'user',
-            content: templatePrompt,
-          },
-        ],
-        max_completion_tokens: 4000,
+        instructions: 'You are an expert HTML template designer. Return only valid HTML code without markdown formatting.',
+        input: templatePrompt,
       };
       // GPT-5 only supports default temperature (1), don't set custom temperature
       if (model !== 'gpt-5') {
         templateCompletionParams.temperature = 0.7;
       }
-      const templateCompletion = await openai.chat.completions.create(templateCompletionParams);
+      const templateCompletion = await openai.responses.create(templateCompletionParams);
 
       const templateDuration = Date.now() - templateStartTime;
       console.log('[Workflow Generation] Template HTML generation completed', {
@@ -342,8 +324,8 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
       // Track usage
       const templateUsage = templateCompletion.usage;
       if (templateUsage) {
-        const inputTokens = templateUsage.prompt_tokens || 0;
-        const outputTokens = templateUsage.completion_tokens || 0;
+        const inputTokens = templateUsage.input_tokens || 0;
+        const outputTokens = templateUsage.output_tokens || 0;
         const costData = calculateOpenAICost(model, inputTokens, outputTokens);
         
         await storeUsageRecord(
@@ -356,7 +338,7 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
         );
       }
 
-      let cleanedHtml = templateCompletion.choices[0]?.message?.content || '';
+      let cleanedHtml = templateCompletion.output_text || '';
       
       // Clean up markdown code blocks if present
       if (cleanedHtml.startsWith('```html')) {
@@ -365,14 +347,8 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
         cleanedHtml = cleanedHtml.replace(/^```\s*/i, '').replace(/\s*```$/i, '');
       }
 
-      // Extract placeholder tags (for backward compatibility, but templates won't have placeholders)
-      const placeholderRegex = /\{\{([A-Z_]+)\}\}/g;
-      const placeholderMatches = cleanedHtml.matchAll(placeholderRegex);
-      const placeholders = new Set<string>();
-      for (const match of placeholderMatches) {
-        placeholders.add(match[1]);
-      }
-      const placeholderTags = Array.from(placeholders).sort();
+      // Extract placeholder tags (disabled - no longer using placeholder syntax)
+      const placeholderTags: string[] = [];
 
       // Generate template name and description
       const templateNamePrompt = `Based on this lead magnet: "${description}", generate:
@@ -385,19 +361,13 @@ Return JSON format: {"name": "...", "description": "..."}`;
       const templateNameStartTime = Date.now();
       const templateNameCompletionParams: any = {
         model,
-        messages: [
-          {
-            role: 'user',
-            content: templateNamePrompt,
-          },
-        ],
-        max_completion_tokens: 200,
+        input: templateNamePrompt,
       };
       // GPT-5 only supports default temperature (1), don't set custom temperature
       if (model !== 'gpt-5') {
         templateNameCompletionParams.temperature = 0.5;
       }
-      const templateNameCompletion = await openai.chat.completions.create(templateNameCompletionParams);
+      const templateNameCompletion = await openai.responses.create(templateNameCompletionParams);
 
       const templateNameDuration = Date.now() - templateNameStartTime;
       console.log('[Workflow Generation] Template name/description generation completed', {
@@ -407,8 +377,8 @@ Return JSON format: {"name": "...", "description": "..."}`;
       // Track usage
       const templateNameUsage = templateNameCompletion.usage;
       if (templateNameUsage) {
-        const inputTokens = templateNameUsage.prompt_tokens || 0;
-        const outputTokens = templateNameUsage.completion_tokens || 0;
+        const inputTokens = templateNameUsage.input_tokens || 0;
+        const outputTokens = templateNameUsage.output_tokens || 0;
         const costData = calculateOpenAICost(model, inputTokens, outputTokens);
         
         await storeUsageRecord(
@@ -421,7 +391,7 @@ Return JSON format: {"name": "...", "description": "..."}`;
         );
       }
 
-      const templateNameContent = templateNameCompletion.choices[0]?.message?.content || '';
+      const templateNameContent = templateNameCompletion.output_text || '';
       let templateName = 'Generated Template';
       let templateDescription = 'A professional HTML template for displaying lead magnet content';
 
@@ -468,23 +438,14 @@ The public_slug should be URL-friendly (lowercase, hyphens only, no spaces).`;
       const formStartTime = Date.now();
       const formCompletionParams: any = {
         model,
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an expert at creating lead capture forms. Return only valid JSON without markdown formatting.',
-          },
-          {
-            role: 'user',
-            content: formPrompt,
-          },
-        ],
-        max_completion_tokens: 1500,
+        instructions: 'You are an expert at creating lead capture forms. Return only valid JSON without markdown formatting.',
+        input: formPrompt,
       };
       // GPT-5 only supports default temperature (1), don't set custom temperature
       if (model !== 'gpt-5') {
         formCompletionParams.temperature = 0.7;
       }
-      const formCompletion = await openai.chat.completions.create(formCompletionParams);
+      const formCompletion = await openai.responses.create(formCompletionParams);
 
       const formDuration = Date.now() - formStartTime;
       console.log('[Workflow Generation] Form generation completed', {
@@ -495,8 +456,8 @@ The public_slug should be URL-friendly (lowercase, hyphens only, no spaces).`;
       // Track usage
       const formUsage = formCompletion.usage;
       if (formUsage) {
-        const inputTokens = formUsage.prompt_tokens || 0;
-        const outputTokens = formUsage.completion_tokens || 0;
+        const inputTokens = formUsage.input_tokens || 0;
+        const outputTokens = formUsage.output_tokens || 0;
         const costData = calculateOpenAICost(model, inputTokens, outputTokens);
         
         await storeUsageRecord(
@@ -509,7 +470,7 @@ The public_slug should be URL-friendly (lowercase, hyphens only, no spaces).`;
         );
       }
 
-      const formContent = formCompletion.choices[0]?.message?.content || '';
+      const formContent = formCompletion.output_text || '';
       let formData = {
         form_name: `Form for ${workflowData.workflow_name}`,
         public_slug: workflowData.workflow_name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
@@ -597,7 +558,7 @@ The public_slug should be URL-friendly (lowercase, hyphens only, no spaces).`;
   }
 
   async refineInstructions(tenantId: string, body: any): Promise<RouteResponse> {
-    const { current_instructions, edit_prompt, model = 'gpt-4o' } = body;
+    const { current_instructions, edit_prompt, model = 'gpt-5' } = body;
 
     if (!current_instructions || !current_instructions.trim()) {
       throw new ApiError('Current instructions are required', 400);
@@ -641,23 +602,14 @@ Return ONLY the modified instructions, no markdown formatting, no explanations.`
       const refineStartTime = Date.now();
       const completionParams: any = {
         model,
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an expert AI prompt engineer. Return only the modified instructions without markdown formatting.',
-          },
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-        max_completion_tokens: 2000,
+        instructions: 'You are an expert AI prompt engineer. Return only the modified instructions without markdown formatting.',
+        input: prompt,
       };
       // GPT-5 only supports default temperature (1), don't set custom temperature
       if (model !== 'gpt-5') {
         completionParams.temperature = 0.7;
       }
-      const completion = await openai.chat.completions.create(completionParams);
+      const completion = await openai.responses.create(completionParams);
 
       const refineDuration = Date.now() - refineStartTime;
       console.log('[Workflow Instructions Refinement] Refinement completed', {
@@ -669,8 +621,8 @@ Return ONLY the modified instructions, no markdown formatting, no explanations.`
       // Track usage
       const usage = completion.usage;
       if (usage) {
-        const inputTokens = usage.prompt_tokens || 0;
-        const outputTokens = usage.completion_tokens || 0;
+        const inputTokens = usage.input_tokens || 0;
+        const outputTokens = usage.output_tokens || 0;
         const costData = calculateOpenAICost(model, inputTokens, outputTokens);
         
         await storeUsageRecord(
@@ -683,7 +635,7 @@ Return ONLY the modified instructions, no markdown formatting, no explanations.`
         );
       }
 
-      const instructionsContent = completion.choices[0]?.message?.content || '';
+      const instructionsContent = completion.output_text || '';
       console.log('[Workflow Instructions Refinement] Refined instructions received', {
         instructionsLength: instructionsContent.length,
         firstChars: instructionsContent.substring(0, 100),

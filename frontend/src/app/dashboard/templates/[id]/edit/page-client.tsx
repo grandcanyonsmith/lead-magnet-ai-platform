@@ -111,7 +111,7 @@ export default function EditTemplatePage() {
       const result = await api.refineTemplateWithAI(
         formData.html_content,
         editPrompt.trim(),
-        'gpt-4o'
+        'gpt-5'
       )
       const duration = Date.now() - startTime
 
