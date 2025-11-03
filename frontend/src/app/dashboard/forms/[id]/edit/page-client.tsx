@@ -71,9 +71,12 @@ export default function EditFormClient() {
   })
 
   useEffect(() => {
-    loadWorkflows()
+    if (formId) {
+      loadWorkflows()
+      loadForm()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [formId])
 
   const loadWorkflows = async (retryCount = 0) => {
     try {
@@ -95,6 +98,46 @@ export default function EditFormClient() {
         return
       } else {
         setError(`Failed to load workflows: ${message || 'Please refresh the page or try again later.'}`)
+      }
+    }
+  }
+
+  const loadForm = async () => {
+    if (!formId) return
+    
+    try {
+      const form = await api.getForm(formId)
+      
+      // Populate form data with existing form
+      setFormData({
+        workflow_id: form.workflow_id || '',
+        form_name: form.form_name || '',
+        public_slug: form.public_slug || '',
+        form_fields_schema: {
+          fields: form.form_fields_schema?.fields || [...REQUIRED_FIELDS]
+        },
+        rate_limit_enabled: form.rate_limit_enabled !== undefined ? form.rate_limit_enabled : true,
+        rate_limit_per_hour: form.rate_limit_per_hour || 10,
+        captcha_enabled: form.captcha_enabled || false,
+        custom_css: form.custom_css || '',
+        thank_you_message: form.thank_you_message || '',
+        redirect_url: form.redirect_url || '',
+      })
+      
+      setError(null)
+    } catch (error: any) {
+      console.error('Failed to load form:', error)
+      const status = error.response?.status
+      const message = error.response?.data?.message || error.message
+      
+      if (status === 401) {
+        setError('Authentication failed. Please try logging out and logging back in.')
+      } else if (status === 403) {
+        setError('You do not have permission to access this form.')
+      } else if (status === 404) {
+        setError('Form not found.')
+      } else {
+        setError(`Failed to load form: ${message || 'Please refresh the page or try again later.'}`)
       }
     } finally {
       setLoading(false)

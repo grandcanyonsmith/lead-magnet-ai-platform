@@ -27,6 +27,10 @@ export default function PublicFormPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [formData, setFormData] = useState<Record<string, any>>({})
+  const [generating, setGenerating] = useState(false)
+  const [jobId, setJobId] = useState<string | null>(null)
+  const [jobStatus, setJobStatus] = useState<string | null>(null)
+  const [outputUrl, setOutputUrl] = useState<string | null>(null)
 
   useEffect(() => {
     if (slug) {
@@ -65,6 +69,10 @@ export default function PublicFormPage() {
     setError(null)
     setSuccess(false)
     setSubmitting(true)
+    setGenerating(false)
+    setJobId(null)
+    setJobStatus(null)
+    setOutputUrl(null)
 
     try {
       const response = await axios.post(`${API_URL}/v1/forms/${slug}/submit`, {
@@ -73,8 +81,16 @@ export default function PublicFormPage() {
 
       setSuccess(true)
       
-      // Show thank you message or redirect
-      if (response.data.redirect_url) {
+      // If we have a job_id, start polling for completion
+      if (response.data.job_id) {
+        setJobId(response.data.job_id)
+        setGenerating(true)
+        setJobStatus('pending')
+        pollJobStatus(response.data.job_id)
+      }
+      
+      // Show thank you message or redirect (but only if no job_id or after completion)
+      if (response.data.redirect_url && !response.data.job_id) {
         setTimeout(() => {
           window.location.href = response.data.redirect_url
         }, 2000)
@@ -85,6 +101,60 @@ export default function PublicFormPage() {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  const pollJobStatus = async (jobIdToPoll: string) => {
+    let attempts = 0
+    const maxAttempts = 180 // 3 minutes max (1 second intervals)
+    
+    const poll = async () => {
+      try {
+        // Poll the public job status endpoint (if it exists) or use admin endpoint
+        // For now, we'll try to access job status - note: this might require auth
+        // We'll need to handle this properly
+        const response = await axios.get(`${API_URL}/v1/jobs/${jobIdToPoll}/status`)
+        
+        const status = response.data.status
+        setJobStatus(status)
+        
+        if (status === 'completed') {
+          setGenerating(false)
+          if (response.data.output_url) {
+            setOutputUrl(response.data.output_url)
+          }
+          return
+        } else if (status === 'failed') {
+          setGenerating(false)
+          setError(response.data.error_message || 'Lead magnet generation failed')
+          return
+        }
+        
+        // Continue polling if still processing
+        if (status === 'pending' || status === 'processing') {
+          attempts++
+          if (attempts < maxAttempts) {
+            setTimeout(poll, 1000)
+          } else {
+            setGenerating(false)
+            setError('Generation is taking longer than expected. Please check back later.')
+          }
+        }
+      } catch (error: any) {
+        // If we can't poll (e.g., no public endpoint), just show generating message
+        // and let user know to check back
+        console.warn('Could not poll job status:', error)
+        attempts++
+        if (attempts < maxAttempts) {
+          setTimeout(poll, 2000) // Poll less frequently on error
+        } else {
+          setGenerating(false)
+          setJobStatus('unknown')
+        }
+      }
+    }
+    
+    // Start polling after a short delay
+    setTimeout(poll, 1000)
   }
 
   const handleChange = (fieldId: string, value: any) => {
@@ -186,17 +256,67 @@ export default function PublicFormPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="bg-white rounded-lg shadow p-8 max-w-md w-full text-center">
-          <div className="mb-4">
-            <svg className="mx-auto h-12 w-12 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Thank You!</h1>
-          <p className="text-gray-600 mb-4">
-            {form?.thank_you_message || 'Your submission has been received and is being processed.'}
-          </p>
-          {form?.redirect_url && (
-            <p className="text-sm text-gray-500">Redirecting...</p>
+          {generating ? (
+            <>
+              <div className="mb-4">
+                <div className="mx-auto h-12 w-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div>
+              </div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-4">Generating Your Lead Magnet...</h1>
+              <p className="text-gray-600 mb-4">
+                {form?.thank_you_message || 'Your submission has been received. We&apos;re generating your personalized lead magnet now.'}
+              </p>
+              {jobStatus && (
+                <p className="text-sm text-gray-500 mb-4">
+                  Status: {jobStatus === 'pending' ? 'Queued' : jobStatus === 'processing' ? 'Processing' : jobStatus}
+                </p>
+              )}
+              <p className="text-xs text-gray-400">This may take a minute. Please don&apos;t close this page.</p>
+            </>
+          ) : outputUrl ? (
+            <>
+              <div className="mb-4">
+                <svg className="mx-auto h-12 w-12 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-4">Your Lead Magnet is Ready!</h1>
+              <p className="text-gray-600 mb-6">
+                {form?.thank_you_message || 'Your personalized lead magnet has been generated successfully.'}
+              </p>
+              <a
+                href={outputUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
+              >
+                View Your Lead Magnet
+              </a>
+              {form?.redirect_url && (
+                <div className="mt-4">
+                  <a
+                    href={form.redirect_url}
+                    className="text-sm text-primary-600 hover:text-primary-700"
+                  >
+                    Continue to {form.redirect_url}
+                  </a>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <div className="mb-4">
+                <svg className="mx-auto h-12 w-12 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-4">Thank You!</h1>
+              <p className="text-gray-600 mb-4">
+                {form?.thank_you_message || 'Your submission has been received and is being processed.'}
+              </p>
+              {form?.redirect_url && (
+                <p className="text-sm text-gray-500">Redirecting...</p>
+              )}
+            </>
           )}
         </div>
       </div>
