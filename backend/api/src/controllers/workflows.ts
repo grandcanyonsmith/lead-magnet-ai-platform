@@ -202,6 +202,269 @@ class WorkflowsController {
     };
   }
 
+  async generateWithAI(tenantId: string, body: any): Promise<RouteResponse> {
+    const { description, model = 'gpt-5' } = body;
+
+    if (!description || !description.trim()) {
+      throw new ApiError('Description is required', 400);
+    }
+
+    console.log('[Workflow Generation] Starting AI generation', {
+      tenantId,
+      model,
+      descriptionLength: description.length,
+      timestamp: new Date().toISOString(),
+    });
+
+    try {
+      const openai = await getOpenAIClient();
+      console.log('[Workflow Generation] OpenAI client initialized');
+
+      // Generate workflow configuration
+      const workflowPrompt = `You are an expert at creating AI-powered lead magnets. Based on this description: "${description}", generate a complete lead magnet configuration.
+
+Generate:
+1. Lead Magnet Name (short, catchy, 2-4 words)
+2. Lead Magnet Description (1-2 sentences explaining what it does)
+3. Research Instructions (detailed instructions for AI to generate personalized research based on form submission data. Use [field_name] to reference form fields)
+
+Return JSON format:
+{
+  "workflow_name": "...",
+  "workflow_description": "...",
+  "research_instructions": "..."
+}`;
+
+      console.log('[Workflow Generation] Calling OpenAI for workflow generation...');
+      const workflowStartTime = Date.now();
+      const workflowCompletion = await openai.chat.completions.create({
+        model,
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert at creating AI-powered lead magnets. Return only valid JSON without markdown formatting.',
+          },
+          {
+            role: 'user',
+            content: workflowPrompt,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 1000,
+      });
+
+      const workflowDuration = Date.now() - workflowStartTime;
+      console.log('[Workflow Generation] Workflow generation completed', {
+        duration: `${workflowDuration}ms`,
+        tokensUsed: workflowCompletion.usage?.total_tokens,
+      });
+
+      // Track usage
+      const workflowUsage = workflowCompletion.usage;
+      if (workflowUsage) {
+        const inputTokens = workflowUsage.prompt_tokens || 0;
+        const outputTokens = workflowUsage.completion_tokens || 0;
+        const costData = calculateOpenAICost(model, inputTokens, outputTokens);
+        
+        await storeUsageRecord(
+          tenantId,
+          'openai_workflow_generate',
+          model,
+          inputTokens,
+          outputTokens,
+          costData.cost_usd
+        );
+      }
+
+      const workflowContent = workflowCompletion.choices[0]?.message?.content || '';
+      let workflowData = {
+        workflow_name: 'Generated Lead Magnet',
+        workflow_description: description,
+        research_instructions: `Generate a personalized report based on form submission data. Use [field_name] to reference form fields.`,
+      };
+
+      try {
+        const jsonMatch = workflowContent.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          workflowData = JSON.parse(jsonMatch[0]);
+        }
+      } catch (e) {
+        console.warn('[Workflow Generation] Failed to parse workflow JSON, using defaults', e);
+      }
+
+      // Generate template HTML
+      const templatePrompt = `You are an expert HTML template designer for lead magnets. Create a professional HTML template for: "${description}"
+
+Requirements:
+1. Generate a complete, valid HTML5 document
+2. Include modern, clean CSS styling (inline or in <style> tag)
+3. Use placeholder syntax {{PLACEHOLDER_NAME}} for dynamic content (use ALL_CAPS with underscores)
+4. Include common placeholders like {{TITLE}}, {{CONTENT}}, {{AUTHOR_NAME}}, {{DATE}}, etc.
+5. Make it responsive and mobile-friendly
+6. Use professional color scheme and typography
+7. Design it to beautifully display the generated research content
+
+Return ONLY the HTML code, no markdown formatting, no explanations.`;
+
+      console.log('[Workflow Generation] Calling OpenAI for template HTML generation...');
+      const templateStartTime = Date.now();
+      const templateCompletion = await openai.chat.completions.create({
+        model,
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert HTML template designer. Return only valid HTML code without markdown formatting.',
+          },
+          {
+            role: 'user',
+            content: templatePrompt,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 4000,
+      });
+
+      const templateDuration = Date.now() - templateStartTime;
+      console.log('[Workflow Generation] Template HTML generation completed', {
+        duration: `${templateDuration}ms`,
+        tokensUsed: templateCompletion.usage?.total_tokens,
+      });
+
+      // Track usage
+      const templateUsage = templateCompletion.usage;
+      if (templateUsage) {
+        const inputTokens = templateUsage.prompt_tokens || 0;
+        const outputTokens = templateUsage.completion_tokens || 0;
+        const costData = calculateOpenAICost(model, inputTokens, outputTokens);
+        
+        await storeUsageRecord(
+          tenantId,
+          'openai_template_generate',
+          model,
+          inputTokens,
+          outputTokens,
+          costData.cost_usd
+        );
+      }
+
+      let cleanedHtml = templateCompletion.choices[0]?.message?.content || '';
+      
+      // Clean up markdown code blocks if present
+      if (cleanedHtml.startsWith('```html')) {
+        cleanedHtml = cleanedHtml.replace(/^```html\s*/i, '').replace(/\s*```$/i, '');
+      } else if (cleanedHtml.startsWith('```')) {
+        cleanedHtml = cleanedHtml.replace(/^```\s*/i, '').replace(/\s*```$/i, '');
+      }
+
+      // Extract placeholder tags
+      const placeholderRegex = /\{\{([A-Z_]+)\}\}/g;
+      const placeholderMatches = cleanedHtml.matchAll(placeholderRegex);
+      const placeholders = new Set<string>();
+      for (const match of placeholderMatches) {
+        placeholders.add(match[1]);
+      }
+      const placeholderTags = Array.from(placeholders).sort();
+
+      // Generate template name and description
+      const templateNamePrompt = `Based on this lead magnet: "${description}", generate:
+1. A short, descriptive template name (2-4 words max)
+2. A brief template description (1-2 sentences)
+
+Return JSON format: {"name": "...", "description": "..."}`;
+
+      console.log('[Workflow Generation] Calling OpenAI for template name/description generation...');
+      const templateNameStartTime = Date.now();
+      const templateNameCompletion = await openai.chat.completions.create({
+        model,
+        messages: [
+          {
+            role: 'user',
+            content: templateNamePrompt,
+          },
+        ],
+        temperature: 0.5,
+        max_tokens: 200,
+      });
+
+      const templateNameDuration = Date.now() - templateNameStartTime;
+      console.log('[Workflow Generation] Template name/description generation completed', {
+        duration: `${templateNameDuration}ms`,
+      });
+
+      // Track usage
+      const templateNameUsage = templateNameCompletion.usage;
+      if (templateNameUsage) {
+        const inputTokens = templateNameUsage.prompt_tokens || 0;
+        const outputTokens = templateNameUsage.completion_tokens || 0;
+        const costData = calculateOpenAICost(model, inputTokens, outputTokens);
+        
+        await storeUsageRecord(
+          tenantId,
+          'openai_template_generate',
+          model,
+          inputTokens,
+          outputTokens,
+          costData.cost_usd
+        );
+      }
+
+      const templateNameContent = templateNameCompletion.choices[0]?.message?.content || '';
+      let templateName = 'Generated Template';
+      let templateDescription = 'A professional HTML template for displaying lead magnet content';
+
+      try {
+        const jsonMatch = templateNameContent.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          templateName = parsed.name || templateName;
+          templateDescription = parsed.description || templateDescription;
+        }
+      } catch (e) {
+        console.warn('[Workflow Generation] Failed to parse template name JSON, using defaults', e);
+      }
+
+      const totalDuration = Date.now() - workflowStartTime;
+      console.log('[Workflow Generation] Success!', {
+        tenantId,
+        workflowName: workflowData.workflow_name,
+        templateName,
+        htmlLength: cleanedHtml.length,
+        placeholderCount: placeholderTags.length,
+        totalDuration: `${totalDuration}ms`,
+        timestamp: new Date().toISOString(),
+      });
+
+      return {
+        statusCode: 200,
+        body: {
+          workflow: {
+            workflow_name: workflowData.workflow_name,
+            workflow_description: workflowData.workflow_description,
+            research_instructions: workflowData.research_instructions,
+          },
+          template: {
+            template_name: templateName,
+            template_description: templateDescription,
+            html_content: cleanedHtml.trim(),
+            placeholder_tags: placeholderTags,
+          },
+        },
+      };
+    } catch (error: any) {
+      console.error('[Workflow Generation] Error occurred', {
+        tenantId,
+        errorMessage: error.message,
+        errorName: error.name,
+        errorStack: error.stack,
+        timestamp: new Date().toISOString(),
+      });
+      throw new ApiError(
+        error.message || 'Failed to generate lead magnet with AI',
+        500
+      );
+    }
+  }
+
   async refineInstructions(tenantId: string, body: any): Promise<RouteResponse> {
     const { current_instructions, edit_prompt, model = 'gpt-4o' } = body;
 
