@@ -73,6 +73,12 @@ export const router = async (
     return await workflowsController.generateWithAI(tenantId, body);
   }
 
+  if (path.match(/^\/admin\/workflows\/generation-status\/[^/]+$/) && method === 'GET') {
+    const jobId = pathSegments[3];
+    console.log('[Router] Matched /admin/workflows/generation-status/:jobId route', { jobId });
+    return await workflowsController.getGenerationStatus(tenantId, jobId);
+  }
+
   if (path === '/admin/workflows/refine-instructions' && method === 'POST') {
     console.log('[Router] Matched /admin/workflows/refine-instructions route');
     return await workflowsController.refineInstructions(tenantId, body);
