@@ -163,6 +163,44 @@ export default function SettingsPage() {
           </div>
 
           <div className="pt-4 border-t">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Branding</h3>
+            
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Logo URL
+                  <span className="ml-2 text-xs text-gray-500" title="Logo URL that will appear on all forms">
+                    ℹ️
+                  </span>
+                </label>
+                <input
+                  type="url"
+                  value={settings.logo_url || ''}
+                  onChange={(e) => setSettings({ ...settings, logo_url: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  placeholder="https://example.com/logo.png"
+                />
+                <p className="mt-1 text-sm text-gray-500">
+                  Logo URL that will appear on all forms. Use a direct image URL (e.g., from Cloudinary, S3, or your CDN).
+                </p>
+                {settings.logo_url && (
+                  <div className="mt-3">
+                    <p className="text-sm text-gray-600 mb-2">Preview:</p>
+                    <img
+                      src={settings.logo_url}
+                      alt="Logo preview"
+                      className="max-h-20 max-w-xs border border-gray-200 rounded"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none'
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-4 border-t">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Delivery Settings</h3>
             
             <div className="space-y-6">

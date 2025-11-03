@@ -61,6 +61,7 @@ export const updateSettingsSchema = z.object({
   organization_name: z.string().optional(),
   contact_email: z.string().email().optional(),
   website_url: z.string().url().optional(),
+  logo_url: z.string().url().optional(),
   avatar_url: z.string().url().optional(),
   branding_colors: z
     .object({

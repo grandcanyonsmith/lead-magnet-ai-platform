@@ -211,6 +211,20 @@ export default function PublicFormPage() {
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl mx-auto">
         <div className="bg-white rounded-lg shadow p-8">
+          {/* Logo */}
+          {form.logo_url && (
+            <div className="mb-6 text-center">
+              <img
+                src={form.logo_url}
+                alt="Logo"
+                className="max-h-20 mx-auto"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none'
+                }}
+              />
+            </div>
+          )}
+          
           <h1 className="text-3xl font-bold text-gray-900 mb-2">{form.form_name}</h1>
           
           {error && (
