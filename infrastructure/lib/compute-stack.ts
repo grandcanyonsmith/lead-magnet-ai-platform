@@ -64,7 +64,7 @@ export class ComputeStack extends cdk.Stack {
         OPENAI_SECRET_NAME: 'leadmagnet/openai-api-key',
         TWILIO_SECRET_NAME: 'leadmagnet/twilio-credentials',
         LOG_LEVEL: 'info',
-        AWS_REGION: this.region,
+        // AWS_REGION is automatically set by Lambda runtime
       },
       logGroup: logGroup,
     });
