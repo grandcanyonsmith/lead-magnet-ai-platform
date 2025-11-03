@@ -229,6 +229,14 @@ class ApiClient {
     return response.data
   }
 
+  async generateWorkflowWithAI(description: string, model: string = 'gpt-5') {
+    const response = await this.client.post('/admin/workflows/generate-with-ai', {
+      description,
+      model,
+    })
+    return response.data
+  }
+
   // Jobs
   async getJobs(params?: any) {
     const response = await this.client.get('/admin/jobs', { params })
