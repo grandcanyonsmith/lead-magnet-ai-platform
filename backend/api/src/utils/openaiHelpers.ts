@@ -1,27 +1,12 @@
-const DEFAULT_TIMEOUT_MS = parseInt(process.env.OPENAI_RESPONSES_TIMEOUT_MS || '840000', 10); // 14 minutes (840s) - leave buffer for Lambda timeout
-
 export async function callResponsesWithTimeout<T>(
   promiseFactory: () => Promise<T>,
-  contextLabel: string,
-  timeoutMs: number = DEFAULT_TIMEOUT_MS
+  _contextLabel: string, // Parameter kept for compatibility but not used
+  _timeoutMs?: number // Parameter kept for compatibility but not used
 ): Promise<T> {
-  let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
-
-  try {
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      timeoutHandle = setTimeout(() => {
-        reject(new Error(`Responses API ${contextLabel} timed out after ${timeoutMs}ms`));
-      }, timeoutMs);
-    });
-
-    return await Promise.race([promiseFactory(), timeoutPromise]);
-  } finally {
-    if (timeoutHandle) {
-      clearTimeout(timeoutHandle);
-    }
-  }
+  // No timeout - just call the promise factory directly
+  return await promiseFactory();
 }
 
-export const RESPONSES_TIMEOUT_MS = DEFAULT_TIMEOUT_MS;
+export const RESPONSES_TIMEOUT_MS = 0; // No timeout
 
 

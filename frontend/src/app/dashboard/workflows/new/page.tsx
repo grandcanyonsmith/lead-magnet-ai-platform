@@ -934,7 +934,7 @@ export default function NewWorkflowPage() {
 
               <div className="bg-blue-50 border border-blue-200 rounded p-3">
                 <p className="text-xs text-blue-800">
-                  <strong>Note:</strong> Twilio credentials must be configured in AWS Secrets Manager (us-west-2) for SMS delivery to work.
+                  <strong>Note:</strong> Twilio credentials must be configured in AWS Secrets Manager (us-east-1) for SMS delivery to work.
                 </p>
               </div>
             </div>
