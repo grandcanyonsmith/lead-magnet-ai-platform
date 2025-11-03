@@ -66,63 +66,162 @@ export default function NewWorkflowPage() {
 
     setGenerating(true)
     setError(null)
-    setGenerationStatus('Generating your lead magnet configuration...')
+    setGenerationStatus('Starting workflow generation...')
 
     try {
       const startTime = Date.now()
-      const result = await api.generateWorkflowWithAI(prompt.trim(), 'gpt-5')
-      const duration = Date.now() - startTime
-
-      console.log('[Workflow Generation] Success!', {
-        duration: `${duration}ms`,
-        workflow: result.workflow,
-        template: result.template,
-        form: result.form,
-        timestamp: new Date().toISOString(),
-      })
-
-      setGenerationStatus('Generation complete! Review and edit the fields below.')
-
-      // Populate workflow fields
-      setFormData(prev => ({
-        ...prev,
-        workflow_name: result.workflow.workflow_name || '',
-        workflow_description: result.workflow.workflow_description || '',
-        ai_instructions: result.workflow.research_instructions || '',
-      }))
-
-      // Populate template fields
-      setTemplateData({
-        template_name: result.template.template_name || '',
-        template_description: result.template.template_description || '',
-        html_content: result.template.html_content || '',
-        placeholder_tags: result.template.placeholder_tags || [],
-      })
-
-      // Populate form fields
-      if (result.form) {
-        setFormFieldsData({
-          form_name: result.form.form_name || '',
-          public_slug: result.form.public_slug || '',
-          form_fields_schema: result.form.form_fields_schema || { fields: [] },
-        })
-        // Auto-show form preview when form is generated
-        if (result.form.form_fields_schema?.fields?.length > 0) {
-          setShowFormPreview(true)
+      
+      // Step 1: Initiate async generation (returns 202 with job_id)
+      const initResponse = await api.generateWorkflowWithAI(prompt.trim(), 'gpt-5')
+      
+      // Check if we got a job_id (async flow)
+      if (initResponse.job_id) {
+        const jobId = initResponse.job_id
+        console.log('[Workflow Generation] Job created', { jobId, status: initResponse.status })
+        
+        setGenerationStatus('Generating your lead magnet configuration... This may take a minute.')
+        
+        // Step 2: Poll for completion
+        let attempts = 0
+        const maxAttempts = 900 // 15 minutes max (1 second intervals)
+        let result: any = null
+        
+        while (attempts < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1 second
+          
+          const statusResponse = await api.getWorkflowGenerationStatus(jobId)
+          console.log('[Workflow Generation] Polling status', { 
+            jobId, 
+            status: statusResponse.status, 
+            attempt: attempts + 1 
+          })
+          
+          if (statusResponse.status === 'completed') {
+            result = statusResponse.result
+            console.log('[Workflow Generation] Job completed', { result })
+            break
+          } else if (statusResponse.status === 'failed') {
+            throw new Error(statusResponse.error_message || 'Workflow generation failed')
+          } else if (statusResponse.status === 'processing') {
+            setGenerationStatus(`Processing... (${attempts + 1}s)`)
+          } else {
+            setGenerationStatus(`Preparing... (${attempts + 1}s)`)
+          }
+          
+          attempts++
         }
+        
+        if (!result) {
+          throw new Error('Workflow generation timed out. Please try again.')
+        }
+        
+        const duration = Date.now() - startTime
+        console.log('[Workflow Generation] Success!', {
+          duration: `${duration}ms`,
+          workflow: result.workflow,
+          template: result.template,
+          form: result.form,
+          timestamp: new Date().toISOString(),
+        })
+
+        setGenerationStatus('Generation complete! Review and edit the fields below.')
+
+        // Populate workflow fields
+        setFormData(prev => ({
+          ...prev,
+          workflow_name: result.workflow?.workflow_name || '',
+          workflow_description: result.workflow?.workflow_description || '',
+          ai_instructions: result.workflow?.research_instructions || '',
+        }))
+
+        // Populate template fields
+        setTemplateData({
+          template_name: result.template?.template_name || '',
+          template_description: result.template?.template_description || '',
+          html_content: result.template?.html_content || '',
+          placeholder_tags: result.template?.placeholder_tags || [],
+        })
+
+        // Populate form fields
+        if (result.form) {
+          setFormFieldsData({
+            form_name: result.form.form_name || '',
+            public_slug: result.form.public_slug || '',
+            form_fields_schema: result.form.form_fields_schema || { fields: [] },
+          })
+          // Auto-show form preview when form is generated
+          if (result.form.form_fields_schema?.fields?.length > 0) {
+            setShowFormPreview(true)
+          }
+        }
+
+        // Auto-show preview when HTML is generated
+        if (result.template?.html_content) {
+          setShowPreview(true)
+        }
+
+        // Move to form step
+        setStep('form')
+
+        setTimeout(() => {
+          setGenerationStatus(null)
+        }, 3000)
+      } else {
+        // Fallback: synchronous response (legacy behavior)
+        const result = initResponse
+        const duration = Date.now() - startTime
+
+        console.log('[Workflow Generation] Success!', {
+          duration: `${duration}ms`,
+          workflow: result.workflow,
+          template: result.template,
+          form: result.form,
+          timestamp: new Date().toISOString(),
+        })
+
+        setGenerationStatus('Generation complete! Review and edit the fields below.')
+
+        // Populate workflow fields
+        setFormData(prev => ({
+          ...prev,
+          workflow_name: result.workflow?.workflow_name || '',
+          workflow_description: result.workflow?.workflow_description || '',
+          ai_instructions: result.workflow?.research_instructions || '',
+        }))
+
+        // Populate template fields
+        setTemplateData({
+          template_name: result.template?.template_name || '',
+          template_description: result.template?.template_description || '',
+          html_content: result.template?.html_content || '',
+          placeholder_tags: result.template?.placeholder_tags || [],
+        })
+
+        // Populate form fields
+        if (result.form) {
+          setFormFieldsData({
+            form_name: result.form.form_name || '',
+            public_slug: result.form.public_slug || '',
+            form_fields_schema: result.form.form_fields_schema || { fields: [] },
+          })
+          // Auto-show form preview when form is generated
+          if (result.form.form_fields_schema?.fields?.length > 0) {
+            setShowFormPreview(true)
+          }
+        }
+
+        // Auto-show preview when HTML is generated
+        if (result.template?.html_content) {
+          setShowPreview(true)
+        }
+
+        // Move to form step
+        setStep('form')
+
+        setTimeout(() => {
+          setGenerationStatus(null)
+        }, 3000)
       }
-
-      // Auto-show preview when HTML is generated
-      if (result.template.html_content) {
-        setShowPreview(true)
-      }
-
-      // Move to form step
-      setStep('form')
-
-      setTimeout(() => {
-        setGenerationStatus(null)
-      }, 3000)
     } catch (error: any) {
       console.error('[Workflow Generation] Failed:', error)
       setError(error.response?.data?.message || error.message || 'Failed to generate lead magnet with AI')
