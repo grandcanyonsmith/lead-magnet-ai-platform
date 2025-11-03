@@ -237,6 +237,11 @@ class ApiClient {
     return response.data
   }
 
+  async getWorkflowGenerationStatus(jobId: string) {
+    const response = await this.client.get(`/admin/workflows/generation-status/${jobId}`)
+    return response.data
+  }
+
   // Jobs
   async getJobs(params?: any) {
     const response = await this.client.get('/admin/jobs', { params })
