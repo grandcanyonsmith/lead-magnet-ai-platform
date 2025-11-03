@@ -229,7 +229,7 @@ class ApiClient {
     return response.data
   }
 
-  async generateWorkflowWithAI(description: string, model: string = 'gpt-5') {
+  async generateWorkflowWithAI(description: string, model: string = 'gpt-4o') {
     const response = await this.client.post('/admin/workflows/generate-with-ai', {
       description,
       model,
