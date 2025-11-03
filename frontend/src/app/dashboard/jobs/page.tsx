@@ -198,7 +198,7 @@ export default function JobsPage() {
       <div className="mb-6">
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Lead Magnets</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Generated Lead Magnets</h1>
             <p className="text-gray-600 mt-1">Your generated lead magnets and documents</p>
           </div>
           <div className="flex items-center space-x-4">
@@ -235,13 +235,13 @@ export default function JobsPage() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Workflow</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Lead Magnet</label>
             <select
               value={workflowFilter}
               onChange={(e) => setWorkflowFilter(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             >
-              <option value="all">All Workflows</option>
+              <option value="all">All Lead Magnets</option>
               {workflows.map((wf) => (
                 <option key={wf.workflow_id} value={wf.workflow_id}>
                   {wf.workflow_name || wf.workflow_id}
@@ -263,7 +263,7 @@ export default function JobsPage() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Workflow
+                  Lead Magnet
                 </th>
                 <th 
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"

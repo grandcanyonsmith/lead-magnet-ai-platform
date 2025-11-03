@@ -56,15 +56,15 @@ export default function ArtifactsPage() {
   }
 
   if (loading) {
-    return <div className="text-center py-12">Loading artifacts...</div>
+    return <div className="text-center py-12">Loading downloads...</div>
   }
 
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Artifacts</h1>
-          <p className="text-gray-600">Generated files and their S3 object URLs</p>
+          <h1 className="text-2xl font-bold text-gray-900">Downloads</h1>
+          <p className="text-gray-600">Generated lead magnet files and documents</p>
         </div>
         <button
           onClick={refresh}
@@ -77,19 +77,19 @@ export default function ArtifactsPage() {
 
       {artifacts.length === 0 ? (
         <div className="bg-white rounded-lg shadow p-12 text-center">
-          <p className="text-gray-600">No artifacts found</p>
+          <p className="text-gray-600">No downloads found</p>
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Artifact</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">File</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Job</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Generated For</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Size</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Object URL</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Download URL</th>
                 <th className="px-6 py-3" />
               </tr>
             </thead>

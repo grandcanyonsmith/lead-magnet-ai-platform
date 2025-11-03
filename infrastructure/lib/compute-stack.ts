@@ -62,6 +62,7 @@ export class ComputeStack extends cdk.Stack {
         ARTIFACTS_BUCKET: props.artifactsBucket.bucketName,
         CLOUDFRONT_DOMAIN: props.cloudfrontDomain || '',
         OPENAI_SECRET_NAME: 'leadmagnet/openai-api-key',
+        TWILIO_SECRET_NAME: 'leadmagnet/twilio-credentials',
         LOG_LEVEL: 'info',
         AWS_REGION: this.region,
       },
@@ -83,6 +84,14 @@ export class ComputeStack extends cdk.Stack {
       'leadmagnet/openai-api-key'
     );
     openaiSecret.grantRead(this.jobProcessorLambda);
+
+    // Grant access to Twilio secret
+    const twilioSecret = secretsmanager.Secret.fromSecretNameV2(
+      this,
+      'TwilioSecret',
+      'leadmagnet/twilio-credentials'
+    );
+    twilioSecret.grantRead(this.jobProcessorLambda);
 
     // Create IAM role for Step Functions
     const stateMachineRole = new iam.Role(this, 'StateMachineRole', {

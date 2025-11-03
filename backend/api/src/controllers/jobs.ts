@@ -53,11 +53,11 @@ class JobsController {
     const job = await db.get(JOBS_TABLE, { job_id: jobId });
 
     if (!job) {
-      throw new ApiError('Job not found', 404);
+      throw new ApiError('This generated lead magnet doesn\'t exist', 404);
     }
 
     if (job.tenant_id !== tenantId) {
-      throw new ApiError('Unauthorized', 403);
+      throw new ApiError('You don\'t have permission to access this lead magnet', 403);
     }
 
     return {

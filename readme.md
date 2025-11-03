@@ -4,7 +4,7 @@
 [![Tests](https://img.shields.io/badge/tests-passing-success)](./scripts/test-e2e.sh)
 [![AWS](https://img.shields.io/badge/AWS-deployed-orange)](https://aws.amazon.com)
 
-A production-ready SaaS platform that helps business owners quickly create and manage AI-powered lead magnets at scale.
+A production-ready SaaS platform that helps business owners create and manage AI-powered lead magnets at scale. **Automated, personalized lead magnets without manual work - increases conversion significantly.**
 
 ## 🎯 What Are Lead Magnets?
 
@@ -20,15 +20,16 @@ A production-ready SaaS platform that helps business owners quickly create and m
 
 This platform enables business owners to create and manage AI-powered lead magnets without technical expertise:
 
-1. **Create Workflows** - Define AI instructions, templates, and delivery settings
-2. **Build Forms** - Generate public forms with custom fields to collect lead information
+1. **Create Lead Magnets** - Define what information to collect and how AI should personalize the deliverable
+2. **Build Forms** - Generate public forms with custom fields to collect lead information (name, email, and phone are always collected automatically)
 3. **Collect Leads** - Share form URLs with your audience
-4. **AI Generates Content** - When a lead submits the form, AI creates personalized content:
-   - Optional research step: AI can research and generate a report based on submission data
-   - Optional HTML styling: AI can convert content to beautifully styled HTML matching your template
-5. **Deliver Results** - Lead magnet is sent via webhook to your GHL (GoHighLevel) system, which then sends it via SMS and Email to the lead
+4. **AI Generates Personalized Content** - When a lead submits the form, AI creates personalized content:
+   - **Optional Research Step**: AI can research and generate a report based on form answers (this research then becomes context for the final deliverable)
+   - **HTML Deliverable**: AI rewrites your HTML template using the user context (form inputs + research outputs if enabled), template, and instructions to create the final personalized lead magnet
+5. **Deliver Results** - The lead magnet HTML file is delivered via webhook or SMS to your leads
+6. **View Submissions** - Businesses can see all form submission details (name, email, phone, and custom answers) for follow-up marketing/sales
 
-**Business Model:** Pay-per-lead-magnet generated. Businesses pay, end customers get it for free.
+**Business Model:** Pay-per-usage at the end of each billing cycle. No upfront payment, no subscription - you only pay for what you use.
 
 ## ✨ Features
 
@@ -41,7 +42,8 @@ This platform enables business owners to create and manage AI-powered lead magne
 - 📊 **Analytics Dashboard** - Track usage and performance
 - 🔒 **Secure** - JWT auth, encrypted storage, HTTPS
 - ⚡ **Serverless** - Auto-scaling Lambda functions, pay-per-use
-- 🔗 **GHL Integration** - Webhook delivery to GoHighLevel for SMS/Email
+- 📱 **Flexible Delivery** - Webhook delivery to any endpoint or SMS delivery via Twilio
+- 🤖 **AI SMS Generation** - Optionally have AI generate SMS content based on lead magnet context
 - 🔄 **CI/CD Ready** - GitHub Actions workflows included
 
 ## 🚀 How It Works
@@ -49,43 +51,47 @@ This platform enables business owners to create and manage AI-powered lead magne
 ### Complete Flow
 
 ```
-1. Lead submits form with their information
+1. Lead submits form with their information (name, email, phone + custom answers)
    ↓
-2. System creates job and triggers workflow
+2. System creates job and triggers lead magnet generation
    ↓
-3. AI Research (Optional)
-   - If research_enabled: AI generates personalized research report
-   - Stores as report.md for fact-checking/reference
+3. AI Research (Optional Precursor Step)
+   - If research enabled: AI generates personalized research report based on form answers
+   - Research output is stored and becomes context for the final deliverable
    ↓
-4. AI Content Generation
-   - If html_enabled: AI generates styled HTML matching your template
-   - If html_enabled=false: Stores markdown/text content
+4. AI HTML Generation (Final Deliverable)
+   - AI rewrites your HTML template using:
+     * User Context: Form inputs + research outputs (if research was performed)
+     * HTML Template: Your custom template
+     * Instructions: Any special instructions you've configured
+   - The result is a beautifully styled, personalized HTML lead magnet
    ↓
-5. Artifact stored in S3 with public URL
+5. Lead magnet stored in S3 with public URL
    ↓
-6. Webhook sent to GHL (GoHighLevel) with artifact URL
+6. Delivery (Your Choice)
+   - Option A: Webhook delivery - Send to any webhook URL with dynamic values (e.g., {{submission.email}}, {{artifact_url}})
+   - Option B: SMS delivery via Twilio - Send directly to lead's phone (manual or AI-generated SMS content)
    ↓
-7. GHL sends SMS and Email to lead with download link
+7. Lead receives personalized lead magnet
    ↓
-8. Business uses collected contact info for marketing/sales
+8. Business accesses all form submission details (name, email, phone, custom answers) for marketing/sales
 ```
 
-### Workflow Configuration
+### Lead Magnet Configuration
 
-Each workflow can be configured with:
-- **Research Enabled** (`research_enabled`): Generate AI research report first
-- **HTML Enabled** (`html_enabled`): Convert content to styled HTML
-- **AI Model**: Choose GPT-4o or other models for research generation
-- **Rewrite Model**: Choose model for HTML styling
-- **Template**: Your custom HTML template for branding
-- **Webhook URL**: GHL webhook endpoint for delivery
+When creating a lead magnet, you can choose:
 
-### Four Processing Modes
+- **Research Enabled**: Generate AI research first, then use it as context for HTML generation
+- **Research Disabled**: Convert form answers directly into HTML using your template
+- **HTML Template**: Your custom HTML template for branding (uses {{PLACEHOLDER_NAME}} syntax)
+- **Delivery Method**: Choose webhook or SMS delivery
+  - **Webhook**: Configure URL, headers, and dynamic values from form/research outputs
+  - **SMS**: Configure Twilio credentials and choose manual SMS or AI-generated SMS content
 
-1. **Research + HTML**: AI research → Styled HTML (most common)
-2. **Research Only**: AI research → Markdown file
-3. **HTML Only**: Direct HTML generation from submission data
-4. **Text Only**: Simple text output from submission data
+### Processing Modes
+
+1. **Research + HTML** (Most Common): AI research → Personalized HTML deliverable
+2. **HTML Only**: Direct HTML generation from form submission data
 
 ## 🏗️ Architecture
 
@@ -116,8 +122,8 @@ Each workflow can be configured with:
                       └──────┬────────────────────┘
                               │
                       ┌───────▼────────┐
-                      │  GHL Webhook   │
-                      │  (SMS/Email)   │
+                      │  Webhook/SMS   │
+                      │   Delivery     │
                       └────────────────┘
 ```
 
@@ -146,7 +152,8 @@ Each workflow can be configured with:
 - OpenAI API (GPT-4o, GPT-4 Turbo)
 
 **Integrations:**
-- GoHighLevel (GHL) - SMS/Email delivery via webhooks
+- Generic Webhook Delivery - Send to any webhook URL with dynamic values
+- Twilio SMS Integration - Direct SMS delivery to leads
 
 ## 📊 Project Structure
 
@@ -183,14 +190,16 @@ lead-magnent-ai/
 
 ## 💰 Business Model
 
-**Pricing:** Pay-per-lead-magnet generated
-- Businesses pay for each AI-generated lead magnet
+**Pricing:** Pay-per-usage at the end of each billing cycle
+- **No upfront payment** - Start using the platform immediately
+- **No subscription** - Only pay for what you use
+- Businesses pay for each AI-generated lead magnet after it's generated
 - End customers receive the lead magnet for free
 - Usage-based pricing model
 
-**Cost Structure:**
-- Platform subscription fee (if applicable)
-- Per-lead-magnet generation fee
+**Billing:**
+- Charges accumulate throughout the billing cycle
+- Payment is processed at the end of each billing cycle based on actual usage
 - AWS infrastructure costs (serverless, pay-per-use)
 - OpenAI API costs (varies by model and usage)
 
@@ -243,7 +252,7 @@ MIT License
 - Worker service ready
 - Frontend operational
 - Tests passing (100%)
-- GHL webhook integration ready
+- Webhook and SMS delivery options ready
 
 ---
 

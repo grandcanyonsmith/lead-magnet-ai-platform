@@ -129,11 +129,11 @@ class TemplatesController {
     }
 
     if (!template) {
-      throw new ApiError('Template not found', 404);
+      throw new ApiError('This template doesn\'t exist', 404);
     }
 
     if (template.tenant_id !== tenantId) {
-      throw new ApiError('Unauthorized', 403);
+      throw new ApiError('You don\'t have permission to access this template', 403);
     }
 
     return {
@@ -181,13 +181,13 @@ class TemplatesController {
     );
 
     if (existingTemplates.length === 0) {
-      throw new ApiError('Template not found', 404);
+      throw new ApiError('This template doesn\'t exist', 404);
     }
 
     const existing = existingTemplates[0];
 
     if (existing.tenant_id !== tenantId) {
-      throw new ApiError('Unauthorized', 403);
+      throw new ApiError('You don\'t have permission to access this template', 403);
     }
 
     const data = validate(updateTemplateSchema, body);
@@ -230,11 +230,11 @@ class TemplatesController {
     const template = await db.get(TEMPLATES_TABLE, { template_id: id, version });
 
     if (!template) {
-      throw new ApiError('Template not found', 404);
+      throw new ApiError('This template doesn\'t exist', 404);
     }
 
     if (template.tenant_id !== tenantId) {
-      throw new ApiError('Unauthorized', 403);
+      throw new ApiError('You don\'t have permission to access this template', 403);
     }
 
     // Hard delete specific version

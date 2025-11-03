@@ -118,11 +118,11 @@ class FormsController {
     const form = await db.get(FORMS_TABLE, { form_id: formId });
 
     if (!form || form.deleted_at) {
-      throw new ApiError('Form not found', 404);
+      throw new ApiError('This form doesn\'t exist or has been removed', 404);
     }
 
     if (form.tenant_id !== tenantId) {
-      throw new ApiError('Unauthorized', 403);
+      throw new ApiError('You don\'t have permission to access this form', 403);
     }
 
     return {
@@ -146,13 +146,13 @@ class FormsController {
       console.log('Query returned forms:', forms);
 
       if (forms.length === 0) {
-        throw new ApiError('Form not found', 404);
+        throw new ApiError('This form doesn\'t exist or has been removed', 404);
       }
 
       const form = forms[0];
 
       if (form.deleted_at) {
-        throw new ApiError('Form not found', 404);
+        throw new ApiError('This form doesn\'t exist or has been removed', 404);
       }
 
       // Fetch user settings to get logo URL
@@ -165,6 +165,21 @@ class FormsController {
         // Continue without logo if settings fetch fails
       }
 
+      // Ensure name, email, and phone fields are always present
+      const requiredFields = [
+        { field_id: 'name', field_type: 'text' as const, label: 'Name', placeholder: 'Your name', required: true },
+        { field_id: 'email', field_type: 'email' as const, label: 'Email', placeholder: 'your@email.com', required: true },
+        { field_id: 'phone', field_type: 'tel' as const, label: 'Phone', placeholder: 'Your phone number', required: true },
+      ];
+
+      const existingFieldIds = new Set(form.form_fields_schema.fields.map((f: any) => f.field_id));
+      const fieldsToAdd = requiredFields.filter(f => !existingFieldIds.has(f.field_id));
+      
+      // Add required fields at the beginning if they don't exist
+      const fieldsWithRequired = fieldsToAdd.length > 0 
+        ? [...fieldsToAdd, ...form.form_fields_schema.fields]
+        : form.form_fields_schema.fields;
+
       // Return only public fields
       return {
         statusCode: 200,
@@ -172,7 +187,9 @@ class FormsController {
           form_id: form.form_id,
           form_name: form.form_name,
           public_slug: form.public_slug,
-          form_fields_schema: form.form_fields_schema,
+          form_fields_schema: {
+            fields: fieldsWithRequired,
+          },
           captcha_enabled: form.captcha_enabled,
           custom_css: form.custom_css,
           thank_you_message: form.thank_you_message,
@@ -195,19 +212,24 @@ class FormsController {
     );
 
     if (forms.length === 0) {
-      throw new ApiError('Form not found', 404);
+      throw new ApiError('This form doesn\'t exist or has been removed', 404);
     }
 
     const form = forms[0];
 
     if (form.deleted_at) {
-      throw new ApiError('Form not found', 404);
+      throw new ApiError('This form doesn\'t exist or has been removed', 404);
     }
 
     // Validate submission data
     const { submission_data } = validate(submitFormSchema, body);
 
     // TODO: Add rate limiting check based on sourceIp and form.rate_limit_per_hour
+
+    // Ensure name, email, and phone are present (validation should catch this, but double-check)
+    if (!submission_data.name || !submission_data.email || !submission_data.phone) {
+      throw new ApiError('Form submission must include name, email, and phone fields', 400);
+    }
 
     // Create submission record
     const submissionId = `sub_${ulid()}`;
@@ -220,6 +242,7 @@ class FormsController {
       submitter_ip: sourceIp,
       submitter_email: submission_data.email || null,
       submitter_phone: submission_data.phone || null,
+      submitter_name: submission_data.name || null,
       created_at: new Date().toISOString(),
       ttl: Math.floor(Date.now() / 1000) + 90 * 24 * 60 * 60, // 90 days
     };
@@ -290,8 +313,21 @@ class FormsController {
     );
 
     if (existingForms.length > 0) {
-      throw new ApiError('Public slug already exists', 400);
+      throw new ApiError('This form URL is already taken. Please choose a different one', 400);
     }
+
+    // Ensure name, email, and phone fields are always present
+    const requiredFields = [
+      { field_id: 'name', field_type: 'text' as const, label: 'Name', placeholder: 'Your name', required: true },
+      { field_id: 'email', field_type: 'email' as const, label: 'Email', placeholder: 'your@email.com', required: true },
+      { field_id: 'phone', field_type: 'tel' as const, label: 'Phone', placeholder: 'Your phone number', required: true },
+    ];
+
+    const existingFieldIds = new Set(data.form_fields_schema.fields.map((f: any) => f.field_id));
+    const fieldsToAdd = requiredFields.filter(f => !existingFieldIds.has(f.field_id));
+    
+    // Add required fields at the beginning
+    data.form_fields_schema.fields = [...fieldsToAdd, ...data.form_fields_schema.fields];
 
     const form = {
       form_id: `form_${ulid()}`,
@@ -313,11 +349,11 @@ class FormsController {
     const existing = await db.get(FORMS_TABLE, { form_id: formId });
 
     if (!existing || existing.deleted_at) {
-      throw new ApiError('Form not found', 404);
+      throw new ApiError('This form doesn\'t exist or has been removed', 404);
     }
 
     if (existing.tenant_id !== tenantId) {
-      throw new ApiError('Unauthorized', 403);
+      throw new ApiError('You don\'t have permission to access this form', 403);
     }
 
     const data = validate(updateFormSchema, body);
@@ -332,8 +368,23 @@ class FormsController {
       );
 
       if (existingForms.length > 0) {
-        throw new ApiError('Public slug already exists', 400);
+        throw new ApiError('This form URL is already taken. Please choose a different one', 400);
       }
+    }
+
+    // Ensure name, email, and phone fields are always present if form_fields_schema is being updated
+    if (data.form_fields_schema && data.form_fields_schema.fields) {
+      const requiredFields = [
+        { field_id: 'name', field_type: 'text' as const, label: 'Name', placeholder: 'Your name', required: true },
+        { field_id: 'email', field_type: 'email' as const, label: 'Email', placeholder: 'your@email.com', required: true },
+        { field_id: 'phone', field_type: 'tel' as const, label: 'Phone', placeholder: 'Your phone number', required: true },
+      ];
+
+      const existingFieldIds = new Set(data.form_fields_schema.fields.map((f: any) => f.field_id));
+      const fieldsToAdd = requiredFields.filter(f => !existingFieldIds.has(f.field_id));
+      
+      // Add required fields at the beginning
+      data.form_fields_schema.fields = [...fieldsToAdd, ...data.form_fields_schema.fields];
     }
 
     const updated = await db.update(FORMS_TABLE, { form_id: formId }, {
@@ -351,11 +402,11 @@ class FormsController {
     const existing = await db.get(FORMS_TABLE, { form_id: formId });
 
     if (!existing || existing.deleted_at) {
-      throw new ApiError('Form not found', 404);
+      throw new ApiError('This form doesn\'t exist or has been removed', 404);
     }
 
     if (existing.tenant_id !== tenantId) {
-      throw new ApiError('Unauthorized', 403);
+      throw new ApiError('You don\'t have permission to access this form', 403);
     }
 
     // Soft delete

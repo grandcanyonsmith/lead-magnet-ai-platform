@@ -55,11 +55,11 @@ export default function DashboardLayout({
 
   const navItems = [
     { href: '/dashboard', label: 'Dashboard', icon: FiHome },
-    { href: '/dashboard/workflows', label: 'Workflows', icon: FiList },
+    { href: '/dashboard/workflows', label: 'Lead Magnets', icon: FiList },
     { href: '/dashboard/forms', label: 'Forms', icon: FiFileText },
     { href: '/dashboard/templates', label: 'Templates', icon: FiLayout },
-    { href: '/dashboard/jobs', label: 'Lead Magnets', icon: FiBarChart2 },
-    { href: '/dashboard/artifacts', label: 'Artifacts', icon: FiFileText },
+    { href: '/dashboard/jobs', label: 'Generated Lead Magnets', icon: FiBarChart2 },
+    { href: '/dashboard/artifacts', label: 'Downloads', icon: FiFileText },
     { href: '/dashboard/settings', label: 'Settings', icon: FiSettings },
   ]
 
