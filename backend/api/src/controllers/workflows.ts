@@ -203,7 +203,7 @@ class WorkflowsController {
   }
 
   async generateWithAI(tenantId: string, body: any): Promise<RouteResponse> {
-    const { description, model = 'gpt-5' } = body;
+    const { description, model = 'gpt-4o' } = body;
 
     if (!description || !description.trim()) {
       throw new ApiError('Description is required', 400);
@@ -237,7 +237,7 @@ Return JSON format:
 
       console.log('[Workflow Generation] Calling OpenAI for workflow generation...');
       const workflowStartTime = Date.now();
-      const workflowCompletion = await openai.chat.completions.create({
+      const workflowCompletionParams: any = {
         model,
         messages: [
           {
@@ -249,9 +249,13 @@ Return JSON format:
             content: workflowPrompt,
           },
         ],
-        temperature: 0.7,
         max_completion_tokens: 1000,
-      });
+      };
+      // GPT-5 only supports default temperature (1), don't set custom temperature
+      if (model !== 'gpt-5') {
+        workflowCompletionParams.temperature = 0.7;
+      }
+      const workflowCompletion = await openai.chat.completions.create(workflowCompletionParams);
 
       const workflowDuration = Date.now() - workflowStartTime;
       console.log('[Workflow Generation] Workflow generation completed', {
@@ -308,7 +312,7 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
 
       console.log('[Workflow Generation] Calling OpenAI for template HTML generation...');
       const templateStartTime = Date.now();
-      const templateCompletion = await openai.chat.completions.create({
+      const templateCompletionParams: any = {
         model,
         messages: [
           {
@@ -320,9 +324,13 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
             content: templatePrompt,
           },
         ],
-        temperature: 0.7,
         max_completion_tokens: 4000,
-      });
+      };
+      // GPT-5 only supports default temperature (1), don't set custom temperature
+      if (model !== 'gpt-5') {
+        templateCompletionParams.temperature = 0.7;
+      }
+      const templateCompletion = await openai.chat.completions.create(templateCompletionParams);
 
       const templateDuration = Date.now() - templateStartTime;
       console.log('[Workflow Generation] Template HTML generation completed', {
@@ -374,7 +382,7 @@ Return JSON format: {"name": "...", "description": "..."}`;
 
       console.log('[Workflow Generation] Calling OpenAI for template name/description generation...');
       const templateNameStartTime = Date.now();
-      const templateNameCompletion = await openai.chat.completions.create({
+      const templateNameCompletionParams: any = {
         model,
         messages: [
           {
@@ -382,9 +390,13 @@ Return JSON format: {"name": "...", "description": "..."}`;
             content: templateNamePrompt,
           },
         ],
-        temperature: 0.5,
         max_completion_tokens: 200,
-      });
+      };
+      // GPT-5 only supports default temperature (1), don't set custom temperature
+      if (model !== 'gpt-5') {
+        templateNameCompletionParams.temperature = 0.5;
+      }
+      const templateNameCompletion = await openai.chat.completions.create(templateNameCompletionParams);
 
       const templateNameDuration = Date.now() - templateNameStartTime;
       console.log('[Workflow Generation] Template name/description generation completed', {
@@ -423,6 +435,116 @@ Return JSON format: {"name": "...", "description": "..."}`;
         console.warn('[Workflow Generation] Failed to parse template name JSON, using defaults', e);
       }
 
+      // Generate form fields
+      const formPrompt = `You are an expert at creating lead capture forms. Based on this lead magnet: "${description}", generate appropriate form fields.
+
+The form should collect all necessary information needed to personalize the lead magnet. Think about what data would be useful for:
+- Personalizing the AI-generated content
+- Contacting the lead
+- Understanding their needs
+
+Generate 3-6 form fields. Common field types: text, email, tel, textarea, select, number.
+
+Return JSON format:
+{
+  "form_name": "...",
+  "public_slug": "...",
+  "fields": [
+    {
+      "field_id": "field_1",
+      "field_type": "text|email|tel|textarea|select|number",
+      "label": "...",
+      "placeholder": "...",
+      "required": true|false,
+      "options": ["option1", "option2"] // only for select fields
+    }
+  ]
+}
+
+The public_slug should be URL-friendly (lowercase, hyphens only, no spaces).`;
+
+      console.log('[Workflow Generation] Calling OpenAI for form generation...');
+      const formStartTime = Date.now();
+      const formCompletionParams: any = {
+        model,
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert at creating lead capture forms. Return only valid JSON without markdown formatting.',
+          },
+          {
+            role: 'user',
+            content: formPrompt,
+          },
+        ],
+        max_completion_tokens: 1500,
+      };
+      // GPT-5 only supports default temperature (1), don't set custom temperature
+      if (model !== 'gpt-5') {
+        formCompletionParams.temperature = 0.7;
+      }
+      const formCompletion = await openai.chat.completions.create(formCompletionParams);
+
+      const formDuration = Date.now() - formStartTime;
+      console.log('[Workflow Generation] Form generation completed', {
+        duration: `${formDuration}ms`,
+        tokensUsed: formCompletion.usage?.total_tokens,
+      });
+
+      // Track usage
+      const formUsage = formCompletion.usage;
+      if (formUsage) {
+        const inputTokens = formUsage.prompt_tokens || 0;
+        const outputTokens = formUsage.completion_tokens || 0;
+        const costData = calculateOpenAICost(model, inputTokens, outputTokens);
+        
+        await storeUsageRecord(
+          tenantId,
+          'openai_workflow_generate',
+          model,
+          inputTokens,
+          outputTokens,
+          costData.cost_usd
+        );
+      }
+
+      const formContent = formCompletion.choices[0]?.message?.content || '';
+      let formData = {
+        form_name: `Form for ${workflowData.workflow_name}`,
+        public_slug: workflowData.workflow_name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+        fields: [
+          {
+            field_id: 'field_1',
+            field_type: 'email',
+            label: 'Email Address',
+            placeholder: 'your@email.com',
+            required: true,
+          },
+          {
+            field_id: 'field_2',
+            field_type: 'text',
+            label: 'Name',
+            placeholder: 'Your Name',
+            required: true,
+          },
+        ],
+      };
+
+      try {
+        const jsonMatch = formContent.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          formData = JSON.parse(jsonMatch[0]);
+        }
+      } catch (e) {
+        console.warn('[Workflow Generation] Failed to parse form JSON, using defaults', e);
+      }
+
+      // Ensure field_id is generated for each field if missing
+      formData.fields = formData.fields.map((field: any, index: number) => ({
+        ...field,
+        field_id: field.field_id || `field_${index + 1}`,
+      }));
+
       const totalDuration = Date.now() - workflowStartTime;
       console.log('[Workflow Generation] Success!', {
         tenantId,
@@ -430,6 +552,7 @@ Return JSON format: {"name": "...", "description": "..."}`;
         templateName,
         htmlLength: cleanedHtml.length,
         placeholderCount: placeholderTags.length,
+        formFieldsCount: formData.fields.length,
         totalDuration: `${totalDuration}ms`,
         timestamp: new Date().toISOString(),
       });
@@ -447,6 +570,13 @@ Return JSON format: {"name": "...", "description": "..."}`;
             template_description: templateDescription,
             html_content: cleanedHtml.trim(),
             placeholder_tags: placeholderTags,
+          },
+          form: {
+            form_name: formData.form_name,
+            public_slug: formData.public_slug,
+            form_fields_schema: {
+              fields: formData.fields,
+            },
           },
         },
       };
@@ -508,7 +638,7 @@ Return ONLY the modified instructions, no markdown formatting, no explanations.`
       });
 
       const refineStartTime = Date.now();
-      const completion = await openai.chat.completions.create({
+      const completionParams: any = {
         model,
         messages: [
           {
@@ -520,9 +650,13 @@ Return ONLY the modified instructions, no markdown formatting, no explanations.`
             content: prompt,
           },
         ],
-        temperature: 0.7,
         max_completion_tokens: 2000,
-      });
+      };
+      // GPT-5 only supports default temperature (1), don't set custom temperature
+      if (model !== 'gpt-5') {
+        completionParams.temperature = 0.7;
+      }
+      const completion = await openai.chat.completions.create(completionParams);
 
       const refineDuration = Date.now() - refineStartTime;
       console.log('[Workflow Instructions Refinement] Refinement completed', {
