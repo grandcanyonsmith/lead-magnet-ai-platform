@@ -152,10 +152,11 @@ export default function SettingsPage() {
               Default AI Model
             </label>
             <select
-              value={settings.default_ai_model || 'gpt-4o'}
+              value={settings.default_ai_model || 'gpt-5'}
               onChange={(e) => setSettings({ ...settings, default_ai_model: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
+              <option value="gpt-5">GPT-5</option>
               <option value="gpt-4o">GPT-4o</option>
               <option value="gpt-4-turbo">GPT-4 Turbo</option>
               <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>

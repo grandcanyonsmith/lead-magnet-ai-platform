@@ -19,9 +19,9 @@ export default function NewWorkflowPage() {
   const [formData, setFormData] = useState({
     workflow_name: '',
     workflow_description: '',
-    ai_model: 'gpt-4o',
+    ai_model: 'gpt-5',
     ai_instructions: '',
-    rewrite_model: 'gpt-4o',
+    rewrite_model: 'gpt-5',
     research_enabled: true,
     html_enabled: true,
     template_id: '',
@@ -70,7 +70,7 @@ export default function NewWorkflowPage() {
 
     try {
       const startTime = Date.now()
-      const result = await api.generateWorkflowWithAI(prompt.trim(), 'gpt-4o')
+      const result = await api.generateWorkflowWithAI(prompt.trim(), 'gpt-5')
       const duration = Date.now() - startTime
 
       console.log('[Workflow Generation] Success!', {
@@ -452,10 +452,10 @@ export default function NewWorkflowPage() {
                 required
                 disabled={!formData.research_enabled}
               >
+                <option value="gpt-5">GPT-5</option>
                 <option value="gpt-4o">GPT-4o</option>
                 <option value="gpt-4-turbo">GPT-4 Turbo</option>
                 <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                <option value="gpt-5">GPT-5</option>
               </select>
               <p className="mt-1 text-xs text-gray-500">
                 Used for generating personalized research
@@ -475,10 +475,10 @@ export default function NewWorkflowPage() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                 disabled={!formData.html_enabled}
               >
+                <option value="gpt-5">GPT-5</option>
                 <option value="gpt-4o">GPT-4o</option>
                 <option value="gpt-4-turbo">GPT-4 Turbo</option>
                 <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                <option value="gpt-5">GPT-5</option>
               </select>
               <p className="mt-1 text-xs text-gray-500">
                 Used for converting content to styled HTML

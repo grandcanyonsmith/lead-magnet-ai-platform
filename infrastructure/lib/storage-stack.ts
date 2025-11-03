@@ -74,6 +74,20 @@ export class StorageStack extends cdk.Stack {
         compress: true,
         cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
       },
+      errorResponses: [
+        {
+          httpStatus: 403,
+          responseHttpStatus: 204,
+          responsePagePath: '/favicon.ico',
+          ttl: cdk.Duration.minutes(10),
+        },
+        {
+          httpStatus: 404,
+          responseHttpStatus: 204,
+          responsePagePath: '/favicon.ico',
+          ttl: cdk.Duration.minutes(10),
+        },
+      ],
       priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
       enabled: true,
       comment: 'Lead Magnet Artifacts CDN',

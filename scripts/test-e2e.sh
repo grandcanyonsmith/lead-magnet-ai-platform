@@ -33,6 +33,7 @@ SUBMIT_RESPONSE=$(curl -s -X POST "$API_URL/v1/forms/test-form/submit" \
     "submission_data": {
       "name": "Jane Smith",
       "email": "jane@example.com",
+      "phone": "+14155551234",
       "project": "I need a comprehensive market research report for the fitness industry"
     }
   }')
