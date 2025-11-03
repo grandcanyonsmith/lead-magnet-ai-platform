@@ -97,11 +97,18 @@ class BillingController {
         }
       );
     } catch (error: any) {
-      // If table doesn't exist yet, return empty results
-      if (error.name === 'ResourceNotFoundException' || error.message?.includes('not found')) {
-        console.warn('[Billing] Usage records table does not exist yet', {
+      // If table doesn't exist yet or permissions are missing, return empty results
+      if (
+        error.name === 'ResourceNotFoundException' ||
+        error.name === 'AccessDeniedException' ||
+        error.message?.includes('not found') ||
+        error.message?.includes('not authorized')
+      ) {
+        console.warn('[Billing] Usage records table not accessible', {
           table: USAGE_RECORDS_TABLE,
-          message: 'Table needs to be created via CDK deployment',
+          errorName: error.name,
+          message: error.message,
+          suggestion: 'Table needs to be created via CDK deployment and permissions granted',
         });
         usageRecords = [];
       } else {

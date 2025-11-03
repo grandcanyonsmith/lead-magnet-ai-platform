@@ -61,6 +61,11 @@ export const router = async (
     return await workflowsController.create(tenantId, body);
   }
 
+  if (path === '/admin/workflows/generate-with-ai' && method === 'POST') {
+    console.log('[Router] Matched /admin/workflows/generate-with-ai route');
+    return await workflowsController.generateWithAI(tenantId, body);
+  }
+
   if (path === '/admin/workflows/refine-instructions' && method === 'POST') {
     console.log('[Router] Matched /admin/workflows/refine-instructions route');
     return await workflowsController.refineInstructions(tenantId, body);
