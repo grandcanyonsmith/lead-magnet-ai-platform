@@ -650,7 +650,7 @@ Generate ONLY the SMS message text, no explanations, no markdown."""
                 job_id,
                 {
                     'service_type': 'openai_sms_generation',
-                    'model': workflow.get('ai_model', 'gpt-4o'),
+                    'model': usage_info.get('model', workflow.get('ai_model', 'gpt-5')),
                     'input_tokens': usage_info.get('input_tokens', 0),
                     'output_tokens': usage_info.get('output_tokens', 0),
                     'cost_usd': usage_info.get('cost_usd', 0.0)

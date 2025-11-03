@@ -60,7 +60,6 @@ class AIService:
         model: str,
         instructions: str,
         context: str,
-        max_tokens: int = 4000
     ) -> Tuple[str, Dict]:
         """
         Generate a report using OpenAI.
@@ -69,7 +68,6 @@ class AIService:
             model: OpenAI model to use (e.g., 'gpt-5')
             instructions: System instructions for the AI
             context: User context/data to generate report from
-            max_tokens: Maximum tokens to generate (deprecated, kept for compatibility)
             
         Returns:
             Tuple of (generated report content, usage info dict)
@@ -82,9 +80,6 @@ class AIService:
                 "instructions": instructions,
                 "input": f"Generate a report based on the following information:\n\n{context}",
             }
-            # GPT-5 only supports default temperature (1), don't set custom temperature
-            if model != 'gpt-5':
-                params["temperature"] = 0.7
             
             response = self.client.responses.create(**params)
             
@@ -141,7 +136,6 @@ class AIService:
         template_style: str = '',
         ai_instructions: str = '',
         model: str = 'gpt-5',
-        max_tokens: int = 8000
     ) -> Tuple[str, Dict]:
         """
         Generate HTML document directly from submission data and template.
@@ -155,7 +149,6 @@ class AIService:
             template_style: Optional style description/guidance
             ai_instructions: AI instructions from workflow
             model: OpenAI model to use
-            max_tokens: Maximum tokens to generate
             
         Returns:
             Styled HTML document matching the template
@@ -209,9 +202,6 @@ Generate a complete HTML document that:
                 "instructions": instructions,
                 "input": user_message,
             }
-            # GPT-5 only supports default temperature (1), don't set custom temperature
-            if model != 'gpt-5':
-                params["temperature"] = 0.6
             
             response = self.client.responses.create(**params)
             
@@ -272,7 +262,6 @@ Generate a complete HTML document that:
         template_style: str = '',
         submission_data: dict = None,
         model: str = 'gpt-5',
-        max_tokens: int = 8000
     ) -> Tuple[str, Dict]:
         """
         Generate styled HTML document from research content and template.
@@ -286,7 +275,6 @@ Generate a complete HTML document that:
             template_style: Optional style description/guidance
             submission_data: Additional submission data to include (name, email, etc.)
             model: OpenAI model to use
-            max_tokens: Maximum tokens to generate
             
         Returns:
             Styled HTML document matching the template
@@ -342,9 +330,6 @@ Generate a complete HTML document that:
                 "instructions": instructions,
                 "input": user_message,
             }
-            # GPT-5 only supports default temperature (1), don't set custom temperature
-            if model != 'gpt-5':
-                params["temperature"] = 0.6
             
             response = self.client.responses.create(**params)
             
@@ -402,7 +387,6 @@ Generate a complete HTML document that:
         self,
         html_content: str,
         model: str = 'gpt-5',
-        max_tokens: int = 6000
     ) -> str:
         """
         Rewrite/enhance HTML content using AI.
@@ -410,7 +394,6 @@ Generate a complete HTML document that:
         Args:
             html_content: Original HTML content
             model: OpenAI model to use
-            max_tokens: Maximum tokens to generate
             
         Returns:
             Enhanced HTML content
@@ -433,9 +416,6 @@ Generate a complete HTML document that:
                 "instructions": instructions,
                 "input": f"Enhance this HTML document:\n\n{html_content}",
             }
-            # GPT-5 only supports default temperature (1), don't set custom temperature
-            if model != 'gpt-5':
-                params["temperature"] = 0.5
             
             response = self.client.responses.create(**params)
             
