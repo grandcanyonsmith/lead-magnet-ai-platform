@@ -157,12 +157,56 @@ class AIService:
             
             report = response.output_text
             
+            # Extract image URLs from tool outputs if image_generation was used
+            image_urls = []
+            try:
+                # Log response structure for debugging
+                logger.debug(f"Response type: {type(response)}, dir: {[x for x in dir(response) if not x.startswith('_')]}")
+                
+                # Check various possible response structures
+                if hasattr(response, 'output_items') and response.output_items:
+                    logger.debug(f"Found output_items: {len(response.output_items)} items")
+                    for idx, item in enumerate(response.output_items):
+                        logger.debug(f"Output item {idx}: type={getattr(item, 'type', 'unknown')}, dir={[x for x in dir(item) if not x.startswith('_')]}")
+                        if hasattr(item, 'type') and item.type == 'image':
+                            if hasattr(item, 'image') and hasattr(item.image, 'url'):
+                                image_urls.append(item.image.url)
+                                logger.info(f"Found image URL: {item.image.url}")
+                        # Check for tool outputs in various formats
+                        if hasattr(item, 'tool_outputs'):
+                            for tool_output in item.tool_outputs:
+                                if hasattr(tool_output, 'image_generation'):
+                                    img_gen = tool_output.image_generation
+                                    if hasattr(img_gen, 'image') and hasattr(img_gen.image, 'url'):
+                                        image_urls.append(img_gen.image.url)
+                                        logger.info(f"Found image URL from tool_output: {img_gen.image.url}")
+                
+                # Also check response directly for image fields
+                if hasattr(response, 'images') and response.images:
+                    for img in response.images:
+                        if hasattr(img, 'url'):
+                            image_urls.append(img.url)
+                            logger.info(f"Found image URL from response.images: {img.url}")
+                
+                # Check if response has a data attribute that might contain images
+                if hasattr(response, 'data'):
+                    response_data = response.data
+                    if isinstance(response_data, list):
+                        for item in response_data:
+                            if isinstance(item, dict) and 'image' in item:
+                                if 'url' in item['image']:
+                                    image_urls.append(item['image']['url'])
+                                    logger.info(f"Found image URL from response.data: {item['image']['url']}")
+            except Exception as e:
+                logger.warning(f"Error extracting image URLs: {e}")
+            
             # Log token usage for cost tracking
             usage = response.usage
             logger.info(
                 f"Report generation completed. "
                 f"Tokens: {usage.total_tokens} "
                 f"(input: {usage.input_tokens}, output: {usage.output_tokens})"
+                + (f" Images generated: {len(image_urls)}" if image_urls else "")
             )
             
             # Calculate cost
@@ -181,9 +225,10 @@ class AIService:
                 'service_type': 'openai_worker_report',
             }
             
-            # Capture response details
+            # Capture response details including image URLs
             response_details = {
                 'output_text': report,
+                'image_urls': image_urls,  # Add image URLs
                 'usage': {
                     'input_tokens': usage.input_tokens or 0,
                     'output_tokens': usage.output_tokens or 0,
@@ -218,10 +263,26 @@ class AIService:
                     report = response.output_text
                     usage = response.usage
                     
+                    # Extract image URLs from tool outputs if image_generation was used
+                    image_urls = []
+                    if hasattr(response, 'output_items') and response.output_items:
+                        for item in response.output_items:
+                            if hasattr(item, 'type') and item.type == 'image':
+                                if hasattr(item, 'image') and hasattr(item.image, 'url'):
+                                    image_urls.append(item.image.url)
+                            # Also check for tool outputs
+                            if hasattr(item, 'tool_outputs'):
+                                for tool_output in item.tool_outputs:
+                                    if hasattr(tool_output, 'image_generation'):
+                                        img_gen = tool_output.image_generation
+                                        if hasattr(img_gen, 'image') and hasattr(img_gen.image, 'url'):
+                                            image_urls.append(img_gen.image.url)
+                    
                     logger.info(
                         f"Report generation completed (without reasoning_level). "
                         f"Tokens: {usage.total_tokens} "
                         f"(input: {usage.input_tokens}, output: {usage.output_tokens})"
+                        + (f" Images generated: {len(image_urls)}" if image_urls else "")
                     )
                     
                     cost_data = calculate_openai_cost(
@@ -252,6 +313,7 @@ class AIService:
                     
                     response_details = {
                         'output_text': report,
+                        'image_urls': image_urls,  # Add image URLs
                         'usage': {
                             'input_tokens': usage.input_tokens or 0,
                             'output_tokens': usage.output_tokens or 0,

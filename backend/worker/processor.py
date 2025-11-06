@@ -214,6 +214,7 @@ class JobProcessor:
                             'model': step_model,
                             'input': request_details,
                             'output': response_details.get('output_text', ''),
+                            'image_urls': response_details.get('image_urls', []),  # Store image URLs
                             'usage_info': convert_floats_to_decimal(usage_info),
                             'timestamp': step_start_time.isoformat(),
                             'duration_ms': int(step_duration),

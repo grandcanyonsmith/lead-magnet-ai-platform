@@ -585,6 +585,36 @@ export default function JobDetailClient() {
                             <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-800 overflow-x-auto max-h-96 overflow-y-auto">
                               {renderContent(formatStepOutput(step))}
                             </div>
+                            {/* Display image URLs if present */}
+                            {step.image_urls && Array.isArray(step.image_urls) && step.image_urls.length > 0 && (
+                              <div className="mt-3">
+                                <span className="text-xs font-medium text-gray-700 mb-2 block">Generated Images:</span>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                  {step.image_urls.map((imageUrl: string, imgIdx: number) => (
+                                    <div key={imgIdx} className="border border-gray-200 rounded-lg overflow-hidden">
+                                      <img 
+                                        src={imageUrl} 
+                                        alt={`Generated image ${imgIdx + 1}`}
+                                        className="w-full h-auto"
+                                        onError={(e) => {
+                                          (e.target as HTMLImageElement).style.display = 'none'
+                                        }}
+                                      />
+                                      <div className="p-2 bg-gray-100">
+                                        <a 
+                                          href={imageUrl} 
+                                          target="_blank" 
+                                          rel="noopener noreferrer"
+                                          className="text-xs text-blue-600 hover:text-blue-800 break-all"
+                                        >
+                                          {imageUrl}
+                                        </a>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
 
                           {step.artifact_id && (
