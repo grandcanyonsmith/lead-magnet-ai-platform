@@ -45,6 +45,8 @@ export default function NewWorkflowPage() {
       model: 'o3-deep-research',
       instructions: '',
       step_order: 0,
+      tools: ['web_search_preview'],
+      tool_choice: 'auto',
     },
     {
       step_name: 'HTML Rewrite',
@@ -52,6 +54,8 @@ export default function NewWorkflowPage() {
       model: 'gpt-5',
       instructions: 'Rewrite the research content into styled HTML matching the provided template. Ensure the output is complete, valid HTML that matches the template\'s design and structure.',
       step_order: 1,
+      tools: [],
+      tool_choice: 'none',
     },
   ])
 

@@ -9,6 +9,8 @@ export interface WorkflowStep {
   model: string
   instructions: string
   step_order?: number
+  tools?: string[]
+  tool_choice?: 'auto' | 'required' | 'none'
 }
 
 interface WorkflowStepEditorProps {
@@ -29,6 +31,16 @@ const MODEL_OPTIONS = [
   { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' },
 ]
 
+const AVAILABLE_TOOLS = [
+  { value: 'web_search_preview', label: 'Web Search Preview', description: 'Enables web search capabilities' },
+]
+
+const TOOL_CHOICE_OPTIONS = [
+  { value: 'auto', label: 'Auto', description: 'Model decides when to use tools' },
+  { value: 'required', label: 'Required', description: 'Model must use at least one tool' },
+  { value: 'none', label: 'None', description: 'Disable tools entirely' },
+]
+
 export default function WorkflowStepEditor({
   step,
   index,
@@ -45,10 +57,18 @@ export default function WorkflowStepEditor({
     setLocalStep(step)
   }, [step])
 
-  const handleChange = (field: keyof WorkflowStep, value: string) => {
+  const handleChange = (field: keyof WorkflowStep, value: string | string[]) => {
     const updated = { ...localStep, [field]: value }
     setLocalStep(updated)
     onChange(index, updated)
+  }
+
+  const handleToolToggle = (toolValue: string) => {
+    const currentTools = localStep.tools || []
+    const updatedTools = currentTools.includes(toolValue)
+      ? currentTools.filter(t => t !== toolValue)
+      : [...currentTools, toolValue]
+    handleChange('tools', updatedTools)
   }
 
   return (
@@ -153,6 +173,44 @@ export default function WorkflowStepEditor({
           <p className="mt-1 text-sm text-gray-500">
             These instructions will be passed to the AI model along with context from previous steps.
           </p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            OpenAI Tools
+          </label>
+          <div className="space-y-2 mb-3">
+            {AVAILABLE_TOOLS.map((tool) => (
+              <label key={tool.value} className="flex items-start space-x-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={(localStep.tools || ['web_search_preview']).includes(tool.value)}
+                  onChange={() => handleToolToggle(tool.value)}
+                  className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                />
+                <div>
+                  <span className="text-sm font-medium text-gray-900">{tool.label}</span>
+                  <p className="text-xs text-gray-500">{tool.description}</p>
+                </div>
+              </label>
+            ))}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Tool Choice
+            </label>
+            <select
+              value={localStep.tool_choice || 'auto'}
+              onChange={(e) => handleChange('tool_choice', e.target.value as 'auto' | 'required' | 'none')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            >
+              {TOOL_CHOICE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label} - {option.description}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
     </div>

@@ -7,6 +7,8 @@ export const workflowStepSchema = z.object({
   model: z.string().min(1),
   instructions: z.string().min(1),
   step_order: z.number().int().min(0).optional(),
+  tools: z.array(z.string()).optional(), // Array of tool types (e.g., ["web_search_preview"])
+  tool_choice: z.enum(['auto', 'required', 'none']).optional().default('auto'), // How model should use tools
 });
 
 // Base workflow schema without refinement
