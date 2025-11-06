@@ -415,6 +415,8 @@ class WorkflowsController {
           model: workflowData.ai_model || 'o3-deep-research',
           instructions: workflowData.ai_instructions,
           step_order: 0,
+          tools: ['web_search_preview'],
+          tool_choice: 'auto',
         });
       }
       
@@ -427,6 +429,8 @@ class WorkflowsController {
             ? 'Rewrite the research content into styled HTML matching the provided template. Ensure the output is complete, valid HTML that matches the template\'s design and structure.'
             : 'Generate HTML output',
           step_order: steps.length,
+          tools: [],
+          tool_choice: 'none',
         });
       }
       
@@ -434,10 +438,12 @@ class WorkflowsController {
         workflowData.steps = steps;
       }
     } else {
-      // Ensure step_order is set for each step
+      // Ensure step_order is set for each step and add defaults for tools/tool_choice
       workflowData.steps = workflowData.steps.map((step: any, index: number) => ({
         ...step,
         step_order: step.step_order !== undefined ? step.step_order : index,
+        tools: step.tools || ['web_search_preview'],
+        tool_choice: step.tool_choice || 'auto',
       }));
     }
 
