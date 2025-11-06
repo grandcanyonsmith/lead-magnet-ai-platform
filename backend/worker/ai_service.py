@@ -169,22 +169,36 @@ class AIService:
                         # Check if item is an ImageGenerationCall
                         if hasattr(item, 'type') and item.type == 'image_generation_call':
                             logger.info(f"Found ImageGenerationCall at output[{idx}]: status={getattr(item, 'status', 'unknown')}")
+                            # Log all attributes to see what's available
+                            item_attrs = [attr for attr in dir(item) if not attr.startswith('_')]
+                            logger.info(f"ImageGenerationCall attributes: {item_attrs}")
+                            
+                            # Try to get the full item as dict to see all fields
+                            try:
+                                if hasattr(item, 'model_dump'):
+                                    item_dict = item.model_dump()
+                                    logger.info(f"ImageGenerationCall as dict: {json.dumps({k: (v[:100] if isinstance(v, str) and len(v) > 100 else v) for k, v in item_dict.items()}, indent=2, default=str)}")
+                                elif hasattr(item, '__dict__'):
+                                    logger.info(f"ImageGenerationCall __dict__: {item.__dict__}")
+                            except Exception as e:
+                                logger.warning(f"Could not serialize ImageGenerationCall: {e}")
+                            
                             # ImageGenerationCall.result contains base64 encoded image
-                            # But we need to check if there's a URL field or if we need to handle base64
-                            if hasattr(item, 'result') and item.result:
-                                # result is base64, but check if there's a URL field
-                                logger.info(f"ImageGenerationCall has result (base64, length={len(item.result) if item.result else 0})")
-                            # Check for URL field (might be in a different location)
-                            if hasattr(item, 'url'):
+                            # Check if there's a URL field (might be added dynamically)
+                            if hasattr(item, 'url') and item.url:
                                 image_urls.append(item.url)
                                 logger.info(f"Found image URL from ImageGenerationCall.url: {item.url}")
-                            elif hasattr(item, 'image_url'):
+                            elif hasattr(item, 'image_url') and item.image_url:
                                 image_urls.append(item.image_url)
                                 logger.info(f"Found image URL from ImageGenerationCall.image_url: {item.image_url}")
-                            # Also check if result might be a URL (though docs say it's base64)
-                            elif hasattr(item, 'result') and item.result and item.result.startswith('http'):
-                                image_urls.append(item.result)
-                                logger.info(f"Found image URL from ImageGenerationCall.result: {item.result}")
+                            # Check if result might be a URL (though docs say it's base64)
+                            elif hasattr(item, 'result') and item.result:
+                                if item.result.startswith('http'):
+                                    image_urls.append(item.result)
+                                    logger.info(f"Found image URL from ImageGenerationCall.result: {item.result}")
+                                else:
+                                    # result is base64 - we'd need to upload it to S3 to get a URL
+                                    logger.info(f"ImageGenerationCall.result is base64 (length={len(item.result)}), would need to upload to S3")
                 
                 # Log if no images found but image_generation tool was used
                 has_image_tool = any(
@@ -198,7 +212,11 @@ class AIService:
                         for idx, item in enumerate(response.output):
                             logger.warning(f"output[{idx}]: type={getattr(item, 'type', 'unknown')}, attributes={[attr for attr in dir(item) if not attr.startswith('_')]}")
                             if hasattr(item, 'type') and item.type == 'image_generation_call':
-                                logger.warning(f"ImageGenerationCall details: {item.model_dump() if hasattr(item, 'model_dump') else 'N/A'}")
+                                try:
+                                    if hasattr(item, 'model_dump'):
+                                        logger.warning(f"ImageGenerationCall full dump: {item.model_dump()}")
+                                except:
+                                    pass
             except Exception as e:
                 logger.warning(f"Error extracting image URLs: {e}", exc_info=True)
             
