@@ -485,7 +485,7 @@ export default function JobDetailClient() {
                           <span className="text-xs text-gray-500">({step.model})</span>
                         )}
                         {/* Display tools and tool_choice */}
-                        {step.input && step.input.tools && Array.isArray(step.input.tools) && step.input.tools.length > 0 && (
+                        {step.input?.tools && Array.isArray(step.input.tools) && step.input.tools.length > 0 && (
                           <div className="flex items-center space-x-2">
                             <span className="text-xs text-gray-500">Tools:</span>
                             <div className="flex flex-wrap gap-1">
@@ -498,14 +498,14 @@ export default function JobDetailClient() {
                                 )
                               })}
                             </div>
-                            {step.input.tool_choice && step.input.tool_choice !== 'auto' && (
+                            {step.input.tool_choice && (
                               <span className="text-xs text-gray-500">
                                 ({step.input.tool_choice})
                               </span>
                             )}
                           </div>
                         )}
-                        {step.input && step.input.tool_choice && step.input.tool_choice === 'none' && (
+                        {step.input?.tool_choice === 'none' && (!step.input?.tools || (Array.isArray(step.input.tools) && step.input.tools.length === 0)) && (
                           <span className="px-1.5 py-0.5 text-xs bg-gray-50 text-gray-600 rounded border border-gray-200">
                             No tools
                           </span>
