@@ -443,7 +443,7 @@ class WorkflowsController {
         ...step,
         step_order: step.step_order !== undefined ? step.step_order : index,
         tools: step.tools || ['web_search_preview'],
-        tool_choice: step.tool_choice || 'auto',
+        tool_choice: (step.tool_choice || 'auto') as 'auto' | 'required' | 'none',
       }));
     }
 
