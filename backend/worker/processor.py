@@ -40,11 +40,15 @@ class JobProcessor:
             Dictionary with success status and optional error
         """
         try:
+            # Initialize execution steps array
+            execution_steps = []
+            
             # Update job status to processing
             self.db.update_job(job_id, {
                 'status': 'processing',
                 'started_at': datetime.utcnow().isoformat(),
-                'updated_at': datetime.utcnow().isoformat()
+                'updated_at': datetime.utcnow().isoformat(),
+                'execution_steps': execution_steps
             })
             
             # Get job details
@@ -63,6 +67,20 @@ class JobProcessor:
             submission = self.db.get_submission(job['submission_id'])
             if not submission:
                 raise ValueError(f"Submission {job['submission_id']} not found")
+            
+            # Add form submission as step 0
+            submission_data = submission.get('submission_data', {})
+            form_step_start = datetime.utcnow()
+            execution_steps.append({
+                'step_name': 'Form Submission',
+                'step_order': 0,
+                'step_type': 'form_submission',
+                'input': submission_data,
+                'output': submission_data,
+                'timestamp': form_step_start.isoformat(),
+                'duration_ms': 0,
+            })
+            self.db.update_job(job_id, {'execution_steps': execution_steps})
             
             # Check if workflow uses new steps format or legacy format
             steps = workflow.get('steps', [])
@@ -93,13 +111,17 @@ class JobProcessor:
                     logger.info(f"Processing step {step_index + 1}/{len(sorted_steps)}: {step_name}")
                     
                     try:
+                        step_start_time = datetime.utcnow()
+                        
                         # Generate step output with accumulated context
-                        step_output, usage_info = self.ai_service.generate_report(
+                        step_output, usage_info, request_details, response_details = self.ai_service.generate_report(
                             model=step_model,
                             instructions=step_instructions,
                             context=initial_context if step_index == 0 else "",
                             previous_context=accumulated_context
                         )
+                        
+                        step_duration = (datetime.utcnow() - step_start_time).total_seconds() * 1000
                         
                         # Store usage record
                         self.store_usage_record(job['tenant_id'], job_id, usage_info)
@@ -118,6 +140,21 @@ class JobProcessor:
                             'output': step_output,
                             'artifact_id': step_artifact_id
                         })
+                        
+                        # Add execution step
+                        execution_steps.append({
+                            'step_name': step_name,
+                            'step_order': step_index + 1,
+                            'step_type': 'ai_generation',
+                            'model': step_model,
+                            'input': request_details,
+                            'output': response_details.get('output_text', ''),
+                            'usage_info': usage_info,
+                            'timestamp': step_start_time.isoformat(),
+                            'duration_ms': int(step_duration),
+                            'artifact_id': step_artifact_id,
+                        })
+                        self.db.update_job(job_id, {'execution_steps': execution_steps})
                         
                         # Accumulate context for next step
                         accumulated_context += f"\n\n--- Step {step_index + 1}: {step_name} ---\n{step_output}"
@@ -156,14 +193,30 @@ class JobProcessor:
                     else:
                         # Generate HTML from accumulated context
                         logger.info("Generating HTML from accumulated step outputs")
-                        final_content, html_usage_info = self.ai_service.generate_styled_html(
+                        html_start_time = datetime.utcnow()
+                        final_content, html_usage_info, html_request_details, html_response_details = self.ai_service.generate_styled_html(
                             research_content=accumulated_context,
                             template_html=template['html_content'],
                             template_style=template.get('style_description', ''),
                             submission_data=submission_data,
                             model=sorted_steps[-1].get('model', 'gpt-5') if sorted_steps else 'gpt-5'
                         )
+                        html_duration = (datetime.utcnow() - html_start_time).total_seconds() * 1000
                         self.store_usage_record(job['tenant_id'], job_id, html_usage_info)
+                        
+                        # Add HTML generation step
+                        execution_steps.append({
+                            'step_name': 'HTML Generation',
+                            'step_order': len(execution_steps),
+                            'step_type': 'html_generation',
+                            'model': sorted_steps[-1].get('model', 'gpt-5') if sorted_steps else 'gpt-5',
+                            'input': html_request_details,
+                            'output': html_response_details.get('output_text', '')[:5000],  # Truncate for storage
+                            'usage_info': html_usage_info,
+                            'timestamp': html_start_time.isoformat(),
+                            'duration_ms': int(html_duration),
+                        })
+                        self.db.update_job(job_id, {'execution_steps': execution_steps})
                     
                     final_artifact_type = 'html_final'
                     final_filename = 'final.html'
@@ -190,20 +243,38 @@ class JobProcessor:
                 if research_enabled:
                     logger.info("Step 1: Generating AI report")
                     try:
-                        report_content, usage_info = self.generate_report(workflow, submission)
+                        report_start_time = datetime.utcnow()
+                        report_content, usage_info, request_details, response_details = self.generate_report(workflow, submission)
+                        report_duration = (datetime.utcnow() - report_start_time).total_seconds() * 1000
+                        
                         # Store usage record
                         self.store_usage_record(job['tenant_id'], job_id, usage_info)
+                        
+                        # Store report as artifact
+                        report_artifact_id = self.store_artifact(
+                            tenant_id=job['tenant_id'],
+                            job_id=job_id,
+                            artifact_type='report_markdown',
+                            content=report_content,
+                            filename='report.md'
+                        )
+                        
+                        # Add execution step
+                        execution_steps.append({
+                            'step_name': 'AI Research Report',
+                            'step_order': 1,
+                            'step_type': 'ai_generation',
+                            'model': workflow.get('ai_model', 'gpt-5'),
+                            'input': request_details,
+                            'output': response_details.get('output_text', ''),
+                            'usage_info': usage_info,
+                            'timestamp': report_start_time.isoformat(),
+                            'duration_ms': int(report_duration),
+                            'artifact_id': report_artifact_id,
+                        })
+                        self.db.update_job(job_id, {'execution_steps': execution_steps})
                     except Exception as e:
                         raise Exception(f"Failed to generate AI report: {str(e)}") from e
-                    
-                    # Store report as artifact
-                    report_artifact_id = self.store_artifact(
-                        tenant_id=job['tenant_id'],
-                        job_id=job_id,
-                        artifact_type='report_markdown',
-                        content=report_content,
-                        filename='report.md'
-                    )
                 else:
                     logger.info("Step 1: Research disabled, skipping report generation")
                 
@@ -242,9 +313,10 @@ class JobProcessor:
                     # Generate HTML document
                     logger.info("Step 3: Generating styled HTML document")
                     try:
+                        html_start_time = datetime.utcnow()
                         if research_enabled:
                             # Use research content + template
-                            final_content, html_usage_info = self.ai_service.generate_styled_html(
+                            final_content, html_usage_info, html_request_details, html_response_details = self.ai_service.generate_styled_html(
                                 research_content=report_content,
                                 template_html=template['html_content'],
                                 template_style=template.get('style_description', ''),
@@ -255,7 +327,7 @@ class JobProcessor:
                             self.store_usage_record(job['tenant_id'], job_id, html_usage_info)
                         else:
                             # Generate HTML directly from submission data + template
-                            final_content, html_usage_info = self.ai_service.generate_html_from_submission(
+                            final_content, html_usage_info, html_request_details, html_response_details = self.ai_service.generate_html_from_submission(
                                 submission_data=submission.get('submission_data', {}),
                                 template_html=template['html_content'],
                                 template_style=template.get('style_description', ''),
@@ -264,6 +336,23 @@ class JobProcessor:
                             )
                             # Store usage record
                             self.store_usage_record(job['tenant_id'], job_id, html_usage_info)
+                        
+                        html_duration = (datetime.utcnow() - html_start_time).total_seconds() * 1000
+                        
+                        # Add execution step
+                        execution_steps.append({
+                            'step_name': 'HTML Generation',
+                            'step_order': len(execution_steps),
+                            'step_type': 'html_generation',
+                            'model': workflow.get('rewrite_model', 'gpt-5'),
+                            'input': html_request_details,
+                            'output': html_response_details.get('output_text', '')[:5000],  # Truncate for storage
+                            'usage_info': html_usage_info,
+                            'timestamp': html_start_time.isoformat(),
+                            'duration_ms': int(html_duration),
+                        })
+                        self.db.update_job(job_id, {'execution_steps': execution_steps})
+                        
                         logger.info("Styled HTML generated successfully")
                         final_artifact_type = 'html_final'
                         final_filename = 'final.html'
@@ -288,6 +377,7 @@ class JobProcessor:
             
             # Step 4: Store final artifact
             try:
+                final_start_time = datetime.utcnow()
                 final_artifact_id = self.store_artifact(
                     tenant_id=job['tenant_id'],
                     job_id=job_id,
@@ -304,6 +394,20 @@ class JobProcessor:
                 if not public_url:
                     logger.error(f"Final artifact {final_artifact_id} has no public_url. Artifact data: {final_artifact}")
                     raise ValueError("Failed to generate public URL for final artifact")
+                
+                final_duration = (datetime.utcnow() - final_start_time).total_seconds() * 1000
+                
+                # Add final output step
+                execution_steps.append({
+                    'step_name': 'Final Output',
+                    'step_order': len(execution_steps),
+                    'step_type': 'final_output',
+                    'input': {'artifact_type': final_artifact_type, 'filename': final_filename},
+                    'output': {'artifact_id': final_artifact_id, 'public_url': public_url},
+                    'timestamp': final_start_time.isoformat(),
+                    'duration_ms': int(final_duration),
+                    'artifact_id': final_artifact_id,
+                })
                 
                 logger.info(f"Final artifact stored with URL: {public_url[:80]}...")
             except Exception as e:
@@ -322,7 +426,8 @@ class JobProcessor:
                 'completed_at': datetime.utcnow().isoformat(),
                 'updated_at': datetime.utcnow().isoformat(),
                 'output_url': public_url,
-                'artifacts': artifacts_list
+                'artifacts': artifacts_list,
+                'execution_steps': execution_steps
             })
             
             # Step 6: Deliver based on workflow configuration
@@ -424,7 +529,7 @@ class JobProcessor:
         
         return "\n".join(content_lines)
     
-    def generate_report(self, workflow: Dict[str, Any], submission: Dict[str, Any]) -> Tuple[str, Dict]:
+    def generate_report(self, workflow: Dict[str, Any], submission: Dict[str, Any]) -> Tuple[str, Dict, Dict, Dict]:
         """Generate AI report content."""
         ai_model = workflow.get('ai_model', 'gpt-5')
         ai_instructions = workflow['ai_instructions']
@@ -437,13 +542,13 @@ class JobProcessor:
         ])
         
         # Generate report
-        report, usage_info = self.ai_service.generate_report(
+        report, usage_info, request_details, response_details = self.ai_service.generate_report(
             model=ai_model,
             instructions=ai_instructions,
             context=context
         )
         
-        return report, usage_info
+        return report, usage_info, request_details, response_details
     
     def store_usage_record(self, tenant_id: str, job_id: str, usage_info: Dict[str, Any]):
         """Store usage record for billing tracking."""
