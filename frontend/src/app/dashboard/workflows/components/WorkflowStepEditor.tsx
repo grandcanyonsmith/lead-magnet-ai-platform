@@ -78,7 +78,7 @@ export default function WorkflowStepEditor({
     }
   }, [step])
 
-  const handleChange = (field: keyof WorkflowStep, value: string | string[]) => {
+  const handleChange = (field: keyof WorkflowStep, value: string | string[] | (string | { type: string; [key: string]: any })[]) => {
     const updated = { ...localStep, [field]: value }
     setLocalStep(updated)
     onChange(index, updated)
