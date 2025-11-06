@@ -1,0 +1,9 @@
+{
+  "rewrites": [
+    {
+      "source": "/v1/forms/:slug",
+      "destination": "/v1/forms/[slug]"
+    }
+  ]
+}
+
