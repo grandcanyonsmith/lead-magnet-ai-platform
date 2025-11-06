@@ -56,7 +56,7 @@ const formatRelativeTime = (dateString: string) => {
   return `${days} ${days === 1 ? 'day' : 'days'} ago`
 }
 
-const formatDuration = (seconds: number) => {
+const formatDurationSeconds = (seconds: number) => {
   if (seconds < 60) return `${seconds}s`
   const minutes = Math.floor(seconds / 60)
   const remainingSeconds = seconds % 60
@@ -64,6 +64,11 @@ const formatDuration = (seconds: number) => {
   const hours = Math.floor(minutes / 60)
   const remainingMinutes = minutes % 60
   return `${hours}h ${remainingMinutes}m`
+}
+
+const formatDurationMs = (ms: number) => {
+  if (ms < 1000) return `${Math.round(ms)}ms`
+  return `${(ms / 1000).toFixed(2)}s`
 }
 
 export default function JobDetailClient() {
@@ -76,6 +81,8 @@ export default function JobDetailClient() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showTechnicalDetails, setShowTechnicalDetails] = useState(false)
+  const [showExecutionSteps, setShowExecutionSteps] = useState(true)
+  const [expandedSteps, setExpandedSteps] = useState<Set<number>>(new Set())
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
@@ -115,6 +122,43 @@ export default function JobDetailClient() {
     navigator.clipboard.writeText(text)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  const toggleStep = (stepOrder: number) => {
+    const newExpanded = new Set(expandedSteps)
+    if (newExpanded.has(stepOrder)) {
+      newExpanded.delete(stepOrder)
+    } else {
+      newExpanded.add(stepOrder)
+    }
+    setExpandedSteps(newExpanded)
+  }
+
+  const formatStepInput = (step: any): string => {
+    if (step.step_type === 'form_submission') {
+      return JSON.stringify(step.input, null, 2)
+    }
+    if (step.input && typeof step.input === 'object') {
+      // For AI steps, show instructions and input
+      const inputObj = step.input as any
+      return `Model: ${step.model || 'N/A'}\n\nInstructions:\n${inputObj.instructions || 'N/A'}\n\nInput:\n${inputObj.input || JSON.stringify(inputObj, null, 2)}`
+    }
+    return JSON.stringify(step.input, null, 2)
+  }
+
+  const formatStepOutput = (step: any): string => {
+    if (step.step_type === 'final_output') {
+      return JSON.stringify(step.output, null, 2)
+    }
+    if (typeof step.output === 'string') {
+      return step.output
+    }
+    return JSON.stringify(step.output, null, 2)
+  }
+
+  const formatDuration = (ms: number) => {
+    if (ms < 1000) return `${Math.round(ms)}ms`
+    return `${(ms / 1000).toFixed(2)}s`
   }
 
   if (loading) {
@@ -231,7 +275,7 @@ export default function JobDetailClient() {
           {duration !== null && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Processing Time</label>
-              <p className="text-sm text-gray-900">{formatDuration(duration)}</p>
+              <p className="text-sm text-gray-900">{formatDurationSeconds(duration)}</p>
             </div>
           )}
 
@@ -269,6 +313,121 @@ export default function JobDetailClient() {
           </div>
         )}
       </div>
+
+      {/* Execution Steps */}
+      {job.execution_steps && Array.isArray(job.execution_steps) && job.execution_steps.length > 0 && (
+        <div className="mt-6 bg-white rounded-lg shadow p-6">
+          <button
+            onClick={() => setShowExecutionSteps(!showExecutionSteps)}
+            className="flex items-center justify-between w-full text-left mb-4"
+          >
+            <h2 className="text-lg font-semibold text-gray-900">Execution Steps</h2>
+            {showExecutionSteps ? (
+              <FiChevronUp className="w-5 h-5 text-gray-500" />
+            ) : (
+              <FiChevronDown className="w-5 h-5 text-gray-500" />
+            )}
+          </button>
+
+          {showExecutionSteps && (
+            <div className="space-y-4 pt-4 border-t border-gray-200">
+              {job.execution_steps.map((step: any, index: number) => {
+                const isExpanded = expandedSteps.has(step.step_order)
+                const stepTypeColors: Record<string, string> = {
+                  form_submission: 'bg-blue-100 text-blue-800',
+                  ai_generation: 'bg-purple-100 text-purple-800',
+                  html_generation: 'bg-green-100 text-green-800',
+                  final_output: 'bg-gray-100 text-gray-800',
+                }
+                const stepTypeColor = stepTypeColors[step.step_type] || 'bg-gray-100 text-gray-800'
+
+                return (
+                  <div key={index} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center space-x-3">
+                        <span className={`px-2 py-1 text-xs font-medium rounded ${stepTypeColor}`}>
+                          Step {step.step_order}
+                        </span>
+                        <h3 className="text-sm font-semibold text-gray-900">{step.step_name}</h3>
+                        {step.model && (
+                          <span className="text-xs text-gray-500">({step.model})</span>
+                        )}
+                      </div>
+                      <div className="flex items-center space-x-2 text-xs text-gray-500">
+                        {step.duration_ms !== undefined && (
+                          <span>{formatDurationMs(step.duration_ms)}</span>
+                        )}
+                        {step.usage_info && (
+                          <span>
+                            {step.usage_info.input_tokens + step.usage_info.output_tokens} tokens
+                            {step.usage_info.cost_usd && ` • $${step.usage_info.cost_usd.toFixed(4)}`}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mt-3 space-y-2">
+                      <button
+                        onClick={() => toggleStep(step.step_order)}
+                        className="flex items-center justify-between w-full text-left text-sm text-gray-700 hover:text-gray-900"
+                      >
+                        <span className="font-medium">Input</span>
+                        {isExpanded ? (
+                          <FiChevronUp className="w-4 h-4" />
+                        ) : (
+                          <FiChevronDown className="w-4 h-4" />
+                        )}
+                      </button>
+
+                      {isExpanded && (
+                        <div className="mt-2 space-y-4">
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs font-medium text-gray-700">Input</span>
+                              <button
+                                onClick={() => copyToClipboard(formatStepInput(step))}
+                                className="text-xs text-gray-500 hover:text-gray-700 flex items-center space-x-1"
+                              >
+                                <FiCopy className="w-3 h-3" />
+                                <span>Copy</span>
+                              </button>
+                            </div>
+                            <div className="bg-gray-50 rounded-lg p-3 font-mono text-xs text-gray-800 whitespace-pre-wrap overflow-x-auto max-h-96 overflow-y-auto">
+                              {formatStepInput(step)}
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs font-medium text-gray-700">Output</span>
+                              <button
+                                onClick={() => copyToClipboard(formatStepOutput(step))}
+                                className="text-xs text-gray-500 hover:text-gray-700 flex items-center space-x-1"
+                              >
+                                <FiCopy className="w-3 h-3" />
+                                <span>Copy</span>
+                              </button>
+                            </div>
+                            <div className="bg-gray-50 rounded-lg p-3 font-mono text-xs text-gray-800 whitespace-pre-wrap overflow-x-auto max-h-96 overflow-y-auto">
+                              {formatStepOutput(step)}
+                            </div>
+                          </div>
+
+                          {step.artifact_id && (
+                            <div className="text-xs text-gray-500">
+                              Artifact ID: <span className="font-mono">{step.artifact_id}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Technical Details (Collapsible) */}
       <div className="mt-6 bg-white rounded-lg shadow p-6">

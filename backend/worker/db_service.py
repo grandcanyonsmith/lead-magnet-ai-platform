@@ -74,6 +74,15 @@ class DynamoDBService:
             logger.error(f"Error getting submission {submission_id}: {e}")
             raise
     
+    def get_form(self, form_id: str) -> Optional[Dict[str, Any]]:
+        """Get form by ID."""
+        try:
+            response = self.forms_table.get_item(Key={'form_id': form_id})
+            return response.get('Item')
+        except Exception as e:
+            logger.error(f"Error getting form {form_id}: {e}")
+            raise
+    
     def get_template(self, template_id: str, version: int = 0) -> Optional[Dict[str, Any]]:
         """
         Get template by ID and version.
