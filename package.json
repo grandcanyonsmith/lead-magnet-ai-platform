@@ -12,6 +12,8 @@
   "scripts": {
     "install:all": "npm install && cd frontend && npm install && cd ../backend/api && npm install && cd ../worker && npm install && cd ../../infrastructure && npm install",
     "dev:frontend": "cd frontend && npm run dev",
+    "dev:api": "cd backend/api && npm run dev",
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:frontend\"",
     "build:frontend": "cd frontend && npm run build",
     "deploy:infra": "cd infrastructure && npm run deploy",
     "test:all": "npm run test --workspaces",
@@ -25,6 +27,9 @@
     "serverless"
   ],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
 }
 

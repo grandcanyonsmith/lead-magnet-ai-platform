@@ -10,19 +10,22 @@
     "export": "next export"
   },
   "dependencies": {
+    "@hookform/resolvers": "^3.3.4",
+    "@tailwindcss/typography": "^0.5.19",
+    "amazon-cognito-identity-js": "^6.3.8",
+    "axios": "^1.6.5",
+    "clsx": "^2.1.0",
+    "date-fns": "^3.2.0",
     "next": "14.1.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "amazon-cognito-identity-js": "^6.3.8",
-    "axios": "^1.6.5",
-    "date-fns": "^3.2.0",
-    "recharts": "^2.10.3",
     "react-hook-form": "^7.49.3",
-    "zod": "^3.22.4",
-    "@hookform/resolvers": "^3.3.4",
     "react-icons": "^5.0.1",
-    "clsx": "^2.1.0",
-    "tailwind-merge": "^2.2.1"
+    "react-markdown": "^10.1.0",
+    "recharts": "^2.10.3",
+    "remark-gfm": "^4.0.1",
+    "tailwind-merge": "^2.2.1",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/node": "^20",
@@ -36,4 +39,3 @@
     "typescript": "^5"
   }
 }
-

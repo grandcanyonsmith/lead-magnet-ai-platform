@@ -56,6 +56,7 @@ const apiStack = new ApiStack(app, 'LeadMagnetApiStack', {
   tablesMap: databaseStack.tablesMap,
   stateMachineArn: computeStack.stateMachineArn,
   artifactsBucket: storageStack.artifactsBucket,
+  cloudfrontDomain: storageStack.distribution.distributionDomainName,
 });
 
 // Stack 6: Worker (ECR Repository - Optional, kept for potential future use)

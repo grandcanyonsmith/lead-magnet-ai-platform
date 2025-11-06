@@ -35,25 +35,49 @@ jobs:
         working-directory: backend/api
         run: npm run build
       
-      - name: Configure AWS credentials
+      - name: Configure AWS credentials (OIDC)
+        if: secrets.AWS_ROLE_ARN != ''
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
       
+      - name: Configure AWS credentials (Access Keys)
+        if: secrets.AWS_ROLE_ARN == '' && secrets.AWS_ACCESS_KEY_ID != ''
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      
       - name: Package Lambda
         working-directory: backend/api
         run: |
+          # Create deployment package with all dependencies
+          rm -f api.zip
           cd dist
-          zip -r ../api.zip .
+          zip -r ../api.zip . -x "*.map"
           cd ..
-          cd node_modules
-          zip -r ../api.zip .
+          # Copy hoisted dependencies from root node_modules if needed
+          # (Workspace hoisting may put some packages in root)
+          # Include transitive dependencies like whatwg-url (dependency of node-fetch)
+          mkdir -p node_modules
+          for pkg in ulid openai zod cors express node-fetch whatwg-url tr46 webidl-conversions; do
+            if [ ! -d "node_modules/$pkg" ] && [ -d "../../node_modules/$pkg" ]; then
+              cp -r "../../node_modules/$pkg" node_modules/
+              echo "Copied $pkg from root node_modules"
+            fi
+          done
+          # Add node_modules (production dependencies only)
+          zip -r api.zip node_modules -x "*.map" -x "*.ts" -x "*.d.ts" -x "test/*" -x "tests/*" -x "*.test.js" -x "*.spec.js"
+          # Verify critical modules are included
+          unzip -l api.zip | grep -E "(ulid|openai|@aws-sdk)" || echo "Warning: Some modules may be missing"
       
       - name: Deploy to Lambda
         working-directory: backend/api
         run: |
           aws lambda update-function-code \
             --function-name leadmagnet-api-handler \
-            --zip-file fileb://api.zip
+            --zip-file fileb://api.zip \
+            --region ${{ env.AWS_REGION }}
 

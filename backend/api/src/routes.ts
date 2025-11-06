@@ -85,6 +85,23 @@ export const router = async (
     return await workflowsController.getGenerationStatus(tenantId, jobId);
   }
 
+  // Manual job processing endpoint (for local development)
+  if (path.match(/^\/admin\/workflows\/process-job\/[^/]+$/) && method === 'POST') {
+    const jobId = pathSegments[3];
+    console.log('[Router] Matched /admin/workflows/process-job/:jobId route', { jobId });
+    // Process the job synchronously (for local dev)
+    await workflowsController.processWorkflowGenerationJob(
+      jobId,
+      tenantId,
+      '', // Will be loaded from job
+      'gpt-5'
+    );
+    return {
+      statusCode: 200,
+      body: { message: 'Job processing started', job_id: jobId },
+    };
+  }
+
   if (path === '/admin/workflows/refine-instructions' && method === 'POST') {
     console.log('[Router] Matched /admin/workflows/refine-instructions route');
     return await workflowsController.refineInstructions(tenantId, body);

@@ -269,27 +269,57 @@ class FormsController {
 
     // Start Step Functions execution
     try {
-      const command = new StartExecutionCommand({
-        stateMachineArn: STEP_FUNCTIONS_ARN,
-        input: JSON.stringify({
-          job_id: jobId,
-          workflow_id: form.workflow_id,
-          submission_id: submissionId,
-          tenant_id: form.tenant_id,
-        }),
-      });
+      // Check if we're in local development - process job directly
+      if (process.env.IS_LOCAL === 'true' || process.env.NODE_ENV === 'development' || !STEP_FUNCTIONS_ARN) {
+        logger.info('Local mode detected, processing job directly', { jobId });
+        
+        // Import worker processor for local processing
+        setImmediate(async () => {
+          try {
+            const { processJobLocally } = await import('../services/jobProcessor');
+            await processJobLocally(jobId, form.tenant_id, form.workflow_id, submissionId);
+          } catch (error: any) {
+            logger.error('Error processing job in local mode', {
+              jobId,
+              error: error.message,
+              errorStack: error.stack,
+            });
+            // Update job status to failed
+            await db.update(JOBS_TABLE, { job_id: jobId }, {
+              status: 'failed',
+              error_message: `Processing failed: ${error.message}`,
+              updated_at: new Date().toISOString(),
+            });
+          }
+        });
+      } else {
+        const command = new StartExecutionCommand({
+          stateMachineArn: STEP_FUNCTIONS_ARN,
+          input: JSON.stringify({
+            job_id: jobId,
+            workflow_id: form.workflow_id,
+            submission_id: submissionId,
+            tenant_id: form.tenant_id,
+          }),
+        });
 
-      await sfnClient.send(command);
-      logger.info('Started Step Functions execution', { jobId, workflowId: form.workflow_id });
-    } catch (error) {
-      logger.error('Failed to start Step Functions execution', { error, jobId });
+        await sfnClient.send(command);
+        logger.info('Started Step Functions execution', { jobId, workflowId: form.workflow_id });
+      }
+    } catch (error: any) {
+      logger.error('Failed to start job processing', { 
+        error: error.message,
+        errorStack: error.stack,
+        jobId,
+        isLocal: process.env.IS_LOCAL === 'true' || process.env.NODE_ENV === 'development',
+      });
       // Update job status to failed
       await db.update(JOBS_TABLE, { job_id: jobId }, {
         status: 'failed',
-        error_message: 'Failed to start processing',
+        error_message: `Failed to start processing: ${error.message}`,
         updated_at: new Date().toISOString(),
       });
-      throw new ApiError('Failed to start job processing', 500);
+      throw new ApiError(`Failed to start job processing: ${error.message}`, 500);
     }
 
     return {
@@ -305,15 +335,28 @@ class FormsController {
   async create(tenantId: string, body: any): Promise<RouteResponse> {
     const data = validate(createFormSchema, body);
 
-    // Check if slug is unique
+    // Enforce 1:1 relationship: Check if workflow already has a form
     const existingForms = await db.query(
+      FORMS_TABLE,
+      'gsi_workflow_id',
+      'workflow_id = :workflow_id',
+      { ':workflow_id': data.workflow_id }
+    );
+
+    const activeForm = existingForms.find((f: any) => !f.deleted_at);
+    if (activeForm) {
+      throw new ApiError('This lead magnet already has a form. Forms are automatically created with lead magnets.', 400);
+    }
+
+    // Check if slug is unique
+    const slugCheck = await db.query(
       FORMS_TABLE,
       'gsi_public_slug',
       'public_slug = :slug',
       { ':slug': data.public_slug }
     );
 
-    if (existingForms.length > 0) {
+    if (slugCheck.length > 0 && !slugCheck[0].deleted_at) {
       throw new ApiError('This form URL is already taken. Please choose a different one', 400);
     }
 
@@ -408,6 +451,12 @@ class FormsController {
 
     if (existing.tenant_id !== tenantId) {
       throw new ApiError('You don\'t have permission to access this form', 403);
+    }
+
+    // Prevent deletion if form is linked to a workflow
+    // Forms should be managed through workflows
+    if (existing.workflow_id) {
+      throw new ApiError('Forms cannot be deleted directly. Delete the associated lead magnet instead.', 400);
     }
 
     // Soft delete

@@ -16,6 +16,7 @@ export interface ApiStackProps extends cdk.StackProps {
   tablesMap: Record<string, dynamodb.Table>;
   stateMachineArn: string;
   artifactsBucket: s3.Bucket;
+  cloudfrontDomain?: string;
 }
 
 export class ApiStack extends cdk.Stack {
@@ -99,6 +100,7 @@ export class ApiStack extends cdk.Stack {
         USAGE_RECORDS_TABLE: props.tablesMap.usageRecords.tableName,
         STEP_FUNCTIONS_ARN: props.stateMachineArn,
         ARTIFACTS_BUCKET: props.artifactsBucket.bucketName,
+        CLOUDFRONT_DOMAIN: props.cloudfrontDomain || '',
         LAMBDA_FUNCTION_NAME: 'leadmagnet-api-handler',
         AWS_REGION: this.region,
         LOG_LEVEL: 'info',
