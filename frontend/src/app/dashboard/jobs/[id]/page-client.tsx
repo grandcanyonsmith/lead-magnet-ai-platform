@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { api } from '@/lib/api'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { FiArrowLeft, FiCheckCircle, FiXCircle, FiClock, FiLoader, FiCopy, FiChevronDown, FiChevronUp, FiExternalLink } from 'react-icons/fi'
 
 const getStatusLabel = (status: string) => {
@@ -134,26 +136,156 @@ export default function JobDetailClient() {
     setExpandedSteps(newExpanded)
   }
 
-  const formatStepInput = (step: any): string => {
+  const isJSON = (str: string): boolean => {
+    try {
+      JSON.parse(str)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  const isMarkdown = (str: string): boolean => {
+    if (typeof str !== 'string') return false
+    // Check for common markdown patterns
+    const markdownPatterns = [
+      /^#{1,6}\s+.+/m,           // Headers
+      /\*\*.*?\*\*/,            // Bold
+      /\*.*?\*/,                // Italic
+      /\[.*?\]\(.*?\)/,         // Links
+      /^[-*+]\s+/m,             // Lists
+      /^\d+\.\s+/m,             // Numbered lists
+      /```[\s\S]*?```/,         // Code blocks
+      /`[^`]+`/,                // Inline code
+    ]
+    return markdownPatterns.some(pattern => pattern.test(str))
+  }
+
+  const formatStepInput = (step: any): { content: string | any, type: 'json' | 'markdown' | 'text', structure?: 'ai_input' } => {
     if (step.step_type === 'form_submission') {
-      return JSON.stringify(step.input, null, 2)
+      return { content: step.input, type: 'json' }
     }
     if (step.input && typeof step.input === 'object') {
       // For AI steps, show instructions and input
       const inputObj = step.input as any
-      return `Model: ${step.model || 'N/A'}\n\nInstructions:\n${inputObj.instructions || 'N/A'}\n\nInput:\n${inputObj.input || JSON.stringify(inputObj, null, 2)}`
+      const inputText = inputObj.input || ''
+      
+      // Check if input text is markdown
+      if (typeof inputText === 'string' && isMarkdown(inputText)) {
+        return {
+          content: {
+            model: step.model || 'N/A',
+            instructions: inputObj.instructions || 'N/A',
+            input: inputText
+          },
+          type: 'markdown',
+          structure: 'ai_input'
+        }
+      }
+      
+      // Otherwise return as JSON
+      return {
+        content: {
+          model: step.model || 'N/A',
+          instructions: inputObj.instructions || 'N/A',
+          input: inputObj.input || inputObj
+        },
+        type: 'json',
+        structure: 'ai_input'
+      }
     }
-    return JSON.stringify(step.input, null, 2)
+    return { content: step.input, type: 'json' }
   }
 
-  const formatStepOutput = (step: any): string => {
+  const formatStepOutput = (step: any): { content: string | any, type: 'json' | 'markdown' | 'text' } => {
     if (step.step_type === 'final_output') {
-      return JSON.stringify(step.output, null, 2)
+      return { content: step.output, type: 'json' }
     }
     if (typeof step.output === 'string') {
-      return step.output
+      // Check if it's JSON
+      if (isJSON(step.output)) {
+        try {
+          return { content: JSON.parse(step.output), type: 'json' }
+        } catch {
+          // If parsing fails, treat as text
+        }
+      }
+      // Check if it's Markdown
+      if (isMarkdown(step.output)) {
+        return { content: step.output, type: 'markdown' }
+      }
+      return { content: step.output, type: 'text' }
     }
-    return JSON.stringify(step.output, null, 2)
+    return { content: step.output, type: 'json' }
+  }
+
+  const renderContent = (formatted: { content: any, type: 'json' | 'markdown' | 'text', structure?: 'ai_input' }) => {
+    if (formatted.type === 'json') {
+      // For AI input structure, show model and instructions separately, then formatted JSON input
+      if (formatted.structure === 'ai_input' && typeof formatted.content === 'object') {
+        return (
+          <div className="space-y-3">
+            <div>
+              <span className="text-xs font-semibold text-gray-700">Model:</span>
+              <span className="text-xs text-gray-900 ml-2">{formatted.content.model}</span>
+            </div>
+            <div>
+              <span className="text-xs font-semibold text-gray-700">Instructions:</span>
+              <div className="text-xs text-gray-900 mt-1 whitespace-pre-wrap bg-gray-100 p-2 rounded max-h-48 overflow-y-auto">
+                {formatted.content.instructions}
+              </div>
+            </div>
+            <div>
+              <span className="text-xs font-semibold text-gray-700">Input:</span>
+              <pre className="text-xs font-mono mt-1 bg-gray-100 p-2 rounded max-h-96 overflow-y-auto">
+                <code>{typeof formatted.content.input === 'string' ? formatted.content.input : JSON.stringify(formatted.content.input, null, 2)}</code>
+              </pre>
+            </div>
+          </div>
+        )
+      }
+      return (
+        <pre className="text-xs font-mono">
+          <code>{JSON.stringify(formatted.content, null, 2)}</code>
+        </pre>
+      )
+    }
+    if (formatted.type === 'markdown') {
+      // For AI input structure, show model and instructions separately, then render markdown input
+      if (formatted.structure === 'ai_input' && typeof formatted.content === 'object') {
+        const markdownContent = formatted.content.input || ''
+        return (
+          <div className="space-y-3">
+            <div>
+              <span className="text-xs font-semibold text-gray-700">Model:</span>
+              <span className="text-xs text-gray-900 ml-2">{formatted.content.model}</span>
+            </div>
+            <div>
+              <span className="text-xs font-semibold text-gray-700">Instructions:</span>
+              <div className="text-xs text-gray-900 mt-1 whitespace-pre-wrap bg-gray-100 p-2 rounded">
+                {formatted.content.instructions}
+              </div>
+            </div>
+            <div>
+              <span className="text-xs font-semibold text-gray-700">Input:</span>
+              <div className="prose prose-sm max-w-none mt-1">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {markdownContent}
+                </ReactMarkdown>
+              </div>
+            </div>
+          </div>
+        )
+      }
+      return (
+        <div className="prose prose-sm max-w-none">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            {typeof formatted.content === 'string' ? formatted.content : formatted.content.input || JSON.stringify(formatted.content, null, 2)}
+          </ReactMarkdown>
+        </div>
+      )
+    }
+    return <pre className="text-xs whitespace-pre-wrap font-mono">{formatted.content}</pre>
   }
 
   const formatDuration = (ms: number) => {
@@ -385,15 +517,23 @@ export default function JobDetailClient() {
                             <div className="flex items-center justify-between mb-1">
                               <span className="text-xs font-medium text-gray-700">Input</span>
                               <button
-                                onClick={() => copyToClipboard(formatStepInput(step))}
+                                onClick={() => {
+                                  const formatted = formatStepInput(step)
+                                  const text = formatted.type === 'json' 
+                                    ? JSON.stringify(formatted.content, null, 2)
+                                    : typeof formatted.content === 'string' 
+                                      ? formatted.content 
+                                      : formatted.content.input || JSON.stringify(formatted.content, null, 2)
+                                  copyToClipboard(text)
+                                }}
                                 className="text-xs text-gray-500 hover:text-gray-700 flex items-center space-x-1"
                               >
                                 <FiCopy className="w-3 h-3" />
                                 <span>Copy</span>
                               </button>
                             </div>
-                            <div className="bg-gray-50 rounded-lg p-3 font-mono text-xs text-gray-800 whitespace-pre-wrap overflow-x-auto max-h-96 overflow-y-auto">
-                              {formatStepInput(step)}
+                            <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-800 overflow-x-auto max-h-96 overflow-y-auto">
+                              {renderContent(formatStepInput(step))}
                             </div>
                           </div>
 
@@ -401,15 +541,23 @@ export default function JobDetailClient() {
                             <div className="flex items-center justify-between mb-1">
                               <span className="text-xs font-medium text-gray-700">Output</span>
                               <button
-                                onClick={() => copyToClipboard(formatStepOutput(step))}
+                                onClick={() => {
+                                  const formatted = formatStepOutput(step)
+                                  const text = formatted.type === 'json' 
+                                    ? JSON.stringify(formatted.content, null, 2)
+                                    : typeof formatted.content === 'string' 
+                                      ? formatted.content 
+                                      : JSON.stringify(formatted.content, null, 2)
+                                  copyToClipboard(text)
+                                }}
                                 className="text-xs text-gray-500 hover:text-gray-700 flex items-center space-x-1"
                               >
                                 <FiCopy className="w-3 h-3" />
                                 <span>Copy</span>
                               </button>
                             </div>
-                            <div className="bg-gray-50 rounded-lg p-3 font-mono text-xs text-gray-800 whitespace-pre-wrap overflow-x-auto max-h-96 overflow-y-auto">
-                              {formatStepOutput(step)}
+                            <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-800 overflow-x-auto max-h-96 overflow-y-auto">
+                              {renderContent(formatStepOutput(step))}
                             </div>
                           </div>
 

@@ -113,6 +113,8 @@ export default function EditWorkflowPage() {
             model: step.model || 'gpt-5',
             instructions: step.instructions?.trim() || defaultInstructions,
             step_order: step.step_order !== undefined ? step.step_order : index,
+            tools: step.tools || ['web_search_preview'],
+            tool_choice: step.tool_choice || 'auto',
           }
         })
         setSteps(loadedSteps)
@@ -126,6 +128,8 @@ export default function EditWorkflowPage() {
             model: workflow.ai_model || 'o3-deep-research',
             instructions: workflow.ai_instructions,
             step_order: 0,
+            tools: ['web_search_preview'],
+            tool_choice: 'auto',
           })
         }
         if (workflow.html_enabled) {
@@ -135,6 +139,8 @@ export default function EditWorkflowPage() {
             model: workflow.rewrite_model || 'gpt-5',
             instructions: 'Rewrite the research content into styled HTML matching the provided template. Ensure the output is complete, valid HTML that matches the template\'s design and structure.',
             step_order: migratedSteps.length,
+            tools: [],
+            tool_choice: 'none',
           })
         }
         // If no steps were created, create default steps
@@ -145,6 +151,8 @@ export default function EditWorkflowPage() {
             model: 'o3-deep-research',
             instructions: workflow.ai_instructions || 'Generate a comprehensive research report based on the form submission data.',
             step_order: 0,
+            tools: ['web_search_preview'],
+            tool_choice: 'auto',
           })
           if (workflow.html_enabled !== false) {
             migratedSteps.push({
@@ -153,6 +161,8 @@ export default function EditWorkflowPage() {
               model: 'gpt-5',
               instructions: 'Rewrite the research content into styled HTML matching the provided template. Ensure the output is complete, valid HTML that matches the template\'s design and structure.',
               step_order: 1,
+              tools: [],
+              tool_choice: 'none',
             })
           }
         }
@@ -368,6 +378,8 @@ export default function EditWorkflowPage() {
         model: 'gpt-5',
         instructions: '',
         step_order: prev.length,
+        tools: ['web_search_preview'],
+        tool_choice: 'auto',
       },
     ])
   }
