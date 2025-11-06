@@ -416,7 +416,7 @@ class WorkflowsController {
           instructions: workflowData.ai_instructions,
           step_order: 0,
           tools: ['web_search_preview'],
-          tool_choice: 'auto',
+          tool_choice: 'auto' as const,
         });
       }
       
@@ -430,7 +430,7 @@ class WorkflowsController {
             : 'Generate HTML output',
           step_order: steps.length,
           tools: [],
-          tool_choice: 'none',
+          tool_choice: 'none' as const,
         });
       }
       
