@@ -6,8 +6,46 @@ import { RouteResponse } from '../routes';
 
 const ARTIFACTS_TABLE = process.env.ARTIFACTS_TABLE!;
 const ARTIFACTS_BUCKET = process.env.ARTIFACTS_BUCKET!;
+const CLOUDFRONT_DOMAIN = process.env.CLOUDFRONT_DOMAIN?.trim() || '';
 
 const s3Client = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
+
+/**
+ * Check if a URL is a presigned S3 URL (contains X-Amz- query parameters)
+ */
+function isPresignedUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  try {
+    const urlObj = new URL(url);
+    return urlObj.searchParams.has('X-Amz-Algorithm') || urlObj.searchParams.has('X-Amz-Signature');
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Generate a CloudFront URL for an S3 key
+ */
+function generateCloudFrontUrl(s3Key: string): string {
+  return `https://${CLOUDFRONT_DOMAIN}/${s3Key}`;
+}
+
+/**
+ * Generate a presigned URL as fallback when CloudFront is not available
+ */
+async function generatePresignedUrl(s3Key: string): Promise<{ url: string; expiresAt: string }> {
+  const command = new GetObjectCommand({
+    Bucket: ARTIFACTS_BUCKET,
+    Key: s3Key,
+  });
+  
+  // Use 7 days expiration as fallback
+  const expiresIn = 604800;
+  const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn });
+  const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
+  
+  return { url: presignedUrl, expiresAt };
+}
 
 class ArtifactsController {
   async list(tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {
@@ -52,67 +90,82 @@ class ArtifactsController {
     });
 
     // Ensure all artifacts have accessible URLs
-    // Generate presigned URLs for artifacts that don't have public_url or expired URLs
+    // Use CloudFront URLs (non-expiring) when available, fallback to presigned URLs
     const artifactsWithUrls = await Promise.all(
       artifacts.map(async (artifact: any) => {
-        // Check if artifact has a valid public_url
-        const hasValidUrl = artifact.public_url && 
-          artifact.s3_key &&
-          (!artifact.url_expires_at || new Date(artifact.url_expires_at) > new Date(Date.now() + 3600000)); // Regenerate if expires within 1 hour
-        
-        if (hasValidUrl && artifact.s3_key) {
-          // Return artifact with public_url as object_url for frontend compatibility
+        if (!artifact.s3_key) {
           return {
             ...artifact,
-            object_url: artifact.public_url,
+            object_url: artifact.public_url || null,
             file_name: artifact.artifact_name || artifact.file_name,
             size_bytes: artifact.file_size_bytes ? parseInt(artifact.file_size_bytes) : artifact.size_bytes,
           };
         }
-        
-        // Generate presigned URL if missing or expired
-        if (artifact.s3_key) {
-          try {
-            const command = new GetObjectCommand({
-              Bucket: ARTIFACTS_BUCKET,
-              Key: artifact.s3_key,
-            });
-            
-            // Use 7 days expiration to match worker (604800 seconds)
-            const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 604800 });
-            const expiresAt = new Date(Date.now() + 604800 * 1000).toISOString();
-            
-            // Update artifact in database with new presigned URL
-            await db.update(ARTIFACTS_TABLE, { artifact_id: artifact.artifact_id }, {
-              public_url: presignedUrl,
-              url_expires_at: expiresAt,
-            });
-            
+
+        try {
+          // Check if artifact already has a valid CloudFront URL
+          const hasValidCloudFrontUrl = artifact.public_url && 
+            !isPresignedUrl(artifact.public_url) &&
+            artifact.public_url.startsWith('https://');
+          
+          // Check if artifact has expired presigned URL or needs replacement
+          const hasExpiredPresignedUrl = isPresignedUrl(artifact.public_url) &&
+            (artifact.url_expires_at && new Date(artifact.url_expires_at) < new Date());
+          
+          const needsUrlUpdate = !artifact.public_url || hasExpiredPresignedUrl || isPresignedUrl(artifact.public_url);
+
+          if (hasValidCloudFrontUrl && !needsUrlUpdate) {
+            // Already has a valid CloudFront URL, use it
             return {
               ...artifact,
-              object_url: presignedUrl,
-              public_url: presignedUrl,
-              url_expires_at: expiresAt,
-              file_name: artifact.artifact_name || artifact.file_name,
-              size_bytes: artifact.file_size_bytes ? parseInt(artifact.file_size_bytes) : artifact.size_bytes,
-            };
-          } catch (error) {
-            console.error(`Error generating presigned URL for artifact ${artifact.artifact_id}:`, error);
-            return {
-              ...artifact,
-              object_url: null,
+              object_url: artifact.public_url,
               file_name: artifact.artifact_name || artifact.file_name,
               size_bytes: artifact.file_size_bytes ? parseInt(artifact.file_size_bytes) : artifact.size_bytes,
             };
           }
+
+          // Generate new URL
+          let objectUrl: string;
+          let updateData: any = {};
+
+          if (CLOUDFRONT_DOMAIN) {
+            // Use CloudFront URL (non-expiring)
+            objectUrl = generateCloudFrontUrl(artifact.s3_key);
+            // CloudFront URLs don't expire, so we don't set url_expires_at
+            updateData = {
+              public_url: objectUrl,
+              url_expires_at: null, // Clear expiration for CloudFront URLs
+            };
+          } else {
+            // Fallback to presigned URL if CloudFront is not configured
+            const { url, expiresAt } = await generatePresignedUrl(artifact.s3_key);
+            objectUrl = url;
+            updateData = {
+              public_url: url,
+              url_expires_at: expiresAt,
+            };
+          }
+
+          // Update artifact in database with new URL
+          await db.update(ARTIFACTS_TABLE, { artifact_id: artifact.artifact_id }, updateData);
+
+          return {
+            ...artifact,
+            object_url: objectUrl,
+            public_url: objectUrl,
+            url_expires_at: updateData.url_expires_at || null,
+            file_name: artifact.artifact_name || artifact.file_name,
+            size_bytes: artifact.file_size_bytes ? parseInt(artifact.file_size_bytes) : artifact.size_bytes,
+          };
+        } catch (error) {
+          console.error(`Error generating URL for artifact ${artifact.artifact_id}:`, error);
+          return {
+            ...artifact,
+            object_url: artifact.public_url || null,
+            file_name: artifact.artifact_name || artifact.file_name,
+            size_bytes: artifact.file_size_bytes ? parseInt(artifact.file_size_bytes) : artifact.size_bytes,
+          };
         }
-        
-        return {
-          ...artifact,
-          object_url: artifact.public_url || null,
-          file_name: artifact.artifact_name || artifact.file_name,
-          size_bytes: artifact.file_size_bytes ? parseInt(artifact.file_size_bytes) : artifact.size_bytes,
-        };
       })
     );
 
@@ -142,26 +195,47 @@ class ArtifactsController {
       throw new ApiError('This file is not available for download', 404);
     }
 
-    // Generate presigned URL if not already public or expired
-    if (!artifact.public_url || !artifact.s3_key || 
-        (artifact.url_expires_at && new Date(artifact.url_expires_at) < new Date())) {
-      const command = new GetObjectCommand({
-        Bucket: ARTIFACTS_BUCKET,
-        Key: artifact.s3_key,
-      });
+    // Generate URL if missing, expired, or is a presigned URL (replace with CloudFront)
+    if (artifact.s3_key) {
+      // Check if artifact already has a valid CloudFront URL
+      const hasValidCloudFrontUrl = artifact.public_url && 
+        !isPresignedUrl(artifact.public_url) &&
+        artifact.public_url.startsWith('https://');
+      
+      // Check if artifact has expired presigned URL or needs replacement
+      const hasExpiredPresignedUrl = isPresignedUrl(artifact.public_url) &&
+        (artifact.url_expires_at && new Date(artifact.url_expires_at) < new Date());
+      
+      const needsUrlUpdate = !artifact.public_url || hasExpiredPresignedUrl || isPresignedUrl(artifact.public_url);
 
-      // Use 7 days expiration to match worker (604800 seconds)
-      const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 604800 });
-      const expiresAt = new Date(Date.now() + 604800 * 1000).toISOString();
+      if (!hasValidCloudFrontUrl || needsUrlUpdate) {
+        let objectUrl: string;
+        let updateData: any = {};
 
-      // Update artifact with new presigned URL
-      await db.update(ARTIFACTS_TABLE, { artifact_id: artifactId }, {
-        public_url: presignedUrl,
-        url_expires_at: expiresAt,
-      });
+        if (CLOUDFRONT_DOMAIN) {
+          // Use CloudFront URL (non-expiring)
+          objectUrl = generateCloudFrontUrl(artifact.s3_key);
+          // CloudFront URLs don't expire, so we don't set url_expires_at
+          updateData = {
+            public_url: objectUrl,
+            url_expires_at: null, // Clear expiration for CloudFront URLs
+          };
+        } else {
+          // Fallback to presigned URL if CloudFront is not configured
+          const { url, expiresAt } = await generatePresignedUrl(artifact.s3_key);
+          objectUrl = url;
+          updateData = {
+            public_url: url,
+            url_expires_at: expiresAt,
+          };
+        }
 
-      artifact.public_url = presignedUrl;
-      artifact.url_expires_at = expiresAt;
+        // Update artifact with new URL
+        await db.update(ARTIFACTS_TABLE, { artifact_id: artifactId }, updateData);
+
+        artifact.public_url = objectUrl;
+        artifact.url_expires_at = updateData.url_expires_at || null;
+      }
     }
 
     return {

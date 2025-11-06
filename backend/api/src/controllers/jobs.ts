@@ -1,6 +1,7 @@
 import { db } from '../utils/db';
 import { ApiError } from '../utils/errors';
 import { RouteResponse } from '../routes';
+import { artifactsController } from './artifacts';
 
 const JOBS_TABLE = process.env.JOBS_TABLE!;
 
@@ -58,6 +59,29 @@ class JobsController {
 
     if (job.tenant_id !== tenantId) {
       throw new ApiError('You don\'t have permission to access this lead magnet', 403);
+    }
+
+    // Refresh output_url from artifacts if job is completed and has artifacts
+    // This ensures the URL never expires
+    if (job.status === 'completed' && job.artifacts && Array.isArray(job.artifacts) && job.artifacts.length > 0) {
+      try {
+        // Get the first artifact (usually the final output)
+        const artifactId = job.artifacts[job.artifacts.length - 1]; // Get the last artifact (final output)
+        if (artifactId) {
+          const artifactResponse = await artifactsController.get(tenantId, artifactId);
+          if (artifactResponse.body && artifactResponse.body.public_url) {
+            // Update job with fresh URL
+            await db.update(JOBS_TABLE, { job_id: jobId }, {
+              output_url: artifactResponse.body.public_url,
+              updated_at: new Date().toISOString(),
+            });
+            job.output_url = artifactResponse.body.public_url;
+          }
+        }
+      } catch (error) {
+        console.error(`Error refreshing output_url for job ${jobId}:`, error);
+        // Continue with existing output_url if refresh fails
+      }
     }
 
     return {

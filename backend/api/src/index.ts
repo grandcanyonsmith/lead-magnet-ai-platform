@@ -16,11 +16,31 @@ export const handler = async (
     
     try {
       const { workflowsController } = await import('./controllers/workflows');
+      
+      // Load job data if description/model are missing
+      let description = event.description;
+      let model = event.model || 'gpt-5';
+      let tenantId = event.tenant_id;
+      
+      if (!description || !tenantId) {
+        const { db } = await import('./utils/db');
+        const JOBS_TABLE = process.env.JOBS_TABLE || 'leadmagnet-jobs';
+        const job = await db.get(JOBS_TABLE, { job_id: event.job_id });
+        
+        if (!job) {
+          throw new Error(`Job ${event.job_id} not found`);
+        }
+        
+        description = description || job.description;
+        model = model || job.model || 'gpt-5';
+        tenantId = tenantId || job.tenant_id;
+      }
+      
       await workflowsController.processWorkflowGenerationJob(
         event.job_id,
-        event.tenant_id,
-        event.description,
-        event.model || 'gpt-5'
+        tenantId,
+        description,
+        model
       );
       
       return {
@@ -31,6 +51,7 @@ export const handler = async (
       console.error('[Handler] Error processing workflow generation job', {
         error: error.message,
         jobId: event.job_id,
+        stack: error.stack,
       });
       throw error;
     }

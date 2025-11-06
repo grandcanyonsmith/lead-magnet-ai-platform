@@ -1,18 +1,38 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
-import { FiPlus, FiEdit, FiTrash2, FiEye } from 'react-icons/fi'
+import { FiPlus, FiEdit, FiTrash2, FiEye, FiExternalLink, FiCopy, FiCheck, FiMoreVertical } from 'react-icons/fi'
 
 export default function WorkflowsPage() {
   const router = useRouter()
   const [workflows, setWorkflows] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [copiedUrl, setCopiedUrl] = useState<string | null>(null)
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const menuRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
   useEffect(() => {
     loadWorkflows()
   }, [])
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (openMenuId) {
+        const menuElement = menuRefs.current[openMenuId]
+        if (menuElement && !menuElement.contains(event.target as Node)) {
+          setOpenMenuId(null)
+        }
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [openMenuId])
 
   const loadWorkflows = async () => {
     try {
@@ -26,7 +46,7 @@ export default function WorkflowsPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this lead magnet?')) {
+    if (!confirm('Are you sure you want to delete this lead magnet? This will also delete its associated form.')) {
       return
     }
 
@@ -52,6 +72,31 @@ export default function WorkflowsPage() {
     )
   }
 
+  const publicUrlFor = (form: any) => {
+    if (!form || !form.public_slug) return null
+    if (typeof window !== 'undefined') {
+      return `${window.location.origin}/v1/forms/${form.public_slug}`
+    }
+    return `/v1/forms/${form.public_slug}`
+  }
+
+  const copyToClipboard = async (text: string, workflowId: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiedUrl(workflowId)
+      setTimeout(() => setCopiedUrl(null), 2000)
+    } catch (error) {
+      console.error('Failed to copy:', error)
+    }
+  }
+
+  const formatUrl = (url: string) => {
+    if (url.length > 40) {
+      return url.substring(0, 37) + '...'
+    }
+    return url
+  }
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -72,7 +117,7 @@ export default function WorkflowsPage() {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Lead Magnets</h1>
-          <p className="text-gray-600">Manage your AI lead magnets</p>
+          <p className="text-gray-600">Manage your AI lead magnets and their forms</p>
         </div>
         <button
           onClick={() => router.push('/dashboard/workflows/new')}
@@ -104,7 +149,7 @@ export default function WorkflowsPage() {
                     Lead Magnet Name
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Status
+                    Form
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Research Model
@@ -121,69 +166,136 @@ export default function WorkflowsPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
-                {workflows.map((workflow) => (
-                  <tr key={workflow.workflow_id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-semibold text-gray-900">{workflow.workflow_name}</div>
-                      {workflow.workflow_description && (
-                        <div className="text-sm text-gray-500 mt-1">{workflow.workflow_description}</div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {getStatusBadge(workflow.status)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-700 font-medium">{workflow.ai_model}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex gap-2">
-                        {workflow.research_enabled && (
-                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-                            Research
-                          </span>
+                {workflows.map((workflow) => {
+                  const formUrl = workflow.form ? publicUrlFor(workflow.form) : null
+                  return (
+                    <tr key={workflow.workflow_id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="text-sm font-semibold text-gray-900">{workflow.workflow_name}</div>
+                        {workflow.workflow_description && (
+                          <div className="text-sm text-gray-500 mt-1">{workflow.workflow_description}</div>
                         )}
-                        {workflow.html_enabled && (
-                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
-                            HTML
-                          </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        {workflow.form ? (
+                          <div className="space-y-1">
+                            <div className="text-sm text-gray-900">{workflow.form.form_name}</div>
+                            {formUrl && (
+                              <div className="flex items-center gap-2">
+                                <a
+                                  href={formUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-xs text-primary-600 hover:text-primary-900 break-all"
+                                  title={formUrl}
+                                >
+                                  {formatUrl(formUrl)}
+                                </a>
+                                <button
+                                  onClick={() => copyToClipboard(formUrl, workflow.workflow_id)}
+                                  className="text-gray-400 hover:text-gray-600 p-1"
+                                  title="Copy URL"
+                                >
+                                  {copiedUrl === workflow.workflow_id ? (
+                                    <FiCheck className="w-3 h-3 text-green-600" />
+                                  ) : (
+                                    <FiCopy className="w-3 h-3" />
+                                  )}
+                                </button>
+                                <a
+                                  href={formUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-primary-600 hover:text-primary-900"
+                                  title="Open form"
+                                >
+                                  <FiExternalLink className="w-3 h-3" />
+                                </a>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-sm text-gray-400 italic">No form</span>
                         )}
-                        {!workflow.research_enabled && !workflow.html_enabled && (
-                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
-                            Text
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {new Date(workflow.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <div className="flex items-center justify-end space-x-2">
-                        <button
-                          onClick={() => router.push(`/dashboard/workflows/${workflow.workflow_id}`)}
-                          className="p-2 text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition-all"
-                          title="View"
-                        >
-                          <FiEye className="w-5 h-5" />
-                        </button>
-                        <button
-                          onClick={() => router.push(`/dashboard/workflows/${workflow.workflow_id}/edit`)}
-                          className="p-2 text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition-all"
-                          title="Edit"
-                        >
-                          <FiEdit className="w-5 h-5" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(workflow.workflow_id)}
-                          className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all"
-                          title="Delete"
-                        >
-                          <FiTrash2 className="w-5 h-5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="text-sm text-gray-700 font-medium">{workflow.ai_model}</span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex gap-2">
+                          {workflow.research_enabled && (
+                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                              Research
+                            </span>
+                          )}
+                          {workflow.html_enabled && (
+                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                              HTML
+                            </span>
+                          )}
+                          {!workflow.research_enabled && !workflow.html_enabled && (
+                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
+                              Text
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {new Date(workflow.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right">
+                        <div className="relative inline-block">
+                          <button
+                            onClick={() => setOpenMenuId(openMenuId === workflow.workflow_id ? null : workflow.workflow_id)}
+                            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all"
+                            title="Actions"
+                          >
+                            <FiMoreVertical className="w-5 h-5" />
+                          </button>
+                          {openMenuId === workflow.workflow_id && (
+                            <div
+                              ref={(el) => (menuRefs.current[workflow.workflow_id] = el)}
+                              className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10"
+                            >
+                              <div className="py-1">
+                                <button
+                                  onClick={() => {
+                                    router.push(`/dashboard/workflows/${workflow.workflow_id}`)
+                                    setOpenMenuId(null)
+                                  }}
+                                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                                >
+                                  <FiEye className="w-4 h-4 mr-2" />
+                                  View
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    router.push(`/dashboard/workflows/${workflow.workflow_id}/edit`)
+                                    setOpenMenuId(null)
+                                  }}
+                                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                                >
+                                  <FiEdit className="w-4 h-4 mr-2" />
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setOpenMenuId(null)
+                                    handleDelete(workflow.workflow_id)
+                                  }}
+                                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center"
+                                >
+                                  <FiTrash2 className="w-4 h-4 mr-2" />
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
