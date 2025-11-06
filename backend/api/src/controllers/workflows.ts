@@ -9,14 +9,21 @@ import { RouteResponse } from '../routes';
 import { calculateOpenAICost } from '../services/costService';
 import { callResponsesWithTimeout } from '../utils/openaiHelpers';
 
-const WORKFLOWS_TABLE = process.env.WORKFLOWS_TABLE!;
-const FORMS_TABLE = process.env.FORMS_TABLE!;
+const WORKFLOWS_TABLE = process.env.WORKFLOWS_TABLE;
+const FORMS_TABLE = process.env.FORMS_TABLE;
 const JOBS_TABLE = process.env.JOBS_TABLE || 'leadmagnet-jobs';
 const USAGE_RECORDS_TABLE = process.env.USAGE_RECORDS_TABLE || 'leadmagnet-usage-records';
 const OPENAI_SECRET_NAME = process.env.OPENAI_SECRET_NAME || 'leadmagnet/openai-api-key';
 const LAMBDA_FUNCTION_NAME = process.env.LAMBDA_FUNCTION_NAME || 'leadmagnet-api-handler';
 const secretsClient = new SecretsManagerClient({ region: process.env.AWS_REGION || 'us-east-1' });
 const lambdaClient = new LambdaClient({ region: process.env.AWS_REGION || 'us-east-1' });
+
+if (!WORKFLOWS_TABLE) {
+  console.error('[Workflows Controller] WORKFLOWS_TABLE environment variable is not set');
+}
+if (!FORMS_TABLE) {
+  console.error('[Workflows Controller] FORMS_TABLE environment variable is not set');
+}
 
 /**
  * Generate a URL-friendly slug from a workflow name
@@ -54,6 +61,10 @@ async function createFormForWorkflow(
   workflowName: string,
   formFields?: any[]
 ): Promise<string> {
+  if (!FORMS_TABLE) {
+    throw new ApiError('FORMS_TABLE environment variable is not configured', 500);
+  }
+
   // Check if workflow already has a form
   const existingForms = await db.query(
     FORMS_TABLE,
@@ -75,12 +86,12 @@ async function createFormForWorkflow(
 
   // Ensure slug is unique
   while (true) {
-    const slugCheck = await db.query(
-      FORMS_TABLE,
-      'gsi_public_slug',
-      'public_slug = :slug',
-      { ':slug': publicSlug }
-    );
+      const slugCheck = await db.query(
+        FORMS_TABLE!,
+        'gsi_public_slug',
+        'public_slug = :slug',
+        { ':slug': publicSlug }
+      );
     
     if (slugCheck.length === 0 || slugCheck[0].deleted_at) {
       break;
@@ -115,7 +126,7 @@ async function createFormForWorkflow(
     updated_at: new Date().toISOString(),
   };
 
-  await db.put(FORMS_TABLE, form);
+  await db.put(FORMS_TABLE!, form);
 
   return form.form_id;
 }
@@ -191,6 +202,10 @@ async function storeUsageRecord(
 
 class WorkflowsController {
   async list(tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {
+    if (!WORKFLOWS_TABLE) {
+      throw new ApiError('WORKFLOWS_TABLE environment variable is not configured', 500);
+    }
+
     try {
       const status = queryParams.status;
       const limit = queryParams.limit ? parseInt(queryParams.limit) : 50;
@@ -201,7 +216,7 @@ class WorkflowsController {
       try {
         if (status) {
           workflows = await db.query(
-            WORKFLOWS_TABLE,
+            WORKFLOWS_TABLE!,
             'gsi_tenant_status',
             'tenant_id = :tenant_id AND #status = :status',
             { ':tenant_id': tenantId, ':status': status },
@@ -210,7 +225,7 @@ class WorkflowsController {
           );
         } else {
           workflows = await db.query(
-            WORKFLOWS_TABLE,
+            WORKFLOWS_TABLE!,
             'gsi_tenant_status',
             'tenant_id = :tenant_id',
             { ':tenant_id': tenantId },
@@ -244,7 +259,7 @@ class WorkflowsController {
         workflows.map(async (workflow: any) => {
           try {
             const forms = await db.query(
-              FORMS_TABLE,
+              FORMS_TABLE!,
               'gsi_workflow_id',
               'workflow_id = :workflow_id',
               { ':workflow_id': workflow.workflow_id }
@@ -266,7 +281,7 @@ class WorkflowsController {
                 );
                 
                 // Fetch the newly created form
-                activeForm = await db.get(FORMS_TABLE, { form_id: formId });
+                activeForm = await db.get(FORMS_TABLE!, { form_id: formId });
               } catch (createError) {
                 console.error('[Workflows List] Error auto-creating form', {
                   workflowId: workflow.workflow_id,
@@ -330,7 +345,14 @@ class WorkflowsController {
   }
 
   async get(tenantId: string, workflowId: string): Promise<RouteResponse> {
-    const workflow = await db.get(WORKFLOWS_TABLE, { workflow_id: workflowId });
+    if (!WORKFLOWS_TABLE) {
+      throw new ApiError('WORKFLOWS_TABLE environment variable is not configured', 500);
+    }
+    if (!FORMS_TABLE) {
+      throw new ApiError('FORMS_TABLE environment variable is not configured', 500);
+    }
+
+    const workflow = await db.get(WORKFLOWS_TABLE!, { workflow_id: workflowId });
 
     if (!workflow || workflow.deleted_at) {
       throw new ApiError('This lead magnet doesn\'t exist or has been removed', 404);
@@ -344,7 +366,7 @@ class WorkflowsController {
     let form = null;
     try {
       const forms = await db.query(
-        FORMS_TABLE,
+        FORMS_TABLE!,
         'gsi_workflow_id',
         'workflow_id = :workflow_id',
         { ':workflow_id': workflowId }
@@ -371,6 +393,13 @@ class WorkflowsController {
   }
 
   async create(tenantId: string, body: any): Promise<RouteResponse> {
+    if (!WORKFLOWS_TABLE) {
+      throw new ApiError('WORKFLOWS_TABLE environment variable is not configured', 500);
+    }
+    if (!FORMS_TABLE) {
+      throw new ApiError('FORMS_TABLE environment variable is not configured', 500);
+    }
+
     const data = validate(createWorkflowSchema, body);
 
     const workflowId = `wf_${ulid()}`;
@@ -383,7 +412,7 @@ class WorkflowsController {
       updated_at: new Date().toISOString(),
     };
 
-    await db.put(WORKFLOWS_TABLE, workflow);
+    await db.put(WORKFLOWS_TABLE!, workflow);
 
     // Auto-create form for the workflow
     let formId: string | null = null;
@@ -396,7 +425,7 @@ class WorkflowsController {
       );
       
       // Update workflow with form_id
-      await db.update(WORKFLOWS_TABLE, { workflow_id: workflowId }, {
+      await db.update(WORKFLOWS_TABLE!, { workflow_id: workflowId }, {
         form_id: formId,
       });
       (workflow as any).form_id = formId;
@@ -412,7 +441,7 @@ class WorkflowsController {
     let form = null;
     if (formId) {
       try {
-        form = await db.get(FORMS_TABLE, { form_id: formId });
+        form = await db.get(FORMS_TABLE!, { form_id: formId });
       } catch (error) {
         console.error('[Workflows Create] Error fetching created form', error);
       }
@@ -428,6 +457,13 @@ class WorkflowsController {
   }
 
   async update(tenantId: string, workflowId: string, body: any): Promise<RouteResponse> {
+    if (!WORKFLOWS_TABLE) {
+      throw new ApiError('WORKFLOWS_TABLE environment variable is not configured', 500);
+    }
+    if (!FORMS_TABLE) {
+      throw new ApiError('FORMS_TABLE environment variable is not configured', 500);
+    }
+
     const existing = await db.get(WORKFLOWS_TABLE, { workflow_id: workflowId });
 
     if (!existing || existing.deleted_at) {
@@ -440,7 +476,7 @@ class WorkflowsController {
 
     const data = validate(updateWorkflowSchema, body);
 
-    const updated = await db.update(WORKFLOWS_TABLE, { workflow_id: workflowId }, {
+    const updated = await db.update(WORKFLOWS_TABLE!, { workflow_id: workflowId }, {
       ...data,
       updated_at: new Date().toISOString(),
     });
@@ -458,7 +494,7 @@ class WorkflowsController {
         const activeForm = forms.find((f: any) => !f.deleted_at);
         if (activeForm) {
           const newFormName = `${data.workflow_name} Form`;
-          await db.update(FORMS_TABLE, { form_id: activeForm.form_id }, {
+          await db.update(FORMS_TABLE!, { form_id: activeForm.form_id }, {
             form_name: newFormName,
             updated_at: new Date().toISOString(),
           });
@@ -475,7 +511,7 @@ class WorkflowsController {
     let form = null;
     try {
       const forms = await db.query(
-        FORMS_TABLE,
+        FORMS_TABLE!,
         'gsi_workflow_id',
         'workflow_id = :workflow_id',
         { ':workflow_id': workflowId }
@@ -499,6 +535,13 @@ class WorkflowsController {
   }
 
   async delete(tenantId: string, workflowId: string): Promise<RouteResponse> {
+    if (!WORKFLOWS_TABLE) {
+      throw new ApiError('WORKFLOWS_TABLE environment variable is not configured', 500);
+    }
+    if (!FORMS_TABLE) {
+      throw new ApiError('FORMS_TABLE environment variable is not configured', 500);
+    }
+
     const existing = await db.get(WORKFLOWS_TABLE, { workflow_id: workflowId });
 
     if (!existing || existing.deleted_at) {
@@ -510,14 +553,14 @@ class WorkflowsController {
     }
 
     // Soft delete workflow
-    await db.update(WORKFLOWS_TABLE, { workflow_id: workflowId }, {
+    await db.update(WORKFLOWS_TABLE!, { workflow_id: workflowId }, {
       deleted_at: new Date().toISOString(),
     });
 
     // Cascade delete associated form
     try {
       const forms = await db.query(
-        FORMS_TABLE,
+        FORMS_TABLE!,
         'gsi_workflow_id',
         'workflow_id = :workflow_id',
         { ':workflow_id': workflowId }
@@ -525,7 +568,7 @@ class WorkflowsController {
       
       for (const form of forms) {
         if (!form.deleted_at) {
-          await db.update(FORMS_TABLE, { form_id: form.form_id }, {
+          await db.update(FORMS_TABLE!, { form_id: form.form_id }, {
             deleted_at: new Date().toISOString(),
           });
         }
