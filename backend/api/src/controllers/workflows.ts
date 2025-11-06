@@ -399,7 +399,7 @@ class WorkflowsController {
       await db.update(WORKFLOWS_TABLE, { workflow_id: workflowId }, {
         form_id: formId,
       });
-      workflow.form_id = formId;
+      (workflow as any).form_id = formId;
     } catch (error) {
       console.error('[Workflows Create] Error creating form for workflow', {
         workflowId,

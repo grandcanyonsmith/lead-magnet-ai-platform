@@ -6,16 +6,15 @@ import { logger } from '../utils/logger';
 const execAsync = promisify(exec);
 
 const JOBS_TABLE = process.env.JOBS_TABLE!;
-const WORKER_SCRIPT_PATH = process.env.WORKER_SCRIPT_PATH || '../worker/worker.py';
 
 /**
  * Process a job locally by calling the Python worker script
  */
 export async function processJobLocally(
   jobId: string,
-  tenantId: string,
-  workflowId: string,
-  submissionId: string
+  _tenantId: string,
+  _workflowId: string,
+  _submissionId: string
 ): Promise<void> {
   logger.info('[Local Job Processor] Starting local job processing', { jobId });
 

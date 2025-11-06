@@ -536,7 +536,7 @@ export default function EditWorkflowPage() {
               required
             />
             <p className="mt-1 text-xs text-gray-500">
-              This is automatically set to "{formData.workflow_name} Form"
+              This is automatically set to &quot;{formData.workflow_name} Form&quot;
             </p>
           </div>
 

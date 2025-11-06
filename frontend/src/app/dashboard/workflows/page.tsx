@@ -254,7 +254,7 @@ export default function WorkflowsPage() {
                           </button>
                           {openMenuId === workflow.workflow_id && (
                             <div
-                              ref={(el) => (menuRefs.current[workflow.workflow_id] = el)}
+                              ref={(el) => { menuRefs.current[workflow.workflow_id] = el; }}
                               className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10"
                             >
                               <div className="py-1">
