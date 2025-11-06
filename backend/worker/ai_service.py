@@ -104,11 +104,28 @@ class AIService:
                 'model': model,
                 'instructions': instructions,
                 'input': input_text,
-                'previous_context': previous_context,
-                'context': context,
+                'previous_context': previous_context,  # Contains ALL previous step outputs
+                'context': context,  # Current step context (form data for step 0, empty for others)
                 'tools': params.get('tools', []),
                 'reasoning_level': params.get('reasoning_level'),
             }
+            
+            # If previous_context contains multiple steps, parse and include them separately for clarity
+            if previous_context and '===' in previous_context:
+                # Extract individual step outputs from previous_context
+                step_sections = previous_context.split('===')
+                previous_steps = []
+                for i in range(1, len(step_sections), 2):
+                    if i + 1 < len(step_sections):
+                        step_header = step_sections[i].strip()
+                        step_content = step_sections[i + 1].strip() if i + 1 < len(step_sections) else ""
+                        if step_header and step_content:
+                            previous_steps.append({
+                                'step': step_header,
+                                'output': step_content
+                            })
+                if previous_steps:
+                    request_details['all_previous_steps'] = previous_steps
             
             response = self.client.responses.create(**params)
             
