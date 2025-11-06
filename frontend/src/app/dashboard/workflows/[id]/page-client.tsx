@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { api } from '@/lib/api'
-import { FiArrowLeft, FiEdit, FiTrash2, FiClock, FiCheckCircle, FiXCircle } from 'react-icons/fi'
+import { FiArrowLeft, FiEdit, FiTrash2, FiClock, FiCheckCircle, FiXCircle, FiExternalLink, FiLink } from 'react-icons/fi'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 export default function WorkflowDetailPage() {
   const router = useRouter()
@@ -12,8 +14,10 @@ export default function WorkflowDetailPage() {
   
   const [workflow, setWorkflow] = useState<any>(null)
   const [jobs, setJobs] = useState<any[]>([])
+  const [submissions, setSubmissions] = useState<Record<string, any>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [creatingForm, setCreatingForm] = useState(false)
 
   useEffect(() => {
     if (workflowId) {
@@ -37,7 +41,22 @@ export default function WorkflowDetailPage() {
   const loadJobs = async () => {
     try {
       const data = await api.getJobs({ workflow_id: workflowId, limit: 10 })
-      setJobs(data.jobs || [])
+      const jobsList = data.jobs || []
+      setJobs(jobsList)
+      
+      // Load submissions for each job
+      const submissionsMap: Record<string, any> = {}
+      for (const job of jobsList) {
+        if (job.submission_id) {
+          try {
+            const submission = await api.getSubmission(job.submission_id)
+            submissionsMap[job.job_id] = submission
+          } catch (error) {
+            console.error(`Failed to load submission for job ${job.job_id}:`, error)
+          }
+        }
+      }
+      setSubmissions(submissionsMap)
     } catch (error) {
       console.error('Failed to load jobs:', error)
     } finally {
@@ -56,6 +75,54 @@ export default function WorkflowDetailPage() {
     } catch (error: any) {
       console.error('Failed to delete workflow:', error)
       alert(error.response?.data?.message || error.message || 'Failed to delete workflow')
+    }
+  }
+
+  const handleCreateForm = async () => {
+    if (!workflow) return
+    
+    setCreatingForm(true)
+    setError(null)
+    
+    try {
+      // Generate a valid slug (lowercase, alphanumeric and hyphens only)
+      const baseSlug = workflow.workflow_name
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9\s-]/g, '') // Remove special chars
+        .replace(/\s+/g, '-') // Replace spaces with hyphens
+        .replace(/-+/g, '-') // Replace multiple hyphens with single
+        .replace(/^-|-$/g, '') // Remove leading/trailing hyphens
+      
+      // Create a form with default fields
+      const formData = {
+        workflow_id: workflowId,
+        form_name: `${workflow.workflow_name} Form`,
+        public_slug: baseSlug || `form-${workflowId.slice(-8)}`, // Fallback if slug is empty
+        form_fields_schema: {
+          fields: [
+            { field_id: 'field_1', field_type: 'text', label: 'Name', placeholder: 'Your name', required: true },
+            { field_id: 'field_2', field_type: 'email', label: 'Email', placeholder: 'your@email.com', required: true },
+            { field_id: 'field_3', field_type: 'text', label: 'Industry', placeholder: 'Your industry', required: false },
+            { field_id: 'field_4', field_type: 'textarea', label: 'Description', placeholder: 'Tell us about your needs', required: false },
+            { field_id: 'field_5', field_type: 'tel', label: 'Phone', placeholder: 'Your phone number', required: false },
+          ],
+        },
+        rate_limit_enabled: true,
+        rate_limit_per_hour: 10,
+        captcha_enabled: false,
+      }
+      
+      await api.createForm(formData)
+      
+      // Reload workflow to get the new form
+      await loadWorkflow()
+    } catch (error: any) {
+      console.error('Failed to create form:', error)
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to create form'
+      setError(errorMessage)
+    } finally {
+      setCreatingForm(false)
     }
   }
 
@@ -126,6 +193,11 @@ export default function WorkflowDetailPage() {
           <FiArrowLeft className="w-4 h-4 mr-2" />
           Back
         </button>
+        {error && (
+          <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            {error}
+          </div>
+        )}
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{workflow.workflow_name}</h1>
@@ -185,6 +257,89 @@ export default function WorkflowDetailPage() {
             )}
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Form</label>
+            {workflow.form ? (
+              <div className="space-y-2">
+                <div>
+                  <p className="text-sm text-gray-900 font-medium">{workflow.form.form_name || 'Form'}</p>
+                  {workflow.form.public_slug && (
+                    <p className="text-xs text-gray-500 mt-1 font-mono">/{workflow.form.public_slug}</p>
+                  )}
+                </div>
+                <div className="flex space-x-2">
+                  {workflow.form.public_slug && (
+                    <a
+                      href={`/v1/forms/${workflow.form.public_slug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center px-3 py-1.5 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                    >
+                      <FiExternalLink className="w-4 h-4 mr-1.5" />
+                      View Form
+                    </a>
+                  )}
+                  {workflow.form.form_id && (
+                    <button
+                      onClick={() => router.push(`/dashboard/forms/${workflow.form.form_id}/edit`)}
+                      className="inline-flex items-center px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                    >
+                      <FiEdit className="w-4 h-4 mr-1.5" />
+                      Edit Form
+                    </button>
+                  )}
+                </div>
+                {workflow.form.public_slug && (
+                  <div className="mt-2">
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Public Form URL</label>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="text"
+                        readOnly
+                        value={typeof window !== 'undefined' ? `${window.location.origin}/v1/forms/${workflow.form.public_slug}` : `/v1/forms/${workflow.form.public_slug}`}
+                        className="flex-1 text-xs font-mono bg-gray-50 border border-gray-200 rounded px-2 py-1 text-gray-700"
+                        onClick={(e) => (e.target as HTMLInputElement).select()}
+                      />
+                      <button
+                        onClick={() => {
+                          const url = typeof window !== 'undefined' 
+                            ? `${window.location.origin}/v1/forms/${workflow.form.public_slug}`
+                            : `/v1/forms/${workflow.form.public_slug}`
+                          navigator.clipboard.writeText(url)
+                        }}
+                        className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+                        title="Copy URL"
+                      >
+                        <FiLink className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm text-gray-500">No form attached to this lead magnet yet.</p>
+                <button
+                  onClick={handleCreateForm}
+                  disabled={creatingForm}
+                  className="inline-flex items-center px-4 py-2 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {creatingForm ? (
+                    <>
+                      <FiClock className="w-4 h-4 mr-2 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <FiLink className="w-4 h-4 mr-2" />
+                      Create Form
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+
           {workflow.delivery_webhook_url && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Webhook URL</label>
@@ -217,8 +372,14 @@ export default function WorkflowDetailPage() {
         {/* AI Instructions */}
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">AI Instructions</h2>
-          <div className="bg-gray-50 rounded-lg p-4 font-mono text-sm whitespace-pre-wrap">
-            {workflow.ai_instructions || 'No instructions provided'}
+          <div className="prose prose-sm max-w-none bg-gray-50 rounded-lg p-4">
+            {workflow.ai_instructions ? (
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {workflow.ai_instructions}
+              </ReactMarkdown>
+            ) : (
+              <p className="text-gray-500">No instructions provided</p>
+            )}
           </div>
         </div>
       </div>
@@ -229,63 +390,58 @@ export default function WorkflowDetailPage() {
         {jobs.length === 0 ? (
           <p className="text-gray-500 text-sm">No jobs found for this workflow</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Job ID
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Created
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Duration
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {jobs.map((job) => {
-                  const duration = job.completed_at
-                    ? Math.round(
-                        (new Date(job.completed_at).getTime() - new Date(job.created_at).getTime()) / 1000
-                      )
-                    : null
-
-                  return (
-                    <tr key={job.job_id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <div className="flex items-center">
-                          {getJobStatusIcon(job.status)}
-                          <span className="ml-2 text-sm font-mono text-gray-900">
-                            {job.job_id.substring(0, 16)}...
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          job.status === 'completed' ? 'bg-green-100 text-green-800' :
-                          job.status === 'failed' ? 'bg-red-100 text-red-800' :
-                          job.status === 'processing' ? 'bg-blue-100 text-blue-800' :
-                          'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {job.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(job.created_at).toLocaleString()}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                        {duration !== null ? `${duration}s` : '-'}
-                      </td>
-                    </tr>
+          <div className="space-y-6">
+            {jobs.map((job) => {
+              const duration = job.completed_at
+                ? Math.round(
+                    (new Date(job.completed_at).getTime() - new Date(job.created_at).getTime()) / 1000
                   )
-                })}
-              </tbody>
-            </table>
+                : null
+              const submission = submissions[job.job_id]
+
+              return (
+                <div key={job.job_id} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-3">
+                      {getJobStatusIcon(job.status)}
+                      <div>
+                        <div className="text-sm font-mono text-gray-900">{job.job_id}</div>
+                        <div className="text-xs text-gray-500">
+                          Created: {new Date(job.created_at).toLocaleString()}
+                          {duration !== null && ` • Duration: ${duration}s`}
+                        </div>
+                      </div>
+                    </div>
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                      job.status === 'completed' ? 'bg-green-100 text-green-800' :
+                      job.status === 'failed' ? 'bg-red-100 text-red-800' :
+                      job.status === 'processing' ? 'bg-blue-100 text-blue-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {job.status}
+                    </span>
+                  </div>
+                  
+                  {submission && submission.submission_data && (
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <h3 className="text-sm font-semibold text-gray-900 mb-3">Form Submission Details</h3>
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <dl className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {Object.entries(submission.submission_data).map(([key, value]: [string, any]) => (
+                            <div key={key}>
+                              <dt className="text-xs font-medium text-gray-500 uppercase">{key}</dt>
+                              <dd className="mt-1 text-sm text-gray-900 break-words">
+                                {typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value)}
+                              </dd>
+                            </div>
+                          ))}
+                        </dl>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         )}
       </div>

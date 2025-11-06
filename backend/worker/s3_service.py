@@ -65,12 +65,13 @@ class S3Service:
                 public_url = f"https://{self.cloudfront_domain}/{key}"
                 logger.info(f"Using CloudFront URL for public artifact: {public_url}")
             else:
-                # Generate presigned URL (valid for 7 days)
+                # Generate presigned URL (valid for 1 year to prevent expiration issues)
                 # Presigned URLs work regardless of ACL settings
+                # Note: API will refresh these URLs on access, but longer expiration provides better UX
                 public_url = self.s3_client.generate_presigned_url(
                     'get_object',
                     Params={'Bucket': self.bucket_name, 'Key': key},
-                    ExpiresIn=604800  # 7 days
+                    ExpiresIn=31536000  # 1 year (31536000 seconds)
                 )
                 if public:
                     logger.warning(f"CloudFront domain not configured, using presigned URL instead")

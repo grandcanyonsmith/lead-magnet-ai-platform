@@ -10,12 +10,115 @@ import { calculateOpenAICost } from '../services/costService';
 import { callResponsesWithTimeout } from '../utils/openaiHelpers';
 
 const WORKFLOWS_TABLE = process.env.WORKFLOWS_TABLE!;
+const FORMS_TABLE = process.env.FORMS_TABLE!;
 const JOBS_TABLE = process.env.JOBS_TABLE || 'leadmagnet-jobs';
 const USAGE_RECORDS_TABLE = process.env.USAGE_RECORDS_TABLE || 'leadmagnet-usage-records';
 const OPENAI_SECRET_NAME = process.env.OPENAI_SECRET_NAME || 'leadmagnet/openai-api-key';
 const LAMBDA_FUNCTION_NAME = process.env.LAMBDA_FUNCTION_NAME || 'leadmagnet-api-handler';
 const secretsClient = new SecretsManagerClient({ region: process.env.AWS_REGION || 'us-east-1' });
 const lambdaClient = new LambdaClient({ region: process.env.AWS_REGION || 'us-east-1' });
+
+/**
+ * Generate a URL-friendly slug from a workflow name
+ */
+function generateSlug(name: string): string {
+  return name.toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+/**
+ * Ensure name, email, and phone fields are always present in form fields
+ */
+function ensureRequiredFields(fields: any[]): any[] {
+  const requiredFields = [
+    { field_id: 'name', field_type: 'text' as const, label: 'Name', placeholder: 'Your name', required: true },
+    { field_id: 'email', field_type: 'email' as const, label: 'Email', placeholder: 'your@email.com', required: true },
+    { field_id: 'phone', field_type: 'tel' as const, label: 'Phone', placeholder: 'Your phone number', required: true },
+  ];
+
+  const existingFieldIds = new Set(fields.map((f: any) => f.field_id));
+  const fieldsToAdd = requiredFields.filter(f => !existingFieldIds.has(f.field_id));
+  
+  return fieldsToAdd.length > 0 ? [...fieldsToAdd, ...fields] : fields;
+}
+
+/**
+ * Create a form for a workflow
+ */
+async function createFormForWorkflow(
+  tenantId: string,
+  workflowId: string,
+  workflowName: string,
+  formFields?: any[]
+): Promise<string> {
+  // Check if workflow already has a form
+  const existingForms = await db.query(
+    FORMS_TABLE,
+    'gsi_workflow_id',
+    'workflow_id = :workflow_id',
+    { ':workflow_id': workflowId }
+  );
+
+  if (existingForms.length > 0 && !existingForms[0].deleted_at) {
+    // Workflow already has a form, return existing form_id
+    return existingForms[0].form_id;
+  }
+
+  // Generate form name and slug
+  const formName = `${workflowName} Form`;
+  let baseSlug = generateSlug(workflowName);
+  let publicSlug = baseSlug;
+  let slugCounter = 1;
+
+  // Ensure slug is unique
+  while (true) {
+    const slugCheck = await db.query(
+      FORMS_TABLE,
+      'gsi_public_slug',
+      'public_slug = :slug',
+      { ':slug': publicSlug }
+    );
+    
+    if (slugCheck.length === 0 || slugCheck[0].deleted_at) {
+      break;
+    }
+    
+    publicSlug = `${baseSlug}-${slugCounter}`;
+    slugCounter++;
+  }
+
+  // Default form fields if not provided
+  const defaultFields = formFields || [
+    { field_id: 'name', field_type: 'text', label: 'Name', placeholder: 'Your name', required: true },
+    { field_id: 'email', field_type: 'email', label: 'Email', placeholder: 'your@email.com', required: true },
+    { field_id: 'phone', field_type: 'tel', label: 'Phone', placeholder: 'Your phone number', required: true },
+  ];
+
+  const formFieldsWithRequired = ensureRequiredFields(defaultFields);
+
+  const form = {
+    form_id: `form_${ulid()}`,
+    tenant_id: tenantId,
+    workflow_id: workflowId,
+    form_name: formName,
+    public_slug: publicSlug,
+    form_fields_schema: {
+      fields: formFieldsWithRequired,
+    },
+    rate_limit_enabled: true,
+    rate_limit_per_hour: 10,
+    captcha_enabled: false,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  await db.put(FORMS_TABLE, form);
+
+  return form.form_id;
+}
 
 async function getOpenAIClient(): Promise<OpenAI> {
   const command = new GetSecretValueCommand({ SecretId: OPENAI_SECRET_NAME });
@@ -136,16 +239,74 @@ class WorkflowsController {
       // Filter out soft-deleted items
       workflows = workflows.filter((w: any) => !w.deleted_at);
 
+      // Fetch form data for each workflow, auto-create if missing
+      const workflowsWithForms = await Promise.all(
+        workflows.map(async (workflow: any) => {
+          try {
+            const forms = await db.query(
+              FORMS_TABLE,
+              'gsi_workflow_id',
+              'workflow_id = :workflow_id',
+              { ':workflow_id': workflow.workflow_id }
+            );
+            
+            let activeForm = forms.find((f: any) => !f.deleted_at);
+            
+            // Auto-create form if it doesn't exist
+            if (!activeForm && workflow.workflow_name) {
+              try {
+                console.log('[Workflows List] Auto-creating form for workflow', {
+                  workflowId: workflow.workflow_id,
+                  workflowName: workflow.workflow_name,
+                });
+                const formId = await createFormForWorkflow(
+                  workflow.tenant_id,
+                  workflow.workflow_id,
+                  workflow.workflow_name
+                );
+                
+                // Fetch the newly created form
+                activeForm = await db.get(FORMS_TABLE, { form_id: formId });
+              } catch (createError) {
+                console.error('[Workflows List] Error auto-creating form', {
+                  workflowId: workflow.workflow_id,
+                  error: (createError as any).message,
+                });
+              }
+            }
+            
+            return {
+              ...workflow,
+              form: activeForm ? {
+                form_id: activeForm.form_id,
+                form_name: activeForm.form_name,
+                public_slug: activeForm.public_slug,
+                status: activeForm.status,
+              } : null,
+            };
+          } catch (error) {
+            console.error('[Workflows List] Error fetching form for workflow', {
+              workflowId: workflow.workflow_id,
+              error: (error as any).message,
+            });
+            return {
+              ...workflow,
+              form: null,
+            };
+          }
+        })
+      );
+
       console.log('[Workflows List] Query completed', {
         tenantId,
-        workflowsFound: workflows.length,
+        workflowsFound: workflowsWithForms.length,
       });
 
       const response = {
         statusCode: 200,
         body: {
-          workflows,
-          count: workflows.length,
+          workflows: workflowsWithForms,
+          count: workflowsWithForms.length,
         },
       };
 
@@ -179,17 +340,42 @@ class WorkflowsController {
       throw new ApiError('You don\'t have permission to access this lead magnet', 403);
     }
 
+    // Fetch associated form
+    let form = null;
+    try {
+      const forms = await db.query(
+        FORMS_TABLE,
+        'gsi_workflow_id',
+        'workflow_id = :workflow_id',
+        { ':workflow_id': workflowId }
+      );
+      
+      const activeForm = forms.find((f: any) => !f.deleted_at);
+      if (activeForm) {
+        form = activeForm;
+      }
+    } catch (error) {
+      console.error('[Workflows Get] Error fetching form', {
+        workflowId,
+        error: (error as any).message,
+      });
+    }
+
     return {
       statusCode: 200,
-      body: workflow,
+      body: {
+        ...workflow,
+        form,
+      },
     };
   }
 
   async create(tenantId: string, body: any): Promise<RouteResponse> {
     const data = validate(createWorkflowSchema, body);
 
+    const workflowId = `wf_${ulid()}`;
     const workflow = {
-      workflow_id: `wf_${ulid()}`,
+      workflow_id: workflowId,
       tenant_id: tenantId,
       ...data,
       status: 'draft',
@@ -199,9 +385,45 @@ class WorkflowsController {
 
     await db.put(WORKFLOWS_TABLE, workflow);
 
+    // Auto-create form for the workflow
+    let formId: string | null = null;
+    try {
+      formId = await createFormForWorkflow(
+        tenantId,
+        workflowId,
+        data.workflow_name,
+        body.form_fields_schema?.fields // Allow form fields to be passed during creation
+      );
+      
+      // Update workflow with form_id
+      await db.update(WORKFLOWS_TABLE, { workflow_id: workflowId }, {
+        form_id: formId,
+      });
+      workflow.form_id = formId;
+    } catch (error) {
+      console.error('[Workflows Create] Error creating form for workflow', {
+        workflowId,
+        error: (error as any).message,
+      });
+      // Continue even if form creation fails - workflow is still created
+    }
+
+    // Fetch the created form to include in response
+    let form = null;
+    if (formId) {
+      try {
+        form = await db.get(FORMS_TABLE, { form_id: formId });
+      } catch (error) {
+        console.error('[Workflows Create] Error fetching created form', error);
+      }
+    }
+
     return {
       statusCode: 201,
-      body: workflow,
+      body: {
+        ...workflow,
+        form,
+      },
     };
   }
 
@@ -223,9 +445,56 @@ class WorkflowsController {
       updated_at: new Date().toISOString(),
     });
 
+    // If workflow name changed, update form name
+    if (data.workflow_name && data.workflow_name !== existing.workflow_name) {
+      try {
+        const forms = await db.query(
+          FORMS_TABLE,
+          'gsi_workflow_id',
+          'workflow_id = :workflow_id',
+          { ':workflow_id': workflowId }
+        );
+        
+        const activeForm = forms.find((f: any) => !f.deleted_at);
+        if (activeForm) {
+          const newFormName = `${data.workflow_name} Form`;
+          await db.update(FORMS_TABLE, { form_id: activeForm.form_id }, {
+            form_name: newFormName,
+            updated_at: new Date().toISOString(),
+          });
+        }
+      } catch (error) {
+        console.error('[Workflows Update] Error updating form name', {
+          workflowId,
+          error: (error as any).message,
+        });
+      }
+    }
+
+    // Fetch updated form to include in response
+    let form = null;
+    try {
+      const forms = await db.query(
+        FORMS_TABLE,
+        'gsi_workflow_id',
+        'workflow_id = :workflow_id',
+        { ':workflow_id': workflowId }
+      );
+      
+      const activeForm = forms.find((f: any) => !f.deleted_at);
+      if (activeForm) {
+        form = activeForm;
+      }
+    } catch (error) {
+      console.error('[Workflows Update] Error fetching form', error);
+    }
+
     return {
       statusCode: 200,
-      body: updated,
+      body: {
+        ...updated,
+        form,
+      },
     };
   }
 
@@ -240,10 +509,34 @@ class WorkflowsController {
       throw new ApiError('You don\'t have permission to access this lead magnet', 403);
     }
 
-    // Soft delete
+    // Soft delete workflow
     await db.update(WORKFLOWS_TABLE, { workflow_id: workflowId }, {
       deleted_at: new Date().toISOString(),
     });
+
+    // Cascade delete associated form
+    try {
+      const forms = await db.query(
+        FORMS_TABLE,
+        'gsi_workflow_id',
+        'workflow_id = :workflow_id',
+        { ':workflow_id': workflowId }
+      );
+      
+      for (const form of forms) {
+        if (!form.deleted_at) {
+          await db.update(FORMS_TABLE, { form_id: form.form_id }, {
+            deleted_at: new Date().toISOString(),
+          });
+        }
+      }
+    } catch (error) {
+      console.error('[Workflows Delete] Error deleting associated form', {
+        workflowId,
+        error: (error as any).message,
+      });
+      // Continue even if form deletion fails
+    }
 
     return {
       statusCode: 204,
@@ -285,34 +578,69 @@ class WorkflowsController {
 
     // Invoke Lambda asynchronously to process workflow generation
     try {
-      const functionArn = `arn:aws:lambda:${process.env.AWS_REGION || 'us-east-1'}:${process.env.AWS_ACCOUNT_ID || '471112574622'}:function:${LAMBDA_FUNCTION_NAME}`;
-      
-      const invokeCommand = new InvokeCommand({
-        FunctionName: functionArn, // Use full ARN for better compatibility
-        InvocationType: 'Event', // Async invocation
-        Payload: JSON.stringify({
-          source: 'workflow-generation-job',
-          job_id: jobId,
-          tenant_id: tenantId,
-          description,
-          model,
-        }),
-      });
+      // Check if we're in local development - process synchronously
+      if (process.env.IS_LOCAL === 'true' || process.env.NODE_ENV === 'development') {
+        console.log('[Workflow Generation] Local mode detected, processing synchronously', { jobId });
+        // Process the job synchronously in local dev (fire and forget, but with error handling)
+        setImmediate(async () => {
+          try {
+            await this.processWorkflowGenerationJob(jobId, tenantId, description, model);
+          } catch (error: any) {
+            console.error('[Workflow Generation] Error processing job in local mode', {
+              jobId,
+              error: error.message,
+              errorStack: error.stack,
+            });
+            // Update job status to failed
+            await db.update(JOBS_TABLE, { job_id: jobId }, {
+              status: 'failed',
+              error_message: `Processing failed: ${error.message}`,
+              updated_at: new Date().toISOString(),
+            });
+          }
+        });
+      } else {
+        const functionArn = `arn:aws:lambda:${process.env.AWS_REGION || 'us-east-1'}:${process.env.AWS_ACCOUNT_ID || '471112574622'}:function:${LAMBDA_FUNCTION_NAME}`;
+        
+        const invokeCommand = new InvokeCommand({
+          FunctionName: functionArn, // Use full ARN for better compatibility
+          InvocationType: 'Event', // Async invocation
+          Payload: JSON.stringify({
+            source: 'workflow-generation-job',
+            job_id: jobId,
+            tenant_id: tenantId,
+            description,
+            model,
+          }),
+        });
 
-      await lambdaClient.send(invokeCommand);
-      console.log('[Workflow Generation] Triggered async processing', { jobId, functionArn });
+        const invokeResponse = await lambdaClient.send(invokeCommand);
+        console.log('[Workflow Generation] Triggered async processing', { 
+          jobId, 
+          functionArn,
+          statusCode: invokeResponse.StatusCode,
+          requestId: invokeResponse.$metadata.requestId,
+        });
+        
+        // Check if invocation was successful
+        if (invokeResponse.StatusCode !== 202 && invokeResponse.StatusCode !== 200) {
+          throw new Error(`Lambda invocation returned status ${invokeResponse.StatusCode}`);
+        }
+      }
     } catch (error: any) {
       console.error('[Workflow Generation] Failed to trigger async processing', {
         error: error.message,
+        errorStack: error.stack,
         jobId,
+        isLocal: process.env.IS_LOCAL === 'true' || process.env.NODE_ENV === 'development',
       });
       // Update job status to failed
       await db.update(JOBS_TABLE, { job_id: jobId }, {
         status: 'failed',
-        error_message: 'Failed to start processing',
+        error_message: `Failed to start processing: ${error.message}`,
         updated_at: new Date().toISOString(),
       });
-      throw new ApiError('Failed to start workflow generation', 500);
+      throw new ApiError(`Failed to start workflow generation: ${error.message}`, 500);
     }
 
     // Return immediately with job_id
@@ -790,6 +1118,42 @@ The public_slug should be URL-friendly (lowercase, hyphens only, no spaces).`;
 
     if (job.tenant_id !== tenantId) {
       throw new ApiError('Unauthorized', 403);
+    }
+
+    // If job has been pending for more than 30 seconds and we're in local/dev mode, try to process it
+    if (job.status === 'pending' && (process.env.IS_LOCAL === 'true' || process.env.NODE_ENV === 'development')) {
+      const createdAt = new Date(job.created_at).getTime();
+      const now = Date.now();
+      const ageSeconds = (now - createdAt) / 1000;
+      
+      // Only try once per job (check if there's a processing_attempted flag or just try if old enough)
+      if (ageSeconds > 30 && !job.processing_attempted) {
+        console.log('[Workflow Generation] Job stuck in pending, attempting to process', {
+          jobId,
+          ageSeconds,
+        });
+        
+        // Mark as attempted to prevent multiple retries
+        await db.update(JOBS_TABLE, { job_id: jobId }, {
+          processing_attempted: true,
+          updated_at: new Date().toISOString(),
+        });
+        
+        // Try to process the job
+        const description = job.description || '';
+        const model = job.model || 'gpt-5';
+        setImmediate(async () => {
+          try {
+            await this.processWorkflowGenerationJob(jobId, tenantId, description, model);
+          } catch (error: any) {
+            console.error('[Workflow Generation] Error processing stuck job', {
+              jobId,
+              error: error.message,
+              errorStack: error.stack,
+            });
+          }
+        });
+      }
     }
 
     return {
