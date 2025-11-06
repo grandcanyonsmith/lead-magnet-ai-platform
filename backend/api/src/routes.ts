@@ -36,6 +36,14 @@ export const router = async (
   // Extract path segments for catch-all routing
   const pathSegments = path.split('/').filter(s => s);
 
+  // Handle OPTIONS requests for CORS preflight (must be before other route checks)
+  if (method === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      body: {},
+    };
+  }
+
   // Public routes (form rendering and submission)
   if (path.match(/^\/v1\/forms\/[^/]+$/) && method === 'GET') {
     const slug = pathSegments[2]; // /v1/forms/{slug}
@@ -50,6 +58,7 @@ export const router = async (
   // Public job status endpoint (for form submissions)
   if (path.match(/^\/v1\/jobs\/[^/]+\/status$/) && method === 'GET') {
     const jobId = pathSegments[2]; // /v1/jobs/{jobId}/status
+    console.log('[Router] Matched /v1/jobs/:jobId/status route', { jobId, pathSegments });
     return await jobsController.getPublicStatus(jobId);
   }
 
