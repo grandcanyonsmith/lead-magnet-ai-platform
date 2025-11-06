@@ -61,7 +61,7 @@ class AIService:
         instructions: str,
         context: str,
         previous_context: str = "",
-    ) -> Tuple[str, Dict]:
+    ) -> Tuple[str, Dict, Dict, Dict]:
         """
         Generate a report using OpenAI with web search preview enabled.
         
@@ -72,7 +72,7 @@ class AIService:
             previous_context: Optional context from previous steps (accumulated)
             
         Returns:
-            Tuple of (generated report content, usage info dict)
+            Tuple of (generated report content, usage info dict, request details dict, response details dict)
         """
         logger.info(f"Generating report with model: {model} (with web search preview)")
         
@@ -84,11 +84,13 @@ class AIService:
         if previous_context:
             full_context = f"{previous_context}\n\n--- Current Step Context ---\n{context}"
         
+        input_text = f"Generate a report based on the following information:\n\n{full_context}"
+        
         try:
             params = {
                 "model": model,
                 "instructions": instructions,
-                "input": f"Generate a report based on the following information:\n\n{full_context}",
+                "input": input_text,
                 "tools": [{"type": "web_search_preview"}],
             }
             
@@ -96,6 +98,34 @@ class AIService:
             if is_o3_model:
                 params["reasoning_level"] = "medium"
                 logger.info(f"Using reasoning_level=medium for o3 model: {model}")
+            
+            # Capture request details
+            request_details = {
+                'model': model,
+                'instructions': instructions,
+                'input': input_text,
+                'previous_context': previous_context,  # Contains ALL previous step outputs
+                'context': context,  # Current step context (form data for step 0, empty for others)
+                'tools': params.get('tools', []),
+                'reasoning_level': params.get('reasoning_level'),
+            }
+            
+            # If previous_context contains multiple steps, parse and include them separately for clarity
+            if previous_context and '===' in previous_context:
+                # Extract individual step outputs from previous_context
+                step_sections = previous_context.split('===')
+                previous_steps = []
+                for i in range(1, len(step_sections), 2):
+                    if i + 1 < len(step_sections):
+                        step_header = step_sections[i].strip()
+                        step_content = step_sections[i + 1].strip() if i + 1 < len(step_sections) else ""
+                        if step_header and step_content:
+                            previous_steps.append({
+                                'step': step_header,
+                                'output': step_content
+                            })
+                if previous_steps:
+                    request_details['all_previous_steps'] = previous_steps
             
             response = self.client.responses.create(**params)
             
@@ -125,7 +155,18 @@ class AIService:
                 'service_type': 'openai_worker_report',
             }
             
-            return report, usage_info
+            # Capture response details
+            response_details = {
+                'output_text': report,
+                'usage': {
+                    'input_tokens': usage.input_tokens or 0,
+                    'output_tokens': usage.output_tokens or 0,
+                    'total_tokens': usage.total_tokens or 0,
+                },
+                'model': getattr(response, 'model', model),
+            }
+            
+            return report, usage_info, request_details, response_details
             
         except Exception as e:
             error_type = type(e).__name__
@@ -167,7 +208,28 @@ class AIService:
                         'service_type': 'openai_worker_report',
                     }
                     
-                    return report, usage_info
+                    # Capture request details for retry
+                    request_details = {
+                        'model': model,
+                        'instructions': instructions,
+                        'input': f"Generate a report based on the following information:\n\n{full_context}",
+                        'previous_context': previous_context,
+                        'context': context,
+                        'tools': params_no_reasoning.get('tools', []),
+                        'reasoning_level': None,
+                    }
+                    
+                    response_details = {
+                        'output_text': report,
+                        'usage': {
+                            'input_tokens': usage.input_tokens or 0,
+                            'output_tokens': usage.output_tokens or 0,
+                            'total_tokens': usage.total_tokens or 0,
+                        },
+                        'model': getattr(response, 'model', model),
+                    }
+                    
+                    return report, usage_info, request_details, response_details
                 except Exception as retry_error:
                     # If retry also fails, continue with original error
                     error_message = str(retry_error)
@@ -194,7 +256,7 @@ class AIService:
         template_style: str = '',
         ai_instructions: str = '',
         model: str = 'gpt-5',
-    ) -> Tuple[str, Dict]:
+    ) -> Tuple[str, Dict, Dict, Dict]:
         """
         Generate HTML document directly from submission data and template.
         
@@ -261,6 +323,17 @@ Generate a complete HTML document that:
                 "input": user_message,
             }
             
+            # Capture request details
+            request_details = {
+                'model': model,
+                'instructions': instructions,
+                'input': user_message,
+                'submission_data': submission_data,
+                'template_html': template_html[:500] + '...' if len(template_html) > 500 else template_html,  # Truncate for storage
+                'template_style': template_style,
+                'ai_instructions': ai_instructions,
+            }
+            
             response = self.client.responses.create(**params)
             
             html_content = response.output_text
@@ -297,7 +370,18 @@ Generate a complete HTML document that:
                 if html_content.startswith('html'):
                     html_content = html_content[4:].strip()
             
-            return html_content, usage_info
+            # Capture response details
+            response_details = {
+                'output_text': html_content,
+                'usage': {
+                    'input_tokens': usage.input_tokens or 0,
+                    'output_tokens': usage.output_tokens or 0,
+                    'total_tokens': usage.total_tokens or 0,
+                },
+                'model': getattr(response, 'model', model),
+            }
+            
+            return html_content, usage_info, request_details, response_details
             
         except Exception as e:
             error_type = type(e).__name__
@@ -320,7 +404,7 @@ Generate a complete HTML document that:
         template_style: str = '',
         submission_data: dict = None,
         model: str = 'gpt-5',
-    ) -> Tuple[str, Dict]:
+    ) -> Tuple[str, Dict, Dict, Dict]:
         """
         Generate styled HTML document from research content and template.
         
@@ -389,6 +473,17 @@ Generate a complete HTML document that:
                 "input": user_message,
             }
             
+            # Capture request details
+            request_details = {
+                'model': model,
+                'instructions': instructions,
+                'input': user_message,
+                'research_content': research_content[:1000] + '...' if len(research_content) > 1000 else research_content,  # Truncate for storage
+                'template_html': template_html[:500] + '...' if len(template_html) > 500 else template_html,  # Truncate for storage
+                'template_style': template_style,
+                'submission_data': submission_data,
+            }
+            
             response = self.client.responses.create(**params)
             
             html_content = response.output_text
@@ -425,7 +520,18 @@ Generate a complete HTML document that:
                 if html_content.startswith('html'):
                     html_content = html_content[4:].strip()
             
-            return html_content, usage_info
+            # Capture response details
+            response_details = {
+                'output_text': html_content,
+                'usage': {
+                    'input_tokens': usage.input_tokens or 0,
+                    'output_tokens': usage.output_tokens or 0,
+                    'total_tokens': usage.total_tokens or 0,
+                },
+                'model': getattr(response, 'model', model),
+            }
+            
+            return html_content, usage_info, request_details, response_details
             
         except Exception as e:
             error_type = type(e).__name__
