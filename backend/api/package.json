@@ -10,6 +10,8 @@
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write src/**/*.ts",
     "package": "npm run build && cd dist && zip -r ../api.zip .",
+    "package:bundle": "node build.js",
+    "package:lambda": "node build.js",
     "dev": "npm run build && node server-local.js",
     "dev:watch": "npm run watch & npm run dev"
   },

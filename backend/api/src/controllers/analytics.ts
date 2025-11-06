@@ -1,13 +1,29 @@
 import { db } from '../utils/db';
 import { RouteResponse } from '../routes';
+import { ApiError } from '../utils/errors';
 
-const JOBS_TABLE = process.env.JOBS_TABLE!;
-const SUBMISSIONS_TABLE = process.env.SUBMISSIONS_TABLE!;
-const WORKFLOWS_TABLE = process.env.WORKFLOWS_TABLE!;
+const JOBS_TABLE = process.env.JOBS_TABLE;
+const SUBMISSIONS_TABLE = process.env.SUBMISSIONS_TABLE;
+const WORKFLOWS_TABLE = process.env.WORKFLOWS_TABLE;
+
+if (!JOBS_TABLE) {
+  console.error('[Analytics Controller] JOBS_TABLE environment variable is not set');
+}
+if (!SUBMISSIONS_TABLE) {
+  console.error('[Analytics Controller] SUBMISSIONS_TABLE environment variable is not set');
+}
+if (!WORKFLOWS_TABLE) {
+  console.error('[Analytics Controller] WORKFLOWS_TABLE environment variable is not set');
+}
 
 class AnalyticsController {
   async getAnalytics(tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {
     console.log('[Analytics] Starting analytics query', { tenantId, queryParams });
+    
+    // Validate environment variables
+    if (!JOBS_TABLE || !SUBMISSIONS_TABLE || !WORKFLOWS_TABLE) {
+      throw new ApiError('Analytics service configuration error: Missing required environment variables', 500);
+    }
     
     const days = queryParams.days ? parseInt(queryParams.days) : 30;
     const startDate = new Date();
@@ -21,7 +37,7 @@ class AnalyticsController {
     try {
       // Get all jobs for tenant in date range
       jobs = await db.query(
-        JOBS_TABLE,
+        JOBS_TABLE!,
         'gsi_tenant_created',
         'tenant_id = :tenant_id AND created_at >= :start_date',
         { ':tenant_id': tenantId, ':start_date': startDateStr }
@@ -41,7 +57,7 @@ class AnalyticsController {
     try {
       // Get all submissions for tenant in date range
       submissions = await db.query(
-        SUBMISSIONS_TABLE,
+        SUBMISSIONS_TABLE!,
         'gsi_tenant_created',
         'tenant_id = :tenant_id AND created_at >= :start_date',
         { ':tenant_id': tenantId, ':start_date': startDateStr }
@@ -61,7 +77,7 @@ class AnalyticsController {
     try {
       // Get all workflows for tenant
       workflows = await db.query(
-        WORKFLOWS_TABLE,
+        WORKFLOWS_TABLE!,
         'gsi_tenant_status',
         'tenant_id = :tenant_id',
         { ':tenant_id': tenantId }

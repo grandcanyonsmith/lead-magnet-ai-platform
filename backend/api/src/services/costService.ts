@@ -26,6 +26,10 @@ const OPENAI_PRICING: Record<string, { input_per_1k_tokens_usd: number; output_p
     input_per_1k_tokens_usd: 0.005,
     output_per_1k_tokens_usd: 0.015,
   },
+  'o3-deep-research': {
+    input_per_1k_tokens_usd: 0.01, // $10 per 1M tokens
+    output_per_1k_tokens_usd: 0.04, // $40 per 1M tokens
+  },
 };
 
 /**

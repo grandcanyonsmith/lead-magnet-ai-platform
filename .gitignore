@@ -69,3 +69,19 @@ docker-compose.override.yml
 lambda-package/
 backend/api/package/
 backend/api/bundle/
+
+# Compiled TypeScript/JavaScript files
+# Infrastructure compiled outputs
+infrastructure/lib/*.js
+infrastructure/lib/*.d.ts
+infrastructure/bin/*.js
+infrastructure/bin/*.d.ts
+
+# Backend API compiled outputs
+backend/api/dist/
+backend/api/index.js
+backend/api/*.zip
+
+# Frontend build outputs
+frontend/out/
+frontend/.next/

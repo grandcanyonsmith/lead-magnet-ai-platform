@@ -3,13 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { api } from '@/lib/api'
-import { FiArrowLeft, FiSave, FiSettings, FiFileText } from 'react-icons/fi'
-
-type Template = {
-  template_id: string
-  template_name?: string
-  version?: number
-}
+import { FiArrowLeft, FiSave, FiSettings, FiFileText, FiLayout, FiZap, FiEdit2, FiEye, FiPlus } from 'react-icons/fi'
+import WorkflowStepEditor, { WorkflowStep } from '../../components/WorkflowStepEditor'
 
 type FormField = {
   field_id: string
@@ -25,8 +20,7 @@ export default function EditWorkflowPage() {
   const params = useParams()
   const workflowId = params?.id as string
   
-  const [activeTab, setActiveTab] = useState<'workflow' | 'form'>('workflow')
-  const [templates, setTemplates] = useState<Template[]>([])
+  const [activeTab, setActiveTab] = useState<'workflow' | 'form' | 'template'>('workflow')
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -34,7 +28,7 @@ export default function EditWorkflowPage() {
   const [formData, setFormData] = useState({
     workflow_name: '',
     workflow_description: '',
-    ai_model: 'gpt-5',
+    ai_model: 'o3-deep-research',
     ai_instructions: '',
     rewrite_model: 'gpt-5',
     research_enabled: true,
@@ -42,6 +36,9 @@ export default function EditWorkflowPage() {
     template_id: '',
     template_version: 0,
   })
+
+  // Steps array for multi-step workflow format
+  const [steps, setSteps] = useState<WorkflowStep[]>([])
 
   const [formFormData, setFormFormData] = useState({
     form_name: '',
@@ -58,36 +55,28 @@ export default function EditWorkflowPage() {
   })
 
   const [formId, setFormId] = useState<string | null>(null)
+  const [templateId, setTemplateId] = useState<string | null>(null)
+  const [templateLoading, setTemplateLoading] = useState(false)
+  const [refining, setRefining] = useState(false)
+  const [generationStatus, setGenerationStatus] = useState<string | null>(null)
+  const [editPrompt, setEditPrompt] = useState('')
+  const [showPreview, setShowPreview] = useState(false)
+  const [detectedPlaceholders, setDetectedPlaceholders] = useState<string[]>([])
+  const [previewKey, setPreviewKey] = useState(0)
+
+  const [templateData, setTemplateData] = useState({
+    template_name: '',
+    template_description: '',
+    html_content: '',
+    is_published: false,
+  })
 
   useEffect(() => {
     if (workflowId) {
-      Promise.all([loadTemplates(), loadWorkflow()])
+      loadWorkflow()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workflowId])
-
-  const loadTemplates = async (retryCount = 0) => {
-    try {
-      const data = await api.getTemplates()
-      setTemplates(data.templates || [])
-      setError(null)
-    } catch (error: any) {
-      console.error('Failed to load templates:', error)
-      const status = error.response?.status
-      const message = error.response?.data?.message || error.message
-      
-      if (status === 401) {
-        setError('Authentication failed. Please try logging out and logging back in.')
-      } else if (status === 403) {
-        setError('You do not have permission to access templates.')
-      } else if (retryCount < 2 && (status >= 500 || status === undefined)) {
-        setTimeout(() => loadTemplates(retryCount + 1), 1000 * (retryCount + 1))
-        return
-      } else {
-        setError(`Failed to load templates: ${message || 'Please refresh the page or try again later.'}`)
-      }
-    }
-  }
 
   const loadWorkflow = async () => {
     try {
@@ -95,7 +84,7 @@ export default function EditWorkflowPage() {
       setFormData({
         workflow_name: workflow.workflow_name || '',
         workflow_description: workflow.workflow_description || '',
-        ai_model: workflow.ai_model || 'gpt-5',
+        ai_model: workflow.ai_model || 'o3-deep-research',
         ai_instructions: workflow.ai_instructions || '',
         rewrite_model: workflow.rewrite_model || 'gpt-5',
         research_enabled: workflow.research_enabled !== undefined ? workflow.research_enabled : true,
@@ -103,6 +92,72 @@ export default function EditWorkflowPage() {
         template_id: workflow.template_id || '',
         template_version: workflow.template_version || 0,
       })
+
+      // Load steps if present, otherwise migrate from legacy format
+      if (workflow.steps && workflow.steps.length > 0) {
+        // Ensure all steps have required fields with defaults
+        const loadedSteps = workflow.steps.map((step: any, index: number) => {
+          // Provide default instructions if empty
+          let defaultInstructions = ''
+          if (step.step_name && step.step_name.toLowerCase().includes('html')) {
+            defaultInstructions = 'Rewrite the content into styled HTML matching the provided template. Ensure the output is complete, valid HTML that matches the template\'s design and structure.'
+          } else if (step.step_name && step.step_name.toLowerCase().includes('research')) {
+            defaultInstructions = 'Generate a comprehensive research report based on the form submission data.'
+          } else {
+            defaultInstructions = 'Process the input data according to the workflow requirements.'
+          }
+          
+          return {
+            step_name: step.step_name || `Step ${index + 1}`,
+            step_description: step.step_description || '',
+            model: step.model || 'gpt-5',
+            instructions: step.instructions?.trim() || defaultInstructions,
+            step_order: step.step_order !== undefined ? step.step_order : index,
+          }
+        })
+        setSteps(loadedSteps)
+      } else {
+        // Migrate legacy format to steps
+        const migratedSteps: WorkflowStep[] = []
+        if (workflow.research_enabled && workflow.ai_instructions) {
+          migratedSteps.push({
+            step_name: 'Deep Research',
+            step_description: 'Generate comprehensive research report',
+            model: workflow.ai_model || 'o3-deep-research',
+            instructions: workflow.ai_instructions,
+            step_order: 0,
+          })
+        }
+        if (workflow.html_enabled) {
+          migratedSteps.push({
+            step_name: 'HTML Rewrite',
+            step_description: 'Rewrite content into styled HTML matching template',
+            model: workflow.rewrite_model || 'gpt-5',
+            instructions: 'Rewrite the research content into styled HTML matching the provided template. Ensure the output is complete, valid HTML that matches the template\'s design and structure.',
+            step_order: migratedSteps.length,
+          })
+        }
+        // If no steps were created, create default steps
+        if (migratedSteps.length === 0) {
+          migratedSteps.push({
+            step_name: 'Deep Research',
+            step_description: 'Generate comprehensive research report',
+            model: 'o3-deep-research',
+            instructions: workflow.ai_instructions || 'Generate a comprehensive research report based on the form submission data.',
+            step_order: 0,
+          })
+          if (workflow.html_enabled !== false) {
+            migratedSteps.push({
+              step_name: 'HTML Rewrite',
+              step_description: 'Rewrite content into styled HTML matching template',
+              model: 'gpt-5',
+              instructions: 'Rewrite the research content into styled HTML matching the provided template. Ensure the output is complete, valid HTML that matches the template\'s design and structure.',
+              step_order: 1,
+            })
+          }
+        }
+        setSteps(migratedSteps)
+      }
 
       // Load form data if it exists
       if (workflow.form) {
@@ -119,12 +174,63 @@ export default function EditWorkflowPage() {
           redirect_url: workflow.form.redirect_url || '',
         })
       }
+
+      // Load template if it exists
+      if (workflow.template_id) {
+        setTemplateId(workflow.template_id)
+        loadTemplate(workflow.template_id)
+      } else {
+        // Initialize with default template name based on workflow name
+        setTemplateData(prev => ({
+          ...prev,
+          template_name: `${workflow.workflow_name || 'Lead Magnet'} Template`,
+        }))
+      }
     } catch (error: any) {
       console.error('Failed to load workflow:', error)
       setError(error.response?.data?.message || error.message || 'Failed to load workflow')
     } finally {
       setLoading(false)
     }
+  }
+
+  const loadTemplate = async (id: string) => {
+    setTemplateLoading(true)
+    try {
+      const template = await api.getTemplate(id)
+      setTemplateData({
+        template_name: template.template_name || '',
+        template_description: template.template_description || '',
+        html_content: template.html_content || '',
+        is_published: template.is_published || false,
+      })
+      
+      // Extract placeholders from loaded HTML
+      if (template.html_content) {
+        const placeholders = extractPlaceholders(template.html_content)
+        setDetectedPlaceholders(placeholders)
+        // Auto-show preview when HTML is loaded
+        if (template.html_content.trim() && !showPreview) {
+          setShowPreview(true)
+          setPreviewKey(1)
+        }
+      }
+    } catch (error: any) {
+      console.error('Failed to load template:', error)
+      setError(error.response?.data?.message || error.message || 'Failed to load template')
+    } finally {
+      setTemplateLoading(false)
+    }
+  }
+
+  const extractPlaceholders = (html: string): string[] => {
+    const regex = /\{\{([A-Z_]+)\}\}/g
+    const matches = html.matchAll(regex)
+    const placeholders = new Set<string>()
+    for (const match of matches) {
+      placeholders.add(match[1])
+    }
+    return Array.from(placeholders).sort()
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -137,30 +243,83 @@ export default function EditWorkflowPage() {
       return
     }
 
-    if (formData.research_enabled && !formData.ai_instructions.trim()) {
-      setError('Research instructions are required when research is enabled')
+    // Validate steps
+    if (steps.length === 0) {
+      setError('At least one workflow step is required')
       return
     }
 
-    if (formData.html_enabled && !formData.template_id) {
-      setError('Template is required when HTML generation is enabled')
+    for (let i = 0; i < steps.length; i++) {
+      const step = steps[i]
+      if (!step.step_name.trim()) {
+        setError(`Step ${i + 1} name is required`)
+        return
+      }
+      if (!step.instructions.trim()) {
+        setError(`Step ${i + 1} instructions are required`)
+        return
+      }
+    }
+
+    if (formData.html_enabled && !templateId && !templateData.html_content.trim()) {
+      setError('Template HTML content is required when HTML generation is enabled')
       return
     }
 
     setSubmitting(true)
 
     try {
-      // Update workflow
+      // Create or update template if HTML is enabled
+      let finalTemplateId = templateId
+      if (formData.html_enabled) {
+        if (!templateData.html_content.trim()) {
+          setError('Template HTML content is required when HTML generation is enabled')
+          setSubmitting(false)
+          return
+        }
+
+        const placeholders = extractPlaceholders(templateData.html_content)
+        
+        if (templateId) {
+          // Update existing template
+          await api.updateTemplate(templateId, {
+            template_name: templateData.template_name.trim(),
+            template_description: templateData.template_description.trim() || undefined,
+            html_content: templateData.html_content.trim(),
+            placeholder_tags: placeholders.length > 0 ? placeholders : undefined,
+            is_published: templateData.is_published,
+          })
+          finalTemplateId = templateId
+        } else {
+          // Create new template
+          const template = await api.createTemplate({
+            template_name: templateData.template_name.trim(),
+            template_description: templateData.template_description.trim() || undefined,
+            html_content: templateData.html_content.trim(),
+            placeholder_tags: placeholders.length > 0 ? placeholders : undefined,
+            is_published: templateData.is_published,
+          })
+          finalTemplateId = template.template_id
+          setTemplateId(template.template_id)
+        }
+      }
+
+      // Update workflow with steps
       await api.updateWorkflow(workflowId, {
         workflow_name: formData.workflow_name.trim(),
         workflow_description: formData.workflow_description.trim() || undefined,
+        steps: steps.map((step, index) => ({
+          ...step,
+          step_order: index,
+        })),
+        // Keep legacy fields for backward compatibility
         ai_model: formData.ai_model,
-        ai_instructions: formData.ai_instructions.trim(),
+        ai_instructions: steps[0]?.instructions || formData.ai_instructions.trim() || '',
         rewrite_model: formData.rewrite_model,
         research_enabled: formData.research_enabled,
         html_enabled: formData.html_enabled,
-        template_id: formData.template_id || undefined,
-        template_version: formData.template_version,
+        template_id: formData.html_enabled ? finalTemplateId : undefined,
+        template_version: 0,
       })
 
       // Update form if it exists
@@ -189,6 +348,56 @@ export default function EditWorkflowPage() {
 
   const handleChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }))
+  }
+
+  // Step management functions
+  const handleStepChange = (index: number, step: WorkflowStep) => {
+    setSteps(prev => {
+      const newSteps = [...prev]
+      newSteps[index] = { ...step, step_order: index }
+      return newSteps
+    })
+  }
+
+  const handleAddStep = () => {
+    setSteps(prev => [
+      ...prev,
+      {
+        step_name: `Step ${prev.length + 1}`,
+        step_description: '',
+        model: 'gpt-5',
+        instructions: '',
+        step_order: prev.length,
+      },
+    ])
+  }
+
+  const handleDeleteStep = (index: number) => {
+    setSteps(prev => {
+      const newSteps = prev.filter((_, i) => i !== index)
+      // Reorder steps
+      return newSteps.map((step, i) => ({ ...step, step_order: i }))
+    })
+  }
+
+  const handleMoveStepUp = (index: number) => {
+    if (index === 0) return
+    setSteps(prev => {
+      const newSteps = [...prev]
+      ;[newSteps[index - 1], newSteps[index]] = [newSteps[index], newSteps[index - 1]]
+      // Reorder steps
+      return newSteps.map((step, i) => ({ ...step, step_order: i }))
+    })
+  }
+
+  const handleMoveStepDown = (index: number) => {
+    if (index === steps.length - 1) return
+    setSteps(prev => {
+      const newSteps = [...prev]
+      ;[newSteps[index], newSteps[index + 1]] = [newSteps[index + 1], newSteps[index]]
+      // Reorder steps
+      return newSteps.map((step, i) => ({ ...step, step_order: i }))
+    })
   }
 
   const handleFormChange = (field: string, value: any) => {
@@ -242,13 +451,104 @@ export default function EditWorkflowPage() {
     })
   }
 
-  // Update template_version when template_id changes
-  useEffect(() => {
-    const selectedTemplate = templates.find(t => t.template_id === formData.template_id)
-    if (selectedTemplate && selectedTemplate.version) {
-      setFormData(prev => ({ ...prev, template_version: selectedTemplate.version || 0 }))
+  const handleTemplateChange = (field: string, value: any) => {
+    setTemplateData(prev => ({ ...prev, [field]: value }))
+  }
+
+  const handleHtmlChange = (html: string) => {
+    setTemplateData(prev => ({ ...prev, html_content: html }))
+    const placeholders = extractPlaceholders(html)
+    setDetectedPlaceholders(placeholders)
+    // Force preview re-render when HTML changes manually
+    setPreviewKey(prev => prev + 1)
+    // Auto-show preview when HTML is added
+    if (html.trim() && !showPreview) {
+      setShowPreview(true)
     }
-  }, [formData.template_id, templates])
+  }
+
+  const handleRefine = async () => {
+    if (!editPrompt.trim()) {
+      setError('Please describe what changes you want to make')
+      return
+    }
+
+    if (!templateData.html_content.trim()) {
+      setError('No HTML content to refine')
+      return
+    }
+
+    setRefining(true)
+    setError(null)
+    setGenerationStatus('Refining template with AI...')
+
+    try {
+      const result = await api.refineTemplateWithAI(
+        templateData.html_content,
+        editPrompt.trim(),
+        'gpt-5'
+      )
+
+      const newHtml = result.html_content
+      setTemplateData(prev => ({
+        ...prev,
+        html_content: newHtml,
+      }))
+      
+      const placeholders = result.placeholder_tags || []
+      setDetectedPlaceholders(placeholders)
+      
+      // Force preview re-render by incrementing previewKey
+      setPreviewKey(prev => prev + 1)
+      
+      // Ensure preview is shown after refinement
+      if (!showPreview) {
+        setShowPreview(true)
+      }
+      
+      // Clear the edit prompt
+      setEditPrompt('')
+      
+      // Clear status after a short delay
+      setTimeout(() => {
+        setGenerationStatus(null)
+      }, 2000)
+    } catch (error: any) {
+      setError(error.response?.data?.message || error.message || 'Failed to refine template with AI')
+      setGenerationStatus(null)
+    } finally {
+      setRefining(false)
+    }
+  }
+
+  // Generate preview HTML with sample data
+  const getPreviewHtml = () => {
+    if (!templateData.html_content.trim()) return ''
+    
+    let previewHtml = templateData.html_content
+    
+    // Replace placeholders with sample data
+    const sampleData: Record<string, string> = {
+      TITLE: 'Sample Lead Magnet Title',
+      CONTENT: 'This is sample content that will be replaced with your actual lead magnet content when the template is used.',
+      AUTHOR_NAME: 'John Doe',
+      COMPANY_NAME: 'Your Company',
+      DATE: new Date().toLocaleDateString(),
+      EMAIL: 'user@example.com',
+      PHONE: '+1 (555) 123-4567',
+    }
+    
+    // Replace all placeholders
+    Object.keys(sampleData).forEach(key => {
+      const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g')
+      previewHtml = previewHtml.replace(regex, sampleData[key])
+    })
+    
+    // Replace any remaining placeholders with generic text
+    previewHtml = previewHtml.replace(/\{\{([A-Z_]+)\}\}/g, '[$1]')
+    
+    return previewHtml
+  }
 
   // Auto-update form name when workflow name changes
   useEffect(() => {
@@ -258,7 +558,26 @@ export default function EditWorkflowPage() {
         form_name: `${formData.workflow_name} Form`,
       }))
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.workflow_name])
+
+  // Auto-update template name when workflow name changes (if template doesn't have a custom name)
+  useEffect(() => {
+    if (formData.workflow_name && !templateId && templateData.template_name === `${formData.workflow_name} Template` || !templateData.template_name) {
+      setTemplateData(prev => ({
+        ...prev,
+        template_name: `${formData.workflow_name || 'Lead Magnet'} Template`,
+      }))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.workflow_name, templateId])
+
+  // Switch away from template tab if HTML is disabled
+  useEffect(() => {
+    if (!formData.html_enabled && activeTab === 'template') {
+      setActiveTab('workflow')
+    }
+  }, [formData.html_enabled, activeTab])
 
   if (loading) {
     return (
@@ -313,25 +632,24 @@ export default function EditWorkflowPage() {
             <FiFileText className="inline w-4 h-4 mr-2" />
             Form Settings
           </button>
+          {formData.html_enabled && (
+            <button
+              onClick={() => setActiveTab('template')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'template'
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <FiLayout className="inline w-4 h-4 mr-2" />
+              Template
+            </button>
+          )}
         </nav>
       </div>
 
       {activeTab === 'workflow' && (
         <>
-          {/* Info Box */}
-          <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 className="text-sm font-semibold text-blue-900 mb-2">Processing Modes</h3>
-            <p className="text-sm text-blue-800 mb-2">
-              Choose how your lead magnet is generated:
-            </p>
-            <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-              <li><strong>Research + HTML:</strong> AI generates personalized research, then converts it to styled HTML</li>
-              <li><strong>Research Only:</strong> AI generates research report (markdown format)</li>
-              <li><strong>HTML Only:</strong> AI generates styled HTML directly from form submission</li>
-              <li><strong>Text Only:</strong> Simple text output from form submission</li>
-            </ul>
-          </div>
-
           <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -362,133 +680,124 @@ export default function EditWorkflowPage() {
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Research Model <span className="text-red-500">*</span>
-                  <span className="ml-2 text-xs text-gray-500" title="Used for generating personalized research">
-                    ℹ️
-                  </span>
-                </label>
-                <select
-                  value={formData.ai_model}
-                  onChange={(e) => handleChange('ai_model', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  required
-                  disabled={!formData.research_enabled}
+            {/* Workflow Steps */}
+            <div className="space-y-4 pt-6 border-t">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-gray-900">Workflow Steps</h2>
+                <button
+                  type="button"
+                  onClick={handleAddStep}
+                  className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
                 >
-                  <option value="gpt-5">GPT-5</option>
-                  <option value="gpt-4o">GPT-4o</option>
-                  <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                  <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                </select>
-                <p className="mt-1 text-xs text-gray-500">
-                  Used for generating personalized research
-                </p>
+                  <FiPlus className="w-4 h-4" />
+                  Add Step
+                </button>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Styling Model
-                  <span className="ml-2 text-xs text-gray-500" title="Used for converting content to styled HTML">
-                    ℹ️
-                  </span>
-                </label>
-                <select
-                  value={formData.rewrite_model}
-                  onChange={(e) => handleChange('rewrite_model', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  disabled={!formData.html_enabled}
-                >
-                  <option value="gpt-5">GPT-5</option>
-                  <option value="gpt-4o">GPT-4o</option>
-                  <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                  <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                </select>
-                <p className="mt-1 text-xs text-gray-500">
-                  Used for converting content to styled HTML
-                </p>
+              <p className="text-sm text-gray-600 mb-4">
+                Define the steps your workflow will execute. Each step receives context from all previous steps.
+              </p>
+              
+              <div className="space-y-4">
+                {steps.map((step, index) => (
+                  <WorkflowStepEditor
+                    key={index}
+                    step={step}
+                    index={index}
+                    totalSteps={steps.length}
+                    onChange={handleStepChange}
+                    onDelete={handleDeleteStep}
+                    onMoveUp={handleMoveStepUp}
+                    onMoveDown={handleMoveStepDown}
+                  />
+                ))}
               </div>
             </div>
 
-            {formData.research_enabled && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Research Instructions <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  value={formData.ai_instructions}
-                  onChange={(e) => handleChange('ai_instructions', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono text-sm"
-                  placeholder="Example: Generate a personalized market research report for [course idea]. Analyze market demand, competition, target audience, and provide actionable recommendations..."
-                  rows={6}
-                  required={formData.research_enabled}
-                />
-                <p className="mt-1 text-sm text-gray-500">
-                  Tell the AI how to generate personalized research based on form submission data. Use [field_name] to reference form fields.
-                </p>
-              </div>
-            )}
+            {/* Legacy fields - hidden but kept for backward compatibility */}
+            <div className="hidden">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Research Model <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.ai_model}
+                    onChange={(e) => handleChange('ai_model', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    disabled={!formData.research_enabled}
+                  >
+                    <option value="o3-deep-research">O3 Deep Research</option>
+                    <option value="gpt-5">GPT-5</option>
+                    <option value="gpt-4o">GPT-4o</option>
+                    <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                  </select>
+                </div>
 
-            <div className="border-t pt-6 space-y-4">
-              <div>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={formData.research_enabled}
-                    onChange={(e) => handleChange('research_enabled', e.target.checked)}
-                    className="mr-2"
-                  />
-                  <span className="text-sm font-medium text-gray-700">Generate AI Research Report</span>
-                </label>
-                <p className="mt-1 text-sm text-gray-500 ml-6">
-                  Generate personalized research first (stored as report.md for fact-checking/reference). This makes your lead magnet 10x more valuable.
-                </p>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Styling Model
+                  </label>
+                  <select
+                    value={formData.rewrite_model}
+                    onChange={(e) => handleChange('rewrite_model', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    disabled={!formData.html_enabled}
+                  >
+                    <option value="gpt-5">GPT-5</option>
+                    <option value="gpt-4o">GPT-4o</option>
+                    <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                  </select>
+                </div>
               </div>
 
-              <div>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={formData.html_enabled}
-                    onChange={(e) => handleChange('html_enabled', e.target.checked)}
-                    className="mr-2"
+              {formData.research_enabled && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Research Instructions <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    value={formData.ai_instructions}
+                    onChange={(e) => handleChange('ai_instructions', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono text-sm"
+                    placeholder="Example: Generate a personalized market research report for [course idea]. Analyze market demand, competition, target audience, and provide actionable recommendations..."
+                    rows={6}
                   />
-                  <span className="text-sm font-medium text-gray-700">Generate Styled HTML</span>
-                </label>
-                <p className="mt-1 text-sm text-gray-500 ml-6">
-                  Convert content to beautifully styled HTML matching your template. Most lead magnets use this.
-                </p>
+                </div>
+              )}
+
+              <div className="border-t pt-6 space-y-4">
+                <div>
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={formData.research_enabled}
+                      onChange={(e) => handleChange('research_enabled', e.target.checked)}
+                      className="mr-2"
+                    />
+                    <span className="text-sm font-medium text-gray-700">Generate AI Research Report</span>
+                  </label>
+                </div>
+
+                <div>
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={formData.html_enabled}
+                      onChange={(e) => handleChange('html_enabled', e.target.checked)}
+                      className="mr-2"
+                    />
+                    <span className="text-sm font-medium text-gray-700">Generate Styled HTML</span>
+                  </label>
+                </div>
               </div>
             </div>
 
             {formData.html_enabled && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Template <span className="text-red-500">*</span>
-                </label>
-                {templates.length === 0 && !loading ? (
-                  <div className="text-sm text-gray-500 mb-2">
-                    No templates available. <a href="/dashboard/templates/new" className="text-primary-600 hover:text-primary-900">Create one first</a>.
-                  </div>
-                ) : (
-                  <select
-                    value={formData.template_id}
-                    onChange={(e) => handleChange('template_id', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    required={formData.html_enabled}
-                  >
-                    <option value="">Select a template...</option>
-                    {templates.map((template) => (
-                      <option key={template.template_id} value={template.template_id}>
-                        {template.template_name || template.template_id}
-                        {template.version ? ` (v${template.version})` : ''}
-                      </option>
-                    ))}
-                  </select>
-                )}
-                <p className="mt-1 text-sm text-gray-500">
-                  Select the HTML template that will style your lead magnet
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-800">
+                  <strong>Note:</strong> Templates are managed in the Template tab above. Enable &quot;Generate Styled HTML&quot; to access template editing.
                 </p>
               </div>
             )}
@@ -503,7 +812,7 @@ export default function EditWorkflowPage() {
               </button>
               <button
                 type="submit"
-                disabled={submitting || (formData.html_enabled && !formData.template_id) || (formData.research_enabled && !formData.ai_instructions.trim())}
+                disabled={submitting || (formData.html_enabled && !templateId && !templateData.html_content.trim()) || (formData.research_enabled && !formData.ai_instructions.trim())}
                 className="flex items-center px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <FiSave className="w-5 h-5 mr-2" />
@@ -536,7 +845,7 @@ export default function EditWorkflowPage() {
               required
             />
             <p className="mt-1 text-xs text-gray-500">
-              This is automatically set to "{formData.workflow_name} Form"
+              This is automatically set to &quot;{formData.workflow_name} Form&quot;
             </p>
           </div>
 
@@ -758,6 +1067,220 @@ export default function EditWorkflowPage() {
           <p className="text-gray-600 mb-4">No form found for this lead magnet.</p>
           <p className="text-sm text-gray-500">Forms are automatically created when you create a lead magnet.</p>
         </div>
+      )}
+
+      {activeTab === 'template' && (
+        <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 space-y-6">
+          {!formData.html_enabled && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+              <p className="text-sm text-yellow-800">
+                <strong>Note:</strong> Enable &quot;Generate Styled HTML&quot; in the Lead Magnet Settings tab to use templates.
+              </p>
+            </div>
+          )}
+
+          {templateLoading && (
+            <div className="text-center py-12">
+              <p className="text-gray-600">Loading template...</p>
+            </div>
+          )}
+
+          {!templateLoading && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Template Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={templateData.template_name}
+                  onChange={(e) => handleTemplateChange('template_name', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  placeholder="Email Template"
+                  maxLength={200}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Description
+                </label>
+                <textarea
+                  value={templateData.template_description}
+                  onChange={(e) => handleTemplateChange('template_description', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  placeholder="Describe what this template is used for..."
+                  rows={3}
+                  maxLength={1000}
+                />
+              </div>
+
+              {/* Preview Section */}
+              {templateData.html_content.trim() && (
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-gray-900 flex items-center">
+                      <FiEye className="w-4 h-4 mr-2" />
+                      HTML Preview
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => setShowPreview(!showPreview)}
+                      className="text-sm text-gray-600 hover:text-gray-900"
+                    >
+                      {showPreview ? 'Hide Preview' : 'Show Preview'}
+                    </button>
+                  </div>
+                  {showPreview && (
+                    <div className="bg-white border-t border-gray-200" style={{ height: '600px' }}>
+                      <iframe
+                        key={`preview-${previewKey}-${templateData.html_content.length}`}
+                        srcDoc={getPreviewHtml()}
+                        className="w-full h-full border-0"
+                        title="HTML Preview"
+                        sandbox="allow-same-origin allow-scripts"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Edit/Refine Section */}
+              {templateData.html_content.trim() && (
+                <div className="bg-gradient-to-r from-green-50 to-teal-50 border border-green-200 rounded-lg p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center">
+                        <FiEdit2 className={`w-5 h-5 mr-2 text-green-600 ${refining ? 'animate-pulse' : ''}`} />
+                        Refine Template
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        Want changes? Describe what you&apos;d like to modify, and AI will update the HTML for you.
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <textarea
+                      value={editPrompt}
+                      onChange={(e) => setEditPrompt(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      placeholder="e.g., Make the colors more vibrant, change the layout to be more modern, remove placeholders, add more spacing..."
+                      rows={4}
+                      disabled={refining}
+                    />
+                    
+                    {generationStatus && (
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600 mr-3"></div>
+                        <span className="text-sm text-green-800 font-medium">{generationStatus}</span>
+                      </div>
+                    )}
+                    
+                    <button
+                      type="button"
+                      onClick={handleRefine}
+                      disabled={refining || !editPrompt.trim()}
+                      className="flex items-center justify-center px-6 py-2 bg-gradient-to-r from-green-600 to-teal-600 text-white rounded-lg hover:from-green-700 hover:to-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {refining ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                          <span>Refining...</span>
+                        </>
+                      ) : (
+                        <>
+                          <FiZap className="w-5 h-5 mr-2" />
+                          <span>Apply Changes</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  HTML Content <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={templateData.html_content}
+                  onChange={(e) => handleHtmlChange(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono text-sm"
+                  placeholder={`<!DOCTYPE html>
+<html>
+<head>
+  <title>Lead Magnet</title>
+</head>
+<body>
+  <h1>{{TITLE}}</h1>
+  <div>{{CONTENT}}</div>
+</body>
+</html>`}
+                  rows={20}
+                  required
+                />
+                <div className="mt-2 space-y-2">
+                  <p className="text-sm text-gray-500">
+                    Use <code className="px-1 py-0.5 bg-gray-100 rounded text-xs">&#123;&#123;PLACEHOLDER_NAME&#125;&#125;</code> syntax for dynamic content.
+                  </p>
+                  {detectedPlaceholders.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      <span className="text-sm font-medium text-gray-700">Detected placeholders:</span>
+                      {detectedPlaceholders.map((placeholder) => (
+                        <span
+                          key={placeholder}
+                          className="px-2 py-1 bg-primary-50 text-primary-700 rounded text-xs font-mono"
+                        >
+                          {`{{${placeholder}}}`}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {detectedPlaceholders.length === 0 && templateData.html_content.trim() && (
+                    <p className="text-sm text-yellow-600">
+                      No placeholders detected. Use <code className="px-1 py-0.5 bg-yellow-100 rounded text-xs">&#123;&#123;PLACEHOLDER_NAME&#125;&#125;</code> format.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={templateData.is_published}
+                    onChange={(e) => handleTemplateChange('is_published', e.target.checked)}
+                    className="mr-2"
+                  />
+                  <span className="text-sm font-medium text-gray-700">Publish Template</span>
+                </label>
+                <p className="mt-1 text-sm text-gray-500 ml-6">
+                  Published templates can be used in workflows immediately
+                </p>
+              </div>
+
+              <div className="flex justify-end space-x-4 pt-4 border-t">
+                <button
+                  type="button"
+                  onClick={() => router.back()}
+                  className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting || !templateData.html_content.trim()}
+                  className="flex items-center px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <FiSave className="w-5 h-5 mr-2" />
+                  {submitting ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </>
+          )}
+        </form>
       )}
     </div>
   )

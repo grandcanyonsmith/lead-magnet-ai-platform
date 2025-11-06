@@ -154,9 +154,29 @@ export const handler = async (
       body: JSON.stringify(result.body),
     };
   } catch (error) {
-    logger.error('Request error', { error, path: event.rawPath });
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    
+    // tenantId might not be defined in error context, so we'll get it from the event
+    const errorTenantId = (event as any).requestContext?.authorizer?.jwt?.claims?.['custom:tenant_id'] || 
+                         (event as any).requestContext?.authorizer?.jwt?.claims?.email ||
+                         'unknown';
+    
+    logger.error('Request error', { 
+      error: errorMessage,
+      errorStack,
+      path: event.rawPath,
+      tenantId: errorTenantId,
+    });
     
     const errorResponse = handleError(error);
+    
+    // Log the error response for debugging
+    console.error('[Handler] Error response', {
+      statusCode: errorResponse.statusCode,
+      body: errorResponse.body,
+      path: event.rawPath,
+    });
     
     return {
       statusCode: errorResponse.statusCode,

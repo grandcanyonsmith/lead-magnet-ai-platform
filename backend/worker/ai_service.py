@@ -60,6 +60,7 @@ class AIService:
         model: str,
         instructions: str,
         context: str,
+        previous_context: str = "",
     ) -> Tuple[str, Dict]:
         """
         Generate a report using OpenAI with web search preview enabled.
@@ -68,20 +69,33 @@ class AIService:
             model: OpenAI model to use (e.g., 'gpt-5')
             instructions: System instructions for the AI
             context: User context/data to generate report from
+            previous_context: Optional context from previous steps (accumulated)
             
         Returns:
             Tuple of (generated report content, usage info dict)
         """
         logger.info(f"Generating report with model: {model} (with web search preview)")
         
+        # Only use reasoning_level for o3 models (requires minimum "medium")
+        is_o3_model = model.startswith('o3') or 'o3-deep-research' in model.lower()
+        
+        # Combine previous context with current context if provided
+        full_context = context
+        if previous_context:
+            full_context = f"{previous_context}\n\n--- Current Step Context ---\n{context}"
+        
         try:
             params = {
                 "model": model,
                 "instructions": instructions,
-                "input": f"Generate a report based on the following information:\n\n{context}",
+                "input": f"Generate a report based on the following information:\n\n{full_context}",
                 "tools": [{"type": "web_search_preview"}],
-                "reasoning_level": "medium",
             }
+            
+            # Add reasoning_level only for o3 models
+            if is_o3_model:
+                params["reasoning_level"] = "medium"
+                logger.info(f"Using reasoning_level=medium for o3 model: {model}")
             
             response = self.client.responses.create(**params)
             
@@ -117,14 +131,15 @@ class AIService:
             error_type = type(e).__name__
             error_message = str(e)
             
-            # If reasoning_level is not supported, retry without it
-            if "reasoning_level" in error_message.lower() or "unsupported" in error_message.lower():
-                logger.warning(f"reasoning_level parameter not supported, retrying without it: {error_message}")
+            # If reasoning_level is not supported and we're using an o3 model, retry without it
+            # (This shouldn't happen for o3 models, but handle gracefully)
+            if ("reasoning_level" in error_message.lower() or "unsupported" in error_message.lower()) and is_o3_model:
+                logger.warning(f"reasoning_level parameter not supported for o3 model, retrying without it: {error_message}")
                 try:
                     params_no_reasoning = {
                         "model": model,
                         "instructions": instructions,
-                        "input": f"Generate a report based on the following information:\n\n{context}",
+                        "input": f"Generate a report based on the following information:\n\n{full_context}",
                         "tools": [{"type": "web_search_preview"}],
                     }
                     response = self.client.responses.create(**params_no_reasoning)

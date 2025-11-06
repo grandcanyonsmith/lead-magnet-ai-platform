@@ -8,7 +8,6 @@ import {
   FiHome, 
   FiSettings, 
   FiFileText, 
-  FiLayout, 
   FiList, 
   FiBarChart2,
   FiLogOut,
@@ -56,7 +55,6 @@ export default function DashboardLayout({
   const navItems = [
     { href: '/dashboard', label: 'Dashboard', icon: FiHome },
     { href: '/dashboard/workflows', label: 'Lead Magnets', icon: FiList },
-    { href: '/dashboard/templates', label: 'Templates', icon: FiLayout },
     { href: '/dashboard/jobs', label: 'Generated Lead Magnets', icon: FiBarChart2 },
     { href: '/dashboard/artifacts', label: 'Downloads', icon: FiFileText },
     { href: '/dashboard/settings', label: 'Settings', icon: FiSettings },
