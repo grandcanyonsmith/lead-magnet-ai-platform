@@ -160,45 +160,36 @@ class AIService:
             # Extract image URLs from tool outputs if image_generation was used
             image_urls = []
             try:
-                # Log response structure for debugging
-                logger.debug(f"Response type: {type(response)}, dir: {[x for x in dir(response) if not x.startswith('_')]}")
-                
-                # Check various possible response structures
+                # OpenAI Responses API returns output_items array
+                # Each item can be of type "text" or "image"
+                # For image items, access item.image.url
                 if hasattr(response, 'output_items') and response.output_items:
-                    logger.debug(f"Found output_items: {len(response.output_items)} items")
+                    logger.info(f"Found output_items: {len(response.output_items)} items")
                     for idx, item in enumerate(response.output_items):
-                        logger.debug(f"Output item {idx}: type={getattr(item, 'type', 'unknown')}, dir={[x for x in dir(item) if not x.startswith('_')]}")
+                        # Check if item is an image type
                         if hasattr(item, 'type') and item.type == 'image':
                             if hasattr(item, 'image') and hasattr(item.image, 'url'):
                                 image_urls.append(item.image.url)
-                                logger.info(f"Found image URL: {item.image.url}")
-                        # Check for tool outputs in various formats
-                        if hasattr(item, 'tool_outputs'):
-                            for tool_output in item.tool_outputs:
-                                if hasattr(tool_output, 'image_generation'):
-                                    img_gen = tool_output.image_generation
-                                    if hasattr(img_gen, 'image') and hasattr(img_gen.image, 'url'):
-                                        image_urls.append(img_gen.image.url)
-                                        logger.info(f"Found image URL from tool_output: {img_gen.image.url}")
+                                logger.info(f"Found image URL from output_items[{idx}]: {item.image.url}")
+                        
+                        # Also check if item has image property directly
+                        elif hasattr(item, 'image'):
+                            if hasattr(item.image, 'url'):
+                                image_urls.append(item.image.url)
+                                logger.info(f"Found image URL from item.image: {item.image.url}")
                 
-                # Also check response directly for image fields
-                if hasattr(response, 'images') and response.images:
-                    for img in response.images:
-                        if hasattr(img, 'url'):
-                            image_urls.append(img.url)
-                            logger.info(f"Found image URL from response.images: {img.url}")
-                
-                # Check if response has a data attribute that might contain images
-                if hasattr(response, 'data'):
-                    response_data = response.data
-                    if isinstance(response_data, list):
-                        for item in response_data:
-                            if isinstance(item, dict) and 'image' in item:
-                                if 'url' in item['image']:
-                                    image_urls.append(item['image']['url'])
-                                    logger.info(f"Found image URL from response.data: {item['image']['url']}")
+                # Log if no images found but image_generation tool was used
+                has_image_tool = any(
+                    (isinstance(t, dict) and t.get("type") == "image_generation") or 
+                    (isinstance(t, str) and t == "image_generation")
+                    for t in tools
+                )
+                if has_image_tool and not image_urls:
+                    logger.warning(f"image_generation tool was used but no image URLs found in response. Response structure: {[attr for attr in dir(response) if not attr.startswith('_')]}")
+                    if hasattr(response, 'output_items'):
+                        logger.warning(f"output_items structure: {[(getattr(item, 'type', 'unknown'), [attr for attr in dir(item) if not attr.startswith('_')]) for item in response.output_items]}")
             except Exception as e:
-                logger.warning(f"Error extracting image URLs: {e}")
+                logger.warning(f"Error extracting image URLs: {e}", exc_info=True)
             
             # Log token usage for cost tracking
             usage = response.usage
@@ -265,18 +256,19 @@ class AIService:
                     
                     # Extract image URLs from tool outputs if image_generation was used
                     image_urls = []
-                    if hasattr(response, 'output_items') and response.output_items:
-                        for item in response.output_items:
-                            if hasattr(item, 'type') and item.type == 'image':
-                                if hasattr(item, 'image') and hasattr(item.image, 'url'):
-                                    image_urls.append(item.image.url)
-                            # Also check for tool outputs
-                            if hasattr(item, 'tool_outputs'):
-                                for tool_output in item.tool_outputs:
-                                    if hasattr(tool_output, 'image_generation'):
-                                        img_gen = tool_output.image_generation
-                                        if hasattr(img_gen, 'image') and hasattr(img_gen.image, 'url'):
-                                            image_urls.append(img_gen.image.url)
+                    try:
+                        if hasattr(response, 'output_items') and response.output_items:
+                            for idx, item in enumerate(response.output_items):
+                                if hasattr(item, 'type') and item.type == 'image':
+                                    if hasattr(item, 'image') and hasattr(item.image, 'url'):
+                                        image_urls.append(item.image.url)
+                                        logger.info(f"Found image URL from output_items[{idx}]: {item.image.url}")
+                                elif hasattr(item, 'image'):
+                                    if hasattr(item.image, 'url'):
+                                        image_urls.append(item.image.url)
+                                        logger.info(f"Found image URL from item.image: {item.image.url}")
+                    except Exception as e:
+                        logger.warning(f"Error extracting image URLs: {e}", exc_info=True)
                     
                     logger.info(
                         f"Report generation completed (without reasoning_level). "
