@@ -157,8 +157,20 @@ export default function NewWorkflowPage() {
           ai_instructions: result.workflow?.research_instructions || '',
         }))
 
-        // Update first step with generated instructions
-        if (result.workflow?.research_instructions) {
+        // Use generated steps if present, otherwise fall back to legacy behavior
+        if (result.workflow?.steps && Array.isArray(result.workflow.steps) && result.workflow.steps.length > 0) {
+          // Replace entire steps array with generated steps
+          setSteps(result.workflow.steps.map((step: any) => ({
+            step_name: step.step_name || 'Step',
+            step_description: step.step_description || '',
+            model: step.model || 'gpt-5',
+            instructions: step.instructions || '',
+            step_order: step.step_order !== undefined ? step.step_order : 0,
+            tools: step.tools || [],
+            tool_choice: step.tool_choice || 'auto',
+          })))
+        } else if (result.workflow?.research_instructions) {
+          // Legacy format - update first step with generated instructions
           setSteps(prev => {
             const newSteps = [...prev]
             if (newSteps.length > 0) {
@@ -229,8 +241,20 @@ export default function NewWorkflowPage() {
           ai_instructions: result.workflow?.research_instructions || '',
         }))
 
-        // Update first step with generated instructions
-        if (result.workflow?.research_instructions) {
+        // Use generated steps if present, otherwise fall back to legacy behavior
+        if (result.workflow?.steps && Array.isArray(result.workflow.steps) && result.workflow.steps.length > 0) {
+          // Replace entire steps array with generated steps
+          setSteps(result.workflow.steps.map((step: any) => ({
+            step_name: step.step_name || 'Step',
+            step_description: step.step_description || '',
+            model: step.model || 'gpt-5',
+            instructions: step.instructions || '',
+            step_order: step.step_order !== undefined ? step.step_order : 0,
+            tools: step.tools || [],
+            tool_choice: step.tool_choice || 'auto',
+          })))
+        } else if (result.workflow?.research_instructions) {
+          // Legacy format - update first step with generated instructions
           setSteps(prev => {
             const newSteps = [...prev]
             if (newSteps.length > 0) {

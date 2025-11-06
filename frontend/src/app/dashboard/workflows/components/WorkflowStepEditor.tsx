@@ -9,7 +9,7 @@ export interface WorkflowStep {
   model: string
   instructions: string
   step_order?: number
-  tools?: string[]
+  tools?: (string | { type: string; [key: string]: any })[]
   tool_choice?: 'auto' | 'required' | 'none'
 }
 
@@ -32,7 +32,12 @@ const MODEL_OPTIONS = [
 ]
 
 const AVAILABLE_TOOLS = [
-  { value: 'web_search_preview', label: 'Web Search Preview', description: 'Enables web search capabilities' },
+  { value: 'web_search', label: 'Web Search', description: 'Web search capabilities (newer version)' },
+  { value: 'web_search_preview', label: 'Web Search Preview', description: 'Web search preview capabilities' },
+  { value: 'image_generation', label: 'Image Generation', description: 'Generate images from text descriptions' },
+  { value: 'computer_use_preview', label: 'Computer Use Preview', description: 'Control computer interfaces (requires configuration)' },
+  { value: 'file_search', label: 'File Search', description: 'Search uploaded files for context' },
+  { value: 'code_interpreter', label: 'Code Interpreter', description: 'Execute Python code in a secure sandbox' },
 ]
 
 const TOOL_CHOICE_OPTIONS = [
@@ -51,10 +56,26 @@ export default function WorkflowStepEditor({
   onMoveDown,
 }: WorkflowStepEditorProps) {
   const [localStep, setLocalStep] = useState<WorkflowStep>(step)
+  const [computerUseConfig, setComputerUseConfig] = useState({
+    display_width: 1024,
+    display_height: 768,
+    environment: 'browser' as 'browser' | 'mac' | 'windows' | 'ubuntu',
+  })
 
   // Sync localStep when step prop changes
   useEffect(() => {
     setLocalStep(step)
+    // Extract computer_use_preview config if present
+    const computerUseTool = (step.tools || []).find(
+      (t) => (typeof t === 'object' && t.type === 'computer_use_preview') || t === 'computer_use_preview'
+    )
+    if (computerUseTool && typeof computerUseTool === 'object') {
+      setComputerUseConfig({
+        display_width: computerUseTool.display_width || 1024,
+        display_height: computerUseTool.display_height || 768,
+        environment: computerUseTool.environment || 'browser',
+      })
+    }
   }, [step])
 
   const handleChange = (field: keyof WorkflowStep, value: string | string[]) => {
@@ -63,11 +84,73 @@ export default function WorkflowStepEditor({
     onChange(index, updated)
   }
 
+  const isToolSelected = (toolValue: string): boolean => {
+    const currentTools = localStep.tools || []
+    return currentTools.some(t => {
+      if (typeof t === 'string') return t === toolValue
+      return t.type === toolValue
+    })
+  }
+
   const handleToolToggle = (toolValue: string) => {
     const currentTools = localStep.tools || []
-    const updatedTools = currentTools.includes(toolValue)
-      ? currentTools.filter(t => t !== toolValue)
-      : [...currentTools, toolValue]
+    const isSelected = isToolSelected(toolValue)
+    
+    let updatedTools: (string | { type: string; [key: string]: any })[]
+    
+    if (isSelected) {
+      // Remove tool
+      updatedTools = currentTools.filter(t => {
+        if (typeof t === 'string') return t !== toolValue
+        return t.type !== toolValue
+      })
+    } else {
+      // Add tool
+      if (toolValue === 'computer_use_preview') {
+        // Add as object with config
+        updatedTools = [...currentTools, {
+          type: 'computer_use_preview',
+          display_width: computerUseConfig.display_width,
+          display_height: computerUseConfig.display_height,
+          environment: computerUseConfig.environment,
+        }]
+      } else {
+        // Add as string
+        updatedTools = [...currentTools, toolValue]
+      }
+    }
+    
+    handleChange('tools', updatedTools)
+  }
+
+  const handleComputerUseConfigChange = (field: 'display_width' | 'display_height' | 'environment', value: number | string) => {
+    const newConfig = { ...computerUseConfig, [field]: value }
+    setComputerUseConfig(newConfig)
+    
+    // Update the tool object in tools array
+    const currentTools = localStep.tools || []
+    const updatedTools = currentTools.map(t => {
+      if (typeof t === 'object' && t.type === 'computer_use_preview') {
+        return {
+          ...t,
+          display_width: newConfig.display_width,
+          display_height: newConfig.display_height,
+          environment: newConfig.environment,
+        }
+      }
+      return t
+    })
+    
+    // If computer_use_preview is selected but not in tools array, add it
+    if (isToolSelected('computer_use_preview') && !updatedTools.some(t => typeof t === 'object' && t.type === 'computer_use_preview')) {
+      updatedTools.push({
+        type: 'computer_use_preview',
+        display_width: newConfig.display_width,
+        display_height: newConfig.display_height,
+        environment: newConfig.environment,
+      })
+    }
+    
     handleChange('tools', updatedTools)
   }
 
@@ -184,7 +267,7 @@ export default function WorkflowStepEditor({
               <label key={tool.value} className="flex items-start space-x-2 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={(localStep.tools || ['web_search_preview']).includes(tool.value)}
+                  checked={isToolSelected(tool.value)}
                   onChange={() => handleToolToggle(tool.value)}
                   className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                 />
@@ -195,6 +278,59 @@ export default function WorkflowStepEditor({
               </label>
             ))}
           </div>
+          
+          {/* Computer Use Preview Configuration */}
+          {isToolSelected('computer_use_preview') && (
+            <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Computer Use Preview Configuration
+              </label>
+              <div className="grid grid-cols-2 gap-4 mb-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Display Width
+                  </label>
+                  <input
+                    type="number"
+                    value={computerUseConfig.display_width}
+                    onChange={(e) => handleComputerUseConfigChange('display_width', parseInt(e.target.value) || 1024)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                    min="100"
+                    max="4096"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Display Height
+                  </label>
+                  <input
+                    type="number"
+                    value={computerUseConfig.display_height}
+                    onChange={(e) => handleComputerUseConfigChange('display_height', parseInt(e.target.value) || 768)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                    min="100"
+                    max="4096"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Environment
+                </label>
+                <select
+                  value={computerUseConfig.environment}
+                  onChange={(e) => handleComputerUseConfigChange('environment', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                >
+                  <option value="browser">Browser</option>
+                  <option value="mac">macOS</option>
+                  <option value="windows">Windows</option>
+                  <option value="ubuntu">Ubuntu</option>
+                </select>
+              </div>
+            </div>
+          )}
+          
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Tool Choice

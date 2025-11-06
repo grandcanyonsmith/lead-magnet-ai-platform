@@ -82,7 +82,14 @@ class AIService:
         if tools is None or len(tools) == 0:
             tools = [{"type": "web_search_preview"}]
         
-        logger.info(f"Generating report with model: {model}, tools: {tools}, tool_choice: {tool_choice}")
+        # Check if computer_use_preview is in tools (requires truncation="auto")
+        has_computer_use = any(
+            (isinstance(t, dict) and t.get("type") == "computer_use_preview") or 
+            (isinstance(t, str) and t == "computer_use_preview")
+            for t in tools
+        )
+        
+        logger.info(f"Generating report with model: {model}, tools: {tools}, tool_choice: {tool_choice}, has_computer_use: {has_computer_use}")
         
         # Only use reasoning_level for o3 models (requires minimum "medium")
         is_o3_model = model.startswith('o3') or 'o3-deep-research' in model.lower()
@@ -102,6 +109,11 @@ class AIService:
                 "tools": tools,
             }
             
+            # Add truncation="auto" if computer_use_preview is used
+            if has_computer_use:
+                params["truncation"] = "auto"
+                logger.info("Added truncation='auto' for computer_use_preview tool")
+            
             # Add tool_choice if not "none" (none means no tools, so don't include the parameter)
             if tool_choice != "none":
                 params["tool_choice"] = tool_choice
@@ -120,6 +132,7 @@ class AIService:
                 'context': context,  # Current step context (form data for step 0, empty for others)
                 'tools': params.get('tools', []),
                 'tool_choice': params.get('tool_choice', 'auto'),
+                'truncation': params.get('truncation'),
                 'reasoning_level': params.get('reasoning_level'),
             }
             
@@ -196,6 +209,9 @@ class AIService:
                         "input": f"Generate a report based on the following information:\n\n{full_context}",
                         "tools": tools,
                     }
+                    # Add truncation if computer_use_preview is used
+                    if has_computer_use:
+                        params_no_reasoning["truncation"] = "auto"
                     if tool_choice != "none":
                         params_no_reasoning["tool_choice"] = tool_choice
                     response = self.client.responses.create(**params_no_reasoning)
