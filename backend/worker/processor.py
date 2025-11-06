@@ -149,6 +149,12 @@ class JobProcessor:
                     step_model = step.get('model', 'gpt-5')
                     step_instructions = step.get('instructions', '')
                     
+                    # Extract tools and tool_choice from step config
+                    step_tools_raw = step.get('tools', ['web_search_preview'])  # Default for backward compatibility
+                    # Convert tool strings to tool dicts format: [{"type": "web_search_preview"}]
+                    step_tools = [{"type": tool} if isinstance(tool, str) else tool for tool in step_tools_raw]
+                    step_tool_choice = step.get('tool_choice', 'auto')
+                    
                     logger.info(f"Processing step {step_index + 1}/{len(sorted_steps)}: {step_name}")
                     
                     try:
@@ -175,7 +181,9 @@ class JobProcessor:
                             model=step_model,
                             instructions=step_instructions,
                             context=current_step_context,
-                            previous_context=all_previous_context
+                            previous_context=all_previous_context,
+                            tools=step_tools,
+                            tool_choice=step_tool_choice
                         )
                         
                         step_duration = (datetime.utcnow() - step_start_time).total_seconds() * 1000
@@ -612,7 +620,9 @@ class JobProcessor:
         report, usage_info, request_details, response_details = self.ai_service.generate_report(
             model=ai_model,
             instructions=ai_instructions,
-            context=context
+            context=context,
+            tools=[{"type": "web_search_preview"}],  # Default for legacy workflows
+            tool_choice="auto"
         )
         
         return report, usage_info, request_details, response_details
@@ -925,7 +935,9 @@ Generate ONLY the SMS message text, no explanations, no markdown."""
             response, usage_info = self.ai_service.generate_report(
                 model=workflow.get('ai_model', 'gpt-5'),
                 instructions=prompt,
-                context=""
+                context="",
+                tools=[{"type": "web_search_preview"}],
+                tool_choice="auto"
             )
             # Store usage record
             self.store_usage_record(

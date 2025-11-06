@@ -415,6 +415,8 @@ class WorkflowsController {
           model: workflowData.ai_model || 'o3-deep-research',
           instructions: workflowData.ai_instructions,
           step_order: 0,
+          tools: ['web_search_preview'],
+          tool_choice: 'auto' as const,
         });
       }
       
@@ -427,6 +429,8 @@ class WorkflowsController {
             ? 'Rewrite the research content into styled HTML matching the provided template. Ensure the output is complete, valid HTML that matches the template\'s design and structure.'
             : 'Generate HTML output',
           step_order: steps.length,
+          tools: [],
+          tool_choice: 'none' as const,
         });
       }
       
@@ -434,10 +438,12 @@ class WorkflowsController {
         workflowData.steps = steps;
       }
     } else {
-      // Ensure step_order is set for each step
+      // Ensure step_order is set for each step and add defaults for tools/tool_choice
       workflowData.steps = workflowData.steps.map((step: any, index: number) => ({
         ...step,
         step_order: step.step_order !== undefined ? step.step_order : index,
+        tools: step.tools || ['web_search_preview'],
+        tool_choice: (step.tool_choice || 'auto') as 'auto' | 'required' | 'none',
       }));
     }
 
@@ -794,19 +800,56 @@ class WorkflowsController {
       console.log('[Workflow Generation] OpenAI client initialized');
 
       // Generate workflow configuration
-      const workflowPrompt = `You are an expert at creating AI-powered lead magnets. Based on this description: "${description}", generate a complete lead magnet configuration.
+      const workflowPrompt = `You are an expert at creating AI-powered lead magnets. Based on this description: "${description}", generate a complete lead magnet configuration with workflow steps.
 
 Generate:
 1. Lead Magnet Name (short, catchy, 2-4 words)
 2. Lead Magnet Description (1-2 sentences explaining what it does)
-3. Research Instructions (detailed instructions for AI to generate personalized research based on form submission data. Use [field_name] to reference form fields)
+3. Workflow Steps (array of steps, each with appropriate tools and tool_choice)
+
+Available OpenAI Tools:
+- web_search / web_search_preview: For research steps that need current information from the web
+- image_generation: For steps that need to generate images
+- computer_use_preview: For steps that need to control computer interfaces (rarely needed for lead magnets)
+- file_search: For steps that need to search uploaded files
+- code_interpreter: For steps that need to execute Python code
+
+Tool Choice Options:
+- "auto": Model decides when to use tools (recommended for most steps)
+- "required": Model must use at least one tool (use when tools are essential)
+- "none": Disable tools entirely (use for HTML generation or final formatting steps)
 
 Return JSON format:
 {
   "workflow_name": "...",
   "workflow_description": "...",
-  "research_instructions": "..."
-}`;
+  "steps": [
+    {
+      "step_name": "Deep Research",
+      "step_description": "Generate comprehensive research report",
+      "model": "o3-deep-research",
+      "instructions": "Detailed instructions for AI to generate personalized research based on form submission data. Use [field_name] to reference form fields.",
+      "step_order": 0,
+      "tools": ["web_search_preview"],
+      "tool_choice": "auto"
+    },
+    {
+      "step_name": "HTML Rewrite",
+      "step_description": "Rewrite content into styled HTML matching template",
+      "model": "gpt-5",
+      "instructions": "Rewrite the research content into styled HTML matching the provided template. Ensure the output is complete, valid HTML that matches the template's design and structure.",
+      "step_order": 1,
+      "tools": [],
+      "tool_choice": "none"
+    }
+  ]
+}
+
+Guidelines for selecting tools:
+- Research/analysis steps: Use web_search or web_search_preview with tool_choice "auto"
+- HTML generation/formatting steps: Use empty tools array [] with tool_choice "none"
+- Steps requiring images: Consider image_generation with tool_choice "auto"
+- Most steps should use tool_choice "auto" unless tools are absolutely required or should be disabled`;
 
       console.log('[Workflow Generation] Calling OpenAI for workflow generation...');
       const workflowStartTime = Date.now();
@@ -871,16 +914,84 @@ Return JSON format:
       }
 
       const workflowContent = ('output_text' in workflowCompletion ? workflowCompletion.output_text : workflowCompletion.choices?.[0]?.message?.content) || '';
-      let workflowData = {
+      let workflowData: any = {
         workflow_name: 'Generated Lead Magnet',
         workflow_description: description,
-        research_instructions: `Generate a personalized report based on form submission data. Use [field_name] to reference form fields.`,
+        steps: [
+          {
+            step_name: 'Deep Research',
+            step_description: 'Generate comprehensive research report',
+            model: 'o3-deep-research',
+            instructions: `Generate a personalized report based on form submission data. Use [field_name] to reference form fields.`,
+            step_order: 0,
+            tools: ['web_search_preview'],
+            tool_choice: 'auto',
+          },
+          {
+            step_name: 'HTML Rewrite',
+            step_description: 'Rewrite content into styled HTML matching template',
+            model: 'gpt-5',
+            instructions: 'Rewrite the research content into styled HTML matching the provided template. Ensure the output is complete, valid HTML that matches the template\'s design and structure.',
+            step_order: 1,
+            tools: [],
+            tool_choice: 'none',
+          },
+        ],
       };
 
       try {
         const jsonMatch = workflowContent.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
-          workflowData = JSON.parse(jsonMatch[0]);
+          const parsed = JSON.parse(jsonMatch[0]);
+          // If parsed data has steps, use it; otherwise fall back to legacy format
+          if (parsed.steps && Array.isArray(parsed.steps) && parsed.steps.length > 0) {
+            workflowData = {
+              workflow_name: parsed.workflow_name || workflowData.workflow_name,
+              workflow_description: parsed.workflow_description || workflowData.workflow_description,
+              steps: parsed.steps.map((step: any, index: number) => ({
+                step_name: step.step_name || `Step ${index + 1}`,
+                step_description: step.step_description || '',
+                model: step.model || (index === 0 ? 'o3-deep-research' : 'gpt-5'),
+                instructions: step.instructions || '',
+                step_order: step.step_order !== undefined ? step.step_order : index,
+                tools: step.tools || (index === 0 ? ['web_search_preview'] : []),
+                tool_choice: step.tool_choice || (index === 0 ? 'auto' : 'none'),
+              })),
+            };
+          } else if (parsed.research_instructions) {
+            // Legacy format - convert to steps
+            workflowData = {
+              workflow_name: parsed.workflow_name || workflowData.workflow_name,
+              workflow_description: parsed.workflow_description || workflowData.workflow_description,
+              steps: [
+                {
+                  step_name: 'Deep Research',
+                  step_description: 'Generate comprehensive research report',
+                  model: 'o3-deep-research',
+                  instructions: parsed.research_instructions,
+                  step_order: 0,
+                  tools: ['web_search_preview'],
+                  tool_choice: 'auto',
+                },
+                {
+                  step_name: 'HTML Rewrite',
+                  step_description: 'Rewrite content into styled HTML matching template',
+                  model: 'gpt-5',
+                  instructions: 'Rewrite the research content into styled HTML matching the provided template. Ensure the output is complete, valid HTML that matches the template\'s design and structure.',
+                  step_order: 1,
+                  tools: [],
+                  tool_choice: 'none',
+                },
+              ],
+            };
+          } else {
+            // Partial update - merge with defaults
+            workflowData = {
+              ...workflowData,
+              workflow_name: parsed.workflow_name || workflowData.workflow_name,
+              workflow_description: parsed.workflow_description || workflowData.workflow_description,
+            };
+          }
         }
       } catch (e) {
         console.warn('[Workflow Generation] Failed to parse workflow JSON, using defaults', e);
@@ -1195,7 +1306,9 @@ The public_slug should be URL-friendly (lowercase, hyphens only, no spaces).`;
         workflow: {
           workflow_name: workflowData.workflow_name,
           workflow_description: workflowData.workflow_description,
-          research_instructions: workflowData.research_instructions,
+          steps: (workflowData as any).steps, // Return steps array instead of research_instructions
+          // Keep research_instructions for backward compatibility if steps not present
+          research_instructions: (workflowData as any).research_instructions || ((workflowData as any).steps && (workflowData as any).steps.length > 0 ? (workflowData as any).steps[0].instructions : ''),
         },
         template: {
           template_name: templateName,
@@ -1314,19 +1427,56 @@ The public_slug should be URL-friendly (lowercase, hyphens only, no spaces).`;
       console.log('[Workflow Generation] OpenAI client initialized');
 
       // Generate workflow configuration
-      const workflowPrompt = `You are an expert at creating AI-powered lead magnets. Based on this description: "${description}", generate a complete lead magnet configuration.
+      const workflowPrompt = `You are an expert at creating AI-powered lead magnets. Based on this description: "${description}", generate a complete lead magnet configuration with workflow steps.
 
 Generate:
 1. Lead Magnet Name (short, catchy, 2-4 words)
 2. Lead Magnet Description (1-2 sentences explaining what it does)
-3. Research Instructions (detailed instructions for AI to generate personalized research based on form submission data. Use [field_name] to reference form fields)
+3. Workflow Steps (array of steps, each with appropriate tools and tool_choice)
+
+Available OpenAI Tools:
+- web_search / web_search_preview: For research steps that need current information from the web
+- image_generation: For steps that need to generate images
+- computer_use_preview: For steps that need to control computer interfaces (rarely needed for lead magnets)
+- file_search: For steps that need to search uploaded files
+- code_interpreter: For steps that need to execute Python code
+
+Tool Choice Options:
+- "auto": Model decides when to use tools (recommended for most steps)
+- "required": Model must use at least one tool (use when tools are essential)
+- "none": Disable tools entirely (use for HTML generation or final formatting steps)
 
 Return JSON format:
 {
   "workflow_name": "...",
   "workflow_description": "...",
-  "research_instructions": "..."
-}`;
+  "steps": [
+    {
+      "step_name": "Deep Research",
+      "step_description": "Generate comprehensive research report",
+      "model": "o3-deep-research",
+      "instructions": "Detailed instructions for AI to generate personalized research based on form submission data. Use [field_name] to reference form fields.",
+      "step_order": 0,
+      "tools": ["web_search_preview"],
+      "tool_choice": "auto"
+    },
+    {
+      "step_name": "HTML Rewrite",
+      "step_description": "Rewrite content into styled HTML matching template",
+      "model": "gpt-5",
+      "instructions": "Rewrite the research content into styled HTML matching the provided template. Ensure the output is complete, valid HTML that matches the template's design and structure.",
+      "step_order": 1,
+      "tools": [],
+      "tool_choice": "none"
+    }
+  ]
+}
+
+Guidelines for selecting tools:
+- Research/analysis steps: Use web_search or web_search_preview with tool_choice "auto"
+- HTML generation/formatting steps: Use empty tools array [] with tool_choice "none"
+- Steps requiring images: Consider image_generation with tool_choice "auto"
+- Most steps should use tool_choice "auto" unless tools are absolutely required or should be disabled`;
 
       console.log('[Workflow Generation] Calling OpenAI for workflow generation...');
       const workflowStartTime = Date.now();
@@ -1397,16 +1547,84 @@ Return JSON format:
 
       // Handle both response formats
       const workflowContent = ('output_text' in workflowCompletion ? workflowCompletion.output_text : workflowCompletion.choices?.[0]?.message?.content) || '';
-      let workflowData = {
+      let workflowData: any = {
         workflow_name: 'Generated Lead Magnet',
         workflow_description: description,
-        research_instructions: `Generate a personalized report based on form submission data. Use [field_name] to reference form fields.`,
+        steps: [
+          {
+            step_name: 'Deep Research',
+            step_description: 'Generate comprehensive research report',
+            model: 'o3-deep-research',
+            instructions: `Generate a personalized report based on form submission data. Use [field_name] to reference form fields.`,
+            step_order: 0,
+            tools: ['web_search_preview'],
+            tool_choice: 'auto',
+          },
+          {
+            step_name: 'HTML Rewrite',
+            step_description: 'Rewrite content into styled HTML matching template',
+            model: 'gpt-5',
+            instructions: 'Rewrite the research content into styled HTML matching the provided template. Ensure the output is complete, valid HTML that matches the template\'s design and structure.',
+            step_order: 1,
+            tools: [],
+            tool_choice: 'none',
+          },
+        ],
       };
 
       try {
         const jsonMatch = workflowContent.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
-          workflowData = JSON.parse(jsonMatch[0]);
+          const parsed = JSON.parse(jsonMatch[0]);
+          // If parsed data has steps, use it; otherwise fall back to legacy format
+          if (parsed.steps && Array.isArray(parsed.steps) && parsed.steps.length > 0) {
+            workflowData = {
+              workflow_name: parsed.workflow_name || workflowData.workflow_name,
+              workflow_description: parsed.workflow_description || workflowData.workflow_description,
+              steps: parsed.steps.map((step: any, index: number) => ({
+                step_name: step.step_name || `Step ${index + 1}`,
+                step_description: step.step_description || '',
+                model: step.model || (index === 0 ? 'o3-deep-research' : 'gpt-5'),
+                instructions: step.instructions || '',
+                step_order: step.step_order !== undefined ? step.step_order : index,
+                tools: step.tools || (index === 0 ? ['web_search_preview'] : []),
+                tool_choice: step.tool_choice || (index === 0 ? 'auto' : 'none'),
+              })),
+            };
+          } else if (parsed.research_instructions) {
+            // Legacy format - convert to steps
+            workflowData = {
+              workflow_name: parsed.workflow_name || workflowData.workflow_name,
+              workflow_description: parsed.workflow_description || workflowData.workflow_description,
+              steps: [
+                {
+                  step_name: 'Deep Research',
+                  step_description: 'Generate comprehensive research report',
+                  model: 'o3-deep-research',
+                  instructions: parsed.research_instructions,
+                  step_order: 0,
+                  tools: ['web_search_preview'],
+                  tool_choice: 'auto',
+                },
+                {
+                  step_name: 'HTML Rewrite',
+                  step_description: 'Rewrite content into styled HTML matching template',
+                  model: 'gpt-5',
+                  instructions: 'Rewrite the research content into styled HTML matching the provided template. Ensure the output is complete, valid HTML that matches the template\'s design and structure.',
+                  step_order: 1,
+                  tools: [],
+                  tool_choice: 'none',
+                },
+              ],
+            };
+          } else {
+            // Partial update - merge with defaults
+            workflowData = {
+              ...workflowData,
+              workflow_name: parsed.workflow_name || workflowData.workflow_name,
+              workflow_description: parsed.workflow_description || workflowData.workflow_description,
+            };
+          }
         }
       } catch (e) {
         console.warn('[Workflow Generation] Failed to parse workflow JSON, using defaults', e);

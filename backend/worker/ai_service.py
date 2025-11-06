@@ -61,20 +61,35 @@ class AIService:
         instructions: str,
         context: str,
         previous_context: str = "",
+        tools: Optional[list] = None,
+        tool_choice: str = "auto",
     ) -> Tuple[str, Dict, Dict, Dict]:
         """
-        Generate a report using OpenAI with web search preview enabled.
+        Generate a report using OpenAI with configurable tools.
         
         Args:
             model: OpenAI model to use (e.g., 'gpt-5')
             instructions: System instructions for the AI
             context: User context/data to generate report from
             previous_context: Optional context from previous steps (accumulated)
+            tools: List of tool dictionaries (e.g., [{"type": "web_search_preview"}])
+            tool_choice: How model should use tools - "auto", "required", or "none"
             
         Returns:
             Tuple of (generated report content, usage info dict, request details dict, response details dict)
         """
-        logger.info(f"Generating report with model: {model} (with web search preview)")
+        # Default to web_search_preview if no tools provided (backward compatibility)
+        if tools is None or len(tools) == 0:
+            tools = [{"type": "web_search_preview"}]
+        
+        # Check if computer_use_preview is in tools (requires truncation="auto")
+        has_computer_use = any(
+            (isinstance(t, dict) and t.get("type") == "computer_use_preview") or 
+            (isinstance(t, str) and t == "computer_use_preview")
+            for t in tools
+        )
+        
+        logger.info(f"Generating report with model: {model}, tools: {tools}, tool_choice: {tool_choice}, has_computer_use: {has_computer_use}")
         
         # Only use reasoning_level for o3 models (requires minimum "medium")
         is_o3_model = model.startswith('o3') or 'o3-deep-research' in model.lower()
@@ -91,8 +106,17 @@ class AIService:
                 "model": model,
                 "instructions": instructions,
                 "input": input_text,
-                "tools": [{"type": "web_search_preview"}],
+                "tools": tools,
             }
+            
+            # Add truncation="auto" if computer_use_preview is used
+            if has_computer_use:
+                params["truncation"] = "auto"
+                logger.info("Added truncation='auto' for computer_use_preview tool")
+            
+            # Add tool_choice if not "none" (none means no tools, so don't include the parameter)
+            if tool_choice != "none":
+                params["tool_choice"] = tool_choice
             
             # Add reasoning_level only for o3 models
             if is_o3_model:
@@ -107,6 +131,8 @@ class AIService:
                 'previous_context': previous_context,  # Contains ALL previous step outputs
                 'context': context,  # Current step context (form data for step 0, empty for others)
                 'tools': params.get('tools', []),
+                'tool_choice': params.get('tool_choice', 'auto'),
+                'truncation': params.get('truncation'),
                 'reasoning_level': params.get('reasoning_level'),
             }
             
@@ -181,8 +207,13 @@ class AIService:
                         "model": model,
                         "instructions": instructions,
                         "input": f"Generate a report based on the following information:\n\n{full_context}",
-                        "tools": [{"type": "web_search_preview"}],
+                        "tools": tools,
                     }
+                    # Add truncation if computer_use_preview is used
+                    if has_computer_use:
+                        params_no_reasoning["truncation"] = "auto"
+                    if tool_choice != "none":
+                        params_no_reasoning["tool_choice"] = tool_choice
                     response = self.client.responses.create(**params_no_reasoning)
                     report = response.output_text
                     usage = response.usage
