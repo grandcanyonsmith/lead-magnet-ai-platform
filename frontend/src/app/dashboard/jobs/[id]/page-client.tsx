@@ -476,13 +476,39 @@ export default function JobDetailClient() {
                 return (
                   <div key={index} className="border border-gray-200 rounded-lg p-4">
                     <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center space-x-3">
+                      <div className="flex items-center space-x-3 flex-wrap">
                         <span className={`px-2 py-1 text-xs font-medium rounded ${stepTypeColor}`}>
                           Step {step.step_order}
                         </span>
                         <h3 className="text-sm font-semibold text-gray-900">{step.step_name}</h3>
                         {step.model && (
                           <span className="text-xs text-gray-500">({step.model})</span>
+                        )}
+                        {/* Display tools and tool_choice */}
+                        {step.input && step.input.tools && Array.isArray(step.input.tools) && step.input.tools.length > 0 && (
+                          <div className="flex items-center space-x-2">
+                            <span className="text-xs text-gray-500">Tools:</span>
+                            <div className="flex flex-wrap gap-1">
+                              {step.input.tools.map((tool: any, toolIdx: number) => {
+                                const toolName = typeof tool === 'string' ? tool : tool.type || 'unknown'
+                                return (
+                                  <span key={toolIdx} className="px-1.5 py-0.5 text-xs bg-blue-50 text-blue-700 rounded border border-blue-200">
+                                    {toolName}
+                                  </span>
+                                )
+                              })}
+                            </div>
+                            {step.input.tool_choice && step.input.tool_choice !== 'auto' && (
+                              <span className="text-xs text-gray-500">
+                                ({step.input.tool_choice})
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {step.input && step.input.tool_choice && step.input.tool_choice === 'none' && (
+                          <span className="px-1.5 py-0.5 text-xs bg-gray-50 text-gray-600 rounded border border-gray-200">
+                            No tools
+                          </span>
                         )}
                       </div>
                       <div className="flex items-center space-x-2 text-xs text-gray-500">
