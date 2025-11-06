@@ -18,7 +18,7 @@ const USER_SETTINGS_TABLE = process.env.USER_SETTINGS_TABLE!;
 const USAGE_RECORDS_TABLE = process.env.USAGE_RECORDS_TABLE || 'leadmagnet-usage-records';
 const OPENAI_SECRET_NAME = process.env.OPENAI_SECRET_NAME || 'leadmagnet/openai-api-key';
 
-const sfnClient = new SFNClient({ region: process.env.AWS_REGION });
+const sfnClient = new SFNClient({ region: process.env.AWS_REGION || 'us-east-1' });
 const secretsClient = new SecretsManagerClient({ region: process.env.AWS_REGION || 'us-east-1' });
 
 async function getOpenAIClient(): Promise<OpenAI> {
