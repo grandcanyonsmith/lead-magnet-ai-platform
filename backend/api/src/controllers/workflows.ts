@@ -402,11 +402,50 @@ class WorkflowsController {
 
     const data = validate(createWorkflowSchema, body);
 
+    // Auto-migrate legacy workflows to steps format if needed
+    let workflowData = { ...data };
+    if (!workflowData.steps || workflowData.steps.length === 0) {
+      // Migrate legacy format to steps
+      const steps = [];
+      
+      if (workflowData.research_enabled && workflowData.ai_instructions) {
+        steps.push({
+          step_name: 'Deep Research',
+          step_description: 'Generate comprehensive research report',
+          model: workflowData.ai_model || 'o3-deep-research',
+          instructions: workflowData.ai_instructions,
+          step_order: 0,
+        });
+      }
+      
+      if (workflowData.html_enabled) {
+        steps.push({
+          step_name: 'HTML Rewrite',
+          step_description: 'Rewrite content into styled HTML matching template',
+          model: workflowData.rewrite_model || 'gpt-5',
+          instructions: workflowData.html_enabled 
+            ? 'Rewrite the research content into styled HTML matching the provided template. Ensure the output is complete, valid HTML that matches the template\'s design and structure.'
+            : 'Generate HTML output',
+          step_order: steps.length,
+        });
+      }
+      
+      if (steps.length > 0) {
+        workflowData.steps = steps;
+      }
+    } else {
+      // Ensure step_order is set for each step
+      workflowData.steps = workflowData.steps.map((step: any, index: number) => ({
+        ...step,
+        step_order: step.step_order !== undefined ? step.step_order : index,
+      }));
+    }
+
     const workflowId = `wf_${ulid()}`;
     const workflow = {
       workflow_id: workflowId,
       tenant_id: tenantId,
-      ...data,
+      ...workflowData,
       status: 'draft',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -474,10 +513,53 @@ class WorkflowsController {
       throw new ApiError('You don\'t have permission to access this lead magnet', 403);
     }
 
-    const data = validate(updateWorkflowSchema, body);
+    const data = validate(updateWorkflowSchema, body) as any;
+
+    // Auto-migrate legacy workflows to steps format if updating legacy fields
+    let updateData: any = { ...data };
+    const hasLegacyFields = data.ai_instructions !== undefined || data.research_enabled !== undefined || data.html_enabled !== undefined;
+    const hasSteps = data.steps !== undefined && data.steps.length > 0;
+    
+    // If updating legacy fields and workflow doesn't have steps yet, migrate
+    if (hasLegacyFields && (!existing.steps || existing.steps.length === 0) && !hasSteps) {
+      const steps = [];
+      const researchEnabled = data.research_enabled !== undefined ? data.research_enabled : existing.research_enabled;
+      const htmlEnabled = data.html_enabled !== undefined ? data.html_enabled : existing.html_enabled;
+      const aiInstructions = data.ai_instructions || existing.ai_instructions;
+      
+      if (researchEnabled && aiInstructions) {
+        steps.push({
+          step_name: 'Deep Research',
+          step_description: 'Generate comprehensive research report',
+          model: data.ai_model || existing.ai_model || 'o3-deep-research',
+          instructions: aiInstructions,
+          step_order: 0,
+        });
+      }
+      
+      if (htmlEnabled) {
+        steps.push({
+          step_name: 'HTML Rewrite',
+          step_description: 'Rewrite content into styled HTML matching template',
+          model: data.rewrite_model || existing.rewrite_model || 'gpt-5',
+          instructions: 'Rewrite the research content into styled HTML matching the provided template. Ensure the output is complete, valid HTML that matches the template\'s design and structure.',
+          step_order: steps.length,
+        });
+      }
+      
+      if (steps.length > 0) {
+        updateData.steps = steps;
+      }
+    } else if (hasSteps) {
+      // Ensure step_order is set for each step
+      updateData.steps = data.steps.map((step: any, index: number) => ({
+        ...step,
+        step_order: step.step_order !== undefined ? step.step_order : index,
+      }));
+    }
 
     const updated = await db.update(WORKFLOWS_TABLE!, { workflow_id: workflowId }, {
-      ...data,
+      ...updateData,
       updated_at: new Date().toISOString(),
     });
 

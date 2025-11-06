@@ -47,27 +47,28 @@ class ApiClient {
       (response) => response,
       (error) => {
         if (error.response?.status === 401) {
-          // Log the error but don't clear tokens automatically
-          // Let the authentication check in the layout handle token clearing
+          // Log the error for debugging
+          const errorData = error.response?.data || {}
+          const errorMessage = typeof errorData === 'string' ? errorData : JSON.stringify(errorData)
+          
           console.warn('API returned 401 Unauthorized:', {
             url: error.config?.url,
-            message: error.response?.data?.message || error.message,
-            hasToken: !!getAuthToken()
+            message: errorMessage,
+            hasToken: !!getAuthToken(),
+            // Check if this is an API Gateway rejection (no response body or generic message)
+            isApiGatewayRejection: !error.response?.data || errorMessage.includes('Unauthorized')
           })
           
-          // Only clear tokens if explicitly an auth error AND we have a clear error message
-          const errorData = error.response?.data || {}
-          const errorMessage = typeof errorData === 'string' ? errorData.toLowerCase() : JSON.stringify(errorData).toLowerCase()
+          // API Gateway JWT authorizer rejects requests before they reach Lambda
+          // This happens when token is missing, expired, or invalid
+          // Always clear tokens and redirect on 401 from API Gateway
+          const isApiGatewayRejection = !error.response?.data || 
+                                       errorMessage.includes('Unauthorized') ||
+                                       errorMessage.includes('unauthorized') ||
+                                       errorMessage.includes('Invalid UserPoolId')
           
-          // Only clear tokens if it's a clear authentication error, not just any 401
-          // API Gateway might return 401 for various reasons
-          const isAuthError = errorMessage.includes('invalid token') || 
-                             errorMessage.includes('token expired') || 
-                             errorMessage.includes('jwt') ||
-                             (errorMessage.includes('unauthorized') && errorMessage.includes('authentication'))
-          
-          if (isAuthError) {
-            console.warn('Authentication token invalid, clearing tokens')
+          if (isApiGatewayRejection || error.response?.status === 401) {
+            console.warn('Authentication failed (token expired or invalid), clearing tokens and redirecting to login')
             
             // Clear all auth tokens (both custom and Cognito format)
             localStorage.removeItem('access_token')
