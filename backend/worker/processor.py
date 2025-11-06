@@ -64,114 +64,227 @@ class JobProcessor:
             if not submission:
                 raise ValueError(f"Submission {job['submission_id']} not found")
             
-            # Check workflow settings
-            research_enabled = workflow.get('research_enabled', True)
-            html_enabled = workflow.get('html_enabled', True)
+            # Check if workflow uses new steps format or legacy format
+            steps = workflow.get('steps', [])
+            use_steps_format = steps and len(steps) > 0
             
-            logger.info(f"Workflow settings: research_enabled={research_enabled}, html_enabled={html_enabled}")
-            
-            # Step 1: Generate AI report (if research enabled)
-            report_content = ""
-            report_artifact_id = None
-            
-            if research_enabled:
-                logger.info("Step 1: Generating AI report")
-                try:
-                    report_content, usage_info = self.generate_report(workflow, submission)
-                    # Store usage record
-                    self.store_usage_record(job['tenant_id'], job_id, usage_info)
-                except Exception as e:
-                    raise Exception(f"Failed to generate AI report: {str(e)}") from e
+            if use_steps_format:
+                logger.info(f"Processing workflow with {len(steps)} steps")
+                # New multi-step workflow processing
+                accumulated_context = ""
+                step_outputs = []
+                submission_data = submission.get('submission_data', {})
                 
-                # Store report as artifact
-                report_artifact_id = self.store_artifact(
-                    tenant_id=job['tenant_id'],
-                    job_id=job_id,
-                    artifact_type='report_markdown',
-                    content=report_content,
-                    filename='report.md'
-                )
-            else:
-                logger.info("Step 1: Research disabled, skipping report generation")
-            
-            # Step 2: Get and prepare template (only if HTML enabled)
-            template = None
-            if html_enabled:
-                logger.info("Step 2: Preparing HTML template")
-                try:
-                    template_id = workflow.get('template_id')
-                    if not template_id:
-                        raise ValueError("Template ID is required when HTML generation is enabled")
+                # Format initial submission data as context
+                initial_context = "\n".join([
+                    f"{key}: {value}"
+                    for key, value in submission_data.items()
+                ])
+                
+                # Sort steps by step_order if present
+                sorted_steps = sorted(steps, key=lambda s: s.get('step_order', 0))
+                
+                # Process each step
+                for step_index, step in enumerate(sorted_steps):
+                    step_name = step.get('step_name', f'Step {step_index + 1}')
+                    step_model = step.get('model', 'gpt-5')
+                    step_instructions = step.get('instructions', '')
                     
-                    template = self.db.get_template(
-                        template_id,
-                        workflow.get('template_version', 0)
-                    )
-                    if not template:
-                        raise ValueError(f"Template {template_id} (version {workflow.get('template_version', 0)}) not found. Please check that the template exists and is published.")
+                    logger.info(f"Processing step {step_index + 1}/{len(sorted_steps)}: {step_name}")
                     
-                    # Check if template is published
-                    if not template.get('is_published', False):
-                        raise ValueError(f"Template {template_id} (version {workflow.get('template_version', 0)}) exists but is not published. Please publish the template before using it in a workflow.")
-                except ValueError:
-                    raise
-                except Exception as e:
-                    raise Exception(f"Failed to load template: {str(e)}") from e
-            else:
-                logger.info("Step 2: HTML disabled, skipping template loading")
-            
-            # Step 3: Generate final content (HTML or markdown/text)
-            final_content = ""
-            final_artifact_type = ""
-            final_filename = ""
-            
-            if html_enabled:
-                # Generate HTML document
-                logger.info("Step 3: Generating styled HTML document")
-                try:
-                    if research_enabled:
-                        # Use research content + template
-                        final_content, html_usage_info = self.ai_service.generate_styled_html(
-                            research_content=report_content,
-                            template_html=template['html_content'],
-                            template_style=template.get('style_description', ''),
-                            submission_data=submission.get('submission_data', {}),
-                            model=workflow.get('rewrite_model', 'gpt-5')
+                    try:
+                        # Generate step output with accumulated context
+                        step_output, usage_info = self.ai_service.generate_report(
+                            model=step_model,
+                            instructions=step_instructions,
+                            context=initial_context if step_index == 0 else "",
+                            previous_context=accumulated_context
                         )
+                        
                         # Store usage record
-                        self.store_usage_record(job['tenant_id'], job_id, html_usage_info)
+                        self.store_usage_record(job['tenant_id'], job_id, usage_info)
+                        
+                        # Store step output as artifact
+                        step_artifact_id = self.store_artifact(
+                            tenant_id=job['tenant_id'],
+                            job_id=job_id,
+                            artifact_type='step_output',
+                            content=step_output,
+                            filename=f'step_{step_index + 1}_{step_name.lower().replace(" ", "_")}.md'
+                        )
+                        step_outputs.append({
+                            'step_name': step_name,
+                            'step_index': step_index,
+                            'output': step_output,
+                            'artifact_id': step_artifact_id
+                        })
+                        
+                        # Accumulate context for next step
+                        accumulated_context += f"\n\n--- Step {step_index + 1}: {step_name} ---\n{step_output}"
+                        
+                    except Exception as e:
+                        raise Exception(f"Failed to process step '{step_name}': {str(e)}") from e
+                
+                # Final step: Check if last step should generate HTML
+                template = None
+                template_id = workflow.get('template_id')
+                if template_id:
+                    try:
+                        template = self.db.get_template(
+                            template_id,
+                            workflow.get('template_version', 0)
+                        )
+                        if not template:
+                            logger.warning(f"Template {template_id} not found, skipping HTML generation")
+                        elif not template.get('is_published', False):
+                            logger.warning(f"Template {template_id} not published, skipping HTML generation")
+                    except Exception as e:
+                        logger.warning(f"Failed to load template: {e}, skipping HTML generation")
+                
+                # Generate final content
+                final_content = ""
+                final_artifact_type = ""
+                final_filename = ""
+                
+                if template and template.get('is_published'):
+                    # Last step output should be HTML-ready, but if not, generate HTML
+                    last_step_output = step_outputs[-1]['output'] if step_outputs else ""
+                    
+                    # Check if last step output looks like HTML
+                    if last_step_output.strip().startswith('<'):
+                        final_content = last_step_output
                     else:
-                        # Generate HTML directly from submission data + template
-                        final_content, html_usage_info = self.ai_service.generate_html_from_submission(
-                            submission_data=submission.get('submission_data', {}),
+                        # Generate HTML from accumulated context
+                        logger.info("Generating HTML from accumulated step outputs")
+                        final_content, html_usage_info = self.ai_service.generate_styled_html(
+                            research_content=accumulated_context,
                             template_html=template['html_content'],
                             template_style=template.get('style_description', ''),
-                            ai_instructions=workflow.get('ai_instructions', ''),
-                            model=workflow.get('rewrite_model', 'gpt-5')
+                            submission_data=submission_data,
+                            model=sorted_steps[-1].get('model', 'gpt-5') if sorted_steps else 'gpt-5'
                         )
-                        # Store usage record
                         self.store_usage_record(job['tenant_id'], job_id, html_usage_info)
-                    logger.info("Styled HTML generated successfully")
+                    
                     final_artifact_type = 'html_final'
                     final_filename = 'final.html'
-                except Exception as e:
-                    raise Exception(f"Failed to generate styled HTML: {str(e)}") from e
-            else:
-                # Store markdown/text content
-                logger.info("Step 3: Generating markdown/text content")
-                if research_enabled:
-                    # Use research content
-                    final_content = report_content
+                else:
+                    # Use last step output as final content
+                    final_content = step_outputs[-1]['output'] if step_outputs else accumulated_context
                     final_artifact_type = 'markdown_final'
                     final_filename = 'final.md'
-                else:
-                    # Generate simple content from submission data
-                    final_content = self.generate_content_from_submission(
-                        workflow,
-                        submission
+                
+                report_artifact_id = step_outputs[0]['artifact_id'] if step_outputs else None
+                
+            else:
+                # Legacy workflow processing
+                logger.info("Processing legacy workflow format")
+                research_enabled = workflow.get('research_enabled', True)
+                html_enabled = workflow.get('html_enabled', True)
+                
+                logger.info(f"Workflow settings: research_enabled={research_enabled}, html_enabled={html_enabled}")
+                
+                # Step 1: Generate AI report (if research enabled)
+                report_content = ""
+                report_artifact_id = None
+                
+                if research_enabled:
+                    logger.info("Step 1: Generating AI report")
+                    try:
+                        report_content, usage_info = self.generate_report(workflow, submission)
+                        # Store usage record
+                        self.store_usage_record(job['tenant_id'], job_id, usage_info)
+                    except Exception as e:
+                        raise Exception(f"Failed to generate AI report: {str(e)}") from e
+                    
+                    # Store report as artifact
+                    report_artifact_id = self.store_artifact(
+                        tenant_id=job['tenant_id'],
+                        job_id=job_id,
+                        artifact_type='report_markdown',
+                        content=report_content,
+                        filename='report.md'
                     )
-                    final_artifact_type = 'text_final'
-                    final_filename = 'final.txt'
+                else:
+                    logger.info("Step 1: Research disabled, skipping report generation")
+                
+                # Step 2: Get and prepare template (only if HTML enabled)
+                template = None
+                if html_enabled:
+                    logger.info("Step 2: Preparing HTML template")
+                    try:
+                        template_id = workflow.get('template_id')
+                        if not template_id:
+                            raise ValueError("Template ID is required when HTML generation is enabled")
+                        
+                        template = self.db.get_template(
+                            template_id,
+                            workflow.get('template_version', 0)
+                        )
+                        if not template:
+                            raise ValueError(f"Template {template_id} (version {workflow.get('template_version', 0)}) not found. Please check that the template exists and is published.")
+                        
+                        # Check if template is published
+                        if not template.get('is_published', False):
+                            raise ValueError(f"Template {template_id} (version {workflow.get('template_version', 0)}) exists but is not published. Please publish the template before using it in a workflow.")
+                    except ValueError:
+                        raise
+                    except Exception as e:
+                        raise Exception(f"Failed to load template: {str(e)}") from e
+                else:
+                    logger.info("Step 2: HTML disabled, skipping template loading")
+                
+                # Step 3: Generate final content (HTML or markdown/text)
+                final_content = ""
+                final_artifact_type = ""
+                final_filename = ""
+                
+                if html_enabled:
+                    # Generate HTML document
+                    logger.info("Step 3: Generating styled HTML document")
+                    try:
+                        if research_enabled:
+                            # Use research content + template
+                            final_content, html_usage_info = self.ai_service.generate_styled_html(
+                                research_content=report_content,
+                                template_html=template['html_content'],
+                                template_style=template.get('style_description', ''),
+                                submission_data=submission.get('submission_data', {}),
+                                model=workflow.get('rewrite_model', 'gpt-5')
+                            )
+                            # Store usage record
+                            self.store_usage_record(job['tenant_id'], job_id, html_usage_info)
+                        else:
+                            # Generate HTML directly from submission data + template
+                            final_content, html_usage_info = self.ai_service.generate_html_from_submission(
+                                submission_data=submission.get('submission_data', {}),
+                                template_html=template['html_content'],
+                                template_style=template.get('style_description', ''),
+                                ai_instructions=workflow.get('ai_instructions', ''),
+                                model=workflow.get('rewrite_model', 'gpt-5')
+                            )
+                            # Store usage record
+                            self.store_usage_record(job['tenant_id'], job_id, html_usage_info)
+                        logger.info("Styled HTML generated successfully")
+                        final_artifact_type = 'html_final'
+                        final_filename = 'final.html'
+                    except Exception as e:
+                        raise Exception(f"Failed to generate styled HTML: {str(e)}") from e
+                else:
+                    # Store markdown/text content
+                    logger.info("Step 3: Generating markdown/text content")
+                    if research_enabled:
+                        # Use research content
+                        final_content = report_content
+                        final_artifact_type = 'markdown_final'
+                        final_filename = 'final.md'
+                    else:
+                        # Generate simple content from submission data
+                        final_content = self.generate_content_from_submission(
+                            workflow,
+                            submission
+                        )
+                        final_artifact_type = 'text_final'
+                        final_filename = 'final.txt'
             
             # Step 4: Store final artifact
             try:

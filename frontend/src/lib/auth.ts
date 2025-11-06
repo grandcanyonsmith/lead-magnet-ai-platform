@@ -11,17 +11,32 @@ let clientId: string | null = null
 
 const getUserPool = () => {
   if (!userPool) {
+    const userPoolId = (process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID || '').trim()
+    const clientIdValue = (process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID || '').trim()
+    
+    if (!userPoolId || !clientIdValue) {
+      const errorMsg = `Cognito configuration missing. UserPoolId: ${userPoolId ? 'set' : 'missing'}, ClientId: ${clientIdValue ? 'set' : 'missing'}`
+      console.error(errorMsg)
+      console.error('Environment variables:', {
+        NEXT_PUBLIC_COGNITO_USER_POOL_ID: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID,
+        NEXT_PUBLIC_COGNITO_CLIENT_ID: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID,
+      })
+      throw new Error(errorMsg)
+    }
+    
+    // Validate UserPoolId format (should be like us-east-1_XXXXXXXXX)
+    if (!/^[\w-]+_[a-zA-Z0-9]+$/.test(userPoolId)) {
+      const errorMsg = `Invalid UserPoolId format: "${userPoolId}". Expected format: region_poolId (e.g., us-east-1_XXXXXXXXX)`
+      console.error(errorMsg)
+      throw new Error(errorMsg)
+    }
+    
     const poolData = {
-      UserPoolId: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID || '',
-      ClientId: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID || '',
+      UserPoolId: userPoolId,
+      ClientId: clientIdValue,
     }
     
-    if (!poolData.UserPoolId || !poolData.ClientId) {
-      console.warn('Cognito credentials not configured')
-      throw new Error('Cognito configuration missing')
-    }
-    
-    clientId = poolData.ClientId
+    clientId = clientIdValue
     userPool = new CognitoUserPool(poolData)
   }
   return userPool
@@ -210,22 +225,42 @@ export const isAuthenticated = async (): Promise<boolean> => {
       return false
     }
 
-    // If we have tokens, consider authenticated
-    // We'll let the API handle token expiration/refresh
-    // Try to get session but don't fail if it's expired
+    // Try to get session to verify token is still valid
+    // This will fail if token is expired
     try {
       const session = await getSession()
-      if (session) {
-        return true
+      if (!session) {
+        console.warn('No session found, clearing authentication')
+        signOut()
+        return false
       }
-    } catch (sessionError) {
-      // Session might be expired but tokens exist - still consider authenticated
-      // The API will handle token refresh if needed
-      console.log('Session check failed but tokens exist:', sessionError)
+      
+      // Check if session is valid
+      if (session.isValid()) {
+        // Also verify token hasn't expired
+        const idTokenObj = session.getIdToken()
+        const exp = idTokenObj.getExpiration()
+        const now = Math.floor(Date.now() / 1000)
+        if (exp > now) {
+          return true
+        }
+        // Token expired
+        console.warn('Token expired, clearing authentication')
+        signOut()
+        return false
+      }
+      
+      // Session is not valid
+      console.warn('Session invalid, clearing authentication')
+      signOut()
+      return false
+    } catch (sessionError: any) {
+      // Session check failed - token likely expired or invalid
+      console.warn('Session check failed, token may be expired:', sessionError?.message)
+      // Clear tokens if session check fails
+      signOut()
+      return false
     }
-    
-    // If tokens exist, we're authenticated
-    return true
   } catch (error) {
     console.error('Error checking authentication:', error)
     return false

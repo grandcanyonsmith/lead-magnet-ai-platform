@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { isAuthenticated } from '@/lib/auth'
-import { FiActivity, FiCheckCircle, FiXCircle, FiClock, FiTrendingUp, FiFileText, FiLayout } from 'react-icons/fi'
+import { FiActivity, FiCheckCircle, FiXCircle, FiClock, FiTrendingUp, FiFileText } from 'react-icons/fi'
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -137,7 +137,7 @@ export default function DashboardPage() {
       {/* Quick Actions */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-8">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <a
             href="/dashboard/workflows/new"
             className="flex items-center justify-center px-4 py-3 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg hover:from-primary-700 hover:to-primary-800 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
@@ -151,13 +151,6 @@ export default function DashboardPage() {
           >
             <FiFileText className="w-5 h-5 mr-2" />
             Create Lead Capture Form
-          </a>
-          <a
-            href="/dashboard/templates/new"
-            className="flex items-center justify-center px-4 py-3 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg hover:from-primary-700 hover:to-primary-800 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
-          >
-            <FiLayout className="w-5 h-5 mr-2" />
-            Create Template
           </a>
         </div>
       </div>

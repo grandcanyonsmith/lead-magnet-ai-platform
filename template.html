@@ -5,6 +5,14 @@
   <title>Automated Background Search Report</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Automated background search report. We've gathered public information about you so you don't have to fill it out yourself.">
+  <!-- SEO & Social Meta Tags -->
+  <meta property="og:title" content="Automated Background Search Report">
+  <meta property="og:description" content="Comprehensive public information dossier generated automatically from verified sources.">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Automated Background Search Report">
+  <meta name="twitter:description" content="Comprehensive public information dossier generated automatically from verified sources.">
+  <!-- Performance Optimizations -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -38,12 +46,17 @@
       font-family:"Plus Jakarta Sans",Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;
       background:var(--grad-1);
       color:var(--text);
-      line-height:1.6;
+      font-size:16px; /* Increased base font size for better readability */
+      line-height:1.75; /* Improved line-height for better readability */
       -webkit-font-smoothing:antialiased;
       -moz-osx-font-smoothing:grayscale;
     }
-    a{color:var(--accent);text-decoration:none}
-    a:hover{text-decoration:underline}
+    /* Improved typography for better readability */
+    p, .small, div{max-width:65ch; /* Optimal reading width */ line-height:1.75}
+    h1,h2,h3,h4,h5,h6{line-height:1.2; letter-spacing:-0.02em}
+    a{color:var(--accent);text-decoration:none;transition:color .3s ease}
+    a:hover{text-decoration:underline;color:#68e5d5}
+    a:focus{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
     .container{width:100%;max-width:1200px;margin:0 auto;padding:0 20px}
     header{
       position:sticky;top:0;z-index:50;
@@ -65,8 +78,12 @@
       content:"";position:absolute;inset:3px;border-radius:9px;background:linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,0));
     }
     .brand-name{font-weight:800;letter-spacing:.2px;font-size:16px}
-    .nav a{color:var(--muted);font-weight:500}
+    .nav a{color:var(--muted);font-weight:500;transition:color .3s ease;padding:4px 0}
+    .nav a:hover{color:var(--accent)}
     .nav-links{display:flex;align-items:center;gap:20px}
+    .btn-download{background:linear-gradient(135deg, var(--accent), #68e5d5);color:#0b1020;border:none;padding:10px 18px;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;margin-left:12px;transition:all .3s ease;box-shadow:0 4px 12px rgba(18,180,181,.3);min-height:44px}
+    .btn-download:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(18,180,181,.4);opacity:0.95}
+    .btn-download:focus{outline:2px solid var(--accent);outline-offset:2px}
     .badge{
       display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;
       font-size:12px;font-weight:700;color:#0c1a16;background:linear-gradient(90deg,#12B4B5, #68e5d5);
@@ -82,94 +99,124 @@
     }
     .hero-grid{display:grid;grid-template-columns:1fr;gap:24px}
     .hero h1{
-      font-size:36px;line-height:1.1;margin:0 0 12px;font-weight:800;
+      font-size:42px;line-height:1.1;margin:0 0 16px;font-weight:800;
       letter-spacing:-.5px;
     }
-    .section{padding:30px 0}
-    .section h2{font-size:28px;margin:0 0 20px;font-weight:800;letter-spacing:-.3px}
+    .section{padding:48px 0} /* Increased section padding for better spacing */
+    .section h2{font-size:32px;margin:0 0 24px;font-weight:800;letter-spacing:-.3px; line-height:1.2}
     .section .eyebrow{
-      font-size:11px;color:var(--muted);letter-spacing:.2em;text-transform:uppercase;
-      margin-bottom:8px;font-weight:700;
+      font-size:12px;color:var(--accent);letter-spacing:.15em;text-transform:uppercase;
+      margin-bottom:10px;font-weight:700;
+      display:inline-flex;align-items:center;gap:8px;
+    }
+    .section .eyebrow::before{
+      content:"";width:4px;height:4px;background:var(--accent);border-radius:50%;
+      display:inline-block;
     }
     .divider{
-      margin:40px 0;border:0;height:1px;
-      background:linear-gradient(90deg, transparent, rgba(255,255,255,.12), transparent);
+      margin:48px 0;border:0;height:2px;
+      background:linear-gradient(90deg, transparent, rgba(18,180,181,.2), rgba(70,86,246,.2), rgba(18,180,181,.2), transparent);
     }
     .cards{display:grid;grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));gap:18px}
     .card{
-      background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
       border:1px solid var(--border);border-radius:var(--radius);
-      padding:20px;box-shadow:var(--shadow);
+      padding:28px;box-shadow:0 8px 24px rgba(0,0,0,.4), 0 2px 8px rgba(0,0,0,.2);
+      transition:transform .3s ease, box-shadow .3s ease;
     }
+    .card:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(0,0,0,.5), 0 4px 12px rgba(0,0,0,.3)}
     .two-col{display:grid;grid-template-columns:1fr 1fr;gap:18px}
     .three-col{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
     .profile-header{
-      display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center;
-      padding:24px;background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
-      border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:30px;
+      display:grid;grid-template-columns:auto 1fr;gap:24px;align-items:center;
+      padding:32px;background:linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+      border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:36px;
+      box-shadow:0 8px 24px rgba(0,0,0,.3);
     }
     .avatar{
-      width:100px;height:100px;border-radius:18px;overflow:hidden;
-      border:2px solid var(--border);background:var(--surface);
+      width:110px;height:110px;border-radius:20px;overflow:hidden;
+      border:3px solid rgba(70,86,246,.3);background:linear-gradient(135deg, var(--surface), var(--surface-2));
       display:flex;align-items:center;justify-content:center;
-      font-size:36px;font-weight:800;color:var(--primary);
+      font-size:40px;font-weight:800;color:var(--primary);
+      box-shadow:0 4px 16px rgba(70,86,246,.2);
     }
-    .profile-info h1{margin:0 0 8px;font-size:32px;font-weight:800}
-    .profile-info .subtitle{color:var(--muted);font-size:14px;margin-bottom:12px}
+    .profile-info h1{margin:0 0 12px;font-size:38px;font-weight:800; line-height:1.1}
+    .profile-info .subtitle{color:var(--muted);font-size:16px;margin-bottom:16px; line-height:1.5}
     .profile-tags{display:flex;flex-wrap:wrap;gap:8px}
     .tag{
       display:inline-flex;align-items:center;gap:6px;
-      background:rgba(18,180,181,.12);color:#a9fff1;
-      border:1px solid rgba(18,180,181,.35);padding:6px 12px;
-      border-radius:999px;font-size:12px;font-weight:600;
+      background:linear-gradient(135deg, rgba(18,180,181,.2), rgba(18,180,181,.1));
+      color:#a9fff1;
+      border:1px solid rgba(18,180,181,.4);padding:8px 14px;
+      border-radius:999px;font-size:13px;font-weight:600;
+      box-shadow:0 2px 8px rgba(18,180,181,.15);
     }
     .kpi{
       display:grid;grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));gap:12px;margin:20px 0
     }
     .kpi .tile{
-      background:#0b112b;border:1px solid var(--border);border-radius:12px;padding:16px;
+      background:linear-gradient(135deg, rgba(11,17,43,.9), rgba(11,17,43,.7));
+      border:1px solid var(--border);border-radius:14px;padding:20px;
       text-align:center;
+      transition:transform .3s ease, box-shadow .3s ease;
+      position:relative;overflow:hidden;
     }
-    .kpi .tile .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
-    .kpi .tile .value{font-size:28px;font-weight:800;line-height:1}
+    .kpi .tile::before{
+      content:"";position:absolute;top:0;left:0;right:0;height:3px;
+      background:linear-gradient(90deg, var(--primary), var(--accent));
+      opacity:0;transition:opacity .3s ease;
+    }
+    .kpi .tile:hover{transform:translateY(-4px);box-shadow:0 8px 20px rgba(70,86,246,.2)}
+    .kpi .tile:hover::before{opacity:1}
+    .kpi .tile .label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;font-weight:700}
+    .kpi .tile .value{font-size:32px;font-weight:800;line-height:1;background:linear-gradient(135deg, var(--text), var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
     .list{display:grid;gap:12px;margin-top:12px}
     .list-item{
-      display:flex;align-items:flex-start;gap:14px;
-      border:1px solid var(--border);border-radius:12px;padding:16px;
-      background:linear-gradient(180deg, #0e1433, #0d132c);
-      transition:transform .2s, box-shadow .2s;
+      display:flex;align-items:flex-start;gap:16px;
+      border:1px solid var(--border);border-radius:12px;padding:20px;
+      background:linear-gradient(180deg, rgba(14,20,51,.8), rgba(13,19,44,.6));
+      transition:transform .3s ease, box-shadow .3s ease, border-color .3s ease;
     }
-    .list-item:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.3)}
+    .list-item:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(0,0,0,.4);border-color:rgba(18,180,181,.3)}
     .icon{
-      width:32px;height:32px;min-width:32px;border-radius:10px;
+      width:40px;height:40px;min-width:40px;border-radius:12px;
       display:inline-flex;align-items:center;justify-content:center;
-      background:linear-gradient(180deg, rgba(106,122,255,.18), rgba(106,122,255,.04));
-      border:1px solid var(--border);
+      background:linear-gradient(135deg, rgba(106,122,255,.25), rgba(106,122,255,.1));
+      border:1px solid rgba(106,122,255,.3);
+      box-shadow:0 2px 8px rgba(106,122,255,.15);
     }
-    .icon svg{width:18px;height:18px}
+    .icon svg{width:20px;height:20px}
     .muted{color:var(--muted)}
-    .small{font-size:13px;color:var(--muted);line-height:1.5}
+    .small{font-size:15px;color:var(--muted);line-height:1.7} /* Increased from 13px to 15px for better readability */
     .link{
       display:inline-flex;align-items:center;gap:8px;
-      border:1px dashed var(--border);padding:8px 12px;border-radius:10px;
-      color:var(--text);background:rgba(255,255,255,.02);
-      transition:all .2s;
+      border:1px dashed var(--border);padding:10px 14px;border-radius:10px;
+      color:var(--accent);background:rgba(18,180,181,.05);
+      transition:all .3s ease;font-weight:500;
     }
-    .link:hover{border-color:var(--accent);background:rgba(18,180,181,.08)}
+    .link:hover{border-color:var(--accent);background:rgba(18,180,181,.15);transform:translateY(-1px);box-shadow:0 4px 12px rgba(18,180,181,.2)}
     .link-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
     .progress{
-      height:10px;background:#0b112b;border:1px solid var(--border);
-      border-radius:999px;overflow:hidden;margin-top:10px;
+      height:12px;background:#0b112b;border:1px solid var(--border);
+      border-radius:999px;overflow:hidden;margin-top:12px;
+      position:relative;
     }
     .progress > span{
       display:block;height:100%;background:linear-gradient(90deg, var(--accent), #7bf0d9);
-      transition:width .3s;
+      transition:width .5s ease;
+      position:relative;
+      box-shadow:0 0 8px rgba(18,180,181,.4);
+    }
+    .progress > span::after{
+      content:attr(data-label);position:absolute;right:8px;top:50%;
+      transform:translateY(-50%);font-size:10px;font-weight:700;color:#0b1020;
+      text-shadow:0 1px 2px rgba(255,255,255,.3);
     }
     .pill{
-      display:inline-flex;align-items:center;gap:6px;font-size:12px;
-      color:#b6c0ec;background:rgba(255,255,255,.04);
-      border:1px solid var(--border);padding:6px 10px;border-radius:999px;
-      font-weight:600;
+      display:inline-flex;align-items:center;gap:6px;font-size:13px;
+      color:#b6c0ec;background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.15);padding:7px 12px;border-radius:999px;
+      font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.2);
     }
     .mono{
       font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
@@ -177,137 +224,187 @@
     }
     pre{
       margin:0;background:#0a0f27;border:1px solid var(--border);
-      padding:16px;border-radius:12px;overflow:auto;
+      padding:18px;border-radius:12px;overflow:auto;
+      line-height:1.6;
     }
-    code{color:#b7c3ff}
+    code{color:#b7c3ff;font-size:13px}
     .toggle{
       display:inline-flex;align-items:center;gap:8px;
-      background:transparent;border:1px solid var(--border);color:var(--text);
-      padding:8px 14px;border-radius:10px;cursor:pointer;
-      font-size:13px;font-weight:600;transition:all .2s;
+      background:rgba(70,86,246,.1);border:1px solid rgba(70,86,246,.3);color:var(--text);
+      padding:10px 16px;border-radius:10px;cursor:pointer;
+      font-size:14px;font-weight:600;transition:all .3s ease;
+      min-height:44px; /* Better touch target */
     }
-    .toggle:hover{background:rgba(255,255,255,.05);border-color:var(--accent)}
+    .toggle:hover{background:rgba(70,86,246,.2);border-color:var(--primary);transform:translateY(-1px);box-shadow:0 4px 12px rgba(70,86,246,.2)}
+    .toggle:focus{outline:2px solid var(--primary);outline-offset:2px}
     .hidden{display:none}
     .social-grid{
       display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;
     }
     .social-card{
-      background:#0b112b;border:1px solid var(--border);border-radius:12px;
-      padding:14px;display:flex;align-items:center;gap:12px;
+      background:linear-gradient(135deg, rgba(11,17,43,.9), rgba(11,17,43,.7));
+      border:1px solid var(--border);border-radius:12px;
+      padding:18px;display:flex;align-items:center;gap:14px;
+      transition:transform .3s ease, box-shadow .3s ease, border-color .3s ease;
     }
+    .social-card:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.3);border-color:rgba(18,180,181,.4)}
     .social-icon{
       width:40px;height:40px;border-radius:10px;
       background:linear-gradient(180deg, rgba(106,122,255,.2), rgba(106,122,255,.1));
       display:flex;align-items:center;justify-content:center;
     }
     .notice{
-      display:flex;gap:12px;align-items:flex-start;
-      background:rgba(70,86,246,.1);border:1px solid rgba(70,86,246,.3);
-      padding:14px;border-radius:12px;margin-top:12px;
+      display:flex;gap:14px;align-items:flex-start;
+      background:linear-gradient(135deg, rgba(70,86,246,.15), rgba(18,180,181,.1));
+      border:1px solid rgba(70,86,246,.4);
+      padding:18px;border-radius:14px;margin-top:16px;
+      box-shadow:0 4px 16px rgba(70,86,246,.15);
     }
     .alert{
-      padding:16px;border-radius:12px;border-left:4px solid;
-      margin-bottom:16px;
+      padding:18px;border-radius:12px;border-left:4px solid;
+      margin-bottom:20px;line-height:1.7;
     }
     .alert-info{
-      background:rgba(70,86,246,.1);border-color:var(--primary);
+      background:linear-gradient(135deg, rgba(70,86,246,.12), rgba(70,86,246,.08));
+      border-color:var(--primary);
+      box-shadow:0 2px 8px rgba(70,86,246,.1);
     }
     .search-badge{
-      display:inline-flex;align-items:center;gap:6px;padding:4px 10px;
-      background:rgba(18,180,181,.15);border:1px solid rgba(18,180,181,.3);
-      border-radius:6px;font-size:11px;font-weight:600;color:#a9fff1;
+      display:inline-flex;align-items:center;gap:6px;padding:5px 12px;
+      background:linear-gradient(135deg, rgba(18,180,181,.2), rgba(18,180,181,.15));
+      border:1px solid rgba(18,180,181,.4);
+      border-radius:8px;font-size:12px;font-weight:600;color:#a9fff1;
+      box-shadow:0 2px 6px rgba(18,180,181,.15);
     }
 
+    /* Mobile Navigation */
+    .mobile-menu-toggle{display:none;background:transparent;border:1px solid var(--border);color:var(--text);padding:8px;border-radius:8px;cursor:pointer;min-height:44px;min-width:44px}
+    .mobile-menu-toggle:hover{background:rgba(255,255,255,.05)}
+    .nav-links.mobile-open{display:flex}
+    
+    /* Back to top button */
+    .back-to-top{
+      position:fixed;bottom:24px;right:24px;width:48px;height:48px;
+      background:linear-gradient(135deg, var(--primary), var(--accent));
+      border:none;border-radius:50%;color:#fff;font-size:20px;
+      cursor:pointer;box-shadow:0 4px 16px rgba(70,86,246,.4);
+      opacity:0;visibility:hidden;transition:all .3s ease;z-index:100;
+      display:flex;align-items:center;justify-content:center;
+    }
+    .back-to-top.visible{opacity:1;visibility:visible}
+    .back-to-top:hover{transform:translateY(-4px);box-shadow:0 8px 24px rgba(70,86,246,.5)}
+    
+    /* Print styles */
+    @media print{
+      header,.back-to-top,.toggle{display:none}
+      body{background:#fff;color:#000}
+      .card{border:1px solid #ddd;page-break-inside:avoid}
+      .section{padding:20px 0}
+    }
+    
+    /* Reduced motion support */
+    @media (prefers-reduced-motion: reduce){
+      *{animation-duration:0.01ms !important;animation-iteration-count:1 !important;transition-duration:0.01ms !important}
+    }
+    
     @media (max-width:1000px){
-      .two-col{grid-template-columns:1fr}
+      .two-col{grid-template-columns:1fr;gap:24px}
       .three-col{grid-template-columns:1fr 1fr}
       .profile-header{grid-template-columns:1fr;text-align:center}
       .cards{grid-template-columns:1fr}
       .social-grid{grid-template-columns:1fr}
+      .nav-links{display:none;flex-direction:column;position:absolute;top:100%;left:0;right:0;background:rgba(11,16,32,.98);padding:20px;border-top:1px solid var(--border);gap:16px}
+      .mobile-menu-toggle{display:flex}
     }
     @media (max-width:640px){
-      .hero h1{font-size:28px}
-      .section h2{font-size:24px}
-      .profile-info h1{font-size:24px}
+      .hero h1{font-size:32px}
+      .section h2{font-size:28px}
+      .profile-info h1{font-size:28px}
       .three-col{grid-template-columns:1fr}
       .kpi{grid-template-columns:1fr 1fr}
-      .avatar{width:80px;height:80px;font-size:28px}
+      .avatar{width:90px;height:90px;font-size:32px}
+      .section{padding:32px 0}
+      .card{padding:20px}
+      .back-to-top{bottom:16px;right:16px;width:44px;height:44px}
     }
   </style>
 </head>
 <body>
-  <header>
+  <header role="banner">
     <div class="container nav">
       <div class="brand">
         <div class="logo" aria-hidden="true"></div>
         <div>
           <div class="brand-name">Background Search Report</div>
-          <div class="small" style="font-size:11px">Automated Information Discovery</div>
+          <div class="small" style="font-size:12px">Automated Information Discovery</div>
         </div>
       </div>
-      <nav class="nav-links">
-        <a href="#overview">Overview</a>
-        <a href="#business">Business</a>
-        <a href="#social-content">Social & Content</a>
-        <a href="#online">Reviews</a>
-        <a href="#creator">Creator</a>
-        <a href="#company">Company</a>
-        <a href="#brand">Brand</a>
-        <button id="downloadBtn" style="background:var(--accent);color:#0b1020;border:none;padding:8px 16px;border-radius:8px;font-weight:600;font-size:14px;cursor:pointer;margin-left:12px;transition:opacity 0.2s" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Download Report</button>
+      <button class="mobile-menu-toggle" aria-label="Toggle navigation" aria-expanded="false" id="mobileMenuToggle">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+      </button>
+      <nav class="nav-links" role="navigation" aria-label="Main navigation">
+        <a href="#overview" aria-label="Go to Overview section">Overview</a>
+        <a href="#business" aria-label="Go to Business section">Business</a>
+        <a href="#social-content" aria-label="Go to Social & Content section">Social & Content</a>
+        <a href="#online" aria-label="Go to Reviews section">Reviews</a>
+        <a href="#creator" aria-label="Go to Creator section">Creator</a>
+        <a href="#company" aria-label="Go to Company section">Company</a>
+        <a href="#brand" aria-label="Go to Brand section">Brand</a>
       </nav>
     </div>
   </header>
 
-  <section class="hero">
+  <main role="main">
+  <section class="hero" aria-labelledby="hero-heading">
     <div class="container">
-      <div class="notice">
-        <div class="icon" style="background:rgba(70,86,246,.15)">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="#7ef5de"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+      <div class="notice" role="alert" aria-live="polite">
+        <div class="icon" style="background:rgba(70,86,246,.2)" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#7ef5de"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
               </div>
               <div>
-          <strong style="display:block;margin-bottom:4px">Automated Search Complete</strong>
-          <div class="small">We've searched public sources and gathered the information below. No need to fill out forms—we found it automatically!</div>
+          <strong style="display:block;margin-bottom:6px;font-size:16px">Automated Search Complete</strong>
+          <div class="small" style="font-size:15px;line-height:1.7">We've searched public sources and gathered the information below. No need to fill out forms—we found it automatically!</div>
               </div>
             </div>
 
       <div class="profile-header">
-        <div class="avatar">AM</div>
+        <div class="avatar" aria-label="Profile avatar">AM</div>
         <div class="profile-info">
-          <h1>Avery Morgan</h1>
+          <h1 id="hero-heading">Avery Morgan</h1>
           <div class="subtitle">Founder & Operations Consultant</div>
-          <div class="profile-tags">
-            <span class="tag">Agency Operations</span>
-            <span class="tag">Automation Expert</span>
-            <span class="tag">Content Creator</span>
-            <span class="tag">SaaS Founder</span>
+          <div class="profile-tags" role="list" aria-label="Expertise areas">
+            <span class="tag" role="listitem">Agency Operations</span>
+            <span class="tag" role="listitem">Automation Expert</span>
+            <span class="tag" role="listitem">Content Creator</span>
+            <span class="tag" role="listitem">SaaS Founder</span>
               </div>
               </div>
             </div>
 
-          <div class="kpi">
-            <div class="tile">
+          <div class="kpi" role="list" aria-label="Key metrics">
+            <div class="tile" role="listitem">
           <div class="label">Websites Found</div>
-              <div class="value">3</div>
+              <div class="value" aria-label="3 websites found">3</div>
             </div>
-            <div class="tile">
+            <div class="tile" role="listitem">
           <div class="label">Pages Indexed</div>
-              <div class="value">142</div>
+              <div class="value" aria-label="142 pages indexed">142</div>
             </div>
-            <div class="tile">
+            <div class="tile" role="listitem">
           <div class="label">Social Profiles</div>
-              <div class="value">5</div>
+              <div class="value" aria-label="5 social profiles">5</div>
             </div>
-            <div class="tile">
+            <div class="tile" role="listitem">
           <div class="label">Content Items</div>
-          <div class="value">89</div>
+          <div class="value" aria-label="89 content items">89</div>
             </div>
-        <div class="tile">
+        <div class="tile" role="listitem">
           <div class="label">Reviews Found</div>
-          <div class="value">12</div>
+          <div class="value" aria-label="12 reviews found">12</div>
           </div>
-        <div class="tile">
+        <div class="tile" role="listitem">
           <div class="label">Search Sources</div>
-          <div class="value">8</div>
+          <div class="value" aria-label="8 search sources">8</div>
         </div>
       </div>
     </div>
@@ -323,7 +420,7 @@
       <div class="two-col">
         <div class="card">
           <div class="eyebrow">Businesses Discovered</div>
-          <h3 style="margin-top:0;font-size:20px">Companies & Projects Found</h3>
+          <h3 style="margin-top:0;font-size:22px;line-height:1.3">Companies & Projects Found</h3>
           <div class="list">
             <div class="list-item">
               <div class="icon">
@@ -381,7 +478,7 @@
       <div class="two-col">
         <div class="card">
           <div class="eyebrow">Website Inventory</div>
-          <h3 style="margin-top:0;font-size:20px">Domains & Sitemaps Found</h3>
+          <h3 style="margin-top:0;font-size:22px;line-height:1.3">Domains & Sitemaps Found</h3>
           <div class="list">
             <div class="list-item" style="flex-direction:column;align-items:stretch">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
@@ -389,10 +486,10 @@
                 <div class="pill">72 pages</div>
               </div>
               <div style="margin-bottom:12px">
-                <img src="https://studioflow.io/favicon.ico" alt="StudioFlow logo" style="width:24px;height:24px;border-radius:6px;margin-right:8px;vertical-align:middle" onerror="this.style.display='none';">
-                <img src="https://studioflow.io/og-image.jpg" alt="StudioFlow homepage" style="width:100%;max-width:400px;border-radius:8px;border:1px solid var(--border);margin-top:8px" onerror="this.style.display='none';">
+                <img src="https://studioflow.io/favicon.ico" alt="StudioFlow logo" loading="lazy" style="width:24px;height:24px;border-radius:6px;margin-right:8px;vertical-align:middle" onerror="this.style.display='none';">
+                <img src="https://studioflow.io/og-image.jpg" alt="StudioFlow homepage" loading="lazy" style="width:100%;max-width:400px;border-radius:8px;border:1px solid var(--border);margin-top:8px" onerror="this.style.display='none';">
             </div>
-              <div class="small muted" style="margin-bottom:12px">
+              <div class="small muted" style="margin-bottom:14px;line-height:1.75;font-size:15px">
                 Micro-SaaS platform offering process automation tools for agencies and studios. Features include client intake automation, proposal workflows, and hand-off systems.
               </div>
               <div style="margin-bottom:12px;padding:12px;background:#0b112b;border-radius:10px;border:1px solid var(--border)">
@@ -422,7 +519,7 @@
               </div>
                 <div style="font-weight:700;margin-bottom:8px;font-size:12px">Logo URL</div>
                 <div style="margin-bottom:8px">
-                  <img src="logos/ftf-logo.avif" alt="FTF Logo" style="max-width:120px;max-height:60px;object-fit:contain;background:#0b112b;padding:8px;border-radius:8px;border:1px solid var(--border)" onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
+                  <img src="logos/ftf-logo.avif" alt="FTF Logo" loading="lazy" style="max-width:120px;max-height:60px;object-fit:contain;background:#0b112b;padding:8px;border-radius:8px;border:1px solid var(--border)" onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
                   <div style="display:none;padding:8px;background:#0b112b;border-radius:8px;border:1px solid var(--border);font-size:11px;color:var(--muted)">Logo not available</div>
             </div>
                 <div class="small" style="word-break:break-all;font-size:11px">
@@ -434,8 +531,8 @@
                 <span class="pill">B2B</span>
                 <span class="pill">Active</span>
           </div>
-              <button class="toggle" data-target="#sm1">View sitemap.xml</button>
-              <div id="sm1" class="hidden" style="margin-top:12px">
+              <button class="toggle" data-target="#sm1" aria-expanded="false" aria-controls="sm1">View sitemap.xml</button>
+              <div id="sm1" class="hidden" style="margin-top:12px" role="region" aria-labelledby="sm1-label">
                 <pre class="mono"><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
 &lt;urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"&gt;
   &lt;url&gt;
@@ -579,37 +676,37 @@
 
         <div class="card">
           <div class="eyebrow">Content Analysis</div>
-          <h3 style="margin-top:0;font-size:20px">Topics & Themes Found</h3>
+          <h3 style="margin-top:0;font-size:22px;line-height:1.3">Topics & Themes Found</h3>
           <div class="list">
             <div class="list-item" style="flex-direction:column;align-items:stretch">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
                 <div><strong>Automation for Client Services</strong></div>
                 <div class="pill">53 mentions</div>
               </div>
-              <div class="small muted" style="margin-bottom:8px">
+                <div class="small muted" style="margin-bottom:10px;line-height:1.75;font-size:15px">
                 Core expertise area with extensive content across blog posts, videos, and case studies.
             </div>
-              <div class="progress"><span style="width:90%"></span></div>
+              <div class="progress" role="progressbar" aria-valuenow="90" aria-valuemin="0" aria-valuemax="100" aria-label="90% strength"><span style="width:90%" data-label="90%"></span></div>
               </div>
             <div class="list-item" style="flex-direction:column;align-items:stretch">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
                 <div><strong>Newsletter Growth & Monetization</strong></div>
                 <div class="pill">31 mentions</div>
             </div>
-              <div class="small muted" style="margin-bottom:8px">
+              <div class="small muted" style="margin-bottom:10px;line-height:1.7">
                 Strong focus on audience building and converting media audiences into customers.
               </div>
-              <div class="progress"><span style="width:72%"></span></div>
+              <div class="progress" role="progressbar" aria-valuenow="72" aria-valuemin="0" aria-valuemax="100" aria-label="72% strength"><span style="width:72%" data-label="72%"></span></div>
             </div>
             <div class="list-item" style="flex-direction:column;align-items:stretch">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
                 <div><strong>Operational SOPs & Workflow Design</strong></div>
                 <div class="pill">24 mentions</div>
               </div>
-              <div class="small muted" style="margin-bottom:8px">
+              <div class="small muted" style="margin-bottom:10px;line-height:1.7">
                 Teaching-focused content on systems and processes for teams.
             </div>
-              <div class="progress"><span style="width:60%"></span></div>
+              <div class="progress" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100" aria-label="60% strength"><span style="width:60%" data-label="60%"></span></div>
               </div>
             </div>
           <div class="alert alert-info" style="margin-top:16px">
@@ -627,10 +724,10 @@
 
       <div class="card">
         <div class="eyebrow">Online Presence</div>
-        <h3 style="margin-top:0;font-size:20px;margin-bottom:16px">Social Media & Profiles Found</h3>
+        <h3 style="margin-top:0;font-size:22px;margin-bottom:18px;line-height:1.3">Social Media & Profiles Found</h3>
         <div class="social-grid" style="margin-bottom:24px">
           <div class="social-card">
-            <img src="https://abs.twimg.com/favicons/twitter.3.ico" alt="Twitter" style="width:40px;height:40px;border-radius:10px;object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+            <img src="https://abs.twimg.com/favicons/twitter.3.ico" alt="Twitter icon" loading="lazy" style="width:40px;height:40px;border-radius:10px;object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
             <div class="social-icon" style="display:none">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="#7ef5de"><path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z"/></svg>
         </div>
@@ -641,7 +738,7 @@
             </div>
           </div>
           <div class="social-card">
-            <img src="https://static-exp1.licdn.com/sc/h/al2o9zrvru7aqj8e1x2rzsrca" alt="LinkedIn" style="width:40px;height:40px;border-radius:10px;object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+            <img src="https://static-exp1.licdn.com/sc/h/al2o9zrvru7aqj8e1x2rzsrca" alt="LinkedIn icon" loading="lazy" style="width:40px;height:40px;border-radius:10px;object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
             <div class="social-icon" style="display:none">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="#7ef5de"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
             </div>
@@ -652,7 +749,7 @@
             </div>
           </div>
           <div class="social-card">
-            <img src="https://www.youtube.com/s/desktop/favicon.ico" alt="YouTube" style="width:40px;height:40px;border-radius:10px;object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+            <img src="https://www.youtube.com/s/desktop/favicon.ico" alt="YouTube icon" loading="lazy" style="width:40px;height:40px;border-radius:10px;object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
             <div class="social-icon" style="display:none">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="#7ef5de"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
             </div>
@@ -669,23 +766,23 @@
 
         <hr class="divider" style="margin:24px 0">
 
-        <h3 style="margin-top:0;font-size:20px">YouTube Videos & Recent Posts</h3>
+        <h3 style="margin-top:0;font-size:22px;line-height:1.3">YouTube Videos & Recent Posts</h3>
         
         <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));gap:18px;margin-top:16px;margin-bottom:24px">
           <div style="background:#0b112b;border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column">
-            <img src="https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg" alt="Video thumbnail" style="width:100%;aspect-ratio:16/9;object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+            <img src="https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg" alt="Video thumbnail" loading="lazy" style="width:100%;aspect-ratio:16/9;object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
             <div style="aspect-ratio:16/9;background:linear-gradient(135deg,#4656F6,#12B4B5);display:none;align-items:center;justify-content:center;color:#fff;font-weight:800">YT</div>
             <div style="padding:14px;flex:1;display:flex;flex-direction:column">
-              <div style="font-weight:700;margin-bottom:6px;font-size:14px"><a href="https://youtu.be/dQw4w9WgXcQ" style="color:var(--text);text-decoration:none">Automate Client Intake</a></div>
-              <div class="small" style="margin-bottom:12px">112k views • 3mo ago</div>
+              <div style="font-weight:700;margin-bottom:8px;font-size:15px;line-height:1.4"><a href="https://youtu.be/dQw4w9WgXcQ" style="color:var(--text);text-decoration:none">Automate Client Intake</a></div>
+              <div class="small" style="margin-bottom:14px;font-size:14px">112k views • 3mo ago</div>
               <span class="search-badge" style="margin-bottom:12px;display:inline-block">Found via YouTube API</span>
               <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:auto">
-                <button class="toggle" data-target="#yt1-script" style="font-size:12px;padding:6px 10px">View Script</button>
-                <button class="toggle" data-target="#yt1-transcript" style="font-size:12px;padding:6px 10px">View Transcript</button>
+                <button class="toggle" data-target="#yt1-script" aria-expanded="false" aria-controls="yt1-script" style="font-size:13px;padding:8px 12px">View Script</button>
+                <button class="toggle" data-target="#yt1-transcript" aria-expanded="false" aria-controls="yt1-transcript" style="font-size:13px;padding:8px 12px">View Transcript</button>
         </div>
-              <div id="yt1-script" class="hidden" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
-                <div style="font-weight:700;margin-bottom:8px;font-size:12px;color:var(--accent)">Video Script:</div>
-                <div class="small" style="line-height:1.6;max-height:200px;overflow-y:auto;padding:12px;background:#0a0f27;border-radius:8px;border:1px solid var(--border)">
+              <div id="yt1-script" class="hidden" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)" role="region" aria-labelledby="yt1-script-label">
+                <div id="yt1-script-label" style="font-weight:700;margin-bottom:10px;font-size:13px;color:var(--accent)">Video Script:</div>
+                <div class="small" style="line-height:1.75;max-height:200px;overflow-y:auto;padding:14px;background:#0a0f27;border-radius:8px;border:1px solid var(--border)">
                   [00:00] Hey everyone, welcome back to the channel. Today I'm going to show you how to automate your entire client intake process using Zapier and Airtable. This is going to save you hours every week.
                   <br><br>
                   [00:15] First, let's set up the Airtable base. You'll want fields for client name, email, project type, budget, and timeline. I'll link the template in the description below.
@@ -697,9 +794,9 @@
                   [05:20] I've been using this setup for six months now, and it's cut my intake time from 5 days to just 2 days. The automation handles all the manual work.
       </div>
               </div>
-              <div id="yt1-transcript" class="hidden" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
-                <div style="font-weight:700;margin-bottom:8px;font-size:12px;color:var(--accent)">Full Transcript:</div>
-                <div class="small" style="line-height:1.6;max-height:200px;overflow-y:auto;padding:12px;background:#0a0f27;border-radius:8px;border:1px solid var(--border)">
+              <div id="yt1-transcript" class="hidden" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)" role="region" aria-labelledby="yt1-transcript-label">
+                <div id="yt1-transcript-label" style="font-weight:700;margin-bottom:10px;font-size:13px;color:var(--accent)">Full Transcript:</div>
+                <div class="small" style="line-height:1.75;max-height:200px;overflow-y:auto;padding:14px;background:#0a0f27;border-radius:8px;border:1px solid var(--border)">
                   Hey everyone, welcome back to the channel. Today I'm going to show you how to automate your entire client intake process using Zapier and Airtable. This is going to save you hours every week. First, let's set up the Airtable base. You'll want fields for client name, email, project type, budget, and timeline. I'll link the template in the description below. Now, let's create the Zapier workflow. When a new form submission comes in, it automatically creates a record in Airtable, sends a confirmation email, and adds them to your CRM. The key here is setting up conditional logic. If the budget is over $10,000, route them to your premium onboarding flow. Otherwise, use the standard process. I've been using this setup for six months now, and it's cut my intake time from 5 days to just 2 days. The automation handles all the manual work. Let me show you the exact steps in Zapier...
                 </div>
               </div>
@@ -709,8 +806,8 @@
             <img src="https://img.youtube.com/vi/9bZkp7q19f0/hqdefault.jpg" alt="Video thumbnail" style="width:100%;aspect-ratio:16/9;object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
             <div style="aspect-ratio:16/9;background:linear-gradient(135deg,#4656F6,#12B4B5);display:none;align-items:center;justify-content:center;color:#fff;font-weight:800">YT</div>
             <div style="padding:14px;flex:1;display:flex;flex-direction:column">
-              <div style="font-weight:700;margin-bottom:6px;font-size:14px"><a href="https://youtu.be/9bZkp7q19f0" style="color:var(--text);text-decoration:none">Micro-SaaS MVP in 7 Days</a></div>
-              <div class="small" style="margin-bottom:12px">89k views • 5mo ago</div>
+              <div style="font-weight:700;margin-bottom:8px;font-size:15px;line-height:1.4"><a href="https://youtu.be/9bZkp7q19f0" style="color:var(--text);text-decoration:none">Micro-SaaS MVP in 7 Days</a></div>
+              <div class="small" style="margin-bottom:14px;font-size:14px">89k views • 5mo ago</div>
               <span class="search-badge" style="margin-bottom:12px;display:inline-block">Found via YouTube API</span>
               <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:auto">
                 <button class="toggle" data-target="#yt2-script" style="font-size:12px;padding:6px 10px">View Script</button>
@@ -742,8 +839,8 @@
             <img src="https://img.youtube.com/vi/3JZ_D3ELwOQ/hqdefault.jpg" alt="Video thumbnail" style="width:100%;aspect-ratio:16/9;object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
             <div style="aspect-ratio:16/9;background:linear-gradient(135deg,#4656F6,#12B4B5);display:none;align-items:center;justify-content:center;color:#fff;font-weight:800">YT</div>
             <div style="padding:14px;flex:1;display:flex;flex-direction:column">
-              <div style="font-weight:700;margin-bottom:6px;font-size:14px"><a href="https://youtu.be/3JZ_D3ELwOQ" style="color:var(--text);text-decoration:none">Newsletter-to-Product Funnel</a></div>
-              <div class="small" style="margin-bottom:12px">76k views • 7mo ago</div>
+              <div style="font-weight:700;margin-bottom:8px;font-size:15px;line-height:1.4"><a href="https://youtu.be/3JZ_D3ELwOQ" style="color:var(--text);text-decoration:none">Newsletter-to-Product Funnel</a></div>
+              <div class="small" style="margin-bottom:14px;font-size:14px">76k views • 7mo ago</div>
               <span class="search-badge" style="margin-bottom:12px;display:inline-block">Found via YouTube API</span>
               <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:auto">
                 <button class="toggle" data-target="#yt3-script" style="font-size:12px;padding:6px 10px">View Script</button>
@@ -775,8 +872,8 @@
             <img src="https://img.youtube.com/vi/L_jWHffIx5E/hqdefault.jpg" alt="Video thumbnail" style="width:100%;aspect-ratio:16/9;object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
             <div style="aspect-ratio:16/9;background:linear-gradient(135deg,#4656F6,#12B4B5);display:none;align-items:center;justify-content:center;color:#fff;font-weight:800">YT</div>
             <div style="padding:14px;flex:1;display:flex;flex-direction:column">
-              <div style="font-weight:700;margin-bottom:6px;font-size:14px"><a href="https://youtu.be/L_jWHffIx5E" style="color:var(--text);text-decoration:none">SOPs That Save Time</a></div>
-              <div class="small" style="margin-bottom:12px">64k views • 2mo ago</div>
+              <div style="font-weight:700;margin-bottom:8px;font-size:15px;line-height:1.4"><a href="https://youtu.be/L_jWHffIx5E" style="color:var(--text);text-decoration:none">SOPs That Save Time</a></div>
+              <div class="small" style="margin-bottom:14px;font-size:14px">64k views • 2mo ago</div>
               <span class="search-badge" style="margin-bottom:12px;display:inline-block">Found via YouTube API</span>
               <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:auto">
                 <button class="toggle" data-target="#yt4-script" style="font-size:12px;padding:6px 10px">View Script</button>
@@ -808,8 +905,8 @@
             <img src="https://img.youtube.com/vi/OPf0YbXqDm0/hqdefault.jpg" alt="Video thumbnail" style="width:100%;aspect-ratio:16/9;object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
             <div style="aspect-ratio:16/9;background:linear-gradient(135deg,#4656F6,#12B4B5);display:none;align-items:center;justify-content:center;color:#fff;font-weight:800">YT</div>
             <div style="padding:14px;flex:1;display:flex;flex-direction:column">
-              <div style="font-weight:700;margin-bottom:6px;font-size:14px"><a href="https://youtu.be/OPf0YbXqDm0" style="color:var(--text);text-decoration:none">n8n vs Zapier Explained</a></div>
-              <div class="small" style="margin-bottom:12px">51k views • 1mo ago</div>
+              <div style="font-weight:700;margin-bottom:8px;font-size:15px;line-height:1.4"><a href="https://youtu.be/OPf0YbXqDm0" style="color:var(--text);text-decoration:none">n8n vs Zapier Explained</a></div>
+              <div class="small" style="margin-bottom:14px;font-size:14px">51k views • 1mo ago</div>
               <span class="search-badge" style="margin-bottom:12px;display:inline-block">Found via YouTube API</span>
               <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:auto">
                 <button class="toggle" data-target="#yt5-script" style="font-size:12px;padding:6px 10px">View Script</button>
@@ -854,8 +951,8 @@
           <div style="display:flex;gap:16px;align-items:flex-start">
             <div style="color:#ffd166;font-size:18px;margin-top:2px">★★★★★</div>
           <div>
-              <strong style="display:block;margin-bottom:8px">Fast, thoughtful support and clear wins.</strong>
-              <div class="small muted" style="margin-bottom:8px">We implemented their automation playbook and cut onboarding time from 5 days to 2. Their examples were practical and easy to adapt.</div>
+              <strong style="display:block;margin-bottom:10px;font-size:16px;line-height:1.4">Fast, thoughtful support and clear wins.</strong>
+              <div class="small muted" style="margin-bottom:10px;line-height:1.75;font-size:15px">We implemented their automation playbook and cut onboarding time from 5 days to 2. Their examples were practical and easy to adapt.</div>
               <div class="small">— Ops Lead, Agency</div>
               <span class="search-badge" style="margin-top:8px;display:inline-block">Found on G2</span>
             </div>
@@ -865,8 +962,8 @@
           <div style="display:flex;gap:16px;align-items:flex-start">
             <div style="color:#ffd166;font-size:18px;margin-top:2px">★★★★★</div>
           <div>
-              <strong style="display:block;margin-bottom:8px">Actionable frameworks, not fluff.</strong>
-              <div class="small muted" style="margin-bottom:8px">Loved the before/after walkthroughs and the templates. We shipped our first Zapier set in a weekend.</div>
+              <strong style="display:block;margin-bottom:10px;font-size:16px;line-height:1.4">Actionable frameworks, not fluff.</strong>
+              <div class="small muted" style="margin-bottom:10px;line-height:1.75;font-size:15px">Loved the before/after walkthroughs and the templates. We shipped our first Zapier set in a weekend.</div>
               <div class="small">— Founder, SaaS</div>
               <span class="search-badge" style="margin-top:8px;display:inline-block">Found on Capterra</span>
             </div>
@@ -876,8 +973,8 @@
           <div style="display:flex;gap:16px;align-items:flex-start">
             <div style="color:#ffd166;font-size:18px;margin-top:2px">★★★★★</div>
           <div>
-              <strong style="display:block;margin-bottom:8px">Great balance of strategy and detail.</strong>
-              <div class="small muted" style="margin-bottom:8px">The SOP section alone justified the purchase. Our team finally speaks the same operations language.</div>
+              <strong style="display:block;margin-bottom:10px;font-size:16px;line-height:1.4">Great balance of strategy and detail.</strong>
+              <div class="small muted" style="margin-bottom:10px;line-height:1.75;font-size:15px">The SOP section alone justified the purchase. Our team finally speaks the same operations language.</div>
               <div class="small">— Program Manager</div>
               <span class="search-badge" style="margin-top:8px;display:inline-block">Found on Reddit</span>
             </div>
@@ -901,21 +998,21 @@
       <div class="card" style="margin-bottom:24px">
         <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap">
           <div style="flex-shrink:0">
-            <img src="https://averymorgan.com/profile.jpg" alt="Avery Morgan" style="width:120px;height:120px;border-radius:16px;border:2px solid var(--border);object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+            <img src="https://averymorgan.com/profile.jpg" alt="Avery Morgan profile photo" loading="lazy" style="width:120px;height:120px;border-radius:16px;border:2px solid var(--border);object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
             <div style="width:120px;height:120px;border-radius:16px;background:linear-gradient(135deg,#4656F6,#12B4B5);border:2px solid var(--border);display:none;align-items:center;justify-content:center;color:#fff;font-size:48px;font-weight:800">AM</div>
             <div class="small" style="text-align:center;margin-top:8px">Profile Image</div>
           </div>
           <div style="flex:1;min-width:250px">
-            <img src="https://averymorgan.com/logo.png" alt="Creator Logo" style="width:80px;height:80px;border-radius:12px;border:2px solid var(--border);object-fit:contain;background:#0b112b;padding:8px;margin-bottom:16px" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+            <img src="https://averymorgan.com/logo.png" alt="Creator Logo" loading="lazy" style="width:80px;height:80px;border-radius:12px;border:2px solid var(--border);object-fit:contain;background:#0b112b;padding:8px;margin-bottom:16px" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
             <div style="width:80px;height:80px;border-radius:12px;background:linear-gradient(135deg,#4656F6,#12B4B5);border:2px solid var(--border);display:none;align-items:center;justify-content:center;color:#fff;font-size:32px;font-weight:800;margin-bottom:16px">L</div>
             <div class="small" style="margin-bottom:16px">Logo</div>
             
-            <h3 style="margin-top:0;font-size:20px;margin-bottom:12px">My Story (Hero's Journey)</h3>
-            <div class="small" style="line-height:1.7;margin-bottom:20px">
+            <h3 style="margin-top:0;font-size:22px;margin-bottom:14px;line-height:1.3">My Story (Hero's Journey)</h3>
+            <div class="small" style="line-height:1.8;margin-bottom:24px;font-size:15px">
               Started as a solo consultant helping agencies automate their workflows. After years of manual processes and client frustrations, I built my first automation tool to solve my own problem. That tool became StudioFlow, which now serves hundreds of agencies. Along the way, I discovered that teaching others through content and courses was just as rewarding as building products. Workbench Academy was born from that passion—helping teams build better systems without hiring more people.
             </div>
 
-            <h3 style="margin-top:0;font-size:20px;margin-bottom:12px">Authority & Credibility</h3>
+            <h3 style="margin-top:0;font-size:22px;margin-bottom:14px;line-height:1.3">Authority & Credibility</h3>
             <div class="list">
               <div class="list-item">
                 <div class="icon">
@@ -957,7 +1054,7 @@
 
       <div class="two-col">
         <div class="card">
-          <img src="https://studioflow.io/logo.png" alt="Company Logo" style="width:100px;height:100px;border-radius:12px;border:2px solid var(--border);object-fit:contain;background:#0b112b;padding:12px;margin-bottom:16px" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <img src="https://studioflow.io/logo.png" alt="Company Logo" loading="lazy" style="width:100px;height:100px;border-radius:12px;border:2px solid var(--border);object-fit:contain;background:#0b112b;padding:12px;margin-bottom:16px" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
           <div style="width:100px;height:100px;border-radius:12px;background:linear-gradient(135deg,#4656F6,#12B4B5);border:2px solid var(--border);display:none;align-items:center;justify-content:center;color:#fff;font-size:40px;font-weight:800;margin-bottom:16px">C</div>
           <div class="small" style="margin-bottom:20px">Company Logo</div>
           
@@ -990,7 +1087,7 @@
         </div>
 
         <div class="card">
-          <h3 style="margin-top:0;font-size:20px;margin-bottom:16px">Program Details</h3>
+          <h3 style="margin-top:0;font-size:22px;margin-bottom:18px;line-height:1.3">Program Details</h3>
           <div class="list">
             <div class="list-item" style="flex-direction:column;align-items:stretch;gap:8px">
               <div><strong>Role in Program</strong></div>
@@ -1030,14 +1127,14 @@
       <h2>Brand Style Guide</h2>
       
       <div class="card" style="margin-bottom:24px">
-        <img src="https://coursecreator360.com/logo.png" alt="Brand Logo" style="width:120px;height:120px;border-radius:16px;border:2px solid var(--border);object-fit:contain;background:#0b112b;padding:16px;margin-bottom:16px" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+        <img src="https://coursecreator360.com/logo.png" alt="Brand Logo" loading="lazy" style="width:120px;height:120px;border-radius:16px;border:2px solid var(--border);object-fit:contain;background:#0b112b;padding:16px;margin-bottom:16px" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
         <div style="width:120px;height:120px;border-radius:16px;background:linear-gradient(135deg,#4656F6,#12B4B5);border:2px solid var(--border);display:none;align-items:center;justify-content:center;color:#fff;font-size:48px;font-weight:800;margin-bottom:16px">B</div>
         <div class="small" style="margin-bottom:24px">Brand Logo</div>
           </div>
 
       <div class="two-col">
         <div class="card">
-          <h3 style="margin-top:0;font-size:20px;margin-bottom:16px">Color Palette</h3>
+          <h3 style="margin-top:0;font-size:22px;margin-bottom:18px;line-height:1.3">Color Palette</h3>
           <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">
             <div style="background:#0b112b;border:1px solid var(--border);border-radius:12px;overflow:hidden">
               <div style="height:60px;background:#4656F6"></div>
@@ -1071,7 +1168,7 @@
         </div>
 
         <div class="card">
-          <h3 style="margin-top:0;font-size:20px;margin-bottom:16px">Typography</h3>
+          <h3 style="margin-top:0;font-size:22px;margin-bottom:18px;line-height:1.3">Typography</h3>
           <div class="list">
             <div class="list-item" style="flex-direction:column;align-items:stretch;gap:8px">
               <div><strong>Headings Font</strong></div>
@@ -1093,7 +1190,7 @@
 
       <div class="two-col" style="margin-top:18px">
         <div class="card">
-          <h3 style="margin-top:0;font-size:20px;margin-bottom:16px">Voice & Tone</h3>
+          <h3 style="margin-top:0;font-size:22px;margin-bottom:18px;line-height:1.3">Voice & Tone</h3>
           <div class="list">
             <div class="list-item" style="flex-direction:column;align-items:stretch;gap:8px">
               <div><strong>Voice Attributes</strong></div>
@@ -1107,7 +1204,7 @@
         </div>
 
         <div class="card">
-          <h3 style="margin-top:0;font-size:20px;margin-bottom:16px">Visual Style</h3>
+          <h3 style="margin-top:0;font-size:22px;margin-bottom:18px;line-height:1.3">Visual Style</h3>
           <div class="list">
             <div class="list-item" style="flex-direction:column;align-items:stretch;gap:8px">
               <div><strong>Style Guidelines</strong></div>
@@ -1126,7 +1223,7 @@
       </div>
 
       <div class="card" style="margin-top:18px">
-        <h3 style="margin-top:0;font-size:20px;margin-bottom:16px">Logo Guidelines</h3>
+        <h3 style="margin-top:0;font-size:22px;margin-bottom:18px;line-height:1.3">Logo Guidelines</h3>
         <div class="two-col">
           <div>
             <div class="list">
@@ -1163,17 +1260,34 @@
 
   <hr class="divider">
 
-  <footer style="margin-top:40px;border-top:1px solid var(--border);padding:30px 0 40px;color:var(--muted)">
+  </main>
+  
+  <footer role="contentinfo" style="margin-top:48px;border-top:1px solid var(--border);padding:40px 0 48px;color:var(--muted)">
     <div class="container">
-      <div class="small" style="text-align:center">
-        <div style="margin-bottom:8px">Automated Background Search Report</div>
-        <div>Information gathered from public sources • Generated automatically</div>
-        <div style="margin-top:12px;color:var(--muted);opacity:.7">Report ID: BSR-2025-10-21-AM-001 • Search completed in 12 seconds</div>
+      <div class="small" style="text-align:center;max-width:none">
+        <div style="margin-bottom:10px;font-size:14px">Automated Background Search Report</div>
+        <div style="line-height:1.7">Information gathered from public sources • Generated automatically</div>
+        <div style="margin-top:16px;color:var(--muted);opacity:.7;font-size:12px">Report ID: BSR-2025-10-21-AM-001 • Search completed in 12 seconds</div>
       </div>
     </div>
   </footer>
+  
+  <button class="back-to-top" aria-label="Back to top" title="Back to top">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>
+  </button>
 
   <script>
+    // Mobile menu toggle
+    const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+    const navLinks = document.querySelector('.nav-links');
+    if (mobileMenuToggle && navLinks) {
+      mobileMenuToggle.addEventListener('click', () => {
+        const isOpen = navLinks.classList.contains('mobile-open');
+        navLinks.classList.toggle('mobile-open');
+        mobileMenuToggle.setAttribute('aria-expanded', !isOpen);
+      });
+    }
+    
     // Toggle functionality for expandable sections
     document.querySelectorAll('.toggle').forEach(btn=>{
       btn.addEventListener('click', ()=>{
@@ -1181,6 +1295,7 @@
         if(!target) return;
         const isHidden = target.classList.contains('hidden');
         target.classList.toggle('hidden');
+        btn.setAttribute('aria-expanded', isHidden);
         
         // Update button text based on content type
         const originalText = btn.textContent.trim();
@@ -1193,6 +1308,21 @@
         }
       });
     });
+    
+    // Back to top button
+    const backToTop = document.querySelector('.back-to-top');
+    if (backToTop) {
+      window.addEventListener('scroll', () => {
+        if (window.pageYOffset > 300) {
+          backToTop.classList.add('visible');
+        } else {
+          backToTop.classList.remove('visible');
+        }
+      });
+      backToTop.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    }
 
     // Smooth scroll for anchor links
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
@@ -1203,158 +1333,6 @@
           target.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
       });
-    });
-
-    // Download report as text file and copy to clipboard
-    document.getElementById('downloadBtn').addEventListener('click', async function() {
-      // Get all main content sections
-      const sections = document.querySelectorAll('section');
-      let textContent = '';
-      
-      // Helper function to clean and format text
-      const cleanText = (text) => {
-        return text
-          .split('\n')
-          .map(line => line.trim())
-          .filter(line => line.length > 0 && !line.match(/^(View|Hide|Download)/))
-          .join('\n');
-      };
-      
-      // Add header information
-      const profileName = document.querySelector('.profile-info h1')?.textContent || 'Participant';
-      const subtitle = document.querySelector('.profile-info .subtitle')?.textContent || '';
-      const tags = Array.from(document.querySelectorAll('.profile-tags .tag')).map(tag => tag.textContent).join(', ');
-      
-      textContent += '╔════════════════════════════════════════════════════════════╗\n';
-      textContent += '║          BACKGROUND SEARCH REPORT                         ║\n';
-      textContent += '╚════════════════════════════════════════════════════════════╝\n\n';
-      
-      textContent += `PARTICIPANT INFORMATION\n`;
-      textContent += `${'─'.repeat(60)}\n`;
-      textContent += `Name: ${profileName}\n`;
-      if (subtitle) textContent += `Role: ${subtitle}\n`;
-      if (tags) textContent += `Tags: ${tags}\n`;
-      textContent += `Generated: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}\n`;
-      textContent += `${new Date().toLocaleTimeString('en-US')}\n\n`;
-      
-      // Extract KPIs
-      const kpis = document.querySelectorAll('.kpi .tile');
-      if (kpis.length > 0) {
-        textContent += `KEY METRICS\n`;
-        textContent += `${'─'.repeat(60)}\n`;
-        kpis.forEach(kpi => {
-          const label = kpi.querySelector('.label')?.textContent || '';
-          const value = kpi.querySelector('.value')?.textContent || '';
-          if (label && value) {
-            textContent += `  • ${label}: ${value}\n`;
-          }
-        });
-        textContent += '\n';
-      }
-      
-      // Extract text from each section
-      sections.forEach((section, index) => {
-        const heading = section.querySelector('h2');
-        const eyebrow = section.querySelector('.eyebrow');
-        
-        if (heading || eyebrow) {
-          if (index > 0) textContent += '\n';
-          textContent += `${'═'.repeat(60)}\n`;
-          if (eyebrow) textContent += `${eyebrow.textContent.trim().toUpperCase()}\n`;
-          if (heading) textContent += `${heading.textContent.trim()}\n`;
-          textContent += `${'═'.repeat(60)}\n\n`;
-        }
-        
-        // Extract structured content
-        const cards = section.querySelectorAll('.card');
-        if (cards.length > 0) {
-          cards.forEach((card, cardIndex) => {
-            const cardEyebrow = card.querySelector('.eyebrow');
-            const cardHeading = card.querySelector('h3');
-            
-            if (cardEyebrow || cardHeading) {
-              if (cardIndex > 0) textContent += '\n';
-              if (cardEyebrow) textContent += `  ${cardEyebrow.textContent.trim()}\n`;
-              if (cardHeading) textContent += `  ${cardHeading.textContent.trim()}\n`;
-              textContent += `  ${'─'.repeat(56)}\n`;
-            }
-            
-            // Extract list items
-            const listItems = card.querySelectorAll('.list-item');
-            listItems.forEach(item => {
-              const itemText = cleanText(item.innerText || item.textContent);
-              if (itemText) {
-                const lines = itemText.split('\n').filter(l => l.trim());
-                lines.forEach((line, i) => {
-                  textContent += `    ${i === 0 ? '•' : ' '} ${line}\n`;
-                });
-              }
-            });
-            
-            // Extract regular paragraphs
-            const paragraphs = card.querySelectorAll('p, .small:not(.muted)');
-            paragraphs.forEach(p => {
-              const text = cleanText(p.innerText || p.textContent);
-              if (text && text.length > 10) {
-                textContent += `  ${text}\n\n`;
-              }
-            });
-            
-            // Extract social cards
-            const socialCards = card.querySelectorAll('.social-card');
-            socialCards.forEach(sc => {
-              const scText = cleanText(sc.innerText || sc.textContent);
-              if (scText) {
-                textContent += `    • ${scText.replace(/\n/g, ' | ')}\n`;
-              }
-            });
-            
-            // Extract alerts
-            const alerts = card.querySelectorAll('.alert');
-            alerts.forEach(alert => {
-              const alertText = cleanText(alert.innerText || alert.textContent);
-              if (alertText) {
-                textContent += `  [NOTE] ${alertText}\n\n`;
-              }
-            });
-          });
-        } else {
-          // If no cards, extract direct text
-          const sectionText = cleanText(section.innerText || section.textContent);
-          if (sectionText && sectionText.length > 20) {
-            textContent += sectionText + '\n\n';
-          }
-        }
-      });
-      
-      textContent += `\n${'═'.repeat(60)}\n`;
-      textContent += `END OF REPORT\n`;
-      textContent += `${'═'.repeat(60)}\n`;
-      
-      // Copy to clipboard
-      try {
-        await navigator.clipboard.writeText(textContent);
-        const originalText = this.textContent;
-        this.textContent = '✓ Copied!';
-        this.style.background = '#12B4B5';
-        setTimeout(() => {
-          this.textContent = originalText;
-          this.style.background = 'var(--accent)';
-        }, 2000);
-      } catch (err) {
-        console.error('Failed to copy to clipboard:', err);
-      }
-      
-      // Create download
-      const blob = new Blob([textContent], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `background-search-report-${profileName.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.txt`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
     });
   </script>
 </body>

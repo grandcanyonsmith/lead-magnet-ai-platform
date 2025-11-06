@@ -4,9 +4,16 @@ import { db } from '../utils/db';
 import { ApiError } from '../utils/errors';
 import { RouteResponse } from '../routes';
 
-const ARTIFACTS_TABLE = process.env.ARTIFACTS_TABLE!;
-const ARTIFACTS_BUCKET = process.env.ARTIFACTS_BUCKET!;
+const ARTIFACTS_TABLE = process.env.ARTIFACTS_TABLE;
+const ARTIFACTS_BUCKET = process.env.ARTIFACTS_BUCKET;
 const CLOUDFRONT_DOMAIN = process.env.CLOUDFRONT_DOMAIN?.trim() || '';
+
+if (!ARTIFACTS_TABLE) {
+  console.error('[Artifacts Controller] ARTIFACTS_TABLE environment variable is not set');
+}
+if (!ARTIFACTS_BUCKET) {
+  console.error('[Artifacts Controller] ARTIFACTS_BUCKET environment variable is not set');
+}
 
 const s3Client = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
 
@@ -49,6 +56,13 @@ async function generatePresignedUrl(s3Key: string): Promise<{ url: string; expir
 
 class ArtifactsController {
   async list(tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {
+    if (!ARTIFACTS_TABLE) {
+      throw new ApiError('ARTIFACTS_TABLE environment variable is not configured', 500);
+    }
+    if (!ARTIFACTS_BUCKET) {
+      throw new ApiError('ARTIFACTS_BUCKET environment variable is not configured', 500);
+    }
+
     const jobId = queryParams.job_id;
     const artifactType = queryParams.artifact_type;
     const limit = queryParams.limit ? parseInt(queryParams.limit) : 50;
@@ -56,7 +70,7 @@ class ArtifactsController {
     let artifacts;
     if (jobId) {
       artifacts = await db.query(
-        ARTIFACTS_TABLE,
+        ARTIFACTS_TABLE!,
         'gsi_job_id',
         'job_id = :job_id',
         { ':job_id': jobId },
@@ -65,7 +79,7 @@ class ArtifactsController {
       );
     } else if (artifactType) {
       artifacts = await db.query(
-        ARTIFACTS_TABLE,
+        ARTIFACTS_TABLE!,
         'gsi_tenant_type',
         'tenant_id = :tenant_id AND artifact_type = :artifact_type',
         { ':tenant_id': tenantId, ':artifact_type': artifactType },
@@ -74,7 +88,7 @@ class ArtifactsController {
       );
     } else {
       artifacts = await db.query(
-        ARTIFACTS_TABLE,
+        ARTIFACTS_TABLE!,
         'gsi_tenant_type',
         'tenant_id = :tenant_id',
         { ':tenant_id': tenantId },
@@ -147,7 +161,7 @@ class ArtifactsController {
           }
 
           // Update artifact in database with new URL
-          await db.update(ARTIFACTS_TABLE, { artifact_id: artifact.artifact_id }, updateData);
+          await db.update(ARTIFACTS_TABLE!, { artifact_id: artifact.artifact_id }, updateData);
 
           return {
             ...artifact,
@@ -179,6 +193,13 @@ class ArtifactsController {
   }
 
   async get(tenantId: string, artifactId: string): Promise<RouteResponse> {
+    if (!ARTIFACTS_TABLE) {
+      throw new ApiError('ARTIFACTS_TABLE environment variable is not configured', 500);
+    }
+    if (!ARTIFACTS_BUCKET) {
+      throw new ApiError('ARTIFACTS_BUCKET environment variable is not configured', 500);
+    }
+
     const artifact = await db.get(ARTIFACTS_TABLE, { artifact_id: artifactId });
 
     if (!artifact) {
@@ -231,7 +252,7 @@ class ArtifactsController {
         }
 
         // Update artifact with new URL
-        await db.update(ARTIFACTS_TABLE, { artifact_id: artifactId }, updateData);
+        await db.update(ARTIFACTS_TABLE!, { artifact_id: artifactId }, updateData);
 
         artifact.public_url = objectUrl;
         artifact.url_expires_at = updateData.url_expires_at || null;

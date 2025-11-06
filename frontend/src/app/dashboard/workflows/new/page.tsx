@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
-import { FiArrowLeft, FiSave, FiZap, FiEye } from 'react-icons/fi'
+import { FiArrowLeft, FiSave, FiZap, FiEye, FiPlus } from 'react-icons/fi'
+import WorkflowStepEditor, { WorkflowStep } from '../components/WorkflowStepEditor'
 
 export default function NewWorkflowPage() {
   const router = useRouter()
@@ -19,7 +20,7 @@ export default function NewWorkflowPage() {
   const [formData, setFormData] = useState({
     workflow_name: '',
     workflow_description: '',
-    ai_model: 'gpt-5',
+    ai_model: 'o3-deep-research',
     ai_instructions: '',
     rewrite_model: 'gpt-5',
     research_enabled: true,
@@ -35,6 +36,24 @@ export default function NewWorkflowPage() {
     delivery_sms_ai_generated: false,
     delivery_sms_ai_instructions: '',
   })
+
+  // Steps array for new multi-step workflow format
+  const [steps, setSteps] = useState<WorkflowStep[]>([
+    {
+      step_name: 'Deep Research',
+      step_description: 'Generate comprehensive research report',
+      model: 'o3-deep-research',
+      instructions: '',
+      step_order: 0,
+    },
+    {
+      step_name: 'HTML Rewrite',
+      step_description: 'Rewrite content into styled HTML matching template',
+      model: 'gpt-5',
+      instructions: 'Rewrite the research content into styled HTML matching the provided template. Ensure the output is complete, valid HTML that matches the template\'s design and structure.',
+      step_order: 1,
+    },
+  ])
 
   const [templateData, setTemplateData] = useState({
     template_name: '',
@@ -134,6 +153,20 @@ export default function NewWorkflowPage() {
           ai_instructions: result.workflow?.research_instructions || '',
         }))
 
+        // Update first step with generated instructions
+        if (result.workflow?.research_instructions) {
+          setSteps(prev => {
+            const newSteps = [...prev]
+            if (newSteps.length > 0) {
+              newSteps[0] = {
+                ...newSteps[0],
+                instructions: result.workflow.research_instructions,
+              }
+            }
+            return newSteps
+          })
+        }
+
         // Populate template fields
         setTemplateData({
           template_name: result.template?.template_name || '',
@@ -159,6 +192,9 @@ export default function NewWorkflowPage() {
         if (result.template?.html_content) {
           setShowPreview(true)
         }
+
+        // Move to form step
+        setStep('form')
 
         // Move to form step
         setStep('form')
@@ -189,6 +225,20 @@ export default function NewWorkflowPage() {
           ai_instructions: result.workflow?.research_instructions || '',
         }))
 
+        // Update first step with generated instructions
+        if (result.workflow?.research_instructions) {
+          setSteps(prev => {
+            const newSteps = [...prev]
+            if (newSteps.length > 0) {
+              newSteps[0] = {
+                ...newSteps[0],
+                instructions: result.workflow.research_instructions,
+              }
+            }
+            return newSteps
+          })
+        }
+
         // Populate template fields
         setTemplateData({
           template_name: result.template?.template_name || '',
@@ -218,6 +268,9 @@ export default function NewWorkflowPage() {
         // Move to form step
         setStep('form')
 
+        // Move to form step
+        setStep('form')
+
         setTimeout(() => {
           setGenerationStatus(null)
         }, 3000)
@@ -241,9 +294,22 @@ export default function NewWorkflowPage() {
       return
     }
 
-    if (formData.research_enabled && !formData.ai_instructions.trim()) {
-      setError('Research instructions are required when research is enabled')
+    // Validate steps
+    if (steps.length === 0) {
+      setError('At least one workflow step is required')
       return
+    }
+
+    for (let i = 0; i < steps.length; i++) {
+      const step = steps[i]
+      if (!step.step_name.trim()) {
+        setError(`Step ${i + 1} name is required`)
+        return
+      }
+      if (!step.instructions.trim()) {
+        setError(`Step ${i + 1} instructions are required`)
+        return
+      }
     }
 
     if (formData.html_enabled && !templateData.html_content.trim()) {
@@ -281,12 +347,17 @@ export default function NewWorkflowPage() {
         }
       }
 
-      // Then create the workflow
+      // Then create the workflow with steps
       const workflow = await api.createWorkflow({
         workflow_name: formData.workflow_name.trim(),
         workflow_description: formData.workflow_description.trim() || undefined,
+        steps: steps.map((step, index) => ({
+          ...step,
+          step_order: index,
+        })),
+        // Keep legacy fields for backward compatibility (will be auto-migrated)
         ai_model: formData.ai_model,
-        ai_instructions: formData.ai_instructions.trim(),
+        ai_instructions: steps[0]?.instructions || formData.ai_instructions.trim() || '',
         rewrite_model: formData.rewrite_model,
         research_enabled: formData.research_enabled,
         html_enabled: formData.html_enabled,
@@ -385,6 +456,56 @@ export default function NewWorkflowPage() {
     if (field === 'form_name' && value.trim() && !showFormPreview) {
       setShowFormPreview(true)
     }
+  }
+
+  // Step management functions
+  const handleStepChange = (index: number, step: WorkflowStep) => {
+    setSteps(prev => {
+      const newSteps = [...prev]
+      newSteps[index] = { ...step, step_order: index }
+      return newSteps
+    })
+  }
+
+  const handleAddStep = () => {
+    setSteps(prev => [
+      ...prev,
+      {
+        step_name: `Step ${prev.length + 1}`,
+        step_description: '',
+        model: 'gpt-5',
+        instructions: '',
+        step_order: prev.length,
+      },
+    ])
+  }
+
+  const handleDeleteStep = (index: number) => {
+    setSteps(prev => {
+      const newSteps = prev.filter((_, i) => i !== index)
+      // Reorder steps
+      return newSteps.map((step, i) => ({ ...step, step_order: i }))
+    })
+  }
+
+  const handleMoveStepUp = (index: number) => {
+    if (index === 0) return
+    setSteps(prev => {
+      const newSteps = [...prev]
+      ;[newSteps[index - 1], newSteps[index]] = [newSteps[index], newSteps[index - 1]]
+      // Reorder steps
+      return newSteps.map((step, i) => ({ ...step, step_order: i }))
+    })
+  }
+
+  const handleMoveStepDown = (index: number) => {
+    if (index === steps.length - 1) return
+    setSteps(prev => {
+      const newSteps = [...prev]
+      ;[newSteps[index], newSteps[index + 1]] = [newSteps[index + 1], newSteps[index]]
+      // Reorder steps
+      return newSteps.map((step, i) => ({ ...step, step_order: i }))
+    })
   }
 
   // Prompt Step
@@ -536,94 +657,114 @@ export default function NewWorkflowPage() {
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Research Model <span className="text-red-500">*</span>
-                <span className="ml-2 text-xs text-gray-500" title="Used for generating personalized research">
-                  ℹ️
-                </span>
-              </label>
-              <select
-                value={formData.ai_model}
-                onChange={(e) => handleChange('ai_model', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                required
-                disabled={!formData.research_enabled}
+          {/* Workflow Steps */}
+          <div className="space-y-4 pt-6 border-t">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-900">Workflow Steps</h2>
+              <button
+                type="button"
+                onClick={handleAddStep}
+                className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
               >
-                <option value="gpt-5">GPT-5</option>
-                <option value="gpt-4o">GPT-4o</option>
-                <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-              </select>
-              <p className="mt-1 text-xs text-gray-500">
-                Used for generating personalized research
-              </p>
+                <FiPlus className="w-4 h-4" />
+                Add Step
+              </button>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Styling Model
-                <span className="ml-2 text-xs text-gray-500" title="Used for converting content to styled HTML">
-                  ℹ️
-                </span>
-              </label>
-              <select
-                value={formData.rewrite_model}
-                onChange={(e) => handleChange('rewrite_model', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                disabled={!formData.html_enabled}
-              >
-                <option value="gpt-5">GPT-5</option>
-                <option value="gpt-4o">GPT-4o</option>
-                <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-              </select>
-              <p className="mt-1 text-xs text-gray-500">
-                Used for converting content to styled HTML
-              </p>
+            <p className="text-sm text-gray-600 mb-4">
+              Define the steps your workflow will execute. Each step receives context from all previous steps.
+            </p>
+            
+            <div className="space-y-4">
+              {steps.map((step, index) => (
+                <WorkflowStepEditor
+                  key={index}
+                  step={step}
+                  index={index}
+                  totalSteps={steps.length}
+                  onChange={handleStepChange}
+                  onDelete={handleDeleteStep}
+                  onMoveUp={handleMoveStepUp}
+                  onMoveDown={handleMoveStepDown}
+                />
+              ))}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={formData.research_enabled}
-                onChange={(e) => handleChange('research_enabled', e.target.checked)}
-                className="mr-2"
-              />
-              <span className="text-sm font-medium text-gray-700">Generate AI Research Report</span>
-            </label>
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={formData.html_enabled}
-                onChange={(e) => handleChange('html_enabled', e.target.checked)}
-                className="mr-2"
-              />
-              <span className="text-sm font-medium text-gray-700">Generate Styled HTML</span>
-            </label>
-          </div>
+          {/* Legacy fields - hidden but kept for backward compatibility */}
+          <div className="hidden">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Research Model <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formData.ai_model}
+                  onChange={(e) => handleChange('ai_model', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  disabled={!formData.research_enabled}
+                >
+                  <option value="o3-deep-research">O3 Deep Research</option>
+                  <option value="gpt-5">GPT-5</option>
+                  <option value="gpt-4o">GPT-4o</option>
+                  <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                  <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                </select>
+              </div>
 
-          {formData.research_enabled && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Research Instructions <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                value={formData.ai_instructions}
-                onChange={(e) => handleChange('ai_instructions', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono text-sm"
-                placeholder="Example: Generate a personalized market research report for [course idea]. Analyze market demand, competition, target audience, and provide actionable recommendations..."
-                rows={8}
-                required
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Tell the AI how to generate personalized research based on form submission data. Use [field_name] to reference form fields.
-              </p>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Styling Model
+                </label>
+                <select
+                  value={formData.rewrite_model}
+                  onChange={(e) => handleChange('rewrite_model', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  disabled={!formData.html_enabled}
+                >
+                  <option value="gpt-5">GPT-5</option>
+                  <option value="gpt-4o">GPT-4o</option>
+                  <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                  <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                </select>
+              </div>
             </div>
-          )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={formData.research_enabled}
+                  onChange={(e) => handleChange('research_enabled', e.target.checked)}
+                  className="mr-2"
+                />
+                <span className="text-sm font-medium text-gray-700">Generate AI Research Report</span>
+              </label>
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={formData.html_enabled}
+                  onChange={(e) => handleChange('html_enabled', e.target.checked)}
+                  className="mr-2"
+                />
+                <span className="text-sm font-medium text-gray-700">Generate Styled HTML</span>
+              </label>
+            </div>
+
+            {formData.research_enabled && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Research Instructions <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={formData.ai_instructions}
+                  onChange={(e) => handleChange('ai_instructions', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono text-sm"
+                  placeholder="Example: Generate a personalized market research report for [course idea]. Analyze market demand, competition, target audience, and provide actionable recommendations..."
+                  rows={8}
+                />
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Template Fields */}

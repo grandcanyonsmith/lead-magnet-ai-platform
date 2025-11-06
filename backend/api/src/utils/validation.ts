@@ -1,11 +1,23 @@
 import { z } from 'zod';
 
-// Workflow schemas
-export const createWorkflowSchema = z.object({
+// Workflow step schema
+export const workflowStepSchema = z.object({
+  step_name: z.string().min(1).max(200),
+  step_description: z.string().max(500).optional(),
+  model: z.string().min(1),
+  instructions: z.string().min(1),
+  step_order: z.number().int().min(0).optional(),
+});
+
+// Base workflow schema without refinement
+const baseWorkflowSchema = z.object({
   workflow_name: z.string().min(1).max(200),
   workflow_description: z.string().max(1000).optional(),
-  ai_model: z.string().default('gpt-5'),
-  ai_instructions: z.string().min(1),
+  // New multi-step workflow support
+  steps: z.array(workflowStepSchema).optional(),
+  // Legacy fields (kept for backward compatibility)
+  ai_model: z.string().default('o3-deep-research'),
+  ai_instructions: z.string().min(1).optional(),
   rewrite_model: z.string().default('gpt-5'),
   rewrite_enabled: z.boolean().default(true),
   research_enabled: z.boolean().default(true),
@@ -22,7 +34,22 @@ export const createWorkflowSchema = z.object({
   delivery_sms_ai_instructions: z.string().optional(), // Instructions for AI SMS generation
 });
 
-export const updateWorkflowSchema = createWorkflowSchema.partial();
+// Workflow schemas with refinement
+export const createWorkflowSchema = baseWorkflowSchema.refine((data) => {
+  // If steps array is provided, it must have at least one step
+  if (data.steps !== undefined && data.steps.length === 0) {
+    return false;
+  }
+  // If no steps array, legacy fields must be present
+  if (!data.steps || data.steps.length === 0) {
+    return !!(data.ai_instructions || data.research_enabled || data.html_enabled);
+  }
+  return true;
+}, {
+  message: 'Either provide steps array with at least one step, or use legacy fields (ai_instructions, research_enabled, html_enabled)',
+});
+
+export const updateWorkflowSchema = baseWorkflowSchema.partial();
 
 // Form schemas
 export const createFormSchema = z.object({

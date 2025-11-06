@@ -205,11 +205,11 @@ lead-magnent-ai/
 
 ## 📖 Documentation
 
-- **[START_HERE.md](./START_HERE.md)** - Quick start guide
-- **[QUICK_REFERENCE.md](./QUICK_REFERENCE.md)** - URLs & commands
-- **[DEPLOYMENT_REPORT.md](./DEPLOYMENT_REPORT.md)** - Deployment details
-- **[INDEX.md](./INDEX.md)** - Documentation index
-- **[FLOW_DIAGRAM.md](./FLOW_DIAGRAM.md)** - Complete process flow
+- **[docs/QUICK_START.md](./docs/QUICK_START.md)** - Quick start guide with URLs, commands, and getting started steps
+- **[docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)** - Complete deployment guide with step-by-step instructions
+- **[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)** - Architecture overview, technology stack, and development guide
+- **[docs/RESOURCES.md](./docs/RESOURCES.md)** - AWS resource inventory and management commands
+- **[docs/FLOW_DIAGRAM.md](./docs/FLOW_DIAGRAM.md)** - Complete process flow diagram
 
 ## 🔐 Security
 
@@ -258,4 +258,4 @@ MIT License
 
 **Built with ❤️ using AWS, OpenAI, Next.js, and TypeScript**
 
-*For complete documentation, see [INDEX.md](./INDEX.md)*
+*For complete documentation, see the [docs](./docs/) folder*

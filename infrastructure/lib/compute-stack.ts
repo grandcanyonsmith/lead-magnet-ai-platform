@@ -73,6 +73,9 @@ export class ComputeStack extends cdk.Stack {
     Object.values(props.tablesMap).forEach((table) => {
       table.grantReadWriteData(this.jobProcessorLambda);
     });
+    
+    // Explicitly ensure usage_records table has PutItem permission (for usage tracking)
+    props.tablesMap.usageRecords.grantWriteData(this.jobProcessorLambda);
 
     // Grant S3 permissions
     props.artifactsBucket.grantReadWrite(this.jobProcessorLambda);
