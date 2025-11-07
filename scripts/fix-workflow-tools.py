@@ -6,6 +6,7 @@ Fix workflow steps that have tool_choice='required' but empty tools array.
 import boto3
 from botocore.exceptions import ClientError
 from decimal import Decimal
+from datetime import datetime
 
 WORKFLOW_ID = "wf_0019a5cb319b8hhht5p5h6a"
 TENANT_ID = "84c8e438-0061-70f2-2ce0-7cb44989a329"
@@ -53,6 +54,7 @@ def fix_workflow_steps(workflow_id: str, tenant_id: str):
         
         fixed_steps = []
         issues_found = False
+        fixed_count = 0  # Track number of steps that were actually fixed
         
         for idx, step in enumerate(steps):
             step_name = step.get("step_name", f"Step {idx + 1}")
@@ -72,6 +74,7 @@ def fix_workflow_steps(workflow_id: str, tenant_id: str):
                     print(f"   Added default tool: web_search_preview")
                 
                 issues_found = True
+                fixed_count += 1
             
             # Also check if tool_choice is 'none' but tools is not empty
             elif tool_choice == "none" and tools and len(tools) > 0:
@@ -81,6 +84,7 @@ def fix_workflow_steps(workflow_id: str, tenant_id: str):
                 
                 step["tools"] = []
                 issues_found = True
+                fixed_count += 1
             
             fixed_steps.append(step)
         
@@ -101,13 +105,13 @@ def fix_workflow_steps(workflow_id: str, tenant_id: str):
             },
             ExpressionAttributeValues={
                 ":steps": fixed_steps,
-                ":updated_at": workflow.get("updated_at", "")
+                ":updated_at": datetime.utcnow().isoformat()
             }
         )
         
         print(f"\n✓ Successfully fixed workflow!")
         print(f"Workflow ID: {workflow_id}")
-        print(f"Fixed {len([s for s in fixed_steps if s.get('tool_choice') == 'required' and s.get('tools')])} steps")
+        print(f"Fixed {fixed_count} step(s)")
         print("=" * 60)
         
         return True
