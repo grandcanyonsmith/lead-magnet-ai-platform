@@ -305,12 +305,21 @@ export default function JobsPage() {
                     </div>
                     
                     {job.output_url && (
-                      <div className="pt-2 border-t border-gray-100">
+                      <div className="pt-2 border-t border-gray-100" onClick={(e) => e.stopPropagation()}>
                         <a
                           href={job.output_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            e.preventDefault()
+                            // Use window.open for better mobile compatibility
+                            if (typeof window !== 'undefined') {
+                              window.open(job.output_url, '_blank', 'noopener,noreferrer')
+                            }
+                          }}
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onTouchStart={(e) => e.stopPropagation()}
                           className="inline-flex items-center text-primary-600 hover:text-primary-900 font-medium"
                         >
                           <FiExternalLink className="w-3 h-3 mr-1" />
@@ -431,13 +440,22 @@ export default function JobsPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {duration !== null ? formatDuration(duration) : '-'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm" onClick={(e) => e.stopPropagation()}>
                         {job.output_url ? (
                           <a
                             href={job.output_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              e.preventDefault()
+                              // Use window.open for better mobile compatibility
+                              if (typeof window !== 'undefined') {
+                                window.open(job.output_url, '_blank', 'noopener,noreferrer')
+                              }
+                            }}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onTouchStart={(e) => e.stopPropagation()}
                             className="inline-flex items-center text-primary-600 hover:text-primary-900 font-medium"
                           >
                             View
