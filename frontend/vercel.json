@@ -1,8 +1,24 @@
 {
   "rewrites": [
     {
-      "source": "/v1/forms/:slug",
-      "destination": "/v1/forms/[slug]"
+      "source": "/v1/forms/:slug*",
+      "destination": "/v1/forms/_"
+    },
+    {
+      "source": "/dashboard/jobs/:id",
+      "destination": "/dashboard/jobs/_"
+    },
+    {
+      "source": "/dashboard/workflows/:id",
+      "destination": "/dashboard/workflows/_"
+    },
+    {
+      "source": "/dashboard/workflows/:id/edit",
+      "destination": "/dashboard/workflows/_/edit"
+    },
+    {
+      "source": "/dashboard/forms/:id/edit",
+      "destination": "/dashboard/forms/_/edit"
     }
   ]
 }
