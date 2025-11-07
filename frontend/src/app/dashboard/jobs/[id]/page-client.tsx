@@ -76,7 +76,22 @@ const formatDurationMs = (ms: number) => {
 export default function JobDetailClient() {
   const router = useRouter()
   const params = useParams()
-  const jobId = params?.id as string
+  // Extract job ID from params, or fallback to URL pathname if param is '_' (Vercel rewrite)
+  const getJobId = () => {
+    const paramId = params?.id as string
+    if (paramId && paramId !== '_') {
+      return paramId
+    }
+    // Fallback: extract from browser URL
+    if (typeof window !== 'undefined') {
+      const pathMatch = window.location.pathname.match(/\/dashboard\/jobs\/([^/]+)/)
+      if (pathMatch && pathMatch[1] && pathMatch[1] !== '_') {
+        return pathMatch[1]
+      }
+    }
+    return paramId || ''
+  }
+  const jobId = getJobId()
   
   const [job, setJob] = useState<any>(null)
   const [workflow, setWorkflow] = useState<any>(null)
