@@ -13,7 +13,7 @@ import { Construct } from 'constructs';
 export interface ApiStackProps extends cdk.StackProps {
   userPool: cognito.UserPool;
   userPoolClient: cognito.UserPoolClient;
-  tablesMap: Record<string, dynamodb.Table>;
+  tablesMap: Record<string, dynamodb.ITable>;
   stateMachineArn: string;
   artifactsBucket: s3.Bucket;
   cloudfrontDomain?: string;

@@ -10,7 +10,7 @@ import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import { Construct } from 'constructs';
 
 export interface ComputeStackProps extends cdk.StackProps {
-  tablesMap: Record<string, dynamodb.Table>;
+  tablesMap: Record<string, dynamodb.ITable>;
   artifactsBucket: s3.Bucket;
   cloudfrontDomain?: string;  // Optional CloudFront distribution domain
 }
@@ -143,7 +143,7 @@ export class ComputeStack extends cdk.Stack {
       expressionAttributeValues: {
         ':status': tasks.DynamoAttributeValue.fromString('failed'),
         ':error': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.processResult.Payload.error')),
-        ':error_type': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.processResult.Payload.error_type || "Unknown"')),
+        ':error_type': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.processResult.Payload.error_type')),
         ':updated_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
       },
     });
@@ -169,8 +169,10 @@ export class ComputeStack extends cdk.Stack {
     const parseErrorLegacy = new sfn.Pass(this, 'ParseErrorLegacy', {
       parameters: {
         'job_id.$': '$.job_id',
-        'error_message.$': sfn.JsonPath.stringAt(
-          "States.Format('Lambda execution failed: {} - {}', $.error.Error, $.error.Cause)"
+        'error_message': sfn.JsonPath.format(
+          'Lambda execution failed: {} - {}',
+          sfn.JsonPath.stringAt('$.error.Error'),
+          sfn.JsonPath.stringAt('$.error.Cause')
         ),
       },
       resultPath: '$.parsedError',
@@ -180,8 +182,10 @@ export class ComputeStack extends cdk.Stack {
       parameters: {
         'job_id.$': '$.job_id',
         'step_index.$': '$.step_index',
-        'error_message.$': sfn.JsonPath.stringAt(
-          "States.Format('Lambda execution failed: {} - {}', $.error.Error, $.error.Cause)"
+        'error_message': sfn.JsonPath.format(
+          'Lambda execution failed: {} - {}',
+          sfn.JsonPath.stringAt('$.error.Error'),
+          sfn.JsonPath.stringAt('$.error.Cause')
         ),
       },
       resultPath: '$.parsedError',
@@ -190,8 +194,10 @@ export class ComputeStack extends cdk.Stack {
     const parseErrorHTML = new sfn.Pass(this, 'ParseErrorHTML', {
       parameters: {
         'job_id.$': '$.job_id',
-        'error_message.$': sfn.JsonPath.stringAt(
-          "States.Format('Lambda execution failed: {} - {}', $.error.Error, $.error.Cause)"
+        'error_message': sfn.JsonPath.format(
+          'Lambda execution failed: {} - {}',
+          sfn.JsonPath.stringAt('$.error.Error'),
+          sfn.JsonPath.stringAt('$.error.Cause')
         ),
       },
       resultPath: '$.parsedError',
@@ -227,7 +233,7 @@ export class ComputeStack extends cdk.Stack {
     // Check if more steps remain - loops back to processStep if more steps (declared before incrementStep)
     const checkMoreSteps = new sfn.Choice(this, 'CheckMoreSteps')
       .when(
-        sfn.Condition.numberLessThan('$.step_index', sfn.JsonPath.numberAt('$.total_steps')),
+        sfn.Condition.numberLessThanJsonPath('$.step_index', '$.total_steps'),
         processStep  // Loop back to process next step
       )
       .otherwise(
@@ -313,6 +319,20 @@ export class ComputeStack extends cdk.Stack {
       )
       .otherwise(incrementStep);
 
+    // Compute steps length
+    const computeStepsLength = new sfn.Pass(this, 'ComputeStepsLength', {
+      parameters: {
+        'job_id.$': '$.job_id',
+        'workflow_id.$': '$.workflow_id',
+        'submission_id.$': '$.submission_id',
+        'tenant_id.$': '$.tenant_id',
+        'workflowData.$': '$.workflowData',
+        'steps_length.$': 'States.ArrayLength($.workflowData.Item.steps.L)',
+        'template_id.$': '$.workflowData.Item.template_id.S',
+      },
+      resultPath: '$',
+    });
+
     // Setup step loop for multi-step workflows
     const setupStepLoop = new sfn.Pass(this, 'SetupStepLoop', {
       parameters: {
@@ -321,9 +341,9 @@ export class ComputeStack extends cdk.Stack {
         'submission_id.$': '$.submission_id',
         'tenant_id.$': '$.tenant_id',
         'step_index': 0,
-        'total_steps.$': 'States.ArrayLength($.workflowData.Item.steps.L)',
-        'has_template.$': 'States.Boolean($.workflowData.Item.template_id)',
-        'template_id.$': '$.workflowData.Item.template_id.S',
+        'total_steps.$': '$.steps_length',
+        'has_template.$': '$.has_template',
+        'template_id.$': '$.template_id',
       },
       resultPath: '$',
     }).next(processStep).next(checkStepResult);
@@ -371,16 +391,55 @@ export class ComputeStack extends cdk.Stack {
       .when(
         sfn.Condition.or(
           sfn.Condition.isNotPresent('$.workflowData.Item.steps'),
-          sfn.Condition.numberEquals('States.ArrayLength($.workflowData.Item.steps.L)', 0)
+          sfn.Condition.numberEquals('$.steps_length', 0)
         ),
         processLegacyJob
       )
       .otherwise(setupStepLoop);
 
-    // Define workflow: Update status -> Initialize steps -> Check workflow type -> Process accordingly
+    // Set has_template to true when template exists
+    const setHasTemplateTrue = new sfn.Pass(this, 'SetHasTemplateTrue', {
+      parameters: {
+        'job_id.$': '$.job_id',
+        'workflow_id.$': '$.workflow_id',
+        'submission_id.$': '$.submission_id',
+        'tenant_id.$': '$.tenant_id',
+        'workflowData.$': '$.workflowData',
+        'steps_length.$': '$.steps_length',
+        'has_template': true,
+        'template_id.$': '$.template_id',
+      },
+      resultPath: '$',
+    }).next(checkWorkflowType);
+
+    // Set has_template to false when template doesn't exist
+    const setHasTemplateFalse = new sfn.Pass(this, 'SetHasTemplateFalse', {
+      parameters: {
+        'job_id.$': '$.job_id',
+        'workflow_id.$': '$.workflow_id',
+        'submission_id.$': '$.submission_id',
+        'tenant_id.$': '$.tenant_id',
+        'workflowData.$': '$.workflowData',
+        'steps_length.$': '$.steps_length',
+        'has_template': false,
+        'template_id': '',
+      },
+      resultPath: '$',
+    }).next(checkWorkflowType);
+
+    // Check if template exists and set has_template boolean
+    const checkTemplateExists = new sfn.Choice(this, 'CheckTemplateExists')
+      .when(
+        sfn.Condition.isPresent('$.workflowData.Item.template_id.S'),
+        setHasTemplateTrue
+      )
+      .otherwise(setHasTemplateFalse);
+
+    // Define workflow: Update status -> Initialize steps -> Compute steps length -> Check template -> Check workflow type -> Process accordingly
     const definition = updateJobStatus
       .next(initializeSteps)
-      .next(checkWorkflowType);
+      .next(computeStepsLength)
+      .next(checkTemplateExists);
 
     // Create State Machine
     this.stateMachine = new sfn.StateMachine(this, 'JobProcessorStateMachine', {
