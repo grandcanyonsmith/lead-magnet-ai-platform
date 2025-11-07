@@ -78,13 +78,13 @@ export class StorageStack extends cdk.Stack {
         {
           httpStatus: 403,
           responseHttpStatus: 200,
-          responsePagePath: '/favicon.ico',
+          responsePagePath: '/index.html',
           ttl: cdk.Duration.minutes(10),
         },
         {
           httpStatus: 404,
           responseHttpStatus: 200,
-          responsePagePath: '/favicon.ico',
+          responsePagePath: '/index.html',
           ttl: cdk.Duration.minutes(10),
         },
       ],
