@@ -31,38 +31,30 @@ export class AuthStack extends cdk.Stack {
             }
             
             // Auto-confirm user and auto-verify email
+            // These are the only fields allowed in PreSignUp response
             event.response.autoConfirmUser = true;
             event.response.autoVerifyEmail = true;
             
-            // Initialize userAttributes if needed
-            if (!event.response.userAttributes) {
-              event.response.userAttributes = {};
-            }
-            
-            // Set tenant_id from email if not already set
-            // Use email as tenant_id (will be normalized to avoid special characters)
-            const email = event.request?.userAttributes?.email || event.request?.userAttributes?.['email'];
-            if (email && !event.request?.userAttributes?.['custom:tenant_id']) {
-              // Use email as tenant_id (normalize to lowercase, replace @ with _, remove dots)
-              const tenantId = email.toLowerCase().replace(/@/g, '_').replace(/\\./g, '_');
-              event.response.userAttributes['custom:tenant_id'] = tenantId;
-            }
+            // Note: Custom attributes cannot be set in PreSignUp trigger response
+            // They must be set via PostConfirmation trigger or AdminUpdateUserAttributes
             
             console.log('PreSignUp Lambda response', JSON.stringify(event.response, null, 2));
             
-            // Ensure we return the event object with proper structure
+            // Return the event object - Cognito expects the full event object back
             return event;
           } catch (error) {
             console.error('PreSignUp Lambda error:', error);
             // Return a valid response even on error to prevent Cognito from failing
-            return {
-              ...event,
-              response: {
-                autoConfirmUser: true,
-                autoVerifyEmail: true,
-                userAttributes: event?.response?.userAttributes || {}
-              }
-            };
+            // Must return the full event object structure
+            if (!event) {
+              event = {};
+            }
+            if (!event.response) {
+              event.response = {};
+            }
+            event.response.autoConfirmUser = true;
+            event.response.autoVerifyEmail = true;
+            return event;
           }
         };
       `),
