@@ -5,6 +5,7 @@ Handles all DynamoDB operations for the worker.
 
 import os
 import logging
+import json
 from typing import Dict, Any, Optional
 import boto3
 from boto3.dynamodb.conditions import Key
@@ -12,6 +13,10 @@ from datetime import datetime
 from ulid import new as ulid
 
 logger = logging.getLogger(__name__)
+
+# DynamoDB item size limit is 400KB
+# We'll use 350KB as a safe threshold to leave room for other fields
+MAX_DYNAMODB_ITEM_SIZE = 350 * 1024  # 350KB in bytes
 
 
 class DynamoDBService:
@@ -32,18 +37,89 @@ class DynamoDBService:
         self.usage_records_table = self.dynamodb.Table(os.environ.get('USAGE_RECORDS_TABLE', 'leadmagnet-usage-records'))
         self.notifications_table = self.dynamodb.Table(os.environ.get('NOTIFICATIONS_TABLE', 'leadmagnet-notifications'))
     
-    def get_job(self, job_id: str) -> Optional[Dict[str, Any]]:
-        """Get job by ID."""
+    def get_job(self, job_id: str, s3_service=None) -> Optional[Dict[str, Any]]:
+        """
+        Get job by ID.
+        
+        Args:
+            job_id: Job ID
+            s3_service: Optional S3Service instance to load execution_steps from S3 if stored there
+        """
         try:
             response = self.jobs_table.get_item(Key={'job_id': job_id})
-            return response.get('Item')
+            job = response.get('Item')
+            
+            # If execution_steps is stored in S3, load it
+            if job and s3_service and job.get('execution_steps_s3_key'):
+                try:
+                    s3_key = job['execution_steps_s3_key']
+                    execution_steps_json = s3_service.download_artifact(s3_key)
+                    job['execution_steps'] = json.loads(execution_steps_json)
+                    logger.debug(f"Loaded execution_steps from S3 for job {job_id}")
+                except Exception as e:
+                    logger.error(f"Error loading execution_steps from S3 for job {job_id}: {e}")
+                    # Fall back to empty array if S3 load fails
+                    job['execution_steps'] = []
+            
+            return job
         except Exception as e:
             logger.error(f"Error getting job {job_id}: {e}")
             raise
     
-    def update_job(self, job_id: str, updates: Dict[str, Any]):
-        """Update job with given fields."""
+    def _estimate_dynamodb_size(self, value: Any) -> int:
+        """
+        Estimate the size of a value when serialized for DynamoDB.
+        This is approximate but should catch items that are clearly too large.
+        """
         try:
+            # Convert to JSON string to estimate size
+            json_str = json.dumps(value, default=str)
+            # DynamoDB uses UTF-8 encoding, so each character is 1-4 bytes
+            # We'll use a conservative estimate of average 2 bytes per character
+            return len(json_str.encode('utf-8'))
+        except Exception:
+            # Fallback: estimate based on string representation
+            return len(str(value).encode('utf-8'))
+    
+    def update_job(self, job_id: str, updates: Dict[str, Any], s3_service=None):
+        """
+        Update job with given fields.
+        
+        If execution_steps is too large (>350KB), it will be stored in S3
+        and only the S3 key will be stored in DynamoDB.
+        
+        Args:
+            job_id: Job ID
+            updates: Dictionary of fields to update
+            s3_service: Optional S3Service instance to store large execution_steps in S3
+        """
+        try:
+            # Check if execution_steps is in updates and if it's too large
+            if 'execution_steps' in updates and s3_service:
+                execution_steps = updates['execution_steps']
+                estimated_size = self._estimate_dynamodb_size(execution_steps)
+                
+                if estimated_size > MAX_DYNAMODB_ITEM_SIZE:
+                    logger.info(f"execution_steps for job {job_id} is too large ({estimated_size} bytes), storing in S3")
+                    # Store in S3
+                    s3_key = f"jobs/{job_id}/execution_steps.json"
+                    execution_steps_json = json.dumps(execution_steps, default=str)
+                    s3_service.upload_artifact(s3_key, execution_steps_json, content_type='application/json', public=False)
+                    
+                    # Replace execution_steps with S3 key reference
+                    updates['execution_steps_s3_key'] = s3_key
+                    # Remove execution_steps from updates to avoid storing it in DynamoDB
+                    del updates['execution_steps']
+                    logger.info(f"Stored execution_steps in S3 at {s3_key} for job {job_id}")
+            
+            # Remove execution_steps_s3_key if we're storing execution_steps directly (and it fits)
+            if 'execution_steps' in updates and 'execution_steps_s3_key' in updates:
+                del updates['execution_steps_s3_key']
+            
+            if not updates:
+                logger.debug(f"No updates to apply for job {job_id}")
+                return
+            
             update_expression = "SET " + ", ".join([f"#{k} = :{k}" for k in updates.keys()])
             expression_attribute_names = {f"#{k}": k for k in updates.keys()}
             expression_attribute_values = {f":{k}": v for k, v in updates.items()}
