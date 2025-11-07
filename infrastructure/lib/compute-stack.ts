@@ -130,11 +130,47 @@ export class ComputeStack extends cdk.Stack {
       resultPath: '$.updateResult',
     });
 
-    // Update job status to failed
-    const handleFailure = new tasks.DynamoUpdateItem(this, 'HandleFailure', {
+    // Parse error message from Lambda response
+    // When Lambda fails, error info is in $.error.Cause (JSON string) or $.error.Error
+    // Try to extract error message from the Lambda response
+    const parseError = new sfn.Pass(this, 'ParseError', {
+      parameters: {
+        'job_id.$': '$.job_id',
+        // Extract error message from Cause (Lambda error response) or Error field
+        // Cause is a JSON string containing the Lambda error response
+        'error_message.$': sfn.JsonPath.stringAt(
+          "States.Format('{}', " +
+          "States.StringToJson(States.String($.error.Cause)).error || " +
+          "$.error.Error || " +
+          "'Error occurred during job processing. Check Lambda logs for details.')"
+        ),
+      },
+      resultPath: '$.parsedError',
+    });
+
+    // Handle Lambda returning success: false (not an exception, but business logic failure)
+    const handleLambdaFailure = new tasks.DynamoUpdateItem(this, 'HandleLambdaFailure', {
       table: props.tablesMap.jobs,
       key: {
         job_id: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.job_id')),
+      },
+      updateExpression: 'SET #status = :status, error_message = :error, error_type = :error_type, updated_at = :updated_at',
+      expressionAttributeNames: {
+        '#status': 'status',
+      },
+      expressionAttributeValues: {
+        ':status': tasks.DynamoAttributeValue.fromString('failed'),
+        ':error': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.processResult.error')),
+        ':error_type': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.processResult.error_type || "Unknown"')),
+        ':updated_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
+      },
+    });
+
+    // Update job status to failed with actual error message (for exceptions)
+    const handleFailure = new tasks.DynamoUpdateItem(this, 'HandleFailure', {
+      table: props.tablesMap.jobs,
+      key: {
+        job_id: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.parsedError.job_id')),
       },
       updateExpression: 'SET #status = :status, error_message = :error, updated_at = :updated_at',
       expressionAttributeNames: {
@@ -142,7 +178,7 @@ export class ComputeStack extends cdk.Stack {
       },
       expressionAttributeValues: {
         ':status': tasks.DynamoAttributeValue.fromString('failed'),
-        ':error': tasks.DynamoAttributeValue.fromString('Error occurred'),
+        ':error': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.parsedError.error_message')),
         ':updated_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
       },
     });
@@ -158,7 +194,8 @@ export class ComputeStack extends cdk.Stack {
     });
     
     // Add error handling for Lambda failures
-    processJob.addCatch(handleFailure, {
+    // First parse the error, then update the job status
+    processJob.addCatch(parseError.next(handleFailure), {
       resultPath: '$.error',
       errors: ['States.ALL'],
     });
@@ -180,10 +217,18 @@ export class ComputeStack extends cdk.Stack {
       },
     });
 
-    // Define workflow: Update status -> Process job -> Handle success
+    // Check if Lambda returned success: false
+    const checkResult = new sfn.Choice(this, 'CheckResult')
+      .when(
+        sfn.Condition.booleanEquals('$.processResult.success', false),
+        handleLambdaFailure
+      )
+      .otherwise(handleSuccess);
+
+    // Define workflow: Update status -> Process job -> Check result -> Handle success/failure
     const definition = updateJobStatus
       .next(processJob)
-      .next(handleSuccess);
+      .next(checkResult);
 
     // Create State Machine
     this.stateMachine = new sfn.StateMachine(this, 'JobProcessorStateMachine', {
