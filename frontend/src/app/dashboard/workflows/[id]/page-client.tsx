@@ -185,37 +185,37 @@ export default function WorkflowDetailPage() {
 
   return (
     <div>
-      <div className="mb-6">
+      <div className="mb-4 sm:mb-6">
         <button
           onClick={() => router.back()}
-          className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
+          className="flex items-center text-gray-600 hover:text-gray-900 mb-3 sm:mb-4 text-sm sm:text-base"
         >
           <FiArrowLeft className="w-4 h-4 mr-2" />
           Back
         </button>
         {error && (
-          <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          <div className="mb-3 sm:mb-4 bg-red-50 border border-red-200 text-red-700 px-3 sm:px-4 py-2 sm:py-3 rounded-lg text-sm sm:text-base">
             {error}
           </div>
         )}
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{workflow.workflow_name}</h1>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-0">
+          <div className="flex-1">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{workflow.workflow_name}</h1>
             {workflow.workflow_description && (
-              <p className="text-gray-600 mt-1">{workflow.workflow_description}</p>
+              <p className="text-sm sm:text-base text-gray-600 mt-1">{workflow.workflow_description}</p>
             )}
           </div>
-          <div className="flex space-x-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <button
               onClick={() => router.push(`/dashboard/workflows/${workflowId}/edit`)}
-              className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+              className="flex items-center justify-center px-3 sm:px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm sm:text-base"
             >
               <FiEdit className="w-4 h-4 mr-2" />
               Edit
             </button>
             <button
               onClick={handleDelete}
-              className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              className="flex items-center justify-center px-3 sm:px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm sm:text-base"
             >
               <FiTrash2 className="w-4 h-4 mr-2" />
               Delete
@@ -224,9 +224,9 @@ export default function WorkflowDetailPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Workflow Details */}
-        <div className="bg-white rounded-lg shadow p-6 space-y-6">
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6 space-y-4 sm:space-y-6">
           <h2 className="text-lg font-semibold text-gray-900">Workflow Details</h2>
           
           <div>
@@ -236,12 +236,12 @@ export default function WorkflowDetailPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">AI Model</label>
-            <p className="text-sm text-gray-900">{workflow.ai_model || 'gpt-5'}</p>
+            <p className="text-sm text-gray-900 break-words">{workflow.ai_model || 'gpt-5'}</p>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Rewrite Model</label>
-            <p className="text-sm text-gray-900">{workflow.rewrite_model || 'gpt-5'}</p>
+            <p className="text-sm text-gray-900 break-words">{workflow.rewrite_model || 'gpt-5'}</p>
           </div>
 
           <div>
@@ -251,7 +251,7 @@ export default function WorkflowDetailPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Template ID</label>
-            <p className="text-sm text-gray-900 font-mono">{workflow.template_id || '-'}</p>
+            <p className="text-sm text-gray-900 font-mono break-all">{workflow.template_id || '-'}</p>
             {workflow.template_version && (
               <p className="text-xs text-gray-500 mt-1">Version {workflow.template_version}</p>
             )}
@@ -262,18 +262,18 @@ export default function WorkflowDetailPage() {
             {workflow.form ? (
               <div className="space-y-2">
                 <div>
-                  <p className="text-sm text-gray-900 font-medium">{workflow.form.form_name || 'Form'}</p>
+                  <p className="text-sm text-gray-900 font-medium break-words">{workflow.form.form_name || 'Form'}</p>
                   {workflow.form.public_slug && (
-                    <p className="text-xs text-gray-500 mt-1 font-mono">/{workflow.form.public_slug}</p>
+                    <p className="text-xs text-gray-500 mt-1 font-mono break-all">/{workflow.form.public_slug}</p>
                   )}
                 </div>
-                <div className="flex space-x-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   {workflow.form.public_slug && (
                     <a
                       href={`/v1/forms/${workflow.form.public_slug}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center px-3 py-1.5 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                      className="inline-flex items-center justify-center px-3 py-1.5 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
                     >
                       <FiExternalLink className="w-4 h-4 mr-1.5" />
                       View Form
@@ -282,7 +282,7 @@ export default function WorkflowDetailPage() {
                   {workflow.form.form_id && (
                     <button
                       onClick={() => router.push(`/dashboard/forms/${workflow.form.form_id}/edit`)}
-                      className="inline-flex items-center px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                      className="inline-flex items-center justify-center px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
                     >
                       <FiEdit className="w-4 h-4 mr-1.5" />
                       Edit Form
@@ -297,7 +297,7 @@ export default function WorkflowDetailPage() {
                         type="text"
                         readOnly
                         value={typeof window !== 'undefined' ? `${window.location.origin}/v1/forms/${workflow.form.public_slug}` : `/v1/forms/${workflow.form.public_slug}`}
-                        className="flex-1 text-xs font-mono bg-gray-50 border border-gray-200 rounded px-2 py-1 text-gray-700"
+                        className="flex-1 text-xs font-mono bg-gray-50 border border-gray-200 rounded px-2 py-1 text-gray-700 break-all"
                         onClick={(e) => (e.target as HTMLInputElement).select()}
                       />
                       <button
@@ -307,7 +307,7 @@ export default function WorkflowDetailPage() {
                             : `/v1/forms/${workflow.form.public_slug}`
                           navigator.clipboard.writeText(url)
                         }}
-                        className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+                        className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors flex-shrink-0"
                         title="Copy URL"
                       >
                         <FiLink className="w-4 h-4" />
@@ -350,7 +350,7 @@ export default function WorkflowDetailPage() {
           {workflow.delivery_phone && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Phone</label>
-              <p className="text-sm text-gray-900">{workflow.delivery_phone}</p>
+              <p className="text-sm text-gray-900 break-words">{workflow.delivery_phone}</p>
             </div>
           )}
 
@@ -370,27 +370,27 @@ export default function WorkflowDetailPage() {
         </div>
 
         {/* AI Instructions */}
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">AI Instructions</h2>
-          <div className="prose prose-sm max-w-none bg-gray-50 rounded-lg p-4">
+          <div className="prose prose-sm max-w-none bg-gray-50 rounded-lg p-3 sm:p-4 overflow-x-auto">
             {workflow.ai_instructions ? (
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                 {workflow.ai_instructions}
               </ReactMarkdown>
             ) : (
-              <p className="text-gray-500">No instructions provided</p>
+              <p className="text-gray-500 text-sm">No instructions provided</p>
             )}
           </div>
         </div>
       </div>
 
       {/* Recent Jobs */}
-      <div className="mt-6 bg-white rounded-lg shadow p-6">
+      <div className="mt-4 sm:mt-6 bg-white rounded-lg shadow p-4 sm:p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Jobs</h2>
         {jobs.length === 0 ? (
           <p className="text-gray-500 text-sm">No jobs found for this workflow</p>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {jobs.map((job) => {
               const duration = job.completed_at
                 ? Math.round(
@@ -400,19 +400,19 @@ export default function WorkflowDetailPage() {
               const submission = submissions[job.job_id]
 
               return (
-                <div key={job.job_id} className="border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-4">
+                <div key={job.job_id} className="border border-gray-200 rounded-lg p-3 sm:p-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-3 sm:mb-4">
                     <div className="flex items-center space-x-3">
                       {getJobStatusIcon(job.status)}
                       <div>
-                        <div className="text-sm font-mono text-gray-900">{job.job_id}</div>
+                        <div className="text-xs sm:text-sm font-mono text-gray-900 break-all">{job.job_id}</div>
                         <div className="text-xs text-gray-500">
                           Created: {new Date(job.created_at).toLocaleString()}
                           {duration !== null && ` • Duration: ${duration}s`}
                         </div>
                       </div>
                     </div>
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full self-start sm:self-auto ${
                       job.status === 'completed' ? 'bg-green-100 text-green-800' :
                       job.status === 'failed' ? 'bg-red-100 text-red-800' :
                       job.status === 'processing' ? 'bg-blue-100 text-blue-800' :
@@ -423,9 +423,9 @@ export default function WorkflowDetailPage() {
                   </div>
                   
                   {submission && submission.submission_data && (
-                    <div className="mt-4 pt-4 border-t border-gray-200">
+                    <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-200">
                       <h3 className="text-sm font-semibold text-gray-900 mb-3">Form Submission Details</h3>
-                      <div className="bg-gray-50 rounded-lg p-4">
+                      <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
                         <dl className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           {Object.entries(submission.submission_data).map(([key, value]: [string, any]) => (
                             <div key={key}>

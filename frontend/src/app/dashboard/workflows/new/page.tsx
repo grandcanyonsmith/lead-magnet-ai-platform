@@ -76,6 +76,121 @@ export default function NewWorkflowPage() {
 
   const [showFormPreview, setShowFormPreview] = useState(false)
 
+  const saveWorkflow = async (autoSave: boolean = false) => {
+    setError(null)
+
+    // Validation
+    if (!formData.workflow_name.trim()) {
+      setError('Lead magnet name is required')
+      return null
+    }
+
+    // Validate steps
+    if (steps.length === 0) {
+      setError('At least one workflow step is required')
+      return null
+    }
+
+    for (let i = 0; i < steps.length; i++) {
+      const step = steps[i]
+      if (!step.step_name.trim()) {
+        setError(`Step ${i + 1} name is required`)
+        return null
+      }
+      if (!step.instructions.trim()) {
+        setError(`Step ${i + 1} instructions are required`)
+        return null
+      }
+    }
+
+    if (formData.html_enabled && !templateData.html_content.trim()) {
+      setError('Template HTML content is required when HTML generation is enabled')
+      return null
+    }
+
+    if (!autoSave) {
+      setSubmitting(true)
+    }
+
+    try {
+      // First, create the template if HTML is enabled
+      let templateId = formData.template_id
+      if (formData.html_enabled && templateData.html_content.trim()) {
+        if (!generatedTemplateId) {
+          // Create new template
+          const template = await api.createTemplate({
+            template_name: templateData.template_name || 'Generated Template',
+            template_description: templateData.template_description || '',
+            html_content: templateData.html_content.trim(),
+            placeholder_tags: templateData.placeholder_tags.length > 0 ? templateData.placeholder_tags : undefined,
+            is_published: true,
+          })
+          templateId = template.template_id
+          setGeneratedTemplateId(templateId)
+        } else {
+          // Update existing template
+          await api.updateTemplate(generatedTemplateId, {
+            template_name: templateData.template_name || 'Generated Template',
+            template_description: templateData.template_description || '',
+            html_content: templateData.html_content.trim(),
+            placeholder_tags: templateData.placeholder_tags.length > 0 ? templateData.placeholder_tags : undefined,
+            is_published: true,
+          })
+          templateId = generatedTemplateId
+        }
+      }
+
+      // Then create the workflow with steps
+      const workflow = await api.createWorkflow({
+        workflow_name: formData.workflow_name.trim(),
+        workflow_description: formData.workflow_description.trim() || undefined,
+        steps: steps.map((step, index) => ({
+          ...step,
+          step_order: index,
+        })),
+        // Keep legacy fields for backward compatibility (will be auto-migrated)
+        ai_model: formData.ai_model,
+        ai_instructions: steps[0]?.instructions || formData.ai_instructions.trim() || '',
+        rewrite_model: formData.rewrite_model,
+        research_enabled: formData.research_enabled,
+        html_enabled: formData.html_enabled,
+        template_id: templateId || undefined,
+        template_version: formData.template_version,
+        // Delivery configuration
+        delivery_method: formData.delivery_method,
+        delivery_webhook_url: formData.delivery_method === 'webhook' && formData.delivery_webhook_url ? formData.delivery_webhook_url : undefined,
+        delivery_webhook_headers: formData.delivery_method === 'webhook' && Object.keys(formData.delivery_webhook_headers).length > 0 ? formData.delivery_webhook_headers : undefined,
+        delivery_sms_enabled: formData.delivery_method === 'sms',
+        delivery_sms_message: formData.delivery_method === 'sms' && formData.delivery_sms_message ? formData.delivery_sms_message : undefined,
+        delivery_sms_ai_generated: formData.delivery_method === 'sms' && formData.delivery_sms_ai_generated,
+        delivery_sms_ai_instructions: formData.delivery_method === 'sms' && formData.delivery_sms_ai_generated && formData.delivery_sms_ai_instructions ? formData.delivery_sms_ai_instructions : undefined,
+      })
+
+      // Create the form if form fields are provided
+      if (formFieldsData.form_fields_schema.fields.length > 0) {
+        await api.createForm({
+          workflow_id: workflow.workflow_id,
+          form_name: formFieldsData.form_name || `Form for ${formData.workflow_name}`,
+          public_slug: formFieldsData.public_slug || formData.workflow_name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+          form_fields_schema: formFieldsData.form_fields_schema,
+          rate_limit_enabled: true,
+          rate_limit_per_hour: 10,
+          captcha_enabled: false,
+        })
+      }
+
+      return workflow
+    } catch (error: any) {
+      console.error('Failed to create workflow:', error)
+      setError(error.response?.data?.message || error.message || 'Failed to create workflow')
+      return null
+    } finally {
+      if (!autoSave) {
+        setSubmitting(false)
+      }
+    }
+  }
+
   const handleGenerateWithAI = async () => {
     if (!prompt.trim()) {
       setError('Please describe what you want to build a lead magnet for')
@@ -147,7 +262,7 @@ export default function NewWorkflowPage() {
           timestamp: new Date().toISOString(),
         })
 
-        setGenerationStatus('Generation complete! Review and edit the fields below.')
+        setGenerationStatus('Generation complete! Auto-saving your lead magnet...')
 
         // Populate workflow fields
         setFormData(prev => ({
@@ -212,12 +327,27 @@ export default function NewWorkflowPage() {
         // Move to form step
         setStep('form')
 
-        // Move to form step
-        setStep('form')
-
-        setTimeout(() => {
-          setGenerationStatus(null)
-        }, 3000)
+        // Auto-save the workflow immediately after generation
+        try {
+          const savedWorkflow = await saveWorkflow(true)
+          if (savedWorkflow) {
+            setGenerationStatus('Lead magnet saved successfully! You can review and edit it below.')
+            setTimeout(() => {
+              setGenerationStatus(null)
+            }, 5000)
+          } else {
+            setGenerationStatus('Generation complete! Review and edit the fields below, then click Save.')
+            setTimeout(() => {
+              setGenerationStatus(null)
+            }, 5000)
+          }
+        } catch (saveError) {
+          console.error('Auto-save failed:', saveError)
+          setGenerationStatus('Generation complete! Review and edit the fields below, then click Save.')
+          setTimeout(() => {
+            setGenerationStatus(null)
+          }, 5000)
+        }
       } else {
         // Fallback: synchronous response (legacy behavior)
         const result = initResponse
@@ -314,112 +444,9 @@ export default function NewWorkflowPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError(null)
-
-    // Validation
-    if (!formData.workflow_name.trim()) {
-      setError('Lead magnet name is required')
-      return
-    }
-
-    // Validate steps
-    if (steps.length === 0) {
-      setError('At least one workflow step is required')
-      return
-    }
-
-    for (let i = 0; i < steps.length; i++) {
-      const step = steps[i]
-      if (!step.step_name.trim()) {
-        setError(`Step ${i + 1} name is required`)
-        return
-      }
-      if (!step.instructions.trim()) {
-        setError(`Step ${i + 1} instructions are required`)
-        return
-      }
-    }
-
-    if (formData.html_enabled && !templateData.html_content.trim()) {
-      setError('Template HTML content is required when HTML generation is enabled')
-      return
-    }
-
-    setSubmitting(true)
-
-    try {
-      // First, create the template if HTML is enabled
-      let templateId = formData.template_id
-      if (formData.html_enabled && templateData.html_content.trim()) {
-        if (!generatedTemplateId) {
-          // Create new template
-          const template = await api.createTemplate({
-            template_name: templateData.template_name || 'Generated Template',
-            template_description: templateData.template_description || '',
-            html_content: templateData.html_content.trim(),
-            placeholder_tags: templateData.placeholder_tags.length > 0 ? templateData.placeholder_tags : undefined,
-            is_published: true,
-          })
-          templateId = template.template_id
-          setGeneratedTemplateId(templateId)
-        } else {
-          // Update existing template
-          await api.updateTemplate(generatedTemplateId, {
-            template_name: templateData.template_name || 'Generated Template',
-            template_description: templateData.template_description || '',
-            html_content: templateData.html_content.trim(),
-            placeholder_tags: templateData.placeholder_tags.length > 0 ? templateData.placeholder_tags : undefined,
-            is_published: true,
-          })
-          templateId = generatedTemplateId
-        }
-      }
-
-      // Then create the workflow with steps
-      const workflow = await api.createWorkflow({
-        workflow_name: formData.workflow_name.trim(),
-        workflow_description: formData.workflow_description.trim() || undefined,
-        steps: steps.map((step, index) => ({
-          ...step,
-          step_order: index,
-        })),
-        // Keep legacy fields for backward compatibility (will be auto-migrated)
-        ai_model: formData.ai_model,
-        ai_instructions: steps[0]?.instructions || formData.ai_instructions.trim() || '',
-        rewrite_model: formData.rewrite_model,
-        research_enabled: formData.research_enabled,
-        html_enabled: formData.html_enabled,
-        template_id: templateId || undefined,
-        template_version: formData.template_version,
-        // Delivery configuration
-        delivery_method: formData.delivery_method,
-        delivery_webhook_url: formData.delivery_method === 'webhook' && formData.delivery_webhook_url ? formData.delivery_webhook_url : undefined,
-        delivery_webhook_headers: formData.delivery_method === 'webhook' && Object.keys(formData.delivery_webhook_headers).length > 0 ? formData.delivery_webhook_headers : undefined,
-        delivery_sms_enabled: formData.delivery_method === 'sms',
-        delivery_sms_message: formData.delivery_method === 'sms' && formData.delivery_sms_message ? formData.delivery_sms_message : undefined,
-        delivery_sms_ai_generated: formData.delivery_method === 'sms' && formData.delivery_sms_ai_generated,
-        delivery_sms_ai_instructions: formData.delivery_method === 'sms' && formData.delivery_sms_ai_generated && formData.delivery_sms_ai_instructions ? formData.delivery_sms_ai_instructions : undefined,
-      })
-
-      // Create the form if form fields are provided
-      if (formFieldsData.form_fields_schema.fields.length > 0) {
-        await api.createForm({
-          workflow_id: workflow.workflow_id,
-          form_name: formFieldsData.form_name || `Form for ${formData.workflow_name}`,
-          public_slug: formFieldsData.public_slug || formData.workflow_name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
-          form_fields_schema: formFieldsData.form_fields_schema,
-          rate_limit_enabled: true,
-          rate_limit_per_hour: 10,
-          captcha_enabled: false,
-        })
-      }
-
+    const workflow = await saveWorkflow(false)
+    if (workflow) {
       router.push('/dashboard/workflows')
-    } catch (error: any) {
-      console.error('Failed to create workflow:', error)
-      setError(error.response?.data?.message || error.message || 'Failed to create workflow')
-    } finally {
-      setSubmitting(false)
     }
   }
 
