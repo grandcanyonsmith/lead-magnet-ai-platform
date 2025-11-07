@@ -102,7 +102,7 @@ export class ApiStack extends cdk.Stack {
         ARTIFACTS_BUCKET: props.artifactsBucket.bucketName,
         CLOUDFRONT_DOMAIN: props.cloudfrontDomain || '',
         LAMBDA_FUNCTION_NAME: 'leadmagnet-api-handler',
-        AWS_REGION: this.region,
+        // AWS_REGION is automatically set by Lambda runtime, don't set it manually
         LOG_LEVEL: 'info',
       },
       tracing: lambda.Tracing.ACTIVE,

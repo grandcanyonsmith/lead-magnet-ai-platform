@@ -8,10 +8,12 @@ import logging
 from typing import Optional, Dict, Tuple
 import boto3
 import json
+import base64
 from datetime import datetime
 from ulid import new as ulid
 from openai import OpenAI
 from cost_service import calculate_openai_cost
+from s3_service import S3Service
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +25,7 @@ class AIService:
         """Initialize OpenAI client with API key from Secrets Manager."""
         self.openai_api_key = self._get_openai_key()
         self.client = OpenAI(api_key=self.openai_api_key)
+        self.s3_service = S3Service()
     
     def _get_openai_key(self) -> str:
         """Get OpenAI API key from AWS Secrets Manager."""
@@ -197,8 +200,46 @@ class AIService:
                                     image_urls.append(item.result)
                                     logger.info(f"Found image URL from ImageGenerationCall.result: {item.result}")
                                 else:
-                                    # result is base64 - we'd need to upload it to S3 to get a URL
-                                    logger.info(f"ImageGenerationCall.result is base64 (length={len(item.result)}), would need to upload to S3")
+                                    # result is base64 - decode and upload to S3 to get a URL
+                                    try:
+                                        logger.info(f"ImageGenerationCall.result is base64 (length={len(item.result)}), uploading to S3")
+                                        
+                                        # Handle data URI format: data:image/png;base64,...
+                                        base64_data = item.result
+                                        content_type = 'image/png'  # default
+                                        file_ext = 'png'
+                                        
+                                        if base64_data.startswith('data:'):
+                                            # Extract content type and base64 data from data URI
+                                            parts = base64_data.split(',', 1)
+                                            if len(parts) == 2:
+                                                header = parts[0]
+                                                base64_data = parts[1]
+                                                # Extract content type from header: data:image/png;base64
+                                                if 'image/' in header:
+                                                    img_type = header.split('image/')[1].split(';')[0]
+                                                    content_type = f'image/{img_type}'
+                                                    file_ext = img_type if img_type in ['png', 'jpeg', 'jpg', 'gif', 'webp'] else 'png'
+                                        
+                                        # Decode base64 to binary
+                                        image_bytes = base64.b64decode(base64_data)
+                                        
+                                        # Generate S3 key for image
+                                        image_id = str(ulid())
+                                        s3_key = f"images/{image_id}.{file_ext}"
+                                        
+                                        # Upload to S3 and get URL
+                                        _, public_url = self.s3_service.upload_image(
+                                            key=s3_key,
+                                            image_data=image_bytes,
+                                            content_type=content_type,
+                                            public=True
+                                        )
+                                        
+                                        image_urls.append(public_url)
+                                        logger.info(f"Uploaded base64 image to S3: {public_url}")
+                                    except Exception as upload_error:
+                                        logger.error(f"Failed to upload base64 image to S3: {upload_error}", exc_info=True)
                 
                 # Log if no images found but image_generation tool was used
                 has_image_tool = any(
