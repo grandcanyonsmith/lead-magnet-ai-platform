@@ -59,8 +59,8 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         'job_id': job_id,
         'step_index': step_index,
         'step_type': step_type,
-        'request_id': context.request_id if context else None,
-        'function_name': context.function_name if context else None,
+        'request_id': getattr(context, 'aws_request_id', None) if context else None,
+        'function_name': getattr(context, 'function_name', None) if context else None,
         'start_time': handler_start_time.isoformat()
     })
     
