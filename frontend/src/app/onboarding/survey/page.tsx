@@ -200,7 +200,7 @@ export default function OnboardingSurveyPage() {
                 placeholder="Describe your ideal customer. What are their characteristics, needs, and behaviors?"
               />
               <p className="mt-2 text-sm text-gray-500">
-                Help us understand who you're targeting so we can personalize your lead magnets.
+                Help us understand who you&apos;re targeting so we can personalize your lead magnets.
               </p>
             </div>
           </div>

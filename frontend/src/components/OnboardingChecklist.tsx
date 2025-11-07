@@ -199,7 +199,7 @@ export function OnboardingChecklist({ settings, onStartTour }: OnboardingCheckli
           {allCompleted && (
             <div className="mt-4 p-3 bg-green-50 rounded-lg">
               <p className="text-sm text-green-700 font-medium text-center">
-                🎉 All set! You're ready to create amazing lead magnets.
+                🎉 All set! You&apos;re ready to create amazing lead magnets.
               </p>
             </div>
           )}
