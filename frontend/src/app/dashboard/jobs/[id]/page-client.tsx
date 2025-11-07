@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import { api } from '@/lib/api'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { FiArrowLeft, FiCheckCircle, FiXCircle, FiClock, FiLoader, FiCopy, FiChevronDown, FiChevronUp, FiExternalLink } from 'react-icons/fi'
+import { FiArrowLeft, FiCheckCircle, FiXCircle, FiClock, FiLoader, FiCopy, FiChevronDown, FiChevronUp, FiExternalLink, FiRefreshCw } from 'react-icons/fi'
 
 const getStatusLabel = (status: string) => {
   const labels: Record<string, string> = {
@@ -80,8 +80,11 @@ export default function JobDetailClient() {
   
   const [job, setJob] = useState<any>(null)
   const [workflow, setWorkflow] = useState<any>(null)
+  const [submission, setSubmission] = useState<any>(null)
+  const [form, setForm] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [resubmitting, setResubmitting] = useState(false)
   const [showTechnicalDetails, setShowTechnicalDetails] = useState(false)
   const [showExecutionSteps, setShowExecutionSteps] = useState(true)
   const [expandedSteps, setExpandedSteps] = useState<Set<number>>(new Set())
@@ -110,6 +113,28 @@ export default function JobDetailClient() {
         }
       }
       
+      // Load submission details if submission_id exists
+      if (data.submission_id) {
+        try {
+          const submissionData = await api.getSubmission(data.submission_id)
+          setSubmission(submissionData)
+          
+          // Load form details if form_id exists
+          if (submissionData.form_id) {
+            try {
+              const formData = await api.getForm(submissionData.form_id)
+              setForm(formData)
+            } catch (err) {
+              console.error('Failed to load form:', err)
+              // Continue without form data
+            }
+          }
+        } catch (err) {
+          console.error('Failed to load submission:', err)
+          // Continue without submission data
+        }
+      }
+      
       setError(null)
     } catch (error: any) {
       console.error('Failed to load job:', error)
@@ -124,6 +149,26 @@ export default function JobDetailClient() {
     navigator.clipboard.writeText(text)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  const handleResubmit = async () => {
+    if (!confirm('Are you sure you want to resubmit this lead magnet? This will create a new job with the same submission data.')) {
+      return
+    }
+
+    setResubmitting(true)
+    setError(null)
+
+    try {
+      const result = await api.resubmitJob(jobId)
+      // Redirect to the new job
+      router.push(`/dashboard/jobs/${result.job_id}`)
+    } catch (error: any) {
+      console.error('Failed to resubmit job:', error)
+      setError(error.response?.data?.message || error.message || 'Failed to resubmit job')
+    } finally {
+      setResubmitting(false)
+    }
   }
 
   const toggleStep = (stepOrder: number) => {
@@ -341,11 +386,24 @@ export default function JobDetailClient() {
           <FiArrowLeft className="w-4 h-4 mr-2" />
           Back
         </button>
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Lead Magnet Details</h1>
-            <p className="text-gray-600 mt-1">View details and status of your generated lead magnet</p>
+        {error && (
+          <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            {error}
           </div>
+        )}
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-0">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Lead Magnet Details</h1>
+            <p className="text-sm sm:text-base text-gray-600 mt-1">View details and status of your generated lead magnet</p>
+          </div>
+          <button
+            onClick={handleResubmit}
+            disabled={resubmitting}
+            className="flex items-center justify-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base w-full sm:w-auto"
+          >
+            <FiRefreshCw className={`w-4 h-4 mr-2 ${resubmitting ? 'animate-spin' : ''}`} />
+            {resubmitting ? 'Resubmitting...' : 'Resubmit'}
+          </button>
         </div>
       </div>
 
@@ -667,7 +725,20 @@ export default function JobDetailClient() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Submission ID</label>
                 <div className="flex items-center space-x-2">
-                  <p className="text-sm font-mono text-gray-900">{job.submission_id}</p>
+                  {form?.public_slug ? (
+                    <a
+                      href={`/v1/forms/${form.public_slug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm font-mono text-primary-600 hover:text-primary-900 hover:underline"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {job.submission_id}
+                      <FiExternalLink className="w-3 h-3 ml-1 inline" />
+                    </a>
+                  ) : (
+                    <p className="text-sm font-mono text-gray-900">{job.submission_id}</p>
+                  )}
                   <button
                     onClick={() => copyToClipboard(job.submission_id)}
                     className="text-gray-500 hover:text-gray-700"
@@ -740,7 +811,17 @@ export default function JobDetailClient() {
                 <div className="space-y-2">
                   {job.artifacts.map((artifactId: string, index: number) => (
                     <div key={artifactId} className="flex items-center space-x-2">
-                      <span className="text-sm font-mono text-gray-600">{artifactId}</span>
+                      <a
+                        href="/dashboard/artifacts"
+                        className="text-sm font-mono text-primary-600 hover:text-primary-900 hover:underline"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          router.push('/dashboard/artifacts')
+                        }}
+                      >
+                        {artifactId}
+                        <FiExternalLink className="w-3 h-3 ml-1 inline" />
+                      </a>
                       <button
                         onClick={() => copyToClipboard(artifactId)}
                         className="text-gray-500 hover:text-gray-700"
