@@ -25,8 +25,15 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
     Lambda handler for processing lead magnet jobs.
     
+    Supports two modes:
+    1. Per-step processing: event contains 'step_index' - processes single step
+    2. Legacy full job processing: event contains only 'job_id' - processes all steps
+    
     Args:
-        event: Step Functions event containing 'job_id'
+        event: Step Functions event containing:
+            - job_id: Required - The job ID to process
+            - step_index: Optional - Index of step to process (for per-step mode)
+            - step_type: Optional - Type of step ('workflow_step' or 'html_generation')
         context: Lambda context object
         
     Returns:
@@ -42,7 +49,11 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             'error_type': 'ValueError'
         }
     
-    logger.info(f"Starting Lambda handler for job: {job_id}")
+    # Extract step_index if present (per-step mode)
+    step_index = event.get('step_index')
+    step_type = event.get('step_type', 'workflow_step')  # 'workflow_step' or 'html_generation'
+    
+    logger.info(f"Starting Lambda handler for job: {job_id}, step_index: {step_index}, step_type: {step_type}")
     
     try:
         # Initialize services
@@ -50,18 +61,25 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         s3_service = S3Service()
         processor = JobProcessor(db_service, s3_service)
         
-        # Process the job
-        result = processor.process_job(job_id)
+        # Route to appropriate processing method
+        if step_index is not None:
+            # Per-step processing mode
+            logger.info(f"Processing single step {step_index} for job {job_id}")
+            result = processor.process_single_step(job_id, step_index, step_type)
+        else:
+            # Legacy full job processing mode (backward compatibility)
+            logger.info(f"Processing full job {job_id} (legacy mode)")
+            result = processor.process_job(job_id)
         
         if result['success']:
-            logger.info(f"Job {job_id} completed successfully")
+            logger.info(f"Job {job_id} step {step_index if step_index is not None else 'all'} completed successfully")
             return result
         else:
-            logger.error(f"Job {job_id} failed: {result.get('error')}")
+            logger.error(f"Job {job_id} step {step_index if step_index is not None else 'all'} failed: {result.get('error')}")
             return result
             
     except Exception as e:
-        logger.exception(f"Fatal error processing job {job_id}")
+        logger.exception(f"Fatal error processing job {job_id}, step {step_index if step_index is not None else 'all'}")
         
         # Create descriptive error message
         error_type = type(e).__name__
@@ -87,6 +105,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         return {
             'success': False,
             'error': descriptive_error,
-            'error_type': error_type
+            'error_type': error_type,
+            'step_index': step_index
         }
 
