@@ -449,17 +449,44 @@ class AIService:
             if ("reasoning_level" in error_message.lower() or "unsupported" in error_message.lower()) and is_o3_model:
                 logger.warning(f"reasoning_level parameter not supported for o3 model, retrying without it: {error_message}")
                 try:
+                    # CRITICAL: Validate tool_choice against tools before retry
+                    # Ensure tool_choice='required' is not set when tools is empty
+                    retry_tool_choice = tool_choice
+                    retry_tools = tools
+                    
+                    # Ensure tools array is not empty
+                    if not retry_tools or len(retry_tools) == 0:
+                        logger.warning("Retry path: tools array is empty, adding default web_search_preview")
+                        retry_tools = [{"type": "web_search_preview"}]
+                    
+                    # Fix tool_choice if it's 'required' but tools is empty
+                    if retry_tool_choice == "required" and (not retry_tools or len(retry_tools) == 0):
+                        logger.warning("Retry path: tool_choice='required' but tools is empty. Changing to 'auto' to prevent API error.")
+                        retry_tool_choice = "auto"
+                        if not retry_tools:
+                            retry_tools = [{"type": "web_search_preview"}]
+                    
                     params_no_reasoning = {
                         "model": model,
                         "instructions": instructions,
                         "input": f"Generate a report based on the following information:\n\n{full_context}",
-                        "tools": tools,
+                        "tools": retry_tools,
                     }
                     # Add truncation if computer_use_preview is used
                     if has_computer_use:
                         params_no_reasoning["truncation"] = "auto"
-                    if tool_choice != "none":
-                        params_no_reasoning["tool_choice"] = tool_choice
+                    # Only set tool_choice if it's not "none" and tools is not empty
+                    if retry_tool_choice != "none" and retry_tools and len(retry_tools) > 0:
+                        # Double-check tool_choice is not "required" with empty tools
+                        if retry_tool_choice == "required" and (not retry_tools or len(retry_tools) == 0):
+                            logger.error("CRITICAL: Retry path - tool_choice='required' but tools is empty! Not setting tool_choice parameter.")
+                            # Don't set tool_choice parameter - let API use default
+                        else:
+                            params_no_reasoning["tool_choice"] = retry_tool_choice
+                    elif retry_tool_choice == "required" and (not retry_tools or len(retry_tools) == 0):
+                        # This should not happen due to check above, but double-check for safety
+                        logger.error("CRITICAL: Retry path - tool_choice='required' but tools is empty! Not setting tool_choice parameter.")
+                        # Don't set tool_choice parameter - let API use default
                     response = self.client.responses.create(**params_no_reasoning)
                     report = response.output_text
                     usage = response.usage
@@ -510,6 +537,8 @@ class AIService:
                         'previous_context': previous_context,
                         'context': context,
                         'tools': params_no_reasoning.get('tools', []),
+                        'tool_choice': params_no_reasoning.get('tool_choice', 'auto'),
+                        'truncation': params_no_reasoning.get('truncation'),
                         'reasoning_level': None,
                     }
                     
