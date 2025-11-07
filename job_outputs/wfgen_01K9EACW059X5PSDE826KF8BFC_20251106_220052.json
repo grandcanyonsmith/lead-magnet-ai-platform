@@ -1,0 +1,18 @@
+{
+  "job": {
+    "job_id": "wfgen_01K9EACW059X5PSDE826KF8BFC",
+    "tenant_id": "84c8e438-0061-70f2-2ce0-7cb44989a329",
+    "status": "completed",
+    "created_at": "2025-11-07T04:50:02.885Z",
+    "updated_at": "2025-11-07T04:55:35.487Z"
+  },
+  "result": {
+    "workflow": {
+      "research_instructions": "Parse and validate form fields. Required fields: [hospital_name], [hospital_city], [hospital_state], [due_date]. Optional fields: [patient_city], [patient_state], [patient_zip], [country], [search_radius_miles], [birth_preferences], [partner_name], [support_people], [language], [insurance_current], [insurance_state], [household_income], [family_size], [employer_insurance_available], [preferred_doctor_or_midwife], [preferred_birth_style], [cesarean_history], [twins_or_multiples], [risk_factors], [email], [phone]. Compute: gestational_week, days_to_due_date, trimester, season_at_due_date (by hemisphere). Set defaults: [search_radius_miles]=25 if missing; [country]=USA if missing. Output a clean JSON context block that later steps can consume.",
+      "workflow_description": "A personalized 12-page birth plan and hospital bag guide that auto-fills with your hospital’s maps, parking, staff, floor layout, policies, tailored packing lists by season, insurance picks, and curated local crib deals plus Hermes babywear.",
+      "workflow_name": "Baby-Day Blueprint",
+      "steps": [
+        {
+          "step_description": "Normalize inputs, compute key dates, and set safe defaults.",
+          "instructions": "Parse and validate form fields. Required fields: [hospital_name], [hospital_city], [hospital_state], [due_date]. Optional fields: [patient_city], [patient_state], [patient_zip], [country], [search_radius_miles], [birth_preferences], [partner_name], [support_people], [language], [insurance_current], [insurance_state], [household_income], [family_size], [employer_insurance_available], [preferred_doctor_or_midwife], [preferred_birth_style], [cesarean_history], [twins_or_multiples], [risk_factors], [email], [phone]. Compute: gestational_week, days_to_due_date, trimester, season_at_due_date (by hemisphere). Set defaults: [search_radius_miles]=25 if missing; [country]=USA if missing. Output a clean JSON context block that later steps can consume.",
+          "step_order": 
