@@ -5,11 +5,10 @@ Handles OpenAI API interactions for report generation and HTML rewriting.
 
 import os
 import logging
-from typing import Optional, Dict, Tuple
+from typing import Optional, Dict, Tuple, List
 import boto3
 import json
 import base64
-from datetime import datetime
 from ulid import new as ulid
 from openai import OpenAI
 from cost_service import calculate_openai_cost
@@ -74,28 +73,25 @@ class AIService:
             }, exc_info=True)
             raise
     
-    def generate_report(
-        self,
-        model: str,
-        instructions: str,
-        context: str,
-        previous_context: str = "",
-        tools: Optional[list] = None,
-        tool_choice: str = "auto",
-    ) -> Tuple[str, Dict, Dict, Dict]:
+    def _is_o3_model(self, model: str) -> bool:
+        """Check if model is an o3 model."""
+        return (
+            model.startswith('o3') or 
+            'o3-deep-research' in model.lower() or
+            model.lower() == 'o3-mini' or
+            model.lower() == 'o3'
+        )
+    
+    def _validate_and_filter_tools(self, tools: Optional[list], tool_choice: str) -> Tuple[List[Dict], str]:
         """
-        Generate a report using OpenAI with configurable tools.
+        Validate and filter tools, ensuring tool_choice='required' never exists with empty tools.
         
         Args:
-            model: OpenAI model to use (e.g., 'gpt-5')
-            instructions: System instructions for the AI
-            context: User context/data to generate report from
-            previous_context: Optional context from previous steps (accumulated)
-            tools: List of tool dictionaries (e.g., [{"type": "web_search_preview"}])
+            tools: List of tool dictionaries or strings
             tool_choice: How model should use tools - "auto", "required", or "none"
             
         Returns:
-            Tuple of (generated report content, usage info dict, request details dict, response details dict)
+            Tuple of (validated tools list, normalized tool_choice)
         """
         # Default to web_search_preview if no tools provided (backward compatibility)
         if tools is None or len(tools) == 0:
@@ -128,12 +124,9 @@ class AIService:
             
             filtered_tools.append(tool_dict)
         
-        tools = filtered_tools
-        
         # Final validation: Double-check that no invalid tools made it through
-        # This is a safety net in case the filtering logic missed something
         validated_tools = []
-        for tool in tools:
+        for tool in filtered_tools:
             tool_type = tool.get("type") if isinstance(tool, dict) else tool
             tool_dict = tool if isinstance(tool, dict) else {"type": tool}
             
@@ -154,523 +147,588 @@ class AIService:
             validated_tools.append(tool_dict)
         
         # If validation removed tools, use default
-        if len(validated_tools) == 0 and len(tools) > 0:
+        if len(validated_tools) == 0:
             logger.warning(f"All tools were removed during validation, using default web_search_preview")
             validated_tools = [{"type": "web_search_preview"}]
-        elif len(validated_tools) == 0:
-            validated_tools = [{"type": "web_search_preview"}]
         
-        tools = validated_tools
+        # CRITICAL: Ensure tool_choice='required' never exists with empty tools
+        # This is the single consolidated check (replaces 4-5 redundant checks)
+        tools_length = len(validated_tools) if validated_tools else 0
+        if tool_choice == "required" and tools_length == 0:
+            logger.warning(f"[AI Service] tool_choice is 'required' but tools array is empty (length={tools_length}). Changing tool_choice to 'auto' to prevent API error.")
+            tool_choice = "auto"
+            # Ensure we have at least one tool
+            if not validated_tools or len(validated_tools) == 0:
+                validated_tools = [{"type": "web_search_preview"}]
+                logger.info(f"[AI Service] Added default tool: web_search_preview")
         
-        # Log final tools being sent to OpenAI for debugging
-        logger.info(f"Final tools after filtering and validation: {tools}")
+        logger.info(f"Final tools after filtering and validation: {validated_tools}")
         
-        # CRITICAL: One final check before API call - ensure no computer_use_preview without container
-        # This is a last-ditch safety check to prevent API errors
-        final_tools = []
-        for tool in tools:
-            if isinstance(tool, dict):
-                tool_type = tool.get("type", "")
-                if tool_type == "computer_use_preview":
-                    container = tool.get("container")
-                    if not container or (isinstance(container, str) and container.strip() == ""):
-                        logger.error(f"ABORTING: Found computer_use_preview without container in final tools list! Removing it. Tool: {tool}")
-                        continue
-                final_tools.append(tool)
-            elif isinstance(tool, str) and tool == "computer_use_preview":
-                logger.error(f"ABORTING: Found computer_use_preview as string without container! Removing it.")
-                continue
+        return validated_tools, tool_choice
+    
+    def _build_input_text(self, context: str, previous_context: str) -> str:
+        """Build input text from context and previous context."""
+        full_context = context
+        if previous_context:
+            full_context = f"{previous_context}\n\n--- Current Step Context ---\n{context}"
+        return f"Generate a report based on the following information:\n\n{full_context}"
+    
+    def _build_api_params(
+        self,
+        model: str,
+        instructions: str,
+        input_text: str,
+        tools: List[Dict],
+        tool_choice: str,
+        has_computer_use: bool,
+        is_o3_model: bool,
+        reasoning_level: Optional[str] = "medium"
+    ) -> Dict:
+        """
+        Build OpenAI API parameters dict.
+        
+        Args:
+            model: OpenAI model name
+            instructions: System instructions
+            input_text: User input text
+            tools: Validated tools list
+            tool_choice: How to use tools
+            has_computer_use: Whether computer_use_preview tool is present
+            is_o3_model: Whether model is o3
+            reasoning_level: Reasoning level for o3 models (None to skip)
+            
+        Returns:
+            Parameters dict for OpenAI API call
+        """
+        # Build base params
+        params = {
+            "model": model,
+            "instructions": instructions,
+            "input": input_text,
+        }
+        
+        # Only add tools parameter if:
+        # 1. tools array is not empty
+        # 2. tool_choice is not "none" (if tool_choice is "none", don't include tools)
+        if tool_choice == "none":
+            # Don't include tools parameter when tool_choice is "none"
+            logger.info("tool_choice is 'none', not including tools parameter")
+        elif tools and len(tools) > 0:
+            params["tools"] = tools
+        else:
+            # If tool_choice is not "none" but tools is empty, add default tool
+            logger.warning("Tools array is empty but tool_choice is not 'none'. Adding default web_search_preview tool.")
+            params["tools"] = [{"type": "web_search_preview"}]
+        
+        # Add truncation="auto" if computer_use_preview is used
+        if has_computer_use:
+            params["truncation"] = "auto"
+            logger.info("Added truncation='auto' for computer_use_preview tool")
+        
+        # Add tool_choice ONLY if:
+        # 1. tool_choice is not "none"
+        # 2. tools array exists and is not empty
+        if tool_choice != "none":
+            tools_in_params = params.get("tools", [])
+            
+            # CRITICAL: Never set tool_choice='required' if tools is empty
+            if tool_choice == "required":
+                if not tools_in_params or len(tools_in_params) == 0:
+                    logger.error("[AI Service] ABORT: tool_choice='required' but tools is empty in params! Not setting tool_choice parameter.")
+                else:
+                    if len(tools_in_params) > 0:
+                        params["tool_choice"] = tool_choice
+                        logger.debug(f"[AI Service] Set tool_choice='{tool_choice}' with {len(tools_in_params)} tools")
+            elif tools_in_params and len(tools_in_params) > 0:
+                # For 'auto', only set if tools exist
+                params["tool_choice"] = tool_choice
+                logger.debug(f"[AI Service] Set tool_choice='{tool_choice}' with {len(tools_in_params)} tools")
             else:
-                final_tools.append(tool)
+                logger.warning(f"[AI Service] Not setting tool_choice='{tool_choice}' because tools array is empty in params.")
         
-        # If we removed tools, ensure we have at least one
-        if len(final_tools) == 0:
-            logger.warning("All tools were removed in final check, using default web_search_preview")
-            final_tools = [{"type": "web_search_preview"}]
+        # Add reasoning_level only for o3 models
+        if is_o3_model and reasoning_level is not None:
+            params["reasoning_level"] = reasoning_level
+            logger.info(f"Using reasoning_level={reasoning_level} for o3 model: {model}")
+        else:
+            # Explicitly ensure reasoning_level is NOT added for non-o3 models
+            if "reasoning_level" in params:
+                logger.warning(f"Removing reasoning_level parameter for non-o3 model: {model}")
+                del params["reasoning_level"]
         
-        tools = final_tools
-        logger.info(f"Tools after final safety check: {tools}")
+        # ABSOLUTE FINAL CHECK: Right before API call, verify tool_choice='required' is never set with empty tools
+        if "tool_choice" in params and params["tool_choice"] == "required":
+            tools_in_params = params.get("tools", [])
+            if not tools_in_params or len(tools_in_params) == 0:
+                logger.critical("[AI Service] CRITICAL: tool_choice='required' found in params with empty tools! Removing tool_choice parameter.")
+                del params["tool_choice"]
+                # Add default tool if we're going to use tools
+                if "tools" not in params or not params.get("tools"):
+                    params["tools"] = [{"type": "web_search_preview"}]
+                    logger.warning("[AI Service] Added default tool since tool_choice was removed")
         
-        # CRITICAL FIX: If tool_choice is "required" but tools array is empty,
-        # change tool_choice to "auto" to prevent API error
-        # This check must happen BEFORE building params dict
-        if tool_choice == "required" and (not tools or len(tools) == 0):
-            logger.warning(f"tool_choice is 'required' but tools array is empty. Changing tool_choice to 'auto' to prevent API error.")
-            tool_choice = "auto"
-            # Also add default tool if tools is empty
-            if not tools:
-                tools = [{"type": "web_search_preview"}]
-                logger.info(f"Added default tool: web_search_preview")
+        logger.debug(f"[AI Service] Final params before API call", extra={
+            'has_tools': 'tools' in params,
+            'tools_count': len(params.get('tools', [])),
+            'has_tool_choice': 'tool_choice' in params,
+            'tool_choice_value': params.get('tool_choice'),
+            'model': model
+        })
         
-        # Additional validation: Ensure tool_choice is not "required" if tools is empty
-        # This is a double-check before params are built
-        if tool_choice == "required":
-            if not tools or len(tools) == 0:
-                logger.error("CRITICAL: tool_choice='required' but tools is empty after all checks! Changing to 'auto'.")
-                tool_choice = "auto"
-                if not tools:
-                    tools = [{"type": "web_search_preview"}]
+        return params
+    
+    def _extract_image_urls(self, response, tools: List[Dict]) -> List[str]:
+        """
+        Extract image URLs from OpenAI response if image_generation tool was used.
         
-        # FINAL SAFETY CHECK: One more validation right before building params
-        # This ensures tool_choice='required' is NEVER set when tools is empty
-        if tool_choice == "required" and (not tools or len(tools) == 0):
-            logger.error("FINAL CHECK FAILED: tool_choice='required' but tools is empty! Forcing tool_choice to 'auto'.")
-            tool_choice = "auto"
-            if not tools or len(tools) == 0:
-                tools = [{"type": "web_search_preview"}]
+        Args:
+            response: OpenAI API response object
+            tools: List of tools used in the request
+            
+        Returns:
+            List of image URLs
+        """
+        image_urls = []
+        try:
+            # OpenAI Responses API returns `output` array (not `output_items`)
+            # Each item can be of various types including ImageGenerationCall
+            # ImageGenerationCall has: type="image_generation_call", result (base64), status
+            if hasattr(response, 'output') and response.output:
+                logger.info(f"Found output: {len(response.output)} items")
+                for idx, item in enumerate(response.output):
+                    # Check if item is an ImageGenerationCall
+                    if hasattr(item, 'type') and item.type == 'image_generation_call':
+                        logger.info(f"Found ImageGenerationCall at output[{idx}]: status={getattr(item, 'status', 'unknown')}")
+                        # Log all attributes to see what's available
+                        item_attrs = [attr for attr in dir(item) if not attr.startswith('_')]
+                        logger.info(f"ImageGenerationCall attributes: {item_attrs}")
+                        
+                        # Try to get the full item as dict to see all fields
+                        try:
+                            if hasattr(item, 'model_dump'):
+                                item_dict = item.model_dump()
+                                logger.info(f"ImageGenerationCall as dict: {json.dumps({k: (v[:100] if isinstance(v, str) and len(v) > 100 else v) for k, v in item_dict.items()}, indent=2, default=str)}")
+                            elif hasattr(item, '__dict__'):
+                                logger.info(f"ImageGenerationCall __dict__: {item.__dict__}")
+                        except Exception as e:
+                            logger.warning(f"Could not serialize ImageGenerationCall: {e}")
+                        
+                        # ImageGenerationCall.result contains base64 encoded image
+                        # Check if there's a URL field (might be added dynamically)
+                        if hasattr(item, 'url') and item.url:
+                            image_urls.append(item.url)
+                            logger.info(f"Found image URL from ImageGenerationCall.url: {item.url}")
+                        elif hasattr(item, 'image_url') and item.image_url:
+                            image_urls.append(item.image_url)
+                            logger.info(f"Found image URL from ImageGenerationCall.image_url: {item.image_url}")
+                        # Check if result might be a URL (though docs say it's base64)
+                        elif hasattr(item, 'result') and item.result:
+                            if item.result.startswith('http'):
+                                image_urls.append(item.result)
+                                logger.info(f"Found image URL from ImageGenerationCall.result: {item.result}")
+                            else:
+                                # result is base64 - decode and upload to S3 to get a URL
+                                try:
+                                    logger.info(f"ImageGenerationCall.result is base64 (length={len(item.result)}), uploading to S3")
+                                    
+                                    # Handle data URI format: data:image/png;base64,...
+                                    base64_data = item.result
+                                    content_type = 'image/png'  # default
+                                    file_ext = 'png'
+                                    
+                                    if base64_data.startswith('data:'):
+                                        # Extract content type and base64 data from data URI
+                                        parts = base64_data.split(',', 1)
+                                        if len(parts) == 2:
+                                            header = parts[0]
+                                            base64_data = parts[1]
+                                            # Extract content type from header: data:image/png;base64
+                                            if 'image/' in header:
+                                                img_type = header.split('image/')[1].split(';')[0]
+                                                content_type = f'image/{img_type}'
+                                                file_ext = img_type if img_type in ['png', 'jpeg', 'jpg', 'gif', 'webp'] else 'png'
+                                    
+                                    # Decode base64 to binary
+                                    image_bytes = base64.b64decode(base64_data)
+                                    
+                                    # Generate S3 key for image
+                                    image_id = str(ulid())
+                                    s3_key = f"images/{image_id}.{file_ext}"
+                                    
+                                    # Upload to S3 and get URL
+                                    _, public_url = self.s3_service.upload_image(
+                                        key=s3_key,
+                                        image_data=image_bytes,
+                                        content_type=content_type,
+                                        public=True
+                                    )
+                                    
+                                    image_urls.append(public_url)
+                                    logger.info(f"Uploaded base64 image to S3: {public_url}")
+                                except Exception as upload_error:
+                                    logger.error(f"Failed to upload base64 image to S3: {upload_error}", exc_info=True)
+            
+            # Log if no images found but image_generation tool was used
+            has_image_tool = any(
+                (isinstance(t, dict) and t.get("type") == "image_generation") or 
+                (isinstance(t, str) and t == "image_generation")
+                for t in tools
+            )
+            if has_image_tool and not image_urls:
+                logger.warning(f"image_generation tool was used but no image URLs found. Response.output length: {len(response.output) if hasattr(response, 'output') and response.output else 0}")
+                if hasattr(response, 'output') and response.output:
+                    for idx, item in enumerate(response.output):
+                        logger.warning(f"output[{idx}]: type={getattr(item, 'type', 'unknown')}, attributes={[attr for attr in dir(item) if not attr.startswith('_')]}")
+                        if hasattr(item, 'type') and item.type == 'image_generation_call':
+                            try:
+                                if hasattr(item, 'model_dump'):
+                                    logger.warning(f"ImageGenerationCall full dump: {item.model_dump()}")
+                            except:
+                                pass
+        except Exception as e:
+            logger.warning(f"Error extracting image URLs: {e}", exc_info=True)
+        
+        return image_urls
+    
+    def _process_api_response(
+        self,
+        response,
+        model: str,
+        instructions: str,
+        input_text: str,
+        previous_context: str,
+        context: str,
+        tools: List[Dict],
+        tool_choice: str,
+        params: Dict
+    ) -> Tuple[str, Dict, Dict, Dict]:
+        """
+        Process OpenAI API response and build return values.
+        
+        Args:
+            response: OpenAI API response object
+            model: Model name used
+            instructions: System instructions used
+            input_text: Input text used
+            previous_context: Previous context string
+            context: Current context string
+            tools: Tools used
+            tool_choice: Tool choice used
+            params: Parameters dict used for API call
+            
+        Returns:
+            Tuple of (report content, usage info dict, request details dict, response details dict)
+        """
+        report = response.output_text
+        
+        # Extract image URLs from tool outputs if image_generation was used
+        image_urls = self._extract_image_urls(response, tools)
+        
+        # Capture request details (after API call to ensure we capture final params)
+        request_details = {
+            'model': model,
+            'instructions': instructions,
+            'input': input_text,
+            'previous_context': previous_context,  # Contains ALL previous step outputs
+            'context': context,  # Current step context (form data for step 0, empty for others)
+            'tools': params.get('tools', []),
+            'tool_choice': params.get('tool_choice', 'auto'),
+            'truncation': params.get('truncation'),
+            'reasoning_level': params.get('reasoning_level'),
+        }
+        
+        # If previous_context contains multiple steps, parse and include them separately for clarity
+        if previous_context and '===' in previous_context:
+            # Extract individual step outputs from previous_context
+            step_sections = previous_context.split('===')
+            previous_steps = []
+            for i in range(1, len(step_sections), 2):
+                if i + 1 < len(step_sections):
+                    step_header = step_sections[i].strip()
+                    step_content = step_sections[i + 1].strip() if i + 1 < len(step_sections) else ""
+                    if step_header and step_content:
+                        previous_steps.append({
+                            'step': step_header,
+                            'output': step_content
+                        })
+            if previous_steps:
+                request_details['all_previous_steps'] = previous_steps
+        
+        # Log token usage for cost tracking
+        usage = response.usage
+        cost_data = calculate_openai_cost(
+            model,
+            usage.input_tokens or 0,
+            usage.output_tokens or 0
+        )
+        logger.info(
+            f"[AI Service] Report generation completed successfully",
+            extra={
+                'model': model,
+                'total_tokens': usage.total_tokens or 0,
+                'input_tokens': usage.input_tokens or 0,
+                'output_tokens': usage.output_tokens or 0,
+                'cost_usd': cost_data['cost_usd'],
+                'output_length': len(report),
+                'images_generated': len(image_urls),
+                'image_urls': image_urls[:3] if image_urls else []  # Log first 3 URLs
+            }
+        )
+        
+        usage_info = {
+            'model': model,
+            'input_tokens': usage.input_tokens or 0,
+            'output_tokens': usage.output_tokens or 0,
+            'total_tokens': usage.total_tokens or 0,
+            'cost_usd': cost_data['cost_usd'],
+            'service_type': 'openai_worker_report',
+        }
+        
+        # Capture response details including image URLs
+        response_details = {
+            'output_text': report,
+            'image_urls': image_urls,  # Add image URLs
+            'usage': {
+                'input_tokens': usage.input_tokens or 0,
+                'output_tokens': usage.output_tokens or 0,
+                'total_tokens': usage.total_tokens or 0,
+            },
+            'model': getattr(response, 'model', model),
+        }
+        
+        return report, usage_info, request_details, response_details
+    
+    def _handle_openai_error(
+        self,
+        error: Exception,
+        model: str,
+        tools: List[Dict],
+        tool_choice: str,
+        instructions: str,
+        context: str,
+        is_o3_model: bool,
+        full_context: str,
+        previous_context: str
+    ) -> Tuple[str, Dict, Dict, Dict]:
+        """
+        Handle OpenAI API errors with retry logic for reasoning_level errors.
+        
+        Args:
+            error: The exception that occurred
+            model: Model name used
+            tools: Tools used
+            tool_choice: Tool choice used
+            instructions: System instructions used
+            context: Current context
+            is_o3_model: Whether model is o3
+            full_context: Full context string
+            previous_context: Previous context string
+            
+        Returns:
+            Tuple of (report content, usage info dict, request details dict, response details dict)
+            
+        Raises:
+            Exception: If error cannot be handled or retry fails
+        """
+        error_type = type(error).__name__
+        error_message = str(error)
+        
+        # If reasoning_level is not supported and we're using an o3 model, retry without it
+        # (This shouldn't happen for o3 models, but handle gracefully)
+        if ("reasoning_level" in error_message.lower() or "unsupported" in error_message.lower()) and is_o3_model:
+            logger.warning(f"reasoning_level parameter not supported for o3 model, retrying without it: {error_message}")
+            try:
+                # Re-validate tools and tool_choice for retry
+                retry_tools, retry_tool_choice = self._validate_and_filter_tools(tools, tool_choice)
+                
+                # Check if computer_use_preview is in tools (requires truncation="auto")
+                has_computer_use = any(
+                    (isinstance(t, dict) and t.get("type") == "computer_use_preview") or 
+                    (isinstance(t, str) and t == "computer_use_preview")
+                    for t in retry_tools
+                )
+                
+                # Build params without reasoning_level
+                input_text = self._build_input_text(context, previous_context)
+                params_no_reasoning = self._build_api_params(
+                    model=model,
+                    instructions=instructions,
+                    input_text=input_text,
+                    tools=retry_tools,
+                    tool_choice=retry_tool_choice,
+                    has_computer_use=has_computer_use,
+                    is_o3_model=is_o3_model,
+                    reasoning_level=None  # Skip reasoning_level for retry
+                )
+                
+                response = self.client.responses.create(**params_no_reasoning)
+                
+                # Process response
+                report, usage_info, request_details, response_details = self._process_api_response(
+                    response=response,
+                    model=model,
+                    instructions=instructions,
+                    input_text=input_text,
+                    previous_context=previous_context,
+                    context=context,
+                    tools=retry_tools,
+                    tool_choice=retry_tool_choice,
+                    params=params_no_reasoning
+                )
+                
+                logger.info(
+                    f"Report generation completed (without reasoning_level). "
+                    f"Tokens: {usage_info['total_tokens']} "
+                    f"(input: {usage_info['input_tokens']}, output: {usage_info['output_tokens']})"
+                    + (f" Images generated: {len(response_details.get('image_urls', []))}" if response_details.get('image_urls') else "")
+                )
+                
+                return report, usage_info, request_details, response_details
+            except Exception as retry_error:
+                # If retry also fails, continue with original error
+                error_message = str(retry_error)
+                error_type = type(retry_error).__name__
+        
+        # Provide more descriptive error messages with detailed logging
+        logger.error(
+            f"[AI Service] OpenAI API error occurred",
+            extra={
+                'model': model,
+                'error_type': error_type,
+                'error_message': error_message,
+                'tools': [t.get('type') if isinstance(t, dict) else t for t in tools] if tools else [],
+                'tool_choice': tool_choice,
+                'instructions_length': len(instructions),
+                'context_length': len(context)
+            },
+            exc_info=True
+        )
+        
+        if "API key" in error_message or "authentication" in error_message.lower():
+            logger.error(f"[AI Service] Authentication error - check API key configuration")
+            raise Exception(f"OpenAI API authentication failed. Please check your API key configuration: {error_message}")
+        elif "rate limit" in error_message.lower() or "quota" in error_message.lower():
+            logger.warning(f"[AI Service] Rate limit exceeded - request should be retried")
+            raise Exception(f"OpenAI API rate limit exceeded. Please try again later: {error_message}")
+        elif "tool_choice" in error_message.lower() and "required" in error_message.lower() and "tools" in error_message.lower():
+            logger.error(f"[AI Service] Invalid tool_choice configuration - tool_choice='required' but tools empty")
+            raise Exception(f"OpenAI API error: Invalid workflow configuration. Tool choice 'required' was specified but no tools are available. This has been automatically fixed - please try again. Original error: {error_message}")
+        elif "model" in error_message.lower() and "not found" in error_message.lower():
+            logger.error(f"[AI Service] Invalid model specified: {model}")
+            raise Exception(f"Invalid AI model specified. Please check your workflow configuration: {error_message}")
+        elif "timeout" in error_message.lower():
+            logger.warning(f"[AI Service] Request timeout - request took too long")
+            raise Exception(f"OpenAI API request timed out. The request took too long to complete: {error_message}")
+        elif "connection" in error_message.lower():
+            logger.error(f"[AI Service] Connection error - network issue")
+            raise Exception(f"Unable to connect to OpenAI API. Please check your network connection: {error_message}")
+        else:
+            logger.error(f"[AI Service] Unexpected API error: {error_type}")
+            raise Exception(f"OpenAI API error ({error_type}): {error_message}")
+    
+    def _clean_html_markdown(self, html_content: str) -> str:
+        """Clean markdown code blocks from HTML content."""
+        if html_content.startswith('```html'):
+            html_content = html_content.replace('```html', '').replace('```', '').strip()
+        elif html_content.startswith('```'):
+            html_content = html_content.split('```')[1].strip()
+            if html_content.startswith('html'):
+                html_content = html_content[4:].strip()
+        return html_content
+    
+    def generate_report(
+        self,
+        model: str,
+        instructions: str,
+        context: str,
+        previous_context: str = "",
+        tools: Optional[list] = None,
+        tool_choice: str = "auto",
+    ) -> Tuple[str, Dict, Dict, Dict]:
+        """
+        Generate a report using OpenAI with configurable tools.
+        
+        Args:
+            model: OpenAI model to use (e.g., 'gpt-5')
+            instructions: System instructions for the AI
+            context: User context/data to generate report from
+            previous_context: Optional context from previous steps (accumulated)
+            tools: List of tool dictionaries (e.g., [{"type": "web_search_preview"}])
+            tool_choice: How model should use tools - "auto", "required", or "none"
+            
+        Returns:
+            Tuple of (generated report content, usage info dict, request details dict, response details dict)
+        """
+        # Validate and filter tools
+        validated_tools, normalized_tool_choice = self._validate_and_filter_tools(tools, tool_choice)
         
         # Check if computer_use_preview is in tools (requires truncation="auto")
         has_computer_use = any(
             (isinstance(t, dict) and t.get("type") == "computer_use_preview") or 
             (isinstance(t, str) and t == "computer_use_preview")
-            for t in tools
+            for t in validated_tools
         )
+        
+        # Check if model is o3
+        is_o3_model = self._is_o3_model(model)
         
         logger.info(f"[AI Service] Generating report", extra={
             'model': model,
-            'tools_count': len(tools) if tools else 0,
-            'tools': [t.get('type') if isinstance(t, dict) else t for t in tools] if tools else [],
-            'tool_choice': tool_choice,
+            'tools_count': len(validated_tools) if validated_tools else 0,
+            'tools': [t.get('type') if isinstance(t, dict) else t for t in validated_tools] if validated_tools else [],
+            'tool_choice': normalized_tool_choice,
             'has_computer_use': has_computer_use,
             'instructions_length': len(instructions),
             'context_length': len(context),
             'previous_context_length': len(previous_context)
         })
         
-        # Only use reasoning_level for o3 models (requires minimum "medium")
-        # Improve o3 model detection to be more robust
-        is_o3_model = (
-            model.startswith('o3') or 
-            'o3-deep-research' in model.lower() or
-            model.lower() == 'o3-mini' or
-            model.lower() == 'o3'
-        )
-        
-        # Combine previous context with current context if provided
-        full_context = context
-        if previous_context:
-            full_context = f"{previous_context}\n\n--- Current Step Context ---\n{context}"
-        
-        input_text = f"Generate a report based on the following information:\n\n{full_context}"
+        # Build input text
+        input_text = self._build_input_text(context, previous_context)
+        full_context = f"{previous_context}\n\n--- Current Step Context ---\n{context}" if previous_context else context
         
         try:
-            # Build params dict - only include tools if non-empty
-            params = {
-                "model": model,
-                "instructions": instructions,
-                "input": input_text,
-            }
-            
-            # Only add tools parameter if:
-            # 1. tools array is not empty
-            # 2. tool_choice is not "none" (if tool_choice is "none", don't include tools)
-            if tool_choice == "none":
-                # Don't include tools parameter when tool_choice is "none"
-                logger.info("tool_choice is 'none', not including tools parameter")
-            elif tools and len(tools) > 0:
-                params["tools"] = tools
-            else:
-                # If tool_choice is not "none" but tools is empty, add default tool
-                logger.warning("Tools array is empty but tool_choice is not 'none'. Adding default web_search_preview tool.")
-                params["tools"] = [{"type": "web_search_preview"}]
-            
-            # Add truncation="auto" if computer_use_preview is used
-            if has_computer_use:
-                params["truncation"] = "auto"
-                logger.info("Added truncation='auto' for computer_use_preview tool")
-            
-            # Add tool_choice ONLY if:
-            # 1. tool_choice is not "none"
-            # 2. tools array exists and is not empty
-            # 3. tool_choice is not "required" when tools is empty (should never happen due to checks above)
-            if tool_choice != "none":
-                # Final validation: ensure tools exists and is not empty before setting tool_choice
-                tools_in_params = params.get("tools", [])
-                if tools_in_params and len(tools_in_params) > 0:
-                    # One final check: never set tool_choice='required' if tools is empty
-                    if tool_choice == "required" and (not tools_in_params or len(tools_in_params) == 0):
-                        logger.error("ABORT: tool_choice='required' but tools is empty in params! Not setting tool_choice.")
-                    else:
-                        params["tool_choice"] = tool_choice
-                else:
-                    logger.warning(f"Not setting tool_choice='{tool_choice}' because tools array is empty in params.")
-            
-            # Add reasoning_level only for o3 models
-            # Improve o3 model detection to be more robust
-            is_o3_model_strict = (
-                model.startswith('o3') or 
-                'o3-deep-research' in model.lower() or
-                model.lower() == 'o3-mini' or
-                model.lower() == 'o3'
+            # Build API parameters
+            params = self._build_api_params(
+                model=model,
+                instructions=instructions,
+                input_text=input_text,
+                tools=validated_tools,
+                tool_choice=normalized_tool_choice,
+                has_computer_use=has_computer_use,
+                is_o3_model=is_o3_model,
+                reasoning_level="medium"
             )
             
-            if is_o3_model_strict:
-                params["reasoning_level"] = "medium"
-                logger.info(f"Using reasoning_level=medium for o3 model: {model}")
-            else:
-                # Explicitly ensure reasoning_level is NOT added for non-o3 models
-                if "reasoning_level" in params:
-                    logger.warning(f"Removing reasoning_level parameter for non-o3 model: {model}")
-                    del params["reasoning_level"]
-            
-            # Capture request details
-            request_details = {
-                'model': model,
-                'instructions': instructions,
-                'input': input_text,
-                'previous_context': previous_context,  # Contains ALL previous step outputs
-                'context': context,  # Current step context (form data for step 0, empty for others)
-                'tools': params.get('tools', []),
-                'tool_choice': params.get('tool_choice', 'auto'),
-                'truncation': params.get('truncation'),
-                'reasoning_level': params.get('reasoning_level'),
-            }
-            
-            # If previous_context contains multiple steps, parse and include them separately for clarity
-            if previous_context and '===' in previous_context:
-                # Extract individual step outputs from previous_context
-                step_sections = previous_context.split('===')
-                previous_steps = []
-                for i in range(1, len(step_sections), 2):
-                    if i + 1 < len(step_sections):
-                        step_header = step_sections[i].strip()
-                        step_content = step_sections[i + 1].strip() if i + 1 < len(step_sections) else ""
-                        if step_header and step_content:
-                            previous_steps.append({
-                                'step': step_header,
-                                'output': step_content
-                            })
-                if previous_steps:
-                    request_details['all_previous_steps'] = previous_steps
-            
+            # Make API call
             response = self.client.responses.create(**params)
             
-            report = response.output_text
-            
-            # Extract image URLs from tool outputs if image_generation was used
-            image_urls = []
-            try:
-                # OpenAI Responses API returns `output` array (not `output_items`)
-                # Each item can be of various types including ImageGenerationCall
-                # ImageGenerationCall has: type="image_generation_call", result (base64), status
-                if hasattr(response, 'output') and response.output:
-                    logger.info(f"Found output: {len(response.output)} items")
-                    for idx, item in enumerate(response.output):
-                        # Check if item is an ImageGenerationCall
-                        if hasattr(item, 'type') and item.type == 'image_generation_call':
-                            logger.info(f"Found ImageGenerationCall at output[{idx}]: status={getattr(item, 'status', 'unknown')}")
-                            # Log all attributes to see what's available
-                            item_attrs = [attr for attr in dir(item) if not attr.startswith('_')]
-                            logger.info(f"ImageGenerationCall attributes: {item_attrs}")
-                            
-                            # Try to get the full item as dict to see all fields
-                            try:
-                                if hasattr(item, 'model_dump'):
-                                    item_dict = item.model_dump()
-                                    logger.info(f"ImageGenerationCall as dict: {json.dumps({k: (v[:100] if isinstance(v, str) and len(v) > 100 else v) for k, v in item_dict.items()}, indent=2, default=str)}")
-                                elif hasattr(item, '__dict__'):
-                                    logger.info(f"ImageGenerationCall __dict__: {item.__dict__}")
-                            except Exception as e:
-                                logger.warning(f"Could not serialize ImageGenerationCall: {e}")
-                            
-                            # ImageGenerationCall.result contains base64 encoded image
-                            # Check if there's a URL field (might be added dynamically)
-                            if hasattr(item, 'url') and item.url:
-                                image_urls.append(item.url)
-                                logger.info(f"Found image URL from ImageGenerationCall.url: {item.url}")
-                            elif hasattr(item, 'image_url') and item.image_url:
-                                image_urls.append(item.image_url)
-                                logger.info(f"Found image URL from ImageGenerationCall.image_url: {item.image_url}")
-                            # Check if result might be a URL (though docs say it's base64)
-                            elif hasattr(item, 'result') and item.result:
-                                if item.result.startswith('http'):
-                                    image_urls.append(item.result)
-                                    logger.info(f"Found image URL from ImageGenerationCall.result: {item.result}")
-                                else:
-                                    # result is base64 - decode and upload to S3 to get a URL
-                                    try:
-                                        logger.info(f"ImageGenerationCall.result is base64 (length={len(item.result)}), uploading to S3")
-                                        
-                                        # Handle data URI format: data:image/png;base64,...
-                                        base64_data = item.result
-                                        content_type = 'image/png'  # default
-                                        file_ext = 'png'
-                                        
-                                        if base64_data.startswith('data:'):
-                                            # Extract content type and base64 data from data URI
-                                            parts = base64_data.split(',', 1)
-                                            if len(parts) == 2:
-                                                header = parts[0]
-                                                base64_data = parts[1]
-                                                # Extract content type from header: data:image/png;base64
-                                                if 'image/' in header:
-                                                    img_type = header.split('image/')[1].split(';')[0]
-                                                    content_type = f'image/{img_type}'
-                                                    file_ext = img_type if img_type in ['png', 'jpeg', 'jpg', 'gif', 'webp'] else 'png'
-                                        
-                                        # Decode base64 to binary
-                                        image_bytes = base64.b64decode(base64_data)
-                                        
-                                        # Generate S3 key for image
-                                        image_id = str(ulid())
-                                        s3_key = f"images/{image_id}.{file_ext}"
-                                        
-                                        # Upload to S3 and get URL
-                                        _, public_url = self.s3_service.upload_image(
-                                            key=s3_key,
-                                            image_data=image_bytes,
-                                            content_type=content_type,
-                                            public=True
-                                        )
-                                        
-                                        image_urls.append(public_url)
-                                        logger.info(f"Uploaded base64 image to S3: {public_url}")
-                                    except Exception as upload_error:
-                                        logger.error(f"Failed to upload base64 image to S3: {upload_error}", exc_info=True)
-                
-                # Log if no images found but image_generation tool was used
-                has_image_tool = any(
-                    (isinstance(t, dict) and t.get("type") == "image_generation") or 
-                    (isinstance(t, str) and t == "image_generation")
-                    for t in tools
-                )
-                if has_image_tool and not image_urls:
-                    logger.warning(f"image_generation tool was used but no image URLs found. Response.output length: {len(response.output) if hasattr(response, 'output') and response.output else 0}")
-                    if hasattr(response, 'output') and response.output:
-                        for idx, item in enumerate(response.output):
-                            logger.warning(f"output[{idx}]: type={getattr(item, 'type', 'unknown')}, attributes={[attr for attr in dir(item) if not attr.startswith('_')]}")
-                            if hasattr(item, 'type') and item.type == 'image_generation_call':
-                                try:
-                                    if hasattr(item, 'model_dump'):
-                                        logger.warning(f"ImageGenerationCall full dump: {item.model_dump()}")
-                                except:
-                                    pass
-            except Exception as e:
-                logger.warning(f"Error extracting image URLs: {e}", exc_info=True)
-            
-            # Log token usage for cost tracking
-            usage = response.usage
-            cost_data = calculate_openai_cost(
-                model,
-                usage.input_tokens or 0,
-                usage.output_tokens or 0
+            # Process response
+            return self._process_api_response(
+                response=response,
+                model=model,
+                instructions=instructions,
+                input_text=input_text,
+                previous_context=previous_context,
+                context=context,
+                tools=validated_tools,
+                tool_choice=normalized_tool_choice,
+                params=params
             )
-            logger.info(
-                f"[AI Service] Report generation completed successfully",
-                extra={
-                    'model': model,
-                    'total_tokens': usage.total_tokens or 0,
-                    'input_tokens': usage.input_tokens or 0,
-                    'output_tokens': usage.output_tokens or 0,
-                    'cost_usd': cost_data['cost_usd'],
-                    'output_length': len(report),
-                    'images_generated': len(image_urls),
-                    'image_urls': image_urls[:3] if image_urls else []  # Log first 3 URLs
-                }
-            )
-            
-            usage_info = {
-                'model': model,
-                'input_tokens': usage.input_tokens or 0,
-                'output_tokens': usage.output_tokens or 0,
-                'total_tokens': usage.total_tokens or 0,
-                'cost_usd': cost_data['cost_usd'],
-                'service_type': 'openai_worker_report',
-            }
-            
-            # Capture response details including image URLs
-            response_details = {
-                'output_text': report,
-                'image_urls': image_urls,  # Add image URLs
-                'usage': {
-                    'input_tokens': usage.input_tokens or 0,
-                    'output_tokens': usage.output_tokens or 0,
-                    'total_tokens': usage.total_tokens or 0,
-                },
-                'model': getattr(response, 'model', model),
-            }
-            
-            return report, usage_info, request_details, response_details
             
         except Exception as e:
-            error_type = type(e).__name__
-            error_message = str(e)
-            
-            # If reasoning_level is not supported and we're using an o3 model, retry without it
-            # (This shouldn't happen for o3 models, but handle gracefully)
-            if ("reasoning_level" in error_message.lower() or "unsupported" in error_message.lower()) and is_o3_model:
-                logger.warning(f"reasoning_level parameter not supported for o3 model, retrying without it: {error_message}")
-                try:
-                    # CRITICAL: Validate tool_choice against tools before retry
-                    # Ensure tool_choice='required' is not set when tools is empty
-                    retry_tool_choice = tool_choice
-                    retry_tools = tools
-                    
-                    # Ensure tools array is not empty
-                    if not retry_tools or len(retry_tools) == 0:
-                        logger.warning("Retry path: tools array is empty, adding default web_search_preview")
-                        retry_tools = [{"type": "web_search_preview"}]
-                    
-                    # Fix tool_choice if it's 'required' but tools is empty
-                    if retry_tool_choice == "required" and (not retry_tools or len(retry_tools) == 0):
-                        logger.warning("Retry path: tool_choice='required' but tools is empty. Changing to 'auto' to prevent API error.")
-                        retry_tool_choice = "auto"
-                        if not retry_tools:
-                            retry_tools = [{"type": "web_search_preview"}]
-                    
-                    # FINAL SAFETY CHECK for retry path
-                    if retry_tool_choice == "required" and (not retry_tools or len(retry_tools) == 0):
-                        logger.error("FINAL RETRY CHECK FAILED: tool_choice='required' but tools is empty! Forcing tool_choice to 'auto'.")
-                        retry_tool_choice = "auto"
-                        if not retry_tools or len(retry_tools) == 0:
-                            retry_tools = [{"type": "web_search_preview"}]
-                    
-                    # Build params dict - only include tools if non-empty
-                    params_no_reasoning = {
-                        "model": model,
-                        "instructions": instructions,
-                        "input": f"Generate a report based on the following information:\n\n{full_context}",
-                    }
-                    
-                    # Only add tools parameter if:
-                    # 1. tools array is not empty
-                    # 2. tool_choice is not "none" (if tool_choice is "none", don't include tools)
-                    if retry_tool_choice == "none":
-                        # Don't include tools parameter when tool_choice is "none"
-                        logger.info("Retry path: tool_choice is 'none', not including tools parameter")
-                    elif retry_tools and len(retry_tools) > 0:
-                        params_no_reasoning["tools"] = retry_tools
-                    else:
-                        # If tool_choice is not "none" but tools is empty, add default tool
-                        logger.warning("Retry path: Tools array is empty but tool_choice is not 'none'. Adding default web_search_preview tool.")
-                        params_no_reasoning["tools"] = [{"type": "web_search_preview"}]
-                    
-                    # Add truncation if computer_use_preview is used
-                    if has_computer_use:
-                        params_no_reasoning["truncation"] = "auto"
-                    
-                    # Add tool_choice ONLY if:
-                    # 1. tool_choice is not "none"
-                    # 2. tools array exists and is not empty
-                    if retry_tool_choice != "none":
-                        # Final validation: ensure tools exists and is not empty before setting tool_choice
-                        tools_in_params = params_no_reasoning.get("tools", [])
-                        if tools_in_params and len(tools_in_params) > 0:
-                            # One final check: never set tool_choice='required' if tools is empty
-                            if retry_tool_choice == "required" and (not tools_in_params or len(tools_in_params) == 0):
-                                logger.error("ABORT RETRY: tool_choice='required' but tools is empty in params! Not setting tool_choice.")
-                            else:
-                                params_no_reasoning["tool_choice"] = retry_tool_choice
-                        else:
-                            logger.warning(f"Retry path: Not setting tool_choice='{retry_tool_choice}' because tools array is empty in params.")
-                    response = self.client.responses.create(**params_no_reasoning)
-                    report = response.output_text
-                    usage = response.usage
-                    
-                    # Extract image URLs from tool outputs if image_generation was used
-                    image_urls = []
-                    try:
-                        # OpenAI Responses API returns `output` array (not `output_items`)
-                        if hasattr(response, 'output') and response.output:
-                            for idx, item in enumerate(response.output):
-                                if hasattr(item, 'type') and item.type == 'image_generation_call':
-                                    if hasattr(item, 'url'):
-                                        image_urls.append(item.url)
-                                    elif hasattr(item, 'image_url'):
-                                        image_urls.append(item.image_url)
-                                    elif hasattr(item, 'result') and item.result and item.result.startswith('http'):
-                                        image_urls.append(item.result)
-                    except Exception as e:
-                        logger.warning(f"Error extracting image URLs: {e}", exc_info=True)
-                    
-                    logger.info(
-                        f"Report generation completed (without reasoning_level). "
-                        f"Tokens: {usage.total_tokens} "
-                        f"(input: {usage.input_tokens}, output: {usage.output_tokens})"
-                        + (f" Images generated: {len(image_urls)}" if image_urls else "")
-                    )
-                    
-                    cost_data = calculate_openai_cost(
-                        model,
-                        usage.input_tokens or 0,
-                        usage.output_tokens or 0
-                    )
-                    
-                    usage_info = {
-                        'model': model,
-                        'input_tokens': usage.input_tokens or 0,
-                        'output_tokens': usage.output_tokens or 0,
-                        'total_tokens': usage.total_tokens or 0,
-                        'cost_usd': cost_data['cost_usd'],
-                        'service_type': 'openai_worker_report',
-                    }
-                    
-                    # Capture request details for retry
-                    request_details = {
-                        'model': model,
-                        'instructions': instructions,
-                        'input': f"Generate a report based on the following information:\n\n{full_context}",
-                        'previous_context': previous_context,
-                        'context': context,
-                        'tools': params_no_reasoning.get('tools', []),
-                        'tool_choice': params_no_reasoning.get('tool_choice', 'auto'),
-                        'truncation': params_no_reasoning.get('truncation'),
-                        'reasoning_level': None,
-                    }
-                    
-                    response_details = {
-                        'output_text': report,
-                        'image_urls': image_urls,  # Add image URLs
-                        'usage': {
-                            'input_tokens': usage.input_tokens or 0,
-                            'output_tokens': usage.output_tokens or 0,
-                            'total_tokens': usage.total_tokens or 0,
-                        },
-                        'model': getattr(response, 'model', model),
-                    }
-                    
-                    return report, usage_info, request_details, response_details
-                except Exception as retry_error:
-                    # If retry also fails, continue with original error
-                    error_message = str(retry_error)
-                    error_type = type(retry_error).__name__
-            
-            # Provide more descriptive error messages with detailed logging
-            logger.error(
-                f"[AI Service] OpenAI API error occurred",
-                extra={
-                    'model': model,
-                    'error_type': error_type,
-                    'error_message': error_message,
-                    'tools': [t.get('type') if isinstance(t, dict) else t for t in tools] if tools else [],
-                    'tool_choice': tool_choice,
-                    'instructions_length': len(instructions),
-                    'context_length': len(context)
-                },
-                exc_info=True
+            # Handle errors with retry logic
+            return self._handle_openai_error(
+                error=e,
+                model=model,
+                tools=validated_tools,
+                tool_choice=normalized_tool_choice,
+                instructions=instructions,
+                context=context,
+                is_o3_model=is_o3_model,
+                full_context=full_context,
+                previous_context=previous_context
             )
-            
-            if "API key" in error_message or "authentication" in error_message.lower():
-                logger.error(f"[AI Service] Authentication error - check API key configuration")
-                raise Exception(f"OpenAI API authentication failed. Please check your API key configuration: {error_message}")
-            elif "rate limit" in error_message.lower() or "quota" in error_message.lower():
-                logger.warning(f"[AI Service] Rate limit exceeded - request should be retried")
-                raise Exception(f"OpenAI API rate limit exceeded. Please try again later: {error_message}")
-            elif "tool_choice" in error_message.lower() and "required" in error_message.lower() and "tools" in error_message.lower():
-                logger.error(f"[AI Service] Invalid tool_choice configuration - tool_choice='required' but tools empty")
-                raise Exception(f"OpenAI API error: Invalid workflow configuration. Tool choice 'required' was specified but no tools are available. This has been automatically fixed - please try again. Original error: {error_message}")
-            elif "model" in error_message.lower() and "not found" in error_message.lower():
-                logger.error(f"[AI Service] Invalid model specified: {model}")
-                raise Exception(f"Invalid AI model specified. Please check your workflow configuration: {error_message}")
-            elif "timeout" in error_message.lower():
-                logger.warning(f"[AI Service] Request timeout - request took too long")
-                raise Exception(f"OpenAI API request timed out. The request took too long to complete: {error_message}")
-            elif "connection" in error_message.lower():
-                logger.error(f"[AI Service] Connection error - network issue")
-                raise Exception(f"Unable to connect to OpenAI API. Please check your network connection: {error_message}")
-            else:
-                logger.error(f"[AI Service] Unexpected API error: {error_type}")
-                raise Exception(f"OpenAI API error ({error_type}): {error_message}")
     
     def generate_html_from_submission(
         self,
@@ -786,12 +844,7 @@ Generate a complete HTML document that:
             }
             
             # Clean up markdown code blocks if present
-            if html_content.startswith('```html'):
-                html_content = html_content.replace('```html', '').replace('```', '').strip()
-            elif html_content.startswith('```'):
-                html_content = html_content.split('```')[1].strip()
-                if html_content.startswith('html'):
-                    html_content = html_content[4:].strip()
+            html_content = self._clean_html_markdown(html_content)
             
             # Capture response details
             response_details = {
@@ -807,10 +860,10 @@ Generate a complete HTML document that:
             return html_content, usage_info, request_details, response_details
             
         except Exception as e:
+            # Use simplified error handling for HTML generation
             error_type = type(e).__name__
             error_message = str(e)
             
-            # Provide descriptive error messages
             if "API key" in error_message or "authentication" in error_message.lower():
                 raise Exception(f"OpenAI API authentication failed: {error_message}")
             elif "rate limit" in error_message.lower() or "quota" in error_message.lower():
@@ -936,12 +989,7 @@ Generate a complete HTML document that:
             }
             
             # Clean up markdown code blocks if present
-            if html_content.startswith('```html'):
-                html_content = html_content.replace('```html', '').replace('```', '').strip()
-            elif html_content.startswith('```'):
-                html_content = html_content.split('```')[1].strip()
-                if html_content.startswith('html'):
-                    html_content = html_content[4:].strip()
+            html_content = self._clean_html_markdown(html_content)
             
             # Capture response details
             response_details = {
@@ -957,10 +1005,10 @@ Generate a complete HTML document that:
             return html_content, usage_info, request_details, response_details
             
         except Exception as e:
+            # Use simplified error handling for HTML generation
             error_type = type(e).__name__
             error_message = str(e)
             
-            # Provide descriptive error messages
             if "API key" in error_message or "authentication" in error_message.lower():
                 raise Exception(f"OpenAI API authentication failed: {error_message}")
             elif "rate limit" in error_message.lower() or "quota" in error_message.lower():
@@ -1017,8 +1065,7 @@ Generate a complete HTML document that:
             )
             
             # Clean up markdown code blocks if present
-            if enhanced_html.startswith('```html'):
-                enhanced_html = enhanced_html.replace('```html', '').replace('```', '').strip()
+            enhanced_html = self._clean_html_markdown(enhanced_html)
             
             return enhanced_html
             
