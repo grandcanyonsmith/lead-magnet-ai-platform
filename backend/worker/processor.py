@@ -596,6 +596,370 @@ class JobProcessor:
                 'error_type': error_type
             }
     
+    def process_single_step(self, job_id: str, step_index: int, step_type: str = 'workflow_step') -> Dict[str, Any]:
+        """
+        Process a single step of a workflow job.
+        
+        This method is called by Step Functions for per-step processing,
+        where each step gets its own Lambda invocation and 15-minute timeout.
+        
+        Args:
+            job_id: The job ID to process
+            step_index: The index of the step to process (0-based)
+            step_type: Type of step - 'workflow_step' or 'html_generation'
+            
+        Returns:
+            Dictionary with success status, step output, and metadata
+        """
+        try:
+            # Get job details
+            job = self.db.get_job(job_id)
+            if not job:
+                raise ValueError(f"Job {job_id} not found")
+            
+            # Get workflow configuration
+            workflow = self.db.get_workflow(job['workflow_id'])
+            if not workflow:
+                raise ValueError(f"Workflow {job['workflow_id']} not found")
+            
+            # Get submission data
+            submission = self.db.get_submission(job['submission_id'])
+            if not submission:
+                raise ValueError(f"Submission {job['submission_id']} not found")
+            
+            submission_data = submission.get('submission_data', {})
+            
+            # Get form to retrieve field labels
+            form = None
+            form_id = submission.get('form_id')
+            if form_id:
+                try:
+                    form = self.db.get_form(form_id)
+                except Exception as e:
+                    logger.warning(f"Could not retrieve form {form_id} for field labels: {e}")
+            
+            # Create field_id to label mapping
+            field_label_map = {}
+            if form and form.get('form_fields_schema') and form['form_fields_schema'].get('fields'):
+                for field in form['form_fields_schema']['fields']:
+                    field_label_map[field.get('field_id')] = field.get('label', field.get('field_id'))
+            
+            # Helper function to format submission data with labels
+            def format_submission_data_with_labels(data: Dict[str, Any]) -> str:
+                """Format submission data using field labels instead of field IDs."""
+                lines = []
+                for key, value in data.items():
+                    label = field_label_map.get(key, key)
+                    lines.append(f"{label}: {value}")
+                return "\n".join(lines)
+            
+            initial_context = format_submission_data_with_labels(submission_data)
+            
+            # Load existing execution_steps from DynamoDB
+            execution_steps = job.get('execution_steps', [])
+            
+            # Handle HTML generation step (special case)
+            if step_type == 'html_generation':
+                return self._process_html_generation_step(
+                    job_id, job, workflow, submission_data, execution_steps, initial_context
+                )
+            
+            # Handle workflow step
+            steps = workflow.get('steps', [])
+            if not steps or len(steps) == 0:
+                raise ValueError(f"Workflow {workflow.get('workflow_id')} has no steps configured")
+            
+            # Sort steps by step_order if present
+            sorted_steps = sorted(steps, key=lambda s: s.get('step_order', 0))
+            
+            if step_index < 0 or step_index >= len(sorted_steps):
+                raise ValueError(f"Step index {step_index} is out of range. Workflow has {len(sorted_steps)} steps.")
+            
+            # Get the step to process
+            step = sorted_steps[step_index]
+            step_name = step.get('step_name', f'Step {step_index + 1}')
+            step_model = step.get('model', 'gpt-5')
+            step_instructions = step.get('instructions', '')
+            
+            # Extract tools and tool_choice from step config
+            step_tools_raw = step.get('tools', ['web_search_preview'])
+            step_tools = [{"type": tool} if isinstance(tool, str) else tool for tool in step_tools_raw]
+            step_tool_choice = step.get('tool_choice', 'auto')
+            
+            logger.info(f"Processing step {step_index + 1}/{len(sorted_steps)}: {step_name}")
+            
+            step_start_time = datetime.utcnow()
+            
+            # Build context with ALL previous step outputs from execution_steps
+            all_previous_outputs = []
+            all_previous_outputs.append(f"=== Form Submission ===\n{initial_context}")
+            
+            # Load previous step outputs from execution_steps
+            for prev_step_data in execution_steps:
+                if prev_step_data.get('step_type') == 'ai_generation':
+                    prev_step_name = prev_step_data.get('step_name', 'Unknown Step')
+                    prev_output_text = prev_step_data.get('output', '')
+                    prev_image_urls = prev_step_data.get('image_urls', [])
+                    
+                    step_context = f"\n=== {prev_step_name} ===\n{prev_output_text}"
+                    if prev_image_urls:
+                        step_context += f"\n\nGenerated Images:\n" + "\n".join([f"- {url}" for url in prev_image_urls])
+                    all_previous_outputs.append(step_context)
+            
+            # Combine all previous outputs into context
+            all_previous_context = "\n\n".join(all_previous_outputs)
+            
+            # Current step context (empty for subsequent steps, initial_context for first step)
+            current_step_context = initial_context if step_index == 0 else ""
+            
+            # Generate step output with all previous step outputs
+            step_output, usage_info, request_details, response_details = self.ai_service.generate_report(
+                model=step_model,
+                instructions=step_instructions,
+                context=current_step_context,
+                previous_context=all_previous_context,
+                tools=step_tools,
+                tool_choice=step_tool_choice
+            )
+            
+            step_duration = (datetime.utcnow() - step_start_time).total_seconds() * 1000
+            
+            # Store usage record
+            self.store_usage_record(job['tenant_id'], job_id, usage_info)
+            
+            # Store step output as artifact
+            step_artifact_id = self.store_artifact(
+                tenant_id=job['tenant_id'],
+                job_id=job_id,
+                artifact_type='step_output',
+                content=step_output,
+                filename=f'step_{step_index + 1}_{step_name.lower().replace(" ", "_")}.md'
+            )
+            
+            # Extract image URLs from response
+            image_urls = response_details.get('image_urls', [])
+            
+            # Add execution step (convert floats to Decimal for DynamoDB)
+            step_data = {
+                'step_name': step_name,
+                'step_order': step_index + 1,
+                'step_type': 'ai_generation',
+                'model': step_model,
+                'input': request_details,
+                'output': response_details.get('output_text', ''),
+                'image_urls': image_urls,
+                'usage_info': convert_floats_to_decimal(usage_info),
+                'timestamp': step_start_time.isoformat(),
+                'duration_ms': int(step_duration),
+                'artifact_id': step_artifact_id,
+            }
+            
+            # Append to execution_steps and update DynamoDB
+            execution_steps.append(step_data)
+            self.db.update_job(job_id, {'execution_steps': execution_steps})
+            
+            logger.info(f"Step {step_index + 1} completed successfully in {step_duration:.0f}ms")
+            
+            return {
+                'success': True,
+                'step_index': step_index,
+                'step_name': step_name,
+                'step_output': step_output,
+                'artifact_id': step_artifact_id,
+                'image_urls': image_urls,
+                'usage_info': usage_info,
+                'duration_ms': int(step_duration)
+            }
+            
+        except Exception as e:
+            logger.exception(f"Error processing step {step_index} for job {job_id}")
+            
+            # Create descriptive error message
+            error_type = type(e).__name__
+            error_message = str(e)
+            
+            if not error_message or error_message == error_type:
+                error_message = f"{error_type}: {error_message}" if error_message else error_type
+            
+            descriptive_error = f"Failed to process step {step_index}: {error_message}"
+            
+            # Update job status to failed
+            try:
+                self.db.update_job(job_id, {
+                    'status': 'failed',
+                    'error_message': descriptive_error,
+                    'error_type': error_type,
+                    'updated_at': datetime.utcnow().isoformat()
+                })
+            except Exception as update_error:
+                logger.error(f"Failed to update job status: {update_error}")
+            
+            return {
+                'success': False,
+                'error': descriptive_error,
+                'error_type': error_type,
+                'step_index': step_index
+            }
+    
+    def _process_html_generation_step(
+        self,
+        job_id: str,
+        job: Dict[str, Any],
+        workflow: Dict[str, Any],
+        submission_data: Dict[str, Any],
+        execution_steps: list,
+        initial_context: str
+    ) -> Dict[str, Any]:
+        """
+        Process HTML generation step (called after all workflow steps complete).
+        
+        Args:
+            job_id: The job ID
+            job: Job record from DynamoDB
+            workflow: Workflow configuration
+            submission_data: Form submission data
+            execution_steps: List of completed execution steps
+            initial_context: Formatted submission context
+            
+        Returns:
+            Dictionary with success status and HTML content
+        """
+        try:
+            template_id = workflow.get('template_id')
+            if not template_id:
+                raise ValueError("Template ID is required for HTML generation")
+            
+            template = self.db.get_template(
+                template_id,
+                workflow.get('template_version', 0)
+            )
+            if not template:
+                raise ValueError(f"Template {template_id} not found")
+            
+            if not template.get('is_published', False):
+                raise ValueError(f"Template {template_id} is not published")
+            
+            logger.info("Generating HTML from accumulated step outputs")
+            html_start_time = datetime.utcnow()
+            
+            # Build accumulated context from all workflow steps
+            accumulated_context = f"=== Form Submission ===\n{initial_context}\n\n"
+            for step_data in execution_steps:
+                if step_data.get('step_type') == 'ai_generation':
+                    step_name = step_data.get('step_name', 'Unknown Step')
+                    step_output = step_data.get('output', '')
+                    image_urls = step_data.get('image_urls', [])
+                    
+                    accumulated_context += f"--- {step_name} ---\n{step_output}\n\n"
+                    if image_urls:
+                        accumulated_context += f"Generated Images:\n" + "\n".join([f"- {url}" for url in image_urls]) + "\n\n"
+            
+            # Get model from last workflow step or default
+            steps = workflow.get('steps', [])
+            model = 'gpt-5'
+            if steps:
+                sorted_steps = sorted(steps, key=lambda s: s.get('step_order', 0))
+                if sorted_steps:
+                    model = sorted_steps[-1].get('model', 'gpt-5')
+            
+            # Generate HTML
+            final_content, html_usage_info, html_request_details, html_response_details = self.ai_service.generate_styled_html(
+                research_content=accumulated_context,
+                template_html=template['html_content'],
+                template_style=template.get('style_description', ''),
+                submission_data=submission_data,
+                model=model
+            )
+            
+            html_duration = (datetime.utcnow() - html_start_time).total_seconds() * 1000
+            self.store_usage_record(job['tenant_id'], job_id, html_usage_info)
+            
+            # Store HTML as final artifact
+            final_artifact_id = self.store_artifact(
+                tenant_id=job['tenant_id'],
+                job_id=job_id,
+                artifact_type='html_final',
+                content=final_content,
+                filename='final.html',
+                public=True
+            )
+            
+            # Get public URL for final artifact
+            final_artifact = self.db.get_artifact(final_artifact_id)
+            public_url = final_artifact.get('public_url')
+            
+            if not public_url:
+                raise ValueError("Failed to generate public URL for final artifact")
+            
+            # Add HTML generation step to execution_steps
+            html_step_data = {
+                'step_name': 'HTML Generation',
+                'step_order': len(execution_steps) + 1,
+                'step_type': 'html_generation',
+                'model': model,
+                'input': html_request_details,
+                'output': html_response_details.get('output_text', '')[:5000],  # Truncate for storage
+                'usage_info': convert_floats_to_decimal(html_usage_info),
+                'timestamp': html_start_time.isoformat(),
+                'duration_ms': int(html_duration),
+                'artifact_id': final_artifact_id,
+            }
+            execution_steps.append(html_step_data)
+            
+            # Update job with final output
+            artifacts_list = job.get('artifacts', [])
+            if final_artifact_id not in artifacts_list:
+                artifacts_list.append(final_artifact_id)
+            
+            self.db.update_job(job_id, {
+                'execution_steps': execution_steps,
+                'output_url': public_url,
+                'artifacts': artifacts_list,
+                'status': 'completed',
+                'completed_at': datetime.utcnow().isoformat(),
+                'updated_at': datetime.utcnow().isoformat()
+            })
+            
+            logger.info(f"HTML generation completed successfully. Final artifact: {public_url[:80]}...")
+            
+            return {
+                'success': True,
+                'step_type': 'html_generation',
+                'final_content': final_content,
+                'artifact_id': final_artifact_id,
+                'output_url': public_url,
+                'usage_info': html_usage_info,
+                'duration_ms': int(html_duration)
+            }
+            
+        except Exception as e:
+            logger.exception(f"Error processing HTML generation step for job {job_id}")
+            
+            error_type = type(e).__name__
+            error_message = str(e)
+            
+            if not error_message or error_message == error_type:
+                error_message = f"{error_type}: {error_message}" if error_message else error_type
+            
+            descriptive_error = f"Failed to generate HTML: {error_message}"
+            
+            try:
+                self.db.update_job(job_id, {
+                    'status': 'failed',
+                    'error_message': descriptive_error,
+                    'error_type': error_type,
+                    'updated_at': datetime.utcnow().isoformat()
+                })
+            except Exception as update_error:
+                logger.error(f"Failed to update job status: {update_error}")
+            
+            return {
+                'success': False,
+                'error': descriptive_error,
+                'error_type': error_type,
+                'step_type': 'html_generation'
+            }
+    
     def generate_content_from_submission(
         self,
         workflow: Dict[str, Any],
