@@ -4,9 +4,9 @@ on:
   push:
     branches:
       - main
-      - staging
     paths:
       - 'frontend/**'
+      - '.github/workflows/frontend-deploy.yml'
   workflow_dispatch:
 
 jobs:
@@ -34,13 +34,12 @@ jobs:
       - name: Build
         working-directory: frontend
         env:
+          NODE_ENV: production
           NEXT_PUBLIC_API_URL: ${{ secrets.API_URL }}
           NEXT_PUBLIC_COGNITO_USER_POOL_ID: ${{ secrets.COGNITO_USER_POOL_ID }}
           NEXT_PUBLIC_COGNITO_CLIENT_ID: ${{ secrets.COGNITO_CLIENT_ID }}
           NEXT_PUBLIC_AWS_REGION: ${{ env.AWS_REGION }}
-        run: |
-          npm run build
-          npm run export
+        run: npm run build
       
       - name: Configure AWS credentials (OIDC)
         if: ${{ secrets.AWS_ROLE_ARN }}
@@ -57,12 +56,24 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
       
+      - name: Verify AWS credentials
+        run: |
+          if ! aws sts get-caller-identity &>/dev/null; then
+            echo "Error: AWS credentials not configured properly"
+            exit 1
+          fi
+          echo "AWS credentials verified"
+      
       - name: Deploy to S3
         working-directory: frontend
         env:
           S3_BUCKET: ${{ secrets.FRONTEND_BUCKET }}
         run: |
-          aws s3 sync out s3://$S3_BUCKET --delete --cache-control max-age=31536000,public
+          if [ ! -d "out" ]; then
+            echo "Error: out directory not found. Build may have failed."
+            exit 1
+          fi
+          aws s3 sync out s3://$S3_BUCKET/app/ --delete --cache-control max-age=31536000,public
       
       - name: Invalidate CloudFront
         env:

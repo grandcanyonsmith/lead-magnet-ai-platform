@@ -4,9 +4,9 @@ on:
   push:
     branches:
       - main
-      - staging
     paths:
       - 'backend/worker/**'
+      - '.github/workflows/worker-ecr.yml'
   workflow_dispatch:
 
 jobs:
@@ -37,6 +37,14 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Verify AWS credentials
+        run: |
+          if ! aws sts get-caller-identity &>/dev/null; then
+            echo "Error: AWS credentials not configured properly"
+            exit 1
+          fi
+          echo "AWS credentials verified"
       
       - name: Login to Amazon ECR
         id: login-ecr
