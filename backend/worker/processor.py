@@ -165,10 +165,16 @@ class JobProcessor:
                         all_previous_outputs = []
                         all_previous_outputs.append(f"=== Form Submission ===\n{initial_context}")
                         
-                        # Include all previous step outputs explicitly
+                        # Include all previous step outputs explicitly (with image URLs if present)
                         for prev_idx, prev_step_output in enumerate(step_outputs):
                             prev_step_name = sorted_steps[prev_idx].get('step_name', f'Step {prev_idx + 1}')
-                            all_previous_outputs.append(f"\n=== Step {prev_idx + 1}: {prev_step_name} ===\n{prev_step_output['output']}")
+                            prev_output_text = prev_step_output['output']
+                            prev_image_urls = prev_step_output.get('image_urls', [])
+                            
+                            step_context = f"\n=== Step {prev_idx + 1}: {prev_step_name} ===\n{prev_output_text}"
+                            if prev_image_urls:
+                                step_context += f"\n\nGenerated Images:\n" + "\n".join([f"- {url}" for url in prev_image_urls])
+                            all_previous_outputs.append(step_context)
                         
                         # Combine all previous outputs into context
                         all_previous_context = "\n\n".join(all_previous_outputs)
@@ -199,11 +205,15 @@ class JobProcessor:
                             content=step_output,
                             filename=f'step_{step_index + 1}_{step_name.lower().replace(" ", "_")}.md'
                         )
+                        # Extract image URLs from response
+                        image_urls = response_details.get('image_urls', [])
+                        
                         step_outputs.append({
                             'step_name': step_name,
                             'step_index': step_index,
                             'output': step_output,
-                            'artifact_id': step_artifact_id
+                            'artifact_id': step_artifact_id,
+                            'image_urls': image_urls  # Store image URLs for context passing
                         })
                         
                         # Add execution step (convert floats to Decimal for DynamoDB)
@@ -214,7 +224,7 @@ class JobProcessor:
                             'model': step_model,
                             'input': request_details,
                             'output': response_details.get('output_text', ''),
-                            'image_urls': response_details.get('image_urls', []),  # Store image URLs
+                            'image_urls': image_urls,  # Store image URLs
                             'usage_info': convert_floats_to_decimal(usage_info),
                             'timestamp': step_start_time.isoformat(),
                             'duration_ms': int(step_duration),
@@ -223,8 +233,10 @@ class JobProcessor:
                         execution_steps.append(step_data)
                         self.db.update_job(job_id, {'execution_steps': execution_steps})
                         
-                        # Accumulate context for next step
+                        # Accumulate context for next step (include image URLs if present)
                         accumulated_context += f"\n\n--- Step {step_index + 1}: {step_name} ---\n{step_output}"
+                        if image_urls:
+                            accumulated_context += f"\n\nGenerated Images:\n" + "\n".join([f"- {url}" for url in image_urls])
                         
                     except Exception as e:
                         raise Exception(f"Failed to process step '{step_name}': {str(e)}") from e

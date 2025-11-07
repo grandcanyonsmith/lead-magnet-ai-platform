@@ -83,6 +83,60 @@ class S3Service:
             logger.error(f"Error uploading to S3: {e}")
             raise
     
+    def upload_image(
+        self,
+        key: str,
+        image_data: bytes,
+        content_type: str = 'image/png',
+        public: bool = True
+    ) -> Tuple[str, str]:
+        """
+        Upload image (binary data) to S3.
+        
+        Args:
+            key: S3 object key
+            image_data: Binary image data
+            content_type: MIME type (e.g., 'image/png', 'image/jpeg')
+            public: Whether to make object publicly accessible
+            
+        Returns:
+            Tuple of (s3_url, public_url)
+        """
+        try:
+            # Prepare upload parameters
+            put_params = {
+                'Bucket': self.bucket_name,
+                'Key': key,
+                'Body': image_data,
+                'ContentType': content_type,
+            }
+            
+            # Upload to S3
+            self.s3_client.put_object(**put_params)
+            
+            # Generate URLs
+            s3_url = f"s3://{self.bucket_name}/{key}"
+            
+            if public and self.cloudfront_domain:
+                # Use CloudFront URL for public access (recommended)
+                public_url = f"https://{self.cloudfront_domain}/{key}"
+                logger.info(f"Using CloudFront URL for public image: {public_url}")
+            else:
+                # Generate presigned URL (valid for 1 year)
+                public_url = self.s3_client.generate_presigned_url(
+                    'get_object',
+                    Params={'Bucket': self.bucket_name, 'Key': key},
+                    ExpiresIn=31536000  # 1 year
+                )
+                if public:
+                    logger.warning(f"CloudFront domain not configured, using presigned URL for image")
+            
+            logger.info(f"Uploaded image to S3: {s3_url}, public_url: {public_url[:80]}...")
+            return s3_url, public_url
+        except ClientError as e:
+            logger.error(f"Error uploading image to S3: {e}")
+            raise
+    
     def download_artifact(self, key: str) -> str:
         """
         Download artifact from S3.
