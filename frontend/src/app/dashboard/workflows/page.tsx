@@ -11,6 +11,7 @@ export default function WorkflowsPage() {
   const [loading, setLoading] = useState(true)
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
   const menuRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
   useEffect(() => {
@@ -37,7 +38,14 @@ export default function WorkflowsPage() {
   const loadWorkflows = async () => {
     try {
       const data = await api.getWorkflows()
-      setWorkflows(data.workflows || [])
+      const workflowsList = data.workflows || []
+      // Sort by created_at DESC (most recent first) as fallback
+      workflowsList.sort((a: any, b: any) => {
+        const dateA = new Date(a.created_at || 0).getTime()
+        const dateB = new Date(b.created_at || 0).getTime()
+        return dateB - dateA // DESC order
+      })
+      setWorkflows(workflowsList)
     } catch (error) {
       console.error('Failed to load workflows:', error)
     } finally {
@@ -97,6 +105,16 @@ export default function WorkflowsPage() {
     return url
   }
 
+  // Filter workflows based on search query
+  const filteredWorkflows = workflows.filter((workflow) => {
+    if (!searchQuery.trim()) return true
+    const query = searchQuery.toLowerCase()
+    const name = (workflow.workflow_name || '').toLowerCase()
+    const description = (workflow.workflow_description || '').toLowerCase()
+    const formName = (workflow.form?.form_name || '').toLowerCase()
+    return name.includes(query) || description.includes(query) || formName.includes(query)
+  })
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -128,7 +146,40 @@ export default function WorkflowsPage() {
         </button>
       </div>
 
-      {workflows.length === 0 ? (
+      {/* Search Bar */}
+      {workflows.length > 0 && (
+        <div className="mb-4 sm:mb-6">
+          <div className="relative">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search lead magnets by name, description, or form..."
+              className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            />
+            <svg
+              className="absolute left-3 top-2.5 w-5 h-5 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+        </div>
+      )}
+
+      {filteredWorkflows.length === 0 && workflows.length > 0 ? (
+        <div className="bg-white rounded-lg shadow p-6 sm:p-12 text-center">
+          <p className="text-gray-600 mb-4 text-sm sm:text-base">No lead magnets match your search</p>
+          <button
+            onClick={() => setSearchQuery('')}
+            className="inline-flex items-center px-3 sm:px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm sm:text-base"
+          >
+            Clear search
+          </button>
+        </div>
+      ) : workflows.length === 0 ? (
         <div className="bg-white rounded-lg shadow p-6 sm:p-12 text-center">
           <p className="text-gray-600 mb-4 text-sm sm:text-base">No lead magnets yet</p>
           <button
@@ -143,7 +194,7 @@ export default function WorkflowsPage() {
         <>
           {/* Mobile Card View */}
           <div className="block md:hidden space-y-3">
-            {workflows.map((workflow) => {
+            {filteredWorkflows.map((workflow) => {
               const formUrl = workflow.form ? publicUrlFor(workflow.form) : null
               return (
                 <div key={workflow.workflow_id} className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
@@ -311,7 +362,7 @@ export default function WorkflowsPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
-                {workflows.map((workflow) => {
+                {filteredWorkflows.map((workflow) => {
                   const formUrl = workflow.form ? publicUrlFor(workflow.form) : null
                   return (
                     <tr key={workflow.workflow_id} className="hover:bg-gray-50 transition-colors">

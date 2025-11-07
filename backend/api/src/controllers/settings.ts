@@ -18,6 +18,13 @@ class SettingsController {
         api_usage_limit: 1000000,
         api_usage_current: 0,
         billing_tier: 'free',
+        onboarding_survey_completed: false,
+        onboarding_survey_responses: {},
+        onboarding_checklist: {
+          complete_profile: false,
+          create_first_lead_magnet: false,
+          view_generated_lead_magnets: false,
+        },
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };

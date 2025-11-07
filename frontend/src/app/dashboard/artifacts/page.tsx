@@ -29,7 +29,14 @@ export default function ArtifactsPage() {
   const loadArtifacts = async () => {
     try {
       const data = await api.getArtifacts({ limit: 100 })
-      setArtifacts(data.artifacts || [])
+      const artifactsList = data.artifacts || []
+      // Sort by created_at DESC (most recent first)
+      artifactsList.sort((a: Artifact, b: Artifact) => {
+        const dateA = new Date(a.created_at || 0).getTime()
+        const dateB = new Date(b.created_at || 0).getTime()
+        return dateB - dateA // DESC order
+      })
+      setArtifacts(artifactsList)
     } catch (error) {
       console.error('Failed to load artifacts:', error)
     } finally {

@@ -4,6 +4,11 @@ import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { signOut, isAuthenticated } from '@/lib/auth'
+import { api } from '@/lib/api'
+import { OnboardingChecklist } from '@/components/OnboardingChecklist'
+import { TourProvider } from '@/components/TourProvider'
+import { TourId } from '@/lib/tours'
+import { NotificationBell } from '@/components/NotificationBell'
 import { 
   FiHome, 
   FiSettings, 
@@ -24,6 +29,8 @@ export default function DashboardLayout({
   const pathname = usePathname()
   const [loading, setLoading] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [settings, setSettings] = useState<any>(null)
+  const [activeTourId, setActiveTourId] = useState<TourId | null>(null)
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -38,6 +45,8 @@ export default function DashboardLayout({
         } else {
           console.log('Authenticated, showing dashboard')
           setLoading(false)
+          // Load settings for onboarding checklist
+          loadSettings()
         }
       } catch (error) {
         console.error('Auth check error:', error)
@@ -46,6 +55,49 @@ export default function DashboardLayout({
     }
     checkAuth()
   }, [router])
+
+  const loadSettings = async () => {
+    try {
+      const data = await api.getSettings()
+      setSettings(data)
+    } catch (error) {
+      console.error('Failed to load settings:', error)
+    }
+  }
+
+  const handleStartTour = (tourId: TourId) => {
+    setActiveTourId(tourId)
+  }
+
+  const handleTourComplete = async (tourId: TourId) => {
+    setActiveTourId(null)
+    
+    // Mark checklist item as complete
+    if (!settings) return
+    
+    const checklist = settings.onboarding_checklist || {}
+    let updatedChecklist = { ...checklist }
+    
+    if (tourId === 'settings') {
+      updatedChecklist.complete_profile = true
+    } else if (tourId === 'create-workflow') {
+      updatedChecklist.create_first_lead_magnet = true
+    } else if (tourId === 'view-jobs') {
+      updatedChecklist.view_generated_lead_magnets = true
+    }
+    
+    try {
+      await api.updateOnboardingChecklist(updatedChecklist)
+      // Reload settings to update UI
+      await loadSettings()
+    } catch (error) {
+      console.error('Failed to update checklist:', error)
+    }
+  }
+
+  const handleTourSkip = () => {
+    setActiveTourId(null)
+  }
 
   const handleSignOut = () => {
     signOut()
@@ -71,23 +123,28 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Mobile sidebar backdrop */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-gray-600 bg-opacity-75 z-20 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+    <TourProvider
+      activeTourId={activeTourId}
+      onTourComplete={handleTourComplete}
+      onTourSkip={handleTourSkip}
+    >
+      <div className="min-h-screen bg-gray-100">
+        {/* Mobile sidebar backdrop */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 bg-gray-600 bg-opacity-75 z-20 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
 
-      {/* Sidebar */}
-      <aside
-        className={`
-          fixed top-0 left-0 z-30 h-full w-64 sm:w-72 bg-white shadow-xl border-r border-gray-200 transform transition-transform duration-300 ease-in-out
-          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-          lg:translate-x-0
-        `}
-      >
+        {/* Sidebar */}
+        <aside
+          className={`
+            fixed top-0 left-0 z-30 h-full w-64 sm:w-72 bg-white shadow-xl border-r border-gray-200 transform transition-transform duration-300 ease-in-out
+            ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+            lg:translate-x-0
+          `}
+        >
         <div className="flex items-center justify-between h-14 sm:h-16 px-4 sm:px-6 border-b border-gray-200 bg-gradient-to-r from-primary-50 to-white">
           <div className="flex items-center">
             <div className="h-7 w-7 sm:h-8 sm:w-8 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center mr-2">
@@ -142,26 +199,33 @@ export default function DashboardLayout({
         </div>
       </aside>
 
-      {/* Main content */}
-      <div className="lg:ml-64">
-        {/* Top bar */}
-        <header className="bg-white shadow-sm h-14 sm:h-16 flex items-center px-3 sm:px-4 lg:px-6 border-b border-gray-200 sticky top-0 z-10">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="lg:hidden text-gray-600 hover:text-gray-900 mr-3 sm:mr-4 p-2 rounded-lg hover:bg-gray-100 transition-colors"
-            aria-label="Open menu"
-          >
-            <FiMenu className="w-5 h-5 sm:w-6 sm:h-6" />
-          </button>
-          <div className="flex-1" />
-        </header>
+        {/* Main content */}
+        <div className="lg:ml-64">
+          {/* Top bar */}
+          <header className="bg-white shadow-sm h-14 sm:h-16 flex items-center px-3 sm:px-4 lg:px-6 border-b border-gray-200 sticky top-0 z-10">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="lg:hidden text-gray-600 hover:text-gray-900 mr-3 sm:mr-4 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              aria-label="Open menu"
+            >
+              <FiMenu className="w-5 h-5 sm:w-6 sm:h-6" />
+            </button>
+            <div className="flex-1" />
+            <NotificationBell />
+          </header>
 
-        {/* Page content */}
-        <main className="p-3 sm:p-4 md:p-6 lg:p-8 bg-gray-50 min-h-screen">
-          {children}
-        </main>
+          {/* Page content */}
+          <main className="p-3 sm:p-4 md:p-6 lg:p-8 bg-gray-50 min-h-screen">
+            {children}
+          </main>
+        </div>
+
+        {/* Onboarding Checklist Widget */}
+        {settings && (
+          <OnboardingChecklist settings={settings} onStartTour={handleStartTour} />
+        )}
       </div>
-    </div>
+    </TourProvider>
   )
 }
 

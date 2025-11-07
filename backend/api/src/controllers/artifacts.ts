@@ -103,6 +103,13 @@ class ArtifactsController {
       return !fileName.includes('report.md') && artifact.artifact_type !== 'report_markdown';
     });
 
+    // Sort by created_at DESC (most recent first)
+    artifacts.sort((a: any, b: any) => {
+      const dateA = new Date(a.created_at || 0).getTime();
+      const dateB = new Date(b.created_at || 0).getTime();
+      return dateB - dateA; // DESC order
+    });
+
     // Ensure all artifacts have accessible URLs
     // Use CloudFront URLs (non-expiring) when available, fallback to presigned URLs
     const artifactsWithUrls = await Promise.all(

@@ -166,6 +166,31 @@ export class DatabaseStack extends cdk.Stack {
       'leadmagnet-usage-records'
     );
 
+    // Table 9: Notifications
+    const notificationsTable = new dynamodb.Table(this, 'NotificationsTable', {
+      tableName: 'leadmagnet-notifications',
+      partitionKey: { name: 'notification_id', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      pointInTimeRecovery: true,
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      encryption: dynamodb.TableEncryption.AWS_MANAGED,
+      timeToLiveAttribute: 'ttl',
+    });
+
+    notificationsTable.addGlobalSecondaryIndex({
+      indexName: 'gsi_tenant_created',
+      partitionKey: { name: 'tenant_id', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'created_at', type: dynamodb.AttributeType.STRING },
+      projectionType: dynamodb.ProjectionType.ALL,
+    });
+
+    notificationsTable.addGlobalSecondaryIndex({
+      indexName: 'gsi_tenant_read',
+      partitionKey: { name: 'tenant_id', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'read_at', type: dynamodb.AttributeType.STRING },
+      projectionType: dynamodb.ProjectionType.ALL,
+    });
+
     // Export table names and references
     this.tablesMap = {
       workflows: workflowsTable,
@@ -176,6 +201,7 @@ export class DatabaseStack extends cdk.Stack {
       templates: templatesTable,
       userSettings: userSettingsTable,
       usageRecords: usageRecordsTable,
+      notifications: notificationsTable,
     };
 
     // CloudFormation outputs
