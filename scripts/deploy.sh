@@ -78,10 +78,14 @@ echo ""
 echo -e "${YELLOW}Step 4: Building and deploying API Lambda...${NC}"
 cd backend/api
 npm install
-npm run build
-cd dist && zip -r ../api.zip . && cd ..
-cd node_modules && zip -r ../api.zip . && cd ..
-aws lambda update-function-code --function-name leadmagnet-api-handler --zip-file fileb://api.zip
+npm run package:lambda
+# Use bundled version (should be much smaller)
+if [ -f "api-bundle.zip" ]; then
+    aws lambda update-function-code --function-name leadmagnet-api-handler --zip-file fileb://api-bundle.zip
+else
+    echo -e "${RED}Error: api-bundle.zip not found. Build may have failed.${NC}"
+    exit 1
+fi
 cd ../..
 echo -e "${GREEN}✓ API deployed${NC}"
 echo ""
@@ -94,7 +98,7 @@ NEXT_PUBLIC_API_URL=$API_URL \
 NEXT_PUBLIC_COGNITO_USER_POOL_ID=$USER_POOL_ID \
 NEXT_PUBLIC_COGNITO_CLIENT_ID=$CLIENT_ID \
 NEXT_PUBLIC_AWS_REGION=$AWS_REGION \
-npm run build && npm run export
+npm run build
 aws s3 sync out s3://$ARTIFACTS_BUCKET --delete --cache-control max-age=31536000,public
 aws cloudfront create-invalidation --distribution-id $DISTRIBUTION_ID --paths '/*'
 cd ..
