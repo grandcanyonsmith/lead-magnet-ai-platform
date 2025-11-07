@@ -32,6 +32,11 @@ class AIService:
         secret_name = os.environ.get('OPENAI_SECRET_NAME', 'leadmagnet/openai-api-key')
         region = os.environ.get('AWS_REGION', 'us-east-1')
         
+        logger.info(f"[OpenAI Key] Retrieving API key from Secrets Manager", extra={
+            'secret_name': secret_name,
+            'region': region
+        })
+        
         # Create a Secrets Manager client
         session = boto3.session.Session()
         client = session.client(
@@ -40,22 +45,33 @@ class AIService:
         )
         
         try:
+            logger.debug(f"[OpenAI Key] Calling get_secret_value for secret: {secret_name}")
             response = client.get_secret_value(SecretId=secret_name)
             
             # Parse the secret value
             if 'SecretString' in response:
                 secret = response['SecretString']
+                logger.debug(f"[OpenAI Key] Secret retrieved successfully, length: {len(secret)}")
                 # Handle both plain string and JSON format
                 try:
                     secret_dict = json.loads(secret)
-                    return secret_dict.get('api_key', secret)
+                    api_key = secret_dict.get('api_key', secret)
+                    logger.info(f"[OpenAI Key] Successfully parsed JSON secret, API key length: {len(api_key) if api_key else 0}")
+                    return api_key
                 except json.JSONDecodeError:
+                    logger.debug(f"[OpenAI Key] Secret is plain string format, using directly")
                     return secret
             else:
+                logger.error(f"[OpenAI Key] Secret binary format not supported")
                 raise ValueError("Secret binary format not supported")
                 
         except Exception as e:
-            logger.error(f"Failed to retrieve OpenAI API key: {e}")
+            logger.error(f"[OpenAI Key] Failed to retrieve OpenAI API key from Secrets Manager", extra={
+                'secret_name': secret_name,
+                'region': region,
+                'error_type': type(e).__name__,
+                'error_message': str(e)
+            }, exc_info=True)
             raise
     
     def generate_report(
@@ -195,6 +211,14 @@ class AIService:
                 if not tools:
                     tools = [{"type": "web_search_preview"}]
         
+        # FINAL SAFETY CHECK: One more validation right before building params
+        # This ensures tool_choice='required' is NEVER set when tools is empty
+        if tool_choice == "required" and (not tools or len(tools) == 0):
+            logger.error("FINAL CHECK FAILED: tool_choice='required' but tools is empty! Forcing tool_choice to 'auto'.")
+            tool_choice = "auto"
+            if not tools or len(tools) == 0:
+                tools = [{"type": "web_search_preview"}]
+        
         # Check if computer_use_preview is in tools (requires truncation="auto")
         has_computer_use = any(
             (isinstance(t, dict) and t.get("type") == "computer_use_preview") or 
@@ -202,7 +226,16 @@ class AIService:
             for t in tools
         )
         
-        logger.info(f"Generating report with model: {model}, tools: {tools}, tool_choice: {tool_choice}, has_computer_use: {has_computer_use}")
+        logger.info(f"[AI Service] Generating report", extra={
+            'model': model,
+            'tools_count': len(tools) if tools else 0,
+            'tools': [t.get('type') if isinstance(t, dict) else t for t in tools] if tools else [],
+            'tool_choice': tool_choice,
+            'has_computer_use': has_computer_use,
+            'instructions_length': len(instructions),
+            'context_length': len(context),
+            'previous_context_length': len(previous_context)
+        })
         
         # Only use reasoning_level for o3 models (requires minimum "medium")
         # Improve o3 model detection to be more robust
@@ -221,32 +254,46 @@ class AIService:
         input_text = f"Generate a report based on the following information:\n\n{full_context}"
         
         try:
+            # Build params dict - only include tools if non-empty
             params = {
                 "model": model,
                 "instructions": instructions,
                 "input": input_text,
-                "tools": tools,
             }
+            
+            # Only add tools parameter if:
+            # 1. tools array is not empty
+            # 2. tool_choice is not "none" (if tool_choice is "none", don't include tools)
+            if tool_choice == "none":
+                # Don't include tools parameter when tool_choice is "none"
+                logger.info("tool_choice is 'none', not including tools parameter")
+            elif tools and len(tools) > 0:
+                params["tools"] = tools
+            else:
+                # If tool_choice is not "none" but tools is empty, add default tool
+                logger.warning("Tools array is empty but tool_choice is not 'none'. Adding default web_search_preview tool.")
+                params["tools"] = [{"type": "web_search_preview"}]
             
             # Add truncation="auto" if computer_use_preview is used
             if has_computer_use:
                 params["truncation"] = "auto"
                 logger.info("Added truncation='auto' for computer_use_preview tool")
             
-            # Add tool_choice if not "none" (none means no tools, so don't include the parameter)
-            # Also ensure we don't set tool_choice="required" if tools is empty
-            # This check is redundant but provides extra safety
-            if tool_choice != "none" and tools and len(tools) > 0:
-                # Double-check tool_choice is not "required" with empty tools
-                if tool_choice == "required" and (not tools or len(tools) == 0):
-                    logger.error("CRITICAL: tool_choice='required' but tools is empty in params building! Not setting tool_choice parameter.")
-                    # Don't set tool_choice parameter - let API use default
+            # Add tool_choice ONLY if:
+            # 1. tool_choice is not "none"
+            # 2. tools array exists and is not empty
+            # 3. tool_choice is not "required" when tools is empty (should never happen due to checks above)
+            if tool_choice != "none":
+                # Final validation: ensure tools exists and is not empty before setting tool_choice
+                tools_in_params = params.get("tools", [])
+                if tools_in_params and len(tools_in_params) > 0:
+                    # One final check: never set tool_choice='required' if tools is empty
+                    if tool_choice == "required" and (not tools_in_params or len(tools_in_params) == 0):
+                        logger.error("ABORT: tool_choice='required' but tools is empty in params! Not setting tool_choice.")
+                    else:
+                        params["tool_choice"] = tool_choice
                 else:
-                    params["tool_choice"] = tool_choice
-            elif tool_choice == "required" and (not tools or len(tools) == 0):
-                # This should not happen due to check above, but double-check for safety
-                logger.error("CRITICAL: tool_choice='required' but tools is empty! Not setting tool_choice parameter.")
-                # Don't set tool_choice parameter - let API use default
+                    logger.warning(f"Not setting tool_choice='{tool_choice}' because tools array is empty in params.")
             
             # Add reasoning_level only for o3 models
             # Improve o3 model detection to be more robust
@@ -403,18 +450,23 @@ class AIService:
             
             # Log token usage for cost tracking
             usage = response.usage
-            logger.info(
-                f"Report generation completed. "
-                f"Tokens: {usage.total_tokens} "
-                f"(input: {usage.input_tokens}, output: {usage.output_tokens})"
-                + (f" Images generated: {len(image_urls)}" if image_urls else "")
-            )
-            
-            # Calculate cost
             cost_data = calculate_openai_cost(
                 model,
                 usage.input_tokens or 0,
                 usage.output_tokens or 0
+            )
+            logger.info(
+                f"[AI Service] Report generation completed successfully",
+                extra={
+                    'model': model,
+                    'total_tokens': usage.total_tokens or 0,
+                    'input_tokens': usage.input_tokens or 0,
+                    'output_tokens': usage.output_tokens or 0,
+                    'cost_usd': cost_data['cost_usd'],
+                    'output_length': len(report),
+                    'images_generated': len(image_urls),
+                    'image_urls': image_urls[:3] if image_urls else []  # Log first 3 URLs
+                }
             )
             
             usage_info = {
@@ -466,27 +518,51 @@ class AIService:
                         if not retry_tools:
                             retry_tools = [{"type": "web_search_preview"}]
                     
+                    # FINAL SAFETY CHECK for retry path
+                    if retry_tool_choice == "required" and (not retry_tools or len(retry_tools) == 0):
+                        logger.error("FINAL RETRY CHECK FAILED: tool_choice='required' but tools is empty! Forcing tool_choice to 'auto'.")
+                        retry_tool_choice = "auto"
+                        if not retry_tools or len(retry_tools) == 0:
+                            retry_tools = [{"type": "web_search_preview"}]
+                    
+                    # Build params dict - only include tools if non-empty
                     params_no_reasoning = {
                         "model": model,
                         "instructions": instructions,
                         "input": f"Generate a report based on the following information:\n\n{full_context}",
-                        "tools": retry_tools,
                     }
+                    
+                    # Only add tools parameter if:
+                    # 1. tools array is not empty
+                    # 2. tool_choice is not "none" (if tool_choice is "none", don't include tools)
+                    if retry_tool_choice == "none":
+                        # Don't include tools parameter when tool_choice is "none"
+                        logger.info("Retry path: tool_choice is 'none', not including tools parameter")
+                    elif retry_tools and len(retry_tools) > 0:
+                        params_no_reasoning["tools"] = retry_tools
+                    else:
+                        # If tool_choice is not "none" but tools is empty, add default tool
+                        logger.warning("Retry path: Tools array is empty but tool_choice is not 'none'. Adding default web_search_preview tool.")
+                        params_no_reasoning["tools"] = [{"type": "web_search_preview"}]
+                    
                     # Add truncation if computer_use_preview is used
                     if has_computer_use:
                         params_no_reasoning["truncation"] = "auto"
-                    # Only set tool_choice if it's not "none" and tools is not empty
-                    if retry_tool_choice != "none" and retry_tools and len(retry_tools) > 0:
-                        # Double-check tool_choice is not "required" with empty tools
-                        if retry_tool_choice == "required" and (not retry_tools or len(retry_tools) == 0):
-                            logger.error("CRITICAL: Retry path - tool_choice='required' but tools is empty! Not setting tool_choice parameter.")
-                            # Don't set tool_choice parameter - let API use default
+                    
+                    # Add tool_choice ONLY if:
+                    # 1. tool_choice is not "none"
+                    # 2. tools array exists and is not empty
+                    if retry_tool_choice != "none":
+                        # Final validation: ensure tools exists and is not empty before setting tool_choice
+                        tools_in_params = params_no_reasoning.get("tools", [])
+                        if tools_in_params and len(tools_in_params) > 0:
+                            # One final check: never set tool_choice='required' if tools is empty
+                            if retry_tool_choice == "required" and (not tools_in_params or len(tools_in_params) == 0):
+                                logger.error("ABORT RETRY: tool_choice='required' but tools is empty in params! Not setting tool_choice.")
+                            else:
+                                params_no_reasoning["tool_choice"] = retry_tool_choice
                         else:
-                            params_no_reasoning["tool_choice"] = retry_tool_choice
-                    elif retry_tool_choice == "required" and (not retry_tools or len(retry_tools) == 0):
-                        # This should not happen due to check above, but double-check for safety
-                        logger.error("CRITICAL: Retry path - tool_choice='required' but tools is empty! Not setting tool_choice parameter.")
-                        # Don't set tool_choice parameter - let API use default
+                            logger.warning(f"Retry path: Not setting tool_choice='{retry_tool_choice}' because tools array is empty in params.")
                     response = self.client.responses.create(**params_no_reasoning)
                     report = response.output_text
                     usage = response.usage
@@ -559,18 +635,41 @@ class AIService:
                     error_message = str(retry_error)
                     error_type = type(retry_error).__name__
             
-            # Provide more descriptive error messages
+            # Provide more descriptive error messages with detailed logging
+            logger.error(
+                f"[AI Service] OpenAI API error occurred",
+                extra={
+                    'model': model,
+                    'error_type': error_type,
+                    'error_message': error_message,
+                    'tools': [t.get('type') if isinstance(t, dict) else t for t in tools] if tools else [],
+                    'tool_choice': tool_choice,
+                    'instructions_length': len(instructions),
+                    'context_length': len(context)
+                },
+                exc_info=True
+            )
+            
             if "API key" in error_message or "authentication" in error_message.lower():
+                logger.error(f"[AI Service] Authentication error - check API key configuration")
                 raise Exception(f"OpenAI API authentication failed. Please check your API key configuration: {error_message}")
             elif "rate limit" in error_message.lower() or "quota" in error_message.lower():
+                logger.warning(f"[AI Service] Rate limit exceeded - request should be retried")
                 raise Exception(f"OpenAI API rate limit exceeded. Please try again later: {error_message}")
+            elif "tool_choice" in error_message.lower() and "required" in error_message.lower() and "tools" in error_message.lower():
+                logger.error(f"[AI Service] Invalid tool_choice configuration - tool_choice='required' but tools empty")
+                raise Exception(f"OpenAI API error: Invalid workflow configuration. Tool choice 'required' was specified but no tools are available. This has been automatically fixed - please try again. Original error: {error_message}")
             elif "model" in error_message.lower() and "not found" in error_message.lower():
+                logger.error(f"[AI Service] Invalid model specified: {model}")
                 raise Exception(f"Invalid AI model specified. Please check your workflow configuration: {error_message}")
             elif "timeout" in error_message.lower():
+                logger.warning(f"[AI Service] Request timeout - request took too long")
                 raise Exception(f"OpenAI API request timed out. The request took too long to complete: {error_message}")
             elif "connection" in error_message.lower():
+                logger.error(f"[AI Service] Connection error - network issue")
                 raise Exception(f"Unable to connect to OpenAI API. Please check your network connection: {error_message}")
             else:
+                logger.error(f"[AI Service] Unexpected API error: {error_type}")
                 raise Exception(f"OpenAI API error ({error_type}): {error_message}")
     
     def generate_html_from_submission(
