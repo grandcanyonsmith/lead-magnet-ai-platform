@@ -78,20 +78,34 @@ export default function JobDetailClient() {
   const params = useParams()
   // Extract job ID from params, or fallback to URL pathname if param is '_' (Vercel rewrite)
   const getJobId = () => {
+    // First try to get from params
     const paramId = params?.id as string
-    if (paramId && paramId !== '_') {
+    if (paramId && paramId !== '_' && paramId.trim() !== '') {
       return paramId
     }
-    // Fallback: extract from browser URL
+    // Fallback: extract from browser URL (works for static exports and direct navigation)
     if (typeof window !== 'undefined') {
-      const pathMatch = window.location.pathname.match(/\/dashboard\/jobs\/([^/]+)/)
-      if (pathMatch && pathMatch[1] && pathMatch[1] !== '_') {
+      const pathMatch = window.location.pathname.match(/\/dashboard\/jobs\/([^/?#]+)/)
+      if (pathMatch && pathMatch[1] && pathMatch[1] !== '_' && pathMatch[1].trim() !== '') {
         return pathMatch[1]
+      }
+      // Also check hash in case of SPA routing
+      const hashMatch = window.location.hash.match(/\/dashboard\/jobs\/([^/?#]+)/)
+      if (hashMatch && hashMatch[1] && hashMatch[1] !== '_' && hashMatch[1].trim() !== '') {
+        return hashMatch[1]
       }
     }
     return paramId || ''
   }
-  const jobId = getJobId()
+  const [jobId, setJobId] = useState<string>(getJobId())
+  
+  // Update jobId when params change (for client-side navigation)
+  useEffect(() => {
+    const newJobId = getJobId()
+    if (newJobId && newJobId !== jobId && newJobId.trim() !== '' && newJobId !== '_') {
+      setJobId(newJobId)
+    }
+  }, [params?.id])
   
   const [job, setJob] = useState<any>(null)
   const [workflow, setWorkflow] = useState<any>(null)
@@ -106,8 +120,11 @@ export default function JobDetailClient() {
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
-    if (jobId) {
+    if (jobId && jobId.trim() !== '' && jobId !== '_') {
       loadJob()
+    } else if (!jobId || jobId.trim() === '' || jobId === '_') {
+      setError('Invalid job ID. Please select a job from the list.')
+      setLoading(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId])
@@ -176,8 +193,12 @@ export default function JobDetailClient() {
 
     try {
       const result = await api.resubmitJob(jobId)
-      // Redirect to the new job
-      router.push(`/dashboard/jobs/${result.job_id}`)
+      // Redirect to the new job - use window.location for static export compatibility
+      if (typeof window !== 'undefined') {
+        window.location.href = `/dashboard/jobs/${result.job_id}`
+      } else {
+        router.push(`/dashboard/jobs/${result.job_id}`)
+      }
     } catch (error: any) {
       console.error('Failed to resubmit job:', error)
       setError(error.response?.data?.message || error.message || 'Failed to resubmit job')
