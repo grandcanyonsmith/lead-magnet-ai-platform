@@ -68,8 +68,10 @@ def find_lead_magnet_jobs(tenant_id: str, workflow_id: str = None):
         
         print(f"\nFound {len(lead_magnet_jobs)} lead magnet generation job(s):\n")
         
+        # Convert Decimal objects to native Python types for all jobs
+        lead_magnet_jobs = [convert_decimals(job) for job in lead_magnet_jobs]
+        
         for job in lead_magnet_jobs:
-            job = convert_decimals(job)
             print(f"Job ID: {job.get('job_id')}")
             print(f"  Status: {job.get('status')}")
             print(f"  Workflow ID: {job.get('workflow_id', 'N/A')}")
