@@ -254,6 +254,11 @@ class ApiClient {
     return response.data
   }
 
+  async resubmitJob(jobId: string) {
+    const response = await this.client.post(`/admin/jobs/${jobId}/resubmit`)
+    return response.data
+  }
+
   // Submissions
   async getSubmissions(params?: any) {
     const response = await this.client.get('/admin/submissions', { params })
