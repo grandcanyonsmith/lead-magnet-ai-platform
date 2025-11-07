@@ -81,6 +81,7 @@ export default function JobsPage() {
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [workflowFilter, setWorkflowFilter] = useState<string>('all')
+  const [searchQuery, setSearchQuery] = useState('')
   
   // Sorting
   const [sortField, setSortField] = useState<SortField>('date')
@@ -152,7 +153,16 @@ export default function JobsPage() {
     }
   }
 
-  const sortedJobs = [...jobs].sort((a, b) => {
+  // Filter jobs by search query
+  const filteredJobs = jobs.filter((job) => {
+    if (!searchQuery.trim()) return true
+    const query = searchQuery.toLowerCase()
+    const workflowName = (workflowMap[job.workflow_id] || '').toLowerCase()
+    const jobId = (job.job_id || '').toLowerCase()
+    return workflowName.includes(query) || jobId.includes(query)
+  })
+
+  const sortedJobs = [...filteredJobs].sort((a, b) => {
     let comparison = 0
     
     switch (sortField) {
@@ -217,8 +227,31 @@ export default function JobsPage() {
         </div>
       </div>
 
+      {/* Search Bar */}
+      {jobs.length > 0 && (
+        <div className="mb-4 sm:mb-6">
+          <div className="relative">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by lead magnet name or job ID..."
+              className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            />
+            <svg
+              className="absolute left-3 top-2.5 w-5 h-5 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+        </div>
+      )}
+
       {/* Filters */}
-      <div className="mb-4 sm:mb-6 bg-white rounded-lg shadow p-3 sm:p-4">
+      <div className="mb-4 sm:mb-6 bg-white rounded-lg shadow p-3 sm:p-4" data-tour="job-filters">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Status</label>
@@ -260,7 +293,7 @@ export default function JobsPage() {
       ) : (
         <>
           {/* Mobile Card View */}
-          <div className="block md:hidden space-y-3">
+          <div className="block md:hidden space-y-3" data-tour="jobs-list">
             {sortedJobs.map((job) => {
               const duration = job.completed_at && job.created_at
                 ? Math.round((new Date(job.completed_at).getTime() - new Date(job.created_at).getTime()) / 1000)
@@ -287,7 +320,7 @@ export default function JobsPage() {
                         {workflowMap[job.workflow_id] || job.workflow_id || '-'}
                       </h3>
                     </div>
-                    <div className="flex items-center space-x-2 ml-2 flex-shrink-0">
+                    <div className="flex items-center space-x-2 ml-2 flex-shrink-0" data-tour="job-status">
                       {getStatusIcon(job.status)}
                       {getStatusBadge(job.status)}
                     </div>
@@ -305,7 +338,7 @@ export default function JobsPage() {
                     </div>
                     
                     {job.output_url && (
-                      <div className="pt-2 border-t border-gray-100" onClick={(e) => e.stopPropagation()}>
+                      <div className="pt-2 border-t border-gray-100" onClick={(e) => e.stopPropagation()} data-tour="view-artifacts">
                         <a
                           href={job.output_url}
                           target="_blank"
@@ -346,7 +379,7 @@ export default function JobsPage() {
           </div>
 
           {/* Desktop Table View */}
-          <div className="hidden md:block bg-white rounded-lg shadow overflow-hidden">
+          <div className="hidden md:block bg-white rounded-lg shadow overflow-hidden" data-tour="jobs-list">
             <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
@@ -446,6 +479,7 @@ export default function JobsPage() {
                             href={job.output_url}
                             target="_blank"
                             rel="noopener noreferrer"
+                            data-tour="view-artifacts"
                             onClick={(e) => {
                               e.stopPropagation()
                               e.preventDefault()

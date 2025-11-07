@@ -1,16 +1,26 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { signIn } from '@/lib/auth'
+import { api } from '@/lib/api'
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    // Pre-fill email from query params
+    const emailParam = searchParams?.get('email')
+    if (emailParam) {
+      setEmail(emailParam)
+    }
+  }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -31,8 +41,8 @@ export default function LoginPage() {
           if (lastAuthUser) {
             const idToken = localStorage.getItem(`CognitoIdentityServiceProvider.${clientId}.${lastAuthUser}.idToken`)
             if (idToken) {
-              // Use router.push instead of window.location to preserve state
-              router.push('/dashboard')
+              // Check onboarding status
+              await checkOnboardingAndRedirect()
               return
             }
           }
@@ -40,7 +50,7 @@ export default function LoginPage() {
         
         // If Cognito tokens aren't ready, try again after a delay
         await new Promise(resolve => setTimeout(resolve, 200))
-        router.push('/dashboard')
+        await checkOnboardingAndRedirect()
       } else {
         setError(result.error || 'Failed to sign in')
         setLoading(false)
@@ -48,6 +58,29 @@ export default function LoginPage() {
     } catch (err: any) {
       setError(err.message || 'An error occurred')
       setLoading(false)
+    }
+  }
+
+  const checkOnboardingAndRedirect = async () => {
+    try {
+      // Check if onboarding survey is completed
+      const settings = await api.getSettings()
+      const redirectParam = searchParams?.get('redirect')
+      
+      if (!settings.onboarding_survey_completed) {
+        // Redirect to onboarding survey
+        router.push('/onboarding/survey')
+      } else if (redirectParam) {
+        // Redirect to specified path
+        router.push(redirectParam)
+      } else {
+        // Default to dashboard
+        router.push('/dashboard')
+      }
+    } catch (error) {
+      console.error('Failed to check onboarding status:', error)
+      // Default to dashboard on error
+      router.push('/dashboard')
     }
   }
 

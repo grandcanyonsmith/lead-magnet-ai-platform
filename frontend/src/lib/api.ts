@@ -306,6 +306,40 @@ class ApiClient {
     const response = await this.client.get('/admin/analytics', { params })
     return response.data
   }
+
+  // Notifications
+  async getNotifications(unreadOnly?: boolean) {
+    const params: any = {}
+    if (unreadOnly) params.unread_only = 'true'
+    const response = await this.client.get('/admin/notifications', { params })
+    return response.data
+  }
+
+  async markNotificationRead(notificationId: string) {
+    const response = await this.client.put(`/admin/notifications/${notificationId}/read`)
+    return response.data
+  }
+
+  async markAllNotificationsRead() {
+    const response = await this.client.put('/admin/notifications/read-all')
+    return response.data
+  }
+
+  // Onboarding
+  async updateOnboardingSurvey(surveyResponses: Record<string, any>) {
+    const response = await this.client.put('/admin/settings', {
+      onboarding_survey_completed: true,
+      onboarding_survey_responses: surveyResponses,
+    })
+    return response.data
+  }
+
+  async updateOnboardingChecklist(checklist: { complete_profile?: boolean; create_first_lead_magnet?: boolean; view_generated_lead_magnets?: boolean }) {
+    const response = await this.client.put('/admin/settings', {
+      onboarding_checklist: checklist,
+    })
+    return response.data
+  }
 }
 
 export const api = new ApiClient()
