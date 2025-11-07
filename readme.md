@@ -114,7 +114,7 @@ When creating a lead magnet, you can choose:
            │                 │              │       │
     ┌──────▼──────┐   ┌──────▼──────┐  ┌───▼──────▼───┐
     │  DynamoDB   │   │    Step     │  │ Lambda Worker │
-    │  (7 tables) │   │  Functions  │  │   (Python)    │
+    │  (8 tables) │   │  Functions  │  │   (Python)    │
     └─────────────┘   └──────┬──────┘  └──────┬───────┘
                              │                 │
                       ┌──────▼─────────────────▼──┐
@@ -141,12 +141,13 @@ When creating a lead magnet, you can choose:
 - AWS SDK v3
 
 **Infrastructure:**
-- AWS CDK (TypeScript)
-- DynamoDB (7 tables)
-- API Gateway (HTTP API)
-- Step Functions (Workflow orchestration)
-- Lambda Functions (Serverless compute)
-- S3 + CloudFront (Artifact storage & CDN)
+- AWS CDK (TypeScript) - Infrastructure as Code
+- DynamoDB (8 tables) - Multi-tenant data storage
+- API Gateway (HTTP API) - RESTful API endpoints
+- Step Functions - Workflow orchestration for job processing
+- Lambda Functions - Serverless compute (Node.js API + Python Worker)
+- S3 + CloudFront - Artifact storage & CDN distribution
+- Cognito - User authentication and authorization
 
 **AI:**
 - OpenAI API (GPT-4o, GPT-4 Turbo)
@@ -160,12 +161,24 @@ When creating a lead magnet, you can choose:
 ```
 lead-magnent-ai/
 ├── infrastructure/      # AWS CDK (6 stacks)
+│   ├── bin/            # CDK app entry point
+│   └── lib/            # Stack definitions (TypeScript)
 ├── backend/
 │   ├── api/            # Node.js Lambda API
+│   │   ├── src/        # TypeScript source files
+│   │   └── build.js    # Build configuration
 │   └── worker/         # Python Lambda worker
+│       ├── *.py        # Python source files
+│       ├── Dockerfile  # Container definition
+│       └── requirements.txt
 ├── frontend/           # Next.js admin dashboard
+│   └── src/            # React/Next.js source files
 ├── .github/workflows/  # CI/CD pipelines
 ├── scripts/            # Helper scripts
+│   ├── deploy.sh       # Main deployment script
+│   ├── destroy.sh      # Cleanup script
+│   ├── test-e2e.sh     # End-to-end tests
+│   └── *.py            # Utility scripts
 └── docs/              # Documentation files
 ```
 
@@ -188,6 +201,18 @@ lead-magnent-ai/
 
 **Test results:** ✅ ALL TESTS PASSING (100%)
 
+**Available Scripts:**
+- `scripts/deploy.sh` - Deploy entire platform (infrastructure + backend + frontend)
+- `scripts/destroy.sh` - Remove all AWS resources
+- `scripts/test-e2e.sh` - Run end-to-end tests
+- `scripts/build-lambda-worker.sh` - Build and push worker Docker image
+- `scripts/confirm-users.sh` - Confirm Cognito users
+- `scripts/setup-github-secrets.sh` - Configure GitHub Actions secrets
+- `scripts/find-lead-magnet-jobs.py` - Find and list lead magnet jobs
+- `scripts/fix-workflow-tools.py` - Fix workflow tool configuration issues
+- `scripts/get-job-output.py` - Retrieve job output from DynamoDB
+- `scripts/import-workflow-from-job.py` - Import workflow from job output
+
 ## 💰 Business Model
 
 **Pricing:** Pay-per-usage at the end of each billing cycle
@@ -205,11 +230,20 @@ lead-magnent-ai/
 
 ## 📖 Documentation
 
+**Main Documentation:**
 - **[docs/QUICK_START.md](./docs/QUICK_START.md)** - Quick start guide with URLs, commands, and getting started steps
 - **[docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)** - Complete deployment guide with step-by-step instructions
 - **[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)** - Architecture overview, technology stack, and development guide
 - **[docs/RESOURCES.md](./docs/RESOURCES.md)** - AWS resource inventory and management commands
 - **[docs/FLOW_DIAGRAM.md](./docs/FLOW_DIAGRAM.md)** - Complete process flow diagram
+
+**Additional Guides:**
+- **[DEPLOYMENT.md](./DEPLOYMENT.md)** - Root-level deployment reference
+- **[LOCAL_DEVELOPMENT.md](./LOCAL_DEVELOPMENT.md)** - Local development setup
+- **[FRONTEND_TEST_GUIDE.md](./FRONTEND_TEST_GUIDE.md)** - Frontend testing guide
+- **[GITHUB_SECRETS_SETUP.md](./GITHUB_SECRETS_SETUP.md)** - GitHub Actions secrets configuration
+- **[QUICK_GITHUB_SETUP.md](./QUICK_GITHUB_SETUP.md)** - Quick GitHub repository setup
+- **[LAMBDA_BUILD_OPTIONS.md](./LAMBDA_BUILD_OPTIONS.md)** - Lambda build and deployment options
 
 ## 🔐 Security
 
@@ -240,9 +274,11 @@ MIT License
 
 ## 🆘 Support
 
-- **Documentation:** See `/docs` folder
+- **Documentation:** See `/docs` folder and root-level `.md` files
 - **Issues:** Open an issue on GitHub
 - **Logs:** Check CloudWatch logs
+- **Local Development:** See [LOCAL_DEVELOPMENT.md](./LOCAL_DEVELOPMENT.md)
+- **Deployment Help:** See [DEPLOYMENT.md](./DEPLOYMENT.md) or [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)
 
 ## 🎉 Status
 
