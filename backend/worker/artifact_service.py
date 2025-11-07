@@ -44,11 +44,27 @@ class ArtifactService:
         Returns:
             Artifact ID
         """
+        content_size = len(content.encode('utf-8'))
+        logger.info(f"[ArtifactService] Storing artifact", extra={
+            'tenant_id': tenant_id,
+            'job_id': job_id,
+            'artifact_type': artifact_type,
+            'filename': filename,
+            'content_size_bytes': content_size,
+            'public': public
+        })
+        
         # Generate artifact ID
         artifact_id = f"art_{ulid()}"
         
         # Upload to S3
         s3_key = f"{tenant_id}/jobs/{job_id}/{filename}"
+        logger.debug(f"[ArtifactService] Uploading to S3", extra={
+            'artifact_id': artifact_id,
+            's3_key': s3_key,
+            'content_size_bytes': content_size
+        })
+        
         s3_url, public_url = self.s3.upload_artifact(
             key=s3_key,
             content=content,
@@ -68,12 +84,28 @@ class ArtifactService:
             's3_url': s3_url,
             'public_url': public_url,  # Always store URL (CloudFront or presigned)
             'is_public': public,  # Flag to indicate if it's truly public vs presigned
-            'file_size_bytes': len(content.encode('utf-8')),
+            'file_size_bytes': content_size,
             'mime_type': self.get_content_type(filename),
             'created_at': datetime.utcnow().isoformat()
         }
         
+        logger.debug(f"[ArtifactService] Creating artifact record in DynamoDB", extra={
+            'artifact_id': artifact_id,
+            'artifact_type': artifact_type
+        })
+        
         self.db.put_artifact(artifact)
+        
+        logger.info(f"[ArtifactService] Artifact stored successfully", extra={
+            'artifact_id': artifact_id,
+            'tenant_id': tenant_id,
+            'job_id': job_id,
+            'artifact_type': artifact_type,
+            'filename': filename,
+            's3_key': s3_key,
+            'public_url_preview': public_url[:80] + '...' if len(public_url) > 80 else public_url,
+            'content_size_bytes': content_size
+        })
         
         return artifact_id
     

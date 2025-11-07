@@ -36,20 +36,36 @@ class TemplateService:
         Returns:
             Rendered HTML
         """
+        logger.debug(f"[TemplateService] Rendering template", extra={
+            'html_length': len(html_content),
+            'context_keys': list(context.keys()),
+            'context_keys_count': len(context)
+        })
+        
         try:
             # First pass: Simple placeholder replacement
             rendered = self._replace_placeholders(html_content, context)
             
             # Second pass: Jinja2 template rendering (if needed)
             if self._has_jinja_syntax(rendered):
+                logger.debug(f"[TemplateService] Detected Jinja2 syntax, performing Jinja2 rendering")
                 template = self.jinja_env.from_string(rendered)
                 rendered = template.render(**context)
             
-            logger.info("Template rendered successfully")
+            logger.info(f"[TemplateService] Template rendered successfully", extra={
+                'input_length': len(html_content),
+                'output_length': len(rendered),
+                'used_jinja2': self._has_jinja_syntax(html_content)
+            })
             return rendered
             
         except Exception as e:
-            logger.error(f"Error rendering template: {e}")
+            logger.error(f"[TemplateService] Error rendering template", extra={
+                'html_length': len(html_content),
+                'context_keys': list(context.keys()),
+                'error_type': type(e).__name__,
+                'error_message': str(e)
+            }, exc_info=True)
             raise
     
     def _replace_placeholders(self, html: str, context: Dict[str, Any]) -> str:

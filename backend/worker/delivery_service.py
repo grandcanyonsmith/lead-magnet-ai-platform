@@ -44,6 +44,13 @@ class DeliveryService:
             submission: Submission data
             job: Job data
         """
+        logger.info(f"[DeliveryService] Sending webhook notification", extra={
+            'job_id': job_id,
+            'webhook_url': webhook_url,
+            'has_custom_headers': bool(webhook_headers),
+            'output_url': output_url
+        })
+        
         # Build payload with dynamic values from submission data
         submission_data = submission.get('submission_data', {})
         payload = {
@@ -68,7 +75,18 @@ class DeliveryService:
             **webhook_headers
         }
         
+        logger.debug(f"[DeliveryService] Webhook payload prepared", extra={
+            'job_id': job_id,
+            'payload_keys': list(payload.keys()),
+            'headers_count': len(headers)
+        })
+        
         try:
+            logger.debug(f"[DeliveryService] Sending POST request to webhook", extra={
+                'job_id': job_id,
+                'webhook_url': webhook_url,
+                'timeout': 30
+            })
             response = requests.post(
                 webhook_url,
                 json=payload,
@@ -76,9 +94,20 @@ class DeliveryService:
                 timeout=30
             )
             response.raise_for_status()
-            logger.info(f"Webhook notification sent successfully to {webhook_url}")
+            logger.info(f"[DeliveryService] Webhook notification sent successfully", extra={
+                'job_id': job_id,
+                'webhook_url': webhook_url,
+                'status_code': response.status_code,
+                'response_length': len(response.content)
+            })
         except Exception as e:
-            logger.error(f"Failed to send webhook notification: {e}")
+            logger.error(f"[DeliveryService] Failed to send webhook notification", extra={
+                'job_id': job_id,
+                'webhook_url': webhook_url,
+                'error_type': type(e).__name__,
+                'error_message': str(e),
+                'response_status': getattr(e.response, 'status_code', None) if hasattr(e, 'response') else None
+            }, exc_info=True)
     
     def _get_twilio_credentials(self) -> Dict[str, str]:
         """
