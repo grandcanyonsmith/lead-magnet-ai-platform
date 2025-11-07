@@ -94,6 +94,7 @@ echo ""
 echo -e "${YELLOW}Step 5: Building and deploying frontend...${NC}"
 cd frontend
 npm install
+NODE_ENV=production \
 NEXT_PUBLIC_API_URL=$API_URL \
 NEXT_PUBLIC_COGNITO_USER_POOL_ID=$USER_POOL_ID \
 NEXT_PUBLIC_COGNITO_CLIENT_ID=$CLIENT_ID \

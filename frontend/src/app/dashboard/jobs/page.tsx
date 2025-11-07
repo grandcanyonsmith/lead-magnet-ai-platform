@@ -195,31 +195,31 @@ export default function JobsPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <div className="flex justify-between items-start">
+      <div className="mb-4 sm:mb-6">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-0">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Generated Lead Magnets</h1>
-            <p className="text-gray-600 mt-1">Your generated lead magnets and documents</p>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Generated Lead Magnets</h1>
+            <p className="text-sm sm:text-base text-gray-600 mt-1">Your generated lead magnets and documents</p>
           </div>
-          <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-600">
+          <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
+            <span className="text-xs sm:text-sm text-gray-600 whitespace-nowrap">
               {jobs.length} {jobs.length === 1 ? 'lead magnet' : 'lead magnets'}
             </span>
             <button
               onClick={() => loadJobs(true)}
               disabled={refreshing}
-              className="flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+              className="flex items-center px-3 sm:px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 text-sm sm:text-base"
             >
               <FiRefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-              Refresh
+              <span className="hidden sm:inline">Refresh</span>
             </button>
           </div>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="mb-6 bg-white rounded-lg shadow p-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="mb-4 sm:mb-6 bg-white rounded-lg shadow p-3 sm:p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Status</label>
             <select
@@ -253,13 +253,85 @@ export default function JobsPage() {
       </div>
 
       {sortedJobs.length === 0 ? (
-        <div className="bg-white rounded-lg shadow p-12 text-center">
-          <p className="text-gray-600">No lead magnets yet</p>
-          <p className="text-sm text-gray-500 mt-2">Lead magnets will appear here once forms are submitted</p>
+        <div className="bg-white rounded-lg shadow p-6 sm:p-12 text-center">
+          <p className="text-gray-600 text-sm sm:text-base">No lead magnets yet</p>
+          <p className="text-xs sm:text-sm text-gray-500 mt-2">Lead magnets will appear here once forms are submitted</p>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
+        <>
+          {/* Mobile Card View */}
+          <div className="block md:hidden space-y-3">
+            {sortedJobs.map((job) => {
+              const duration = job.completed_at && job.created_at
+                ? Math.round((new Date(job.completed_at).getTime() - new Date(job.created_at).getTime()) / 1000)
+                : null
+              
+              const hasError = job.status === 'failed' && job.error_message
+              
+              return (
+                <div
+                  key={job.job_id}
+                  onClick={() => router.push(`/dashboard/jobs/${job.job_id}`)}
+                  className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 cursor-pointer hover:shadow-md transition-shadow"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm font-semibold text-gray-900 truncate">
+                        {workflowMap[job.workflow_id] || job.workflow_id || '-'}
+                      </h3>
+                    </div>
+                    <div className="flex items-center space-x-2 ml-2 flex-shrink-0">
+                      {getStatusIcon(job.status)}
+                      {getStatusBadge(job.status)}
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-500">Date:</span>
+                      <span className="text-gray-900 font-medium">{formatRelativeTime(job.created_at)}</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-500">Processing Time:</span>
+                      <span className="text-gray-900 font-medium">{duration !== null ? formatDuration(duration) : '-'}</span>
+                    </div>
+                    
+                    {job.output_url && (
+                      <div className="pt-2 border-t border-gray-100">
+                        <a
+                          href={job.output_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center text-primary-600 hover:text-primary-900 font-medium"
+                        >
+                          <FiExternalLink className="w-3 h-3 mr-1" />
+                          View Document
+                        </a>
+                      </div>
+                    )}
+                    
+                    {hasError && (
+                      <div className="pt-2 border-t border-gray-100">
+                        <div className="flex items-start">
+                          <FiXCircle className="w-3 h-3 text-red-600 mt-0.5 mr-2 flex-shrink-0" />
+                          <div className="flex-1">
+                            <p className="text-red-600 font-medium text-xs">Error</p>
+                            <p className="text-red-500 text-xs mt-1 line-clamp-2">{job.error_message}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden md:block bg-white rounded-lg shadow overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -394,6 +466,7 @@ export default function JobsPage() {
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {/* Auto-refresh indicator */}
