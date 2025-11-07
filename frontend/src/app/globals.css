@@ -15,6 +15,34 @@ body {
   .text-balance {
     text-wrap: balance;
   }
+  
+  /* Mobile-first responsive utilities */
+  .container-mobile {
+    @apply px-3 sm:px-4 md:px-6 lg:px-8;
+  }
+  
+  /* Better touch targets for mobile */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+  
+  /* Prevent text overflow on mobile */
+  .text-ellipsis-mobile {
+    @apply truncate;
+  }
+  
+  /* Responsive text sizes */
+  .text-responsive {
+    @apply text-sm sm:text-base;
+  }
+  
+  .text-responsive-lg {
+    @apply text-base sm:text-lg lg:text-xl;
+  }
+  
+  .text-responsive-xl {
+    @apply text-lg sm:text-xl lg:text-2xl;
+  }
 }
 
 /* Custom scrollbar */
@@ -41,5 +69,23 @@ body {
   transition-property: color, background-color, border-color, transform, opacity;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
+}
+
+/* Mobile optimizations */
+@media (max-width: 640px) {
+  /* Improve tap targets */
+  button, a {
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Prevent horizontal scroll */
+  body {
+    overflow-x: hidden;
+  }
+  
+  /* Better form inputs on mobile */
+  input, textarea, select {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
 }
 

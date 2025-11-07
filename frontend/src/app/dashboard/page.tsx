@@ -111,83 +111,83 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600">Create and manage AI-powered lead magnets that convert leads 10x better</p>
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">Dashboard</h1>
+        <p className="text-sm sm:text-base text-gray-600">Create and manage AI-powered lead magnets that convert leads 10x better</p>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6 mb-6 sm:mb-8">
         {stats.map((stat) => {
           const Icon = stat.icon
           return (
-            <div key={stat.label} className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 border border-gray-100 group">
-              <div className="flex items-center justify-between mb-4">
-                <div className={`p-3 rounded-xl ${colorMap[stat.color]} group-hover:scale-110 transition-transform`}>
-                  <Icon className="w-6 h-6" />
+            <div key={stat.label} className="bg-white rounded-lg sm:rounded-xl shadow-sm hover:shadow-md transition-shadow p-4 sm:p-6 border border-gray-100 group">
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <div className={`p-2 sm:p-3 rounded-lg sm:rounded-xl ${colorMap[stat.color]} group-hover:scale-110 transition-transform`}>
+                  <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
               </div>
-              <p className="text-3xl font-bold text-gray-900 mb-1">{stat.value}</p>
-              <p className="text-sm text-gray-600 font-medium">{stat.label}</p>
+              <p className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">{stat.value}</p>
+              <p className="text-xs sm:text-sm text-gray-600 font-medium leading-tight">{stat.label}</p>
             </div>
           )
         })}
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-8">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-6 sm:mb-8">
+        <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Quick Actions</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <a
             href="/dashboard/workflows/new"
-            className="flex items-center justify-center px-4 py-3 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg hover:from-primary-700 hover:to-primary-800 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+            className="flex items-center justify-center px-3 sm:px-4 py-2.5 sm:py-3 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg hover:from-primary-700 hover:to-primary-800 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 text-sm sm:text-base"
           >
-            <FiActivity className="w-5 h-5 mr-2" />
+            <FiActivity className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
             Create Lead Magnet
           </a>
           <a
             href="/dashboard/forms/new"
-            className="flex items-center justify-center px-4 py-3 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg hover:from-primary-700 hover:to-primary-800 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+            className="flex items-center justify-center px-3 sm:px-4 py-2.5 sm:py-3 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg hover:from-primary-700 hover:to-primary-800 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 text-sm sm:text-base"
           >
-            <FiFileText className="w-5 h-5 mr-2" />
+            <FiFileText className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
             Create Lead Capture Form
           </a>
         </div>
       </div>
 
       {/* Additional Information */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-sm border border-blue-100 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-3">What Are AI Lead Magnets?</h2>
-          <p className="text-sm text-gray-700 mb-3 leading-relaxed">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg sm:rounded-xl shadow-sm border border-blue-100 p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-2 sm:mb-3">What Are AI Lead Magnets?</h2>
+          <p className="text-xs sm:text-sm text-gray-700 mb-2 sm:mb-3 leading-relaxed">
             AI lead magnets are personalized resources that use artificial intelligence to create custom content for each lead. Instead of sending a generic PDF, you send a personalized report generated specifically for that lead.
           </p>
-          <p className="text-sm text-gray-700 font-semibold">
+          <p className="text-xs sm:text-sm text-gray-700 font-semibold">
             🚀 This approach is <strong>10x more effective</strong> at converting leads because it solves their specific problems!
           </p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">System Overview</h2>
+        <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">System Overview</h2>
           <div className="space-y-4">
-            <div className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
+            <div className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0 text-sm">
               <span className="text-gray-600">Total Submissions</span>
               <span className="font-semibold text-gray-900">{overview.total_submissions || 0}</span>
             </div>
-            <div className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
+            <div className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0 text-sm">
               <span className="text-gray-600">Total Lead Magnets</span>
               <span className="font-semibold text-gray-900">{overview.total_workflows || 0}</span>
             </div>
-            <div className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
+            <div className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0 text-sm">
               <span className="text-gray-600">Active Lead Magnets</span>
               <span className="font-semibold text-green-600">{overview.active_workflows || 0}</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
-          <p className="text-gray-600 text-sm leading-relaxed">
+        <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Recent Activity</h2>
+          <p className="text-gray-600 text-xs sm:text-sm leading-relaxed">
             Monitor your generated lead magnets and form submissions in the{' '}
             <a href="/dashboard/jobs" className="text-primary-600 hover:text-primary-700 font-medium">
               Generated Lead Magnets section

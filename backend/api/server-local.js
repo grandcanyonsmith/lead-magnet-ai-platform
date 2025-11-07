@@ -157,12 +157,25 @@ app.all('*', async (req, res) => {
   }
 });
 
-// Start server
-app.listen(PORT, () => {
+// Start server with error handling for port conflicts
+const server = app.listen(PORT, () => {
   console.log(`🚀 Local API server running on http://localhost:${PORT}`);
   console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔧 AWS Region: ${process.env.AWS_REGION}`);
   console.log(`\n💡 Make sure AWS credentials are configured for DynamoDB access`);
   console.log(`💡 Frontend should point to: http://localhost:${PORT}\n`);
+});
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`\n❌ Port ${PORT} is already in use.`);
+    console.error(`💡 Try one of these solutions:`);
+    console.error(`   1. Kill the process using port ${PORT}: lsof -ti:${PORT} | xargs kill -9`);
+    console.error(`   2. Use a different port: PORT=3002 npm run dev`);
+    console.error(`   3. Find what's using the port: lsof -i:${PORT}\n`);
+    process.exit(1);
+  } else {
+    throw err;
+  }
 });
 
