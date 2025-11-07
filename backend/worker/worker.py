@@ -30,13 +30,20 @@ def main():
     # Get job_id from environment variable (passed by Step Functions)
     job_id = os.environ.get('JOB_ID')
     if not job_id:
-        logger.error("JOB_ID environment variable not set")
+        logger.error("[Worker] JOB_ID environment variable not set", extra={
+            'available_env_vars': [k for k in os.environ.keys() if 'JOB' in k.upper()]
+        })
         sys.exit(1)
     
-    logger.info(f"Starting worker for job: {job_id}")
+    logger.info(f"[Worker] Starting worker", extra={
+        'job_id': job_id,
+        'python_version': sys.version,
+        'aws_region': os.environ.get('AWS_REGION', 'not set')
+    })
     
     try:
         # Initialize services
+        logger.debug(f"[Worker] Initializing services", extra={'job_id': job_id})
         db_service = DynamoDBService()
         s3_service = S3Service()
         processor = JobProcessor(db_service, s3_service)
