@@ -100,12 +100,13 @@ export function migrateLegacyWorkflowOnUpdate(
 }
 
 /**
- * Ensure step defaults are set (step_order, tools, tool_choice)
+ * Ensure step defaults are set (step_order, tools, tool_choice, step_description)
  */
 export function ensureStepDefaults(steps: WorkflowStep[]): WorkflowStep[] {
   return steps.map((step: any, index: number) => ({
     ...step,
     step_order: step.step_order !== undefined ? step.step_order : index,
+    step_description: step.step_description || step.step_name || `Step ${index + 1}`,
     tools: step.tools || (index === 0 ? ['web_search_preview'] : []),
     tool_choice: (step.tool_choice || (index === 0 ? 'auto' : 'none')) as 'auto' | 'required' | 'none',
   }));
