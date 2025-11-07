@@ -177,6 +177,7 @@ class AIService:
         
         # CRITICAL FIX: If tool_choice is "required" but tools array is empty,
         # change tool_choice to "auto" to prevent API error
+        # This check must happen BEFORE building params dict
         if tool_choice == "required" and (not tools or len(tools) == 0):
             logger.warning(f"tool_choice is 'required' but tools array is empty. Changing tool_choice to 'auto' to prevent API error.")
             tool_choice = "auto"
@@ -184,6 +185,15 @@ class AIService:
             if not tools:
                 tools = [{"type": "web_search_preview"}]
                 logger.info(f"Added default tool: web_search_preview")
+        
+        # Additional validation: Ensure tool_choice is not "required" if tools is empty
+        # This is a double-check before params are built
+        if tool_choice == "required":
+            if not tools or len(tools) == 0:
+                logger.error("CRITICAL: tool_choice='required' but tools is empty after all checks! Changing to 'auto'.")
+                tool_choice = "auto"
+                if not tools:
+                    tools = [{"type": "web_search_preview"}]
         
         # Check if computer_use_preview is in tools (requires truncation="auto")
         has_computer_use = any(
@@ -195,7 +205,13 @@ class AIService:
         logger.info(f"Generating report with model: {model}, tools: {tools}, tool_choice: {tool_choice}, has_computer_use: {has_computer_use}")
         
         # Only use reasoning_level for o3 models (requires minimum "medium")
-        is_o3_model = model.startswith('o3') or 'o3-deep-research' in model.lower()
+        # Improve o3 model detection to be more robust
+        is_o3_model = (
+            model.startswith('o3') or 
+            'o3-deep-research' in model.lower() or
+            model.lower() == 'o3-mini' or
+            model.lower() == 'o3'
+        )
         
         # Combine previous context with current context if provided
         full_context = context
@@ -219,17 +235,36 @@ class AIService:
             
             # Add tool_choice if not "none" (none means no tools, so don't include the parameter)
             # Also ensure we don't set tool_choice="required" if tools is empty
+            # This check is redundant but provides extra safety
             if tool_choice != "none" and tools and len(tools) > 0:
-                params["tool_choice"] = tool_choice
+                # Double-check tool_choice is not "required" with empty tools
+                if tool_choice == "required" and (not tools or len(tools) == 0):
+                    logger.error("CRITICAL: tool_choice='required' but tools is empty in params building! Not setting tool_choice parameter.")
+                    # Don't set tool_choice parameter - let API use default
+                else:
+                    params["tool_choice"] = tool_choice
             elif tool_choice == "required" and (not tools or len(tools) == 0):
                 # This should not happen due to check above, but double-check for safety
                 logger.error("CRITICAL: tool_choice='required' but tools is empty! Not setting tool_choice parameter.")
                 # Don't set tool_choice parameter - let API use default
             
             # Add reasoning_level only for o3 models
-            if is_o3_model:
+            # Improve o3 model detection to be more robust
+            is_o3_model_strict = (
+                model.startswith('o3') or 
+                'o3-deep-research' in model.lower() or
+                model.lower() == 'o3-mini' or
+                model.lower() == 'o3'
+            )
+            
+            if is_o3_model_strict:
                 params["reasoning_level"] = "medium"
                 logger.info(f"Using reasoning_level=medium for o3 model: {model}")
+            else:
+                # Explicitly ensure reasoning_level is NOT added for non-o3 models
+                if "reasoning_level" in params:
+                    logger.warning(f"Removing reasoning_level parameter for non-o3 model: {model}")
+                    del params["reasoning_level"]
             
             # Capture request details
             request_details = {

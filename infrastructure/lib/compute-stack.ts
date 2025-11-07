@@ -192,18 +192,6 @@ export class ComputeStack extends cdk.Stack {
       resultPath: '$.parsedError',
     }).next(handleStepException);
 
-    const parseErrorHTML = new sfn.Pass(this, 'ParseErrorHTML', {
-      parameters: {
-        'job_id.$': '$.job_id',
-        'error_message': sfn.JsonPath.format(
-          'Lambda execution failed: {} - {}',
-          sfn.JsonPath.stringAt('$.error.Error'),
-          sfn.JsonPath.stringAt('$.error.Cause')
-        ),
-      },
-      resultPath: '$.parsedError',
-    }).next(handleStepException);
-
     // Initialize steps: Load workflow and get step count
     const initializeSteps = new tasks.DynamoGetItem(this, 'InitializeSteps', {
       table: props.tablesMap.workflows,
@@ -238,64 +226,22 @@ export class ComputeStack extends cdk.Stack {
         processStep  // Loop back to process next step
       )
       .otherwise(
-        new sfn.Choice(this, 'CheckTemplate')
-          .when(
-            sfn.Condition.booleanEquals('$.has_template', true),
-            new tasks.LambdaInvoke(this, 'ProcessHTMLStep', {
-              lambdaFunction: this.jobProcessorLambda,
-              payload: sfn.TaskInput.fromObject({
-                'job_id': sfn.JsonPath.stringAt('$.job_id'),
-                'step_type': 'html_generation',
-              }),
-              resultPath: '$.htmlResult',
-              retryOnServiceExceptions: false,
-            })
-              .addCatch(parseErrorHTML, {
-                resultPath: '$.error',
-                errors: ['States.ALL'],
-              })
-              .next(
-                new sfn.Choice(this, 'CheckHTMLResult')
-                  .when(
-                    sfn.Condition.booleanEquals('$.htmlResult.Payload.success', false),
-                    handleStepFailure
-                  )
-                  .otherwise(
-                    new tasks.DynamoUpdateItem(this, 'FinalizeJobWithHTML', {
-                      table: props.tablesMap.jobs,
-                      key: {
-                        job_id: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.job_id')),
-                      },
-                      updateExpression: 'SET #status = :status, completed_at = :completed_at, updated_at = :updated_at',
-                      expressionAttributeNames: {
-                        '#status': 'status',
-                      },
-                      expressionAttributeValues: {
-                        ':status': tasks.DynamoAttributeValue.fromString('completed'),
-                        ':completed_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
-                        ':updated_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
-                      },
-                    })
-                  )
-              )
-          )
-          .otherwise(
-            new tasks.DynamoUpdateItem(this, 'FinalizeJobNoHTML', {
-              table: props.tablesMap.jobs,
-              key: {
-                job_id: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.job_id')),
-              },
-              updateExpression: 'SET #status = :status, completed_at = :completed_at, updated_at = :updated_at',
-              expressionAttributeNames: {
-                '#status': 'status',
-              },
-              expressionAttributeValues: {
-                ':status': tasks.DynamoAttributeValue.fromString('completed'),
-                ':completed_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
-                ':updated_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
-              },
-            })
-          )
+        // Finalize job - used for both HTML and non-HTML workflows
+        new tasks.DynamoUpdateItem(this, 'FinalizeJob', {
+          table: props.tablesMap.jobs,
+          key: {
+            job_id: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.job_id')),
+          },
+          updateExpression: 'SET #status = :status, completed_at = :completed_at, updated_at = :updated_at',
+          expressionAttributeNames: {
+            '#status': 'status',
+          },
+          expressionAttributeValues: {
+            ':status': tasks.DynamoAttributeValue.fromString('completed'),
+            ':completed_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
+            ':updated_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
+          },
+        })
       );
 
     // Check if step succeeded - connects to incrementStep which connects to checkMoreSteps
@@ -319,89 +265,6 @@ export class ComputeStack extends cdk.Stack {
         handleStepFailure
       )
       .otherwise(incrementStep);
-
-    // Check workflow type and route accordingly (defined early for use in template checks)
-    const checkWorkflowType = new sfn.Choice(this, 'CheckWorkflowType')
-      .when(
-        sfn.Condition.or(
-          sfn.Condition.isNotPresent('$.workflowData.Item.steps'),
-          sfn.Condition.numberEquals('$.steps_length', 0)
-        ),
-        processLegacyJob
-      )
-      .otherwise(setupStepLoop);
-
-    // Set has_template to true when template exists
-    const setHasTemplateTrue = new sfn.Pass(this, 'SetHasTemplateTrue', {
-      parameters: {
-        'job_id.$': '$.job_id',
-        'workflow_id.$': '$.workflow_id',
-        'submission_id.$': '$.submission_id',
-        'tenant_id.$': '$.tenant_id',
-        'workflowData.$': '$.workflowData',
-        'steps_length.$': '$.steps_length',
-        'has_template': true,
-        'template_id.$': '$.template_id',
-      },
-      resultPath: '$',
-    }).next(checkWorkflowType);
-
-    // Set has_template to false when template doesn't exist
-    const setHasTemplateFalse = new sfn.Pass(this, 'SetHasTemplateFalse', {
-      parameters: {
-        'job_id.$': '$.job_id',
-        'workflow_id.$': '$.workflow_id',
-        'submission_id.$': '$.submission_id',
-        'tenant_id.$': '$.tenant_id',
-        'workflowData.$': '$.workflowData',
-        'steps_length.$': '$.steps_length',
-        'has_template': false,
-        'template_id': '',
-      },
-      resultPath: '$',
-    }).next(checkWorkflowType);
-
-    // Check if template exists and set has_template boolean
-    const checkTemplateExists = new sfn.Choice(this, 'CheckTemplateExists')
-      .when(
-        sfn.Condition.isPresent('$.workflowData.Item.template_id.S'),
-        setHasTemplateTrue
-      )
-      .otherwise(setHasTemplateFalse);
-
-    // Compute steps length - handle both new (with steps) and legacy (without steps) workflows
-    const computeStepsLengthWithSteps = new sfn.Pass(this, 'ComputeStepsLengthWithSteps', {
-      parameters: {
-        'job_id.$': '$.job_id',
-        'workflow_id.$': '$.workflow_id',
-        'submission_id.$': '$.submission_id',
-        'tenant_id.$': '$.tenant_id',
-        'workflowData.$': '$.workflowData',
-        'steps_length.$': 'States.ArrayLength($.workflowData.Item.steps.L)',
-        'template_id.$': '$.workflowData.Item.template_id.S',
-      },
-      resultPath: '$',
-    }).next(checkTemplateExists);
-
-    const computeStepsLengthLegacy = new sfn.Pass(this, 'ComputeStepsLengthLegacy', {
-      parameters: {
-        'job_id.$': '$.job_id',
-        'workflow_id.$': '$.workflow_id',
-        'submission_id.$': '$.submission_id',
-        'tenant_id.$': '$.tenant_id',
-        'workflowData.$': '$.workflowData',
-        'steps_length': 0,
-        'template_id.$': '$.workflowData.Item.template_id.S',
-      },
-      resultPath: '$',
-    }).next(checkTemplateExists);
-
-    const computeStepsLength = new sfn.Choice(this, 'ComputeStepsLength')
-      .when(
-        sfn.Condition.isPresent('$.workflowData.Item.steps'),
-        computeStepsLengthWithSteps
-      )
-      .otherwise(computeStepsLengthLegacy);
 
     // Setup step loop for multi-step workflows
     const setupStepLoop = new sfn.Pass(this, 'SetupStepLoop', {
@@ -455,6 +318,89 @@ export class ComputeStack extends cdk.Stack {
             })
           )
       );
+
+    // Check workflow type and route accordingly (defined after processLegacyJob and setupStepLoop)
+    const checkWorkflowType = new sfn.Choice(this, 'CheckWorkflowType')
+      .when(
+        sfn.Condition.or(
+          sfn.Condition.isNotPresent('$.workflowData.Item.steps'),
+          sfn.Condition.numberEquals('$.steps_length', 0)
+        ),
+        processLegacyJob
+      )
+      .otherwise(setupStepLoop);
+
+    // Set has_template to true when template exists
+    const setHasTemplateTrue = new sfn.Pass(this, 'SetHasTemplateTrue', {
+      parameters: {
+        'job_id.$': '$.job_id',
+        'workflow_id.$': '$.workflow_id',
+        'submission_id.$': '$.submission_id',
+        'tenant_id.$': '$.tenant_id',
+        'workflowData.$': '$.workflowData',
+        'steps_length.$': '$.steps_length',
+        'has_template': true,
+        'template_id.$': '$.workflowData.Item.template_id.S',
+      },
+      resultPath: '$',
+    }).next(checkWorkflowType);
+
+    // Set has_template to false when template doesn't exist
+    const setHasTemplateFalse = new sfn.Pass(this, 'SetHasTemplateFalse', {
+      parameters: {
+        'job_id.$': '$.job_id',
+        'workflow_id.$': '$.workflow_id',
+        'submission_id.$': '$.submission_id',
+        'tenant_id.$': '$.tenant_id',
+        'workflowData.$': '$.workflowData',
+        'steps_length.$': '$.steps_length',
+        'has_template': false,
+        'template_id': '',
+      },
+      resultPath: '$',
+    }).next(checkWorkflowType);
+
+    // Check if template exists and set has_template boolean
+    const checkTemplateExists = new sfn.Choice(this, 'CheckTemplateExists')
+      .when(
+        sfn.Condition.isPresent('$.workflowData.Item.template_id.S'),
+        setHasTemplateTrue
+      )
+      .otherwise(setHasTemplateFalse);
+
+    // Compute steps length - handle both new (with steps) and legacy (without steps) workflows
+    const computeStepsLengthWithSteps = new sfn.Pass(this, 'ComputeStepsLengthWithSteps', {
+      parameters: {
+        'job_id.$': '$.job_id',
+        'workflow_id.$': '$.workflow_id',
+        'submission_id.$': '$.submission_id',
+        'tenant_id.$': '$.tenant_id',
+        'workflowData.$': '$.workflowData',
+        'steps_length.$': 'States.ArrayLength($.workflowData.Item.steps.L)',
+        // Don't extract template_id here - let checkTemplateExists handle it safely
+      },
+      resultPath: '$',
+    }).next(checkTemplateExists);
+
+    const computeStepsLengthLegacy = new sfn.Pass(this, 'ComputeStepsLengthLegacy', {
+      parameters: {
+        'job_id.$': '$.job_id',
+        'workflow_id.$': '$.workflow_id',
+        'submission_id.$': '$.submission_id',
+        'tenant_id.$': '$.tenant_id',
+        'workflowData.$': '$.workflowData',
+        'steps_length': 0,
+        // Don't extract template_id here - let checkTemplateExists handle it safely
+      },
+      resultPath: '$',
+    }).next(checkTemplateExists);
+
+    const computeStepsLength = new sfn.Choice(this, 'ComputeStepsLength')
+      .when(
+        sfn.Condition.isPresent('$.workflowData.Item.steps'),
+        computeStepsLengthWithSteps
+      )
+      .otherwise(computeStepsLengthLegacy);
 
     // Define workflow: Update status -> Initialize steps -> Compute steps length -> Check template -> Check workflow type -> Process accordingly
     // Note: computeStepsLength internally connects to checkTemplateExists
