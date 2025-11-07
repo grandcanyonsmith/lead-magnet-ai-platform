@@ -5,7 +5,7 @@ import * as ecr from 'aws-cdk-lib/aws-ecr';
 import { Construct } from 'constructs';
 
 export interface WorkerStackProps extends cdk.StackProps {
-  tablesMap: Record<string, dynamodb.Table>;
+  tablesMap: Record<string, dynamodb.ITable>;
   artifactsBucket: s3.Bucket;
 }
 
