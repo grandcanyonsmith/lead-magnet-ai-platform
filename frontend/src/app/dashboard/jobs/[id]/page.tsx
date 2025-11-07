@@ -1,8 +1,8 @@
-export async function generateStaticParams() {
+import JobDetailClient from './page-client'
+
+export async function generateStaticParams(): Promise<{ id: string }[]> {
   return []
 }
-
-import JobDetailClient from './page-client'
 
 export default function JobDetailPage() {
   return <JobDetailClient />
