@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { FiCheckCircle, FiXCircle, FiClock, FiLoader, FiRefreshCw, FiExternalLink, FiChevronDown, FiChevronUp } from 'react-icons/fi'
+import { useJobFilters, useJobSorting } from '@/hooks/useJobFilters'
 
 const getStatusLabel = (status: string) => {
   const labels: Record<string, string> = {
@@ -67,9 +68,6 @@ const formatDuration = (seconds: number) => {
   return `${hours}h ${remainingMinutes}m`
 }
 
-type SortField = 'date' | 'status' | 'duration'
-type SortDirection = 'asc' | 'desc'
-
 export default function JobsPage() {
   const router = useRouter()
   const [jobs, setJobs] = useState<any[]>([])
@@ -78,14 +76,9 @@ export default function JobsPage() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   
-  // Filters
-  const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [workflowFilter, setWorkflowFilter] = useState<string>('all')
-  const [searchQuery, setSearchQuery] = useState('')
-  
-  // Sorting
-  const [sortField, setSortField] = useState<SortField>('date')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
+  // Use extracted hooks for filtering and sorting
+  const filters = useJobFilters(jobs, workflowMap)
+  const sorting = useJobSorting(filters.filteredJobs)
 
   // Load workflows for filter dropdown
   useEffect(() => {
@@ -110,11 +103,11 @@ export default function JobsPage() {
       if (showRefreshing) setRefreshing(true)
       
       const params: any = {}
-      if (statusFilter !== 'all') {
-        params.status = statusFilter
+      if (filters.statusFilter !== 'all') {
+        params.status = filters.statusFilter
       }
-      if (workflowFilter !== 'all') {
-        params.workflow_id = workflowFilter
+      if (filters.workflowFilter !== 'all') {
+        params.workflow_id = filters.workflowFilter
       }
       
       const data = await api.getJobs(params)
@@ -125,7 +118,7 @@ export default function JobsPage() {
       setLoading(false)
       setRefreshing(false)
     }
-  }, [statusFilter, workflowFilter])
+  }, [filters.statusFilter, filters.workflowFilter])
 
   useEffect(() => {
     loadJobs()
@@ -144,47 +137,6 @@ export default function JobsPage() {
     return () => clearInterval(interval)
   }, [jobs, loadJobs])
 
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
-    } else {
-      setSortField(field)
-      setSortDirection('desc')
-    }
-  }
-
-  // Filter jobs by search query
-  const filteredJobs = jobs.filter((job) => {
-    if (!searchQuery.trim()) return true
-    const query = searchQuery.toLowerCase()
-    const workflowName = (workflowMap[job.workflow_id] || '').toLowerCase()
-    const jobId = (job.job_id || '').toLowerCase()
-    return workflowName.includes(query) || jobId.includes(query)
-  })
-
-  const sortedJobs = [...filteredJobs].sort((a, b) => {
-    let comparison = 0
-    
-    switch (sortField) {
-      case 'date':
-        comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-        break
-      case 'status':
-        comparison = a.status.localeCompare(b.status)
-        break
-      case 'duration':
-        const durationA = a.completed_at && a.created_at
-          ? Math.round((new Date(a.completed_at).getTime() - new Date(a.created_at).getTime()) / 1000)
-          : 0
-        const durationB = b.completed_at && b.created_at
-          ? Math.round((new Date(b.completed_at).getTime() - new Date(b.created_at).getTime()) / 1000)
-          : 0
-        comparison = durationA - durationB
-        break
-    }
-    
-    return sortDirection === 'asc' ? comparison : -comparison
-  })
 
   const hasProcessingJobs = jobs.some(job => job.status === 'processing' || job.status === 'pending')
 
@@ -233,8 +185,8 @@ export default function JobsPage() {
           <div className="relative">
             <input
               type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={filters.searchQuery}
+              onChange={(e) => filters.setSearchQuery(e.target.value)}
               placeholder="Search by lead magnet name or job ID..."
               className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             />
@@ -256,8 +208,8 @@ export default function JobsPage() {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Status</label>
             <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              value={filters.statusFilter}
+              onChange={(e) => filters.setStatusFilter(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             >
               <option value="all">All Statuses</option>
@@ -270,8 +222,8 @@ export default function JobsPage() {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Lead Magnet</label>
             <select
-              value={workflowFilter}
-              onChange={(e) => setWorkflowFilter(e.target.value)}
+              value={filters.workflowFilter}
+              onChange={(e) => filters.setWorkflowFilter(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             >
               <option value="all">All Lead Magnets</option>
@@ -285,7 +237,7 @@ export default function JobsPage() {
         </div>
       </div>
 
-      {sortedJobs.length === 0 ? (
+      {sorting.sortedJobs.length === 0 ? (
         <div className="bg-white rounded-lg shadow p-6 sm:p-12 text-center">
           <p className="text-gray-600 text-sm sm:text-base">No lead magnets yet</p>
           <p className="text-xs sm:text-sm text-gray-500 mt-2">Lead magnets will appear here once forms are submitted</p>
@@ -294,7 +246,7 @@ export default function JobsPage() {
         <>
           {/* Mobile Card View */}
           <div className="block md:hidden space-y-3" data-tour="jobs-list">
-            {sortedJobs.map((job) => {
+            {sorting.sortedJobs.map((job) => {
               const duration = job.completed_at && job.created_at
                 ? Math.round((new Date(job.completed_at).getTime() - new Date(job.created_at).getTime()) / 1000)
                 : null
@@ -388,34 +340,34 @@ export default function JobsPage() {
                 </th>
                 <th 
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  onClick={() => handleSort('status')}
+                  onClick={() => sorting.handleSort('status')}
                 >
                   <div className="flex items-center">
                     Status
-                    {sortField === 'status' && (
-                      sortDirection === 'asc' ? <FiChevronUp className="w-3 h-3 ml-1" /> : <FiChevronDown className="w-3 h-3 ml-1" />
+                    {sorting.sortField === 'status' && (
+                      sorting.sortDirection === 'asc' ? <FiChevronUp className="w-3 h-3 ml-1" /> : <FiChevronDown className="w-3 h-3 ml-1" />
                     )}
                   </div>
                 </th>
                 <th 
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  onClick={() => handleSort('date')}
+                  onClick={() => sorting.handleSort('date')}
                 >
                   <div className="flex items-center">
                     Date
-                    {sortField === 'date' && (
-                      sortDirection === 'asc' ? <FiChevronUp className="w-3 h-3 ml-1" /> : <FiChevronDown className="w-3 h-3 ml-1" />
+                    {sorting.sortField === 'date' && (
+                      sorting.sortDirection === 'asc' ? <FiChevronUp className="w-3 h-3 ml-1" /> : <FiChevronDown className="w-3 h-3 ml-1" />
                     )}
                   </div>
                 </th>
                 <th 
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  onClick={() => handleSort('duration')}
+                  onClick={() => sorting.handleSort('duration')}
                 >
                   <div className="flex items-center">
                     Processing Time
-                    {sortField === 'duration' && (
-                      sortDirection === 'asc' ? <FiChevronUp className="w-3 h-3 ml-1" /> : <FiChevronDown className="w-3 h-3 ml-1" />
+                    {sorting.sortField === 'duration' && (
+                      sorting.sortDirection === 'asc' ? <FiChevronUp className="w-3 h-3 ml-1" /> : <FiChevronDown className="w-3 h-3 ml-1" />
                     )}
                   </div>
                 </th>
@@ -425,7 +377,7 @@ export default function JobsPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {sortedJobs.map((job) => {
+              {sorting.sortedJobs.map((job) => {
                 const duration = job.completed_at && job.created_at
                   ? Math.round((new Date(job.completed_at).getTime() - new Date(job.created_at).getTime()) / 1000)
                   : null
