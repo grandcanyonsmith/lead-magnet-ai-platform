@@ -96,3 +96,6 @@ backend/api/*.zip
 # Frontend build outputs
 frontend/out/
 frontend/.next/
+
+# Temporary job outputs
+job_outputs/
