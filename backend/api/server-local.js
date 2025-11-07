@@ -175,7 +175,12 @@ server.on('error', (err) => {
     console.error(`   3. Find what's using the port: lsof -i:${PORT}\n`);
     process.exit(1);
   } else {
-    throw err;
+    console.error(`\n❌ Server error:`, err);
+    console.error(`💡 Error details:`, err.message);
+    if (err.stack) {
+      console.error(`\nStack trace:`, err.stack);
+    }
+    process.exit(1);
   }
 });
 
