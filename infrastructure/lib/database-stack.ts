@@ -3,7 +3,7 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import { Construct } from 'constructs';
 
 export class DatabaseStack extends cdk.Stack {
-  public readonly tablesMap: Record<string, dynamodb.Table>;
+  public readonly tablesMap: Record<string, dynamodb.ITable>;
 
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
@@ -159,21 +159,12 @@ export class DatabaseStack extends cdk.Stack {
     });
 
     // Table 8: Usage Records (for billing/usage tracking)
-    const usageRecordsTable = new dynamodb.Table(this, 'UsageRecordsTable', {
-      tableName: 'leadmagnet-usage-records',
-      partitionKey: { name: 'usage_id', type: dynamodb.AttributeType.STRING },
-      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-      pointInTimeRecovery: true,
-      removalPolicy: cdk.RemovalPolicy.RETAIN,
-      encryption: dynamodb.TableEncryption.AWS_MANAGED,
-    });
-
-    usageRecordsTable.addGlobalSecondaryIndex({
-      indexName: 'gsi_tenant_date',
-      partitionKey: { name: 'tenant_id', type: dynamodb.AttributeType.STRING },
-      sortKey: { name: 'created_at', type: dynamodb.AttributeType.STRING },
-      projectionType: dynamodb.ProjectionType.ALL,
-    });
+    // Note: Table already exists, referencing it instead of creating
+    const usageRecordsTable = dynamodb.Table.fromTableName(
+      this,
+      'UsageRecordsTable',
+      'leadmagnet-usage-records'
+    );
 
     // Export table names and references
     this.tablesMap = {
