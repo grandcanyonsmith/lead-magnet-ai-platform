@@ -17,19 +17,32 @@ export class AuthStack extends cdk.Stack {
       handler: 'index.handler',
       code: lambda.Code.fromInline(`
         exports.handler = async (event) => {
+          console.log('PreSignUp Lambda triggered', JSON.stringify(event, null, 2));
+          
+          // Initialize response object if it doesn't exist
+          if (!event.response) {
+            event.response = {};
+          }
+          
           // Auto-confirm user and auto-verify email
           event.response.autoConfirmUser = true;
           event.response.autoVerifyEmail = true;
           
+          // Initialize userAttributes if needed
+          if (!event.response.userAttributes) {
+            event.response.userAttributes = {};
+          }
+          
           // Set tenant_id from email if not already set
           // Use email as tenant_id (will be normalized to avoid special characters)
-          const email = event.request.userAttributes.email || event.request.userAttributes['email'];
-          if (email && !event.request.userAttributes['custom:tenant_id']) {
+          const email = event.request.userAttributes?.email || event.request.userAttributes?.['email'];
+          if (email && !event.request.userAttributes?.['custom:tenant_id']) {
             // Use email as tenant_id (normalize to lowercase, replace @ with _, remove dots)
             const tenantId = email.toLowerCase().replace(/@/g, '_').replace(/\\./g, '_');
-            event.response.userAttributes = event.response.userAttributes || {};
             event.response.userAttributes['custom:tenant_id'] = tenantId;
           }
+          
+          console.log('PreSignUp Lambda response', JSON.stringify(event.response, null, 2));
           
           return event;
         };
