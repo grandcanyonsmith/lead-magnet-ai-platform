@@ -1,8 +1,8 @@
-export async function generateStaticParams() {
+import WorkflowDetailClient from './page-client'
+
+export async function generateStaticParams(): Promise<{ id: string }[]> {
   return []
 }
-
-import WorkflowDetailClient from './page-client'
 
 export default function WorkflowDetailPage() {
   return <WorkflowDetailClient />
