@@ -72,32 +72,64 @@ class JobProcessor:
         Returns:
             Dictionary with success status and optional error
         """
+        process_start_time = datetime.utcnow()
+        logger.info(f"[JobProcessor] Starting job processing", extra={
+            'job_id': job_id,
+            'start_time': process_start_time.isoformat()
+        })
+        
         try:
             # Initialize execution steps array
             execution_steps = []
             
             # Update job status to processing
+            logger.debug(f"[JobProcessor] Updating job status to processing", extra={'job_id': job_id})
             self.db.update_job(job_id, {
                 'status': 'processing',
-                'started_at': datetime.utcnow().isoformat(),
-                'updated_at': datetime.utcnow().isoformat(),
+                'started_at': process_start_time.isoformat(),
+                'updated_at': process_start_time.isoformat(),
                 'execution_steps': execution_steps
             }, s3_service=self.s3)
             
             # Get job details
+            logger.debug(f"[JobProcessor] Retrieving job details", extra={'job_id': job_id})
             job = self.db.get_job(job_id, s3_service=self.s3)
             if not job:
+                logger.error(f"[JobProcessor] Job not found", extra={'job_id': job_id})
                 raise ValueError(f"Job {job_id} not found")
             
-            logger.info(f"Processing job {job_id} for workflow {job['workflow_id']}")
+            tenant_id = job.get('tenant_id')
+            workflow_id = job.get('workflow_id')
+            submission_id = job.get('submission_id')
+            
+            logger.info(f"[JobProcessor] Job retrieved successfully", extra={
+                'job_id': job_id,
+                'tenant_id': tenant_id,
+                'workflow_id': workflow_id,
+                'submission_id': submission_id,
+                'job_status': job.get('status')
+            })
             
             # Get workflow configuration
-            workflow = self.db.get_workflow(job['workflow_id'])
+            logger.debug(f"[JobProcessor] Retrieving workflow configuration", extra={'workflow_id': workflow_id})
+            workflow = self.db.get_workflow(workflow_id)
             if not workflow:
-                raise ValueError(f"Workflow {job['workflow_id']} not found")
+                logger.error(f"[JobProcessor] Workflow not found", extra={
+                    'job_id': job_id,
+                    'workflow_id': workflow_id
+                })
+                raise ValueError(f"Workflow {workflow_id} not found")
+            
+            logger.info(f"[JobProcessor] Workflow retrieved successfully", extra={
+                'workflow_id': workflow_id,
+                'workflow_name': workflow.get('workflow_name'),
+                'has_steps': bool(workflow.get('steps')),
+                'steps_count': len(workflow.get('steps', []))
+            })
             
             # Get submission data
-            submission = self.db.get_submission(job['submission_id'])
+            logger.debug(f"[JobProcessor] Retrieving submission data", extra={'submission_id': submission_id})
+            submission = self.db.get_submission(submission_id)
             if not submission:
                 raise ValueError(f"Submission {job['submission_id']} not found")
             
@@ -168,7 +200,15 @@ class JobProcessor:
                     step_tools = [{"type": tool} if isinstance(tool, str) else tool for tool in step_tools_raw]
                     step_tool_choice = step.get('tool_choice', 'auto')
                     
-                    logger.info(f"Processing step {step_index + 1}/{len(sorted_steps)}: {step_name}")
+                    logger.info(f"[JobProcessor] Processing step {step_index + 1}/{len(sorted_steps)}", extra={
+                        'job_id': job_id,
+                        'step_index': step_index,
+                        'step_name': step_name,
+                        'step_model': step_model,
+                        'total_steps': len(sorted_steps),
+                        'tools_count': len(step_tools),
+                        'tool_choice': step_tool_choice
+                    })
                     
                     try:
                         step_start_time = datetime.utcnow()
@@ -206,6 +246,20 @@ class JobProcessor:
                         )
                         
                         step_duration = (datetime.utcnow() - step_start_time).total_seconds() * 1000
+                        
+                        logger.info(f"[JobProcessor] Step completed successfully", extra={
+                            'job_id': job_id,
+                            'step_index': step_index,
+                            'step_name': step_name,
+                            'step_model': step_model,
+                            'duration_ms': step_duration,
+                            'output_length': len(step_output),
+                            'input_tokens': usage_info.get('input_tokens', 0),
+                            'output_tokens': usage_info.get('output_tokens', 0),
+                            'total_tokens': usage_info.get('total_tokens', 0),
+                            'cost_usd': usage_info.get('cost_usd', 0),
+                            'images_generated': len(response_details.get('image_urls', []))
+                        })
                         
                         # Store usage record
                         self.store_usage_record(job['tenant_id'], job_id, usage_info)

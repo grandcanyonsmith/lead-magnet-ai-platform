@@ -25,7 +25,10 @@ class DynamoDBService:
     
     def __init__(self):
         """Initialize DynamoDB client."""
-        self.dynamodb = boto3.resource('dynamodb', region_name=os.environ.get('AWS_REGION', 'us-east-1'))
+        region = os.environ.get('AWS_REGION', 'us-east-1')
+        logger.info(f"[DynamoDB] Initializing DynamoDB service", extra={'region': region})
+        
+        self.dynamodb = boto3.resource('dynamodb', region_name=region)
         
         # Table references
         self.workflows_table = self.dynamodb.Table(os.environ['WORKFLOWS_TABLE'])
@@ -37,6 +40,12 @@ class DynamoDBService:
         self.user_settings_table = self.dynamodb.Table(os.environ.get('USER_SETTINGS_TABLE', 'user_settings'))
         self.usage_records_table = self.dynamodb.Table(os.environ.get('USAGE_RECORDS_TABLE', 'leadmagnet-usage-records'))
         self.notifications_table = self.dynamodb.Table(os.environ.get('NOTIFICATIONS_TABLE', 'leadmagnet-notifications'))
+        
+        logger.info(f"[DynamoDB] DynamoDB service initialized successfully", extra={
+            'workflows_table': self.workflows_table.table_name,
+            'jobs_table': self.jobs_table.table_name,
+            'artifacts_table': self.artifacts_table.table_name
+        })
     
     def get_job(self, job_id: str, s3_service=None) -> Optional[Dict[str, Any]]:
         """
@@ -46,28 +55,54 @@ class DynamoDBService:
             job_id: Job ID
             s3_service: Optional S3Service instance to load execution_steps from S3 if stored there
         """
+        logger.debug(f"[DynamoDB] Getting job", extra={'job_id': job_id})
         try:
             response = self.jobs_table.get_item(Key={'job_id': job_id})
             job = response.get('Item')
+            
+            if not job:
+                logger.warning(f"[DynamoDB] Job not found", extra={'job_id': job_id})
+                return None
+            
+            logger.debug(f"[DynamoDB] Job retrieved successfully", extra={
+                'job_id': job_id,
+                'status': job.get('status'),
+                'workflow_id': job.get('workflow_id'),
+                'has_execution_steps_s3_key': bool(job.get('execution_steps_s3_key'))
+            })
             
             # If execution_steps is stored in S3, load it
             if job and s3_service and job.get('execution_steps_s3_key'):
                 try:
                     s3_key = job['execution_steps_s3_key']
+                    logger.debug(f"[DynamoDB] Loading execution_steps from S3", extra={
+                        'job_id': job_id,
+                        's3_key': s3_key
+                    })
                     execution_steps_json = s3_service.download_artifact(s3_key)
                     job['execution_steps'] = json.loads(execution_steps_json)
-                    logger.debug(f"Loaded execution_steps from S3 for job {job_id}")
+                    logger.info(f"[DynamoDB] Loaded execution_steps from S3", extra={
+                        'job_id': job_id,
+                        's3_key': s3_key,
+                        'steps_count': len(job.get('execution_steps', []))
+                    })
                 except Exception as e:
-                    logger.error(f"Error loading execution_steps from S3 for job {job_id} (key: {job.get('execution_steps_s3_key')}): {e}")
+                    logger.error(f"[DynamoDB] Error loading execution_steps from S3", extra={
+                        'job_id': job_id,
+                        's3_key': job.get('execution_steps_s3_key'),
+                        'error_type': type(e).__name__,
+                        'error_message': str(e)
+                    }, exc_info=True)
                     # Fall back to empty array if S3 load fails
-                    # Note: If execution_steps_s3_key exists, execution_steps should not be in DynamoDB
-                    # (it was removed when stored in S3), so empty array is appropriate
                     job['execution_steps'] = []
-                    # Optionally: Could clean up stale execution_steps_s3_key here, but that's a separate concern
             
             return job
         except Exception as e:
-            logger.error(f"Error getting job {job_id}: {e}")
+            logger.error(f"[DynamoDB] Error getting job", extra={
+                'job_id': job_id,
+                'error_type': type(e).__name__,
+                'error_message': str(e)
+            }, exc_info=True)
             raise
     
     def _estimate_dynamodb_size(self, value: Any) -> int:
@@ -100,6 +135,12 @@ class DynamoDBService:
             updates: Dictionary of fields to update
             s3_service: Optional S3Service instance to store large execution_steps in S3
         """
+        logger.debug(f"[DynamoDB] Updating job", extra={
+            'job_id': job_id,
+            'update_fields': list(updates.keys()),
+            'has_execution_steps': 'execution_steps' in updates
+        })
+        
         try:
             execution_steps_stored_in_s3 = False
             
@@ -108,8 +149,18 @@ class DynamoDBService:
                 execution_steps = updates['execution_steps']
                 estimated_size = self._estimate_dynamodb_size(execution_steps)
                 
+                logger.debug(f"[DynamoDB] Checking execution_steps size", extra={
+                    'job_id': job_id,
+                    'estimated_size_bytes': estimated_size,
+                    'max_size_bytes': MAX_DYNAMODB_ITEM_SIZE
+                })
+                
                 if estimated_size > MAX_DYNAMODB_ITEM_SIZE:
-                    logger.info(f"execution_steps for job {job_id} is too large ({estimated_size} bytes), storing in S3")
+                    logger.info(f"[DynamoDB] execution_steps too large, storing in S3", extra={
+                        'job_id': job_id,
+                        'estimated_size_bytes': estimated_size,
+                        'max_size_bytes': MAX_DYNAMODB_ITEM_SIZE
+                    })
                     # Store in S3
                     s3_key = f"jobs/{job_id}/execution_steps.json"
                     execution_steps_json = json.dumps(execution_steps, default=str)
@@ -120,7 +171,11 @@ class DynamoDBService:
                     # Remove execution_steps from updates to avoid storing it in DynamoDB
                     del updates['execution_steps']
                     execution_steps_stored_in_s3 = True
-                    logger.info(f"Stored execution_steps in S3 at {s3_key} for job {job_id}")
+                    logger.info(f"[DynamoDB] Stored execution_steps in S3", extra={
+                        'job_id': job_id,
+                        's3_key': s3_key,
+                        'steps_count': len(execution_steps)
+                    })
             
             # If we're storing execution_steps directly (it's in updates and wasn't moved to S3),
             # we need to remove any existing execution_steps_s3_key from DynamoDB
@@ -131,7 +186,7 @@ class DynamoDBService:
                     updates['execution_steps_s3_key'] = None  # Mark for removal
             
             if not updates:
-                logger.debug(f"No updates to apply for job {job_id}")
+                logger.debug(f"[DynamoDB] No updates to apply", extra={'job_id': job_id})
                 return
             
             # Build update expression, handling removal of execution_steps_s3_key if needed
@@ -156,7 +211,7 @@ class DynamoDBService:
                 update_parts.append(remove_expr)
             
             if not update_parts:
-                logger.debug(f"No updates to apply for job {job_id}")
+                logger.debug(f"[DynamoDB] No update expression to apply", extra={'job_id': job_id})
                 return
             
             update_expression = " ".join(update_parts)
@@ -176,10 +231,25 @@ class DynamoDBService:
             if expression_attribute_values:
                 update_params['ExpressionAttributeValues'] = expression_attribute_values
             
+            logger.debug(f"[DynamoDB] Executing update_item", extra={
+                'job_id': job_id,
+                'set_fields_count': len(set_updates),
+                'remove_fields_count': len(remove_attributes)
+            })
+            
             self.jobs_table.update_item(**update_params)
-            logger.debug(f"Updated job {job_id}")
+            logger.info(f"[DynamoDB] Job updated successfully", extra={
+                'job_id': job_id,
+                'updated_fields': list(set_updates.keys()),
+                'removed_fields': remove_attributes
+            })
         except Exception as e:
-            logger.error(f"Error updating job {job_id}: {e}")
+            logger.error(f"[DynamoDB] Error updating job", extra={
+                'job_id': job_id,
+                'update_fields': list(updates.keys()),
+                'error_type': type(e).__name__,
+                'error_message': str(e)
+            }, exc_info=True)
             raise
     
     def get_workflow(self, workflow_id: str) -> Optional[Dict[str, Any]]:

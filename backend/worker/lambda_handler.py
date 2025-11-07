@@ -39,10 +39,12 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     Returns:
         Dictionary with success status and optional error
     """
+    handler_start_time = datetime.utcnow()
+    
     # Extract job_id from event
     job_id = event.get('job_id')
     if not job_id:
-        logger.error("job_id not provided in event")
+        logger.error("[LambdaHandler] job_id not provided in event", extra={'event_keys': list(event.keys())})
         return {
             'success': False,
             'error': 'job_id not provided in event',
@@ -53,10 +55,18 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     step_index = event.get('step_index')
     step_type = event.get('step_type', 'workflow_step')  # 'workflow_step' or 'html_generation'
     
-    logger.info(f"Starting Lambda handler for job: {job_id}, step_index: {step_index}, step_type: {step_type}")
+    logger.info(f"[LambdaHandler] Starting Lambda handler", extra={
+        'job_id': job_id,
+        'step_index': step_index,
+        'step_type': step_type,
+        'request_id': context.request_id if context else None,
+        'function_name': context.function_name if context else None,
+        'start_time': handler_start_time.isoformat()
+    })
     
     try:
         # Initialize services
+        logger.debug(f"[LambdaHandler] Initializing services", extra={'job_id': job_id})
         db_service = DynamoDBService()
         s3_service = S3Service()
         processor = JobProcessor(db_service, s3_service)

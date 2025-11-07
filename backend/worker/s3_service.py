@@ -17,11 +17,25 @@ class S3Service:
     
     def __init__(self):
         """Initialize S3 client."""
-        self.s3_client = boto3.client('s3', region_name=os.environ.get('AWS_REGION', 'us-east-1'))
-        self.bucket_name = os.environ['ARTIFACTS_BUCKET']
-        # CloudFront distribution domain (optional, falls back to presigned URLs)
+        region = os.environ.get('AWS_REGION', 'us-east-1')
+        bucket_name = os.environ['ARTIFACTS_BUCKET']
         cloudfront_domain = os.environ.get('CLOUDFRONT_DOMAIN', '').strip()
+        
+        logger.info(f"[S3] Initializing S3 service", extra={
+            'region': region,
+            'bucket': bucket_name,
+            'has_cloudfront': bool(cloudfront_domain)
+        })
+        
+        self.s3_client = boto3.client('s3', region_name=region)
+        self.bucket_name = bucket_name
+        # CloudFront distribution domain (optional, falls back to presigned URLs)
         self.cloudfront_domain = cloudfront_domain if cloudfront_domain else None
+        
+        logger.info(f"[S3] S3 service initialized successfully", extra={
+            'bucket': self.bucket_name,
+            'cloudfront_domain': self.cloudfront_domain or 'not configured'
+        })
     
     def upload_artifact(
         self,
@@ -42,6 +56,15 @@ class S3Service:
         Returns:
             Tuple of (s3_url, public_url)
         """
+        content_size = len(content.encode('utf-8'))
+        logger.info(f"[S3] Uploading artifact", extra={
+            'key': key,
+            'content_type': content_type,
+            'content_size_bytes': content_size,
+            'public': public,
+            'bucket': self.bucket_name
+        })
+        
         try:
             # Prepare upload parameters
             put_params = {
@@ -55,6 +78,7 @@ class S3Service:
             # Public access is handled via CloudFront distribution.
             
             # Upload to S3
+            logger.debug(f"[S3] Calling put_object", extra={'key': key, 'bucket': self.bucket_name})
             self.s3_client.put_object(**put_params)
             
             # Generate URLs
@@ -63,24 +87,44 @@ class S3Service:
             if public and self.cloudfront_domain:
                 # Use CloudFront URL for public access (recommended)
                 public_url = f"https://{self.cloudfront_domain}/{key}"
-                logger.info(f"Using CloudFront URL for public artifact: {public_url}")
+                logger.info(f"[S3] Using CloudFront URL for public artifact", extra={
+                    'key': key,
+                    'public_url': public_url,
+                    'cloudfront_domain': self.cloudfront_domain
+                })
             else:
                 # Generate presigned URL (valid for 1 year to prevent expiration issues)
                 # Presigned URLs work regardless of ACL settings
                 # Note: API will refresh these URLs on access, but longer expiration provides better UX
+                logger.debug(f"[S3] Generating presigned URL", extra={'key': key, 'expires_in': 31536000})
                 public_url = self.s3_client.generate_presigned_url(
                     'get_object',
                     Params={'Bucket': self.bucket_name, 'Key': key},
                     ExpiresIn=31536000  # 1 year (31536000 seconds)
                 )
                 if public:
-                    logger.warning(f"CloudFront domain not configured, using presigned URL instead")
+                    logger.warning(f"[S3] CloudFront domain not configured, using presigned URL instead", extra={
+                        'key': key,
+                        'public_url_length': len(public_url)
+                    })
             
-            logger.info(f"Uploaded artifact to S3: {s3_url}, public_url: {public_url[:80]}...")
+            logger.info(f"[S3] Artifact uploaded successfully", extra={
+                'key': key,
+                's3_url': s3_url,
+                'public_url_preview': public_url[:80] + '...' if len(public_url) > 80 else public_url,
+                'content_size_bytes': content_size,
+                'content_type': content_type
+            })
             return s3_url, public_url
             
         except ClientError as e:
-            logger.error(f"Error uploading to S3: {e}")
+            logger.error(f"[S3] Error uploading artifact to S3", extra={
+                'key': key,
+                'bucket': self.bucket_name,
+                'error_code': e.response.get('Error', {}).get('Code', 'Unknown'),
+                'error_message': str(e),
+                'content_size_bytes': content_size
+            }, exc_info=True)
             raise
     
     def upload_image(
