@@ -80,6 +80,8 @@ export default function JobDetailClient() {
   
   const [job, setJob] = useState<any>(null)
   const [workflow, setWorkflow] = useState<any>(null)
+  const [submission, setSubmission] = useState<any>(null)
+  const [form, setForm] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [resubmitting, setResubmitting] = useState(false)
@@ -108,6 +110,28 @@ export default function JobDetailClient() {
         } catch (err) {
           console.error('Failed to load workflow:', err)
           // Continue without workflow data
+        }
+      }
+      
+      // Load submission details if submission_id exists
+      if (data.submission_id) {
+        try {
+          const submissionData = await api.getSubmission(data.submission_id)
+          setSubmission(submissionData)
+          
+          // Load form details if form_id exists
+          if (submissionData.form_id) {
+            try {
+              const formData = await api.getForm(submissionData.form_id)
+              setForm(formData)
+            } catch (err) {
+              console.error('Failed to load form:', err)
+              // Continue without form data
+            }
+          }
+        } catch (err) {
+          console.error('Failed to load submission:', err)
+          // Continue without submission data
         }
       }
       
@@ -701,7 +725,20 @@ export default function JobDetailClient() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Submission ID</label>
                 <div className="flex items-center space-x-2">
-                  <p className="text-sm font-mono text-gray-900">{job.submission_id}</p>
+                  {form?.public_slug ? (
+                    <a
+                      href={`/v1/forms/${form.public_slug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm font-mono text-primary-600 hover:text-primary-900 hover:underline"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {job.submission_id}
+                      <FiExternalLink className="w-3 h-3 ml-1 inline" />
+                    </a>
+                  ) : (
+                    <p className="text-sm font-mono text-gray-900">{job.submission_id}</p>
+                  )}
                   <button
                     onClick={() => copyToClipboard(job.submission_id)}
                     className="text-gray-500 hover:text-gray-700"
@@ -774,7 +811,17 @@ export default function JobDetailClient() {
                 <div className="space-y-2">
                   {job.artifacts.map((artifactId: string, index: number) => (
                     <div key={artifactId} className="flex items-center space-x-2">
-                      <span className="text-sm font-mono text-gray-600">{artifactId}</span>
+                      <a
+                        href="/dashboard/artifacts"
+                        className="text-sm font-mono text-primary-600 hover:text-primary-900 hover:underline"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          router.push('/dashboard/artifacts')
+                        }}
+                      >
+                        {artifactId}
+                        <FiExternalLink className="w-3 h-3 ml-1 inline" />
+                      </a>
                       <button
                         onClick={() => copyToClipboard(artifactId)}
                         className="text-gray-500 hover:text-gray-700"
