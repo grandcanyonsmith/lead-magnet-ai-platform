@@ -311,13 +311,30 @@ Context:
 Generate ONLY the SMS message text, no explanations, no markdown."""
         
         try:
-            response, usage_info = self.ai_service.generate_report(
+            logger.info(f"[DeliveryService] Generating SMS message via AI", extra={
+                'job_id': job_id,
+                'tenant_id': tenant_id,
+                'model': workflow.get('ai_model', 'gpt-5'),
+                'has_research_content': bool(research_content),
+                'research_content_length': len(research_content) if research_content else 0
+            })
+            
+            # generate_report returns a 4-tuple: (report, usage_info, request_details, response_details)
+            report, usage_info, request_details, response_details = self.ai_service.generate_report(
                 model=workflow.get('ai_model', 'gpt-5'),
                 instructions=prompt,
                 context="",
                 tools=[{"type": "web_search_preview"}],
                 tool_choice="auto"
             )
+            
+            logger.debug(f"[DeliveryService] SMS message generated successfully", extra={
+                'job_id': job_id,
+                'message_length': len(report),
+                'input_tokens': usage_info.get('input_tokens', 0),
+                'output_tokens': usage_info.get('output_tokens', 0),
+                'cost_usd': usage_info.get('cost_usd', 0)
+            })
             
             # Store usage record
             from decimal import Decimal
@@ -341,17 +358,34 @@ Generate ONLY the SMS message text, no explanations, no markdown."""
                 'cost_usd': cost_usd,
                 'created_at': datetime.utcnow().isoformat(),
             }
+            
+            logger.debug(f"[DeliveryService] Storing usage record", extra={
+                'job_id': job_id,
+                'usage_id': usage_id,
+                'cost_usd': float(cost_usd)
+            })
+            
             self.db.put_usage_record(usage_record)
             
             # Clean up response (remove markdown if present)
-            sms_message = response.strip()
+            sms_message = report.strip()
             if sms_message.startswith('"') and sms_message.endswith('"'):
                 sms_message = sms_message[1:-1]
             if sms_message.startswith("'") and sms_message.endswith("'"):
                 sms_message = sms_message[1:-1]
             
+            logger.info(f"[DeliveryService] SMS message cleaned and ready", extra={
+                'job_id': job_id,
+                'final_message_length': len(sms_message)
+            })
+            
             return sms_message
         except Exception as e:
-            logger.error(f"Failed to generate SMS message: {e}")
+            logger.error(f"[DeliveryService] Failed to generate SMS message", extra={
+                'job_id': job_id,
+                'tenant_id': tenant_id,
+                'error_type': type(e).__name__,
+                'error_message': str(e)
+            }, exc_info=True)
             raise
 
