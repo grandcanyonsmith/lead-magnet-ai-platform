@@ -69,10 +69,10 @@ class JobProcessor:
                 'started_at': datetime.utcnow().isoformat(),
                 'updated_at': datetime.utcnow().isoformat(),
                 'execution_steps': execution_steps
-            })
+            }, s3_service=self.s3)
             
             # Get job details
-            job = self.db.get_job(job_id)
+            job = self.db.get_job(job_id, s3_service=self.s3)
             if not job:
                 raise ValueError(f"Job {job_id} not found")
             
@@ -124,7 +124,7 @@ class JobProcessor:
                 'timestamp': form_step_start.isoformat(),
                 'duration_ms': 0,
             })
-            self.db.update_job(job_id, {'execution_steps': execution_steps})
+            self.db.update_job(job_id, {'execution_steps': execution_steps}, s3_service=self.s3)
             
             # Check if workflow uses new steps format or legacy format
             steps = workflow.get('steps', [])
@@ -231,7 +231,7 @@ class JobProcessor:
                             'artifact_id': step_artifact_id,
                         }
                         execution_steps.append(step_data)
-                        self.db.update_job(job_id, {'execution_steps': execution_steps})
+                        self.db.update_job(job_id, {'execution_steps': execution_steps}, s3_service=self.s3)
                         
                         # Accumulate context for next step (include image URLs if present)
                         accumulated_context += f"\n\n--- Step {step_index + 1}: {step_name} ---\n{step_output}"
@@ -296,7 +296,7 @@ class JobProcessor:
                             'duration_ms': int(html_duration),
                         }
                         execution_steps.append(html_step_data)
-                        self.db.update_job(job_id, {'execution_steps': execution_steps})
+                        self.db.update_job(job_id, {'execution_steps': execution_steps}, s3_service=self.s3)
                     
                     final_artifact_type = 'html_final'
                     final_filename = 'final.html'
@@ -353,7 +353,7 @@ class JobProcessor:
                             'artifact_id': report_artifact_id,
                         }
                         execution_steps.append(report_step_data)
-                        self.db.update_job(job_id, {'execution_steps': execution_steps})
+                        self.db.update_job(job_id, {'execution_steps': execution_steps}, s3_service=self.s3)
                     except Exception as e:
                         raise Exception(f"Failed to generate AI report: {str(e)}") from e
                 else:
@@ -433,7 +433,7 @@ class JobProcessor:
                             'duration_ms': int(html_duration),
                         }
                         execution_steps.append(html_step_data)
-                        self.db.update_job(job_id, {'execution_steps': execution_steps})
+                        self.db.update_job(job_id, {'execution_steps': execution_steps}, s3_service=self.s3)
                         
                         logger.info("Styled HTML generated successfully")
                         final_artifact_type = 'html_final'
@@ -510,7 +510,7 @@ class JobProcessor:
                 'output_url': public_url,
                 'artifacts': artifacts_list,
                 'execution_steps': execution_steps
-            })
+            }, s3_service=self.s3)
             
             # Step 6: Deliver based on workflow configuration
             delivery_method = workflow.get('delivery_method', 'none')
@@ -629,7 +629,7 @@ class JobProcessor:
         """
         try:
             # Get job details
-            job = self.db.get_job(job_id)
+            job = self.db.get_job(job_id, s3_service=self.s3)
             if not job:
                 raise ValueError(f"Job {job_id} not found")
             
@@ -772,7 +772,7 @@ class JobProcessor:
             
             # Append to execution_steps and update DynamoDB
             execution_steps.append(step_data)
-            self.db.update_job(job_id, {'execution_steps': execution_steps})
+            self.db.update_job(job_id, {'execution_steps': execution_steps}, s3_service=self.s3)
             
             logger.info(f"Step {step_index + 1} completed successfully in {step_duration:.0f}ms")
             
@@ -934,7 +934,7 @@ class JobProcessor:
                 'status': 'completed',
                 'completed_at': datetime.utcnow().isoformat(),
                 'updated_at': datetime.utcnow().isoformat()
-            })
+            }, s3_service=self.s3)
             
             logger.info(f"HTML generation completed successfully. Final artifact: {public_url[:80]}...")
             
