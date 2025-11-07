@@ -271,7 +271,14 @@ export default function JobsPage() {
               return (
                 <div
                   key={job.job_id}
-                  onClick={() => router.push(`/dashboard/jobs/${job.job_id}`)}
+                  onClick={() => {
+                    // Use window.location for static export compatibility on mobile
+                    if (typeof window !== 'undefined') {
+                      window.location.href = `/dashboard/jobs/${job.job_id}`
+                    } else {
+                      router.push(`/dashboard/jobs/${job.job_id}`)
+                    }
+                  }}
                   className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 cursor-pointer hover:shadow-md transition-shadow"
                 >
                   <div className="flex items-start justify-between mb-3">
@@ -393,7 +400,14 @@ export default function JobsPage() {
                     <tr 
                       key={job.job_id} 
                       className="hover:bg-gray-50 cursor-pointer transition-colors"
-                      onClick={() => router.push(`/dashboard/jobs/${job.job_id}`)}
+                      onClick={() => {
+                        // Use window.location for static export compatibility
+                        if (typeof window !== 'undefined') {
+                          window.location.href = `/dashboard/jobs/${job.job_id}`
+                        } else {
+                          router.push(`/dashboard/jobs/${job.job_id}`)
+                        }
+                      }}
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">
@@ -438,7 +452,14 @@ export default function JobsPage() {
                       <tr 
                         key={`${job.job_id}-error`}
                         className="bg-red-50 hover:bg-red-100 cursor-pointer transition-colors"
-                        onClick={() => router.push(`/dashboard/jobs/${job.job_id}`)}
+                        onClick={() => {
+                          // Use window.location for static export compatibility
+                          if (typeof window !== 'undefined') {
+                            window.location.href = `/dashboard/jobs/${job.job_id}`
+                          } else {
+                            router.push(`/dashboard/jobs/${job.job_id}`)
+                          }
+                        }}
                       >
                         <td colSpan={5} className="px-6 py-3">
                           <div className="flex items-start">
@@ -449,7 +470,12 @@ export default function JobsPage() {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  router.push(`/dashboard/jobs/${job.job_id}`)
+                                  // Use window.location for static export compatibility
+                                  if (typeof window !== 'undefined') {
+                                    window.location.href = `/dashboard/jobs/${job.job_id}`
+                                  } else {
+                                    router.push(`/dashboard/jobs/${job.job_id}`)
+                                  }
                                 }}
                                 className="text-xs text-red-600 hover:text-red-800 font-medium mt-1 underline"
                               >
