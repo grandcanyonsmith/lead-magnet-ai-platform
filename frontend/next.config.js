@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export', // Enable static export
+  // Only enable static export in production builds, not in dev mode
+  ...(process.env.NODE_ENV === 'production' && { output: 'export' }),
   reactStrictMode: true,
   images: {
     unoptimized: true,
