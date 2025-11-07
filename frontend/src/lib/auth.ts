@@ -117,11 +117,12 @@ export const signUp = async (
           console.error('Signup error:', err)
           // Provide more helpful error messages
           let errorMessage = err.message || 'Failed to sign up'
-          if (err.code === 'InvalidParameterException') {
+          const errorCode = (err as any).code || (err as any).name
+          if (errorCode === 'InvalidParameterException') {
             errorMessage = 'Invalid signup parameters. Please check your email and password requirements.'
-          } else if (err.code === 'UsernameExistsException') {
+          } else if (errorCode === 'UsernameExistsException') {
             errorMessage = 'An account with this email already exists. Please sign in instead.'
-          } else if (err.code === 'InvalidPasswordException') {
+          } else if (errorCode === 'InvalidPasswordException') {
             errorMessage = 'Password does not meet requirements. Must be at least 8 characters with uppercase, lowercase, and numbers.'
           }
           resolve({ success: false, error: errorMessage })
