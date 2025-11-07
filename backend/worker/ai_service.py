@@ -175,6 +175,16 @@ class AIService:
         tools = final_tools
         logger.info(f"Tools after final safety check: {tools}")
         
+        # CRITICAL FIX: If tool_choice is "required" but tools array is empty,
+        # change tool_choice to "auto" to prevent API error
+        if tool_choice == "required" and (not tools or len(tools) == 0):
+            logger.warning(f"tool_choice is 'required' but tools array is empty. Changing tool_choice to 'auto' to prevent API error.")
+            tool_choice = "auto"
+            # Also add default tool if tools is empty
+            if not tools:
+                tools = [{"type": "web_search_preview"}]
+                logger.info(f"Added default tool: web_search_preview")
+        
         # Check if computer_use_preview is in tools (requires truncation="auto")
         has_computer_use = any(
             (isinstance(t, dict) and t.get("type") == "computer_use_preview") or 
@@ -208,8 +218,13 @@ class AIService:
                 logger.info("Added truncation='auto' for computer_use_preview tool")
             
             # Add tool_choice if not "none" (none means no tools, so don't include the parameter)
-            if tool_choice != "none":
+            # Also ensure we don't set tool_choice="required" if tools is empty
+            if tool_choice != "none" and tools and len(tools) > 0:
                 params["tool_choice"] = tool_choice
+            elif tool_choice == "required" and (not tools or len(tools) == 0):
+                # This should not happen due to check above, but double-check for safety
+                logger.error("CRITICAL: tool_choice='required' but tools is empty! Not setting tool_choice parameter.")
+                # Don't set tool_choice parameter - let API use default
             
             # Add reasoning_level only for o3 models
             if is_o3_model:
