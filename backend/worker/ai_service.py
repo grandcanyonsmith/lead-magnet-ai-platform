@@ -85,6 +85,37 @@ class AIService:
         if tools is None or len(tools) == 0:
             tools = [{"type": "web_search_preview"}]
         
+        # Filter out tools that require additional configuration we don't have
+        # file_search requires vector_store_ids
+        # computer_use_preview requires container
+        filtered_tools = []
+        for tool in tools:
+            tool_type = tool.get("type") if isinstance(tool, dict) else tool
+            tool_dict = tool if isinstance(tool, dict) else {"type": tool}
+            
+            # Skip file_search if vector_store_ids is not provided
+            if tool_type == "file_search":
+                if not tool_dict.get("vector_store_ids"):
+                    logger.warning(f"Skipping file_search tool - vector_store_ids not provided")
+                    continue
+            
+            # Skip computer_use_preview if container is not provided
+            if tool_type == "computer_use_preview":
+                if not tool_dict.get("container"):
+                    logger.warning(f"Skipping computer_use_preview tool - container not provided")
+                    continue
+            
+            filtered_tools.append(tool_dict)
+        
+        # If all tools were filtered out, use default
+        if len(filtered_tools) == 0 and len(tools) > 0:
+            logger.warning(f"All tools were filtered out, using default web_search_preview")
+            filtered_tools = [{"type": "web_search_preview"}]
+        elif len(filtered_tools) == 0:
+            filtered_tools = [{"type": "web_search_preview"}]
+        
+        tools = filtered_tools
+        
         # Check if computer_use_preview is in tools (requires truncation="auto")
         has_computer_use = any(
             (isinstance(t, dict) and t.get("type") == "computer_use_preview") or 

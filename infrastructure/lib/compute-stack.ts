@@ -48,7 +48,7 @@ export class ComputeStack extends cdk.Stack {
         // 1. Pre-build using: ./scripts/build-lambda-worker.sh
         // 2. Use the zip file directly: lambda.Code.fromAsset('path/to/pre-built.zip')
       }),
-      timeout: cdk.Duration.minutes(15),
+      timeout: cdk.Duration.minutes(15), // Maximum Lambda timeout
       memorySize: 2048,
       environment: {
         WORKFLOWS_TABLE: props.tablesMap.workflows.tableName,
@@ -112,7 +112,7 @@ export class ComputeStack extends cdk.Stack {
     // Grant Lambda invoke permissions to Step Functions
     this.jobProcessorLambda.grantInvoke(stateMachineRole);
 
-    // Simple Step Functions State Machine
+    // Step Functions State Machine with per-step processing
     // Update job status to processing
     const updateJobStatus = new tasks.DynamoUpdateItem(this, 'UpdateJobStatus', {
       table: props.tablesMap.jobs,
@@ -130,26 +130,8 @@ export class ComputeStack extends cdk.Stack {
       resultPath: '$.updateResult',
     });
 
-    // Parse error message from Lambda response
-    // When Lambda fails, error info is in $.error.Cause (JSON string) or $.error.Error
-    // Try to extract error message from the Lambda response
-    const parseError = new sfn.Pass(this, 'ParseError', {
-      parameters: {
-        'job_id.$': '$.job_id',
-        // Extract error message from Cause (Lambda error response) or Error field
-        // Cause is a JSON string containing the Lambda error response
-        'error_message.$': sfn.JsonPath.stringAt(
-          "States.Format('{}', " +
-          "States.StringToJson(States.String($.error.Cause)).error || " +
-          "$.error.Error || " +
-          "'Error occurred during job processing. Check Lambda logs for details.')"
-        ),
-      },
-      resultPath: '$.parsedError',
-    });
-
-    // Handle Lambda returning success: false (not an exception, but business logic failure)
-    const handleLambdaFailure = new tasks.DynamoUpdateItem(this, 'HandleLambdaFailure', {
+    // Handle Lambda returning success: false (business logic failure)
+    const handleStepFailure = new tasks.DynamoUpdateItem(this, 'HandleStepFailure', {
       table: props.tablesMap.jobs,
       key: {
         job_id: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.job_id')),
@@ -160,14 +142,14 @@ export class ComputeStack extends cdk.Stack {
       },
       expressionAttributeValues: {
         ':status': tasks.DynamoAttributeValue.fromString('failed'),
-        ':error': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.processResult.error')),
-        ':error_type': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.processResult.error_type || "Unknown"')),
+        ':error': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.processResult.Payload.error')),
+        ':error_type': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.processResult.Payload.error_type || "Unknown"')),
         ':updated_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
       },
     });
 
-    // Update job status to failed with actual error message (for exceptions)
-    const handleFailure = new tasks.DynamoUpdateItem(this, 'HandleFailure', {
+    // Handle Lambda exception (timeout, etc.)
+    const handleStepException = new tasks.DynamoUpdateItem(this, 'HandleStepException', {
       table: props.tablesMap.jobs,
       key: {
         job_id: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.parsedError.job_id')),
@@ -183,52 +165,222 @@ export class ComputeStack extends cdk.Stack {
       },
     });
 
-    // Process job using Lambda function
-    const processJob = new tasks.LambdaInvoke(this, 'ProcessJob', {
+    // Parse error message from Lambda response (create separate instances for each catch handler)
+    const parseErrorLegacy = new sfn.Pass(this, 'ParseErrorLegacy', {
+      parameters: {
+        'job_id.$': '$.job_id',
+        'error_message.$': sfn.JsonPath.stringAt(
+          "States.Format('Lambda execution failed: {} - {}', $.error.Error, $.error.Cause)"
+        ),
+      },
+      resultPath: '$.parsedError',
+    }).next(handleStepException);
+
+    const parseErrorStep = new sfn.Pass(this, 'ParseErrorStep', {
+      parameters: {
+        'job_id.$': '$.job_id',
+        'step_index.$': '$.step_index',
+        'error_message.$': sfn.JsonPath.stringAt(
+          "States.Format('Lambda execution failed: {} - {}', $.error.Error, $.error.Cause)"
+        ),
+      },
+      resultPath: '$.parsedError',
+    }).next(handleStepException);
+
+    const parseErrorHTML = new sfn.Pass(this, 'ParseErrorHTML', {
+      parameters: {
+        'job_id.$': '$.job_id',
+        'error_message.$': sfn.JsonPath.stringAt(
+          "States.Format('Lambda execution failed: {} - {}', $.error.Error, $.error.Cause)"
+        ),
+      },
+      resultPath: '$.parsedError',
+    }).next(handleStepException);
+
+    // Initialize steps: Load workflow and get step count
+    const initializeSteps = new tasks.DynamoGetItem(this, 'InitializeSteps', {
+      table: props.tablesMap.workflows,
+      key: {
+        workflow_id: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.workflow_id')),
+      },
+      resultPath: '$.workflowData',
+    });
+
+    // Process a single step using Lambda function (declared early for use in setupStepLoop)
+    const processStep = new tasks.LambdaInvoke(this, 'ProcessStep', {
+      lambdaFunction: this.jobProcessorLambda,
+      payload: sfn.TaskInput.fromObject({
+        'job_id': sfn.JsonPath.stringAt('$.job_id'),
+        'step_index': sfn.JsonPath.numberAt('$.step_index'),
+        'step_type': 'workflow_step',
+      }),
+      resultPath: '$.processResult',
+      retryOnServiceExceptions: false,
+    });
+
+    // Add error handling for Lambda failures
+    processStep.addCatch(parseErrorStep, {
+      resultPath: '$.error',
+      errors: ['States.ALL'],
+    });
+
+    // Check if more steps remain - loops back to processStep if more steps (declared before incrementStep)
+    const checkMoreSteps = new sfn.Choice(this, 'CheckMoreSteps')
+      .when(
+        sfn.Condition.numberLessThan('$.step_index', sfn.JsonPath.numberAt('$.total_steps')),
+        processStep  // Loop back to process next step
+      )
+      .otherwise(
+        new sfn.Choice(this, 'CheckTemplate')
+          .when(
+            sfn.Condition.booleanEquals('$.has_template', true),
+            new tasks.LambdaInvoke(this, 'ProcessHTMLStep', {
+              lambdaFunction: this.jobProcessorLambda,
+              payload: sfn.TaskInput.fromObject({
+                'job_id': sfn.JsonPath.stringAt('$.job_id'),
+                'step_type': 'html_generation',
+              }),
+              resultPath: '$.htmlResult',
+              retryOnServiceExceptions: false,
+            })
+              .addCatch(parseErrorHTML, {
+                resultPath: '$.error',
+                errors: ['States.ALL'],
+              })
+              .next(
+                new sfn.Choice(this, 'CheckHTMLResult')
+                  .when(
+                    sfn.Condition.booleanEquals('$.htmlResult.Payload.success', false),
+                    handleStepFailure
+                  )
+                  .otherwise(
+                    new tasks.DynamoUpdateItem(this, 'FinalizeJobWithHTML', {
+                      table: props.tablesMap.jobs,
+                      key: {
+                        job_id: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.job_id')),
+                      },
+                      updateExpression: 'SET #status = :status, completed_at = :completed_at, updated_at = :updated_at',
+                      expressionAttributeNames: {
+                        '#status': 'status',
+                      },
+                      expressionAttributeValues: {
+                        ':status': tasks.DynamoAttributeValue.fromString('completed'),
+                        ':completed_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
+                        ':updated_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
+                      },
+                    })
+                  )
+              )
+          )
+          .otherwise(
+            new tasks.DynamoUpdateItem(this, 'FinalizeJobNoHTML', {
+              table: props.tablesMap.jobs,
+              key: {
+                job_id: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.job_id')),
+              },
+              updateExpression: 'SET #status = :status, completed_at = :completed_at, updated_at = :updated_at',
+              expressionAttributeNames: {
+                '#status': 'status',
+              },
+              expressionAttributeValues: {
+                ':status': tasks.DynamoAttributeValue.fromString('completed'),
+                ':completed_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
+                ':updated_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
+              },
+            })
+          )
+      );
+
+    // Check if step succeeded - connects to incrementStep which connects to checkMoreSteps
+    const incrementStep = new sfn.Pass(this, 'IncrementStep', {
+      parameters: {
+        'job_id.$': '$.job_id',
+        'workflow_id.$': '$.workflow_id',
+        'submission_id.$': '$.submission_id',
+        'tenant_id.$': '$.tenant_id',
+        'step_index.$': 'States.MathAdd($.step_index, 1)',
+        'total_steps.$': '$.total_steps',
+        'has_template.$': '$.has_template',
+        'template_id.$': '$.template_id',
+      },
+      resultPath: '$',
+    }).next(checkMoreSteps);
+
+    const checkStepResult = new sfn.Choice(this, 'CheckStepResult')
+      .when(
+        sfn.Condition.booleanEquals('$.processResult.Payload.success', false),
+        handleStepFailure
+      )
+      .otherwise(incrementStep);
+
+    // Setup step loop for multi-step workflows
+    const setupStepLoop = new sfn.Pass(this, 'SetupStepLoop', {
+      parameters: {
+        'job_id.$': '$.job_id',
+        'workflow_id.$': '$.workflow_id',
+        'submission_id.$': '$.submission_id',
+        'tenant_id.$': '$.tenant_id',
+        'step_index': 0,
+        'total_steps.$': 'States.ArrayLength($.workflowData.Item.steps.L)',
+        'has_template.$': 'States.Boolean($.workflowData.Item.template_id)',
+        'template_id.$': '$.workflowData.Item.template_id.S',
+      },
+      resultPath: '$',
+    }).next(processStep).next(checkStepResult);
+
+    // Legacy workflow processing
+    const processLegacyJob = new tasks.LambdaInvoke(this, 'ProcessLegacyJob', {
       lambdaFunction: this.jobProcessorLambda,
       payload: sfn.TaskInput.fromObject({
         'job_id': sfn.JsonPath.stringAt('$.job_id'),
       }),
       resultPath: '$.processResult',
       retryOnServiceExceptions: false,
-    });
-    
-    // Add error handling for Lambda failures
-    // First parse the error, then update the job status
-    processJob.addCatch(parseError.next(handleFailure), {
-      resultPath: '$.error',
-      errors: ['States.ALL'],
-    });
+    })
+      .addCatch(parseErrorLegacy, {
+        resultPath: '$.error',
+        errors: ['States.ALL'],
+      })
+      .next(
+        new sfn.Choice(this, 'CheckLegacyResult')
+          .when(
+            sfn.Condition.booleanEquals('$.processResult.Payload.success', false),
+            handleStepFailure
+          )
+          .otherwise(
+            new tasks.DynamoUpdateItem(this, 'FinalizeLegacyJob', {
+              table: props.tablesMap.jobs,
+              key: {
+                job_id: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.job_id')),
+              },
+              updateExpression: 'SET #status = :status, completed_at = :completed_at, updated_at = :updated_at',
+              expressionAttributeNames: {
+                '#status': 'status',
+              },
+              expressionAttributeValues: {
+                ':status': tasks.DynamoAttributeValue.fromString('completed'),
+                ':completed_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
+                ':updated_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
+              },
+            })
+          )
+      );
 
-    // Update job status to completed
-    const handleSuccess = new tasks.DynamoUpdateItem(this, 'HandleSuccess', {
-      table: props.tablesMap.jobs,
-      key: {
-        job_id: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.job_id')),
-      },
-      updateExpression: 'SET #status = :status, completed_at = :completed_at, updated_at = :updated_at',
-      expressionAttributeNames: {
-        '#status': 'status',
-      },
-      expressionAttributeValues: {
-        ':status': tasks.DynamoAttributeValue.fromString('completed'),
-        ':completed_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
-        ':updated_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
-      },
-    });
-
-    // Check if Lambda returned success: false
-    const checkResult = new sfn.Choice(this, 'CheckResult')
+    // Check workflow type and route accordingly
+    const checkWorkflowType = new sfn.Choice(this, 'CheckWorkflowType')
       .when(
-        sfn.Condition.booleanEquals('$.processResult.success', false),
-        handleLambdaFailure
+        sfn.Condition.or(
+          sfn.Condition.isNotPresent('$.workflowData.Item.steps'),
+          sfn.Condition.numberEquals('States.ArrayLength($.workflowData.Item.steps.L)', 0)
+        ),
+        processLegacyJob
       )
-      .otherwise(handleSuccess);
+      .otherwise(setupStepLoop);
 
-    // Define workflow: Update status -> Process job -> Check result -> Handle success/failure
+    // Define workflow: Update status -> Initialize steps -> Check workflow type -> Process accordingly
     const definition = updateJobStatus
-      .next(processJob)
-      .next(checkResult);
+      .next(initializeSteps)
+      .next(checkWorkflowType);
 
     // Create State Machine
     this.stateMachine = new sfn.StateMachine(this, 'JobProcessorStateMachine', {
