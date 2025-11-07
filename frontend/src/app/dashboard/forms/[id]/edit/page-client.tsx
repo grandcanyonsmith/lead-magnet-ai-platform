@@ -19,7 +19,22 @@ type FormField = {
 export default function EditFormClient() {
   const router = useRouter()
   const params = useParams()
-  const formId = params?.id as string
+  // Extract form ID from params, or fallback to URL pathname if param is '_' (Vercel rewrite)
+  const getFormId = () => {
+    const paramId = params?.id as string
+    if (paramId && paramId !== '_') {
+      return paramId
+    }
+    // Fallback: extract from browser URL
+    if (typeof window !== 'undefined') {
+      const pathMatch = window.location.pathname.match(/\/dashboard\/forms\/([^/]+)\/edit/)
+      if (pathMatch && pathMatch[1] && pathMatch[1] !== '_') {
+        return pathMatch[1]
+      }
+    }
+    return paramId || ''
+  }
+  const formId = getFormId()
   
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)

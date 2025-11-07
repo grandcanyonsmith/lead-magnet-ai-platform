@@ -10,7 +10,22 @@ import remarkGfm from 'remark-gfm'
 export default function WorkflowDetailPage() {
   const router = useRouter()
   const params = useParams()
-  const workflowId = params?.id as string
+  // Extract workflow ID from params, or fallback to URL pathname if param is '_' (Vercel rewrite)
+  const getWorkflowId = () => {
+    const paramId = params?.id as string
+    if (paramId && paramId !== '_') {
+      return paramId
+    }
+    // Fallback: extract from browser URL
+    if (typeof window !== 'undefined') {
+      const pathMatch = window.location.pathname.match(/\/dashboard\/workflows\/([^/]+)/)
+      if (pathMatch && pathMatch[1] && pathMatch[1] !== '_') {
+        return pathMatch[1]
+      }
+    }
+    return paramId || ''
+  }
+  const workflowId = getWorkflowId()
   
   const [workflow, setWorkflow] = useState<any>(null)
   const [jobs, setJobs] = useState<any[]>([])
