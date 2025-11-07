@@ -23,6 +23,31 @@ from legacy_processor import LegacyWorkflowProcessor
 logger = logging.getLogger(__name__)
 
 
+def normalize_step_order(step_data: Dict[str, Any]) -> int:
+    """
+    Normalize step_order to integer.
+    DynamoDB may store step_order as string or number, so we need to handle both.
+    
+    Args:
+        step_data: Step data dictionary containing step_order
+        
+    Returns:
+        Integer step_order value, or 0 if not found/invalid
+    """
+    step_order = step_data.get('step_order', 0)
+    if isinstance(step_order, int):
+        return step_order
+    elif isinstance(step_order, str):
+        try:
+            return int(step_order)
+        except (ValueError, TypeError):
+            return 0
+    elif isinstance(step_order, (float, Decimal)):
+        return int(step_order)
+    else:
+        return 0
+
+
 def convert_floats_to_decimal(obj: Any) -> Any:
     """
     Recursively convert float values to Decimal for DynamoDB compatibility.
@@ -223,7 +248,17 @@ class JobProcessor:
                         for prev_idx, prev_step_output in enumerate(step_outputs):
                             prev_step_name = sorted_steps[prev_idx].get('step_name', f'Step {prev_idx + 1}')
                             prev_output_text = prev_step_output['output']
-                            prev_image_urls = prev_step_output.get('image_urls', [])
+                            
+                            # Extract image URLs - handle both list and None cases
+                            prev_image_urls_raw = prev_step_output.get('image_urls', [])
+                            # Normalize to list: handle None, empty list, or already a list
+                            if prev_image_urls_raw is None:
+                                prev_image_urls = []
+                            elif isinstance(prev_image_urls_raw, list):
+                                prev_image_urls = [url for url in prev_image_urls_raw if url]  # Filter out None/empty strings
+                            else:
+                                # If it's not a list, try to convert (shouldn't happen, but be safe)
+                                prev_image_urls = [str(prev_image_urls_raw)] if prev_image_urls_raw else []
                             
                             step_context = f"\n=== Step {prev_idx + 1}: {prev_step_name} ===\n{prev_output_text}"
                             if prev_image_urls:
@@ -238,7 +273,8 @@ class JobProcessor:
                             'step_index': step_index,
                             'previous_steps_count': len(step_outputs),
                             'previous_context_length': len(all_previous_context),
-                            'previous_step_names': [sorted_steps[i].get('step_name') for i in range(len(step_outputs))]
+                            'previous_step_names': [sorted_steps[i].get('step_name') for i in range(len(step_outputs))],
+                            'previous_steps_with_images': len([s for s in step_outputs if s.get('image_urls')])
                         })
                         
                         # Current step context (empty for subsequent steps, initial_context for first step)
@@ -665,16 +701,26 @@ class JobProcessor:
             # Sort execution_steps by step_order to ensure correct order
             sorted_execution_steps = sorted(
                 [s for s in execution_steps if s.get('step_type') == 'ai_generation'],
-                key=lambda s: s.get('step_order', 0)
+                key=normalize_step_order
             )
             
             for prev_step_data in sorted_execution_steps:
-                prev_step_order = prev_step_data.get('step_order', 0)
+                prev_step_order = normalize_step_order(prev_step_data)
                 # Only include steps that come before the current step
                 if prev_step_order < current_step_order:
                     prev_step_name = prev_step_data.get('step_name', 'Unknown Step')
                     prev_output_text = prev_step_data.get('output', '')
-                    prev_image_urls = prev_step_data.get('image_urls', [])
+                    
+                    # Extract image URLs - handle both list and None cases
+                    prev_image_urls_raw = prev_step_data.get('image_urls', [])
+                    # Normalize to list: handle None, empty list, or already a list
+                    if prev_image_urls_raw is None:
+                        prev_image_urls = []
+                    elif isinstance(prev_image_urls_raw, list):
+                        prev_image_urls = [url for url in prev_image_urls_raw if url]  # Filter out None/empty strings
+                    else:
+                        # If it's not a list, try to convert (shouldn't happen, but be safe)
+                        prev_image_urls = [str(prev_image_urls_raw)] if prev_image_urls_raw else []
                     
                     step_context = f"\n=== Step {prev_step_order}: {prev_step_name} ===\n{prev_output_text}"
                     if prev_image_urls:
@@ -688,8 +734,9 @@ class JobProcessor:
                 'job_id': job_id,
                 'step_index': step_index,
                 'current_step_order': current_step_order,
-                'previous_steps_count': len([s for s in execution_steps if s.get('step_type') == 'ai_generation' and s.get('step_order', 0) < current_step_order]),
-                'previous_context_length': len(all_previous_context)
+                'previous_steps_count': len([s for s in execution_steps if s.get('step_type') == 'ai_generation' and normalize_step_order(s) < current_step_order]),
+                'previous_context_length': len(all_previous_context),
+                'previous_steps_with_images': len([s for s in execution_steps if s.get('step_type') == 'ai_generation' and normalize_step_order(s) < current_step_order and s.get('image_urls')])
             })
             
             # Current step context (empty for subsequent steps, initial_context for first step)
