@@ -219,6 +219,7 @@ class JobProcessor:
                         all_previous_outputs.append(f"=== Form Submission ===\n{initial_context}")
                         
                         # Include all previous step outputs explicitly (with image URLs if present)
+                        # step_outputs contains outputs from steps 0 through (step_index - 1)
                         for prev_idx, prev_step_output in enumerate(step_outputs):
                             prev_step_name = sorted_steps[prev_idx].get('step_name', f'Step {prev_idx + 1}')
                             prev_output_text = prev_step_output['output']
@@ -231,6 +232,14 @@ class JobProcessor:
                         
                         # Combine all previous outputs into context
                         all_previous_context = "\n\n".join(all_previous_outputs)
+                        
+                        logger.info(f"[JobProcessor] Built previous context for step {step_index + 1}", extra={
+                            'job_id': job_id,
+                            'step_index': step_index,
+                            'previous_steps_count': len(step_outputs),
+                            'previous_context_length': len(all_previous_context),
+                            'previous_step_names': [sorted_steps[i].get('step_name') for i in range(len(step_outputs))]
+                        })
                         
                         # Current step context (empty for subsequent steps, initial_context for first step)
                         current_step_context = initial_context if step_index == 0 else ""
@@ -644,23 +653,44 @@ class JobProcessor:
             step_start_time = datetime.utcnow()
             
             # Build context with ALL previous step outputs from execution_steps
+            # Only include steps that come BEFORE the current step_index
             all_previous_outputs = []
             all_previous_outputs.append(f"=== Form Submission ===\n{initial_context}")
             
             # Load previous step outputs from execution_steps
-            for prev_step_data in execution_steps:
-                if prev_step_data.get('step_type') == 'ai_generation':
+            # Filter to only include steps with step_order < (step_index + 1)
+            # step_index is 0-indexed, step_order is 1-indexed
+            current_step_order = step_index + 1
+            
+            # Sort execution_steps by step_order to ensure correct order
+            sorted_execution_steps = sorted(
+                [s for s in execution_steps if s.get('step_type') == 'ai_generation'],
+                key=lambda s: s.get('step_order', 0)
+            )
+            
+            for prev_step_data in sorted_execution_steps:
+                prev_step_order = prev_step_data.get('step_order', 0)
+                # Only include steps that come before the current step
+                if prev_step_order < current_step_order:
                     prev_step_name = prev_step_data.get('step_name', 'Unknown Step')
                     prev_output_text = prev_step_data.get('output', '')
                     prev_image_urls = prev_step_data.get('image_urls', [])
                     
-                    step_context = f"\n=== {prev_step_name} ===\n{prev_output_text}"
+                    step_context = f"\n=== Step {prev_step_order}: {prev_step_name} ===\n{prev_output_text}"
                     if prev_image_urls:
                         step_context += f"\n\nGenerated Images:\n" + "\n".join([f"- {url}" for url in prev_image_urls])
                     all_previous_outputs.append(step_context)
             
             # Combine all previous outputs into context
             all_previous_context = "\n\n".join(all_previous_outputs)
+            
+            logger.info(f"[JobProcessor] Built previous context for step {step_index + 1}", extra={
+                'job_id': job_id,
+                'step_index': step_index,
+                'current_step_order': current_step_order,
+                'previous_steps_count': len([s for s in execution_steps if s.get('step_type') == 'ai_generation' and s.get('step_order', 0) < current_step_order]),
+                'previous_context_length': len(all_previous_context)
+            })
             
             # Current step context (empty for subsequent steps, initial_context for first step)
             current_step_context = initial_context if step_index == 0 else ""
