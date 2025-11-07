@@ -204,6 +204,11 @@ export const router = async (
     return await jobsController.list(tenantId, queryParams);
   }
 
+  if (path.match(/^\/admin\/jobs\/[^/]+\/resubmit$/) && method === 'POST') {
+    const id = pathSegments[2];
+    return await jobsController.resubmit(tenantId, id);
+  }
+
   if (path.match(/^\/admin\/jobs\/[^/]+$/) && method === 'GET') {
     const id = pathSegments[2];
     return await jobsController.get(tenantId, id);
