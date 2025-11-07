@@ -6,6 +6,7 @@ Fix workflow steps that have tool_choice='required' but empty tools array.
 import boto3
 from botocore.exceptions import ClientError
 from decimal import Decimal
+from datetime import datetime
 
 WORKFLOW_ID = "wf_0019a5cb319b8hhht5p5h6a"
 TENANT_ID = "84c8e438-0061-70f2-2ce0-7cb44989a329"
@@ -104,7 +105,7 @@ def fix_workflow_steps(workflow_id: str, tenant_id: str):
             },
             ExpressionAttributeValues={
                 ":steps": fixed_steps,
-                ":updated_at": workflow.get("updated_at", "")
+                ":updated_at": datetime.utcnow().isoformat()
             }
         )
         
