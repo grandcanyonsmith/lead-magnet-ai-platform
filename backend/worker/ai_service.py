@@ -93,28 +93,55 @@ class AIService:
             tool_type = tool.get("type") if isinstance(tool, dict) else tool
             tool_dict = tool if isinstance(tool, dict) else {"type": tool}
             
-            # Skip file_search if vector_store_ids is not provided
+            # Skip file_search if vector_store_ids is not provided or is empty
             if tool_type == "file_search":
-                if not tool_dict.get("vector_store_ids"):
-                    logger.warning(f"Skipping file_search tool - vector_store_ids not provided")
+                vector_store_ids = tool_dict.get("vector_store_ids")
+                if not vector_store_ids or (isinstance(vector_store_ids, list) and len(vector_store_ids) == 0):
+                    logger.warning(f"Skipping file_search tool - vector_store_ids not provided or empty")
                     continue
             
-            # Skip computer_use_preview if container is not provided
+            # Skip computer_use_preview if container is not provided or is empty
             if tool_type == "computer_use_preview":
-                if not tool_dict.get("container"):
-                    logger.warning(f"Skipping computer_use_preview tool - container not provided")
+                container = tool_dict.get("container")
+                if not container or (isinstance(container, str) and container.strip() == ""):
+                    logger.warning(f"Skipping computer_use_preview tool - container not provided or empty (tool_dict: {tool_dict})")
                     continue
             
             filtered_tools.append(tool_dict)
         
-        # If all tools were filtered out, use default
-        if len(filtered_tools) == 0 and len(tools) > 0:
-            logger.warning(f"All tools were filtered out, using default web_search_preview")
-            filtered_tools = [{"type": "web_search_preview"}]
-        elif len(filtered_tools) == 0:
-            filtered_tools = [{"type": "web_search_preview"}]
-        
         tools = filtered_tools
+        
+        # Final validation: Double-check that no invalid tools made it through
+        # This is a safety net in case the filtering logic missed something
+        validated_tools = []
+        for tool in tools:
+            tool_type = tool.get("type") if isinstance(tool, dict) else tool
+            tool_dict = tool if isinstance(tool, dict) else {"type": tool}
+            
+            # Final check for computer_use_preview - must have container
+            if tool_type == "computer_use_preview":
+                container = tool_dict.get("container")
+                if not container or (isinstance(container, str) and container.strip() == ""):
+                    logger.error(f"CRITICAL: computer_use_preview tool passed validation without container! Filtering it out now. tool_dict: {tool_dict}")
+                    continue
+            
+            # Final check for file_search - must have vector_store_ids
+            if tool_type == "file_search":
+                vector_store_ids = tool_dict.get("vector_store_ids")
+                if not vector_store_ids or (isinstance(vector_store_ids, list) and len(vector_store_ids) == 0):
+                    logger.error(f"CRITICAL: file_search tool passed validation without vector_store_ids! Filtering it out now. tool_dict: {tool_dict}")
+                    continue
+            
+            validated_tools.append(tool_dict)
+        
+        # If validation removed tools, use default
+        if len(validated_tools) == 0 and len(tools) > 0:
+            logger.warning(f"All tools were removed during validation, using default web_search_preview")
+            validated_tools = [{"type": "web_search_preview"}]
+        elif len(validated_tools) == 0:
+            validated_tools = [{"type": "web_search_preview"}]
+        
+        tools = validated_tools
         
         # Check if computer_use_preview is in tools (requires truncation="auto")
         has_computer_use = any(
