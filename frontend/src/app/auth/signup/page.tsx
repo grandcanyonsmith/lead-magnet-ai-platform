@@ -23,15 +23,17 @@ export default function SignUpPage() {
       const result = await signUp(email, password, name)
       if (result.success) {
         setSuccess(true)
+        // User is auto-confirmed, so they can sign in immediately
+        // Redirect to login after a short delay
         setTimeout(() => {
-          router.push('/auth/login')
+          router.push('/auth/login?email=' + encodeURIComponent(email))
         }, 2000)
       } else {
         setError(result.error || 'Failed to sign up')
+        setLoading(false)
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred')
-    } finally {
       setLoading(false)
     }
   }

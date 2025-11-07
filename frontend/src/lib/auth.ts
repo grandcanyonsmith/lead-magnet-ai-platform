@@ -3,6 +3,7 @@ import {
   CognitoUser,
   AuthenticationDetails,
   CognitoUserSession,
+  CognitoUserAttribute,
 } from 'amazon-cognito-identity-js'
 
 // Initialize pool lazily to avoid build-time errors
@@ -98,28 +99,42 @@ export const signUp = async (
     try {
       const pool = getUserPool()
       
+      // Use CognitoUserAttribute for proper attribute handling
       const attributeList = [
-        {
+        new CognitoUserAttribute({
           Name: 'email',
           Value: email,
-        },
-        {
-          Name: 'name',
+        }),
+        new CognitoUserAttribute({
+          Name: 'name', // Cognito standard attribute - maps to 'fullname'
           Value: name,
-        },
+        }),
       ]
 
-      // Note: Cognito will auto-create the user. For production, you may want to 
-      // use admin-create-user API instead via backend
-      pool.signUp(email, password, attributeList as any, [], (err, result) => {
+      // Sign up with auto-confirmation (handled by Lambda trigger)
+      pool.signUp(email, password, attributeList, [], (err, result) => {
         if (err) {
-          resolve({ success: false, error: err.message })
+          console.error('Signup error:', err)
+          // Provide more helpful error messages
+          let errorMessage = err.message || 'Failed to sign up'
+          if (err.code === 'InvalidParameterException') {
+            errorMessage = 'Invalid signup parameters. Please check your email and password requirements.'
+          } else if (err.code === 'UsernameExistsException') {
+            errorMessage = 'An account with this email already exists. Please sign in instead.'
+          } else if (err.code === 'InvalidPasswordException') {
+            errorMessage = 'Password does not meet requirements. Must be at least 8 characters with uppercase, lowercase, and numbers.'
+          }
+          resolve({ success: false, error: errorMessage })
           return
         }
+        
+        // User is auto-confirmed by Lambda trigger, so they can sign in immediately
+        console.log('Signup successful, user auto-confirmed')
         resolve({ success: true })
       })
     } catch (error: any) {
-      resolve({ success: false, error: error.message })
+      console.error('Signup exception:', error)
+      resolve({ success: false, error: error.message || 'An unexpected error occurred during signup' })
     }
   })
 }
