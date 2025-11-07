@@ -58,9 +58,12 @@ class DynamoDBService:
                     job['execution_steps'] = json.loads(execution_steps_json)
                     logger.debug(f"Loaded execution_steps from S3 for job {job_id}")
                 except Exception as e:
-                    logger.error(f"Error loading execution_steps from S3 for job {job_id}: {e}")
+                    logger.error(f"Error loading execution_steps from S3 for job {job_id} (key: {job.get('execution_steps_s3_key')}): {e}")
                     # Fall back to empty array if S3 load fails
+                    # Note: If execution_steps_s3_key exists, execution_steps should not be in DynamoDB
+                    # (it was removed when stored in S3), so empty array is appropriate
                     job['execution_steps'] = []
+                    # Optionally: Could clean up stale execution_steps_s3_key here, but that's a separate concern
             
             return job
         except Exception as e:
