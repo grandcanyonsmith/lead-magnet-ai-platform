@@ -19,7 +19,9 @@ type FormField = {
 
 export default function PublicFormPage() {
   const params = useParams()
-  const slug = params?.slug as string
+  // Handle catch-all route: slug can be string or string[]
+  const slugParam = params?.slug
+  const slug = Array.isArray(slugParam) ? slugParam[0] : (slugParam as string)
   
   const [form, setForm] = useState<any>(null)
   const [loading, setLoading] = useState(true)
