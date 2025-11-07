@@ -320,8 +320,57 @@ export class ComputeStack extends cdk.Stack {
       )
       .otherwise(incrementStep);
 
-    // Compute steps length
-    const computeStepsLength = new sfn.Pass(this, 'ComputeStepsLength', {
+    // Check workflow type and route accordingly (defined early for use in template checks)
+    const checkWorkflowType = new sfn.Choice(this, 'CheckWorkflowType')
+      .when(
+        sfn.Condition.or(
+          sfn.Condition.isNotPresent('$.workflowData.Item.steps'),
+          sfn.Condition.numberEquals('$.steps_length', 0)
+        ),
+        processLegacyJob
+      )
+      .otherwise(setupStepLoop);
+
+    // Set has_template to true when template exists
+    const setHasTemplateTrue = new sfn.Pass(this, 'SetHasTemplateTrue', {
+      parameters: {
+        'job_id.$': '$.job_id',
+        'workflow_id.$': '$.workflow_id',
+        'submission_id.$': '$.submission_id',
+        'tenant_id.$': '$.tenant_id',
+        'workflowData.$': '$.workflowData',
+        'steps_length.$': '$.steps_length',
+        'has_template': true,
+        'template_id.$': '$.template_id',
+      },
+      resultPath: '$',
+    }).next(checkWorkflowType);
+
+    // Set has_template to false when template doesn't exist
+    const setHasTemplateFalse = new sfn.Pass(this, 'SetHasTemplateFalse', {
+      parameters: {
+        'job_id.$': '$.job_id',
+        'workflow_id.$': '$.workflow_id',
+        'submission_id.$': '$.submission_id',
+        'tenant_id.$': '$.tenant_id',
+        'workflowData.$': '$.workflowData',
+        'steps_length.$': '$.steps_length',
+        'has_template': false,
+        'template_id': '',
+      },
+      resultPath: '$',
+    }).next(checkWorkflowType);
+
+    // Check if template exists and set has_template boolean
+    const checkTemplateExists = new sfn.Choice(this, 'CheckTemplateExists')
+      .when(
+        sfn.Condition.isPresent('$.workflowData.Item.template_id.S'),
+        setHasTemplateTrue
+      )
+      .otherwise(setHasTemplateFalse);
+
+    // Compute steps length - handle both new (with steps) and legacy (without steps) workflows
+    const computeStepsLengthWithSteps = new sfn.Pass(this, 'ComputeStepsLengthWithSteps', {
       parameters: {
         'job_id.$': '$.job_id',
         'workflow_id.$': '$.workflow_id',
@@ -332,7 +381,27 @@ export class ComputeStack extends cdk.Stack {
         'template_id.$': '$.workflowData.Item.template_id.S',
       },
       resultPath: '$',
-    });
+    }).next(checkTemplateExists);
+
+    const computeStepsLengthLegacy = new sfn.Pass(this, 'ComputeStepsLengthLegacy', {
+      parameters: {
+        'job_id.$': '$.job_id',
+        'workflow_id.$': '$.workflow_id',
+        'submission_id.$': '$.submission_id',
+        'tenant_id.$': '$.tenant_id',
+        'workflowData.$': '$.workflowData',
+        'steps_length': 0,
+        'template_id.$': '$.workflowData.Item.template_id.S',
+      },
+      resultPath: '$',
+    }).next(checkTemplateExists);
+
+    const computeStepsLength = new sfn.Choice(this, 'ComputeStepsLength')
+      .when(
+        sfn.Condition.isPresent('$.workflowData.Item.steps'),
+        computeStepsLengthWithSteps
+      )
+      .otherwise(computeStepsLengthLegacy);
 
     // Setup step loop for multi-step workflows
     const setupStepLoop = new sfn.Pass(this, 'SetupStepLoop', {
@@ -387,60 +456,11 @@ export class ComputeStack extends cdk.Stack {
           )
       );
 
-    // Check workflow type and route accordingly
-    const checkWorkflowType = new sfn.Choice(this, 'CheckWorkflowType')
-      .when(
-        sfn.Condition.or(
-          sfn.Condition.isNotPresent('$.workflowData.Item.steps'),
-          sfn.Condition.numberEquals('$.steps_length', 0)
-        ),
-        processLegacyJob
-      )
-      .otherwise(setupStepLoop);
-
-    // Set has_template to true when template exists
-    const setHasTemplateTrue = new sfn.Pass(this, 'SetHasTemplateTrue', {
-      parameters: {
-        'job_id.$': '$.job_id',
-        'workflow_id.$': '$.workflow_id',
-        'submission_id.$': '$.submission_id',
-        'tenant_id.$': '$.tenant_id',
-        'workflowData.$': '$.workflowData',
-        'steps_length.$': '$.steps_length',
-        'has_template': true,
-        'template_id.$': '$.template_id',
-      },
-      resultPath: '$',
-    }).next(checkWorkflowType);
-
-    // Set has_template to false when template doesn't exist
-    const setHasTemplateFalse = new sfn.Pass(this, 'SetHasTemplateFalse', {
-      parameters: {
-        'job_id.$': '$.job_id',
-        'workflow_id.$': '$.workflow_id',
-        'submission_id.$': '$.submission_id',
-        'tenant_id.$': '$.tenant_id',
-        'workflowData.$': '$.workflowData',
-        'steps_length.$': '$.steps_length',
-        'has_template': false,
-        'template_id': '',
-      },
-      resultPath: '$',
-    }).next(checkWorkflowType);
-
-    // Check if template exists and set has_template boolean
-    const checkTemplateExists = new sfn.Choice(this, 'CheckTemplateExists')
-      .when(
-        sfn.Condition.isPresent('$.workflowData.Item.template_id.S'),
-        setHasTemplateTrue
-      )
-      .otherwise(setHasTemplateFalse);
-
     // Define workflow: Update status -> Initialize steps -> Compute steps length -> Check template -> Check workflow type -> Process accordingly
+    // Note: computeStepsLength internally connects to checkTemplateExists
     const definition = updateJobStatus
       .next(initializeSteps)
-      .next(computeStepsLength)
-      .next(checkTemplateExists);
+      .next(computeStepsLength);
 
     // Create State Machine
     this.stateMachine = new sfn.StateMachine(this, 'JobProcessorStateMachine', {
