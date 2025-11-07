@@ -15,8 +15,9 @@ from ulid import new as ulid
 logger = logging.getLogger(__name__)
 
 # DynamoDB item size limit is 400KB
-# We'll use 350KB as a safe threshold to leave room for other fields
-MAX_DYNAMODB_ITEM_SIZE = 350 * 1024  # 350KB in bytes
+# We'll use 300KB as a safe threshold to leave room for other fields in the item
+# This accounts for other job fields like status, timestamps, artifacts, etc.
+MAX_DYNAMODB_ITEM_SIZE = 300 * 1024  # 300KB in bytes
 
 
 class DynamoDBService:
@@ -70,16 +71,19 @@ class DynamoDBService:
         """
         Estimate the size of a value when serialized for DynamoDB.
         This is approximate but should catch items that are clearly too large.
+        DynamoDB serialization adds overhead, so we add a 10% buffer to be safe.
         """
         try:
             # Convert to JSON string to estimate size
             json_str = json.dumps(value, default=str)
-            # DynamoDB uses UTF-8 encoding, so each character is 1-4 bytes
-            # We'll use a conservative estimate of average 2 bytes per character
-            return len(json_str.encode('utf-8'))
+            # Get actual UTF-8 byte size
+            byte_size = len(json_str.encode('utf-8'))
+            # Add 10% buffer for DynamoDB serialization overhead
+            return int(byte_size * 1.1)
         except Exception:
             # Fallback: estimate based on string representation
-            return len(str(value).encode('utf-8'))
+            byte_size = len(str(value).encode('utf-8'))
+            return int(byte_size * 1.1)
     
     def update_job(self, job_id: str, updates: Dict[str, Any], s3_service=None):
         """
