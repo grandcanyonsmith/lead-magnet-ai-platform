@@ -4,13 +4,39 @@ import { RouteResponse } from '../routes';
 import { artifactsController } from './artifacts';
 import { ulid } from 'ulid';
 import { SFNClient, StartExecutionCommand } from '@aws-sdk/client-sfn';
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { logger } from '../utils/logger';
 
 const JOBS_TABLE = process.env.JOBS_TABLE!;
 const SUBMISSIONS_TABLE = process.env.SUBMISSIONS_TABLE!;
 const STEP_FUNCTIONS_ARN = process.env.STEP_FUNCTIONS_ARN!;
+const ARTIFACTS_BUCKET = process.env.ARTIFACTS_BUCKET!;
 
 const sfnClient = STEP_FUNCTIONS_ARN ? new SFNClient({ region: process.env.AWS_REGION || 'us-east-1' }) : null;
+const s3Client = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
+
+/**
+ * Download execution_steps from S3 if stored there
+ */
+async function loadExecutionStepsFromS3(s3Key: string): Promise<any[] | null> {
+  try {
+    const command = new GetObjectCommand({
+      Bucket: ARTIFACTS_BUCKET,
+      Key: s3Key,
+    });
+    
+    const response = await s3Client.send(command);
+    const body = await response.Body?.transformToString();
+    if (!body) {
+      return null;
+    }
+    
+    return JSON.parse(body);
+  } catch (error) {
+    logger.error(`Error loading execution_steps from S3: ${s3Key}`, error);
+    return null;
+  }
+}
 
 class JobsController {
   async list(tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {
@@ -74,6 +100,14 @@ class JobsController {
 
     if (job.tenant_id !== tenantId) {
       throw new ApiError('You don\'t have permission to access this lead magnet', 403);
+    }
+
+    // Load execution_steps from S3 if stored there
+    if (job.execution_steps_s3_key && !job.execution_steps) {
+      const executionSteps = await loadExecutionStepsFromS3(job.execution_steps_s3_key);
+      if (executionSteps) {
+        job.execution_steps = executionSteps;
+      }
     }
 
     // Refresh output_url from artifacts if job is completed and has artifacts
