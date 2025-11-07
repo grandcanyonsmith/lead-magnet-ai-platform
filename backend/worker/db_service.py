@@ -89,7 +89,7 @@ class DynamoDBService:
         """
         Update job with given fields.
         
-        If execution_steps is too large (>350KB), it will be stored in S3
+        If execution_steps is too large (>300KB), it will be stored in S3
         and only the S3 key will be stored in DynamoDB.
         
         Args:
@@ -98,6 +98,8 @@ class DynamoDBService:
             s3_service: Optional S3Service instance to store large execution_steps in S3
         """
         try:
+            execution_steps_stored_in_s3 = False
+            
             # Check if execution_steps is in updates and if it's too large
             if 'execution_steps' in updates and s3_service:
                 execution_steps = updates['execution_steps']
@@ -114,26 +116,64 @@ class DynamoDBService:
                     updates['execution_steps_s3_key'] = s3_key
                     # Remove execution_steps from updates to avoid storing it in DynamoDB
                     del updates['execution_steps']
+                    execution_steps_stored_in_s3 = True
                     logger.info(f"Stored execution_steps in S3 at {s3_key} for job {job_id}")
             
-            # Remove execution_steps_s3_key if we're storing execution_steps directly (and it fits)
-            if 'execution_steps' in updates and 'execution_steps_s3_key' in updates:
-                del updates['execution_steps_s3_key']
+            # If we're storing execution_steps directly (it's in updates and wasn't moved to S3),
+            # we need to remove any existing execution_steps_s3_key from DynamoDB
+            if 'execution_steps' in updates and not execution_steps_stored_in_s3:
+                # Mark execution_steps_s3_key for removal from DynamoDB
+                # We'll handle this in the update expression
+                if 'execution_steps_s3_key' not in updates:
+                    updates['execution_steps_s3_key'] = None  # Mark for removal
             
             if not updates:
                 logger.debug(f"No updates to apply for job {job_id}")
                 return
             
-            update_expression = "SET " + ", ".join([f"#{k} = :{k}" for k in updates.keys()])
-            expression_attribute_names = {f"#{k}": k for k in updates.keys()}
-            expression_attribute_values = {f":{k}": v for k, v in updates.items()}
+            # Build update expression, handling removal of execution_steps_s3_key if needed
+            set_updates = {}
+            remove_attributes = []
             
-            self.jobs_table.update_item(
-                Key={'job_id': job_id},
-                UpdateExpression=update_expression,
-                ExpressionAttributeNames=expression_attribute_names,
-                ExpressionAttributeValues=expression_attribute_values
-            )
+            for key, value in updates.items():
+                if value is None and key == 'execution_steps_s3_key':
+                    # Remove this attribute from DynamoDB
+                    remove_attributes.append(key)
+                else:
+                    set_updates[key] = value
+            
+            # Build the update expression
+            update_parts = []
+            if set_updates:
+                set_expr = "SET " + ", ".join([f"#{k} = :{k}" for k in set_updates.keys()])
+                update_parts.append(set_expr)
+            
+            if remove_attributes:
+                remove_expr = "REMOVE " + ", ".join([f"#{k}" for k in remove_attributes])
+                update_parts.append(remove_expr)
+            
+            if not update_parts:
+                logger.debug(f"No updates to apply for job {job_id}")
+                return
+            
+            update_expression = " ".join(update_parts)
+            expression_attribute_names = {f"#{k}": k for k in set_updates.keys()}
+            # Add names for removed attributes
+            for attr in remove_attributes:
+                expression_attribute_names[f"#{attr}"] = attr
+            expression_attribute_values = {f":{k}": v for k, v in set_updates.items()}
+            
+            # DynamoDB update_item requires ExpressionAttributeValues even if empty for REMOVE-only operations
+            # But we can pass an empty dict if there are no SET operations
+            update_params = {
+                'Key': {'job_id': job_id},
+                'UpdateExpression': update_expression,
+                'ExpressionAttributeNames': expression_attribute_names,
+            }
+            if expression_attribute_values:
+                update_params['ExpressionAttributeValues'] = expression_attribute_values
+            
+            self.jobs_table.update_item(**update_params)
             logger.debug(f"Updated job {job_id}")
         except Exception as e:
             logger.error(f"Error updating job {job_id}: {e}")
