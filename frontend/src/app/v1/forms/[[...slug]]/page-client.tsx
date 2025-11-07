@@ -19,9 +19,41 @@ type FormField = {
 
 export default function PublicFormPage() {
   const params = useParams()
-  // Handle catch-all route: slug can be string or string[]
-  const slugParam = params?.slug
-  const slug = Array.isArray(slugParam) ? slugParam[0] : (slugParam as string)
+  // Extract slug from params or URL pathname (for static export/Vercel compatibility)
+  const getSlug = () => {
+    // First try to get from params
+    const slugParam = params?.slug
+    const paramSlug = Array.isArray(slugParam) ? slugParam[0] : (slugParam as string)
+    
+    if (paramSlug && paramSlug !== '_' && paramSlug.trim() !== '') {
+      return paramSlug
+    }
+    
+    // Fallback: extract from browser URL (works for static exports and direct navigation)
+    if (typeof window !== 'undefined') {
+      const pathMatch = window.location.pathname.match(/\/v1\/forms\/([^/?#]+)/)
+      if (pathMatch && pathMatch[1] && pathMatch[1] !== '_' && pathMatch[1].trim() !== '') {
+        return pathMatch[1]
+      }
+      // Also check hash in case of SPA routing
+      const hashMatch = window.location.hash.match(/\/v1\/forms\/([^/?#]+)/)
+      if (hashMatch && hashMatch[1] && hashMatch[1] !== '_' && hashMatch[1].trim() !== '') {
+        return hashMatch[1]
+      }
+    }
+    
+    return paramSlug || ''
+  }
+  
+  const [slug, setSlug] = useState<string>(getSlug())
+  
+  // Update slug when params change (for client-side navigation)
+  useEffect(() => {
+    const newSlug = getSlug()
+    if (newSlug && newSlug !== slug && newSlug.trim() !== '' && newSlug !== '_') {
+      setSlug(newSlug)
+    }
+  }, [params?.slug])
   
   const [form, setForm] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -35,8 +67,11 @@ export default function PublicFormPage() {
   const [outputUrl, setOutputUrl] = useState<string | null>(null)
 
   useEffect(() => {
-    if (slug) {
+    if (slug && slug.trim() !== '' && slug !== '_') {
       loadForm()
+    } else if (!slug || slug.trim() === '' || slug === '_') {
+      setError('Invalid form URL. Please check the form link.')
+      setLoading(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug])
