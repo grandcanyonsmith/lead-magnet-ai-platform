@@ -10,7 +10,7 @@ import { calculateOpenAICost } from '../services/costService';
 import { callResponsesWithTimeout } from '../utils/openaiHelpers';
 import { formService } from '../services/formService';
 import { WorkflowGenerationService } from '../services/workflowGenerationService';
-import { migrateLegacyWorkflowToSteps, migrateLegacyWorkflowOnUpdate, ensureStepDefaults } from '../utils/workflowMigration';
+import { migrateLegacyWorkflowToSteps, migrateLegacyWorkflowOnUpdate, ensureStepDefaults, WorkflowStep } from '../utils/workflowMigration';
 
 const WORKFLOWS_TABLE = process.env.WORKFLOWS_TABLE;
 const FORMS_TABLE = process.env.FORMS_TABLE;
@@ -172,7 +172,7 @@ class WorkflowsController {
                   workflowId: workflow.workflow_id,
                   workflowName: workflow.workflow_name,
                 });
-                const formId = await formService.createFormForWorkflow(
+                await formService.createFormForWorkflow(
                   workflow.tenant_id,
                   workflow.workflow_id,
                   workflow.workflow_name
@@ -285,8 +285,8 @@ class WorkflowsController {
         workflowData.steps = steps;
       }
     } else {
-      // Ensure step_order is set for each step and add defaults for tools/tool_choice
-      workflowData.steps = ensureStepDefaults(workflowData.steps);
+      // Ensure step_order is set for each step and add defaults for tools/tool_choice/step_description
+      workflowData.steps = ensureStepDefaults(workflowData.steps as any[]) as WorkflowStep[];
     }
 
     const workflowId = `wf_${ulid()}`;
@@ -633,6 +633,7 @@ class WorkflowsController {
         updated_at: new Date().toISOString(),
       });
       throw error;
+    }
   }
 
   async getGenerationStatus(tenantId: string, jobId: string): Promise<RouteResponse> {
