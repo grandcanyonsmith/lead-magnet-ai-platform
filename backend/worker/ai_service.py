@@ -87,7 +87,7 @@ class AIService:
         
         # Filter out tools that require additional configuration we don't have
         # file_search requires vector_store_ids
-        # computer_use_preview requires container
+        # computer_use_preview requires container (mandatory for code interpreter)
         filtered_tools = []
         for tool in tools:
             tool_type = tool.get("type") if isinstance(tool, dict) else tool
@@ -101,11 +101,14 @@ class AIService:
                     continue
             
             # Skip computer_use_preview if container is not provided or is empty
+            # Container is REQUIRED for computer_use_preview (code interpreter)
             if tool_type == "computer_use_preview":
                 container = tool_dict.get("container")
                 if not container or (isinstance(container, str) and container.strip() == ""):
-                    logger.warning(f"Skipping computer_use_preview tool - container not provided or empty (tool_dict: {tool_dict})")
+                    logger.warning(f"Skipping computer_use_preview tool - container parameter is REQUIRED but not provided or empty. Tool config: {tool_dict}")
                     continue
+                # Log successful inclusion for debugging
+                logger.info(f"Including computer_use_preview tool with container: {container}")
             
             filtered_tools.append(tool_dict)
         
@@ -142,6 +145,35 @@ class AIService:
             validated_tools = [{"type": "web_search_preview"}]
         
         tools = validated_tools
+        
+        # Log final tools being sent to OpenAI for debugging
+        logger.info(f"Final tools after filtering and validation: {tools}")
+        
+        # CRITICAL: One final check before API call - ensure no computer_use_preview without container
+        # This is a last-ditch safety check to prevent API errors
+        final_tools = []
+        for tool in tools:
+            if isinstance(tool, dict):
+                tool_type = tool.get("type", "")
+                if tool_type == "computer_use_preview":
+                    container = tool.get("container")
+                    if not container or (isinstance(container, str) and container.strip() == ""):
+                        logger.error(f"ABORTING: Found computer_use_preview without container in final tools list! Removing it. Tool: {tool}")
+                        continue
+                final_tools.append(tool)
+            elif isinstance(tool, str) and tool == "computer_use_preview":
+                logger.error(f"ABORTING: Found computer_use_preview as string without container! Removing it.")
+                continue
+            else:
+                final_tools.append(tool)
+        
+        # If we removed tools, ensure we have at least one
+        if len(final_tools) == 0:
+            logger.warning("All tools were removed in final check, using default web_search_preview")
+            final_tools = [{"type": "web_search_preview"}]
+        
+        tools = final_tools
+        logger.info(f"Tools after final safety check: {tools}")
         
         # Check if computer_use_preview is in tools (requires truncation="auto")
         has_computer_use = any(
