@@ -254,6 +254,13 @@ class WorkflowsController {
       // Filter out soft-deleted items
       workflows = workflows.filter((w: any) => !w.deleted_at);
 
+      // Sort by created_at DESC (most recent first)
+      workflows.sort((a: any, b: any) => {
+        const dateA = new Date(a.created_at || 0).getTime();
+        const dateB = new Date(b.created_at || 0).getTime();
+        return dateB - dateA; // DESC order
+      });
+
       // Fetch form data for each workflow, auto-create if missing
       const workflowsWithForms = await Promise.all(
         workflows.map(async (workflow: any) => {
@@ -490,6 +497,22 @@ class WorkflowsController {
       } catch (error) {
         console.error('[Workflows Create] Error fetching created form', error);
       }
+    }
+
+    // Create notification for workflow creation
+    try {
+      const { notificationsController } = await import('./notifications');
+      await notificationsController.create(
+        tenantId,
+        'workflow_created',
+        'New lead magnet created',
+        `Your lead magnet "${workflowData.workflow_name}" has been created successfully.`,
+        workflowId,
+        'workflow'
+      );
+    } catch (error) {
+      console.error('[Workflows Create] Error creating notification', error);
+      // Don't fail workflow creation if notification fails
     }
 
     return {

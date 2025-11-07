@@ -24,9 +24,9 @@ export default function SignUpPage() {
       if (result.success) {
         setSuccess(true)
         // User is auto-confirmed, so they can sign in immediately
-        // Redirect to login after a short delay
+        // Redirect to onboarding survey after a short delay
         setTimeout(() => {
-          router.push('/auth/login?email=' + encodeURIComponent(email))
+          router.push('/auth/login?email=' + encodeURIComponent(email) + '&redirect=/onboarding/survey')
         }, 2000)
       } else {
         setError(result.error || 'Failed to sign up')

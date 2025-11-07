@@ -91,6 +91,7 @@ export class ApiStack extends cdk.Stack {
       role: lambdaRole,
       environment: {
         WORKFLOWS_TABLE: props.tablesMap.workflows.tableName,
+        NOTIFICATIONS_TABLE: props.tablesMap.notifications.tableName,
         FORMS_TABLE: props.tablesMap.forms.tableName,
         SUBMISSIONS_TABLE: props.tablesMap.submissions.tableName,
         JOBS_TABLE: props.tablesMap.jobs.tableName,

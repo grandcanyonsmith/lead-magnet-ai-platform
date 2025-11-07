@@ -103,7 +103,7 @@ export default function SettingsPage() {
         <p className="text-gray-600">Manage your account settings</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="max-w-2xl">
+      <form onSubmit={handleSubmit} className="max-w-2xl" data-tour="settings-form">
         {success && (
           <div className="mb-6 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
             Settings saved successfully!
@@ -120,6 +120,7 @@ export default function SettingsPage() {
               value={settings.organization_name || ''}
               onChange={(e) => setSettings({ ...settings, organization_name: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              data-tour="organization-name"
             />
           </div>
 
@@ -132,6 +133,7 @@ export default function SettingsPage() {
               value={settings.contact_email || ''}
               onChange={(e) => setSettings({ ...settings, contact_email: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              data-tour="contact-email"
             />
           </div>
 
@@ -247,6 +249,7 @@ export default function SettingsPage() {
               type="submit"
               disabled={saving}
               className="flex items-center px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              data-tour="save-settings"
             >
               <FiSave className="w-5 h-5 mr-2" />
               {saving ? 'Saving...' : 'Save Settings'}

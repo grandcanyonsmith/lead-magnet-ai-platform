@@ -8,6 +8,8 @@ import logging
 from typing import Dict, Any, Optional
 import boto3
 from boto3.dynamodb.conditions import Key
+from datetime import datetime
+from ulid import new as ulid
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +30,7 @@ class DynamoDBService:
         self.templates_table = self.dynamodb.Table(os.environ['TEMPLATES_TABLE'])
         self.user_settings_table = self.dynamodb.Table(os.environ.get('USER_SETTINGS_TABLE', 'user_settings'))
         self.usage_records_table = self.dynamodb.Table(os.environ.get('USAGE_RECORDS_TABLE', 'leadmagnet-usage-records'))
+        self.notifications_table = self.dynamodb.Table(os.environ.get('NOTIFICATIONS_TABLE', 'leadmagnet-notifications'))
     
     def get_job(self, job_id: str) -> Optional[Dict[str, Any]]:
         """Get job by ID."""
@@ -143,5 +146,43 @@ class DynamoDBService:
         except Exception as e:
             logger.error(f"Error creating usage record: {e}")
             # Don't fail the job if usage tracking fails
+            pass
+    
+    def create_notification(
+        self,
+        tenant_id: str,
+        notification_type: str,
+        title: str,
+        message: str,
+        related_resource_id: Optional[str] = None,
+        related_resource_type: Optional[str] = None
+    ):
+        """Create a notification for the tenant."""
+        try:
+            notification_id = f"notif_{ulid()}"
+            now = datetime.utcnow().isoformat()
+            ttl = int(datetime.utcnow().timestamp()) + (90 * 24 * 60 * 60)  # 90 days
+            
+            notification = {
+                'notification_id': notification_id,
+                'tenant_id': tenant_id,
+                'type': notification_type,
+                'title': title,
+                'message': message,
+                'read': False,
+                'created_at': now,
+                'ttl': ttl
+            }
+            
+            if related_resource_id:
+                notification['related_resource_id'] = related_resource_id
+            if related_resource_type:
+                notification['related_resource_type'] = related_resource_type
+            
+            self.notifications_table.put_item(Item=notification)
+            logger.debug(f"Created notification {notification_id} for tenant {tenant_id}")
+        except Exception as e:
+            logger.error(f"Error creating notification: {e}")
+            # Don't fail the job if notification creation fails
             pass
 
