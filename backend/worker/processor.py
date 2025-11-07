@@ -667,7 +667,7 @@ class JobProcessor:
             # Handle workflow step
             steps = workflow.get('steps', [])
             if not steps or len(steps) == 0:
-                raise ValueError(f"Workflow {workflow.get('workflow_id')} has no steps configured")
+                raise ValueError(f"Workflow {job.get('workflow_id')} has no steps configured")
             
             # Sort steps by step_order if present
             sorted_steps = sorted(steps, key=lambda s: s.get('step_order', 0))
