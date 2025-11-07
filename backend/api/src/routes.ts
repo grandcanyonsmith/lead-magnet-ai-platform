@@ -8,6 +8,7 @@ import { artifactsController } from './controllers/artifacts';
 import { settingsController } from './controllers/settings';
 import { analyticsController } from './controllers/analytics';
 import { billingController } from './controllers/billing';
+import { notificationsController } from './controllers/notifications';
 import { ApiError } from './utils/errors';
 
 export interface RouteResponse {
@@ -258,6 +259,20 @@ export const router = async (
       bodyKeys: result.body ? Object.keys(result.body) : null,
     });
     return result;
+  }
+
+  // Admin routes - Notifications
+  if (path === '/admin/notifications' && method === 'GET') {
+    return await notificationsController.list(tenantId, queryParams);
+  }
+
+  if (path.match(/^\/admin\/notifications\/[^/]+\/read$/) && method === 'PUT') {
+    const notificationId = pathSegments[2];
+    return await notificationsController.markAsRead(tenantId, notificationId);
+  }
+
+  if (path === '/admin/notifications/read-all' && method === 'PUT') {
+    return await notificationsController.markAllAsRead(tenantId);
   }
 
   // Route not found

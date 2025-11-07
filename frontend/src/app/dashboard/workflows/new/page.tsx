@@ -678,7 +678,7 @@ export default function NewWorkflowPage() {
         </ul>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 space-y-6">
+      <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 space-y-6" data-tour="workflow-form">
         {/* Workflow Fields */}
         <div className="space-y-6">
           <h2 className="text-xl font-semibold text-gray-900 border-b pb-2">Lead Magnet Configuration</h2>
@@ -695,6 +695,7 @@ export default function NewWorkflowPage() {
               placeholder="Course Idea Validator"
               maxLength={200}
               required
+              data-tour="workflow-name"
             />
           </div>
 
@@ -709,11 +710,12 @@ export default function NewWorkflowPage() {
               placeholder="Describe what this lead magnet does..."
               rows={3}
               maxLength={1000}
+              data-tour="workflow-description"
             />
           </div>
 
           {/* Workflow Steps */}
-          <div className="space-y-4 pt-6 border-t">
+          <div className="space-y-4 pt-6 border-t" data-tour="workflow-steps">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold text-gray-900">Workflow Steps</h2>
               <button
@@ -1248,6 +1250,7 @@ export default function NewWorkflowPage() {
             type="submit"
             disabled={submitting}
             className="flex items-center px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            data-tour="create-workflow-button"
           >
             <FiSave className="w-5 h-5 mr-2" />
             {submitting ? 'Creating...' : 'Create Lead Magnet'}

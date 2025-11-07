@@ -121,6 +121,15 @@ export const updateSettingsSchema = z.object({
   webhooks: z.array(z.string().url()).optional(),
   ghl_webhook_url: z.string().url().optional(),
   lead_phone_field: z.string().optional(),
+  // Onboarding fields
+  onboarding_survey_completed: z.boolean().optional(),
+  onboarding_survey_responses: z.record(z.any()).optional(),
+  onboarding_checklist: z.object({
+    complete_profile: z.boolean().optional(),
+    create_first_lead_magnet: z.boolean().optional(),
+    view_generated_lead_magnets: z.boolean().optional(),
+  }).optional(),
+  onboarding_completed_at: z.string().optional(),
 });
 
 // Form submission schema

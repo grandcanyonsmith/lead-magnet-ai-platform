@@ -1,0 +1,205 @@
+import { db } from '../utils/db';
+import { ApiError } from '../utils/errors';
+import { RouteResponse } from '../routes';
+import { ulid } from 'ulid';
+
+const NOTIFICATIONS_TABLE = process.env.NOTIFICATIONS_TABLE!;
+
+export type NotificationType = 'workflow_created' | 'job_completed';
+
+export interface NotificationData {
+  notification_id: string;
+  tenant_id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  read: boolean;
+  read_at?: string;
+  related_resource_id?: string; // workflow_id or job_id
+  related_resource_type?: 'workflow' | 'job';
+  created_at: string;
+  ttl?: number; // TTL for auto-deletion (90 days)
+}
+
+class NotificationsController {
+  async list(tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {
+    if (!NOTIFICATIONS_TABLE) {
+      throw new ApiError('NOTIFICATIONS_TABLE environment variable is not configured', 500);
+    }
+
+    const unreadOnly = queryParams.unread_only === 'true';
+    const limit = queryParams.limit ? parseInt(queryParams.limit) : 50;
+
+    let notifications: any[] = [];
+    
+    if (unreadOnly) {
+      // Query for unread notifications (read_at is null or doesn't exist)
+      // We'll need to filter client-side since DynamoDB doesn't support null queries easily
+      notifications = await db.query(
+        NOTIFICATIONS_TABLE,
+        'gsi_tenant_created',
+        'tenant_id = :tenant_id',
+        { ':tenant_id': tenantId },
+        undefined,
+        limit * 2 // Get more to filter unread
+      );
+      // Filter for unread notifications
+      notifications = notifications.filter((n: any) => !n.read && !n.read_at);
+    } else {
+      notifications = await db.query(
+        NOTIFICATIONS_TABLE,
+        'gsi_tenant_created',
+        'tenant_id = :tenant_id',
+        { ':tenant_id': tenantId },
+        undefined,
+        limit
+      );
+    }
+
+    // Sort by created_at DESC (most recent first)
+    notifications.sort((a: any, b: any) => {
+      const dateA = new Date(a.created_at || 0).getTime();
+      const dateB = new Date(b.created_at || 0).getTime();
+      return dateB - dateA; // DESC order
+    });
+
+    // Limit after sorting
+    notifications = notifications.slice(0, limit);
+
+    const unreadCount = notifications.filter((n: any) => !n.read && !n.read_at).length;
+
+    return {
+      statusCode: 200,
+      body: {
+        notifications,
+        unread_count: unreadCount,
+        count: notifications.length,
+      },
+    };
+  }
+
+  async create(
+    tenantId: string,
+    type: NotificationType,
+    title: string,
+    message: string,
+    relatedResourceId?: string,
+    relatedResourceType?: 'workflow' | 'job'
+  ): Promise<NotificationData> {
+    if (!NOTIFICATIONS_TABLE) {
+      throw new ApiError('NOTIFICATIONS_TABLE environment variable is not configured', 500);
+    }
+
+    const notificationId = `notif_${ulid()}`;
+    const now = new Date().toISOString();
+    const ttl = Math.floor(Date.now() / 1000) + 90 * 24 * 60 * 60; // 90 days
+
+    const notification: NotificationData = {
+      notification_id: notificationId,
+      tenant_id: tenantId,
+      type,
+      title,
+      message,
+      read: false,
+      related_resource_id: relatedResourceId,
+      related_resource_type: relatedResourceType,
+      created_at: now,
+      ttl,
+    };
+
+    await db.put(NOTIFICATIONS_TABLE, notification);
+
+    return notification;
+  }
+
+  async markAsRead(tenantId: string, notificationId: string): Promise<RouteResponse> {
+    if (!NOTIFICATIONS_TABLE) {
+      throw new ApiError('NOTIFICATIONS_TABLE environment variable is not configured', 500);
+    }
+
+    const notification = await db.get(NOTIFICATIONS_TABLE, { notification_id: notificationId });
+
+    if (!notification) {
+      throw new ApiError('Notification not found', 404);
+    }
+
+    if (notification.tenant_id !== tenantId) {
+      throw new ApiError('You don\'t have permission to access this notification', 403);
+    }
+
+    const now = new Date().toISOString();
+    const updated = await db.update(NOTIFICATIONS_TABLE, { notification_id: notificationId }, {
+      read: true,
+      read_at: now,
+      updated_at: now,
+    });
+
+    return {
+      statusCode: 200,
+      body: updated,
+    };
+  }
+
+  async markAllAsRead(tenantId: string): Promise<RouteResponse> {
+    if (!NOTIFICATIONS_TABLE) {
+      throw new ApiError('NOTIFICATIONS_TABLE environment variable is not configured', 500);
+    }
+
+    // Get all unread notifications for this tenant
+    const notifications = await db.query(
+      NOTIFICATIONS_TABLE,
+      'gsi_tenant_created',
+      'tenant_id = :tenant_id',
+      { ':tenant_id': tenantId },
+      undefined,
+      1000 // Large limit to get all
+    );
+
+    const unreadNotifications = notifications.filter((n: any) => !n.read && !n.read_at);
+    const now = new Date().toISOString();
+
+    // Update all unread notifications
+    await Promise.all(
+      unreadNotifications.map((notification: any) =>
+        db.update(NOTIFICATIONS_TABLE, { notification_id: notification.notification_id }, {
+          read: true,
+          read_at: now,
+          updated_at: now,
+        })
+      )
+    );
+
+    return {
+      statusCode: 200,
+      body: {
+        message: `Marked ${unreadNotifications.length} notifications as read`,
+        count: unreadNotifications.length,
+      },
+    };
+  }
+
+  async getUnreadCount(tenantId: string): Promise<number> {
+    if (!NOTIFICATIONS_TABLE) {
+      return 0;
+    }
+
+    try {
+      const notifications = await db.query(
+        NOTIFICATIONS_TABLE,
+        'gsi_tenant_created',
+        'tenant_id = :tenant_id',
+        { ':tenant_id': tenantId },
+        undefined,
+        1000 // Large limit to count all
+      );
+
+      return notifications.filter((n: any) => !n.read && !n.read_at).length;
+    } catch (error) {
+      console.error('Error getting unread count:', error);
+      return 0;
+    }
+  }
+}
+
+export const notificationsController = new NotificationsController();
+

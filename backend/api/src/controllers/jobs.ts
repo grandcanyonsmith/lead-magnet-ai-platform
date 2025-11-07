@@ -48,6 +48,14 @@ class JobsController {
       );
     }
 
+    // Ensure jobs are sorted by created_at DESC (most recent first)
+    // db.query already uses ScanIndexForward: false, but add explicit sort as fallback
+    jobs.sort((a: any, b: any) => {
+      const dateA = new Date(a.created_at || 0).getTime();
+      const dateB = new Date(b.created_at || 0).getTime();
+      return dateB - dateA; // DESC order
+    });
+
     return {
       statusCode: 200,
       body: {

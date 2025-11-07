@@ -543,6 +543,22 @@ class JobProcessor:
             else:
                 logger.info("Step 6: No delivery method configured, skipping delivery")
             
+            # Create notification for job completion
+            try:
+                workflow_name = workflow.get('workflow_name', 'Lead magnet')
+                submission_email = submission.get('submitter_email', 'customer')
+                self.db.create_notification(
+                    tenant_id=job['tenant_id'],
+                    notification_type='job_completed',
+                    title='Lead magnet delivered',
+                    message=f'Your lead magnet "{workflow_name}" has been delivered for {submission_email}.',
+                    related_resource_id=job_id,
+                    related_resource_type='job'
+                )
+            except Exception as e:
+                logger.error(f"Error creating notification for job completion: {e}")
+                # Don't fail the job if notification fails
+            
             logger.info(f"Job {job_id} completed successfully")
             return {
                 'success': True,
