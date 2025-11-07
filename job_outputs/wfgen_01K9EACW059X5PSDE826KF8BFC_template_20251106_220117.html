@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Free 12‑Page Birth Plan & Hospital Bag List</title>
+<meta name="description" content="A professional, customizable birth plan and hospital bag checklist lead magnet template with hospital-specific guidance, maps, tips, insurance insights, and curated shopping links.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b1220;
+    --card:#0f1a2e;
+    --muted:#7f8da6;
+    --text:#e7edf8;
+    --brand:#2dd4bf;
+    --accent:#7c5cff;
+    --danger:#ff6b6b;
+    --ok:#22c55e;
+    --line:rgba(255,255,255,0.08);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:linear-gradient(180deg,#0a1020 0%,#0d1630 100%);color:var(--text);font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:var(--brand);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:1100px;margin:0 auto;padding:28px}
+  header{
+    background:radial-gradient(1200px 600px at 10% -10%, rgba(124,92,255,0.25), transparent 40%),
+               radial-gradient(800px 400px at 110% -20%, rgba(45,212,191,0.22), transparent 42%);
+    border:1px solid var(--line);
+    border-radius:20px;
+    padding:28px 28px 24px;
+    position:relative;
+    overflow:hidden;
+  }
+  .badge{display:inline-flex;gap:8px;align-items:center;background:rgba(45,212,191,0.12);color:#d4fffa;border:1px solid rgba(45,212,191,0.3);padding:6px 10px;border-radius:999px;font-weight:600;font-size:12px;letter-spacing:.02em}
+  h1{font-size:40px;line-height:1.1;margin:14px 0 10px}
+  .lead{color:#c8d3ea;max-width:760px;font-size:16px;margin:0 0 14px}
+  .ctaRow{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .btn{
+    display:inline-flex;align-items:center;gap:10px;background:linear-gradient(180deg,var(--brand),#13b59f);
+    color:#05151d;font-weight:800;padding:12px 16px;border-radius:12px;border:none;cursor:pointer;box-shadow:0 10px 20px rgba(45,212,191,0.25)
+  }
+  .btn.secondary{background:transparent;border:1px solid var(--line);color:var(--text)}
+  .grid{
+    display:grid;gap:20px;margin-top:22px;
+    grid-template-columns: repeat(12, 1fr);
+  }
+  .col-4{grid-column: span 4}
+  .col-6{grid-column: span 6}
+  .col-8{grid-column: span 8}
+  .col-12{grid-column: span 12}
+  @media (max-width:960px){
+    .col-4,.col-6,.col-8,.col-12{grid-column:1/-1}
+    h1{font-size:32px}
+  }
+  .card{
+    background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent),
+               linear-gradient(0deg, rgba(255,255,255,0.02), transparent);
+    border:1px solid var(--line);border-radius:16px;padding:18px
+  }
+  .card h2,.card h3{margin:0 0 8px}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;color:var(--muted);font-size:13px}
+  .meta .pill{background:#0b1a2f;border:1px solid var(--line);padding:6px 10px;border-radius:999px}
+  .kpi{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px}
+  .kpi div{background:#0e1c37;border:1px solid var(--line);padding:10px 12px;border-radius:12px}
+  .checklist{display:grid;grid-template-columns:repeat(2,minmax(200px,1fr));gap:10px}
+  @media (max-width:700px){.checklist{grid-template-columns:1fr}}
+  .check{
+    display:flex;gap:10px;align-items:flex-start;background:#0e1c37;border:1px solid var(--line);padding:10px;border-radius:10px
+  }
+  .check input{accent-color:var(--brand);margin-top:3px}
+  .note{color:#a9b6d1;font-size:13px}
+  .mapWrap{border-radius:14px;overflow:hidden;border:1px solid var(--line)}
+  iframe{display:block;width:100%;height:320px;border:0}
+  .layout{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px
+  }
+  @media (max-width:700px){.layout{grid-template-columns:1fr}}
+  .room{background:#0f203f;border:1px solid var(--line);border-radius:12px;padding:10px}
+  .room h4{margin:0 0 6px;font-size:14px}
+  .tips{display:grid;gap:10px}
+  .tip{display:flex;gap:10px;background:#0f203f;border:1px solid var(--line);padding:10px;border-radius:10px}
+  .tip .flag{width:10px;height:10px;border-radius:2px;background:var(--accent);margin-top:5px}
+  .staffList{display:grid;grid-template-columns:repeat(2,minmax(200px,1fr));gap:10px}
+  @media (max-width:700px){.staffList{grid-template-columns:1fr}}
+  .staff{background:#0f203f;border:1px solid var(--line);border-radius:12px;padding:12px}
+  .staff .role{font-weight:700}
+  .insure{display:grid;gap:10px}
+  .insureItem{background:#0f203f;border:1px solid var(--line);border-radius:12px;padding:12px}
+  .shopGrid{display:grid;grid-template-columns:repeat(3,minmax(200px,1fr));gap:16px}
+  @media (max-width:900px){.shopGrid{grid-template-columns:repeat(2,minmax(160px,1fr))}}
+  @media (max-width:600px){.shopGrid{grid-template-columns:1fr}}
+  .product{background:#0f203f;border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+  .product img{width:100%;height:170px;object-fit:cover;background:#0b1220}
+  .product .pbody{padding:12px}
+  .tag{display:inline-flex;align-items:center;gap:6px;background:#0a2433;border:1px solid var(--line);color:#bfeeed;padding:4px 8px;border-radius:999px;font-size:12px}
+  .price{font-weight:800;margin-top:8px}
+  .footer{color:#8fa0bf;font-size:12px;margin-top:16px}
+  .divider{height:1px;background:var(--line);margin:14px 0}
+  .pageBreak{break-before:page}
+  @media print{
+    body{background:#fff;color:#000}
+    header,.btn,.ctaRow{display:none!important}
+    .card{border:1px solid #ccc}
+    .pageBreak{page-break-before:always}
+  }
+  .callout{
+    background:linear-gradient(180deg, rgba(124,92,255,0.12), rgba(45,212,191,0.08));
+    border:1px dashed rgba(124,92,255,0.35);
+    padding:14px;border-radius:14px;color:#d9e2ff
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <span class="badge">Free Download • 12‑Page Birth Plan & Hospital Bag List</span>
+      <h1>Personalized Birth Plan + Hospital Bag Checklist</h1>
+      <p class="lead">Built to be customized for your hospital, due date, and preferences. Includes a printable 12‑section birth plan, season‑specific packing guide, hospital maps and parking, team roles, tips, insurance insights, and curated baby shopping links.</p>
+      <div class="ctaRow">
+        <button class="btn" onclick="window.print()">
+          <span>⬇</span> Download / Print PDF
+        </button>
+        <a class="btn secondary" href="#get-personalized">Get a Personalized Version</a>
+      </div>
+      <div class="kpi">
+        <div>Editable • Print‑ready</div>
+        <div>Mobile‑friendly</div>
+        <div>Evidence‑informed</div>
+      </div>
+    </header>
+
+    <section class="grid" aria-label="Personal Profile">
+      <div class="card col-8">
+        <h2>Parent & Pregnancy Details (Sample)</h2>
+        <div class="meta">
+          <span class="pill">Birthing Parent: Jordan Taylor</span>
+          <span class="pill">Partner: Avery</span>
+          <span class="pill">Pregnancy: 39 weeks</span>
+          <span class="pill">Language: English</span>
+        </div>
+        <div class="divider"></div>
+        <div class="meta">
+          <span class="pill">Hospital: NYU Langone — Tisch Hospital, New York, NY</span>
+          <span class="pill">Due Date: Feb 20, 2026</span>
+          <span class="pill">OB/GYN Clinic: NYU Langone OB Associates</span>
+          <span class="pill">Pediatrician: East Side Pediatrics</span>
+        </div>
+        <p class="note" style="margin-top:10px">Note: This sample uses NYU Langone — Tisch Hospital to demonstrate hospital‑specific sections. Replace with your hospital to auto‑adapt parking, season‑aware packing, and policies. Always verify details with your facility.</p>
+      </div>
+      <div class="card col-4" id="get-personalized">
+        <h3>Get a Personalized Version</h3>
+        <p>Paste your hospital name and due date to auto‑tailor packing items, map, parking, and reminders.</p>
+        <ul class="note" style="margin:0 0 8px 16px">
+          <li>Adjusts for season and length of stay</li>
+          <li>Links to official policies and parking</li>
+          <li>Creates a newborn care checklist</li>
+        </ul>
+        <a class="btn" href="#">Start Personalizing</a>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card col-12">
+        <h2>12‑Section Birth Plan (Sample)</h2>
+        <div class="note">Print‑ready. Share with your care team on arrival. Keep flexible: clinical needs may change.</div>
+        <div class="divider"></div>
+
+        <div class="grid">
+          <div class="card col-6">
+            <h3>1) Environment & Communication</h3>
+            <ul>
+              <li>Quiet room, dim lights, limit nonessential interruptions</li>
+              <li>Introduce all staff on entry; share roles clearly</li>
+              <li>Preferences to be discussed with both parent and partner</li>
+            </ul>
+          </div>
+          <div class="card col-6">
+            <h3>2) Mobility & Monitoring</h3>
+            <ul>
+              <li>Encourage walking and position changes as tolerated</li>
+              <li>Intermittent fetal monitoring if medically appropriate</li>
+              <li>Wireless telemetry preferred if continuous monitoring required</li>
+            </ul>
+          </div>
+
+          <div class="card col-6">
+            <h3>3) Hydration & Nutrition</h3>
+            <ul>
+              <li>Clear fluids as allowed by hospital policy</li>
+              <li>Ice chips available; IV only if indicated</li>
+            </ul>
+          </div>
+          <div class="card col-6">
+            <h3>4) Pain Management</h3>
+            <ul>
+              <li>Non‑medicated coping first: shower, birthing ball, massage</li>
+              <li>Epidural on request; option to delay until active labor</li>
+              <li>Nitrous oxide if available</li>
+            </ul>
+          </div>
+
+          <div class="card col-6">
+            <h3>5) Induction & Augmentation</h3>
+            <ul>
+              <li>Discuss Bishop score; prefer membrane sweep before Pitocin if appropriate</li>
+              <li>Interventions explained with benefits/risks/alternatives</li>
+            </ul>
+          </div>
+          <div class="card col-6">
+            <h3>6) Second Stage (Pushing)</h3>
+            <ul>
+              <li>Open‑glottis pushing; positions of comfort</li>
+              <li>Perineal support, warm compresses to reduce tearing</li>
+              <li>Episiotomy only if medically necessary</li>
+            </ul>
+          </div>
+
+          <div class="card col-6">
+            <h3>7) Delivery Preferences</h3>
+            <ul>
+              <li>Partner to announce sex (if not previously known)</li>
+              <li>Golden hour skin‑to‑skin immediately if baby stable</li>
+              <li>Delayed cord clamping ~60–120 seconds when safe</li>
+            </ul>
+          </div>
+          <div class="card col-6">
+            <h3>8) Third Stage (Placenta)</h3>
+            <ul>
+              <li>Active management if indicated; otherwise physiologic</li>
+              <li>Placenta disposition per hospital policy</li>
+            </ul>
+          </div>
+
+          <div class="card col-6">
+            <h3>9) Newborn Care</h3>
+            <ul>
+              <li>Vitamin K and erythromycin: yes</li>
+              <li>First bath delayed >12 hours; measurements after bonding if possible</li>
+              <li>Room‑in; partner to accompany baby for procedures</li>
+            </ul>
+          </div>
+          <div class="card col-6">
+            <h3>10) Feeding Plan</h3>
+            <ul>
+              <li>Exclusive breastfeeding if possible; formula only by request or medical need</li>
+              <li>Lactation consult within first 12 hours</li>
+            </ul>
+          </div>
+
+          <div class="card col-6">
+            <h3>11) Visitors & Photos</h3>
+            <ul>
+              <li>Limit visitors to immediate family day 1</li>
+              <li>No social media posts without parent approval</li>
+            </ul>
+          </div>
+          <div class="card col-6">
+            <h3>12) Unplanned Cesarean</h3>
+            <ul>
+              <li>Clear drape or mirror if feasible; partner present</li>
+              <li>Skin‑to‑skin in OR/PACU when safe; gentle cesarean approach</li>
+            </ul>
+          </div>
+        </div>
+        <div class="note" style="margin-top:10px">Signature(s): __________________________  Date: __________</div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card col-7">
+        <h2>Hospital Bag Checklist (Tailored for Late Winter in NYC)</h2>
+        <p class="note">Due date: Feb 20 ⇒ Cold weather prep, dry air, potentially icy travel. Pack layers and easy‑wash items.</p>
+        <div class="divider"></div>
+        <div class="checklist">
+          <label class="check"><input type="checkbox"> <span><strong>Documents</strong>: ID, insurance card, hospital preregistration, birth plan copies (x3), pediatrician info</span></label>
+          <label class="check"><input type="checkbox"> <span><strong>Tech</strong>: Phone + long cable, power bank, earbuds, small speaker (white noise)</span></label>
+          <label class="check"><input type="checkbox"> <span><strong>Comfort</strong>: Lip balm, unscented lotion, eye mask, heating pad, reusable water bottle with straw</span></label>
+          <label class="check"><input type="checkbox"> <span><strong>Clothing</strong>: 2 nursing bras, warm socks, robe, loose joggers, dark pajamas, going‑home outfit</span></label>
+          <label class="check"><input type="checkbox"> <span><strong>Toiletries</strong>: Travel shampoo/conditioner, face wash, toothbrush, dry shampoo, hair ties</span></label>
+          <label class="check"><input type="checkbox"> <span><strong>Labor Tools</strong>: Birth ball if allowed, TENS unit (batteries), massage oil</span></label>
+          <label class="check"><input type="checkbox"> <span><strong>Baby</strong>: 2 zip‑up sleepers, hat, mittens, swaddle, warm blanket, rear‑facing car seat installed</span></label>
+          <label class="check"><input type="checkbox"> <span><strong>Feeding</strong>: Nipple balm, silver cups, nursing pillow (optional)</span></label>
+          <label class="check"><input type="checkbox"> <span><strong>Winter Add‑Ons</strong>: Warm coatigan/cardigan, non‑slip slippers, stroller muff (for discharge), car seat cover</span></label>
+          <label class="check"><input type="checkbox"> <span><strong>Snacks & Drinks</strong>: Electrolyte drinks, easy carbs, protein bars, mints</span></label>
+          <label class="check"><input type="checkbox"> <span><strong>Partner</strong>: Change of clothes, toiletries, hoodie, blanket, list of contacts</span></label>
+          <label class="check"><input type="checkbox"> <span><strong>Optional</strong>: Essential oils, Bluetooth thermometer, mini humidifier</span></label>
+        </div>
+        <p class="note" style="margin-top:8px">Hospital typically provides pads, mesh underwear, peri bottle, diapers, and wipes—confirm at admission.</p>
+      </div>
+
+      <div class="card col-5">
+        <h2>NYU Langone — Tisch Hospital Guide (Sample)</h2>
+        <div class="mapWrap">
+          <iframe title="NYU Langone — Tisch Hospital Map" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=NYU%20Langone%20Tisch%20Hospital%20550%201st%20Avenue%2C%20New%20York%2C%20NY&output=embed"></iframe>
+        </div>
+        <div class="tips" style="margin-top:10px">
+          <div class="tip">
+            <span class="flag"></span>
+            <div>
+              <strong>Parking & Drop‑off</strong>
+              <div class="note">Use the main hospital entrance for Labor & Delivery drop‑off. Confirm current parking rates and valet availability. Official parking info: <a href="https://nyulangone.org/locations/parking-at-nyu-langone" target="_blank" rel="noopener">nyulangone.org/locations/parking-at-nyu-langone</a></div>
+            </div>
+          </div>
+          <div class="tip">
+            <span class="flag"></span>
+            <div>
+              <strong>Arriving in Labor</strong>
+              <div class="note">Call your OB or L&D before arrival if possible. Bring preregistration confirmation to expedite check‑in.</div>
+            </div>
+          </div>
+          <div class="tip">
+            <span class="flag"></span>
+            <div>
+              <strong>Visitor Policies</strong>
+              <div class="note">Visitor hours and number of support people may change. Verify latest policy on the hospital website before heading in.</div>
+            </div>
+          </div>
+        </div>
+        <div class="callout" style="margin-top:10px">
+          This is a non‑official guide prepared for planning purposes. Always follow hospital signage and staff directions; details can change.
+        </div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card col-7">
+        <h2>L&D Floor Layout (Illustrative)</h2>
+        <p class="note">Diagram is illustrative only. Confirm exact locations on arrival or via the hospital’s wayfinding app.</p>
+        <div class="layout">
+          <div class="room">
+            <h4>Check‑In & Triage</h4>
+            <div class="note">Initial assessment, monitoring, admission decisions.</div>
+          </div>
+          <div class="room">
+            <h4>Labor Rooms</h4>
+            <div class="note">Private rooms with monitoring, showers; birthing ball on request.</div>
+          </div>
+          <div class="room">
+            <h4>Operating Rooms</h4>
+            <div class="note">Cesarean and assisted procedures; recovery adjacent.</div>
+          </div>
+          <div class="room">
+            <h4>Newborn Nursery</h4>
+            <div class="note">Optional; room‑in is encouraged when appropriate.</div>
+          </div>
+          <div class="room">
+            <h4>Postpartum Unit</h4>
+            <div class="note">Recovery rooms; lactation support available daily.</div>
+          </div>
+          <div class="room">
+            <h4>Family Lounge</h4>
+            <div class="note">Snacks, seating; visitor limits may apply.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card col-5">
+        <h2>Your Care Team (Typical Roles)</h2>
+        <div class="staffList">
+          <div class="staff">
+            <div class="role">Attending OB/GYN</div>
+            <div class="note">Leads delivery and surgical care if needed.</div>
+          </div>
+          <div class="staff">
+            <div class="role">Labor & Delivery Nurse</div>
+            <div class="note">Primary bedside support, monitoring, comfort measures.</div>
+          </div>
+          <div class="staff">
+            <div class="role">Anesthesiologist/CRNA</div>
+            <div class="note">Epidural/spinal and pain management.</div>
+          </div>
+          <div class="staff">
+            <div class="role">Midwife (if applicable)</div>
+            <div class="note">Physiologic labor support; collaborates with OB.</div>
+          </div>
+          <div class="staff">
+            <div class="role">Pediatrician/Neonatologist</div>
+            <div class="note">Newborn exam, resuscitation if needed.</div>
+          </div>
+          <div class="staff">
+            <div class="role">Lactation Consultant (IBCLC)</div>
+            <div class="note">Feeding support, latch assessment, pumping plan.</div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <p class="note">Ask your nurse to note names on the whiteboard at shift change. You can request a huddle to review your preferences.</p>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card col-6">
+        <h2>Hospital‑Specific Tips (Sample for NYU Langone — Tisch)</h2>
+        <ul class="tips">
+          <li class="tip">
+            <span class="flag" style="background:var(--ok)"></span>
+            <div>
+              <strong>Lactation Support</strong>
+              <div class="note">Ask for lactation within the first morning after birth. Bring your feeding plan; formula is available upon request.</div>
+            </div>
+          </li>
+          <li class="tip">
+            <span class="flag" style="background:#08a6ff"></span>
+            <div>
+              <strong>Meal Timing</strong>
+              <div class="note">Cafeteria hours can be limited overnight. Pack shelf‑stable snacks for the partner.</div>
+            </div>
+          </li>
+          <li class="tip">
+            <span class="flag" style="background:#ffd166"></span>
+            <div>
+              <strong>Quiet Hours</strong>
+              <div class="note">Use white noise to buffer night rounding; ask for a “Do Not Disturb” window if baby is sleeping and stable.</div>
+            </div>
+          </li>
+        </ul>
+      </div>
+      <div class="card col-6">
+        <h2>Insurance & Billing Insights</h2>
+        <p class="note">“Best” plans vary by state, employer options, and network. For NYC academic centers, families often report smooth maternity experiences with large PPO networks.</p>
+        <div class="insure">
+          <div class="insureItem">
+            <strong>Coverage Types</strong>
+            <ul>
+              <li>PPO: widest hospital choice, higher premiums, lower referral friction</li>
+              <li>HMO/EPO: lower premiums, but stricter networks and referrals</li>
+            </ul>
+          </div>
+          <div class="insureItem">
+            <strong>Frequently Compatible in NYC</strong>
+            <ul>
+              <li>Blue Cross Blue Shield PPO (Empire BCBS)</li>
+              <li>UnitedHealthcare Choice/Choice Plus</li>
+              <li>Aetna PPO/Open Choice</li>
+            </ul>
+            <div class="note">Confirm your specific plan and provider IDs with the hospital’s insurance office for the most accurate, current network status.</div>
+          </div>
+          <div class="insureItem">
+            <strong>Action Steps (Before 28 Weeks)</strong>
+            <ul>
+              <li>Verify in‑network status for OB, hospital, anesthesiology, neonatology</li>
+              <li>Ask for global maternity billing estimate and newborn coverage start</li>
+              <li>Preauthorize breast pump; confirm lactation visit coverage</li>
+            </ul>
+          </div>
+        </div>
+        <div class="callout" style="margin-top:10px">
+          Contact hospital financial counseling for up‑to‑date, plan‑specific guidance. Keep screenshots of verification calls.
+        </div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card col-12">
+        <h2>Local Cribs — Facebook Marketplace (New York, NY)</h2>
+        <p class="note">Tap a search to view current local listings. Images below are representative of typical crib styles; marketplace images and availability change frequently.</p>
+        <div class="ctaRow" style="margin-bottom:10px">
+          <a class="btn" href="https://www.facebook.com/marketplace/newyork/search?query=crib&radius=40" target="_blank" rel="noopener">Search: Cribs near New York</a>
+          <a class="btn secondary" href="https://www.facebook.com/marketplace/newyork/search?query=bassinet&radius=40" target="_blank" rel="noopener">Search: Bassinets</a>
+        </div>
+        <div class="shopGrid">
+          <div class="product">
+            <img src="https://images.unsplash.com/photo-1609766857118-51a6a7d12b1e?q=80&w=1200&auto=format&fit=crop" alt="Modern white crib (representative image)">
+            <div class="pbody">
+              <div class="tag">Marketplace Search Link</div>
+              <div class="price">$100–$350 typical</div>
+              <div class="note">Click to see current NYC listings</div>
+              <div style="margin-top:8px"><a href="https://www.facebook.com/marketplace/newyork/search?query=white%20crib&radius=40" target="_blank" rel="noopener">View listings →</a></div>
+            </div>
+          </div>
+          <div class="product">
+            <img src="https://images.unsplash.com/photo-1610871746538-62a5e419c9f2?q=80&w=1200&auto=format&fit=crop" alt="Convertible crib (representative image)">
+            <div class="pbody">
+              <div class="tag">Marketplace Search Link</div>
+              <div class="price">$150–$500 typical</div>
+              <div class="note">Convertible 3‑in‑1 / 4‑in‑1 styles</div>
+              <div style="margin-top:8px"><a href="https://www.facebook.com/marketplace/newyork/search?query=convertible%20crib&radius=40" target="_blank" rel="noopener">View listings →</a></div>
+            </div>
+          </div>
+          <div class="product">
+            <img src="https://images.unsplash.com/photo-1604467794349-0b74285de7e1?q=80&w=1200&auto=format&fit=crop" alt="Natural wood crib (representative image)">
+            <div class="pbody">
+              <div class="tag">Marketplace Search Link</div>
+              <div class="price">$120–$400 typical</div>
+              <div class="note">Unfinished or non‑toxic finishes preferred</div>
+              <div style="margin-top:8px"><a href="https://www.facebook.com/marketplace/newyork/search?query=wood%20crib&radius=40" target="_blank" rel="noopener">View listings →</a></div>
+            </div>
+          </div>
+        </div>
+        <p class="note" style="margin-top:10px">Safety check: Verify model, recall status (CPSC), hardware completeness, and mattress fit (<2 fingers gap). Avoid drop‑side cribs.</p>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card col-12">
+        <h2>Hermès Baby Clothes — Online Picks</h2>
+        <p class="note">Explore the official Hermès Baby collection for luxe newborn sets and layette items. Availability and images change—shop the official site for current styles.</p>
+        <div class="ctaRow" style="margin-bottom:10px">
+          <a class="btn" href="https://www.hermes.com/us/en/category/children/baby/" target="_blank" rel="noopener">Shop Hermès Baby (Official)</a>
+          <a class="btn secondary" href="https://www.hermes.com/us/en/category/children/baby/clothings-and-shoes/" target="_blank" rel="noopener">Clothing & Shoes</a>
+        </div>
+        <div class="shopGrid">
+          <div class="product">
+            <img src="https://images.unsplash.com/photo-1540924786162-2bfe2ba7d08a?q=80&w=1200&auto=format&fit=crop" alt="Luxury baby knit cardigan (representative image)">
+            <div class="pbody">
+              <div class="tag">Hermès Inspired</div>
+              <div class="price">Premium Knitwear</div>
+              <div class="note">Look for cashmere/cotton blend newborn cardigans</div>
+              <div style="margin-top:8px"><a href="https://www.hermes.com/us/en/category/children/baby/" target="_blank" rel="noopener">See current styles →</a></div>
+            </div>
+          </div>
+          <div class="product">
+            <img src="https://images.unsplash.com/photo-1520975922325-24bdcdfb6f20?q=80&w=1200&auto=format&fit=crop" alt="Elegant baby onesie outfit (representative image)">
+            <div class="pbody">
+              <div class="tag">Hermès Inspired</div>
+              <div class="price">Layette Sets</div>
+              <div class="note">Giftable sets: onesie, hat, booties, bib</div>
+              <div style="margin-top:8px"><a href="https://www.hermes.com/us/en/category/children/baby/" target="_blank" rel="noopener">Shop layette →</a></div>
+            </div>
+          </div>
+          <div class="product">
+            <img src="https://images.unsplash.com/photo-1445205170230-053b83016050?q=80&w=1200&auto=format&fit=crop" alt="Soft baby booties (representative image)">
+            <div class="pbody">
+              <div class="tag">Hermès Inspired</div>
+              <div class="price">Booties & Accessories</div>
+              <div class="note">Silk/cotton accessories for newborn photos</div>
+              <div style="margin-top:8px"><a href="https://www.hermes.com/us/en/category/children/baby/" target="_blank" rel="noopener">Browse accessories →</a></div>
+            </div>
+          </div>
+        </div>
+        <p class="note" style="margin-top:10px">Sizing tip: For winter due dates, consider 0–3M for longer use. Keep tags until after first try‑on.</p>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card col-6">
+        <h2>Newborn Care Checklist</h2>
+        <ul class="checklist">
+          <label class="check"><input type="checkbox"> <span>First latch within 1 hour if stable</span></label>
+          <label class="check"><input type="checkbox"> <span>Vitamin K, erythromycin administered</span></label>
+          <label class="check"><input type="checkbox"> <span>Hepatitis B vaccine discussed/provided</span></label>
+          <label class="check"><input type="checkbox"> <span>Newborn screen, hearing test, CCHD pulse ox</span></label>
+          <label class="check"><input type="checkbox"> <span>Pediatrician appointment scheduled (within 1–2 days)</span></label>
+          <label class="check"><input type="checkbox"> <span>Car seat fit check completed</span></label>
+        </ul>
+      </div>
+      <div class="card col-6">
+        <h2>Weather & Travel Prep (NYC • February)</h2>
+        <ul>
+          <li>Check live traffic and street parking near discharge time</li>
+          <li>Warm layers and blanket for parent and baby; no bulky coats in car seat</li>
+          <li>Install car seat base before week 36; practice harness fit</li>
+          <li>Plan salted/cleared route and backup ride option</li>
+        </ul>
+        <div class="callout" style="margin-top:10px">
+          Keep hospital’s L&D number saved. Call if contractions every 5–1–1, fluid leakage, bleeding, or reduced fetal movement.
+        </div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card col-12">
+        <h2>Contacts & Links (Sample)</h2>
+        <div class="grid">
+          <div class="card col-4">
+            <h3>Labor & Delivery Unit</h3>
+            <div class="note">NYU Langone — Tisch Hospital</div>
+            <div class="note">Main switchboard: (212) 263‑7300</div>
+            <div class="note">Website: <a href="https://nyulangone.org" target="_blank" rel="noopener">nyulangone.org</a></div>
+          </div>
+          <div class="card col-4">
+            <h3>Insurance & Billing</h3>
+            <div class="note">Financial counseling: see hospital “Billing & Insurance” page</div>
+            <div class="note"><a href="https://nyulangone.org/insurance-billing" target="_blank" rel="noopener">Insurance & Billing</a></div>
+          </div>
+          <div class="card col-4">
+            <h3>Urgent Concerns</h3>
+            <div class="note">Call your OB practice first when possible</div>
+            <div class="note">Emergency: Dial 911</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid pageBreak">
+      <div class="card col-12">
+        <h2>How to Use This Lead Magnet</h2>
+        <ol>
+          <li>Replace the hospital name and due date at the top to auto‑tailor season and on‑site info.</li>
+          <li>Review each of the 12 birth plan sections with your provider by 36 weeks.</li>
+          <li>Print two copies for your hospital bag and share digitally with your support person.</li>
+          <li>Use the Marketplace searches and Hermès links to source baby items; verify safety and authenticity.</li>
+          <li>Call your hospital to confirm parking, visitor policy, and lactation consult availability the week before your due date.</li>
+        </ol>
+        <div class="footer">Copyright © Your Brand. Educational use only; not medical advice. Verify all hospital details directly with your facility.</div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
