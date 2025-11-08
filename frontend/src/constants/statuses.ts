@@ -33,6 +33,8 @@ export const STATUS_LABELS: Record<string, string> = {
   // Workflow and Form statuses share the same values ('active' and 'inactive')
   [WORKFLOW_STATUS.ACTIVE]: 'Active',
   [WORKFLOW_STATUS.INACTIVE]: 'Inactive',
+  [FORM_STATUS.ACTIVE]: 'Active',
+  [FORM_STATUS.INACTIVE]: 'Inactive',
 }
 
 export const STATUS_COLORS: Record<string, string> = {
@@ -43,5 +45,7 @@ export const STATUS_COLORS: Record<string, string> = {
   // Workflow and Form statuses share the same values ('active' and 'inactive')
   [WORKFLOW_STATUS.ACTIVE]: 'green',
   [WORKFLOW_STATUS.INACTIVE]: 'gray',
+  [FORM_STATUS.ACTIVE]: 'green',
+  [FORM_STATUS.INACTIVE]: 'gray',
 }
 
