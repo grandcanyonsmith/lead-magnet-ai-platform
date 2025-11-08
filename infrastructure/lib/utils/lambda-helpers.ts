@@ -75,8 +75,8 @@ export function grantSecretsAccess(
  * Creates a Lambda function with DynamoDB tables, S3 bucket, and environment variables configured
  */
 export interface CreateLambdaWithTablesOptions {
-  runtime: lambda.Runtime;
-  handler: string;
+  runtime?: lambda.Runtime;  // Optional for container images
+  handler?: string;  // Optional for container images
   code: lambda.Code;
   timeout?: cdk.Duration;
   memorySize?: number;
@@ -93,7 +93,7 @@ export function createLambdaWithTables(
   tablesMap: TableMap,
   artifactsBucket: s3.Bucket,
   options: CreateLambdaWithTablesOptions
-): lambda.Function {
+): lambda.IFunction {
   // Create role if not provided
   const role = options.role || createLambdaRole(scope, `${id}Role`, {
     includeXRay: options.tracing === lambda.Tracing.ACTIVE,
@@ -107,19 +107,39 @@ export function createLambdaWithTables(
     ...options.environment,
   };
 
-  // Create Lambda function
-  const lambdaFunction = new lambda.Function(scope, id, {
-    runtime: options.runtime,
-    handler: options.handler,
-    code: options.code,
-    timeout: options.timeout,
-    memorySize: options.memorySize,
-    environment,
-    role,
-    logRetention: options.logRetention,
-    tracing: options.tracing,
-    logGroup: options.logGroup,
-  });
+  // Create Lambda function (container image or zip)
+  let lambdaFunction: lambda.IFunction;
+  
+  if (options.code instanceof lambda.DockerImageCode) {
+    // Container image - use DockerImageFunction
+    lambdaFunction = new lambda.DockerImageFunction(scope, id, {
+      code: options.code,
+      timeout: options.timeout,
+      memorySize: options.memorySize,
+      environment,
+      role,
+      logRetention: options.logRetention,
+      tracing: options.tracing,
+      logGroup: options.logGroup,
+    });
+  } else {
+    // Zip deployment - use regular Function
+    if (!options.runtime || !options.handler) {
+      throw new Error('runtime and handler are required for zip-based Lambda functions');
+    }
+    lambdaFunction = new lambda.Function(scope, id, {
+      runtime: options.runtime,
+      handler: options.handler,
+      code: options.code,
+      timeout: options.timeout,
+      memorySize: options.memorySize,
+      environment,
+      role,
+      logRetention: options.logRetention,
+      tracing: options.tracing,
+      logGroup: options.logGroup,
+    });
+  }
 
   // Grant permissions
   grantDynamoDBPermissions(lambdaFunction, tablesMap);
