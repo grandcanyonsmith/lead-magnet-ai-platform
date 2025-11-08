@@ -156,7 +156,7 @@ export default function DashboardLayout({
           </div>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="lg:hidden text-gray-600 hover:text-gray-900 p-1 rounded-lg hover:bg-gray-100 transition-colors"
+            className="lg:hidden text-gray-600 hover:text-gray-900 p-2 rounded-lg hover:bg-gray-100 transition-colors touch-target"
             aria-label="Close menu"
           >
             <FiX className="w-5 h-5" />
@@ -205,7 +205,7 @@ export default function DashboardLayout({
           <header className="bg-white shadow-sm h-14 sm:h-16 flex items-center px-3 sm:px-4 lg:px-6 border-b border-gray-200 sticky top-0 z-10">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden text-gray-600 hover:text-gray-900 mr-3 sm:mr-4 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              className="lg:hidden text-gray-600 hover:text-gray-900 mr-3 sm:mr-4 p-2 rounded-lg hover:bg-gray-100 transition-colors touch-target"
               aria-label="Open menu"
             >
               <FiMenu className="w-5 h-5 sm:w-6 sm:h-6" />

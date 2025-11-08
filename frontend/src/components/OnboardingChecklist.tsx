@@ -91,8 +91,8 @@ export function OnboardingChecklist({ settings, onStartTour }: OnboardingCheckli
 
   return (
     <div
-      className={`fixed bottom-4 right-4 z-50 bg-white rounded-lg shadow-xl border border-gray-200 transition-all duration-300 ${
-        isMinimized ? 'w-64' : 'w-80'
+      className={`fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 z-50 bg-white rounded-lg shadow-xl border border-gray-200 transition-all duration-300 ${
+        isMinimized ? 'w-auto sm:w-64' : 'w-full sm:w-80'
       }`}
     >
       <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-primary-50 to-white">
@@ -103,7 +103,7 @@ export function OnboardingChecklist({ settings, onStartTour }: OnboardingCheckli
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsMinimized(!isMinimized)}
-            className="text-gray-500 hover:text-gray-700 p-1 rounded hover:bg-gray-100"
+            className="text-gray-500 hover:text-gray-700 p-2 rounded hover:bg-gray-100 touch-target"
             aria-label={isMinimized ? 'Expand' : 'Minimize'}
           >
             {isMinimized ? (
@@ -119,7 +119,7 @@ export function OnboardingChecklist({ settings, onStartTour }: OnboardingCheckli
           {allCompleted && (
             <button
               onClick={handleDismiss}
-              className="text-gray-500 hover:text-gray-700 p-1 rounded hover:bg-gray-100"
+              className="text-gray-500 hover:text-gray-700 p-2 rounded hover:bg-gray-100 touch-target"
               aria-label="Close"
             >
               <FiX className="w-4 h-4" />

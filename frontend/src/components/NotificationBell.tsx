@@ -119,7 +119,7 @@ export const NotificationBell: React.FC = () => {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+        className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors touch-target"
         aria-label="Notifications"
       >
         <FiBell className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -131,21 +131,21 @@ export const NotificationBell: React.FC = () => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-96 overflow-hidden flex flex-col">
+        <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-80 md:w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-96 overflow-hidden flex flex-col">
           <div className="flex items-center justify-between p-4 border-b border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
             <div className="flex items-center space-x-2">
               {unreadCount > 0 && (
                 <button
                   onClick={handleMarkAllAsRead}
-                  className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                  className="text-xs text-primary-600 hover:text-primary-700 font-medium py-2 px-2 touch-target"
                 >
                   Mark all read
                 </button>
               )}
               <button
                 onClick={() => setIsOpen(false)}
-                className="text-gray-400 hover:text-gray-600 p-1 rounded-md hover:bg-gray-100"
+                className="text-gray-400 hover:text-gray-600 p-2 rounded-md hover:bg-gray-100 touch-target"
                 aria-label="Close notifications"
               >
                 <FiX className="w-4 h-4" />
@@ -182,7 +182,7 @@ export const NotificationBell: React.FC = () => {
                           {!notification.read && (
                             <button
                               onClick={(e) => handleMarkAsRead(notification.notification_id, e)}
-                              className="ml-2 p-1 text-gray-400 hover:text-gray-600 rounded-md hover:bg-gray-200 flex-shrink-0"
+                              className="ml-2 p-2 text-gray-400 hover:text-gray-600 rounded-md hover:bg-gray-200 flex-shrink-0 touch-target"
                               aria-label="Mark as read"
                             >
                               <FiCheck className="w-4 h-4" />

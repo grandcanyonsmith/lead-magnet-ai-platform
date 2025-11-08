@@ -417,7 +417,7 @@ export default function JobDetailClient() {
       <div className="mb-6">
         <button
           onClick={() => router.back()}
-          className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
+          className="flex items-center text-gray-600 hover:text-gray-900 mb-4 py-2 touch-target"
         >
           <FiArrowLeft className="w-4 h-4 mr-2" />
           Back
@@ -435,7 +435,7 @@ export default function JobDetailClient() {
           <button
             onClick={handleResubmit}
             disabled={resubmitting}
-            className="flex items-center justify-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base w-full sm:w-auto"
+            className="flex items-center justify-center px-4 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base w-full sm:w-auto touch-target"
           >
             <FiRefreshCw className={`w-4 h-4 mr-2 ${resubmitting ? 'animate-spin' : ''}`} />
             {resubmitting ? 'Resubmitting...' : 'Resubmit'}
@@ -646,7 +646,7 @@ export default function JobDetailClient() {
                                       : formatted.content.input || JSON.stringify(formatted.content, null, 2)
                                   copyToClipboard(text)
                                 }}
-                                className="text-xs text-gray-500 hover:text-gray-700 flex items-center space-x-1"
+                                className="text-xs text-gray-500 hover:text-gray-700 flex items-center space-x-1 p-2 touch-target"
                               >
                                 <FiCopy className="w-3 h-3" />
                                 <span>Copy</span>
@@ -670,7 +670,7 @@ export default function JobDetailClient() {
                                       : JSON.stringify(formatted.content, null, 2)
                                   copyToClipboard(text)
                                 }}
-                                className="text-xs text-gray-500 hover:text-gray-700 flex items-center space-x-1"
+                                className="text-xs text-gray-500 hover:text-gray-700 flex items-center space-x-1 p-2 touch-target"
                               >
                                 <FiCopy className="w-3 h-3" />
                                 <span>Copy</span>
@@ -749,7 +749,7 @@ export default function JobDetailClient() {
                 <p className="text-sm font-mono text-gray-900">{job.job_id}</p>
                 <button
                   onClick={() => copyToClipboard(job.job_id)}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="text-gray-500 hover:text-gray-700 p-2 touch-target"
                   title="Copy Job ID"
                 >
                   <FiCopy className="w-4 h-4" />
@@ -777,7 +777,7 @@ export default function JobDetailClient() {
                   )}
                   <button
                     onClick={() => copyToClipboard(job.submission_id)}
-                    className="text-gray-500 hover:text-gray-700"
+                    className="text-gray-500 hover:text-gray-700 p-2 touch-target"
                     title="Copy Submission ID"
                   >
                     <FiCopy className="w-4 h-4" />
@@ -793,7 +793,7 @@ export default function JobDetailClient() {
                   <p className="text-sm font-mono text-gray-900">{job.workflow_id}</p>
                   <button
                     onClick={() => copyToClipboard(job.workflow_id)}
-                    className="text-gray-500 hover:text-gray-700"
+                    className="text-gray-500 hover:text-gray-700 p-2 touch-target"
                     title="Copy Workflow ID"
                   >
                     <FiCopy className="w-4 h-4" />
@@ -860,7 +860,7 @@ export default function JobDetailClient() {
                       </a>
                       <button
                         onClick={() => copyToClipboard(artifactId)}
-                        className="text-gray-500 hover:text-gray-700"
+                        className="text-gray-500 hover:text-gray-700 p-2 touch-target"
                         title="Copy Artifact ID"
                       >
                         <FiCopy className="w-4 h-4" />
@@ -881,7 +881,7 @@ export default function JobDetailClient() {
             )}
 
             {copied && (
-              <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg">
+              <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-[60]">
                 Copied!
               </div>
             )}

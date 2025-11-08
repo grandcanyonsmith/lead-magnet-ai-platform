@@ -130,7 +130,7 @@ export default function NewFormClient() {
       <div className="mb-6">
         <button
           onClick={() => router.back()}
-          className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
+          className="flex items-center text-gray-600 hover:text-gray-900 mb-4 py-2 touch-target"
         >
           <FiArrowLeft className="w-4 h-4 mr-2" />
           Back
@@ -191,7 +191,7 @@ export default function NewFormClient() {
             <button
               type="button"
               onClick={addField}
-              className="text-sm text-primary-600 hover:text-primary-900"
+              className="text-sm text-primary-600 hover:text-primary-900 py-2 px-2 touch-target"
             >
               + Add Field
             </button>
@@ -199,7 +199,7 @@ export default function NewFormClient() {
           <div className="space-y-4">
             {formFormData.form_fields_schema.fields.map((field, index) => (
               <div key={field.field_id || index} className="border border-gray-200 rounded-lg p-4 space-y-3">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Field Type</label>
                     <select
@@ -261,7 +261,7 @@ export default function NewFormClient() {
                   <button
                     type="button"
                     onClick={() => removeField(index)}
-                    className="text-xs text-red-600 hover:text-red-900"
+                    className="text-xs text-red-600 hover:text-red-900 py-2 px-2 touch-target"
                   >
                     Remove
                   </button>
@@ -353,18 +353,18 @@ export default function NewFormClient() {
           />
         </div>
 
-        <div className="flex justify-end space-x-4 pt-4 border-t">
+        <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4 pt-4 border-t">
           <button
             type="button"
             onClick={() => router.back()}
-            className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+            className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors touch-target"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={submitting}
-            className="flex items-center px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center justify-center px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-target"
           >
             <FiSave className="w-5 h-5 mr-2" />
             {submitting ? 'Creating...' : 'Create Form'}
