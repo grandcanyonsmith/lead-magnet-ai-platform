@@ -47,10 +47,11 @@ RUN find /var/lang/lib/python3.11/site-packages/playwright -name "node" -type f 
     done || echo "Node.js driver replacement attempted"
 # Install Chromium browser using Playwright's install command
 # This ensures the correct revision and directory structure that Playwright expects
+# Note: We skip --with-deps since we've already installed system dependencies above
 RUN mkdir -p /opt/playwright && \
     export PLAYWRIGHT_BROWSERS_PATH=/opt/playwright && \
     export PLAYWRIGHT_NODEJS_PATH=/opt/nodejs/node-playwright && \
-    python3 -m playwright install chromium --with-deps && \
+    python3 -m playwright install chromium && \
     # Verify installation
     ls -la /opt/playwright/chromium-*/chrome-linux/chrome || (echo "Chromium installation check failed" && find /opt/playwright -name "chrome" -type f 2>/dev/null | head -5)
 
