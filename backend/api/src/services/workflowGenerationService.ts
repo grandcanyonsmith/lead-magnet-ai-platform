@@ -184,7 +184,7 @@ Create a personalized action plan document for [name] at [company_name]. Use ins
 - **Step 1+**: Build upon previous steps, transform or enhance content
 - **Final Step**: Often HTML generation (tool_choice: "none", tools: [])
 
-**Dependencies (depends_on field):**
+**Dependencies (\`depends_on\` field):**
 - Use depends_on to explicitly control which steps must complete before this step runs
 - depends_on is an array of step indices (0-based) that this step depends on
 - If depends_on is not provided, dependencies are auto-detected from step_order:
