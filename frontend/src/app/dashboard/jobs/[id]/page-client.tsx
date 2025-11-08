@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { FiRefreshCw } from 'react-icons/fi'
 import { useJobDetail } from '@/hooks/useJobDetail'
 import { useJobExecutionSteps } from '@/hooks/useJobExecutionSteps'
 import { JobHeader } from '@/components/jobs/JobHeader'
@@ -87,7 +88,26 @@ export default function JobDetailClient() {
         {/* Form Submission Details */}
         {submission && submission.submission_data ? (
           <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Form Submission Details</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Form Submission Details</h2>
+              <button
+                onClick={handleResubmitClick}
+                disabled={resubmitting}
+                className="flex items-center justify-center px-3 py-1.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium touch-target"
+              >
+                {resubmitting ? (
+                  <>
+                    <FiRefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Resubmitting...
+                  </>
+                ) : (
+                  <>
+                    <FiRefreshCw className="w-4 h-4 mr-2" />
+                    Resubmit
+                  </>
+                )}
+              </button>
+            </div>
             <div className="space-y-3">
               {Object.entries(submission.submission_data).map(([key, value]: [string, any]) => (
                 <div key={key} className="border-b border-gray-100 pb-3 last:border-b-0">
@@ -103,7 +123,26 @@ export default function JobDetailClient() {
           </div>
         ) : submission ? (
           <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Form Submission Details</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Form Submission Details</h2>
+              <button
+                onClick={handleResubmitClick}
+                disabled={resubmitting}
+                className="flex items-center justify-center px-3 py-1.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium touch-target"
+              >
+                {resubmitting ? (
+                  <>
+                    <FiRefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Resubmitting...
+                  </>
+                ) : (
+                  <>
+                    <FiRefreshCw className="w-4 h-4 mr-2" />
+                    Resubmit
+                  </>
+                )}
+              </button>
+            </div>
             <p className="text-sm text-gray-500">No submission data available</p>
           </div>
         ) : null}
