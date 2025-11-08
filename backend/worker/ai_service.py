@@ -185,17 +185,8 @@ class AIService:
             
             validated_tools.append(tool_dict)
         
-        # If validation removed tools, use default
-        if len(validated_tools) == 0:
-            logger.warning(f"[AI Service] All tools were removed during validation, using default web_search_preview", extra={
-                'original_tools_count': len(tools) if tools else 0,
-                'original_tools': [t.get('type') if isinstance(t, dict) else t for t in tools] if tools else [],
-                'tool_choice': tool_choice
-            })
-            validated_tools = [{"type": "web_search_preview"}]
-        
-        # CRITICAL: Ensure tool_choice='required' never exists with empty tools
-        # This is the single consolidated check (replaces 4-5 redundant checks)
+        # CRITICAL: Check tool_choice='required' BEFORE assigning default tools
+        # If tool_choice is 'required' but all tools were filtered out, change to 'auto'
         tools_length = len(validated_tools) if validated_tools else 0
         if tool_choice == "required" and tools_length == 0:
             logger.warning(f"[AI Service] tool_choice is 'required' but tools array is empty (length={tools_length}). Changing tool_choice to 'auto' to prevent API error.", extra={
@@ -204,10 +195,16 @@ class AIService:
                 'original_tools': [t.get('type') if isinstance(t, dict) else t for t in tools] if tools else []
             })
             tool_choice = "auto"
-            # Ensure we have at least one tool
-            if not validated_tools or len(validated_tools) == 0:
-                validated_tools = [{"type": "web_search_preview"}]
-                logger.info(f"[AI Service] Added default tool: web_search_preview")
+        
+        # If validation removed all tools, use default tool
+        # This happens after tool_choice check so we don't force 'required' with only default tool
+        if len(validated_tools) == 0:
+            logger.warning(f"[AI Service] All tools were removed during validation, using default web_search_preview", extra={
+                'original_tools_count': len(tools) if tools else 0,
+                'original_tools': [t.get('type') if isinstance(t, dict) else t for t in tools] if tools else [],
+                'tool_choice': tool_choice
+            })
+            validated_tools = [{"type": "web_search_preview"}]
         
         logger.info(f"[AI Service] Final tools after filtering and validation", extra={
             'tools_count': len(validated_tools) if validated_tools else 0,
