@@ -12,28 +12,9 @@ from ai_service import AIService
 from db_service import DynamoDBService
 from s3_service import S3Service
 from artifact_service import ArtifactService
+from utils.decimal_utils import convert_floats_to_decimal
 
 logger = logging.getLogger(__name__)
-
-
-def convert_floats_to_decimal(obj: Any) -> Any:
-    """
-    Recursively convert float values to Decimal for DynamoDB compatibility.
-    
-    Args:
-        obj: Object to convert (dict, list, or primitive)
-        
-    Returns:
-        Object with floats converted to Decimal
-    """
-    if isinstance(obj, float):
-        return Decimal(str(obj))
-    elif isinstance(obj, dict):
-        return {key: convert_floats_to_decimal(value) for key, value in obj.items()}
-    elif isinstance(obj, list):
-        return [convert_floats_to_decimal(item) for item in obj]
-    else:
-        return obj
 
 
 class LegacyWorkflowProcessor:
