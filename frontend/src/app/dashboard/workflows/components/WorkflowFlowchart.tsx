@@ -44,7 +44,7 @@ function FitViewButton() {
   return (
     <button
       onClick={() => fitView({ padding: 0.25, duration: 300 })}
-      className="flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-3 py-1.5 text-sm text-slate-600 shadow-sm transition hover:border-primary-200 hover:text-primary-600"
+      className="flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-3 py-2 text-sm text-slate-600 shadow-sm transition hover:border-primary-200 hover:text-primary-600 touch-target"
       title="Fit view"
     >
       <FiMaximize2 className="h-4 w-4" aria-hidden />
@@ -336,7 +336,7 @@ function FlowchartContent({
       <div className="pointer-events-auto absolute left-6 top-6 z-10 flex items-center gap-2">
         <button
           onClick={onAddStep}
-          className="flex items-center gap-2 rounded-full bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-primary-300/60 transition hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400/80"
+          className="flex items-center gap-2 rounded-full bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-primary-300/60 transition hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400/80 touch-target"
         >
           <FiPlus className="h-4 w-4" aria-hidden />
           Add Step
@@ -362,7 +362,7 @@ function FlowchartContent({
             </p>
             <button
               onClick={onAddStep}
-              className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-primary-300/50 transition hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400/80"
+              className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-primary-300/50 transition hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400/80 touch-target"
             >
               <FiPlus className="h-4 w-4" aria-hidden />
               Create the first step
