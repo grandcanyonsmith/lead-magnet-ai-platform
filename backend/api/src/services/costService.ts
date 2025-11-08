@@ -34,6 +34,10 @@ const OPENAI_PRICING: Record<string, { input_per_1k_tokens_usd: number; output_p
     input_per_1k_tokens_usd: 0.005, // $5 per 1M tokens (similar to gpt-5)
     output_per_1k_tokens_usd: 0.015, // $15 per 1M tokens (similar to gpt-5)
   },
+  'computer-use-preview': {
+    input_per_1k_tokens_usd: 0.005, // $5 per 1M tokens (similar to gpt-5)
+    output_per_1k_tokens_usd: 0.015, // $15 per 1M tokens (similar to gpt-5)
+  },
 };
 
 /**
