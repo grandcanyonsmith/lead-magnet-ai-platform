@@ -5,6 +5,8 @@ import { useRouter, useParams } from 'next/navigation'
 import { api } from '@/lib/api'
 import { FiArrowLeft, FiSave, FiSettings, FiFileText, FiLayout, FiZap, FiEdit2, FiEye, FiPlus } from 'react-icons/fi'
 import WorkflowStepEditor, { WorkflowStep } from '../../components/WorkflowStepEditor'
+import WorkflowFlowchart from '../../components/WorkflowFlowchart'
+import FlowchartSidePanel from '../../components/FlowchartSidePanel'
 
 type FormField = {
   field_id: string
@@ -78,6 +80,8 @@ export default function EditWorkflowPage() {
   const [showPreview, setShowPreview] = useState(false)
   const [detectedPlaceholders, setDetectedPlaceholders] = useState<string[]>([])
   const [previewKey, setPreviewKey] = useState(0)
+  const [selectedStepIndex, setSelectedStepIndex] = useState<number | null>(null)
+  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false)
 
   const [templateData, setTemplateData] = useState({
     template_name: '',
@@ -707,37 +711,32 @@ export default function EditWorkflowPage() {
               />
             </div>
 
-            {/* Workflow Steps */}
+            {/* Workflow Steps - Flowchart Visualization */}
             <div className="space-y-4 pt-6 border-t">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">Workflow Steps</h2>
-                <button
-                  type="button"
-                  onClick={handleAddStep}
-                  className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-                >
-                  <FiPlus className="w-4 h-4" />
-                  Add Step
-                </button>
+              <div className="mb-4">
+                <h2 className="text-xl font-semibold text-gray-900 mb-2">Workflow Steps</h2>
+                <p className="text-sm text-gray-600">
+                  Define the steps your workflow will execute. Each step receives context from all previous steps.
+                  Click on a step to edit its details.
+                </p>
               </div>
-              <p className="text-sm text-gray-600 mb-4">
-                Define the steps your workflow will execute. Each step receives context from all previous steps.
-              </p>
               
-              <div className="space-y-4">
-                {steps.map((step, index) => (
-                  <WorkflowStepEditor
-                    key={index}
-                    step={step}
-                    index={index}
-                    totalSteps={steps.length}
-                    onChange={handleStepChange}
-                    onDelete={handleDeleteStep}
-                    onMoveUp={handleMoveStepUp}
-                    onMoveDown={handleMoveStepDown}
-                  />
-                ))}
-              </div>
+              <WorkflowFlowchart
+                steps={steps}
+                onStepClick={(index) => {
+                  setSelectedStepIndex(index)
+                  setIsSidePanelOpen(true)
+                }}
+                onAddStep={handleAddStep}
+                onStepsReorder={(newSteps) => {
+                  // Update step order based on new positions
+                  const reorderedSteps = newSteps.map((step, index) => ({
+                    ...step,
+                    step_order: index,
+                  }))
+                  setSteps(reorderedSteps)
+                }}
+              />
             </div>
 
             {/* Legacy fields - hidden but kept for backward compatibility */}
@@ -1311,6 +1310,20 @@ export default function EditWorkflowPage() {
           )}
         </form>
       )}
+
+      {/* Flowchart Side Panel */}
+      <FlowchartSidePanel
+        step={selectedStepIndex !== null ? steps[selectedStepIndex] : null}
+        index={selectedStepIndex}
+        totalSteps={steps.length}
+        isOpen={isSidePanelOpen}
+        onClose={() => {
+          setIsSidePanelOpen(false)
+          setSelectedStepIndex(null)
+        }}
+        onChange={handleStepChange}
+        onDelete={handleDeleteStep}
+      />
     </div>
   )
 }
