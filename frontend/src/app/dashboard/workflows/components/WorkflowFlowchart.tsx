@@ -38,21 +38,6 @@ const NODE_SPACING = 320
 const START_NODE_X = 140
 const NODE_Y = 210
 
-function FitViewButton() {
-  const { fitView } = useReactFlow()
-
-  return (
-    <button
-      onClick={() => fitView({ padding: 0.25, duration: 300 })}
-      className="flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-3 py-2 text-sm text-slate-600 shadow-sm transition hover:border-primary-200 hover:text-primary-600 touch-target"
-      title="Fit view"
-    >
-      <FiMaximize2 className="h-4 w-4" aria-hidden />
-      Fit View
-    </button>
-  )
-}
-
 const getBasePosition = (index: number) => START_NODE_X + index * NODE_SPACING
 
 const getStepWarnings = (step: WorkflowStep, index: number): string[] => {
@@ -333,15 +318,24 @@ function FlowchartContent({
       <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-white/95 via-white/60 to-transparent" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white/95 via-white/60 to-transparent" />
 
-      <div className="pointer-events-auto absolute left-6 top-6 z-10 flex items-center gap-2">
+      <div className="pointer-events-auto absolute left-3 sm:left-6 top-3 sm:top-6 z-10 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
         <button
           onClick={onAddStep}
-          className="flex items-center gap-2 rounded-full bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-primary-300/60 transition hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400/80 touch-target"
+          className="flex items-center justify-center gap-2 rounded-full bg-primary-600 px-3 sm:px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-primary-300/60 transition hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400/80 touch-target"
         >
           <FiPlus className="h-4 w-4" aria-hidden />
-          Add Step
+          <span className="hidden sm:inline">Add Step</span>
+          <span className="sm:hidden">Add</span>
         </button>
-        <FitViewButton />
+        <button
+          onClick={() => fitView({ padding: 0.25, duration: 300 })}
+          className="flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white/90 px-3 sm:px-4 py-2 text-sm text-slate-600 shadow-sm transition hover:border-primary-200 hover:text-primary-600 touch-target"
+          title="Fit view"
+        >
+          <FiMaximize2 className="h-4 w-4" aria-hidden />
+          <span className="hidden sm:inline">Fit View</span>
+          <span className="sm:hidden">Fit</span>
+        </button>
       </div>
 
       {dragState.nodeId && dragState.targetIndex !== null && (
