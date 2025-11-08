@@ -82,6 +82,11 @@ class AIService:
             model.lower() == 'o3'
         )
     
+    @staticmethod
+    def _default_tool() -> Dict[str, str]:
+        """Return a fresh default tool configuration."""
+        return {"type": "web_search_preview"}
+    
     def _validate_and_filter_tools(self, tools: Optional[list], tool_choice: str) -> Tuple[List[Dict], str]:
         """
         Validate and filter tools, ensuring tool_choice='required' never exists with empty tools.
@@ -95,7 +100,7 @@ class AIService:
         """
         # Default to web_search_preview if no tools provided (backward compatibility)
         if tools is None or len(tools) == 0:
-            tools = [{"type": "web_search_preview"}]
+            tools = [self._default_tool()]
         
         # Filter out tools that require additional configuration we don't have
         # file_search requires vector_store_ids
@@ -204,7 +209,7 @@ class AIService:
                 'original_tools': [t.get('type') if isinstance(t, dict) else t for t in tools] if tools else [],
                 'tool_choice': tool_choice
             })
-            validated_tools = [{"type": "web_search_preview"}]
+            validated_tools = [self._default_tool()]
         
         logger.info(f"[AI Service] Final tools after filtering and validation", extra={
             'tools_count': len(validated_tools) if validated_tools else 0,
@@ -274,7 +279,7 @@ class AIService:
             # Provide a safe default tool so that 'tool_choice' never goes out without 'tools'
             if not final_tools:
                 logger.warning("[AI Service] No tools supplied; adding default web_search_preview tool")
-                final_tools = [{"type": "web_search_preview"}]
+                final_tools = [self._default_tool()]
             params["tools"] = final_tools
             logger.debug("[AI Service] Using tools", extra={
                 "count": len(final_tools),
@@ -292,7 +297,7 @@ class AIService:
                 # Self-heal instead of raising: downgrade to auto and add default tool.
                 logger.warning("[AI Service] tool_choice='required' but tools empty; downgrading to 'auto' and adding default tool")
                 params["tool_choice"] = "auto"
-                params["tools"] = [{"type": "web_search_preview"}]
+                params["tools"] = [self._default_tool()]
             else:
                 params["tool_choice"] = tool_choice
                 logger.debug(f"[AI Service] Set tool_choice='{tool_choice}' with {len(tools_in_params)} tools")
@@ -301,7 +306,7 @@ class AIService:
         if params.get("tool_choice") == "required" and not params.get("tools"):
             logger.warning("[AI Service] Final clamp: switching 'required' → 'auto' and adding default tool")
             params["tool_choice"] = "auto"
-            params["tools"] = [{"type": "web_search_preview"}]
+            params["tools"] = [self._default_tool()]
 
         logger.debug("[AI Service] Final params before API call", extra={
             "has_tools": "tools" in params,
@@ -573,7 +578,7 @@ class AIService:
         if "Tool choice 'required' must be specified with 'tools' parameter" in error_message:
             logger.warning("[AI Service] Recovering from 'required' without tools by retrying with tool_choice='auto' and a default tool")
             try:
-                retry_tools = tools or [{"type": "web_search_preview"}]
+                retry_tools = tools or [self._default_tool()]
                 input_text = self._build_input_text(context, previous_context)
                 params_retry = self._build_api_params(
                     model=model,
@@ -644,7 +649,7 @@ class AIService:
                     input_text=input_text,
                     previous_context=previous_context,
                     context=context,
-                    tools=retry_tools or [{"type": "web_search_preview"}],
+                    tools=retry_tools,
                     tool_choice=retry_tool_choice or "auto",
                     params=params_no_reasoning
                 )
@@ -723,7 +728,7 @@ class AIService:
         instructions: str,
         context: str,
         previous_context: str = "",
-        tools: List[Dict] = [{"type": "web_search_preview"}],
+        tools: Optional[List[Dict]] = None,
         tool_choice: str = "auto",
     ) -> Tuple[str, Dict, Dict, Dict]:
         """
@@ -808,7 +813,7 @@ class AIService:
                 model=model,
                 instructions=instructions,
                 input_text=input_text,
-                tools=validated_tools or [{"type": "web_search_preview"}],
+                tools=validated_tools,
                 tool_choice=normalized_tool_choice,
                 has_computer_use=has_computer_use,
                 is_o3_model=is_o3_model,
@@ -842,7 +847,7 @@ class AIService:
                 input_text=input_text,
                 previous_context=previous_context,
                 context=context,
-                tools=validated_tools or [{"type": "web_search_preview"}],
+                tools=validated_tools,
                 tool_choice=normalized_tool_choice,
                 params=params
             )
@@ -852,7 +857,7 @@ class AIService:
             return self._handle_openai_error(
                 error=e,
                 model=model,
-                tools=validated_tools or [{"type": "web_search_preview"}],
+                tools=validated_tools,
                 tool_choice=normalized_tool_choice,
                 instructions=instructions,
                 context=context,
