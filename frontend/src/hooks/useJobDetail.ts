@@ -41,6 +41,7 @@ export function useJobDetail() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [resubmitting, setResubmitting] = useState(false)
+  const [rerunningStep, setRerunningStep] = useState<number | null>(null)
   
   // Update jobId when params change (for client-side navigation)
   useEffect(() => {
@@ -128,6 +129,24 @@ export function useJobDetail() {
     }
   }
 
+  const handleRerunStep = async (stepIndex: number) => {
+    setRerunningStep(stepIndex)
+    setError(null)
+
+    try {
+      await api.rerunStep(jobId, stepIndex)
+      // Reload job data after a short delay to see the update
+      setTimeout(() => {
+        loadJob()
+      }, 2000)
+    } catch (error: any) {
+      console.error('Failed to rerun step:', error)
+      setError(error.response?.data?.message || error.message || 'Failed to rerun step')
+    } finally {
+      setRerunningStep(null)
+    }
+  }
+
   return {
     jobId,
     job,
@@ -138,6 +157,8 @@ export function useJobDetail() {
     error,
     resubmitting,
     handleResubmit,
+    rerunningStep,
+    handleRerunStep,
   }
 }
 

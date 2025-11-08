@@ -775,8 +775,22 @@ class JobProcessor:
                 artifact_id=step_artifact_id
             )
             
-            # Append to execution_steps and update DynamoDB
-            execution_steps.append(step_data)
+            # Check if this step already exists (for reruns) and replace it, otherwise append
+            step_order = step_index + 1
+            existing_step_index = None
+            for i, existing_step in enumerate(execution_steps):
+                if existing_step.get('step_order') == step_order and existing_step.get('step_type') == 'ai_generation':
+                    existing_step_index = i
+                    break
+            
+            if existing_step_index is not None:
+                # Replace existing step (rerun case)
+                logger.info(f"Replacing existing execution step for step_order {step_order} (rerun)")
+                execution_steps[existing_step_index] = step_data
+            else:
+                # Append new step (first run case)
+                execution_steps.append(step_data)
+            
             self.db.update_job(job_id, {'execution_steps': execution_steps}, s3_service=self.s3)
             
             logger.info(f"Step {step_index + 1} completed successfully in {step_duration:.0f}ms")
