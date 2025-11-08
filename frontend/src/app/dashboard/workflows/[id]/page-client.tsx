@@ -220,17 +220,17 @@ export default function WorkflowDetailPage() {
               <p className="text-sm sm:text-base text-gray-600 mt-1">{workflow.workflow_description}</p>
             )}
           </div>
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <button
               onClick={() => router.push(`/dashboard/workflows/${workflowId}/edit`)}
-              className="flex items-center justify-center px-3 sm:px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm sm:text-base"
+              className="flex items-center justify-center px-4 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm sm:text-base touch-target"
             >
               <FiEdit className="w-4 h-4 mr-2" />
               Edit
             </button>
             <button
               onClick={handleDelete}
-              className="flex items-center justify-center px-3 sm:px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm sm:text-base"
+              className="flex items-center justify-center px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm sm:text-base touch-target"
             >
               <FiTrash2 className="w-4 h-4 mr-2" />
               Delete
@@ -288,7 +288,7 @@ export default function WorkflowDetailPage() {
                       href={`/v1/forms/${workflow.form.public_slug}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center px-3 py-1.5 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                      className="inline-flex items-center justify-center px-4 py-3 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors touch-target"
                     >
                       <FiExternalLink className="w-4 h-4 mr-1.5" />
                       View Form
@@ -297,7 +297,7 @@ export default function WorkflowDetailPage() {
                   {workflow.form.form_id && (
                     <button
                       onClick={() => router.push(`/dashboard/forms/${workflow.form.form_id}/edit`)}
-                      className="inline-flex items-center justify-center px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                      className="inline-flex items-center justify-center px-4 py-3 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors touch-target"
                     >
                       <FiEdit className="w-4 h-4 mr-1.5" />
                       Edit Form
@@ -322,7 +322,7 @@ export default function WorkflowDetailPage() {
                             : `/v1/forms/${workflow.form.public_slug}`
                           navigator.clipboard.writeText(url)
                         }}
-                        className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors flex-shrink-0"
+                        className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors flex-shrink-0 touch-target"
                         title="Copy URL"
                       >
                         <FiLink className="w-4 h-4" />
@@ -337,7 +337,7 @@ export default function WorkflowDetailPage() {
                 <button
                   onClick={handleCreateForm}
                   disabled={creatingForm}
-                  className="inline-flex items-center px-4 py-2 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center justify-center px-4 py-3 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-target"
                 >
                   {creatingForm ? (
                     <>
@@ -387,9 +387,16 @@ export default function WorkflowDetailPage() {
         {/* AI Instructions */}
         <div className="bg-white rounded-lg shadow p-4 sm:p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">AI Instructions</h2>
-          <div className="prose prose-sm max-w-none bg-gray-50 rounded-lg p-3 sm:p-4 overflow-x-auto">
+          <div className="prose prose-sm max-w-none bg-gray-50 rounded-lg p-3 sm:p-4 overflow-x-auto break-words">
             {workflow.ai_instructions ? (
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              <ReactMarkdown 
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  p: ({node, ...props}) => <p className="mb-2 last:mb-0 break-words" {...props} />,
+                  li: ({node, ...props}) => <li className="mb-1 break-words" {...props} />,
+                  code: ({node, ...props}) => <code className="break-all whitespace-pre-wrap" {...props} />,
+                }}
+              >
                 {workflow.ai_instructions}
               </ReactMarkdown>
             ) : (
@@ -415,26 +422,39 @@ export default function WorkflowDetailPage() {
               const submission = submissions[job.job_id]
 
               return (
-                <div key={job.job_id} className="border border-gray-200 rounded-lg p-3 sm:p-4">
+                <div key={job.job_id} className="border border-gray-200 rounded-lg p-3 sm:p-4 hover:border-gray-300 transition-colors">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-3 sm:mb-4">
-                    <div className="flex items-center space-x-3">
+                    <div className="flex items-start sm:items-center space-x-3 flex-1 min-w-0">
                       {getJobStatusIcon(job.status)}
-                      <div>
-                        <div className="text-xs sm:text-sm font-mono text-gray-900 break-all">{job.job_id}</div>
-                        <div className="text-xs text-gray-500">
+                      <div className="flex-1 min-w-0">
+                        <button
+                          onClick={() => router.push(`/dashboard/jobs/${job.job_id}`)}
+                          className="text-xs sm:text-sm font-mono text-gray-900 break-all hover:text-primary-600 transition-colors text-left w-full touch-target py-1"
+                        >
+                          {job.job_id}
+                        </button>
+                        <div className="text-xs text-gray-500 mt-1">
                           Created: {new Date(job.created_at).toLocaleString()}
                           {duration !== null && ` • Duration: ${duration}s`}
                         </div>
                       </div>
                     </div>
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full self-start sm:self-auto ${
-                      job.status === 'completed' ? 'bg-green-100 text-green-800' :
-                      job.status === 'failed' ? 'bg-red-100 text-red-800' :
-                      job.status === 'processing' ? 'bg-blue-100 text-blue-800' :
-                      'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {job.status}
-                    </span>
+                    <div className="flex items-center justify-between sm:justify-end gap-2">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        job.status === 'completed' ? 'bg-green-100 text-green-800' :
+                        job.status === 'failed' ? 'bg-red-100 text-red-800' :
+                        job.status === 'processing' ? 'bg-blue-100 text-blue-800' :
+                        'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {job.status}
+                      </span>
+                      <button
+                        onClick={() => router.push(`/dashboard/jobs/${job.job_id}`)}
+                        className="px-3 py-1.5 text-xs sm:text-sm text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition-colors touch-target"
+                      >
+                        View
+                      </button>
+                    </div>
                   </div>
                   
                   {submission && submission.submission_data && (
