@@ -1,0 +1,201 @@
+/**
+ * Main API client that combines all domain-specific clients
+ * This provides a unified interface matching the original ApiClient
+ */
+
+import { TokenProvider } from './base.client'
+import { LocalStorageTokenProvider } from './token-provider'
+import { WorkflowsClient } from './workflows.client'
+import { FormsClient } from './forms.client'
+import { TemplatesClient } from './templates.client'
+import { JobsClient } from './jobs.client'
+import { NotificationsClient } from './notifications.client'
+import { SettingsClient } from './settings.client'
+import { AnalyticsClient } from './analytics.client'
+import { UsageClient } from './usage.client'
+import { ApiClient } from '@/types'
+
+class ApiClientImpl implements ApiClient {
+  public workflows: WorkflowsClient
+  public forms: FormsClient
+  public templates: TemplatesClient
+  public jobs: JobsClient
+  public notifications: NotificationsClient
+  public settings: SettingsClient
+  public analytics: AnalyticsClient
+  public usage: UsageClient
+
+  private tokenProvider: TokenProvider
+
+  constructor(tokenProvider?: TokenProvider) {
+    this.tokenProvider = tokenProvider || new LocalStorageTokenProvider()
+    
+    this.workflows = new WorkflowsClient(this.tokenProvider)
+    this.forms = new FormsClient(this.tokenProvider)
+    this.templates = new TemplatesClient(this.tokenProvider)
+    this.jobs = new JobsClient(this.tokenProvider)
+    this.notifications = new NotificationsClient(this.tokenProvider)
+    this.settings = new SettingsClient(this.tokenProvider)
+    this.analytics = new AnalyticsClient(this.tokenProvider)
+    this.usage = new UsageClient(this.tokenProvider)
+  }
+
+  // Workflows - delegate to workflows client
+  async getWorkflows(params?: Record<string, unknown>) {
+    return this.workflows.getWorkflows(params)
+  }
+
+  async getWorkflow(id: string) {
+    return this.workflows.getWorkflow(id)
+  }
+
+  async createWorkflow(data: Parameters<WorkflowsClient['createWorkflow']>[0]) {
+    return this.workflows.createWorkflow(data)
+  }
+
+  async updateWorkflow(id: string, data: Parameters<WorkflowsClient['updateWorkflow']>[0]) {
+    return this.workflows.updateWorkflow(id, data)
+  }
+
+  async deleteWorkflow(id: string) {
+    return this.workflows.deleteWorkflow(id)
+  }
+
+  // Forms - delegate to forms client
+  async getForms(params?: Record<string, unknown>) {
+    return this.forms.getForms(params)
+  }
+
+  async getForm(id: string) {
+    return this.forms.getForm(id)
+  }
+
+  async createForm(data: Parameters<FormsClient['createForm']>[0]) {
+    return this.forms.createForm(data)
+  }
+
+  async updateForm(id: string, data: Parameters<FormsClient['updateForm']>[0]) {
+    return this.forms.updateForm(id, data)
+  }
+
+  async deleteForm(id: string) {
+    return this.forms.deleteForm(id)
+  }
+
+  // Templates - delegate to templates client
+  async getTemplates(params?: Record<string, unknown>) {
+    return this.templates.getTemplates(params)
+  }
+
+  async getTemplate(id: string) {
+    return this.templates.getTemplate(id)
+  }
+
+  async createTemplate(data: Parameters<TemplatesClient['createTemplate']>[0]) {
+    return this.templates.createTemplate(data)
+  }
+
+  async updateTemplate(id: string, data: Parameters<TemplatesClient['updateTemplate']>[0]) {
+    return this.templates.updateTemplate(id, data)
+  }
+
+  async deleteTemplate(id: string) {
+    return this.templates.deleteTemplate(id)
+  }
+
+  // Jobs - delegate to jobs client
+  async getJobs(params?: Parameters<JobsClient['getJobs']>[0]) {
+    return this.jobs.getJobs(params)
+  }
+
+  async getJob(id: string) {
+    return this.jobs.getJob(id)
+  }
+
+  async resubmitJob(jobId: string) {
+    return this.jobs.resubmitJob(jobId)
+  }
+
+  // AI Generation - delegate to workflows client
+  async generateWorkflowWithAI(request: Parameters<WorkflowsClient['generateWorkflowWithAI']>[0]) {
+    return this.workflows.generateWorkflowWithAI(request)
+  }
+
+  async getWorkflowGenerationStatus(jobId: string) {
+    return this.workflows.getWorkflowGenerationStatus(jobId)
+  }
+
+  async refineWorkflowInstructions(workflowId: string, request: Parameters<WorkflowsClient['refineWorkflowInstructions']>[1]) {
+    return this.workflows.refineWorkflowInstructions(workflowId, request)
+  }
+
+  async refineInstructions(request: Parameters<WorkflowsClient['refineInstructions']>[0]) {
+    return this.workflows.refineInstructions(request)
+  }
+
+  // Template AI - delegate to templates client
+  async generateTemplateWithAI(request: Parameters<TemplatesClient['generateTemplateWithAI']>[0]) {
+    return this.templates.generateTemplateWithAI(request)
+  }
+
+  async refineTemplateWithAI(request: Parameters<TemplatesClient['refineTemplateWithAI']>[0]) {
+    return this.templates.refineTemplateWithAI(request)
+  }
+
+  // Form AI - delegate to forms client
+  async generateFormCSS(request: Parameters<FormsClient['generateFormCSS']>[0]) {
+    return this.forms.generateFormCSS(request)
+  }
+
+  async refineFormCSS(request: Parameters<FormsClient['refineFormCSS']>[0]) {
+    return this.forms.refineFormCSS(request)
+  }
+
+  // Notifications - delegate to notifications client
+  async getNotifications(unreadOnly?: boolean) {
+    return this.notifications.getNotifications(unreadOnly)
+  }
+
+  async markNotificationRead(notificationId: string) {
+    return this.notifications.markNotificationRead(notificationId)
+  }
+
+  async markAllNotificationsRead() {
+    return this.notifications.markAllNotificationsRead()
+  }
+
+  // Settings - delegate to settings client
+  async getSettings() {
+    return this.settings.getSettings()
+  }
+
+  async updateSettings(data: Parameters<SettingsClient['updateSettings']>[0]) {
+    return this.settings.updateSettings(data)
+  }
+
+  // Analytics - delegate to analytics client
+  async getAnalytics(params?: Record<string, unknown>) {
+    return this.analytics.getAnalytics(params)
+  }
+
+  // Usage - delegate to usage client
+  async getUsage(startDate?: string, endDate?: string) {
+    return this.usage.getUsage(startDate, endDate)
+  }
+
+  // Onboarding - delegate to settings client
+  async updateOnboardingSurvey(surveyResponses: Record<string, unknown>) {
+    return this.settings.updateOnboardingSurvey(surveyResponses)
+  }
+
+  async updateOnboardingChecklist(checklist: Record<string, boolean>) {
+    return this.settings.updateOnboardingChecklist(checklist)
+  }
+}
+
+// Export singleton instance for backward compatibility
+export const api = new ApiClientImpl()
+
+// Export class for testing
+export { ApiClientImpl }
+
