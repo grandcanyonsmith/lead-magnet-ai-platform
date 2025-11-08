@@ -31,7 +31,7 @@ export class ComputeStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    this.jobProcessorLambda = createLambdaWithTables(
+        this.jobProcessorLambda = createLambdaWithTables(
       this,
       'JobProcessorLambda',
       props.tablesMap,
@@ -54,14 +54,16 @@ export class ComputeStack extends cdk.Stack {
           // 1. Pre-build using: ./scripts/build-lambda-worker.sh
           // 2. Use the zip file directly: lambda.Code.fromAsset('path/to/pre-built.zip')
         }),
-        timeout: cdk.Duration.minutes(15), // Maximum Lambda timeout
-        memorySize: 2048,
+        timeout: cdk.Duration.minutes(15), // Maximum Lambda timeout (CUA loop may take time)
+        memorySize: 3008, // Increased memory for Playwright browser automation
         environment: {
           CLOUDFRONT_DOMAIN: props.cloudfrontDomain || '',
           OPENAI_SECRET_NAME: 'leadmagnet/openai-api-key',
           TWILIO_SECRET_NAME: 'leadmagnet/twilio-credentials',
           LOG_LEVEL: 'info',
           // AWS_REGION is automatically set by Lambda runtime
+          // Playwright environment variables
+          PLAYWRIGHT_BROWSERS_PATH: '/opt/playwright',
         },
         logGroup: logGroup,
       }
