@@ -325,7 +325,10 @@ class DeliveryService:
         if research_content:
             context_parts.append(f"Research Content: {research_content[:500]}...")  # Truncate for SMS context
         
-        context_parts.append(f"Form Submission: {json.dumps(submission_data)}")
+        # Convert Decimal values to float for JSON serialization
+        from utils.decimal_utils import convert_decimals_to_float
+        serializable_submission_data = convert_decimals_to_float(submission_data)
+        context_parts.append(f"Form Submission: {json.dumps(serializable_submission_data)}")
         context_parts.append(f"Lead Magnet URL: {output_url}")
         
         context = "\n".join(context_parts)
