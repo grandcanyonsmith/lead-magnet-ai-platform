@@ -184,20 +184,20 @@ Create a personalized action plan document for [name] at [company_name]. Use ins
 - **Step 1+**: Build upon previous steps, transform or enhance content
 - **Final Step**: Often HTML generation (tool_choice: "none", tools: [])
 
-**Dependencies (`depends_on` field):**
-- Use `depends_on` to explicitly control which steps must complete before this step runs
-- `depends_on` is an array of step indices (0-based) that this step depends on
-- If `depends_on` is not provided, dependencies are auto-detected from `step_order`:
-  - Steps with the same `step_order` can run in parallel
-  - Steps with higher `step_order` depend on all steps with lower `step_order`
-- **Example**: If Step 2 depends on Step 0 and Step 1, set `depends_on: [0, 1]`
-- **Parallel execution**: Steps with same `step_order` and no explicit `depends_on` can run simultaneously
+**Dependencies (depends_on field):**
+- Use depends_on to explicitly control which steps must complete before this step runs
+- depends_on is an array of step indices (0-based) that this step depends on
+- If depends_on is not provided, dependencies are auto-detected from step_order:
+  - Steps with the same step_order can run in parallel
+  - Steps with higher step_order depend on all steps with lower step_order
+- **Example**: If Step 2 depends on Step 0 and Step 1, set depends_on: [0, 1]
+- **Parallel execution**: Steps with same step_order and no explicit depends_on can run simultaneously
 
 Common patterns:
 - Research → Analysis → Content Generation → HTML Formatting
 - Data Collection → Processing → Visualization → Final Document
 - Research → Personalization → Formatting
-- Parallel research: Multiple research steps with `step_order: 0` and `depends_on: []` can run in parallel
+- Parallel research: Multiple research steps with step_order: 0 and depends_on: [] can run in parallel
 
 ## Output Format Expectations
 
