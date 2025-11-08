@@ -42,7 +42,7 @@ export class ComputeStack extends cdk.Stack {
           // AWS_REGION is automatically set by Lambda runtime
           // Playwright environment variables
           PLAYWRIGHT_BROWSERS_PATH: '/opt/playwright',
-          PLAYWRIGHT_NODEJS_PATH: '/usr/local/bin/node-playwright',
+          PLAYWRIGHT_NODEJS_PATH: '/opt/nodejs/node-playwright',
         };
         
         if (props.ecrRepository) {
