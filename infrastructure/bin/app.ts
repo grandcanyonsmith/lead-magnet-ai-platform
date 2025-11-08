@@ -14,6 +14,7 @@ const env = {
   region: process.env.CDK_DEFAULT_REGION || 'us-east-1',
 };
 
+
 // Stack 1: Database (DynamoDB Tables)
 const databaseStack = new DatabaseStack(app, 'LeadMagnetDatabaseStack', {
   env,
