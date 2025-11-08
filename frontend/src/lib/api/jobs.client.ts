@@ -32,5 +32,11 @@ export class JobsClient extends BaseApiClient {
   async resubmitJob(jobId: string): Promise<JobResubmitResponse> {
     return this.post<JobResubmitResponse>(`/admin/jobs/${jobId}/resubmit`)
   }
+
+  async rerunStep(jobId: string, stepIndex: number): Promise<{ message: string; job_id: string; step_index: number }> {
+    return this.post<{ message: string; job_id: string; step_index: number }>(`/admin/jobs/${jobId}/rerun-step`, {
+      step_index: stepIndex,
+    })
+  }
 }
 
