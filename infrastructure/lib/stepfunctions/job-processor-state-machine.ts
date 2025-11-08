@@ -7,7 +7,7 @@ import { Construct } from 'constructs';
 export interface JobProcessorStateMachineProps {
   jobsTable: dynamodb.ITable;
   workflowsTable: dynamodb.ITable;
-  jobProcessorLambda: lambda.Function;
+  jobProcessorLambda: lambda.IFunction;
 }
 
 /**
