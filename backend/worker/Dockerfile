@@ -11,6 +11,7 @@ RUN yum update -y && \
     alsa-lib \
     nss \
     xorg-x11-server-Xvfb \
+    cups-libs \
     unzip \
     curl \
     xz \
