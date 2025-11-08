@@ -22,9 +22,9 @@ echo "ECR Repository: $ECR_REPO"
 echo "Logging in to ECR..."
 aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $ECR_REPO
 
-# Build image
-echo "Building Docker image..."
-docker build -t leadmagnet-worker:latest .
+# Build image for Linux x86_64 (Lambda architecture) using buildx
+echo "Building Docker image for Linux x86_64..."
+docker buildx build --platform linux/amd64 -t leadmagnet-worker:latest --load .
 
 # Tag for ECR
 docker tag leadmagnet-worker:latest $ECR_REPO:latest
