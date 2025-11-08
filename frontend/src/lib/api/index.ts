@@ -9,17 +9,21 @@ import { WorkflowsClient } from './workflows.client'
 import { FormsClient } from './forms.client'
 import { TemplatesClient } from './templates.client'
 import { JobsClient } from './jobs.client'
+import { ArtifactsClient } from './artifacts.client'
+import { SubmissionsClient } from './submissions.client'
 import { NotificationsClient } from './notifications.client'
 import { SettingsClient } from './settings.client'
 import { AnalyticsClient } from './analytics.client'
 import { UsageClient } from './usage.client'
-import { ApiClient } from '@/types'
+import { ApiClient, ArtifactListParams, ArtifactListResponse, Artifact, FormUpdateRequest, TemplateUpdateRequest, WorkflowUpdateRequest } from '@/types'
 
 class ApiClientImpl implements ApiClient {
   public workflows: WorkflowsClient
   public forms: FormsClient
   public templates: TemplatesClient
   public jobs: JobsClient
+  public artifacts: ArtifactsClient
+  public submissions: SubmissionsClient
   public notifications: NotificationsClient
   public settings: SettingsClient
   public analytics: AnalyticsClient
@@ -34,6 +38,8 @@ class ApiClientImpl implements ApiClient {
     this.forms = new FormsClient(this.tokenProvider)
     this.templates = new TemplatesClient(this.tokenProvider)
     this.jobs = new JobsClient(this.tokenProvider)
+    this.artifacts = new ArtifactsClient(this.tokenProvider)
+    this.submissions = new SubmissionsClient(this.tokenProvider)
     this.notifications = new NotificationsClient(this.tokenProvider)
     this.settings = new SettingsClient(this.tokenProvider)
     this.analytics = new AnalyticsClient(this.tokenProvider)
@@ -53,7 +59,7 @@ class ApiClientImpl implements ApiClient {
     return this.workflows.createWorkflow(data)
   }
 
-  async updateWorkflow(id: string, data: Parameters<WorkflowsClient['updateWorkflow']>[0]) {
+  async updateWorkflow(id: string, data: WorkflowUpdateRequest) {
     return this.workflows.updateWorkflow(id, data)
   }
 
@@ -74,7 +80,7 @@ class ApiClientImpl implements ApiClient {
     return this.forms.createForm(data)
   }
 
-  async updateForm(id: string, data: Parameters<FormsClient['updateForm']>[0]) {
+  async updateForm(id: string, data: FormUpdateRequest) {
     return this.forms.updateForm(id, data)
   }
 
@@ -95,7 +101,7 @@ class ApiClientImpl implements ApiClient {
     return this.templates.createTemplate(data)
   }
 
-  async updateTemplate(id: string, data: Parameters<TemplatesClient['updateTemplate']>[0]) {
+  async updateTemplate(id: string, data: TemplateUpdateRequest) {
     return this.templates.updateTemplate(id, data)
   }
 
@@ -114,6 +120,24 @@ class ApiClientImpl implements ApiClient {
 
   async resubmitJob(jobId: string) {
     return this.jobs.resubmitJob(jobId)
+  }
+
+  // Artifacts - delegate to artifacts client
+  async getArtifacts(params?: ArtifactListParams): Promise<ArtifactListResponse> {
+    return this.artifacts.getArtifacts(params)
+  }
+
+  async getArtifact(id: string): Promise<Artifact> {
+    return this.artifacts.getArtifact(id)
+  }
+
+  // Submissions - delegate to submissions client
+  async getSubmissions(params?: { form_id?: string; limit?: number }) {
+    return this.submissions.getSubmissions(params)
+  }
+
+  async getSubmission(id: string) {
+    return this.submissions.getSubmission(id)
   }
 
   // AI Generation - delegate to workflows client

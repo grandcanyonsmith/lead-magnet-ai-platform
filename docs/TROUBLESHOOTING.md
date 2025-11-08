@@ -1,5 +1,9 @@
 # Troubleshooting Guide
 
+> **Last Updated**: 2025-01-27  
+> **Status**: Current  
+> **Related Docs**: [Architecture Overview](./ARCHITECTURE.md), [Deployment Guide](./DEPLOYMENT.md), [Resources](./RESOURCES.md), [Changelog](./CHANGELOG.md)
+
 This guide helps diagnose and resolve common issues in the Lead Magnet AI platform.
 
 ## Log Event Troubleshooting
@@ -192,3 +196,13 @@ All API errors include:
    - Use structured logging fields (`extra` parameter)
    - Trace requests using `job_id` through logs
 
+## Related Documentation
+
+- [Architecture Overview](./ARCHITECTURE.md) - System architecture and components
+- [Deployment Guide](./DEPLOYMENT.md) - Deployment troubleshooting
+- [Resources](./RESOURCES.md) - AWS resource management
+- [Changelog](./CHANGELOG.md) - Recent fixes and changes
+- [Quick Start Guide](./QUICK_START.md) - Quick verification steps
+- [Flow Diagram](./FLOW_DIAGRAM.md) - Process flow understanding
+
+---

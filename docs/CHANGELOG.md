@@ -1,6 +1,10 @@
 # Changelog
 
-All notable changes to the Lead Magnet AI platform will be documented in this file.
+> **Last Updated**: 2025-01-27  
+> **Status**: Current  
+> **Related Docs**: [Architecture Overview](./ARCHITECTURE.md), [Troubleshooting Guide](./TROUBLESHOOTING.md)
+
+All notable changes to the Lead Magnet AI platform are documented in this file.
 
 ---
 
@@ -53,9 +57,78 @@ All notable changes to the Lead Magnet AI platform will be documented in this fi
 
 ---
 
+## [2025-11-07] - DynamoDB Size Limit Fix and S3 Offloading
+
+### Summary
+Fixed critical DynamoDB item size limit errors by implementing automatic S3 offloading for large `execution_steps` data. This prevents `ValidationException` errors when job execution steps exceed DynamoDB's 400KB item size limit.
+
+### Added
+- **S3 Offloading**: Automatic detection and offloading of large `execution_steps` (> 300KB)
+- **S3 Loading**: API layer automatically loads `execution_steps` from S3 when needed
+- **Size Estimation**: 10% buffer added to size estimation for DynamoDB serialization overhead
+- **Stale Key Cleanup**: Automatic cleanup of stale `execution_steps_s3_key` references
+
+### Changed
+- **Size Threshold**: Reduced from 350KB to 300KB for better safety margin
+- **Worker Integration**: All `update_job()` calls now pass `s3_service` parameter
+- **Error Logging**: Enhanced error logging for S3 load failures with S3 key included
+
+### Fixed
+- **DynamoDB ValidationException**: Item size exceeded 400KB errors eliminated
+- **Stale S3 Keys**: Fixed bug where stale `execution_steps_s3_key` references were never cleaned up
+- **GitHub Actions**: Fixed invalid `if` condition syntax in all workflow files
+- **Missing Parameters**: Fixed missing `s3_service` parameter in some `update_job` calls
+
+### Technical Details
+
+#### Size Calculation
+```python
+def _estimate_dynamodb_size(self, value: Any) -> int:
+    json_str = json.dumps(value, default=str)
+    byte_size = len(json_str.encode('utf-8'))
+    return int(byte_size * 1.1)  # 10% buffer
+```
+
+#### S3 Offloading Logic
+- If `execution_steps` > 300KB, serialize to JSON and upload to S3
+- Store S3 key (`execution_steps_s3_key`) in DynamoDB
+- Remove `execution_steps` from DynamoDB update
+- S3 Path: `jobs/{job_id}/execution_steps.json`
+
+#### API Integration
+- API automatically detects `execution_steps_s3_key` and loads from S3
+- Transparent to API consumers - `execution_steps` always populated
+- Error handling returns `null` on failure, logged but doesn't fail request
+
+### Performance Impact
+- **Positive**: Prevents DynamoDB write failures, enables unlimited execution_steps size
+- **Trade-offs**: S3 upload/download adds ~50-200ms per operation
+- **Mitigation**: Error handling prevents blocking, CloudFront caching reduces costs
+
+### Migration Notes
+- All changes are backward compatible
+- Existing jobs with `execution_steps` in DynamoDB continue to work
+- Jobs with large `execution_steps` automatically offloaded on next update
+- API interface unchanged
+
+### Monitoring
+- **Key Metrics**: DynamoDB ValidationException errors (should be zero), S3 operations success rates
+- **Log Patterns**: 
+  - `"execution_steps for job {job_id} is too large"` - S3 offloading triggered
+  - `"Stored execution_steps in S3 at {s3_key}"` - Successful offload
+  - `"Error loading execution_steps from S3"` - S3 retrieval failure
+
+---
+
 ## Previous Changes
 
-See individual changelog files:
-- `CHANGELOG_DYNAMODB_FIX.md` - DynamoDB size limit fixes
-- `REFACTORING_SUMMARY.md` - Comprehensive refactoring summary
+For historical reference, see archived documentation:
+- [Archived Changelogs](./archive/README.md) - Historical changelog entries
+- [Refactoring Summary](./archive/REFACTORING_SUMMARY.md) - Comprehensive refactoring summary
+
+## Related Documentation
+
+- [Architecture Overview](./ARCHITECTURE.md) - System architecture details
+- [Troubleshooting Guide](./TROUBLESHOOTING.md) - Common issues and solutions
+- [Resources](./RESOURCES.md) - AWS resource inventory
 
