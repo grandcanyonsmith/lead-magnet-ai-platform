@@ -783,11 +783,7 @@ class JobProcessor:
             
             logger.info(f"Step {step_index + 1} completed successfully in {step_duration:.0f}ms")
             
-            # Check if this is the last step and if template exists - store output as HTML artifact
-            total_steps = len(sorted_steps)
-            is_last_step = (step_index + 1) == total_steps
-            template_id = workflow.get('template_id')
-            
+            # Return step result - HTML generation will be handled separately after all steps complete
             result = {
                 'success': True,
                 'step_index': step_index,
@@ -798,51 +794,6 @@ class JobProcessor:
                 'usage_info': usage_info,
                 'duration_ms': int(step_duration)
             }
-            
-            if is_last_step and template_id:
-                try:
-                    # Get template to verify it exists and is published
-                    template = self.db.get_template(
-                        template_id,
-                        workflow.get('template_version', 0)
-                    )
-                    
-                    if template and template.get('is_published', False):
-                        logger.info(f"Last step completed with template - storing output as HTML artifact")
-                        
-                        # Store step output as final HTML artifact
-                        final_artifact_id = self.artifact_service.store_artifact(
-                            tenant_id=job['tenant_id'],
-                            job_id=job_id,
-                            artifact_type='html_final',
-                            content=step_output,
-                            filename='final.html',
-                            public=True
-                        )
-                        
-                        # Get public URL for final artifact
-                        public_url = self.artifact_service.get_artifact_public_url(final_artifact_id)
-                        
-                        # Update job with final output
-                        artifacts_list = job.get('artifacts', [])
-                        if final_artifact_id not in artifacts_list:
-                            artifacts_list.append(final_artifact_id)
-                        
-                        self.db.update_job(job_id, {
-                            'output_url': public_url,
-                            'artifacts': artifacts_list,
-                        }, s3_service=self.s3)
-                        
-                        logger.info(f"Final HTML artifact stored: {public_url[:80]}...")
-                        
-                        # Add to result
-                        result['final_artifact_id'] = final_artifact_id
-                        result['output_url'] = public_url
-                    else:
-                        logger.info(f"Template {template_id} not found or not published, skipping HTML artifact storage")
-                except Exception as template_error:
-                    logger.warning(f"Failed to store HTML artifact for last step: {template_error}")
-                    # Don't fail the step if HTML storage fails
             
             return result
             
