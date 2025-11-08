@@ -1,19 +1,23 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import { useJobDetail } from '@/hooks/useJobDetail'
 import { useJobExecutionSteps } from '@/hooks/useJobExecutionSteps'
 import { JobHeader } from '@/components/jobs/JobHeader'
 import { JobDetails } from '@/components/jobs/JobDetails'
 import { ExecutionSteps } from '@/components/jobs/ExecutionSteps'
 import { TechnicalDetails } from '@/components/jobs/TechnicalDetails'
+import { ResubmitModal } from '@/components/jobs/ResubmitModal'
 
 export default function JobDetailClient() {
   const router = useRouter()
+  const [showResubmitModal, setShowResubmitModal] = useState(false)
   const {
     job,
     workflow,
     form,
+    submission,
     loading,
     error,
     resubmitting,
@@ -29,6 +33,15 @@ export default function JobDetailClient() {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)
+  }
+
+  const handleResubmitClick = () => {
+    setShowResubmitModal(true)
+  }
+
+  const handleResubmitConfirm = async () => {
+    await handleResubmit()
+    setShowResubmitModal(false)
   }
 
   if (loading) {
@@ -59,20 +72,41 @@ export default function JobDetailClient() {
 
   return (
     <div>
-      <JobHeader error={error} resubmitting={resubmitting} onResubmit={handleResubmit} />
+      <JobHeader error={error} resubmitting={resubmitting} onResubmit={handleResubmitClick} />
+      
+      <ResubmitModal
+        isOpen={showResubmitModal}
+        onClose={() => setShowResubmitModal(false)}
+        onConfirm={handleResubmitConfirm}
+        isResubmitting={resubmitting}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <JobDetails job={job} workflow={workflow} />
 
-        {/* AI Instructions (if workflow loaded) */}
-        {workflow && workflow.ai_instructions && (
+        {/* Form Submission Details */}
+        {submission && submission.submission_data ? (
           <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">AI Instructions</h2>
-            <div className="bg-gray-50 rounded-lg p-4 font-mono text-sm whitespace-pre-wrap max-h-96 overflow-y-auto">
-              {workflow.ai_instructions}
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Form Submission Details</h2>
+            <div className="space-y-3">
+              {Object.entries(submission.submission_data).map(([key, value]: [string, any]) => (
+                <div key={key} className="border-b border-gray-100 pb-3 last:border-b-0">
+                  <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">
+                    {key.replace(/_/g, ' ')}
+                  </label>
+                  <p className="text-sm text-gray-900 break-words">
+                    {typeof value === 'string' ? value : JSON.stringify(value)}
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
-        )}
+        ) : submission ? (
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Form Submission Details</h2>
+            <p className="text-sm text-gray-500">No submission data available</p>
+          </div>
+        ) : null}
       </div>
 
       {/* Execution Steps */}

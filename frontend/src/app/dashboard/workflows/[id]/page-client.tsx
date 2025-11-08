@@ -141,33 +141,6 @@ export default function WorkflowDetailPage() {
     }
   }
 
-  const getStatusBadge = (status: string) => {
-    const colors: Record<string, string> = {
-      active: 'bg-green-100 text-green-800 border-green-200',
-      inactive: 'bg-gray-100 text-gray-800 border-gray-200',
-      draft: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    }
-    return (
-      <span className={`inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-full border ${colors[status] || 'bg-gray-100 text-gray-800 border-gray-200'}`}>
-        {status === 'active' && <FiCheckCircle className="w-3 h-3 mr-1.5" />}
-        {status === 'draft' && <FiClock className="w-3 h-3 mr-1.5" />}
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </span>
-    )
-  }
-
-  const getJobStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <FiCheckCircle className="w-4 h-4 text-green-600" />
-      case 'failed':
-        return <FiXCircle className="w-4 h-4 text-red-600" />
-      case 'processing':
-        return <FiClock className="w-4 h-4 text-blue-600 animate-spin" />
-      default:
-        return <FiClock className="w-4 h-4 text-yellow-600" />
-    }
-  }
 
   if (loading) {
     return (
@@ -250,11 +223,6 @@ export default function WorkflowDetailPage() {
           </div>
           
           <div className="space-y-5">
-            <div className="pb-4 border-b border-gray-100">
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Status</label>
-              <div>{getStatusBadge(workflow.status || 'draft')}</div>
-            </div>
-
             <div>
               <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                 <FiZap className="w-3.5 h-3.5" />
@@ -456,71 +424,71 @@ export default function WorkflowDetailPage() {
         {jobs.length === 0 ? (
           <p className="text-gray-500 text-sm">No jobs found for this workflow</p>
         ) : (
-          <div className="space-y-4 sm:space-y-6">
-            {jobs.map((job) => {
-              const duration = job.completed_at
-                ? Math.round(
-                    (new Date(job.completed_at).getTime() - new Date(job.created_at).getTime()) / 1000
-                  )
-                : null
-              const submission = submissions[job.job_id]
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Job ID</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Submission</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {jobs.map((job) => {
+                  const duration = job.completed_at
+                    ? Math.round(
+                        (new Date(job.completed_at).getTime() - new Date(job.created_at).getTime()) / 1000
+                      )
+                    : null
+                  const submission = submissions[job.job_id]
 
-              return (
-                <div key={job.job_id} className="border border-gray-200 rounded-lg p-3 sm:p-4 hover:border-gray-300 transition-colors">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-3 sm:mb-4">
-                    <div className="flex items-start sm:items-center space-x-3 flex-1 min-w-0">
-                      {getJobStatusIcon(job.status)}
-                      <div className="flex-1 min-w-0">
+                  return (
+                    <tr key={job.job_id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         <button
                           onClick={() => router.push(`/dashboard/jobs/${job.job_id}`)}
-                          className="text-xs sm:text-sm font-mono text-gray-900 break-all hover:text-primary-600 transition-colors text-left w-full touch-target py-1"
+                          className="text-xs font-mono text-gray-900 hover:text-primary-600 transition-colors text-left"
                         >
                           {job.job_id}
                         </button>
-                        <div className="text-xs text-gray-500 mt-1">
-                          Created: {new Date(job.created_at).toLocaleString()}
-                          {duration !== null && ` • Duration: ${duration}s`}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between sm:justify-end gap-2">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        job.status === 'completed' ? 'bg-green-100 text-green-800' :
-                        job.status === 'failed' ? 'bg-red-100 text-red-800' :
-                        job.status === 'processing' ? 'bg-blue-100 text-blue-800' :
-                        'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {job.status}
-                      </span>
-                      <button
-                        onClick={() => router.push(`/dashboard/jobs/${job.job_id}`)}
-                        className="px-3 py-1.5 text-xs sm:text-sm text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition-colors touch-target"
-                      >
-                        View
-                      </button>
-                    </div>
-                  </div>
-                  
-                  {submission && submission.submission_data && (
-                    <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-200">
-                      <h3 className="text-sm font-semibold text-gray-900 mb-3">Form Submission Details</h3>
-                      <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
-                        <dl className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          {Object.entries(submission.submission_data).map(([key, value]: [string, any]) => (
-                            <div key={key}>
-                              <dt className="text-xs font-medium text-gray-500 uppercase">{key}</dt>
-                              <dd className="mt-1 text-sm text-gray-900 break-words">
-                                {typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value)}
-                              </dd>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                        {new Date(job.created_at).toLocaleString()}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                        {duration !== null ? `${duration}s` : '-'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {submission && submission.submission_data ? (
+                          <div className="max-w-xs">
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              {Object.entries(submission.submission_data).slice(0, 4).map(([key, value]: [string, any]) => (
+                                <div key={key} className="truncate">
+                                  <span className="font-medium text-gray-500">{key}:</span>{' '}
+                                  <span className="text-gray-900">{String(value).substring(0, 20)}{String(value).length > 20 ? '...' : ''}</span>
+                                </div>
+                              ))}
                             </div>
-                          ))}
-                        </dl>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-right text-sm">
+                        <button
+                          onClick={() => router.push(`/dashboard/jobs/${job.job_id}`)}
+                          className="text-primary-600 hover:text-primary-700 hover:bg-primary-50 px-3 py-1.5 rounded-lg transition-colors"
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
