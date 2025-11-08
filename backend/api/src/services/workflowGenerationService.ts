@@ -184,10 +184,20 @@ Create a personalized action plan document for [name] at [company_name]. Use ins
 - **Step 1+**: Build upon previous steps, transform or enhance content
 - **Final Step**: Often HTML generation (tool_choice: "none", tools: [])
 
+**Dependencies (`depends_on` field):**
+- Use `depends_on` to explicitly control which steps must complete before this step runs
+- `depends_on` is an array of step indices (0-based) that this step depends on
+- If `depends_on` is not provided, dependencies are auto-detected from `step_order`:
+  - Steps with the same `step_order` can run in parallel
+  - Steps with higher `step_order` depend on all steps with lower `step_order`
+- **Example**: If Step 2 depends on Step 0 and Step 1, set `depends_on: [0, 1]`
+- **Parallel execution**: Steps with same `step_order` and no explicit `depends_on` can run simultaneously
+
 Common patterns:
 - Research → Analysis → Content Generation → HTML Formatting
 - Data Collection → Processing → Visualization → Final Document
 - Research → Personalization → Formatting
+- Parallel research: Multiple research steps with `step_order: 0` and `depends_on: []` can run in parallel
 
 ## Output Format Expectations
 
@@ -220,15 +230,37 @@ Common patterns:
       "model": "o3-deep-research",
       "instructions": "Generate a comprehensive market research report for [company_name] in the [industry] industry. Research current market trends, competitor landscape, and growth opportunities. Include specific statistics, recent developments, and actionable insights. Personalize all recommendations based on [company_name]'s size and target market.",
       "step_order": 0,
+      "depends_on": [],
       "tools": ["web_search_preview"],
       "tool_choice": "auto"
+    },
+    {
+      "step_name": "Competitor Analysis",
+      "step_description": "Analyze competitors in parallel with market research",
+      "model": "gpt-4o",
+      "instructions": "Research and analyze top 5 competitors for [company_name] in the [industry] industry. Include their strengths, weaknesses, and market positioning.",
+      "step_order": 0,
+      "depends_on": [],
+      "tools": ["web_search_preview"],
+      "tool_choice": "auto"
+    },
+    {
+      "step_name": "SWOT Analysis",
+      "step_description": "Create SWOT analysis based on research findings",
+      "model": "gpt-5",
+      "instructions": "Using insights from Step 1 (Deep Research) and Step 2 (Competitor Analysis), create a comprehensive SWOT analysis for [company_name]. Focus on opportunities and threats specific to the [industry] industry.",
+      "step_order": 1,
+      "depends_on": [0, 1],
+      "tools": [],
+      "tool_choice": "none"
     },
     {
       "step_name": "HTML Formatting",
       "step_description": "Format research content into styled HTML matching template",
       "model": "gpt-5",
-      "instructions": "Transform the research content from Step 1 into a beautifully formatted HTML document that matches the provided template. Preserve all research findings, statistics, and insights. Ensure the HTML is accessible, mobile-responsive, and maintains the template's design structure.",
-      "step_order": 1,
+      "instructions": "Transform the research content from previous steps into a beautifully formatted HTML document that matches the provided template. Preserve all research findings, statistics, and insights. Ensure the HTML is accessible, mobile-responsive, and maintains the template's design structure.",
+      "step_order": 2,
+      "depends_on": [2],
       "tools": [],
       "tool_choice": "none"
     }
@@ -250,6 +282,7 @@ Return ONLY valid JSON matching this structure:
       "model": "...",
       "instructions": "Detailed, specific instructions with [field_name] references",
       "step_order": 0,
+      "depends_on": [],  // Array of step indices this step depends on (optional, auto-detected from step_order if not provided)
       "tools": ["..."],
       "tool_choice": "auto|required|none"
     }
@@ -372,6 +405,7 @@ Important: Return ONLY the JSON, no markdown formatting, no explanations.`;
               model: step.model || (index === 0 ? 'o3-deep-research' : 'gpt-5'),
               instructions: step.instructions || '',
               step_order: step.step_order !== undefined ? step.step_order : index,
+              depends_on: step.depends_on !== undefined ? step.depends_on : undefined, // Preserve depends_on if provided
               tools: step.tools || (index === 0 ? ['web_search_preview'] : []),
               tool_choice: step.tool_choice || (index === 0 ? 'auto' : 'none'),
             })),

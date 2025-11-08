@@ -8,6 +8,7 @@ interface FlowchartSidePanelProps {
   step: WorkflowStep | null
   index: number | null
   totalSteps: number
+  allSteps?: WorkflowStep[] // All steps for dependency selection
   isOpen: boolean
   onClose: () => void
   onChange: (index: number, step: WorkflowStep) => void
@@ -20,6 +21,7 @@ export default function FlowchartSidePanel({
   step,
   index,
   totalSteps,
+  allSteps = [],
   isOpen,
   onClose,
   onChange,
@@ -110,6 +112,7 @@ export default function FlowchartSidePanel({
               step={localStep}
               index={index}
               totalSteps={totalSteps}
+              allSteps={allSteps}
               onChange={handleChange}
               onDelete={handleDelete}
               onMoveUp={onMoveUp}

@@ -21,6 +21,7 @@ from utils.error_utils import create_descriptive_error, normalize_error_message
 from utils.step_utils import normalize_step_order
 from services.context_builder import ContextBuilder
 from services.execution_step_manager import ExecutionStepManager
+from dependency_resolver import resolve_execution_groups, get_ready_steps, get_step_status, validate_dependencies
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,48 @@ class JobProcessor:
             self.ai_service,
             self.artifact_service
         )
+    
+    def resolve_step_dependencies(self, steps: list) -> Dict[str, Any]:
+        """
+        Resolve step dependencies and build execution plan.
+        
+        Args:
+            steps: List of workflow step dictionaries
+            
+        Returns:
+            Dictionary with executionGroups and totalSteps
+        """
+        try:
+            # Validate dependencies first
+            is_valid, errors = validate_dependencies(steps)
+            if not is_valid:
+                logger.warning(f"Dependency validation errors: {errors}")
+                # Continue anyway for backward compatibility
+            
+            # Resolve execution groups
+            execution_plan = resolve_execution_groups(steps)
+            
+            logger.info(f"[JobProcessor] Resolved execution plan", extra={
+                'total_steps': execution_plan['totalSteps'],
+                'execution_groups': len(execution_plan['executionGroups']),
+                'groups': [
+                    {
+                        'groupIndex': g['groupIndex'],
+                        'stepIndices': g['stepIndices'],
+                        'canRunInParallel': g['canRunInParallel']
+                    }
+                    for g in execution_plan['executionGroups']
+                ]
+            })
+            
+            return execution_plan
+        except Exception as e:
+            logger.error(f"Error resolving step dependencies: {e}", exc_info=True)
+            # Fallback to sequential execution
+            return {
+                'executionGroups': [{'groupIndex': i, 'stepIndices': [i], 'canRunInParallel': False} for i in range(len(steps))],
+                'totalSteps': len(steps),
+            }
     
     def process_job(self, job_id: str) -> Dict[str, Any]:
         """
@@ -564,24 +607,73 @@ class JobProcessor:
             if not steps or len(steps) == 0:
                 raise ValueError(f"Workflow {job.get('workflow_id')} has no steps configured")
             
-            # Sort steps by step_order if present
-            sorted_steps = sorted(steps, key=lambda s: s.get('step_order', 0))
+            if step_index < 0 or step_index >= len(steps):
+                raise ValueError(f"Step index {step_index} is out of range. Workflow has {len(steps)} steps.")
             
-            if step_index < 0 or step_index >= len(sorted_steps):
-                raise ValueError(f"Step index {step_index} is out of range. Workflow has {len(sorted_steps)} steps.")
-            
-            # Get the step to process
-            step = sorted_steps[step_index]
+            # Get the step to process (use original steps array, not sorted)
+            step = steps[step_index]
             step_name = step.get('step_name', f'Step {step_index + 1}')
             step_model = step.get('model', 'gpt-5')
             step_instructions = step.get('instructions', '')
+            
+            # Check if dependencies are satisfied
+            step_deps = step.get('depends_on', [])
+            if not step_deps:
+                # Auto-detect from step_order
+                step_order = step.get('step_order', step_index)
+                step_deps = [
+                    i for i, s in enumerate(steps)
+                    if s.get('step_order', i) < step_order
+                ]
+            
+            # Get completed step indices from execution_steps
+            completed_step_indices = [
+                normalize_step_order(s) - 1  # Convert 1-indexed step_order to 0-indexed
+                for s in execution_steps
+                if s.get('step_type') == 'ai_generation' and normalize_step_order(s) > 0
+            ]
+            
+            # Check if all dependencies are completed
+            all_deps_completed = len(step_deps) == 0 or all(dep_index in completed_step_indices for dep_index in step_deps)
+            
+            if not all_deps_completed:
+                missing_deps = [dep for dep in step_deps if dep not in completed_step_indices]
+                logger.warning(f"[JobProcessor] Step {step_index + 1} ({step_name}) waiting for dependencies", extra={
+                    'job_id': job_id,
+                    'step_index': step_index,
+                    'step_name': step_name,
+                    'step_status': 'waiting',
+                    'missing_dependencies': missing_deps,
+                    'completed_steps': completed_step_indices
+                })
+                raise ValueError(f"Step {step_index + 1} ({step_name}) cannot execute yet. Missing dependencies: {missing_deps}")
+            
+            # Get ready steps for logging
+            ready_steps = get_ready_steps(completed_step_indices, steps)
+            step_status_map = get_step_status(completed_step_indices, [], steps)
+            
+            logger.info(f"[JobProcessor] Step readiness check", extra={
+                'job_id': job_id,
+                'step_index': step_index,
+                'step_name': step_name,
+                'step_status': 'ready',
+                'dependencies': step_deps,
+                'all_dependencies_completed': all_deps_completed,
+                'ready_steps': ready_steps,
+                'step_status_map': {k: v for k, v in step_status_map.items()}
+            })
             
             # Extract tools and tool_choice from step config
             step_tools_raw = step.get('tools', ['web_search_preview'])
             step_tools = [{"type": tool} if isinstance(tool, str) else tool for tool in step_tools_raw]
             step_tool_choice = step.get('tool_choice', 'auto')
             
-            logger.info(f"Processing step {step_index + 1}/{len(sorted_steps)}: {step_name}")
+            logger.info(f"Processing step {step_index + 1}/{len(steps)}: {step_name}", extra={
+                'job_id': job_id,
+                'step_index': step_index,
+                'step_name': step_name,
+                'step_status': 'ready'
+            })
             
             step_start_time = datetime.utcnow()
             
@@ -589,11 +681,22 @@ class JobProcessor:
             current_step_order = step_index + 1
             
             # Build context with ALL previous step outputs from execution_steps
-            # Only include steps that come BEFORE the current step_index
+            # Only include steps that this step depends on (or all previous if no explicit deps)
+            step_deps = step.get('depends_on', [])
+            if not step_deps:
+                # Auto-detect from step_order
+                step_order = step.get('step_order', step_index)
+                step_deps = [
+                    i for i, s in enumerate(steps)
+                    if s.get('step_order', i) < step_order
+                ]
+            
+            # Build context only from dependency steps
             all_previous_context = ContextBuilder.build_previous_context_from_execution_steps(
                 initial_context=initial_context,
                 execution_steps=execution_steps,
-                current_step_order=current_step_order
+                current_step_order=step_index + 1,  # Use step_index + 1 for step_order
+                dependency_indices=step_deps  # Only include these dependencies
             )
             
             logger.info(f"[JobProcessor] Built previous context for step {step_index + 1}", extra={
