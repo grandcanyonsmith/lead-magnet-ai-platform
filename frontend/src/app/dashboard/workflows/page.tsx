@@ -20,7 +20,7 @@ export default function WorkflowsPage() {
 
   // Close menu when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
       if (openMenuId) {
         const menuElement = menuRefs.current[openMenuId]
         if (menuElement && !menuElement.contains(event.target as Node)) {
@@ -30,8 +30,10 @@ export default function WorkflowsPage() {
     }
 
     document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('touchstart', handleClickOutside)
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('touchstart', handleClickOutside)
     }
   }, [openMenuId])
 
@@ -207,7 +209,14 @@ export default function WorkflowsPage() {
                     </div>
                     <div className="relative ml-2">
                       <button
-                        onClick={() => setOpenMenuId(openMenuId === workflow.workflow_id ? null : workflow.workflow_id)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setOpenMenuId(openMenuId === workflow.workflow_id ? null : workflow.workflow_id)
+                        }}
+                        onTouchStart={(e) => {
+                          e.stopPropagation()
+                          setOpenMenuId(openMenuId === workflow.workflow_id ? null : workflow.workflow_id)
+                        }}
                         className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all touch-target"
                         aria-label="Actions"
                       >
@@ -217,34 +226,51 @@ export default function WorkflowsPage() {
                         <div
                           ref={(el) => { menuRefs.current[workflow.workflow_id] = el; }}
                           className="absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-200 z-10"
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onTouchStart={(e) => e.stopPropagation()}
                         >
                           <div className="py-1">
                             <button
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                e.preventDefault()
                                 router.push(`/dashboard/workflows/${workflow.workflow_id}`)
                                 setOpenMenuId(null)
                               }}
-                              className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 flex items-center"
+                              onTouchStart={(e) => {
+                                e.stopPropagation()
+                              }}
+                              className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 active:bg-gray-100 flex items-center touch-target"
                             >
                               <FiEye className="w-3 h-3 mr-2" />
                               View
                             </button>
                             <button
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                e.preventDefault()
                                 router.push(`/dashboard/workflows/${workflow.workflow_id}/edit`)
                                 setOpenMenuId(null)
                               }}
-                              className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 flex items-center"
+                              onTouchStart={(e) => {
+                                e.stopPropagation()
+                              }}
+                              className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 active:bg-gray-100 flex items-center touch-target"
                             >
                               <FiEdit className="w-3 h-3 mr-2" />
                               Edit
                             </button>
                             <button
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                e.preventDefault()
                                 setOpenMenuId(null)
                                 handleDelete(workflow.workflow_id)
                               }}
-                              className="w-full text-left px-3 py-2 text-xs text-red-600 hover:bg-red-50 flex items-center"
+                              onTouchStart={(e) => {
+                                e.stopPropagation()
+                              }}
+                              className="w-full text-left px-3 py-2 text-xs text-red-600 hover:bg-red-50 active:bg-red-50 flex items-center touch-target"
                             >
                               <FiTrash2 className="w-3 h-3 mr-2" />
                               Delete
@@ -442,7 +468,14 @@ export default function WorkflowsPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-right">
                         <div className="relative inline-block">
                           <button
-                            onClick={() => setOpenMenuId(openMenuId === workflow.workflow_id ? null : workflow.workflow_id)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setOpenMenuId(openMenuId === workflow.workflow_id ? null : workflow.workflow_id)
+                            }}
+                            onTouchStart={(e) => {
+                              e.stopPropagation()
+                              setOpenMenuId(openMenuId === workflow.workflow_id ? null : workflow.workflow_id)
+                            }}
                             className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all touch-target"
                             title="Actions"
                           >
@@ -452,34 +485,51 @@ export default function WorkflowsPage() {
                             <div
                               ref={(el) => { menuRefs.current[workflow.workflow_id] = el; }}
                               className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10"
+                              onMouseDown={(e) => e.stopPropagation()}
+                              onTouchStart={(e) => e.stopPropagation()}
                             >
                               <div className="py-1">
                                 <button
-                                  onClick={() => {
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    e.preventDefault()
                                     router.push(`/dashboard/workflows/${workflow.workflow_id}`)
                                     setOpenMenuId(null)
                                   }}
-                                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                                  onTouchStart={(e) => {
+                                    e.stopPropagation()
+                                  }}
+                                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 active:bg-gray-100 flex items-center touch-target"
                                 >
                                   <FiEye className="w-4 h-4 mr-2" />
                                   View
                                 </button>
                                 <button
-                                  onClick={() => {
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    e.preventDefault()
                                     router.push(`/dashboard/workflows/${workflow.workflow_id}/edit`)
                                     setOpenMenuId(null)
                                   }}
-                                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                                  onTouchStart={(e) => {
+                                    e.stopPropagation()
+                                  }}
+                                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 active:bg-gray-100 flex items-center touch-target"
                                 >
                                   <FiEdit className="w-4 h-4 mr-2" />
                                   Edit
                                 </button>
                                 <button
-                                  onClick={() => {
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    e.preventDefault()
                                     setOpenMenuId(null)
                                     handleDelete(workflow.workflow_id)
                                   }}
-                                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center"
+                                  onTouchStart={(e) => {
+                                    e.stopPropagation()
+                                  }}
+                                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 active:bg-red-50 flex items-center touch-target"
                                 >
                                   <FiTrash2 className="w-4 h-4 mr-2" />
                                   Delete
