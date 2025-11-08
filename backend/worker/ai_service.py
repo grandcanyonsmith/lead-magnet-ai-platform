@@ -87,6 +87,30 @@ class AIService:
         """Return a fresh default tool configuration."""
         return {"type": "web_search_preview"}
     
+    def _ensure_tools_and_choice(self, tools: Optional[List[Dict]], tool_choice: str) -> Tuple[List[Dict], str]:
+        """
+        Ensure tools list and tool_choice are always in a valid combination.
+        """
+        normalized_tools: List[Dict] = list(tools) if tools else []
+        normalized_choice = tool_choice or "auto"
+
+        if normalized_choice == "none":
+            return [], "none"
+
+        if not normalized_tools:
+            logger.warning("[AI Service] No tools supplied; adding default web_search_preview tool")
+            normalized_tools = [self._default_tool()]
+            if normalized_choice == "required":
+                logger.warning("[AI Service] tool_choice='required' but no tools provided; downgrading to 'auto'")
+                normalized_choice = "auto"
+
+        if normalized_choice == "required" and len(normalized_tools) == 0:
+            logger.warning("[AI Service] tool_choice='required' but tools array empty. Changing to 'auto'")
+            normalized_choice = "auto"
+            normalized_tools = [self._default_tool()]
+
+        return normalized_tools, normalized_choice
+
     def _validate_and_filter_tools(self, tools: Optional[list], tool_choice: str) -> Tuple[List[Dict], str]:
         """
         Validate and filter tools, ensuring tool_choice='required' never exists with empty tools.
@@ -203,21 +227,15 @@ class AIService:
         
         # If validation removed all tools, use default tool
         # This happens after tool_choice check so we don't force 'required' with only default tool
-        if len(validated_tools) == 0:
-            logger.warning(f"[AI Service] All tools were removed during validation, using default web_search_preview", extra={
-                'original_tools_count': len(tools) if tools else 0,
-                'original_tools': [t.get('type') if isinstance(t, dict) else t for t in tools] if tools else [],
-                'tool_choice': tool_choice
-            })
-            validated_tools = [self._default_tool()]
+        validated_tools, normalized_choice = self._ensure_tools_and_choice(validated_tools, tool_choice)
         
-        logger.info(f"[AI Service] Final tools after filtering and validation", extra={
-            'tools_count': len(validated_tools) if validated_tools else 0,
-            'tools': [t.get('type') if isinstance(t, dict) else t for t in validated_tools] if validated_tools else [],
-            'tool_choice': tool_choice
+        logger.info("[AI Service] Final tools after filtering and validation", extra={
+            'tools_count': len(validated_tools),
+            'tools': [t.get('type') if isinstance(t, dict) else t for t in validated_tools],
+            'tool_choice': normalized_choice
         })
         
-        return validated_tools, tool_choice
+        return validated_tools, normalized_choice
     
     def _build_input_text(self, context: str, previous_context: str) -> str:
         """Build input text from context and previous context."""
@@ -253,6 +271,8 @@ class AIService:
         Returns:
             Parameters dict for OpenAI API call
         """
+        normalized_tools, normalized_choice = self._ensure_tools_and_choice(tools, tool_choice)
+
         params = {
             "model": model,
             "instructions": instructions,
@@ -261,29 +281,17 @@ class AIService:
 
         logger.debug("[AI Service] Building API params", extra={
             "model": model,
-            "tool_choice": tool_choice,
-            "tools_count": len(tools) if tools else 0,
-            "tools": [t.get("type") if isinstance(t, dict) else t for t in tools] if tools else [],
+            "tool_choice": normalized_choice,
+            "tools_count": len(normalized_tools),
+            "tools": [t.get("type") if isinstance(t, dict) else t for t in normalized_tools],
             "has_computer_use": has_computer_use,
         })
 
-        # Decide final tools to send.
-        final_tools: List[Dict] = []
-        if tool_choice != "none":
-            final_tools = tools or []
-            # If tool_choice is 'required' but tools are empty, downgrade to 'auto' before adding default
-            # This prevents forcing 'required' with only a default tool the user didn't request
-            if tool_choice == "required" and not final_tools:
-                logger.warning("[AI Service] tool_choice='required' but no tools provided; downgrading to 'auto' before adding default tool")
-                tool_choice = "auto"
-            # Provide a safe default tool so that 'tool_choice' never goes out without 'tools'
-            if not final_tools:
-                logger.warning("[AI Service] No tools supplied; adding default web_search_preview tool")
-                final_tools = [self._default_tool()]
-            params["tools"] = final_tools
+        if normalized_choice != "none":
+            params["tools"] = normalized_tools
             logger.debug("[AI Service] Using tools", extra={
-                "count": len(final_tools),
-                "tools": [t.get("type") if isinstance(t, dict) else t for t in final_tools],
+                "count": len(normalized_tools),
+                "tools": [t.get("type") if isinstance(t, dict) else t for t in normalized_tools],
             })
 
         if has_computer_use:
@@ -291,16 +299,15 @@ class AIService:
             logger.info("[AI Service] Added truncation='auto' for computer_use_preview tool")
 
         # Set tool_choice only when it's not "none".
-        if tool_choice != "none":
+        if normalized_choice != "none":
             tools_in_params = params.get("tools", [])
-            if tool_choice == "required" and not tools_in_params:
-                # Self-heal instead of raising: downgrade to auto and add default tool.
+            if normalized_choice == "required" and not tools_in_params:
                 logger.warning("[AI Service] tool_choice='required' but tools empty; downgrading to 'auto' and adding default tool")
                 params["tool_choice"] = "auto"
                 params["tools"] = [self._default_tool()]
             else:
-                params["tool_choice"] = tool_choice
-                logger.debug(f"[AI Service] Set tool_choice='{tool_choice}' with {len(tools_in_params)} tools")
+                params["tool_choice"] = normalized_choice
+                logger.debug(f"[AI Service] Set tool_choice='{normalized_choice}' with {len(tools_in_params)} tools")
 
         # Absolutely final clamp: never send 'required' without tools.
         if params.get("tool_choice") == "required" and not params.get("tools"):
@@ -578,14 +585,14 @@ class AIService:
         if "Tool choice 'required' must be specified with 'tools' parameter" in error_message:
             logger.warning("[AI Service] Recovering from 'required' without tools by retrying with tool_choice='auto' and a default tool")
             try:
-                retry_tools = tools or [self._default_tool()]
+                retry_tools, retry_choice = self._ensure_tools_and_choice(tools, "auto")
                 input_text = self._build_input_text(context, previous_context)
                 params_retry = self._build_api_params(
                     model=model,
                     instructions=instructions,
                     input_text=input_text,
                     tools=retry_tools,
-                    tool_choice="auto",
+                    tool_choice=retry_choice,
                     has_computer_use=any(
                         (isinstance(t, dict) and t.get("type") == "computer_use_preview") or 
                         (isinstance(t, str) and t == "computer_use_preview")
@@ -603,7 +610,7 @@ class AIService:
                     previous_context=previous_context,
                     context=context,
                     tools=retry_tools,
-                    tool_choice="auto",
+                    tool_choice=retry_choice,
                     params=params_retry
                 )
             except Exception as retry_error:
