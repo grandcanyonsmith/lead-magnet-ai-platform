@@ -179,18 +179,35 @@ class DeliveryService:
             research_content: Optional research content for AI message generation
         """
         submission_data = submission.get('submission_data', {})
-        phone_number = submission_data.get('phone')
+        phone_number = submission_data.get('phone') or submission_data.get('phone_number') or submission.get('submitter_phone')
         
-        logger.info(f"SMS Notification: Starting for job {job_id}, phone: {phone_number[:10] if phone_number else 'N/A'}...")
+        logger.info(f"SMS Notification: Starting for job {job_id}, phone: {phone_number[:10] if phone_number and len(phone_number) > 10 else phone_number if phone_number else 'N/A'}...")
         
         if not phone_number:
-            logger.error(f"SMS Notification: No phone number in submission data for job {job_id}. Submission data keys: {list(submission_data.keys())}")
-            return
+            logger.error(f"SMS Notification: No phone number found in submission data for job {job_id}. Submission data keys: {list(submission_data.keys())}, submission keys: {list(submission.keys())}")
+            raise ValueError(f"No phone number found for SMS delivery in job {job_id}")
         
-        # Validate phone number format
-        if not phone_number or len(phone_number.strip()) < 10:
-            logger.error(f"SMS Notification: Invalid phone number format: {phone_number}")
-            return
+        # Clean and validate phone number format
+        phone_number = phone_number.strip()
+        # Remove common formatting characters
+        phone_number = phone_number.replace('-', '').replace(' ', '').replace('(', '').replace(')', '').replace('.', '')
+        
+        # Check if it starts with +, if not add it (assuming US numbers)
+        if not phone_number.startswith('+'):
+            # If it's 10 digits, assume US number and add +1
+            if len(phone_number) == 10:
+                phone_number = '+1' + phone_number
+            elif len(phone_number) == 11 and phone_number.startswith('1'):
+                phone_number = '+' + phone_number
+            else:
+                # Try to add + if it looks like an international number
+                phone_number = '+' + phone_number
+        
+        # Validate phone number format (should be at least 10 digits after +)
+        digits_only = ''.join(filter(str.isdigit, phone_number))
+        if len(digits_only) < 10:
+            logger.error(f"SMS Notification: Invalid phone number format (too short): {phone_number}")
+            raise ValueError(f"Invalid phone number format: {phone_number}")
         
         # Get SMS message
         sms_message = None
@@ -238,12 +255,12 @@ class DeliveryService:
             
             if not twilio_account_sid or not twilio_auth_token or not twilio_from_number:
                 logger.error(f"SMS Notification: Twilio credentials incomplete - account_sid: {'present' if twilio_account_sid else 'missing'}, auth_token: {'present' if twilio_auth_token else 'missing'}, from_number: {'present' if twilio_from_number else 'missing'}")
-                return
+                raise ValueError("Twilio credentials incomplete - missing required fields")
             
             logger.info(f"SMS Notification: Twilio credentials retrieved successfully, from_number: {twilio_from_number[:5]}...")
         except Exception as e:
             logger.error(f"SMS Notification: Failed to retrieve Twilio credentials: {e}", exc_info=True)
-            return
+            raise Exception(f"Failed to retrieve Twilio credentials: {str(e)}") from e
         
         try:
             # Send SMS via Twilio API
@@ -262,9 +279,21 @@ class DeliveryService:
             response_data = response.json()
             logger.info(f"SMS Notification: SMS sent successfully to {phone_number}. Twilio SID: {response_data.get('sid', 'N/A')}, Status: {response_data.get('status', 'N/A')}")
         except requests.exceptions.HTTPError as e:
-            logger.error(f"SMS Notification: HTTP error sending SMS: {e}. Response: {e.response.text if e.response else 'N/A'}")
+            error_msg = f"SMS Notification: HTTP error sending SMS: {e}"
+            if e.response:
+                try:
+                    error_detail = e.response.json()
+                    error_msg += f". Twilio error: {error_detail.get('message', e.response.text)}"
+                except:
+                    error_msg += f". Response: {e.response.text}"
+            logger.error(error_msg)
+            raise Exception(f"Failed to send SMS: {error_msg}") from e
+        except requests.exceptions.RequestException as e:
+            logger.error(f"SMS Notification: Request error sending SMS: {e}", exc_info=True)
+            raise Exception(f"Failed to send SMS due to network error: {str(e)}") from e
         except Exception as e:
-            logger.error(f"SMS Notification: Failed to send SMS: {e}", exc_info=True)
+            logger.error(f"SMS Notification: Unexpected error sending SMS: {e}", exc_info=True)
+            raise Exception(f"Failed to send SMS: {str(e)}") from e
     
     def generate_sms_message(
         self,

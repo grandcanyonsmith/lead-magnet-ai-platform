@@ -75,6 +75,10 @@ export default function JobsPage() {
   const [workflowMap, setWorkflowMap] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize] = useState(20)
+  const [totalJobs, setTotalJobs] = useState(0)
+  const [hasMore, setHasMore] = useState(false)
   
   // Use extracted hooks for filtering and sorting
   const filters = useJobFilters(jobs, workflowMap)
@@ -98,11 +102,14 @@ export default function JobsPage() {
     loadWorkflows()
   }, [])
 
-  const loadJobs = useCallback(async (showRefreshing = false) => {
+  const loadJobs = useCallback(async (showRefreshing = false, page = currentPage) => {
     try {
       if (showRefreshing) setRefreshing(true)
       
-      const params: any = {}
+      const params: any = {
+        limit: pageSize,
+        offset: (page - 1) * pageSize,
+      }
       if (filters.statusFilter !== 'all') {
         params.status = filters.statusFilter
       }
@@ -112,17 +119,23 @@ export default function JobsPage() {
       
       const data = await api.getJobs(params)
       setJobs(data.jobs || [])
+      setTotalJobs(data.total || 0)
+      setHasMore(data.has_more || false)
     } catch (error) {
       console.error('Failed to load jobs:', error)
     } finally {
       setLoading(false)
       setRefreshing(false)
     }
+  }, [filters.statusFilter, filters.workflowFilter, currentPage, pageSize])
+
+  useEffect(() => {
+    setCurrentPage(1) // Reset to first page when filters change
   }, [filters.statusFilter, filters.workflowFilter])
 
   useEffect(() => {
-    loadJobs()
-  }, [loadJobs])
+    loadJobs(false, currentPage)
+  }, [loadJobs, currentPage])
 
   // Auto-refresh for processing/pending jobs
   useEffect(() => {
@@ -264,33 +277,27 @@ export default function JobsPage() {
                       router.push(`/dashboard/jobs/${job.job_id}`)
                     }
                   }}
-                  className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 cursor-pointer hover:shadow-md transition-shadow"
+                  className="bg-white rounded-lg shadow-sm border border-gray-100 p-3 cursor-pointer hover:shadow transition-shadow"
                 >
-                  <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-start justify-between mb-2">
                     <div className="flex-1 min-w-0">
                       <h3 className="text-sm font-semibold text-gray-900 truncate">
                         {workflowMap[job.workflow_id] || job.workflow_id || '-'}
                       </h3>
                     </div>
-                    <div className="flex items-center space-x-2 ml-2 flex-shrink-0" data-tour="job-status">
-                      {getStatusIcon(job.status)}
+                    <div className="ml-2 flex-shrink-0" data-tour="job-status">
                       {getStatusBadge(job.status)}
                     </div>
                   </div>
                   
-                  <div className="space-y-2 text-xs">
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-500">Date:</span>
-                      <span className="text-gray-900 font-medium">{formatRelativeTime(job.created_at)}</span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-500">Processing Time:</span>
-                      <span className="text-gray-900 font-medium">{duration !== null ? formatDuration(duration) : '-'}</span>
+                  <div className="space-y-1 text-xs">
+                    <div className="flex items-center justify-between text-gray-600">
+                      <span>{formatRelativeTime(job.created_at)}</span>
+                      {duration !== null && <span>{formatDuration(duration)}</span>}
                     </div>
                     
                     {job.output_url && (
-                      <div className="pt-2 border-t border-gray-100" onClick={(e) => e.stopPropagation()} data-tour="view-artifacts">
+                      <div className="pt-1" onClick={(e) => e.stopPropagation()} data-tour="view-artifacts">
                         <a
                           href={job.output_url}
                           target="_blank"
@@ -298,30 +305,23 @@ export default function JobsPage() {
                           onClick={(e) => {
                             e.stopPropagation()
                             e.preventDefault()
-                            // Use window.open for better mobile compatibility
                             if (typeof window !== 'undefined') {
                               window.open(job.output_url, '_blank', 'noopener,noreferrer')
                             }
                           }}
                           onMouseDown={(e) => e.stopPropagation()}
                           onTouchStart={(e) => e.stopPropagation()}
-                          className="inline-flex items-center text-primary-600 hover:text-primary-900 font-medium"
+                          className="inline-flex items-center text-primary-600 hover:text-primary-900 text-xs"
                         >
                           <FiExternalLink className="w-3 h-3 mr-1" />
-                          View Document
+                          View
                         </a>
                       </div>
                     )}
                     
                     {hasError && (
-                      <div className="pt-2 border-t border-gray-100">
-                        <div className="flex items-start">
-                          <FiXCircle className="w-3 h-3 text-red-600 mt-0.5 mr-2 flex-shrink-0" />
-                          <div className="flex-1">
-                            <p className="text-red-600 font-medium text-xs">Error</p>
-                            <p className="text-red-500 text-xs mt-1 line-clamp-2">{job.error_message}</p>
-                          </div>
-                        </div>
+                      <div className="pt-1">
+                        <p className="text-red-600 text-xs line-clamp-1">{job.error_message}</p>
                       </div>
                     )}
                   </div>
@@ -409,10 +409,7 @@ export default function JobsPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center space-x-2">
-                          {getStatusIcon(job.status)}
-                          {getStatusBadge(job.status)}
-                        </div>
+                        {getStatusBadge(job.status)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">
@@ -497,6 +494,78 @@ export default function JobsPage() {
           </table>
         </div>
         </>
+      )}
+
+      {/* Pagination Controls */}
+      {sorting.sortedJobs.length > 0 && (
+        <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="text-sm text-gray-600">
+            Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalJobs)} of {totalJobs} lead magnets
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                if (currentPage > 1) {
+                  setCurrentPage(currentPage - 1)
+                  window.scrollTo({ top: 0, behavior: 'smooth' })
+                }
+              }}
+              disabled={currentPage === 1}
+              className="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Previous
+            </button>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(5, Math.ceil(totalJobs / pageSize)) }, (_, i) => {
+                const pageNum = i + 1
+                const totalPages = Math.ceil(totalJobs / pageSize)
+                let displayPage = pageNum
+                
+                // Show pages around current page
+                if (totalPages > 5) {
+                  if (currentPage <= 3) {
+                    displayPage = pageNum
+                  } else if (currentPage >= totalPages - 2) {
+                    displayPage = totalPages - 4 + pageNum
+                  } else {
+                    displayPage = currentPage - 2 + pageNum
+                  }
+                }
+                
+                if (displayPage > totalPages) return null
+                
+                return (
+                  <button
+                    key={displayPage}
+                    onClick={() => {
+                      setCurrentPage(displayPage)
+                      window.scrollTo({ top: 0, behavior: 'smooth' })
+                    }}
+                    className={`px-3 py-2 text-sm rounded-lg transition-colors ${
+                      currentPage === displayPage
+                        ? 'bg-primary-600 text-white'
+                        : 'border border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    {displayPage}
+                  </button>
+                )
+              })}
+            </div>
+            <button
+              onClick={() => {
+                if (hasMore || currentPage * pageSize < totalJobs) {
+                  setCurrentPage(currentPage + 1)
+                  window.scrollTo({ top: 0, behavior: 'smooth' })
+                }
+              }}
+              disabled={!hasMore && currentPage * pageSize >= totalJobs}
+              className="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Next
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Auto-refresh indicator */}
