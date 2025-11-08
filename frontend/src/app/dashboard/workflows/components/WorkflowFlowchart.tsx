@@ -177,7 +177,6 @@ function FlowchartContent({
         target,
         type: 'smoothstep',
         animated: isHighlighted,
-        selectable: false,
         style: {
           stroke: color,
           strokeWidth: isHighlighted ? 3 : 2,
