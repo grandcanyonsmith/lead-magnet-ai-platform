@@ -230,10 +230,10 @@ class AIService:
         tool_choice: str,
         has_computer_use: bool,
         is_o3_model: bool,
-        reasoning_level: Optional[str] = "medium"
+        reasoning_level: Optional[str] = None  # not used; Responses API doesn't support it
     ) -> Dict:
         """
-        Build OpenAI API parameters dict.
+        Build OpenAI API parameters dict (robust against tool_choice/tools mismatches).
         
         Args:
             model: OpenAI model name
@@ -243,126 +243,69 @@ class AIService:
             tool_choice: How to use tools
             has_computer_use: Whether computer_use_preview tool is present
             is_o3_model: Whether model is o3
-            reasoning_level: Reasoning level for o3 models (None to skip)
+            reasoning_level: Reasoning level for o3 models (None to skip, not supported in Responses API)
             
         Returns:
             Parameters dict for OpenAI API call
         """
-        # Build base params
         params = {
             "model": model,
             "instructions": instructions,
             "input": input_text,
         }
-        
-        logger.debug(f"[AI Service] Building API params", extra={
-            'model': model,
-            'tool_choice': tool_choice,
-            'tools_count': len(tools) if tools else 0,
-            'tools': [t.get('type') if isinstance(t, dict) else t for t in tools] if tools else [],
-            'has_computer_use': has_computer_use
+
+        logger.debug("[AI Service] Building API params", extra={
+            "model": model,
+            "tool_choice": tool_choice,
+            "tools_count": len(tools) if tools else 0,
+            "tools": [t.get("type") if isinstance(t, dict) else t for t in tools] if tools else [],
+            "has_computer_use": has_computer_use,
         })
-        
-        # Only add tools parameter if:
-        # 1. tools array is not empty
-        # 2. tool_choice is not "none" (if tool_choice is "none", don't include tools)
-        if tool_choice == "none":
-            # Don't include tools parameter when tool_choice is "none"
-            logger.info("[AI Service] tool_choice is 'none', not including tools parameter", extra={
-                'tools_count': len(tools) if tools else 0
+
+        # Decide final tools to send.
+        final_tools: List[Dict] = []
+        if tool_choice != "none":
+            final_tools = tools or []
+            if not final_tools:
+                # Provide a safe default tool so that 'tool_choice' never goes out without 'tools'
+                logger.warning("[AI Service] No tools supplied; adding default web_search_preview tool")
+                final_tools = [{"type": "web_search_preview"}]
+            params["tools"] = final_tools
+            logger.debug("[AI Service] Using tools", extra={
+                "count": len(final_tools),
+                "tools": [t.get("type") if isinstance(t, dict) else t for t in final_tools],
             })
-        elif tools and len(tools) > 0:
-            params["tools"] = tools
-            logger.debug(f"[AI Service] Added {len(tools)} tools to params", extra={
-                'tools': [t.get('type') if isinstance(t, dict) else t for t in tools]
-            })
-        else:
-            # If tool_choice is not "none" but tools is empty, we have a problem
-            # If tool_choice is 'required', this is an error condition
-            if tool_choice == "required":
-                logger.error("[AI Service] CRITICAL: tool_choice='required' but tools array is empty after filtering! Cannot proceed.", extra={
-                    'tool_choice': tool_choice,
-                    'tools_count': 0,
-                    'tools': []
-                })
-                raise ValueError("Invalid workflow configuration: tool_choice='required' but no valid tools available. Please check your workflow step configuration.")
-            # For 'auto', add default tool
-            logger.warning("[AI Service] Tools array is empty but tool_choice is not 'none'. Adding default web_search_preview tool.", extra={
-                'tool_choice': tool_choice,
-                'tools_count': 0
-            })
-            params["tools"] = [{"type": "web_search_preview"}]
-        
-        # Add truncation="auto" if computer_use_preview is used
+
         if has_computer_use:
             params["truncation"] = "auto"
             logger.info("[AI Service] Added truncation='auto' for computer_use_preview tool")
-        
-        # Add tool_choice ONLY if:
-        # 1. tool_choice is not "none"
-        # 2. tools array exists and is not empty
+
+        # Set tool_choice only when it's not "none".
         if tool_choice != "none":
             tools_in_params = params.get("tools", [])
-            
-            logger.debug(f"[AI Service] Checking tool_choice parameter", extra={
-                'tool_choice': tool_choice,
-                'tools_in_params_count': len(tools_in_params) if tools_in_params else 0,
-                'has_tools_key': 'tools' in params
-            })
-            
-            # CRITICAL: Never set tool_choice='required' if tools is empty
-            if tool_choice == "required":
-                if not tools_in_params or len(tools_in_params) == 0:
-                    logger.error("[AI Service] ABORT: tool_choice='required' but tools is empty in params! This should have been caught earlier.", extra={
-                        'tool_choice': tool_choice,
-                        'tools_in_params': tools_in_params,
-                        'has_tools_key': 'tools' in params,
-                        'params_keys': list(params.keys())
-                    })
-                    raise ValueError("Invalid API configuration: tool_choice='required' but tools array is empty. This indicates a bug in tool validation.")
-                else:
-                    # Only set tool_choice='required' if we have tools
-                    params["tool_choice"] = tool_choice
-                    logger.debug(f"[AI Service] Set tool_choice='{tool_choice}' with {len(tools_in_params)} tools", extra={
-                        'tools': [t.get('type') if isinstance(t, dict) else t for t in tools_in_params]
-                    })
-            elif tools_in_params and len(tools_in_params) > 0:
-                # For 'auto', only set if tools exist
+            if tool_choice == "required" and not tools_in_params:
+                # Self-heal instead of raising: downgrade to auto and add default tool.
+                logger.warning("[AI Service] tool_choice='required' but tools empty; downgrading to 'auto' and adding default tool")
+                params["tool_choice"] = "auto"
+                params["tools"] = [{"type": "web_search_preview"}]
+            else:
                 params["tool_choice"] = tool_choice
                 logger.debug(f"[AI Service] Set tool_choice='{tool_choice}' with {len(tools_in_params)} tools")
-            else:
-                logger.warning(f"[AI Service] Not setting tool_choice='{tool_choice}' because tools array is empty in params.", extra={
-                    'tool_choice': tool_choice,
-                    'tools_in_params_count': len(tools_in_params) if tools_in_params else 0
-                })
-        
-        # NOTE: reasoning_level is NOT supported for o3 models in the Responses API
-        # Do NOT add reasoning_level parameter for any model
-        if "reasoning_level" in params:
-            logger.warning(f"Removing reasoning_level parameter - not supported in Responses API")
-            del params["reasoning_level"]
-        
-        # ABSOLUTE FINAL CHECK: Right before API call, verify tool_choice='required' is never set with empty tools
-        if "tool_choice" in params and params["tool_choice"] == "required":
-            tools_in_params = params.get("tools", [])
-            if not tools_in_params or len(tools_in_params) == 0:
-                logger.critical("[AI Service] CRITICAL: tool_choice='required' found in params with empty tools! This is a critical bug.", extra={
-                    'params_keys': list(params.keys()),
-                    'has_tools_key': 'tools' in params,
-                    'tools_in_params': tools_in_params,
-                    'tool_choice_value': params.get('tool_choice')
-                })
-                raise ValueError("CRITICAL BUG: tool_choice='required' found in params with empty tools array. This should never happen after validation.")
-        
-        logger.debug(f"[AI Service] Final params before API call", extra={
-            'has_tools': 'tools' in params,
-            'tools_count': len(params.get('tools', [])) if 'tools' in params else 0,
-            'has_tool_choice': 'tool_choice' in params,
-            'tool_choice_value': params.get('tool_choice'),
-            'model': model,
-            'has_truncation': 'truncation' in params
+
+        # Absolutely final clamp: never send 'required' without tools.
+        if params.get("tool_choice") == "required" and not params.get("tools"):
+            logger.warning("[AI Service] Final clamp: switching 'required' → 'auto' and adding default tool")
+            params["tool_choice"] = "auto"
+            params["tools"] = [{"type": "web_search_preview"}]
+
+        logger.debug("[AI Service] Final params before API call", extra={
+            "has_tools": "tools" in params,
+            "tools_count": len(params.get("tools", [])) if "tools" in params else 0,
+            "has_tool_choice": "tool_choice" in params,
+            "tool_choice_value": params.get("tool_choice"),
+            "model": model,
+            "has_truncation": "truncation" in params
         })
-        
         return params
     
     def _extract_image_urls(self, response, tools: List[Dict]) -> List[str]:
@@ -599,7 +542,7 @@ class AIService:
         previous_context: str
     ) -> Tuple[str, Dict, Dict, Dict]:
         """
-        Handle OpenAI API errors with retry logic for reasoning_level errors.
+        Handle OpenAI API errors with retry logic for reasoning_level errors and tool_choice errors.
         
         Args:
             error: The exception that occurred
@@ -620,6 +563,43 @@ class AIService:
         """
         error_type = type(error).__name__
         error_message = str(error)
+        
+        # Special recovery: API complained about 'required' without 'tools'
+        if "Tool choice 'required' must be specified with 'tools' parameter" in error_message:
+            logger.warning("[AI Service] Recovering from 'required' without tools by retrying with tool_choice='auto' and a default tool")
+            try:
+                retry_tools = tools or [{"type": "web_search_preview"}]
+                input_text = self._build_input_text(context, previous_context)
+                params_retry = self._build_api_params(
+                    model=model,
+                    instructions=instructions,
+                    input_text=input_text,
+                    tools=retry_tools,
+                    tool_choice="auto",
+                    has_computer_use=any(
+                        (isinstance(t, dict) and t.get("type") == "computer_use_preview") or 
+                        (isinstance(t, str) and t == "computer_use_preview")
+                        for t in retry_tools
+                    ),
+                    is_o3_model=is_o3_model,
+                    reasoning_level=None
+                )
+                response = self.client.responses.create(**params_retry)
+                return self._process_api_response(
+                    response=response,
+                    model=model,
+                    instructions=instructions,
+                    input_text=input_text,
+                    previous_context=previous_context,
+                    context=context,
+                    tools=retry_tools,
+                    tool_choice="auto",
+                    params=params_retry
+                )
+            except Exception as retry_error:
+                error_message = str(retry_error)
+                error_type = type(retry_error).__name__
+                # fall through to the generic handling below
         
         # If reasoning_level is not supported and we're using an o3 model, retry without it
         # (This shouldn't happen for o3 models, but handle gracefully)
@@ -764,23 +744,14 @@ class AIService:
             'original_tool_choice': tool_choice
         })
         
-        # Check if image_generation tool is present - if so, set tool_choice to 'required'
+        # Detect image_generation tool, but do NOT force tool_choice='required'.
         has_image_generation = any(
             (isinstance(t, dict) and t.get("type") == "image_generation") or 
             (isinstance(t, str) and t == "image_generation")
             for t in validated_tools
         )
-        if has_image_generation and normalized_tool_choice != "none":
-            # Image generation requires tool_choice='required' to ensure images are generated
-            # BUT: Only do this if we actually have tools (image_generation tool should be in validated_tools)
-            if not validated_tools or len(validated_tools) == 0:
-                logger.error("[AI Service] CRITICAL: image_generation tool detected but validated_tools is empty! This should not happen.")
-                raise ValueError("Invalid workflow configuration: image_generation tool was detected but no valid tools are available after validation.")
-            normalized_tool_choice = "required"
-            logger.info("[AI Service] image_generation tool detected, setting tool_choice='required'", extra={
-                'validated_tools_count': len(validated_tools),
-                'tools': [t.get('type') if isinstance(t, dict) else t for t in validated_tools]
-            })
+        # Intentionally not changing normalized_tool_choice here:
+        # 'required' doesn't guarantee the image tool is picked and can cause invalid requests.
         
         # CRITICAL VALIDATION: Ensure tool_choice='required' never exists with empty tools
         if normalized_tool_choice == "required":
