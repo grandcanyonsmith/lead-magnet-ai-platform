@@ -742,15 +742,41 @@ class JobProcessor:
             # Current step context (empty for subsequent steps, initial_context for first step)
             current_step_context = initial_context if step_index == 0 else ""
             
+            logger.info(f"[JobProcessor] Processing step {step_index + 1}", extra={
+                'job_id': job_id,
+                'step_index': step_index,
+                'step_name': step_name,
+                'step_model': step_model,
+                'step_tool_choice': step_tool_choice,
+                'step_tools_count': len(step_tools) if step_tools else 0,
+                'step_tools': [t.get('type') if isinstance(t, dict) else t for t in step_tools] if step_tools else [],
+                'current_step_context_length': len(current_step_context),
+                'previous_context_length': len(all_previous_context)
+            })
+            
             # Generate step output with all previous step outputs
-            step_output, usage_info, request_details, response_details = self.ai_service.generate_report(
-                model=step_model,
-                instructions=step_instructions,
-                context=current_step_context,
-                previous_context=all_previous_context,
-                tools=step_tools,
-                tool_choice=step_tool_choice
-            )
+            try:
+                step_output, usage_info, request_details, response_details = self.ai_service.generate_report(
+                    model=step_model,
+                    instructions=step_instructions,
+                    context=current_step_context,
+                    previous_context=all_previous_context,
+                    tools=step_tools,
+                    tool_choice=step_tool_choice
+                )
+            except Exception as step_error:
+                logger.error(f"[JobProcessor] Error generating report for step {step_index + 1}", extra={
+                    'job_id': job_id,
+                    'step_index': step_index,
+                    'step_name': step_name,
+                    'step_model': step_model,
+                    'step_tool_choice': step_tool_choice,
+                    'step_tools_count': len(step_tools) if step_tools else 0,
+                    'step_tools': [t.get('type') if isinstance(t, dict) else t for t in step_tools] if step_tools else [],
+                    'error_type': type(step_error).__name__,
+                    'error_message': str(step_error)
+                }, exc_info=True)
+                raise
             
             step_duration = (datetime.utcnow() - step_start_time).total_seconds() * 1000
             
