@@ -36,7 +36,7 @@ export function createJobProcessorStateMachine(
     resultPath: '$.updateResult',
   });
 
-  // Handle Lambda returning success: false (business logic failure)
+  // Handle Lambda returning success: false (business logic failure) for workflow steps
   const handleStepFailure = new tasks.DynamoUpdateItem(scope, 'HandleStepFailure', {
     table: jobsTable,
     key: {
@@ -50,6 +50,24 @@ export function createJobProcessorStateMachine(
       ':status': tasks.DynamoAttributeValue.fromString('failed'),
       ':error': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.processResult.Payload.error')),
       ':error_type': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.processResult.Payload.error_type')),
+      ':updated_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
+    },
+  });
+
+  // Handle HTML generation failures - reads from htmlResult instead of processResult
+  const handleHtmlGenerationFailure = new tasks.DynamoUpdateItem(scope, 'HandleHtmlGenerationFailure', {
+    table: jobsTable,
+    key: {
+      job_id: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.job_id')),
+    },
+    updateExpression: 'SET #status = :status, error_message = :error, error_type = :error_type, updated_at = :updated_at',
+    expressionAttributeNames: {
+      '#status': 'status',
+    },
+    expressionAttributeValues: {
+      ':status': tasks.DynamoAttributeValue.fromString('failed'),
+      ':error': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.htmlResult.Payload.error')),
+      ':error_type': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.htmlResult.Payload.error_type')),
       ':updated_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
     },
   });
@@ -162,7 +180,7 @@ export function createJobProcessorStateMachine(
   const checkHtmlResult = new sfn.Choice(scope, 'CheckHtmlResult')
     .when(
       sfn.Condition.booleanEquals('$.htmlResult.Payload.success', false),
-      handleStepFailure
+      handleHtmlGenerationFailure
     )
     .otherwise(finalizeJob);
 
