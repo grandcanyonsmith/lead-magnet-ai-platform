@@ -51,19 +51,47 @@ export function useWorkflowSubmission() {
         }
       }
 
+      // Validate required fields before submission
+      const workflowName = formData.workflow_name.trim()
+      if (!workflowName) {
+        throw new Error('Workflow name is required')
+      }
+
+      if (steps.length === 0) {
+        throw new Error('At least one workflow step is required')
+      }
+
+      // Ensure all steps have required fields
+      steps.forEach((step, index) => {
+        if (!step.step_name?.trim()) {
+          throw new Error(`Step ${index + 1} name is required`)
+        }
+        if (!step.instructions?.trim()) {
+          throw new Error(`Step ${index + 1} instructions are required`)
+        }
+      })
+
+      // Get ai_instructions - use first step's instructions if available, otherwise use formData
+      // Only include ai_instructions if we have steps (for backward compatibility)
+      // If no steps, the validation will require ai_instructions, research_enabled, or html_enabled
+      const aiInstructions = steps.length > 0 
+        ? (steps[0]?.instructions?.trim() || formData.ai_instructions.trim() || undefined)
+        : (formData.ai_instructions.trim() || undefined)
+
       // Then create the workflow with steps
       const workflow = await api.createWorkflow({
-        workflow_name: formData.workflow_name.trim(),
+        workflow_name: workflowName,
         workflow_description: formData.workflow_description?.trim() || '',
         steps: steps.map((step, index) => ({
           ...step,
           step_order: index,
           model: step.model as any,
           tools: step.tools as any,
+          instructions: step.instructions.trim(), // Ensure instructions are trimmed
         })),
         // Keep legacy fields for backward compatibility (will be auto-migrated)
         ai_model: formData.ai_model as AIModel,
-        ai_instructions: steps[0]?.instructions || formData.ai_instructions.trim() || '',
+        ai_instructions: aiInstructions, // Include if not empty, undefined otherwise
         rewrite_model: formData.rewrite_model as AIModel,
         research_enabled: formData.research_enabled,
         html_enabled: formData.html_enabled,
@@ -79,17 +107,28 @@ export function useWorkflowSubmission() {
         delivery_sms_ai_instructions: formData.delivery_method === 'sms' && formData.delivery_sms_ai_generated && formData.delivery_sms_ai_instructions ? formData.delivery_sms_ai_instructions : undefined,
       })
 
-      // Create the form if form fields are provided
+      // Update or create the form if form fields are provided
       if (formFieldsData.form_fields_schema.fields.length > 0) {
-        await api.createForm({
-          workflow_id: workflow.workflow_id,
-          form_name: formFieldsData.form_name || `Form for ${formData.workflow_name}`,
-          public_slug: formFieldsData.public_slug || formData.workflow_name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
-          form_fields_schema: formFieldsData.form_fields_schema,
-          rate_limit_enabled: true,
-          rate_limit_per_hour: 10,
-          captcha_enabled: false,
-        })
+        // Check if workflow already has a form (from auto-creation)
+        if (workflow.form?.form_id) {
+          // Update existing form with all fields
+          await api.updateForm(workflow.form.form_id, {
+            form_name: formFieldsData.form_name || `Form for ${formData.workflow_name}`,
+            public_slug: formFieldsData.public_slug || formData.workflow_name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+            form_fields_schema: formFieldsData.form_fields_schema,
+          })
+        } else {
+          // Create new form if it doesn't exist
+          await api.createForm({
+            workflow_id: workflow.workflow_id,
+            form_name: formFieldsData.form_name || `Form for ${formData.workflow_name}`,
+            public_slug: formFieldsData.public_slug || formData.workflow_name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+            form_fields_schema: formFieldsData.form_fields_schema,
+            rate_limit_enabled: true,
+            rate_limit_per_hour: 10,
+            captcha_enabled: false,
+          })
+        }
       }
 
       return workflow
