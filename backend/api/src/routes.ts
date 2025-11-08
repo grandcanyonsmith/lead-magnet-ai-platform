@@ -117,6 +117,16 @@ export const router = async (
     return await workflowsController.refineInstructions(tenantId, body);
   }
 
+  if (path.match(/^\/admin\/workflows\/[^/]+\/execution-plan$/) && method === 'GET') {
+    const id = pathSegments[2];
+    return await workflowsController.getExecutionPlan(tenantId, id);
+  }
+
+  if (path.match(/^\/admin\/workflows\/[^/]+\/validate-dependencies$/) && method === 'POST') {
+    const id = pathSegments[2];
+    return await workflowsController.validateDependencies(tenantId, id, body);
+  }
+
   if (path.match(/^\/admin\/workflows\/[^/]+$/) && method === 'GET') {
     const id = pathSegments[2];
     return await workflowsController.get(tenantId, id);
