@@ -55,7 +55,7 @@ RUN set -e && \
     export PLAYWRIGHT_BROWSERS_PATH=/opt/playwright && \
     export PLAYWRIGHT_NODEJS_PATH=/opt/nodejs/node-playwright && \
     echo "Installing Chromium browser to $PLAYWRIGHT_BROWSERS_PATH..." && \
-    python3 -m playwright install chromium --with-deps && \
+    python3 -m playwright install chromium && \
     echo "Verifying Chromium installation..." && \
     CHROMIUM_PATH=$(find /opt/playwright -type d -name "chromium-*" | head -1) && \
     if [ -z "$CHROMIUM_PATH" ]; then \
