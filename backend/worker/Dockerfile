@@ -48,12 +48,31 @@ RUN find /var/lang/lib/python3.11/site-packages/playwright -name "node" -type f 
 # Install Chromium browser using Playwright's install command
 # This ensures the correct revision and directory structure that Playwright expects
 # Note: We skip --with-deps since we've already installed system dependencies above
-RUN mkdir -p /opt/playwright && \
+RUN set -e && \
+    mkdir -p /opt/playwright && \
     export PLAYWRIGHT_BROWSERS_PATH=/opt/playwright && \
     export PLAYWRIGHT_NODEJS_PATH=/opt/nodejs/node-playwright && \
+    echo "Installing Chromium browser to $PLAYWRIGHT_BROWSERS_PATH..." && \
     python3 -m playwright install chromium && \
-    # Verify installation
-    ls -la /opt/playwright/chromium-*/chrome-linux/chrome || (echo "Chromium installation check failed" && find /opt/playwright -name "chrome" -type f 2>/dev/null | head -5)
+    echo "Verifying Chromium installation..." && \
+    CHROMIUM_PATH=$(find /opt/playwright -type d -name "chromium-*" | head -1) && \
+    if [ -z "$CHROMIUM_PATH" ]; then \
+        echo "ERROR: Chromium directory not found after installation"; \
+        echo "Contents of /opt/playwright:"; \
+        ls -la /opt/playwright || true; \
+        exit 1; \
+    fi && \
+    CHROME_BINARY="$CHROMIUM_PATH/chrome-linux/chrome" && \
+    if [ ! -f "$CHROME_BINARY" ]; then \
+        echo "ERROR: Chromium binary not found at $CHROME_BINARY"; \
+        echo "Contents of $CHROMIUM_PATH:"; \
+        ls -la "$CHROMIUM_PATH" || true; \
+        exit 1; \
+    fi && \
+    chmod +x "$CHROME_BINARY" && \
+    echo "Chromium installed successfully at $CHROME_BINARY" && \
+    ls -lh "$CHROME_BINARY" && \
+    echo "Browser installation verification complete"
 
 # Copy application code (copy everything from build context)
 # This includes lambda_handler.py, all .py files, services/, and utils/ directories
