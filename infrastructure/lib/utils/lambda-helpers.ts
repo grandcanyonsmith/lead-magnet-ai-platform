@@ -77,7 +77,7 @@ export function grantSecretsAccess(
 export interface CreateLambdaWithTablesOptions {
   runtime?: lambda.Runtime;  // Optional for container images
   handler?: string;  // Optional for container images
-  code: lambda.Code;
+  code: lambda.Code | lambda.DockerImageCode;
   timeout?: cdk.Duration;
   memorySize?: number;
   environment?: Record<string, string>;
@@ -110,10 +110,13 @@ export function createLambdaWithTables(
   // Create Lambda function (container image or zip)
   let lambdaFunction: lambda.IFunction;
   
-  if (options.code instanceof lambda.DockerImageCode) {
+  // Determine deployment type: container image if runtime/handler are both missing
+  const isContainerImage = options.runtime === undefined && options.handler === undefined;
+  
+  if (isContainerImage) {
     // Container image - use DockerImageFunction
     lambdaFunction = new lambda.DockerImageFunction(scope, id, {
-      code: options.code,
+      code: options.code as lambda.DockerImageCode,
       timeout: options.timeout,
       memorySize: options.memorySize,
       environment,
@@ -125,12 +128,12 @@ export function createLambdaWithTables(
   } else {
     // Zip deployment - use regular Function
     if (!options.runtime || !options.handler) {
-      throw new Error('runtime and handler are required for zip-based Lambda functions');
+      throw new Error('Both runtime and handler are required for zip-based Lambda functions');
     }
     lambdaFunction = new lambda.Function(scope, id, {
       runtime: options.runtime,
       handler: options.handler,
-      code: options.code,
+      code: options.code as lambda.Code,
       timeout: options.timeout,
       memorySize: options.memorySize,
       environment,
