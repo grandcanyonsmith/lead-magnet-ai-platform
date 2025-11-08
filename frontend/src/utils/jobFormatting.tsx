@@ -68,7 +68,11 @@ export function formatDurationSeconds(seconds: number): string {
 
 export function formatDurationMs(ms: number): string {
   if (ms < 1000) return `${Math.round(ms)}ms`
-  return `${(ms / 1000).toFixed(2)}s`
+  const totalSeconds = Math.round(ms / 1000)
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  if (minutes === 0) return `${seconds}s`
+  return `${minutes}m ${seconds}s`
 }
 
 export function isJSON(str: string): boolean {

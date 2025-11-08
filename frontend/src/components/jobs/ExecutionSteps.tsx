@@ -108,7 +108,7 @@ export function ExecutionSteps({
                         </span>
                         {step.usage_info.cost_usd && (
                           <span className="text-gray-600 font-medium">
-                            ${step.usage_info.cost_usd.toFixed(4)}
+                            ${step.usage_info.cost_usd.toFixed(2)}
                           </span>
                         )}
                       </div>

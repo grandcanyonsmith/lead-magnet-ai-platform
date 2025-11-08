@@ -113,7 +113,7 @@ class WorkflowsController {
       let workflows: any[] = [];
       try {
         if (status) {
-          workflows = await db.query(
+          const result = await db.query(
             WORKFLOWS_TABLE!,
             'gsi_tenant_status',
             'tenant_id = :tenant_id AND #status = :status',
@@ -121,8 +121,9 @@ class WorkflowsController {
             { '#status': 'status' },
             limit
           );
+          workflows = Array.isArray(result) ? result : result.items;
         } else {
-          workflows = await db.query(
+          const result = await db.query(
             WORKFLOWS_TABLE!,
             'gsi_tenant_status',
             'tenant_id = :tenant_id',
@@ -130,6 +131,7 @@ class WorkflowsController {
             undefined,
             limit
           );
+          workflows = Array.isArray(result) ? result : result.items;
         }
       } catch (dbError: any) {
         console.error('[Workflows List] Database query error', {
@@ -879,7 +881,7 @@ When modifying instructions, ensure:
 ## Output Requirements
 
 Return ONLY the modified instructions:
-- No markdown formatting (no code blocks, no ```)
+- No markdown formatting (no code blocks, no \`\`\`)
 - No explanations or commentary
 - Just the improved instructions text
 - Maintain the same general structure unless changes require restructuring`;
