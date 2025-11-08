@@ -145,13 +145,6 @@ export default function DashboardPage() {
             <FiActivity className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
             Create Lead Magnet
           </a>
-          <a
-            href="/dashboard/forms/new"
-            className="flex items-center justify-center px-3 sm:px-4 py-2.5 sm:py-3 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg hover:from-primary-700 hover:to-primary-800 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 text-sm sm:text-base"
-          >
-            <FiFileText className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-            Create Lead Capture Form
-          </a>
         </div>
       </div>
 

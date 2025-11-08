@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { FiExternalLink } from 'react-icons/fi'
-import { getStatusIcon, getStatusBadge, formatRelativeTime, formatDurationSeconds } from '@/utils/jobFormatting'
+import { formatRelativeTime, formatDurationSeconds } from '@/utils/jobFormatting'
 
 interface JobDetailsProps {
   job: any
@@ -16,18 +16,18 @@ export function JobDetails({ job, workflow }: JobDetailsProps) {
     ? Math.round((new Date(job.completed_at).getTime() - new Date(job.created_at).getTime()) / 1000)
     : null
 
+  // Calculate total cost from all execution steps
+  const totalCost = job.execution_steps && Array.isArray(job.execution_steps)
+    ? job.execution_steps.reduce((sum: number, step: any) => {
+        const cost = step.usage_info?.cost_usd
+        return sum + (typeof cost === 'number' ? cost : 0)
+      }, 0)
+    : null
+
   return (
     <div className="bg-white rounded-lg shadow p-6 space-y-6">
       <h2 className="text-lg font-semibold text-gray-900">Details</h2>
       
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-        <div className="flex items-center space-x-3">
-          {getStatusIcon(job.status)}
-          {getStatusBadge(job.status)}
-        </div>
-      </div>
-
       {workflow && (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Workflow</label>
@@ -74,6 +74,13 @@ export function JobDetails({ job, workflow }: JobDetailsProps) {
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Processing Time</label>
           <p className="text-sm text-gray-900">{formatDurationSeconds(duration)}</p>
+        </div>
+      )}
+
+      {totalCost !== null && totalCost > 0 && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Total Cost</label>
+          <p className="text-sm text-gray-900">${totalCost.toFixed(2)}</p>
         </div>
       )}
 
