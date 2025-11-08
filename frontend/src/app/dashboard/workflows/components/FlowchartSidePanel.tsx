@@ -12,6 +12,8 @@ interface FlowchartSidePanelProps {
   onClose: () => void
   onChange: (index: number, step: WorkflowStep) => void
   onDelete: (index: number) => void
+  onMoveUp: (index: number) => void
+  onMoveDown: (index: number) => void
 }
 
 export default function FlowchartSidePanel({
@@ -22,6 +24,8 @@ export default function FlowchartSidePanel({
   onClose,
   onChange,
   onDelete,
+  onMoveUp,
+  onMoveDown,
 }: FlowchartSidePanelProps) {
   const [localStep, setLocalStep] = useState<WorkflowStep | null>(step)
 
@@ -108,8 +112,8 @@ export default function FlowchartSidePanel({
               totalSteps={totalSteps}
               onChange={handleChange}
               onDelete={handleDelete}
-              onMoveUp={() => {}}
-              onMoveDown={() => {}}
+              onMoveUp={onMoveUp}
+              onMoveDown={onMoveDown}
             />
           )}
         </div>
