@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { FiSave } from 'react-icons/fi'
-import WorkflowFlowchart from '../../components/WorkflowFlowchart'
+import WorkflowFlowchart from '@/app/dashboard/workflows/components/WorkflowFlowchart'
 import { WorkflowFormData } from '@/hooks/useWorkflowEdit'
 import { WorkflowStep } from '@/app/dashboard/workflows/components/WorkflowStepEditor'
 
