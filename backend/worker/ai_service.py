@@ -100,10 +100,40 @@ class AIService:
         # Filter out tools that require additional configuration we don't have
         # file_search requires vector_store_ids
         # computer_use_preview requires container (mandatory for code interpreter)
+        # code_interpreter also requires container
         filtered_tools = []
         for tool in tools:
             tool_type = tool.get("type") if isinstance(tool, dict) else tool
-            tool_dict = tool if isinstance(tool, dict) else {"type": tool}
+            # Convert string tools to dict format
+            tool_dict = tool.copy() if isinstance(tool, dict) else {"type": tool}
+            
+            # Normalize tool type (handle variations)
+            if tool_type == "code_interpreter" or tool_type == "computer_use_preview":
+                # Both require container - ensure it's present
+                container = tool_dict.get("container")
+                if not container:
+                    # Auto-add container for code_interpreter, but filter out computer_use_preview if missing
+                    if tool_type == "code_interpreter":
+                        tool_dict["container"] = {"type": "auto"}
+                        logger.info(f"Auto-added container for code_interpreter tool")
+                    else:
+                        logger.warning(f"Skipping {tool_type} tool - container parameter is REQUIRED but not provided. Tool config: {tool_dict}")
+                        continue
+                elif isinstance(container, str):
+                    # Convert string container to dict format
+                    if container.strip() == "":
+                        if tool_type == "code_interpreter":
+                            tool_dict["container"] = {"type": "auto"}
+                            logger.info(f"Auto-added container for code_interpreter tool (empty string)")
+                        else:
+                            logger.warning(f"Skipping {tool_type} tool - container is empty string")
+                            continue
+                    else:
+                        tool_dict["container"] = {"type": "auto"} if container.strip() == "auto" else {"id": container.strip()}
+                        logger.info(f"Converted {tool_type} container string to dict: {tool_dict['container']}")
+                elif not isinstance(container, dict):
+                    logger.warning(f"Invalid container format for {tool_type}, filtering out: {container}")
+                    continue
             
             # Skip file_search if vector_store_ids is not provided or is empty
             if tool_type == "file_search":
@@ -112,67 +142,38 @@ class AIService:
                     logger.warning(f"Skipping file_search tool - vector_store_ids not provided or empty")
                     continue
             
-            # Handle code_interpreter - container is REQUIRED, auto-add if missing
-            if tool_type == "code_interpreter":
-                container = tool_dict.get("container")
-                if not container:
-                    # Auto-add container for code_interpreter
-                    tool_dict["container"] = {"type": "auto"}
-                    logger.info("Auto-added container={'type': 'auto'} for code_interpreter tool")
-                elif isinstance(container, str) and container.strip() == "":
-                    # Empty string container - use auto mode
-                    tool_dict["container"] = {"type": "auto"}
-                    logger.warning("Empty container string for code_interpreter, using auto mode")
-                elif isinstance(container, dict) and container.get("type") == "auto":
-                    # Valid auto container
-                    logger.debug("code_interpreter has valid auto container")
-                elif isinstance(container, str) and container.strip():
-                    # Valid explicit container ID
-                    logger.debug(f"code_interpreter has explicit container: {container}")
-                else:
-                    # Invalid container format - filter out
-                    logger.warning(f"Invalid container format for code_interpreter, filtering out: {container}")
-                    continue
-            
-            # Skip computer_use_preview if container is not provided or is empty
-            # Container is REQUIRED for computer_use_preview (code interpreter)
-            if tool_type == "computer_use_preview":
-                container = tool_dict.get("container")
-                if not container or (isinstance(container, str) and container.strip() == ""):
-                    logger.warning(f"Skipping computer_use_preview tool - container parameter is REQUIRED but not provided or empty. Tool config: {tool_dict}")
-                    continue
-                # Log successful inclusion for debugging
-                logger.info(f"Including computer_use_preview tool with container: {container}")
-            
             filtered_tools.append(tool_dict)
         
         # Final validation: Double-check that no invalid tools made it through
         validated_tools = []
         for tool in filtered_tools:
             tool_type = tool.get("type") if isinstance(tool, dict) else tool
-            tool_dict = tool if isinstance(tool, dict) else {"type": tool}
+            tool_dict = dict(tool) if isinstance(tool, dict) else {"type": tool}
             
-            # Final check for code_interpreter - must have container
-            if tool_type == "code_interpreter":
+            # Final check for tools requiring containers
+            if tool_type == "code_interpreter" or tool_type == "computer_use_preview":
                 container = tool_dict.get("container")
                 if not container:
-                    # Auto-add container if somehow missing
-                    tool_dict["container"] = {"type": "auto"}
-                    logger.info("Auto-added container={'type': 'auto'} for code_interpreter tool in final validation")
-                elif isinstance(container, str) and container.strip() == "":
-                    # Empty string container - use auto mode
-                    tool_dict["container"] = {"type": "auto"}
-                    logger.warning("Empty container string for code_interpreter in final validation, using auto mode")
-                elif not (isinstance(container, dict) and container.get("type") == "auto") and not (isinstance(container, str) and container.strip()):
-                    # Invalid container format - filter out
-                    logger.error(f"CRITICAL: code_interpreter tool has invalid container format! Filtering it out now. container: {container}, tool_dict: {tool_dict}")
-                    continue
-            
-            # Final check for computer_use_preview - must have container
-            if tool_type == "computer_use_preview":
-                container = tool_dict.get("container")
-                if not container or (isinstance(container, str) and container.strip() == ""):
-                    logger.error(f"CRITICAL: computer_use_preview tool passed validation without container! Filtering it out now. tool_dict: {tool_dict}")
+                    if tool_type == "code_interpreter":
+                        # Auto-add container for code_interpreter
+                        tool_dict["container"] = {"type": "auto"}
+                        logger.info(f"Final validation: Auto-added container for code_interpreter tool")
+                    else:
+                        logger.error(f"CRITICAL: {tool_type} tool passed validation without container! Filtering it out now. tool_dict: {tool_dict}")
+                        continue
+                elif isinstance(container, str):
+                    if container.strip() == "":
+                        if tool_type == "code_interpreter":
+                            tool_dict["container"] = {"type": "auto"}
+                            logger.info(f"Final validation: Auto-added container for code_interpreter (empty string)")
+                        else:
+                            logger.error(f"CRITICAL: {tool_type} tool has empty container string! Filtering it out now. tool_dict: {tool_dict}")
+                            continue
+                    else:
+                        tool_dict["container"] = {"type": "auto"} if container.strip() == "auto" else {"id": container.strip()}
+                        logger.info(f"Final validation: Converted {tool_type} container string to dict: {tool_dict['container']}")
+                elif not isinstance(container, dict):
+                    logger.error(f"CRITICAL: {tool_type} tool has invalid container format! Filtering it out now. container: {container}, tool_dict: {tool_dict}")
                     continue
             
             # Final check for file_search - must have vector_store_ids
@@ -284,15 +285,11 @@ class AIService:
             else:
                 logger.warning(f"[AI Service] Not setting tool_choice='{tool_choice}' because tools array is empty in params.")
         
-        # Add reasoning_level only for o3 models
-        if is_o3_model and reasoning_level is not None:
-            params["reasoning_level"] = reasoning_level
-            logger.info(f"Using reasoning_level={reasoning_level} for o3 model: {model}")
-        else:
-            # Explicitly ensure reasoning_level is NOT added for non-o3 models
-            if "reasoning_level" in params:
-                logger.warning(f"Removing reasoning_level parameter for non-o3 model: {model}")
-                del params["reasoning_level"]
+        # NOTE: reasoning_level is NOT supported for o3 models in the Responses API
+        # Do NOT add reasoning_level parameter for any model
+        if "reasoning_level" in params:
+            logger.warning(f"Removing reasoning_level parameter - not supported in Responses API")
+            del params["reasoning_level"]
         
         # ABSOLUTE FINAL CHECK: Right before API call, verify tool_choice='required' is never set with empty tools
         if "tool_choice" in params and params["tool_choice"] == "required":
@@ -727,6 +724,7 @@ class AIService:
         
         try:
             # Build API parameters
+            # NOTE: reasoning_level is NOT supported in Responses API, so we don't pass it
             params = self._build_api_params(
                 model=model,
                 instructions=instructions,
@@ -735,7 +733,7 @@ class AIService:
                 tool_choice=normalized_tool_choice,
                 has_computer_use=has_computer_use,
                 is_o3_model=is_o3_model,
-                reasoning_level="medium"
+                reasoning_level=None  # Not supported in Responses API
             )
             
             # Make API call
