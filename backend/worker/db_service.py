@@ -30,6 +30,26 @@ class DynamoDBService:
         
         self.dynamodb = boto3.resource('dynamodb', region_name=region)
         
+        # Required environment variables
+        required_env_vars = [
+            'WORKFLOWS_TABLE',
+            'FORMS_TABLE',
+            'SUBMISSIONS_TABLE',
+            'JOBS_TABLE',
+            'ARTIFACTS_TABLE',
+            'TEMPLATES_TABLE'
+        ]
+        
+        # Check for missing required environment variables
+        missing_vars = [var for var in required_env_vars if not os.environ.get(var)]
+        if missing_vars:
+            error_msg = f"Missing required environment variables: {', '.join(missing_vars)}"
+            logger.error(f"[DynamoDB] {error_msg}", extra={
+                'missing_vars': missing_vars,
+                'available_env_vars': [k for k in os.environ.keys() if 'TABLE' in k.upper()]
+            })
+            raise ValueError(error_msg)
+        
         # Table references
         self.workflows_table = self.dynamodb.Table(os.environ['WORKFLOWS_TABLE'])
         self.forms_table = self.dynamodb.Table(os.environ['FORMS_TABLE'])
