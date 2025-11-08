@@ -100,6 +100,14 @@ Return JSON format:
   ]
 }
 
+Available Models:
+- o3-deep-research: For deep research and analysis steps
+- gpt-5: For high-quality content generation and HTML rewriting
+- gpt-4.1: For high-quality content generation with Code Interpreter support
+- gpt-4o: For general-purpose content generation
+- gpt-4-turbo: For faster content generation
+- gpt-3.5-turbo: For cost-effective content generation
+
 Guidelines for selecting tools:
 - Research/analysis steps: Use web_search or web_search_preview with tool_choice "auto"
 - HTML generation/formatting steps: Use empty tools array [] with tool_choice "none"

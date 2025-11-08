@@ -10,6 +10,10 @@ const OPENAI_PRICING: Record<string, { input_per_1k_tokens_usd: number; output_p
     input_per_1k_tokens_usd: 0.0025, // $2.50 per 1M tokens
     output_per_1k_tokens_usd: 0.01, // $10 per 1M tokens
   },
+  'gpt-4.1': {
+    input_per_1k_tokens_usd: 0.0025, // $2.50 per 1M tokens
+    output_per_1k_tokens_usd: 0.01, // $10 per 1M tokens
+  },
   'gpt-4-turbo': {
     input_per_1k_tokens_usd: 0.01, // $10 per 1M tokens
     output_per_1k_tokens_usd: 0.03, // $30 per 1M tokens
