@@ -1,6 +1,10 @@
 # Lead Magnet Generation Flow
 
-## Complete Process Flow Diagram
+> **Last Updated**: 2025-01-27  
+> **Status**: Current  
+> **Related Docs**: [Architecture Overview](./ARCHITECTURE.md), [Deployment Guide](./DEPLOYMENT.md), [Troubleshooting Guide](./TROUBLESHOOTING.md)
+
+Visual process flow diagrams showing how form submissions are processed into personalized lead magnets.
 
 ```mermaid
 flowchart TD
@@ -197,3 +201,12 @@ User submits form
 - Step Functions catch Lambda errors
 - AI rewrite failures fall back to original HTML
 
+## Related Documentation
+
+- [Architecture Overview](./ARCHITECTURE.md) - System architecture and components
+- [Deployment Guide](./DEPLOYMENT.md) - Deployment and infrastructure setup
+- [Troubleshooting Guide](./TROUBLESHOOTING.md) - Common issues and solutions
+- [Resources](./RESOURCES.md) - AWS resource inventory
+- [Quick Start Guide](./QUICK_START.md) - Quick testing steps
+
+---

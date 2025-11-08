@@ -1,13 +1,27 @@
 # Lead Magnet AI Platform - Resource Inventory
 
-## AWS Resources Deployed
+> **Last Updated**: 2025-01-27  
+> **Status**: Current  
+> **Related Docs**: [Architecture Overview](./ARCHITECTURE.md), [Deployment Guide](./DEPLOYMENT.md), [Quick Start Guide](./QUICK_START.md)
 
-### Account Information
-- **AWS Account ID:** 471112574622
-- **Region:** us-east-1
-- **Deployment Date:** October 17, 2025
+Complete inventory of AWS resources deployed for the Lead Magnet AI Platform.
 
 ---
+
+## Finding Your Resource Values
+
+All resource names follow consistent patterns. Use CloudFormation outputs to find specific values:
+
+```bash
+# Get all stack outputs
+aws cloudformation describe-stacks --stack-name leadmagnet-{stack-name} \
+  --query "Stacks[0].Outputs"
+
+# Get specific output value
+aws cloudformation describe-stacks --stack-name leadmagnet-{stack-name} \
+  --query "Stacks[0].Outputs[?OutputKey=='{OutputKey}'].OutputValue" \
+  --output text
+```
 
 ## CloudFormation Stacks
 
@@ -204,18 +218,24 @@ lead-magnent-ai/
 
 ## Access URLs Summary
 
+Retrieve your URLs using CloudFormation outputs:
+
 ```bash
-# API
-export API_URL="https://czp5b77azd.execute-api.us-east-1.amazonaws.com"
+# API URL
+export API_URL=$(aws cloudformation describe-stacks \
+  --stack-name leadmagnet-api \
+  --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
+  --output text)
 
-# Frontend
-export FRONTEND_URL="https://dmydkyj79auy7.cloudfront.net/app/"
+# Frontend URL
+export FRONTEND_URL=$(aws cloudformation describe-stacks \
+  --stack-name leadmagnet-storage \
+  --query "Stacks[0].Outputs[?OutputKey=='DistributionDomainName'].OutputValue" \
+  --output text)
+export FRONTEND_URL="https://$FRONTEND_URL/app/"
 
-# Test Form
-export TEST_FORM="$API_URL/v1/forms/test-form"
-
-# CloudFront
-export CDN_URL="https://dmydkyj79auy7.cloudfront.net"
+# Test Form (replace with your form slug)
+export TEST_FORM="$API_URL/v1/forms/{your-form-slug}"
 ```
 
 ---
@@ -245,5 +265,15 @@ aws ecs list-task-definitions
 
 ---
 
-**Last Updated:** October 17, 2025  
-**Status:** All resources active and tested ✅
+## Related Documentation
+
+- [Architecture Overview](./ARCHITECTURE.md) - System architecture and design
+- [Deployment Guide](./DEPLOYMENT.md) - Deployment instructions
+- [Quick Start Guide](./QUICK_START.md) - Quick setup and testing
+- [Troubleshooting Guide](./TROUBLESHOOTING.md) - Common issues and solutions
+- [Flow Diagram](./FLOW_DIAGRAM.md) - Process flow visualization
+
+---
+
+**Last Updated:** 2025-01-27  
+**Status:** Current - Use CloudFormation outputs to find specific resource values

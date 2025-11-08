@@ -231,19 +231,21 @@ lead-magnent-ai/
 ## 📖 Documentation
 
 **Main Documentation:**
-- **[docs/QUICK_START.md](./docs/QUICK_START.md)** - Quick start guide with URLs, commands, and getting started steps
-- **[docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)** - Complete deployment guide with step-by-step instructions
-- **[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)** - Architecture overview, technology stack, and development guide
-- **[docs/RESOURCES.md](./docs/RESOURCES.md)** - AWS resource inventory and management commands
-- **[docs/FLOW_DIAGRAM.md](./docs/FLOW_DIAGRAM.md)** - Complete process flow diagram
+- **[Documentation Index](./docs/README.md)** - Complete documentation navigation and index
+- **[Quick Start Guide](./docs/QUICK_START.md)** - Quick start guide with setup instructions
+- **[Deployment Guide](./docs/DEPLOYMENT.md)** - Complete deployment guide with step-by-step instructions
+- **[Architecture Overview](./docs/ARCHITECTURE.md)** - Architecture overview, technology stack, and development guide
+- **[Resources](./docs/RESOURCES.md)** - AWS resource inventory and management commands
+- **[Flow Diagram](./docs/FLOW_DIAGRAM.md)** - Complete process flow diagram
 
 **Additional Guides:**
-- **[DEPLOYMENT.md](./DEPLOYMENT.md)** - Root-level deployment reference
-- **[LOCAL_DEVELOPMENT.md](./LOCAL_DEVELOPMENT.md)** - Local development setup
-- **[FRONTEND_TEST_GUIDE.md](./FRONTEND_TEST_GUIDE.md)** - Frontend testing guide
-- **[GITHUB_SECRETS_SETUP.md](./GITHUB_SECRETS_SETUP.md)** - GitHub Actions secrets configuration
-- **[QUICK_GITHUB_SETUP.md](./QUICK_GITHUB_SETUP.md)** - Quick GitHub repository setup
-- **[LAMBDA_BUILD_OPTIONS.md](./LAMBDA_BUILD_OPTIONS.md)** - Lambda build and deployment options
+- **[Local Development](./LOCAL_DEVELOPMENT.md)** - Local development setup
+- **[Frontend Test Guide](./FRONTEND_TEST_GUIDE.md)** - Frontend testing guide
+- **[GitHub Secrets Setup](./GITHUB_SECRETS_SETUP.md)** - GitHub Actions secrets configuration
+- **[Quick GitHub Setup](./QUICK_GITHUB_SETUP.md)** - Quick GitHub repository setup
+- **[Lambda Build Options](./LAMBDA_BUILD_OPTIONS.md)** - Lambda build and deployment options
+
+For complete documentation, see the [Documentation Index](./docs/README.md).
 
 ## 🔐 Security
 
@@ -274,11 +276,11 @@ MIT License
 
 ## 🆘 Support
 
-- **Documentation:** See `/docs` folder and root-level `.md` files
+- **Documentation:** See [Documentation Index](./docs/README.md) for complete documentation
 - **Issues:** Open an issue on GitHub
 - **Logs:** Check CloudWatch logs
 - **Local Development:** See [LOCAL_DEVELOPMENT.md](./LOCAL_DEVELOPMENT.md)
-- **Deployment Help:** See [DEPLOYMENT.md](./DEPLOYMENT.md) or [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)
+- **Deployment Help:** See [Deployment Guide](./docs/DEPLOYMENT.md)
 
 ## 🎉 Status
 
@@ -294,4 +296,4 @@ MIT License
 
 **Built with ❤️ using AWS, OpenAI, Next.js, and TypeScript**
 
-*For complete documentation, see the [docs](./docs/) folder*
+*For complete documentation, see the [Documentation Index](./docs/README.md)*
