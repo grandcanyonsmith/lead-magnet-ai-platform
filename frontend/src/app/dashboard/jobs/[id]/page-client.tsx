@@ -542,21 +542,21 @@ export default function JobDetailClient() {
 
       {/* Execution Steps */}
       {job.execution_steps && Array.isArray(job.execution_steps) && job.execution_steps.length > 0 && (
-        <div className="mt-6 bg-white rounded-lg shadow p-6">
+        <div className="mt-4 sm:mt-6 bg-white rounded-lg shadow p-4 sm:p-6">
           <button
             onClick={() => setShowExecutionSteps(!showExecutionSteps)}
-            className="flex items-center justify-between w-full text-left mb-4"
+            className="flex items-center justify-between w-full text-left mb-4 touch-target"
           >
             <h2 className="text-lg font-semibold text-gray-900">Execution Steps</h2>
             {showExecutionSteps ? (
-              <FiChevronUp className="w-5 h-5 text-gray-500" />
+              <FiChevronUp className="w-5 h-5 text-gray-500 flex-shrink-0 ml-2" />
             ) : (
-              <FiChevronDown className="w-5 h-5 text-gray-500" />
+              <FiChevronDown className="w-5 h-5 text-gray-500 flex-shrink-0 ml-2" />
             )}
           </button>
 
           {showExecutionSteps && (
-            <div className="space-y-4 pt-4 border-t border-gray-200">
+            <div className="space-y-3 sm:space-y-4 pt-4 border-t border-gray-200">
               {job.execution_steps.map((step: any, index: number) => {
                 const isExpanded = expandedSteps.has(step.step_order)
                 const stepTypeColors: Record<string, string> = {
@@ -568,73 +568,88 @@ export default function JobDetailClient() {
                 const stepTypeColor = stepTypeColors[step.step_type] || 'bg-gray-100 text-gray-800'
 
                 return (
-                  <div key={index} className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center space-x-3 flex-wrap">
-                        <span className={`px-2 py-1 text-xs font-medium rounded ${stepTypeColor}`}>
-                          Step {step.step_order}
-                        </span>
-                        <h3 className="text-sm font-semibold text-gray-900">{step.step_name}</h3>
-                        {step.model && (
-                          <span className="text-xs text-gray-500">({step.model})</span>
+                  <div key={index} className="border border-gray-200 rounded-lg p-3 sm:p-4 hover:border-gray-300 transition-colors">
+                    {/* Header Section */}
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
+                      {/* Left: Step info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center flex-wrap gap-2 mb-2">
+                          <span className={`px-2 py-1 text-xs font-medium rounded flex-shrink-0 ${stepTypeColor}`}>
+                            Step {step.step_order}
+                          </span>
+                          <h3 className="text-sm sm:text-base font-semibold text-gray-900 break-words">{step.step_name}</h3>
+                          {step.model && (
+                            <span className="text-xs text-gray-500 whitespace-nowrap">({step.model})</span>
+                          )}
+                        </div>
+                        
+                        {/* Tools Section - Always show for consistency */}
+                        <div className="flex items-center flex-wrap gap-1.5 text-xs">
+                          <span className="text-gray-500 font-medium">Tools:</span>
+                          {step.input?.tools && Array.isArray(step.input.tools) && step.input.tools.length > 0 ? (
+                            <>
+                              <div className="flex flex-wrap gap-1">
+                                {step.input.tools.map((tool: any, toolIdx: number) => {
+                                  const toolName = typeof tool === 'string' ? tool : tool.type || 'unknown'
+                                  return (
+                                    <span key={toolIdx} className="px-2 py-0.5 text-xs bg-blue-50 text-blue-700 rounded border border-blue-200 whitespace-nowrap">
+                                      {toolName}
+                                    </span>
+                                  )
+                                })}
+                              </div>
+                              {step.input.tool_choice && (
+                                <span className="text-gray-500">
+                                  ({step.input.tool_choice})
+                                </span>
+                              )}
+                            </>
+                          ) : (
+                            <span className="px-2 py-0.5 text-xs bg-gray-50 text-gray-600 rounded border border-gray-200">
+                              None
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Right: Metrics - Stack vertically on mobile */}
+                      <div className="flex flex-col items-start sm:items-end gap-1 text-xs text-gray-500 flex-shrink-0">
+                        {step.duration_ms !== undefined && (
+                          <span className="font-medium text-gray-700">{formatDurationMs(step.duration_ms)}</span>
                         )}
-                        {/* Display tools and tool_choice */}
-                        {step.input?.tools && Array.isArray(step.input.tools) && step.input.tools.length > 0 && (
-                          <div className="flex items-center space-x-2">
-                            <span className="text-xs text-gray-500">Tools:</span>
-                            <div className="flex flex-wrap gap-1">
-                              {step.input.tools.map((tool: any, toolIdx: number) => {
-                                const toolName = typeof tool === 'string' ? tool : tool.type || 'unknown'
-                                return (
-                                  <span key={toolIdx} className="px-1.5 py-0.5 text-xs bg-blue-50 text-blue-700 rounded border border-blue-200">
-                                    {toolName}
-                                  </span>
-                                )
-                              })}
-                            </div>
-                            {step.input.tool_choice && (
-                              <span className="text-xs text-gray-500">
-                                ({step.input.tool_choice})
+                        {step.usage_info && (
+                          <div className="flex flex-col sm:items-end gap-0.5">
+                            <span className="text-gray-600">
+                              {step.usage_info.input_tokens + step.usage_info.output_tokens} tokens
+                            </span>
+                            {step.usage_info.cost_usd && (
+                              <span className="text-gray-600 font-medium">
+                                ${step.usage_info.cost_usd.toFixed(4)}
                               </span>
                             )}
                           </div>
                         )}
-                        {step.input?.tool_choice === 'none' && (!step.input?.tools || (Array.isArray(step.input.tools) && step.input.tools.length === 0)) && (
-                          <span className="px-1.5 py-0.5 text-xs bg-gray-50 text-gray-600 rounded border border-gray-200">
-                            No tools
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center space-x-2 text-xs text-gray-500">
-                        {step.duration_ms !== undefined && (
-                          <span>{formatDurationMs(step.duration_ms)}</span>
-                        )}
-                        {step.usage_info && (
-                          <span>
-                            {step.usage_info.input_tokens + step.usage_info.output_tokens} tokens
-                            {step.usage_info.cost_usd && ` • $${step.usage_info.cost_usd.toFixed(4)}`}
-                          </span>
-                        )}
                       </div>
                     </div>
 
-                    <div className="mt-3 space-y-2">
+                    {/* Input/Output Section */}
+                    <div className="mt-3 pt-3 border-t border-gray-100">
                       <button
                         onClick={() => toggleStep(step.step_order)}
-                        className="flex items-center justify-between w-full text-left text-sm text-gray-700 hover:text-gray-900"
+                        className="flex items-center justify-between w-full text-left text-sm text-gray-700 hover:text-gray-900 touch-target py-1"
                       >
                         <span className="font-medium">Input</span>
                         {isExpanded ? (
-                          <FiChevronUp className="w-4 h-4" />
+                          <FiChevronUp className="w-5 h-5 flex-shrink-0 ml-2" />
                         ) : (
-                          <FiChevronDown className="w-4 h-4" />
+                          <FiChevronDown className="w-5 h-5 flex-shrink-0 ml-2" />
                         )}
                       </button>
 
                       {isExpanded && (
-                        <div className="mt-2 space-y-4">
+                        <div className="mt-3 space-y-4">
                           <div>
-                            <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center justify-between mb-2">
                               <span className="text-xs font-medium text-gray-700">Input</span>
                               <button
                                 onClick={() => {
@@ -646,9 +661,9 @@ export default function JobDetailClient() {
                                       : formatted.content.input || JSON.stringify(formatted.content, null, 2)
                                   copyToClipboard(text)
                                 }}
-                                className="text-xs text-gray-500 hover:text-gray-700 flex items-center space-x-1 p-2 touch-target"
+                                className="text-xs text-gray-500 hover:text-gray-700 flex items-center space-x-1 px-2 py-1.5 rounded hover:bg-gray-50 touch-target"
                               >
-                                <FiCopy className="w-3 h-3" />
+                                <FiCopy className="w-3.5 h-3.5" />
                                 <span>Copy</span>
                               </button>
                             </div>
@@ -658,7 +673,7 @@ export default function JobDetailClient() {
                           </div>
 
                           <div>
-                            <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center justify-between mb-2">
                               <span className="text-xs font-medium text-gray-700">Output</span>
                               <button
                                 onClick={() => {
@@ -670,9 +685,9 @@ export default function JobDetailClient() {
                                       : JSON.stringify(formatted.content, null, 2)
                                   copyToClipboard(text)
                                 }}
-                                className="text-xs text-gray-500 hover:text-gray-700 flex items-center space-x-1 p-2 touch-target"
+                                className="text-xs text-gray-500 hover:text-gray-700 flex items-center space-x-1 px-2 py-1.5 rounded hover:bg-gray-50 touch-target"
                               >
-                                <FiCopy className="w-3 h-3" />
+                                <FiCopy className="w-3.5 h-3.5" />
                                 <span>Copy</span>
                               </button>
                             </div>
@@ -713,7 +728,7 @@ export default function JobDetailClient() {
 
                           {step.artifact_id && (
                             <div className="text-xs text-gray-500">
-                              Artifact ID: <span className="font-mono">{step.artifact_id}</span>
+                              Artifact ID: <span className="font-mono break-all">{step.artifact_id}</span>
                             </div>
                           )}
                         </div>
@@ -728,16 +743,16 @@ export default function JobDetailClient() {
       )}
 
       {/* Technical Details (Collapsible) */}
-      <div className="mt-6 bg-white rounded-lg shadow p-6">
+      <div className="mt-4 sm:mt-6 bg-white rounded-lg shadow p-4 sm:p-6">
         <button
           onClick={() => setShowTechnicalDetails(!showTechnicalDetails)}
-          className="flex items-center justify-between w-full text-left mb-4"
+          className="flex items-center justify-between w-full text-left mb-4 touch-target"
         >
           <h2 className="text-lg font-semibold text-gray-900">Technical Details</h2>
           {showTechnicalDetails ? (
-            <FiChevronUp className="w-5 h-5 text-gray-500" />
+            <FiChevronUp className="w-5 h-5 text-gray-500 flex-shrink-0 ml-2" />
           ) : (
-            <FiChevronDown className="w-5 h-5 text-gray-500" />
+            <FiChevronDown className="w-5 h-5 text-gray-500 flex-shrink-0 ml-2" />
           )}
         </button>
 
