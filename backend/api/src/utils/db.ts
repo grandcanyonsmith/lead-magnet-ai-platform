@@ -91,7 +91,8 @@ export class DynamoDBService {
     keyCondition: string,
     expressionAttributeValues: Record<string, any>,
     expressionAttributeNames?: Record<string, string>,
-    limit?: number
+    limit?: number,
+    exclusiveStartKey?: Record<string, any>
   ) {
     const params: any = {
       TableName: tableName,
@@ -116,10 +117,25 @@ export class DynamoDBService {
       params.Limit = limit;
     }
 
+    if (exclusiveStartKey) {
+      params.ExclusiveStartKey = exclusiveStartKey;
+    }
+
     const command = new QueryCommand(params);
 
     const result = await docClient.send(command);
-    return result.Items || [];
+    const items = result.Items || [];
+    
+    // Return backward compatible format: if exclusiveStartKey was used, return object with pagination info
+    // Otherwise return array for backward compatibility
+    if (exclusiveStartKey !== undefined) {
+      return {
+        items,
+        lastEvaluatedKey: result.LastEvaluatedKey,
+      };
+    }
+    
+    return items;
   }
 
   async scan(tableName: string, limit?: number) {

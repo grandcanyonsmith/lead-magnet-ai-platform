@@ -21,7 +21,11 @@ export interface Job extends BaseEntity {
 
 export interface JobListResponse {
   jobs: Job[]
+  count?: number
   total?: number
+  offset?: number
+  limit?: number
+  has_more?: boolean
 }
 
 export interface JobListParams {
