@@ -164,7 +164,7 @@ export default function ArtifactsPage() {
                           href={a.object_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-primary-600 hover:text-primary-900 p-1 rounded hover:bg-gray-100"
+                          className="text-primary-600 hover:text-primary-900 p-2 rounded hover:bg-gray-100 touch-target"
                           title="Preview in new tab"
                         >
                           <FiExternalLink className="w-5 h-5" />
@@ -172,7 +172,7 @@ export default function ArtifactsPage() {
                         <a
                           href={a.object_url}
                           download={a.file_name || `${a.artifact_id}.${a.content_type?.split('/')[1] || 'txt'}`}
-                          className="text-primary-600 hover:text-primary-900 p-1 rounded hover:bg-gray-100"
+                          className="text-primary-600 hover:text-primary-900 p-2 rounded hover:bg-gray-100 touch-target"
                           title="Download"
                         >
                           <FiDownload className="w-5 h-5" />

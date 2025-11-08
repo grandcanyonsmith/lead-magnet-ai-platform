@@ -797,7 +797,7 @@ export default function EditWorkflowPage() {
       <div className="mb-6">
         <button
           onClick={() => router.back()}
-          className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
+          className="flex items-center text-gray-600 hover:text-gray-900 mb-4 py-2 touch-target"
         >
           <FiArrowLeft className="w-4 h-4 mr-2" />
           Back
@@ -813,8 +813,8 @@ export default function EditWorkflowPage() {
       )}
 
       {/* Tabs */}
-      <div className="mb-6 border-b border-gray-200">
-        <nav className="flex space-x-8">
+      <div className="mb-6 border-b border-gray-200 overflow-x-auto">
+        <nav className="flex space-x-4 sm:space-x-8 min-w-max">
           <button
             onClick={() => setActiveTab('workflow')}
             className={`py-4 px-1 border-b-2 font-medium text-sm ${
@@ -1005,18 +1005,18 @@ export default function EditWorkflowPage() {
               </div>
             )}
 
-            <div className="flex justify-end space-x-4 pt-4 border-t">
+            <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4 pt-4 border-t">
               <button
                 type="button"
                 onClick={() => router.back()}
-                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors touch-target"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={submitting || (formData.html_enabled && !templateId && !templateData.html_content.trim()) || (formData.research_enabled && !formData.ai_instructions.trim())}
-                className="flex items-center px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center justify-center px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-target"
               >
                 <FiSave className="w-5 h-5 mr-2" />
                 {submitting ? 'Saving...' : 'Save Changes'}
@@ -1181,12 +1181,12 @@ export default function EditWorkflowPage() {
                             <button
                               type="button"
                               onClick={() => removeField(index)}
-                              className="text-red-600 hover:text-red-700 p-1"
+                              className="text-red-600 hover:text-red-700 p-2 touch-target"
                             >
                               <FiMinus className="w-4 h-4" />
                             </button>
                           </div>
-                          <div className="grid grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                               <label className="block text-xs font-medium text-gray-700 mb-1">Field Type</label>
                               <select
@@ -1254,7 +1254,7 @@ export default function EditWorkflowPage() {
                           <button
                             type="button"
                             onClick={addField}
-                            className="mt-3 text-sm text-primary-600 hover:text-primary-700"
+                            className="mt-3 text-sm text-primary-600 hover:text-primary-700 py-2 px-2 touch-target"
                           >
                             Add your first field
                           </button>
@@ -1380,18 +1380,18 @@ export default function EditWorkflowPage() {
                 )}
               </div>
 
-              <div className="flex justify-end space-x-4 pt-4 border-t">
+              <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4 pt-4 border-t">
                 <button
                   type="button"
                   onClick={() => router.back()}
-                  className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                  className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors touch-target"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="flex items-center px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center justify-center px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-target"
                 >
                   <FiSave className="w-5 h-5 mr-2" />
                   {submitting ? 'Saving...' : 'Save Changes'}
@@ -1608,7 +1608,7 @@ export default function EditWorkflowPage() {
                         <button
                           type="button"
                           onClick={() => setDevicePreviewSize('mobile')}
-                          className={`p-1.5 rounded transition-colors ${
+                          className={`p-2 rounded transition-colors touch-target ${
                             devicePreviewSize === 'mobile'
                               ? 'bg-primary-600 text-white'
                               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -1620,7 +1620,7 @@ export default function EditWorkflowPage() {
                         <button
                           type="button"
                           onClick={() => setDevicePreviewSize('tablet')}
-                          className={`p-1.5 rounded transition-colors ${
+                          className={`p-2 rounded transition-colors touch-target ${
                             devicePreviewSize === 'tablet'
                               ? 'bg-primary-600 text-white'
                               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -1632,7 +1632,7 @@ export default function EditWorkflowPage() {
                         <button
                           type="button"
                           onClick={() => setDevicePreviewSize('desktop')}
-                          className={`p-1.5 rounded transition-colors ${
+                          className={`p-2 rounded transition-colors touch-target ${
                             devicePreviewSize === 'desktop'
                               ? 'bg-primary-600 text-white'
                               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -1746,18 +1746,18 @@ export default function EditWorkflowPage() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex justify-end space-x-4 pt-4">
+              <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4 pt-4">
                 <button
                   type="button"
                   onClick={() => router.back()}
-                  className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                  className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors touch-target"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting || !templateData.html_content.trim()}
-                  className="flex items-center px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center justify-center px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-target"
                 >
                   <FiSave className="w-5 h-5 mr-2" />
                   {submitting ? 'Saving...' : 'Save Changes'}

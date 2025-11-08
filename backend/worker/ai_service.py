@@ -269,11 +269,49 @@ class AIService:
         return validated_tools, normalized_choice
     
     def _build_input_text(self, context: str, previous_context: str) -> str:
-        """Build input text from context and previous context."""
-        full_context = context
+        """
+        Build input text from context and previous context with structured guidance.
+        
+        Args:
+            context: Current step context (form data for first step, empty for subsequent steps)
+            previous_context: Accumulated context from all previous steps
+            
+        Returns:
+            Formatted input text with guidance on output expectations
+        """
+        # Build guidance on output format and quality expectations
+        output_guidance = """Generate a comprehensive, well-structured report based on the following information.
+
+Output Requirements:
+1. Format: Use clear markdown formatting with proper headings, sections, and structure
+2. Quality: Be comprehensive, accurate, and personalized based on the provided context
+3. Structure: Organize content with logical sections, headings, and subsections
+4. Personalization: Reference specific details from the form submission data when available
+5. Completeness: Provide thorough analysis and insights, not just surface-level information
+
+When previous step outputs are provided:
+- Build upon and reference insights from previous steps
+- Synthesize information across steps to create cohesive content
+- Use previous step outputs to inform and enhance your analysis
+- Maintain consistency with themes and findings from earlier steps
+
+When form submission data is provided:
+- Personalize content using specific field values (e.g., name, company, industry)
+- Reference form fields explicitly in your output where relevant
+- Tailor recommendations and insights to the submitter's specific situation"""
+        
+        # Build context sections
+        full_context_parts = []
+        
         if previous_context:
-            full_context = f"{previous_context}\n\n--- Current Step Context ---\n{context}"
-        return f"Generate a report based on the following information:\n\n{full_context}"
+            full_context_parts.append("=== Previous Step Outputs ===\n" + previous_context)
+        
+        if context:
+            full_context_parts.append("=== Current Step Context ===\n" + context)
+        
+        full_context = "\n\n".join(full_context_parts) if full_context_parts else context
+        
+        return f"{output_guidance}\n\n{full_context}"
     
     def _build_api_params(
         self,
@@ -1090,7 +1128,7 @@ class AIService:
     
     def _build_html_instructions(self, template_style: str, ai_instructions: str, include_research: bool) -> str:
         """
-        Build system instructions for HTML generation.
+        Build system instructions for HTML generation with comprehensive guidance.
         
         Args:
             template_style: Optional style description/guidance
@@ -1100,33 +1138,66 @@ class AIService:
         Returns:
             System instructions string
         """
-        base_instructions = """You are an expert web developer and content designer.
+        base_instructions = """You are an expert web developer and content designer specializing in accessible, responsive web design.
 
 Your task is to create a beautifully styled HTML document"""
         
         if include_research:
             base_instructions += " based on research content and a template design."
-            requirements = """Requirements:
-1. Use the research content provided as the basis for the document
-2. Style the HTML to match the design and structure of the provided template
-3. Maintain all research content and facts accurately
-4. Apply the template's styling, layout, and visual design
-5. Ensure semantic HTML structure
-6. Include proper headings, sections, and formatting
-7. Make it visually appealing and professional
-8. DO NOT use placeholder syntax like {PLACEHOLDER_NAME} - generate complete, personalized content directly
-9. Personalize all content based on the research and submission data provided"""
+            content_guidance = """1. Use the research content provided as the basis for the document
+2. Maintain all research content and facts accurately
+3. Preserve key insights, data points, and findings from the research
+4. Organize research content logically within the template structure
+5. Personalize all content based on the research and submission data provided"""
         else:
             base_instructions += " based on user submission data and a template design."
-            requirements = """Requirements:
-1. Use the submission data provided as the basis for the document
-2. Style the HTML to match the design and structure of the provided template
-3. Apply the template's styling, layout, and visual design
-4. Ensure semantic HTML structure
-5. Include proper headings, sections, and formatting
-6. Make it visually appealing and professional
-7. Personalize the content based on the submission data
-8. DO NOT use placeholder syntax like {PLACEHOLDER_NAME} - generate complete, personalized content directly"""
+            content_guidance = """1. Use the submission data provided as the basis for the document
+2. Extract and organize information from form fields intelligently
+3. Personalize the content based on the submission data
+4. Transform form data into engaging, readable content"""
+        
+        requirements = f"""Template Matching Requirements:
+1. Preserve the template's exact HTML structure, CSS classes, and layout patterns
+2. Match the template's visual design including colors, fonts, spacing, and styling
+3. Maintain the template's component structure (headers, sections, cards, etc.)
+4. Keep the same CSS class names and IDs from the template
+5. Preserve the template's responsive breakpoints and media queries
+6. Match the template's overall aesthetic and design language
+
+Content Requirements:
+{content_guidance}
+7. DO NOT use placeholder syntax like {{PLACEHOLDER_NAME}} - generate complete, personalized content directly
+8. Ensure all content is meaningful and contextually appropriate
+
+Accessibility Requirements:
+1. Use semantic HTML5 elements (header, nav, main, article, section, footer, etc.)
+2. Include proper heading hierarchy (h1, h2, h3 in logical order)
+3. Add alt text to all images: alt="descriptive text about the image"
+4. Use ARIA labels where appropriate for interactive elements
+5. Ensure sufficient color contrast (WCAG AA minimum)
+6. Make interactive elements keyboard accessible
+7. Use descriptive link text (avoid "click here" or "read more")
+8. Include proper form labels and field associations
+
+Mobile Responsiveness Requirements:
+1. Ensure the HTML works on mobile devices (320px width minimum)
+2. Use responsive design patterns from the template
+3. Test that images scale appropriately
+4. Ensure text is readable without horizontal scrolling
+5. Maintain touch-friendly button and link sizes (minimum 44x44px)
+6. Preserve the template's mobile layout patterns
+
+Image Handling:
+1. If images are referenced in previous step outputs, include them using proper img tags
+2. Use the image URLs provided in the context when available
+3. Ensure all images have appropriate alt text
+4. Maintain image aspect ratios and sizing from the template
+
+Output Format:
+- Return ONLY the complete HTML document
+- No markdown code blocks (no ```html or ```)
+- No additional commentary or explanations
+- Complete, valid HTML5 document ready for use"""
         
         instructions = f"""{base_instructions}
 
