@@ -23,9 +23,8 @@ RUN apt-get update && \
     lsb-release \
     && rm -rf /var/lib/apt/lists/*
 
-# Create symlinks for python and pip
-RUN ln -s /usr/bin/python3.11 /usr/bin/python && \
-    ln -s /usr/bin/python3.11 /usr/bin/python3 && \
+# Create symlink for python (python3 already exists)
+RUN ln -sf /usr/bin/python3.11 /usr/bin/python && \
     python3 -m pip install --upgrade pip
 
 # Install Lambda Runtime Interface Client (RIC)
@@ -87,8 +86,11 @@ RUN (find /usr/local/lib/python3.11/dist-packages/playwright -name "node" -type 
         chmod +x "$node_file"; \
     done || echo "Node.js driver replacement attempted"
 # Install Chromium browser using Playwright's install command
+# First install Playwright's system dependencies to ensure compatibility
+RUN python3 -m playwright install-deps chromium || echo "Dependency installation completed (some may already be installed)"
+
+# Install Chromium browser using Playwright's install command
 # This ensures the correct revision and directory structure that Playwright expects
-# Note: We skip --with-deps since we've already installed system dependencies above
 RUN set -e && \
     mkdir -p /opt/playwright && \
     export PLAYWRIGHT_BROWSERS_PATH=/opt/playwright && \
