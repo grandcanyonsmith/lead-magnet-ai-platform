@@ -42,36 +42,60 @@ class JobsController {
   async list(tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {
     const workflowId = queryParams.workflow_id;
     const status = queryParams.status;
-    const limit = queryParams.limit ? parseInt(queryParams.limit) : 50;
+    const pageSize = queryParams.limit ? parseInt(queryParams.limit) : 20;
+    const offset = queryParams.offset ? parseInt(queryParams.offset) : 0;
+    
+    // Fetch more items than needed to support offset-based pagination
+    const fetchLimit = pageSize + offset;
 
     let jobs;
+    let totalCount = 0;
+    
     if (workflowId && status) {
-      jobs = await db.query(
+      const result = await db.query(
         JOBS_TABLE,
         'gsi_workflow_status',
         'workflow_id = :workflow_id AND #status = :status',
         { ':workflow_id': workflowId, ':status': status },
         { '#status': 'status' },
-        limit
+        fetchLimit
       );
+      jobs = Array.isArray(result) ? result : result.items;
+      // For total count, we'd need a separate query, but for now estimate based on fetched items
+      totalCount = jobs.length;
     } else if (workflowId) {
-      jobs = await db.query(
+      const result = await db.query(
         JOBS_TABLE,
         'gsi_workflow_status',
         'workflow_id = :workflow_id',
         { ':workflow_id': workflowId },
         undefined,
-        limit
+        fetchLimit
       );
+      jobs = Array.isArray(result) ? result : result.items;
+      totalCount = jobs.length;
     } else {
-      jobs = await db.query(
+      const result = await db.query(
         JOBS_TABLE,
         'gsi_tenant_created',
         'tenant_id = :tenant_id',
         { ':tenant_id': tenantId },
         undefined,
-        limit
+        fetchLimit
       );
+      jobs = Array.isArray(result) ? result : result.items;
+      // For tenant queries, try to get a better count estimate
+      // Fetch a larger sample to estimate total
+      const countResult = await db.query(
+        JOBS_TABLE,
+        'gsi_tenant_created',
+        'tenant_id = :tenant_id',
+        { ':tenant_id': tenantId },
+        undefined,
+        1000 // Sample size for count estimation
+      );
+      const countJobs = Array.isArray(countResult) ? countResult : countResult.items;
+      totalCount = countJobs.length >= 1000 ? 1000 : countJobs.length;
     }
 
     // Ensure jobs are sorted by created_at DESC (most recent first)
@@ -82,11 +106,19 @@ class JobsController {
       return dateB - dateA; // DESC order
     });
 
+    // Apply offset and limit
+    const paginatedJobs = jobs.slice(offset, offset + pageSize);
+    const hasMore = jobs.length > offset + pageSize;
+
     return {
       statusCode: 200,
       body: {
-        jobs,
-        count: jobs.length,
+        jobs: paginatedJobs,
+        count: paginatedJobs.length,
+        total: totalCount,
+        offset,
+        limit: pageSize,
+        has_more: hasMore,
       },
     };
   }
