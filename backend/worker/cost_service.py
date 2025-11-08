@@ -12,6 +12,10 @@ OPENAI_PRICING = {
         'input_per_1k_tokens_usd': Decimal('0.0025'),
         'output_per_1k_tokens_usd': Decimal('0.01'),
     },
+    'gpt-4.1': {
+        'input_per_1k_tokens_usd': Decimal('0.0025'),
+        'output_per_1k_tokens_usd': Decimal('0.01'),
+    },
     'gpt-4-turbo': {
         'input_per_1k_tokens_usd': Decimal('0.01'),
         'output_per_1k_tokens_usd': Decimal('0.03'),
