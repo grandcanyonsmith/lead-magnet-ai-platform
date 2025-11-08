@@ -15,7 +15,10 @@ from decimal import Decimal
 from botocore.exceptions import ClientError
 
 # Configuration
-JOB_ID = "wfgen_01K9EACW059X5PSDE826KF8BFC"
+JOB_IDS = [
+    "wfgen_01K9J0X1NFKYCBM6TDJWKSKVXW",
+    "wfgen_01K9J140J1XXX79F2SD8J3C4YH"
+]
 TENANT_ID = "84c8e438-0061-70f2-2ce0-7cb44989a329"
 REGION = "us-east-1"
 
@@ -278,6 +281,41 @@ def import_workflow_from_job(job_id: str, tenant_id: str):
 
 
 if __name__ == "__main__":
-    success = import_workflow_from_job(JOB_ID, TENANT_ID)
-    sys.exit(0 if success else 1)
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="Import workflow generation job results into database")
+    parser.add_argument("--job-id", help="Specific job ID to import (if not provided, imports all configured jobs)")
+    args = parser.parse_args()
+    
+    jobs_to_process = [args.job_id] if args.job_id else JOB_IDS
+    
+    print("=" * 80)
+    print("Workflow Import Tool")
+    print("=" * 80)
+    print(f"Tenant ID: {TENANT_ID}")
+    print(f"Jobs to process: {len(jobs_to_process)}")
+    print("=" * 80)
+    
+    success_count = 0
+    failed_count = 0
+    
+    for job_id in jobs_to_process:
+        print(f"\n{'=' * 80}")
+        print(f"Processing Job: {job_id}")
+        print(f"{'=' * 80}")
+        
+        success = import_workflow_from_job(job_id, TENANT_ID)
+        if success:
+            success_count += 1
+        else:
+            failed_count += 1
+    
+    print("\n" + "=" * 80)
+    print("Import Summary")
+    print("=" * 80)
+    print(f"✓ Successfully imported: {success_count}")
+    print(f"✗ Failed: {failed_count}")
+    print("=" * 80)
+    
+    sys.exit(0 if failed_count == 0 else 1)
 
