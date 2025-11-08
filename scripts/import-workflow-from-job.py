@@ -15,10 +15,6 @@ from decimal import Decimal
 from botocore.exceptions import ClientError
 
 # Configuration
-JOB_IDS = [
-    "wfgen_01K9J0X1NFKYCBM6TDJWKSKVXW",
-    "wfgen_01K9J140J1XXX79F2SD8J3C4YH"
-]
 TENANT_ID = "84c8e438-0061-70f2-2ce0-7cb44989a329"
 REGION = "us-east-1"
 
@@ -284,10 +280,10 @@ if __name__ == "__main__":
     import argparse
     
     parser = argparse.ArgumentParser(description="Import workflow generation job results into database")
-    parser.add_argument("--job-id", help="Specific job ID to import (if not provided, imports all configured jobs)")
+    parser.add_argument("job_ids", nargs="+", help="Job ID(s) to import")
     args = parser.parse_args()
     
-    jobs_to_process = [args.job_id] if args.job_id else JOB_IDS
+    jobs_to_process = args.job_ids
     
     print("=" * 80)
     print("Workflow Import Tool")

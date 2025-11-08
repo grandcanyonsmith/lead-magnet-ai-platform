@@ -6,16 +6,10 @@ Check job execution steps to see what happened.
 import os
 import json
 import boto3
-from botocore.exceptions import ClientError
 
 TENANT_ID = "84c8e438-0061-70f2-2ce0-7cb44989a329"
 JOBS_TABLE = "leadmagnet-jobs"
 REGION = os.environ.get("AWS_REGION", "us-east-1")
-
-JOB_IDS = [
-    "wfgen_01K9J0X1NFKYCBM6TDJWKSKVXW",
-    "wfgen_01K9J140J1XXX79F2SD8J3C4YH"
-]
 
 
 def get_job_execution_steps(job_id: str):
@@ -63,11 +57,17 @@ def get_job_execution_steps(job_id: str):
 
 def main():
     """Main function."""
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="Check job execution steps to see what happened")
+    parser.add_argument("job_ids", nargs="+", help="Job ID(s) to check")
+    args = parser.parse_args()
+    
     print("=" * 80)
     print("Job Execution Steps Analysis")
     print("=" * 80)
     
-    for job_id in JOB_IDS:
+    for job_id in args.job_ids:
         print(f"\n{'=' * 80}")
         print(f"Job: {job_id}")
         print(f"{'=' * 80}")
