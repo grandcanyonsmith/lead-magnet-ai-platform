@@ -217,11 +217,26 @@ export const router = async (
 
   if (path.match(/^\/admin\/jobs\/[^/]+\/resubmit$/) && method === 'POST') {
     const id = pathSegments[2];
+    console.log('[Router] Matched /admin/jobs/:id/resubmit route', { id, pathSegments });
     return await jobsController.resubmit(tenantId, id);
   }
 
-  if (path.match(/^\/admin\/jobs\/[^/]+\/rerun-step$/) && method === 'POST') {
+  // Debug logging for rerun-step route
+  const rerunStepMatch = path.match(/^\/admin\/jobs\/[^/]+\/rerun-step\/?$/);
+  console.log('[Router] Checking rerun-step route', {
+    path,
+    method,
+    rerunStepMatch: !!rerunStepMatch,
+    pathSegments,
+    pathSegmentsLength: pathSegments.length,
+    bodyKeys: body ? Object.keys(body) : null,
+    stepIndex: body?.step_index,
+    bodyType: typeof body,
+  });
+
+  if (rerunStepMatch && method === 'POST') {
     const id = pathSegments[2];
+    console.log('[Router] Matched /admin/jobs/:id/rerun-step route', { id, stepIndex: body?.step_index, pathSegments });
     const stepIndex = body?.step_index;
     if (stepIndex === undefined || stepIndex === null) {
       throw new ApiError('step_index is required in request body', 400);
