@@ -4,6 +4,7 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import * as logs from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
 import { TableMap } from '../types';
 import { createTableEnvironmentVars } from './environment-helpers';
@@ -80,10 +81,10 @@ export interface CreateLambdaWithTablesOptions {
   timeout?: cdk.Duration;
   memorySize?: number;
   environment?: Record<string, string>;
-  logRetention?: cdk.logs.RetentionDays;
+  logRetention?: logs.RetentionDays;
   tracing?: lambda.Tracing;
   role?: iam.Role;
-  logGroup?: cdk.logs.LogGroup;
+  logGroup?: logs.LogGroup;
 }
 
 export function createLambdaWithTables(

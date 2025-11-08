@@ -239,8 +239,8 @@ function testInvalidDependencies() {
   const validation = validateDependencies(steps);
   
   assert(validation.valid === false, 'Should detect invalid dependency');
-  assert(validation.errors.length > 0, 'Should have error messages');
-  assert(validation.errors.some(e => e.includes('out of range')), 'Error should mention out of range');
+  assert(validation.errors && validation.errors.length > 0, 'Should have error messages');
+  assert(validation.errors.some((e: string) => e.includes('out of range')), 'Error should mention out of range');
   
   log(`Validation Errors: ${JSON.stringify(validation.errors, null, 2)}`);
 }
@@ -452,9 +452,9 @@ function testDependencyGraphBuilding() {
   const graph = buildDependencyGraph(steps);
   
   assert(graph.steps.length === 2, 'Graph should have 2 steps');
-  assert(graph.dependencies.get(0)?.length === 0, 'Step 0 should have no dependencies');
-  assert(graph.dependencies.get(1)?.includes(0), 'Step 1 should depend on step 0');
-  assert(graph.dependents.get(0)?.includes(1), 'Step 0 should have step 1 as dependent');
+  assert((graph.dependencies.get(0)?.length ?? 0) === 0, 'Step 0 should have no dependencies');
+  assert((graph.dependencies.get(1)?.includes(0) ?? false), 'Step 1 should depend on step 0');
+  assert((graph.dependents.get(0)?.includes(1) ?? false), 'Step 0 should have step 1 as dependent');
   
   log(`Dependencies: ${JSON.stringify(Object.fromEntries(graph.dependencies))}`);
   log(`Dependents: ${JSON.stringify(Object.fromEntries(graph.dependents))}`);
