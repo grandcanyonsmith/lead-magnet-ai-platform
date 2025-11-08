@@ -5,6 +5,7 @@ import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import * as ecr from 'aws-cdk-lib/aws-ecr';
 import { Construct } from 'constructs';
 import { TableMap } from './types';
 import { createLambdaWithTables, grantSecretsAccess, grantDynamoDBPermissions, grantS3Permissions } from './utils/lambda-helpers';
@@ -14,12 +15,13 @@ export interface ComputeStackProps extends cdk.StackProps {
   tablesMap: TableMap;
   artifactsBucket: s3.Bucket;
   cloudfrontDomain?: string;  // Optional CloudFront distribution domain
+  ecrRepository?: ecr.IRepository;  // Optional ECR repository for container image
 }
 
 export class ComputeStack extends cdk.Stack {
   public readonly stateMachine: sfn.StateMachine;
   public readonly stateMachineArn: string;
-  public readonly jobProcessorLambda: lambda.Function;
+  public readonly jobProcessorLambda: lambda.IFunction;
 
   constructor(scope: Construct, id: string, props: ComputeStackProps) {
     super(scope, id, props);
@@ -31,29 +33,35 @@ export class ComputeStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
+        // Use container image if ECR repository is provided, otherwise use zip deployment
+        let lambdaCode: lambda.Code;
+        if (props.ecrRepository) {
+          // Use container image (required for Playwright with proper GLIBC)
+          lambdaCode = lambda.Code.fromEcrImage(props.ecrRepository, {
+            tag: 'latest',
+          });
+        } else {
+          // Fallback to zip deployment (will have GLIBC issues with Playwright)
+          lambdaCode = lambda.Code.fromAsset('../backend/worker', {
+            bundling: {
+              image: lambda.Runtime.PYTHON_3_11.bundlingImage,
+              command: [
+                'bash', '-c',
+                'pip install --platform manylinux2014_x86_64 --implementation cp --python-version 3.11 --only-binary=:all: --upgrade --target /asset-output -r requirements.txt && cp -r /asset-input/*.py /asset-output/ 2>/dev/null || true && cp -r /asset-input/services /asset-output/ 2>/dev/null || true && cp -r /asset-input/utils /asset-output/ 2>/dev/null || true'
+              ],
+            },
+          });
+        }
+
         this.jobProcessorLambda = createLambdaWithTables(
       this,
       'JobProcessorLambda',
       props.tablesMap,
       props.artifactsBucket,
       {
-        runtime: lambda.Runtime.PYTHON_3_11,
-        handler: 'lambda_handler.lambda_handler',
-        code: lambda.Code.fromAsset('../backend/worker', {
-          // Use bundling without Docker if available, otherwise skip bundling
-          // If Docker is not available, you can pre-build the package using:
-          // ./scripts/build-lambda-worker.sh
-          bundling: {
-            image: lambda.Runtime.PYTHON_3_11.bundlingImage,
-            command: [
-              'bash', '-c',
-              'pip install --platform manylinux2014_x86_64 --implementation cp --python-version 3.11 --only-binary=:all: --upgrade --target /asset-output -r requirements.txt && cp -r /asset-input/*.py /asset-output/ 2>/dev/null || true && cp -r /asset-input/services /asset-output/ 2>/dev/null || true && cp -r /asset-input/utils /asset-output/ 2>/dev/null || true'
-            ],
-          },
-          // If Docker is not available during CDK synth, you can:
-          // 1. Pre-build using: ./scripts/build-lambda-worker.sh
-          // 2. Use the zip file directly: lambda.Code.fromAsset('path/to/pre-built.zip')
-        }),
+        runtime: props.ecrRepository ? undefined : lambda.Runtime.PYTHON_3_11, // No runtime for container images
+        handler: props.ecrRepository ? undefined : 'lambda_handler.lambda_handler', // No handler for container images
+        code: lambdaCode,
         timeout: cdk.Duration.minutes(15), // Maximum Lambda timeout (CUA loop may take time)
         memorySize: 3008, // Increased memory for Playwright browser automation
         environment: {
