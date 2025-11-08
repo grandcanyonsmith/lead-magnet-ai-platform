@@ -107,24 +107,32 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 'success': True,
                 'execution_plan': execution_plan
             }
-        elif step_index is not None:
-            # Per-step processing mode
-            logger.info(f"Processing single step {step_index} for job {job_id}")
-            result = processor.process_single_step(job_id, step_index, step_type)
+        elif step_index is not None or step_type == 'html_generation':
+            # Per-step processing mode (including HTML generation)
+            if step_type == 'html_generation':
+                logger.info(f"Processing HTML generation step for job {job_id}")
+                # HTML generation doesn't need step_index, use -1 as placeholder
+                result = processor.process_single_step(job_id, -1, step_type)
+            else:
+                logger.info(f"Processing single step {step_index} for job {job_id}")
+                result = processor.process_single_step(job_id, step_index, step_type)
         else:
             # Legacy full job processing mode (backward compatibility)
             logger.info(f"Processing full job {job_id} (legacy mode)")
             result = processor.process_job(job_id)
         
         if result['success']:
-            logger.info(f"Job {job_id} step {step_index if step_index is not None else 'all'} completed successfully")
+            step_description = 'HTML generation' if step_type == 'html_generation' else (f'step {step_index}' if step_index is not None else 'all')
+            logger.info(f"Job {job_id} {step_description} completed successfully")
             return result
         else:
-            logger.error(f"Job {job_id} step {step_index if step_index is not None else 'all'} failed: {result.get('error')}")
+            step_description = 'HTML generation' if step_type == 'html_generation' else (f'step {step_index}' if step_index is not None else 'all')
+            logger.error(f"Job {job_id} {step_description} failed: {result.get('error')}")
             return result
             
     except Exception as e:
-        logger.exception(f"Fatal error processing job {job_id}, step {step_index if step_index is not None else 'all'}")
+        step_description = 'HTML generation' if step_type == 'html_generation' else (f'step {step_index}' if step_index is not None else 'all')
+        logger.exception(f"Fatal error processing job {job_id}, {step_description}")
         
         # Create descriptive error message
         error_type = type(e).__name__
