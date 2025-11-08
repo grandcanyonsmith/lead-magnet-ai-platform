@@ -15,7 +15,7 @@ import { NotificationsClient } from './notifications.client'
 import { SettingsClient } from './settings.client'
 import { AnalyticsClient } from './analytics.client'
 import { UsageClient } from './usage.client'
-import { ApiClient, ArtifactListParams, FormUpdateRequest, TemplateUpdateRequest, WorkflowUpdateRequest } from '@/types'
+import { ApiClient, ArtifactListParams, ArtifactListResponse, Artifact, FormUpdateRequest, TemplateUpdateRequest, WorkflowUpdateRequest } from '@/types'
 
 class ApiClientImpl implements ApiClient {
   public workflows: WorkflowsClient
@@ -123,11 +123,11 @@ class ApiClientImpl implements ApiClient {
   }
 
   // Artifacts - delegate to artifacts client
-  async getArtifacts(params?: ArtifactListParams) {
+  async getArtifacts(params?: ArtifactListParams): Promise<ArtifactListResponse> {
     return this.artifacts.getArtifacts(params)
   }
 
-  async getArtifact(id: string) {
+  async getArtifact(id: string): Promise<Artifact> {
     return this.artifacts.getArtifact(id)
   }
 

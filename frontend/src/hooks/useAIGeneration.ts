@@ -140,7 +140,7 @@ export function useAIGeneration() {
           setGenerationStatus(null)
         }, 3000)
         
-        return syncResult
+        return syncResult.result
       }
     } catch (err: any) {
       console.error('[Workflow Generation] Failed:', err)
