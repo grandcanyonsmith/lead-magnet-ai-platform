@@ -157,10 +157,15 @@ aws cloudfront list-invalidations --distribution-id $DISTRIBUTION_ID --query 'In
 - ✅ Extracted `DeliveryService` (`backend/worker/delivery_service.py`)
 - ✅ Extracted `LegacyWorkflowProcessor` (`backend/worker/legacy_processor.py`)
 - ✅ Refactored JobProcessor: **1,365 → 886 lines (35% reduction)**
+- ✅ **Refactored AI Service**: `generate_report()` method **638 → ~93 lines (85% reduction)**
+  - Extracted 8 helper methods for better maintainability
+  - Consolidated tool validation logic
+  - Centralized error handling
+  - See `docs/AI_SERVICE_REFACTORING.md` for details
 
 **Status**: ✅ Completed
 **Files Created**: 3 new service files
-**Impact**: Clear separation of concerns, improved testability
+**Impact**: Clear separation of concerns, improved testability, significantly simplified AI service
 
 ---
 
@@ -194,6 +199,11 @@ aws cloudfront list-invalidations --distribution-id $DISTRIBUTION_ID --query 'In
 10. ✅ Phase 1 (Backend API Refactoring) - COMPLETED
 11. ✅ Phase 2 (Frontend Refactoring) - COMPLETED
 12. ✅ Phase 4 (Additional Improvements) - COMPLETED
+13. ✅ **AI Service Refactoring** - COMPLETED (85% reduction in generate_report method)
+14. ✅ **Workflow Step Processing Fixes** - COMPLETED
+    - Previous step outputs accumulation fixed
+    - Image URLs now passed in previous context
+    - Type comparison error fixed
 
 ---
 
@@ -213,8 +223,9 @@ aws cloudfront list-invalidations --distribution-id $DISTRIBUTION_ID --query 'In
 
 **Refactoring Summary**:
 - **Total Files Created**: 17 new service/hook/component files
-- **Total Code Reduced**: ~3,000+ lines refactored
+- **Total Code Reduced**: ~3,500+ lines refactored
 - **Largest Reductions**:
+  - AI Service `generate_report()`: 85% reduction (638 → ~93 lines)
   - Frontend new workflow page: 74% reduction (1,262 → 322 lines)
   - Backend workflows controller: 58% reduction (2,163 → 910 lines)
   - Backend artifacts controller: 46% reduction (278 → 149 lines)
