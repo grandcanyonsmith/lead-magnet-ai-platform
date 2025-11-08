@@ -723,6 +723,7 @@ export default function EditWorkflowPage() {
               
               <WorkflowFlowchart
                 steps={steps}
+                activeStepIndex={selectedStepIndex}
                 onStepClick={(index) => {
                   setSelectedStepIndex(index)
                   setIsSidePanelOpen(true)
