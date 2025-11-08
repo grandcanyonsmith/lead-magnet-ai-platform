@@ -47,7 +47,7 @@ export class ComputeStack extends cdk.Stack {
             image: lambda.Runtime.PYTHON_3_11.bundlingImage,
             command: [
               'bash', '-c',
-              'pip install --platform manylinux2014_x86_64 --implementation cp --python-version 3.11 --only-binary=:all: --upgrade --target /asset-output -r requirements.txt && cp -r /asset-input/*.py /asset-output/ && cp -r /asset-input/services /asset-output/ 2>/dev/null || true && cp -r /asset-input/utils /asset-output/ 2>/dev/null || true'
+              'pip install --platform manylinux2014_x86_64 --implementation cp --python-version 3.11 --only-binary=:all: --upgrade --target /asset-output -r requirements.txt && cp -r /asset-input/*.py /asset-output/ 2>/dev/null || true && cp -r /asset-input/services /asset-output/ 2>/dev/null || true && cp -r /asset-input/utils /asset-output/ 2>/dev/null || true'
             ],
           },
           // If Docker is not available during CDK synth, you can:
