@@ -4,6 +4,7 @@ import * as cdk from 'aws-cdk-lib';
 import { DatabaseStack } from '../lib/database-stack';
 import { AuthStack } from '../lib/auth-stack';
 import { StorageStack } from '../lib/storage-stack';
+import { WorkerStack } from '../lib/worker-stack';
 import { ComputeStack } from '../lib/compute-stack';
 import { ApiStack } from '../lib/api-stack';
 
@@ -36,6 +37,15 @@ const storageStack = new StorageStack(app, 'LeadMagnetStorageStack', {
   description: 'S3 buckets and CloudFront for artifact storage',
 });
 
+// Stack 3.5: Worker (ECR Repository for container images)
+const workerStack = new WorkerStack(app, 'LeadMagnetWorkerStack', {
+  env,
+  stackName: 'leadmagnet-worker',
+  description: 'ECR repository for Lambda container images',
+  tablesMap: databaseStack.tablesMap,
+  artifactsBucket: storageStack.artifactsBucket,
+});
+
 // Stack 4: Compute (Step Functions + Lambda)
 const computeStack = new ComputeStack(app, 'LeadMagnetComputeStack', {
   env,
@@ -44,6 +54,7 @@ const computeStack = new ComputeStack(app, 'LeadMagnetComputeStack', {
   tablesMap: databaseStack.tablesMap,
   artifactsBucket: storageStack.artifactsBucket,
   cloudfrontDomain: storageStack.distribution.distributionDomainName,
+  ecrRepository: workerStack.ecrRepository,  // Use container image for Playwright
 });
 
 // Stack 5: API Gateway + Lambda
@@ -59,9 +70,8 @@ const apiStack = new ApiStack(app, 'LeadMagnetApiStack', {
   cloudfrontDomain: storageStack.distribution.distributionDomainName,
 });
 
-// Note: WorkerStack removed - ECR repository was optional and unused.
-// Worker is implemented as Lambda function in ComputeStack.
-// If ECR is needed in the future, it can be added to ComputeStack.
+// Note: WorkerStack provides ECR repository for Lambda container images.
+// Container images are required for Playwright (GLIBC compatibility).
 
 app.synth();
 
