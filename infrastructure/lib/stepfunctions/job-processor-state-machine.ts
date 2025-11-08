@@ -141,30 +141,30 @@ export function createJobProcessorStateMachine(
     errors: ['States.ALL'],
   });
 
+  // Create reusable finalize job task
+  const finalizeJob = new tasks.DynamoUpdateItem(scope, 'FinalizeJob', {
+    table: jobsTable,
+    key: {
+      job_id: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.job_id')),
+    },
+    updateExpression: 'SET #status = :status, completed_at = :completed_at, updated_at = :updated_at',
+    expressionAttributeNames: {
+      '#status': 'status',
+    },
+    expressionAttributeValues: {
+      ':status': tasks.DynamoAttributeValue.fromString('completed'),
+      ':completed_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
+      ':updated_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
+    },
+  });
+
   // Check HTML generation result
   const checkHtmlResult = new sfn.Choice(scope, 'CheckHtmlResult')
     .when(
       sfn.Condition.booleanEquals('$.htmlResult.Payload.success', false),
       handleStepFailure
     )
-    .otherwise(
-      // Finalize job after HTML generation
-      new tasks.DynamoUpdateItem(scope, 'FinalizeJob', {
-        table: jobsTable,
-        key: {
-          job_id: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.job_id')),
-        },
-        updateExpression: 'SET #status = :status, completed_at = :completed_at, updated_at = :updated_at',
-        expressionAttributeNames: {
-          '#status': 'status',
-        },
-        expressionAttributeValues: {
-          ':status': tasks.DynamoAttributeValue.fromString('completed'),
-          ':completed_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
-          ':updated_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
-        },
-      })
-    );
+    .otherwise(finalizeJob);
 
   // Check if more steps remain - loops back to processStep if more steps (declared before incrementStep)
   const checkMoreSteps = new sfn.Choice(scope, 'CheckMoreSteps')
@@ -179,24 +179,7 @@ export function createJobProcessorStateMachine(
           sfn.Condition.booleanEquals('$.has_template', true),
           processHtmlGeneration.next(checkHtmlResult)
         )
-        .otherwise(
-          // No template - finalize job directly
-          new tasks.DynamoUpdateItem(scope, 'FinalizeJob', {
-            table: jobsTable,
-            key: {
-              job_id: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.job_id')),
-            },
-            updateExpression: 'SET #status = :status, completed_at = :completed_at, updated_at = :updated_at',
-            expressionAttributeNames: {
-              '#status': 'status',
-            },
-            expressionAttributeValues: {
-              ':status': tasks.DynamoAttributeValue.fromString('completed'),
-              ':completed_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
-              ':updated_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
-            },
-          })
-        )
+        .otherwise(finalizeJob)
     );
 
   // Check if step succeeded - connects to incrementStep which connects to checkMoreSteps
