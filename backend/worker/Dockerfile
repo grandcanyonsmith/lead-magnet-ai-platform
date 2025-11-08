@@ -35,13 +35,15 @@ RUN pip install --no-cache-dir -r requirements.txt
 # The Playwright Python package's Node.js driver has GLIBC 2.27+ requirements
 # We'll download Chromium directly and configure Playwright to use it
 ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright
-# Replace Playwright's bundled Node.js driver with our compatible version
-# This must be done after pip install playwright
-RUN if [ -f "/var/lang/lib/python3.11/site-packages/playwright/driver/node" ]; then \
-        rm -f /var/lang/lib/python3.11/site-packages/playwright/driver/node && \
-        cp /usr/local/bin/node-playwright /var/lang/lib/python3.11/site-packages/playwright/driver/node && \
-        chmod +x /var/lang/lib/python3.11/site-packages/playwright/driver/node; \
-    fi || echo "Node.js driver replacement skipped"
+# Set PLAYWRIGHT_NODEJS_PATH to use our compatible Node.js 14 binary
+# This tells Playwright to use our Node.js instead of its bundled driver
+ENV PLAYWRIGHT_NODEJS_PATH=/usr/local/bin/node-playwright
+# Also try to replace the bundled driver if it exists (backup approach)
+RUN find /var/lang/lib/python3.11/site-packages/playwright -name "node" -type f -executable 2>/dev/null | while read node_file; do \
+        echo "Replacing $node_file with compatible Node.js"; \
+        cp /usr/local/bin/node-playwright "$node_file" && \
+        chmod +x "$node_file"; \
+    done || echo "Node.js driver replacement attempted"
 RUN mkdir -p /opt/playwright && \
     cd /opt/playwright && \
     # Get Chromium revision for Playwright 1.48.0 (hardcoded to avoid API calls)
