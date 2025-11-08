@@ -116,11 +116,11 @@ export default function WorkflowDetailPage() {
         public_slug: baseSlug || `form-${workflowId.slice(-8)}`, // Fallback if slug is empty
         form_fields_schema: {
           fields: [
-            { field_id: 'field_1', field_type: 'text', label: 'Name', placeholder: 'Your name', required: true },
-            { field_id: 'field_2', field_type: 'email', label: 'Email', placeholder: 'your@email.com', required: true },
-            { field_id: 'field_3', field_type: 'text', label: 'Industry', placeholder: 'Your industry', required: false },
-            { field_id: 'field_4', field_type: 'textarea', label: 'Description', placeholder: 'Tell us about your needs', required: false },
-            { field_id: 'field_5', field_type: 'tel', label: 'Phone', placeholder: 'Your phone number', required: false },
+            { field_id: 'field_1', field_type: 'text' as const, label: 'Name', placeholder: 'Your name', required: true },
+            { field_id: 'field_2', field_type: 'email' as const, label: 'Email', placeholder: 'your@email.com', required: true },
+            { field_id: 'field_3', field_type: 'text' as const, label: 'Industry', placeholder: 'Your industry', required: false },
+            { field_id: 'field_4', field_type: 'textarea' as const, label: 'Description', placeholder: 'Tell us about your needs', required: false },
+            { field_id: 'field_5', field_type: 'tel' as const, label: 'Phone', placeholder: 'Your phone number', required: false },
           ],
         },
         rate_limit_enabled: true,

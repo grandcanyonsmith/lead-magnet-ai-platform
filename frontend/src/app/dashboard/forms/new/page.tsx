@@ -1,6 +1,11 @@
+import { Suspense } from 'react'
 import NewFormClient from './page-client'
 
 export default function NewFormPage() {
-  return <NewFormClient />
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <NewFormClient />
+    </Suspense>
+  )
 }
 

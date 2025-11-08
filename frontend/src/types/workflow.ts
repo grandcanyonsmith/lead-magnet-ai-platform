@@ -3,6 +3,7 @@
  */
 
 import { BaseEntity } from './common'
+import { FormField } from './form'
 
 export type AIModel = 
   | 'o3-deep-research'
