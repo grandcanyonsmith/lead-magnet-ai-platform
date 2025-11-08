@@ -30,10 +30,9 @@ export const STATUS_LABELS: Record<string, string> = {
   [JOB_STATUS.PROCESSING]: 'Generating',
   [JOB_STATUS.COMPLETED]: 'Ready',
   [JOB_STATUS.FAILED]: 'Error',
-  [`workflow_${WORKFLOW_STATUS.ACTIVE}`]: 'Active',
-  [`workflow_${WORKFLOW_STATUS.INACTIVE}`]: 'Inactive',
-  [`form_${FORM_STATUS.ACTIVE}`]: 'Active',
-  [`form_${FORM_STATUS.INACTIVE}`]: 'Inactive',
+  // Workflow and Form statuses share the same values ('active' and 'inactive')
+  [WORKFLOW_STATUS.ACTIVE]: 'Active',
+  [WORKFLOW_STATUS.INACTIVE]: 'Inactive',
 }
 
 export const STATUS_COLORS: Record<string, string> = {
@@ -41,9 +40,8 @@ export const STATUS_COLORS: Record<string, string> = {
   [JOB_STATUS.PROCESSING]: 'blue',
   [JOB_STATUS.COMPLETED]: 'green',
   [JOB_STATUS.FAILED]: 'red',
-  [`workflow_${WORKFLOW_STATUS.ACTIVE}`]: 'green',
-  [`workflow_${WORKFLOW_STATUS.INACTIVE}`]: 'gray',
-  [`form_${FORM_STATUS.ACTIVE}`]: 'green',
-  [`form_${FORM_STATUS.INACTIVE}`]: 'gray',
+  // Workflow and Form statuses share the same values ('active' and 'inactive')
+  [WORKFLOW_STATUS.ACTIVE]: 'green',
+  [WORKFLOW_STATUS.INACTIVE]: 'gray',
 }
 
