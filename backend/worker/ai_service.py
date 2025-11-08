@@ -644,8 +644,8 @@ class AIService:
                     input_text=input_text,
                     previous_context=previous_context,
                     context=context,
-                    tools=retry_tools,
-                    tool_choice=retry_tool_choice,
+                    tools=retry_tools or [{"type": "web_search_preview"}],
+                    tool_choice=retry_tool_choice or "auto",
                     params=params_no_reasoning
                 )
                 
@@ -669,6 +669,7 @@ class AIService:
                 'model': model,
                 'error_type': error_type,
                 'error_message': error_message,
+                'tools_count': len(tools) if tools else 0,
                 'tools': [t.get('type') if isinstance(t, dict) else t for t in tools] if tools else [],
                 'tool_choice': tool_choice,
                 'instructions_length': len(instructions),
@@ -722,7 +723,7 @@ class AIService:
         instructions: str,
         context: str,
         previous_context: str = "",
-        tools: Optional[list] = None,
+        tools: List[Dict] = [{"type": "web_search_preview"}],
         tool_choice: str = "auto",
     ) -> Tuple[str, Dict, Dict, Dict]:
         """
@@ -807,7 +808,7 @@ class AIService:
                 model=model,
                 instructions=instructions,
                 input_text=input_text,
-                tools=validated_tools,
+                tools=validated_tools or [{"type": "web_search_preview"}],
                 tool_choice=normalized_tool_choice,
                 has_computer_use=has_computer_use,
                 is_o3_model=is_o3_model,
@@ -841,7 +842,7 @@ class AIService:
                 input_text=input_text,
                 previous_context=previous_context,
                 context=context,
-                tools=validated_tools,
+                tools=validated_tools or [{"type": "web_search_preview"}],
                 tool_choice=normalized_tool_choice,
                 params=params
             )
@@ -851,7 +852,7 @@ class AIService:
             return self._handle_openai_error(
                 error=e,
                 model=model,
-                tools=validated_tools,
+                tools=validated_tools or [{"type": "web_search_preview"}],
                 tool_choice=normalized_tool_choice,
                 instructions=instructions,
                 context=context,
