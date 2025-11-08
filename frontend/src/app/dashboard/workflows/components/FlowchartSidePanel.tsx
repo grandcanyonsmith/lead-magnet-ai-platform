@@ -48,10 +48,7 @@ export default function FlowchartSidePanel({
   return (
     <>
       {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity"
-        onClick={onClose}
-      />
+      <div className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm transition-opacity" onClick={onClose} />
 
       {/* Side Panel */}
       <div
@@ -59,20 +56,51 @@ export default function FlowchartSidePanel({
           isOpen ? 'translate-x-0' : 'translate-x-full'
         } overflow-y-auto`}
       >
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
-          <h2 className="text-xl font-semibold text-gray-900">
-            Edit Step {index + 1}
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-            aria-label="Close panel"
-          >
-            <FiX className="w-5 h-5" />
-          </button>
+        <div className="sticky top-0 z-10 border-b border-slate-200 bg-gradient-to-r from-white via-white to-slate-50/60 px-6 py-5 shadow-sm backdrop-blur">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-widest text-slate-400">Step {index + 1} of {totalSteps}</div>
+              <h2 className="mt-1 text-2xl font-semibold text-slate-900">{step.step_name || `Step ${index + 1}`}</h2>
+              <p className="mt-1 text-sm text-slate-500">{step.step_description || 'Configure what this step should accomplish.'}</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="rounded-full border border-slate-200 bg-white p-2 text-slate-400 shadow-sm transition hover:border-primary-200 hover:text-primary-600"
+              aria-label="Close panel"
+            >
+              <FiX className="h-5 w-5" aria-hidden />
+            </button>
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-3 text-[11px] font-medium text-slate-500 md:grid-cols-4">
+            <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">Model</div>
+              <div className="mt-1 text-sm font-semibold text-slate-700">
+                {step.model === 'o3-deep-research' ? 'O3 Deep Research' : step.model.replace('gpt-', 'GPT-').replace('turbo', 'Turbo')}
+              </div>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">Tools</div>
+              <div className="mt-1 text-sm font-semibold text-slate-700">
+                {step.tools?.length ? `${step.tools.length} enabled` : 'None'}
+              </div>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">Tool Choice</div>
+              <div className="mt-1 text-sm font-semibold text-slate-700 capitalize">
+                {step.tool_choice ? step.tool_choice : 'Auto'}
+              </div>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">Instructions</div>
+              <div className="mt-1 text-sm font-semibold text-slate-700">
+                {step.instructions?.trim() ? `${step.instructions.trim().split(/\s+/).length} words` : 'Not set'}
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="p-6">
+        <div className="space-y-6 bg-gradient-to-b from-white via-white to-slate-50 px-6 py-6">
           {localStep && (
             <WorkflowStepEditor
               step={localStep}
