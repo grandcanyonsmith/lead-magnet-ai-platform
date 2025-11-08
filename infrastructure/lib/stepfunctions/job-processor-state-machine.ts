@@ -124,14 +124,31 @@ export function createJobProcessorStateMachine(
     errors: ['States.ALL'],
   });
 
-  // Check if more steps remain - loops back to processStep if more steps (declared before incrementStep)
-  const checkMoreSteps = new sfn.Choice(scope, 'CheckMoreSteps')
+  // Process HTML generation step
+  const processHtmlGeneration = new tasks.LambdaInvoke(scope, 'ProcessHtmlGeneration', {
+    lambdaFunction: jobProcessorLambda,
+    payload: sfn.TaskInput.fromObject({
+      'job_id': sfn.JsonPath.stringAt('$.job_id'),
+      'step_type': 'html_generation',
+    }),
+    resultPath: '$.htmlResult',
+    retryOnServiceExceptions: false,
+  });
+
+  // Add error handling for HTML generation failures
+  processHtmlGeneration.addCatch(parseErrorStep, {
+    resultPath: '$.error',
+    errors: ['States.ALL'],
+  });
+
+  // Check HTML generation result
+  const checkHtmlResult = new sfn.Choice(scope, 'CheckHtmlResult')
     .when(
-      sfn.Condition.numberLessThanJsonPath('$.step_index', '$.total_steps'),
-      processStep  // Loop back to process next step
+      sfn.Condition.booleanEquals('$.htmlResult.Payload.success', false),
+      handleStepFailure
     )
     .otherwise(
-      // Finalize job - used for both HTML and non-HTML workflows
+      // Finalize job after HTML generation
       new tasks.DynamoUpdateItem(scope, 'FinalizeJob', {
         table: jobsTable,
         key: {
@@ -147,6 +164,39 @@ export function createJobProcessorStateMachine(
           ':updated_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
         },
       })
+    );
+
+  // Check if more steps remain - loops back to processStep if more steps (declared before incrementStep)
+  const checkMoreSteps = new sfn.Choice(scope, 'CheckMoreSteps')
+    .when(
+      sfn.Condition.numberLessThanJsonPath('$.step_index', '$.total_steps'),
+      processStep  // Loop back to process next step
+    )
+    .otherwise(
+      // All workflow steps complete - check if HTML generation is needed
+      new sfn.Choice(scope, 'CheckIfHtmlNeeded')
+        .when(
+          sfn.Condition.booleanEquals('$.has_template', true),
+          processHtmlGeneration.next(checkHtmlResult)
+        )
+        .otherwise(
+          // No template - finalize job directly
+          new tasks.DynamoUpdateItem(scope, 'FinalizeJob', {
+            table: jobsTable,
+            key: {
+              job_id: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.job_id')),
+            },
+            updateExpression: 'SET #status = :status, completed_at = :completed_at, updated_at = :updated_at',
+            expressionAttributeNames: {
+              '#status': 'status',
+            },
+            expressionAttributeValues: {
+              ':status': tasks.DynamoAttributeValue.fromString('completed'),
+              ':completed_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
+              ':updated_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
+            },
+          })
+        )
     );
 
   // Check if step succeeded - connects to incrementStep which connects to checkMoreSteps
