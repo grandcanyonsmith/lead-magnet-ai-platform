@@ -45,7 +45,7 @@ export function AuthProvider({ children, authService: service = authService }: A
         
         if (currentSession) {
           const idToken = currentSession.getIdToken()
-            const payload = idToken.payload
+          const payload = idToken.payload
           
           setUser({
             email: payload.email as string || '',
