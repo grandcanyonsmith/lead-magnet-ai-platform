@@ -854,7 +854,12 @@ Return ONLY the modified instructions, no markdown formatting, no explanations.`
         );
       }
 
-      const refinedContent = completion.output_text || '';
+      // Validate response has output_text
+      if (!completion.output_text) {
+        throw new ApiError('OpenAI Responses API returned empty response. output_text is missing for workflow instructions refinement.', 500);
+      }
+      
+      const refinedContent = completion.output_text;
       
       // Clean up markdown code blocks if present
       let cleanedContent = refinedContent.trim();

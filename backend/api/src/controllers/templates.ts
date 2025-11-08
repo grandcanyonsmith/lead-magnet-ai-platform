@@ -347,7 +347,12 @@ Return ONLY the modified HTML code, no markdown formatting, no explanations.`;
         );
       }
 
-      const htmlContent = completion.output_text || '';
+      // Validate response has output_text
+      if (!completion.output_text) {
+        throw new ApiError('OpenAI Responses API returned empty response. output_text is missing for template refinement.', 500);
+      }
+      
+      const htmlContent = completion.output_text;
       console.log('[Template Refinement] Refined HTML received', {
         htmlLength: htmlContent.length,
         firstChars: htmlContent.substring(0, 100),
@@ -478,7 +483,12 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
         );
       }
 
-      const htmlContent = completion.output_text || '';
+      // Validate response has output_text
+      if (!completion.output_text) {
+        throw new ApiError('OpenAI Responses API returned empty response. output_text is missing for template HTML generation.', 500);
+      }
+      
+      const htmlContent = completion.output_text;
       console.log('[Template Generation] Raw HTML received', {
         htmlLength: htmlContent.length,
         firstChars: htmlContent.substring(0, 100),
@@ -548,7 +558,12 @@ Return JSON format: {"name": "...", "description": "..."}`;
         );
       }
 
-      const nameContent = nameCompletion.output_text || '';
+      // Validate response has output_text
+      if (!nameCompletion.output_text) {
+        throw new ApiError('OpenAI Responses API returned empty response. output_text is missing for template name generation.', 500);
+      }
+      
+      const nameContent = nameCompletion.output_text;
       let templateName = 'Generated Template';
       let templateDescription = description;
 

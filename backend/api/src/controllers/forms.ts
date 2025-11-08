@@ -556,7 +556,12 @@ Return ONLY the CSS code, no markdown formatting, no explanations.`;
         );
       }
 
-      const cssContent = completion.output_text || '';
+      // Validate response has output_text
+      if (!completion.output_text) {
+        throw new ApiError('OpenAI Responses API returned empty response. output_text is missing for form CSS generation.', 500);
+      }
+      
+      const cssContent = completion.output_text;
       console.log('[Form CSS Generation] Raw CSS received', {
         cssLength: cssContent.length,
         firstChars: cssContent.substring(0, 100),
@@ -682,7 +687,12 @@ Return ONLY the modified CSS code, no markdown formatting, no explanations.`;
         );
       }
 
-      const cssContent = completion.output_text || '';
+      // Validate response has output_text
+      if (!completion.output_text) {
+        throw new ApiError('OpenAI Responses API returned empty response. output_text is missing for form CSS refinement.', 500);
+      }
+      
+      const cssContent = completion.output_text;
       console.log('[Form CSS Refinement] Refined CSS received', {
         cssLength: cssContent.length,
         firstChars: cssContent.substring(0, 100),
