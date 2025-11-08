@@ -12,5 +12,6 @@ export * from './notification'
 export * from './settings'
 export * from './analytics'
 export * from './usage'
+export * from './artifact'
 export * from './api'
 

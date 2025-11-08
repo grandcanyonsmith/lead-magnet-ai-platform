@@ -3,9 +3,10 @@
  */
 
 import { Workflow, WorkflowListResponse, WorkflowCreateRequest, WorkflowUpdateRequest, WorkflowGenerationRequest, WorkflowGenerationResponse, WorkflowRefineInstructionsRequest, WorkflowRefineInstructionsResponse } from './workflow'
-import { Form, FormListResponse, FormCreateRequest, FormUpdateRequest, FormGenerateCSSRequest, FormGenerateCSSResponse, FormRefineCSSRequest, FormRefineCSSResponse } from './form'
+import { Form, FormListResponse, FormCreateRequest, FormUpdateRequest, FormGenerateCSSRequest, FormGenerateCSSResponse, FormRefineCSSRequest, FormRefineCSSResponse, FormSubmission } from './form'
 import { Template, TemplateListResponse, TemplateCreateRequest, TemplateUpdateRequest, TemplateGenerateRequest, TemplateGenerateResponse, TemplateRefineRequest, TemplateRefineResponse } from './template'
 import { Job, JobListResponse, JobListParams, JobResubmitResponse } from './job'
+import { Artifact, ArtifactListResponse, ArtifactListParams } from './artifact'
 import { Notification, NotificationListResponse } from './notification'
 import { Settings, SettingsUpdateRequest } from './settings'
 import { AnalyticsResponse } from './analytics'
@@ -49,6 +50,14 @@ export interface ApiClient {
   getJobs(params?: JobListParams): Promise<JobListResponse>
   getJob(id: string): Promise<Job>
   resubmitJob(jobId: string): Promise<JobResubmitResponse>
+  
+  // Artifacts
+  getArtifacts(params?: ArtifactListParams): Promise<ArtifactListResponse>
+  getArtifact(id: string): Promise<Artifact>
+  
+  // Submissions
+  getSubmissions(params?: { form_id?: string; limit?: number }): Promise<{ submissions: FormSubmission[]; count: number }>
+  getSubmission(id: string): Promise<FormSubmission>
   
   // AI Generation
   generateWorkflowWithAI(request: WorkflowGenerationRequest): Promise<WorkflowGenerationResponse>

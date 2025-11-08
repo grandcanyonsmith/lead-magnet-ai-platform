@@ -2,9 +2,7 @@
  * Job formatting utilities
  */
 
-import React from 'react'
 import { FiCheckCircle, FiXCircle, FiClock, FiLoader } from 'react-icons/fi'
-import { ExecutionStep } from '@/types/job'
 
 export function getStatusLabel(status: string): string {
   const labels: Record<string, string> = {
@@ -69,11 +67,7 @@ export function formatDurationSeconds(seconds: number): string {
 
 export function formatDurationMs(ms: number): string {
   if (ms < 1000) return `${Math.round(ms)}ms`
-  const totalSeconds = Math.round(ms / 1000)
-  const minutes = Math.floor(totalSeconds / 60)
-  const seconds = totalSeconds % 60
-  if (minutes === 0) return `${seconds}s`
-  return `${minutes}m ${seconds}s`
+  return `${(ms / 1000).toFixed(2)}s`
 }
 
 export function isJSON(str: string): boolean {
@@ -101,55 +95,13 @@ export function isMarkdown(str: string): boolean {
   return markdownPatterns.some(pattern => pattern.test(str))
 }
 
-export function isHTML(str: string): boolean {
-  if (typeof str !== 'string') return false
-  const trimmed = str.trim()
-  // Check for HTML patterns
-  const htmlPatterns = [
-    /^<!DOCTYPE\s+html/i,           // DOCTYPE declaration
-    /^<html[\s>]/i,                  // HTML tag
-    /<\/html>\s*$/i,                 // Closing HTML tag
-    /^<\!--[\s\S]*?-->/,            // HTML comment
-  ]
-  // Check if it contains HTML tags
-  const hasHTMLTags = /<[a-z][\s\S]*>/i.test(trimmed)
-  const hasClosingTags = /<\/[a-z]+>/i.test(trimmed)
-  
-  // If it has both opening and closing tags, or matches specific patterns
-  return htmlPatterns.some(pattern => pattern.test(trimmed)) || (hasHTMLTags && hasClosingTags)
-}
-
-interface WebhookInput {
-  webhook_url?: string
-  payload?: Record<string, unknown>
-}
-
-interface AIInput {
-  instructions?: string
-  input?: string | unknown
-}
-
-export function formatStepInput(step: ExecutionStep): { content: string | unknown, type: 'json' | 'markdown' | 'text', structure?: 'ai_input' } {
+export function formatStepInput(step: any): { content: string | any, type: 'json' | 'markdown' | 'text', structure?: 'ai_input' } {
   if (step.step_type === 'form_submission') {
     return { content: step.input, type: 'json' }
   }
-  if (step.step_type === 'webhook') {
-    // For webhook steps, show webhook URL and payload
-    const inputObj = step.input as WebhookInput | undefined
-    return {
-      content: {
-        webhook_url: inputObj?.webhook_url || 'N/A',
-        payload: inputObj?.payload || {}
-      },
-      type: 'json'
-    }
-  }
   if (step.input && typeof step.input === 'object') {
     // For AI steps, show instructions and input
-    const inputObj = step.input as AIInput | undefined
-    if (!inputObj) {
-      return { content: step.input, type: 'json' }
-    }
+    const inputObj = step.input as any
     const inputText = inputObj.input || ''
     
     // Check if input text is markdown
@@ -179,35 +131,11 @@ export function formatStepInput(step: ExecutionStep): { content: string | unknow
   return { content: step.input, type: 'json' }
 }
 
-interface WebhookOutput {
-  success?: boolean
-  response_status?: string | number
-  response_body?: unknown
-  error?: string | null
-}
-
-export function formatStepOutput(step: ExecutionStep): { content: string | unknown, type: 'json' | 'markdown' | 'text' | 'html' } {
+export function formatStepOutput(step: any): { content: string | any, type: 'json' | 'markdown' | 'text' } {
   if (step.step_type === 'final_output') {
     return { content: step.output, type: 'json' }
   }
-  if (step.step_type === 'webhook') {
-    // For webhook steps, show response details
-    const outputObj = step.output as WebhookOutput | undefined
-    return {
-      content: {
-        success: outputObj?.success ?? false,
-        response_status: outputObj?.response_status || 'N/A',
-        response_body: outputObj?.response_body || null,
-        error: outputObj?.error || null
-      },
-      type: 'json'
-    }
-  }
   if (typeof step.output === 'string') {
-    // Check if it's HTML first (before JSON, as HTML might contain JSON-like syntax)
-    if (isHTML(step.output)) {
-      return { content: step.output, type: 'html' }
-    }
     // Check if it's JSON
     if (isJSON(step.output)) {
       try {
