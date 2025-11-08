@@ -4,13 +4,10 @@ Handles the complete workflow of generating AI reports and rendering HTML.
 """
 
 import logging
-import json
-import os
 from datetime import datetime
 from decimal import Decimal
-from typing import Dict, Any, Optional, Tuple, Union
+from typing import Dict, Any, Optional
 from ulid import new as ulid
-import boto3
 
 from ai_service import AIService
 from template_service import TemplateService
@@ -19,53 +16,17 @@ from s3_service import S3Service
 from artifact_service import ArtifactService
 from delivery_service import DeliveryService
 from legacy_processor import LegacyWorkflowProcessor
+from utils.decimal_utils import convert_floats_to_decimal
+from utils.error_utils import create_descriptive_error, normalize_error_message
+from utils.step_utils import normalize_step_order
+from services.context_builder import ContextBuilder
+from services.execution_step_manager import ExecutionStepManager
 
 logger = logging.getLogger(__name__)
 
 
-def normalize_step_order(step_data: Dict[str, Any]) -> int:
-    """
-    Normalize step_order to integer.
-    DynamoDB may store step_order as string or number, so we need to handle both.
-    
-    Args:
-        step_data: Step data dictionary containing step_order
-        
-    Returns:
-        Integer step_order value, or 0 if not found/invalid
-    """
-    step_order = step_data.get('step_order', 0)
-    if isinstance(step_order, int):
-        return step_order
-    elif isinstance(step_order, str):
-        try:
-            return int(step_order)
-        except (ValueError, TypeError):
-            return 0
-    elif isinstance(step_order, (float, Decimal)):
-        return int(step_order)
-    else:
-        return 0
 
 
-def convert_floats_to_decimal(obj: Any) -> Any:
-    """
-    Recursively convert float values to Decimal for DynamoDB compatibility.
-    
-    Args:
-        obj: Object to convert (dict, list, or primitive)
-        
-    Returns:
-        Object with floats converted to Decimal
-    """
-    if isinstance(obj, float):
-        return Decimal(str(obj))
-    elif isinstance(obj, dict):
-        return {key: convert_floats_to_decimal(value) for key, value in obj.items()}
-    elif isinstance(obj, list):
-        return [convert_floats_to_decimal(item) for item in obj]
-    else:
-        return obj
 
 
 class JobProcessor:
@@ -176,24 +137,13 @@ class JobProcessor:
             # Helper function to format submission data with labels
             def format_submission_data_with_labels(data: Dict[str, Any]) -> str:
                 """Format submission data using field labels instead of field IDs."""
-                lines = []
-                for key, value in data.items():
-                    label = field_label_map.get(key, key)  # Use label if available, otherwise use key
-                    lines.append(f"{label}: {value}")
-                return "\n".join(lines)
+                return ContextBuilder.format_submission_data_with_labels(data, field_label_map)
             
             # Add form submission as step 0
             submission_data = submission.get('submission_data', {})
-            form_step_start = datetime.utcnow()
-            execution_steps.append({
-                'step_name': 'Form Submission',
-                'step_order': 0,
-                'step_type': 'form_submission',
-                'input': submission_data,
-                'output': submission_data,
-                'timestamp': form_step_start.isoformat(),
-                'duration_ms': 0,
-            })
+            execution_steps.append(
+                ExecutionStepManager.create_form_submission_step(submission_data)
+            )
             self.db.update_job(job_id, {'execution_steps': execution_steps}, s3_service=self.s3)
             
             # Check if workflow uses new steps format or legacy format
@@ -240,33 +190,11 @@ class JobProcessor:
                         
                         # Build context with ALL previous step outputs
                         # Include form submission data
-                        all_previous_outputs = []
-                        all_previous_outputs.append(f"=== Form Submission ===\n{initial_context}")
-                        
-                        # Include all previous step outputs explicitly (with image URLs if present)
-                        # step_outputs contains outputs from steps 0 through (step_index - 1)
-                        for prev_idx, prev_step_output in enumerate(step_outputs):
-                            prev_step_name = sorted_steps[prev_idx].get('step_name', f'Step {prev_idx + 1}')
-                            prev_output_text = prev_step_output['output']
-                            
-                            # Extract image URLs - handle both list and None cases
-                            prev_image_urls_raw = prev_step_output.get('image_urls', [])
-                            # Normalize to list: handle None, empty list, or already a list
-                            if prev_image_urls_raw is None:
-                                prev_image_urls = []
-                            elif isinstance(prev_image_urls_raw, list):
-                                prev_image_urls = [url for url in prev_image_urls_raw if url]  # Filter out None/empty strings
-                            else:
-                                # If it's not a list, try to convert (shouldn't happen, but be safe)
-                                prev_image_urls = [str(prev_image_urls_raw)] if prev_image_urls_raw else []
-                            
-                            step_context = f"\n=== Step {prev_idx + 1}: {prev_step_name} ===\n{prev_output_text}"
-                            if prev_image_urls:
-                                step_context += f"\n\nGenerated Images:\n" + "\n".join([f"- {url}" for url in prev_image_urls])
-                            all_previous_outputs.append(step_context)
-                        
-                        # Combine all previous outputs into context
-                        all_previous_context = "\n\n".join(all_previous_outputs)
+                        all_previous_context = ContextBuilder.build_previous_context_from_step_outputs(
+                            initial_context=initial_context,
+                            step_outputs=step_outputs,
+                            sorted_steps=sorted_steps
+                        )
                         
                         logger.info(f"[JobProcessor] Built previous context for step {step_index + 1}", extra={
                             'job_id': job_id,
@@ -278,7 +206,7 @@ class JobProcessor:
                         })
                         
                         # Current step context (empty for subsequent steps, initial_context for first step)
-                        current_step_context = initial_context if step_index == 0 else ""
+                        current_step_context = ContextBuilder.get_current_step_context(step_index, initial_context)
                         
                         # Generate step output with all previous step outputs
                         step_output, usage_info, request_details, response_details = self.ai_service.generate_report(
@@ -329,19 +257,17 @@ class JobProcessor:
                         })
                         
                         # Add execution step (convert floats to Decimal for DynamoDB)
-                        step_data = {
-                            'step_name': step_name,
-                            'step_order': step_index + 1,
-                            'step_type': 'ai_generation',
-                            'model': step_model,
-                            'input': request_details,
-                            'output': response_details.get('output_text', ''),
-                            'image_urls': image_urls,  # Store image URLs
-                            'usage_info': convert_floats_to_decimal(usage_info),
-                            'timestamp': step_start_time.isoformat(),
-                            'duration_ms': int(step_duration),
-                            'artifact_id': step_artifact_id,
-                        }
+                        step_data = ExecutionStepManager.create_ai_generation_step(
+                            step_name=step_name,
+                            step_order=step_index + 1,
+                            step_model=step_model,
+                            request_details=request_details,
+                            response_details=response_details,
+                            usage_info=usage_info,
+                            step_start_time=step_start_time,
+                            step_duration=step_duration,
+                            artifact_id=step_artifact_id
+                        )
                         execution_steps.append(step_data)
                         self.db.update_job(job_id, {'execution_steps': execution_steps}, s3_service=self.s3)
                         
@@ -396,17 +322,15 @@ class JobProcessor:
                         self.store_usage_record(job['tenant_id'], job_id, html_usage_info)
                         
                         # Add HTML generation step (convert floats to Decimal for DynamoDB)
-                        html_step_data = {
-                            'step_name': 'HTML Generation',
-                            'step_order': len(execution_steps),
-                            'step_type': 'html_generation',
-                            'model': sorted_steps[-1].get('model', 'gpt-5') if sorted_steps else 'gpt-5',
-                            'input': html_request_details,
-                            'output': html_response_details.get('output_text', '')[:5000],  # Truncate for storage
-                            'usage_info': convert_floats_to_decimal(html_usage_info),
-                            'timestamp': html_start_time.isoformat(),
-                            'duration_ms': int(html_duration),
-                        }
+                        html_step_data = ExecutionStepManager.create_html_generation_step(
+                            model=sorted_steps[-1].get('model', 'gpt-5') if sorted_steps else 'gpt-5',
+                            html_request_details=html_request_details,
+                            html_response_details=html_response_details,
+                            html_usage_info=html_usage_info,
+                            html_start_time=html_start_time,
+                            html_duration=html_duration,
+                            step_order=len(execution_steps)
+                        )
                         execution_steps.append(html_step_data)
                         self.db.update_job(job_id, {'execution_steps': execution_steps}, s3_service=self.s3)
                     
@@ -449,16 +373,15 @@ class JobProcessor:
                 final_duration = (datetime.utcnow() - final_start_time).total_seconds() * 1000
                 
                 # Add final output step
-                execution_steps.append({
-                    'step_name': 'Final Output',
-                    'step_order': len(execution_steps),
-                    'step_type': 'final_output',
-                    'input': {'artifact_type': final_artifact_type, 'filename': final_filename},
-                    'output': {'artifact_id': final_artifact_id, 'public_url': public_url},
-                    'timestamp': final_start_time.isoformat(),
-                    'duration_ms': int(final_duration),
-                    'artifact_id': final_artifact_id,
-                })
+                execution_steps.append(
+                    ExecutionStepManager.create_final_output_step(
+                        final_artifact_type=final_artifact_type,
+                        final_filename=final_filename,
+                        final_artifact_id=final_artifact_id,
+                        public_url=public_url,
+                        step_order=len(execution_steps)
+                    )
+                )
                 
                 logger.info(f"Final artifact stored with URL: {public_url[:80]}...")
             except Exception as e:
@@ -551,31 +474,9 @@ class JobProcessor:
         except Exception as e:
             logger.exception(f"Error processing job {job_id}")
             
-            # Create descriptive error message
-            error_type = type(e).__name__
-            error_message = str(e)
-            
-            # Build context-aware error message
-            if not error_message or error_message == error_type:
-                error_message = f"{error_type}: {error_message}" if error_message else error_type
-            
-            # Add common error context
-            descriptive_error = error_message
-            
-            # Handle specific error types with better messages
-            if isinstance(e, ValueError):
-                if "not found" in error_message.lower():
-                    descriptive_error = f"Resource not found: {error_message}"
-                else:
-                    descriptive_error = f"Invalid configuration: {error_message}"
-            elif isinstance(e, KeyError):
-                descriptive_error = f"Missing required field: {error_message}"
-            elif "OpenAI" in str(type(e)) or "API" in error_type:
-                descriptive_error = f"AI service error: {error_message}"
-            elif "Connection" in error_type or "Timeout" in error_type:
-                descriptive_error = f"Network error: {error_message}"
-            elif "Permission" in error_type or "Access" in error_type:
-                descriptive_error = f"Access denied: {error_message}"
+            # Use utility function for error handling
+            error_type, error_message = normalize_error_message(e)
+            descriptive_error = create_descriptive_error(e)
             
             # Update job status to failed
             try:
@@ -645,11 +546,7 @@ class JobProcessor:
             # Helper function to format submission data with labels
             def format_submission_data_with_labels(data: Dict[str, Any]) -> str:
                 """Format submission data using field labels instead of field IDs."""
-                lines = []
-                for key, value in data.items():
-                    label = field_label_map.get(key, key)
-                    lines.append(f"{label}: {value}")
-                return "\n".join(lines)
+                return ContextBuilder.format_submission_data_with_labels(data, field_label_map)
             
             initial_context = format_submission_data_with_labels(submission_data)
             
@@ -688,47 +585,16 @@ class JobProcessor:
             
             step_start_time = datetime.utcnow()
             
-            # Build context with ALL previous step outputs from execution_steps
-            # Only include steps that come BEFORE the current step_index
-            all_previous_outputs = []
-            all_previous_outputs.append(f"=== Form Submission ===\n{initial_context}")
-            
-            # Load previous step outputs from execution_steps
-            # Filter to only include steps with step_order < (step_index + 1)
             # step_index is 0-indexed, step_order is 1-indexed
             current_step_order = step_index + 1
             
-            # Sort execution_steps by step_order to ensure correct order
-            sorted_execution_steps = sorted(
-                [s for s in execution_steps if s.get('step_type') == 'ai_generation'],
-                key=normalize_step_order
+            # Build context with ALL previous step outputs from execution_steps
+            # Only include steps that come BEFORE the current step_index
+            all_previous_context = ContextBuilder.build_previous_context_from_execution_steps(
+                initial_context=initial_context,
+                execution_steps=execution_steps,
+                current_step_order=current_step_order
             )
-            
-            for prev_step_data in sorted_execution_steps:
-                prev_step_order = normalize_step_order(prev_step_data)
-                # Only include steps that come before the current step
-                if prev_step_order < current_step_order:
-                    prev_step_name = prev_step_data.get('step_name', 'Unknown Step')
-                    prev_output_text = prev_step_data.get('output', '')
-                    
-                    # Extract image URLs - handle both list and None cases
-                    prev_image_urls_raw = prev_step_data.get('image_urls', [])
-                    # Normalize to list: handle None, empty list, or already a list
-                    if prev_image_urls_raw is None:
-                        prev_image_urls = []
-                    elif isinstance(prev_image_urls_raw, list):
-                        prev_image_urls = [url for url in prev_image_urls_raw if url]  # Filter out None/empty strings
-                    else:
-                        # If it's not a list, try to convert (shouldn't happen, but be safe)
-                        prev_image_urls = [str(prev_image_urls_raw)] if prev_image_urls_raw else []
-                    
-                    step_context = f"\n=== Step {prev_step_order}: {prev_step_name} ===\n{prev_output_text}"
-                    if prev_image_urls:
-                        step_context += f"\n\nGenerated Images:\n" + "\n".join([f"- {url}" for url in prev_image_urls])
-                    all_previous_outputs.append(step_context)
-            
-            # Combine all previous outputs into context
-            all_previous_context = "\n\n".join(all_previous_outputs)
             
             logger.info(f"[JobProcessor] Built previous context for step {step_index + 1}", extra={
                 'job_id': job_id,
@@ -740,7 +606,7 @@ class JobProcessor:
             })
             
             # Current step context (empty for subsequent steps, initial_context for first step)
-            current_step_context = initial_context if step_index == 0 else ""
+            current_step_context = ContextBuilder.get_current_step_context(step_index, initial_context)
             
             logger.info(f"[JobProcessor] Processing step {step_index + 1}", extra={
                 'job_id': job_id,
@@ -796,19 +662,17 @@ class JobProcessor:
             image_urls = response_details.get('image_urls', [])
             
             # Add execution step (convert floats to Decimal for DynamoDB)
-            step_data = {
-                'step_name': step_name,
-                'step_order': step_index + 1,
-                'step_type': 'ai_generation',
-                'model': step_model,
-                'input': request_details,
-                'output': response_details.get('output_text', ''),
-                'image_urls': image_urls,
-                'usage_info': convert_floats_to_decimal(usage_info),
-                'timestamp': step_start_time.isoformat(),
-                'duration_ms': int(step_duration),
-                'artifact_id': step_artifact_id,
-            }
+            step_data = ExecutionStepManager.create_ai_generation_step(
+                step_name=step_name,
+                step_order=step_index + 1,
+                step_model=step_model,
+                request_details=request_details,
+                response_details=response_details,
+                usage_info=usage_info,
+                step_start_time=step_start_time,
+                step_duration=step_duration,
+                artifact_id=step_artifact_id
+            )
             
             # Append to execution_steps and update DynamoDB
             execution_steps.append(step_data)
@@ -882,14 +746,9 @@ class JobProcessor:
         except Exception as e:
             logger.exception(f"Error processing step {step_index} for job {job_id}")
             
-            # Create descriptive error message
-            error_type = type(e).__name__
-            error_message = str(e)
-            
-            if not error_message or error_message == error_type:
-                error_message = f"{error_type}: {error_message}" if error_message else error_type
-            
-            descriptive_error = f"Failed to process step {step_index}: {error_message}"
+            # Use utility function for error handling
+            error_type, error_message = normalize_error_message(e)
+            descriptive_error = create_descriptive_error(e, f"Failed to process step {step_index}")
             
             # Update job status to failed
             try:
@@ -951,16 +810,10 @@ class JobProcessor:
             html_start_time = datetime.utcnow()
             
             # Build accumulated context from all workflow steps
-            accumulated_context = f"=== Form Submission ===\n{initial_context}\n\n"
-            for step_data in execution_steps:
-                if step_data.get('step_type') == 'ai_generation':
-                    step_name = step_data.get('step_name', 'Unknown Step')
-                    step_output = step_data.get('output', '')
-                    image_urls = step_data.get('image_urls', [])
-                    
-                    accumulated_context += f"--- {step_name} ---\n{step_output}\n\n"
-                    if image_urls:
-                        accumulated_context += f"Generated Images:\n" + "\n".join([f"- {url}" for url in image_urls]) + "\n\n"
+            accumulated_context = ContextBuilder.build_accumulated_context_for_html(
+                initial_context=initial_context,
+                execution_steps=execution_steps
+            )
             
             # Get model from last workflow step or default
             steps = workflow.get('steps', [])
@@ -996,18 +849,15 @@ class JobProcessor:
             public_url = self.artifact_service.get_artifact_public_url(final_artifact_id)
             
             # Add HTML generation step to execution_steps
-            html_step_data = {
-                'step_name': 'HTML Generation',
-                'step_order': len(execution_steps) + 1,
-                'step_type': 'html_generation',
-                'model': model,
-                'input': html_request_details,
-                'output': html_response_details.get('output_text', '')[:5000],  # Truncate for storage
-                'usage_info': convert_floats_to_decimal(html_usage_info),
-                'timestamp': html_start_time.isoformat(),
-                'duration_ms': int(html_duration),
-                'artifact_id': final_artifact_id,
-            }
+            html_step_data = ExecutionStepManager.create_html_generation_step(
+                model=model,
+                html_request_details=html_request_details,
+                html_response_details=html_response_details,
+                html_usage_info=html_usage_info,
+                html_start_time=html_start_time,
+                html_duration=html_duration,
+                step_order=len(execution_steps) + 1
+            )
             execution_steps.append(html_step_data)
             
             # Update job with final output
@@ -1039,13 +889,9 @@ class JobProcessor:
         except Exception as e:
             logger.exception(f"Error processing HTML generation step for job {job_id}")
             
-            error_type = type(e).__name__
-            error_message = str(e)
-            
-            if not error_message or error_message == error_type:
-                error_message = f"{error_type}: {error_message}" if error_message else error_type
-            
-            descriptive_error = f"Failed to generate HTML: {error_message}"
+            # Use utility function for error handling
+            error_type, error_message = normalize_error_message(e)
+            descriptive_error = create_descriptive_error(e, "Failed to generate HTML")
             
             try:
                 self.db.update_job(job_id, {
