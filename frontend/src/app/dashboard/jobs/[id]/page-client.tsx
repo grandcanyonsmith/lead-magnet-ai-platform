@@ -23,6 +23,8 @@ export default function JobDetailClient() {
     error,
     resubmitting,
     handleResubmit,
+    rerunningStep,
+    handleRerunStep,
   } = useJobDetail()
   
   const {
@@ -47,12 +49,18 @@ export default function JobDetailClient() {
 
   // Merge workflow steps with execution steps to show all steps
   const getMergedSteps = () => {
+    const executionSteps = job.execution_steps || []
+    
     if (!workflow?.steps || !Array.isArray(workflow.steps) || workflow.steps.length === 0) {
       // Fallback to execution steps if no workflow steps available
-      return job.execution_steps || []
+      return executionSteps.map((step: any) => ({
+        ...step,
+        _status: step.output !== null && step.output !== undefined && step.output !== '' 
+          ? 'completed' as const 
+          : 'pending' as const
+      }))
     }
 
-    const executionSteps = job.execution_steps || []
     const executionStepsMap = new Map<number, any>()
     
     // Create a map of execution steps by step_order
@@ -85,7 +93,7 @@ export default function JobDetailClient() {
         // Step hasn't been executed yet - create pending step
         const isJobProcessing = job.status === 'processing'
         // Count workflow steps that have been executed (excluding form submission step_order 0)
-        const executedWorkflowSteps = executionSteps.filter((s: any) => s.step_order > 0).length
+        const executedWorkflowSteps = executionSteps.filter((s: any) => s.step_order > 0 && s.step_order <= workflow.steps.length).length
         const isCurrentStep = isJobProcessing && index === executedWorkflowSteps
         
         return {
@@ -115,7 +123,28 @@ export default function JobDetailClient() {
       })
     }
 
-    return mergedSteps
+    // Add any additional execution steps that aren't workflow steps (HTML generation, final output, etc.)
+    // These typically have step_order > workflow.steps.length
+    const maxWorkflowStepOrder = workflow.steps.length
+    executionSteps.forEach((execStep: any) => {
+      const order = execStep.step_order
+      if (order !== undefined && order > maxWorkflowStepOrder) {
+        // This is an additional step (HTML generation, final output, etc.)
+        // Check if it's already in mergedSteps
+        const exists = mergedSteps.some((s: any) => s.step_order === order)
+        if (!exists) {
+          mergedSteps.push({
+            ...execStep,
+            _status: execStep.output !== null && execStep.output !== undefined && execStep.output !== '' 
+              ? 'completed' as const 
+              : 'pending' as const
+          })
+        }
+      }
+    })
+
+    // Sort by step_order to ensure correct order
+    return mergedSteps.sort((a: any, b: any) => (a.step_order || 0) - (b.step_order || 0))
   }
 
   if (loading) {
@@ -232,6 +261,8 @@ export default function JobDetailClient() {
           onToggleStep={toggleStep}
           onCopy={copyToClipboard}
           jobStatus={job.status}
+          onRerunStep={handleRerunStep}
+          rerunningStep={rerunningStep}
         />
       ) : null}
 

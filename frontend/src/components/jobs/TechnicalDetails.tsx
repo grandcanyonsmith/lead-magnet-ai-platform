@@ -98,39 +98,90 @@ export function TechnicalDetails({ job, form }: TechnicalDetailsProps) {
           {job.tenant_id && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Tenant ID</label>
-              <p className="text-sm font-mono text-gray-900">{job.tenant_id}</p>
+              <div className="flex items-center space-x-2">
+                <p className="text-sm font-mono text-gray-900">{job.tenant_id}</p>
+                <button
+                  onClick={() => copyToClipboard(job.tenant_id)}
+                  className="text-gray-500 hover:text-gray-700 p-2 touch-target"
+                  title="Copy Tenant ID"
+                >
+                  <FiCopy className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           )}
 
           {job.started_at && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Started At</label>
-              <p className="text-sm text-gray-900">
-                {(() => {
-                  try {
-                    const date = new Date(job.started_at)
-                    return isNaN(date.getTime()) ? job.started_at : date.toLocaleString()
-                  } catch {
-                    return job.started_at
-                  }
-                })()}
-              </p>
+              <div className="flex items-center space-x-2">
+                <p className="text-sm text-gray-900">
+                  {(() => {
+                    try {
+                      const date = new Date(job.started_at)
+                      if (isNaN(date.getTime())) {
+                        return job.started_at
+                      }
+                      // Format: M/D/YYYY, H:MM:SS AM/PM
+                      return date.toLocaleString('en-US', {
+                        month: 'numeric',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: true
+                      })
+                    } catch {
+                      return job.started_at
+                    }
+                  })()}
+                </p>
+                <button
+                  onClick={() => copyToClipboard(job.started_at)}
+                  className="text-gray-500 hover:text-gray-700 p-2 touch-target"
+                  title="Copy Started At"
+                >
+                  <FiCopy className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           )}
 
           {job.updated_at && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Last Updated</label>
-              <p className="text-sm text-gray-900">
-                {(() => {
-                  try {
-                    const date = new Date(job.updated_at)
-                    return isNaN(date.getTime()) ? job.updated_at : date.toLocaleString()
-                  } catch {
-                    return job.updated_at
-                  }
-                })()}
-              </p>
+              <div className="flex items-center space-x-2">
+                <p className="text-sm text-gray-900">
+                  {(() => {
+                    try {
+                      const date = new Date(job.updated_at)
+                      if (isNaN(date.getTime())) {
+                        return job.updated_at
+                      }
+                      // Format: M/D/YYYY, H:MM:SS AM/PM
+                      return date.toLocaleString('en-US', {
+                        month: 'numeric',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: true
+                      })
+                    } catch {
+                      return job.updated_at
+                    }
+                  })()}
+                </p>
+                <button
+                  onClick={() => copyToClipboard(job.updated_at)}
+                  className="text-gray-500 hover:text-gray-700 p-2 touch-target"
+                  title="Copy Last Updated"
+                >
+                  <FiCopy className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           )}
 
