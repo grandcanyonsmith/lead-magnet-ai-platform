@@ -122,6 +122,10 @@ class ApiClientImpl implements ApiClient {
     return this.jobs.resubmitJob(jobId)
   }
 
+  async rerunStep(jobId: string, stepIndex: number) {
+    return this.jobs.rerunStep(jobId, stepIndex)
+  }
+
   // Artifacts - delegate to artifacts client
   async getArtifacts(params?: ArtifactListParams): Promise<ArtifactListResponse> {
     return this.artifacts.getArtifacts(params)

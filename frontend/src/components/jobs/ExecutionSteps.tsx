@@ -1,6 +1,7 @@
 'use client'
 
-import { FiChevronDown, FiChevronUp, FiCopy, FiCheckCircle, FiCircle, FiLoader } from 'react-icons/fi'
+import { useState } from 'react'
+import { FiChevronDown, FiChevronUp, FiCopy, FiCheckCircle, FiCircle, FiLoader, FiRefreshCw } from 'react-icons/fi'
 import { formatStepInput, formatStepOutput, formatDurationMs } from '@/utils/jobFormatting'
 import { StepContent } from './StepContent'
 
@@ -14,6 +15,8 @@ interface ExecutionStepsProps {
   onToggleStep: (stepOrder: number) => void
   onCopy: (text: string) => void
   jobStatus?: string
+  onRerunStep?: (stepIndex: number) => Promise<void>
+  rerunningStep?: number | null
 }
 
 export function ExecutionSteps({
@@ -24,7 +27,10 @@ export function ExecutionSteps({
   onToggleStep,
   onCopy,
   jobStatus,
+  onRerunStep,
+  rerunningStep,
 }: ExecutionStepsProps) {
+  const [activeTab, setActiveTab] = useState<Record<number, 'input' | 'output'>>({})
   if (!steps || steps.length === 0) {
     return null
   }
@@ -306,9 +312,9 @@ export function ExecutionSteps({
                     )}
                   </div>
 
-                  {/* Right: Metrics - Only show for completed steps */}
+                  {/* Right: Metrics and Actions - Only show for completed steps */}
                   {isCompleted && (
-                    <div className="flex flex-col items-end gap-1 text-xs text-gray-500 flex-shrink-0">
+                    <div className="flex flex-col items-end gap-2 text-xs text-gray-500 flex-shrink-0">
                       {step.duration_ms !== undefined && (
                         <span className="font-medium text-gray-700">{formatDurationMs(step.duration_ms)}</span>
                       )}
@@ -324,6 +330,30 @@ export function ExecutionSteps({
                           )}
                         </div>
                       )}
+                      {/* Rerun Step Button */}
+                      {onRerunStep && step.step_order > 0 && step.step_type === 'ai_generation' && (
+                        <button
+                          onClick={() => {
+                            const stepIndex = step.step_order - 1 // Convert to 0-indexed
+                            onRerunStep(stepIndex)
+                          }}
+                          disabled={rerunningStep === step.step_order - 1}
+                          className="mt-2 flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-target"
+                          title="Rerun this step"
+                        >
+                          {rerunningStep === step.step_order - 1 ? (
+                            <>
+                              <FiLoader className="w-3.5 h-3.5 animate-spin" />
+                              Rerunning...
+                            </>
+                          ) : (
+                            <>
+                              <FiRefreshCw className="w-3.5 h-3.5" />
+                              Rerun Step
+                            </>
+                          )}
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -333,9 +363,9 @@ export function ExecutionSteps({
                   <div className="px-3 sm:px-4 pb-3 sm:pb-4 pt-0 border-t border-gray-100">
                     <button
                       onClick={() => onToggleStep(step.step_order)}
-                      className="flex items-center justify-between w-full text-left text-sm text-gray-700 hover:text-gray-900 touch-target py-1"
+                      className="flex items-center justify-between w-full text-left text-sm text-gray-700 hover:text-gray-900 touch-target py-2"
                     >
-                      <span className="font-medium">Input</span>
+                      <span className="font-medium">Input & Output</span>
                       {isExpanded ? (
                         <FiChevronUp className="w-5 h-5 flex-shrink-0 ml-2" />
                       ) : (
@@ -352,7 +382,7 @@ export function ExecutionSteps({
                           return (
                             <div>
                               <div className="flex items-center justify-between mb-2">
-                                <span className="text-xs font-medium text-gray-700">Context from Previous Steps</span>
+                                <span className="text-sm font-semibold text-gray-700">Context from Previous Steps</span>
                                 <button
                                   onClick={() => onCopy(previousContext)}
                                   className="text-xs text-gray-500 hover:text-gray-700 flex items-center space-x-1 px-2 py-1.5 rounded hover:bg-gray-50 touch-target"
@@ -370,82 +400,108 @@ export function ExecutionSteps({
                         return null
                       })()}
                       
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-medium text-gray-700">Input</span>
+                      {/* Tabs for Input/Output */}
+                      <div className="border border-gray-200 rounded-lg overflow-hidden">
+                        <div className="flex border-b border-gray-200 bg-gray-50">
                           <button
-                            onClick={() => {
-                              const formatted = formatStepInput(step)
-                              const text = formatted.type === 'json' 
-                                ? JSON.stringify(formatted.content, null, 2)
-                                : typeof formatted.content === 'string' 
-                                  ? formatted.content 
-                                  : formatted.content.input || JSON.stringify(formatted.content, null, 2)
-                              onCopy(text)
-                            }}
-                            className="text-xs text-gray-500 hover:text-gray-700 flex items-center space-x-1 px-2 py-1.5 rounded hover:bg-gray-50 touch-target"
+                            onClick={() => setActiveTab({ ...activeTab, [step.step_order]: 'input' })}
+                            className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
+                              (activeTab[step.step_order] || 'input') !== 'output'
+                                ? 'bg-white text-gray-900 border-b-2 border-blue-600'
+                                : 'text-gray-600 hover:text-gray-900'
+                            }`}
                           >
-                            <FiCopy className="w-3.5 h-3.5" />
-                            <span>Copy</span>
+                            Input
+                          </button>
+                          <button
+                            onClick={() => setActiveTab({ ...activeTab, [step.step_order]: 'output' })}
+                            className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
+                              (activeTab[step.step_order] || 'input') === 'output'
+                                ? 'bg-white text-gray-900 border-b-2 border-blue-600'
+                                : 'text-gray-600 hover:text-gray-900'
+                            }`}
+                          >
+                            Output
                           </button>
                         </div>
-                        <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-800 overflow-x-auto max-h-96 overflow-y-auto">
-                          <StepContent formatted={formatStepInput(step)} />
-                        </div>
-                      </div>
-
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-medium text-gray-700">Output</span>
-                          <button
-                            onClick={() => {
-                              const formatted = formatStepOutput(step)
-                              const text = formatted.type === 'json' 
-                                ? JSON.stringify(formatted.content, null, 2)
-                                : typeof formatted.content === 'string' 
-                                  ? formatted.content 
-                                  : JSON.stringify(formatted.content, null, 2)
-                              onCopy(text)
-                            }}
-                            className="text-xs text-gray-500 hover:text-gray-700 flex items-center space-x-1 px-2 py-1.5 rounded hover:bg-gray-50 touch-target"
-                          >
-                            <FiCopy className="w-3.5 h-3.5" />
-                            <span>Copy</span>
-                          </button>
-                        </div>
-                        <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-800 overflow-x-auto max-h-96 overflow-y-auto">
-                          <StepContent formatted={formatStepOutput(step)} />
-                        </div>
-                        {/* Display image URLs if present */}
-                        {step.image_urls && Array.isArray(step.image_urls) && step.image_urls.length > 0 && (
-                          <div className="mt-3">
-                            <span className="text-xs font-medium text-gray-700 mb-2 block">Generated Images:</span>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                              {step.image_urls.map((imageUrl: string, imgIdx: number) => (
-                                <div key={imgIdx} className="border border-gray-200 rounded-lg overflow-hidden">
-                                  <img 
-                                    src={imageUrl} 
-                                    alt={`Generated image ${imgIdx + 1}`}
-                                    className="w-full h-auto"
-                                    onError={(e) => {
-                                      (e.target as HTMLImageElement).style.display = 'none'
-                                    }}
-                                  />
-                                  <div className="p-2 bg-gray-100">
-                                    <a 
-                                      href={imageUrl} 
-                                      target="_blank" 
-                                      rel="noopener noreferrer"
-                                      className="text-xs text-blue-600 hover:text-blue-800 break-all"
-                                    >
-                                      {imageUrl}
-                                    </a>
+                        
+                        <div className="p-4 bg-white">
+                          {(activeTab[step.step_order] || 'input') !== 'output' ? (
+                            <div>
+                              <div className="flex items-center justify-between mb-3">
+                                <span className="text-sm font-semibold text-gray-700">Input</span>
+                                <button
+                                  onClick={() => {
+                                    const formatted = formatStepInput(step)
+                                    const text = formatted.type === 'json' 
+                                      ? JSON.stringify(formatted.content, null, 2)
+                                      : typeof formatted.content === 'string' 
+                                        ? formatted.content 
+                                        : formatted.content.input || JSON.stringify(formatted.content, null, 2)
+                                    onCopy(text)
+                                  }}
+                                  className="text-xs text-gray-500 hover:text-gray-700 flex items-center space-x-1 px-2 py-1.5 rounded hover:bg-gray-50 touch-target"
+                                >
+                                  <FiCopy className="w-3.5 h-3.5" />
+                                  <span>Copy</span>
+                                </button>
+                              </div>
+                              <StepContent formatted={formatStepInput(step)} />
+                            </div>
+                          ) : (
+                            <div>
+                              <div className="flex items-center justify-between mb-3">
+                                <span className="text-sm font-semibold text-gray-700">Output</span>
+                                <button
+                                  onClick={() => {
+                                    const formatted = formatStepOutput(step)
+                                    const text = formatted.type === 'json' 
+                                      ? JSON.stringify(formatted.content, null, 2)
+                                      : typeof formatted.content === 'string' 
+                                        ? formatted.content 
+                                        : JSON.stringify(formatted.content, null, 2)
+                                    onCopy(text)
+                                  }}
+                                  className="text-xs text-gray-500 hover:text-gray-700 flex items-center space-x-1 px-2 py-1.5 rounded hover:bg-gray-50 touch-target"
+                                >
+                                  <FiCopy className="w-3.5 h-3.5" />
+                                  <span>Copy</span>
+                                </button>
+                              </div>
+                              <StepContent formatted={formatStepOutput(step)} />
+                              {/* Display image URLs if present */}
+                              {step.image_urls && Array.isArray(step.image_urls) && step.image_urls.length > 0 && (
+                                <div className="mt-4 pt-4 border-t border-gray-200">
+                                  <span className="text-sm font-semibold text-gray-700 mb-3 block">Generated Images:</span>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {step.image_urls.map((imageUrl: string, imgIdx: number) => (
+                                      <div key={imgIdx} className="border border-gray-200 rounded-lg overflow-hidden">
+                                        <img 
+                                          src={imageUrl} 
+                                          alt={`Generated image ${imgIdx + 1}`}
+                                          className="w-full h-auto"
+                                          onError={(e) => {
+                                            (e.target as HTMLImageElement).style.display = 'none'
+                                          }}
+                                        />
+                                        <div className="p-2 bg-gray-100">
+                                          <a 
+                                            href={imageUrl} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="text-xs text-blue-600 hover:text-blue-800 break-all"
+                                          >
+                                            {imageUrl}
+                                          </a>
+                                        </div>
+                                      </div>
+                                    ))}
                                   </div>
                                 </div>
-                              ))}
+                              )}
                             </div>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
 
                       {step.artifact_id && (
