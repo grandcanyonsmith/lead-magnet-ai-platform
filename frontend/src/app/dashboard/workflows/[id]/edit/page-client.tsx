@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { api } from '@/lib/api'
-import { FiArrowLeft, FiSave, FiSettings, FiFileText, FiLayout, FiZap, FiEdit2, FiEye, FiPlus } from 'react-icons/fi'
+import { FiArrowLeft, FiSave, FiSettings, FiFileText, FiLayout, FiZap, FiEdit2, FiEye, FiPlus, FiType, FiMail, FiPhone, FiHash, FiList, FiChevronDown, FiChevronUp, FiGripVertical, FiMinus, FiMaximize2, FiMinimize2, FiMonitor, FiTablet, FiSmartphone, FiCode, FiCopy } from 'react-icons/fi'
 import WorkflowStepEditor, { WorkflowStep } from '../../components/WorkflowStepEditor'
 import WorkflowFlowchart from '../../components/WorkflowFlowchart'
 import FlowchartSidePanel from '../../components/FlowchartSidePanel'
@@ -82,6 +82,20 @@ export default function EditWorkflowPage() {
   const [previewKey, setPreviewKey] = useState(0)
   const [selectedStepIndex, setSelectedStepIndex] = useState<number | null>(null)
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false)
+  
+  // Form Settings UI states
+  const [showFormPreview, setShowFormPreview] = useState(true)
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
+    basic: false,
+    fields: false,
+    security: false,
+    customization: false,
+  })
+  const [draggedFieldIndex, setDraggedFieldIndex] = useState<number | null>(null)
+  
+  // Template Viewer UI states
+  const [templateViewMode, setTemplateViewMode] = useState<'split' | 'editor' | 'preview'>('split')
+  const [devicePreviewSize, setDevicePreviewSize] = useState<'mobile' | 'tablet' | 'desktop'>('desktop')
 
   const [templateData, setTemplateData] = useState({
     template_name: '',
@@ -482,6 +496,166 @@ export default function EditWorkflowPage() {
     })
   }
 
+  // Drag and drop handlers
+  const handleDragStart = (index: number) => {
+    setDraggedFieldIndex(index)
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+  }
+
+  const handleDrop = (dropIndex: number) => {
+    if (draggedFieldIndex === null || draggedFieldIndex === dropIndex) {
+      setDraggedFieldIndex(null)
+      return
+    }
+
+    setFormFormData(prev => {
+      const newFields = [...prev.form_fields_schema.fields]
+      const draggedField = newFields[draggedFieldIndex]
+      newFields.splice(draggedFieldIndex, 1)
+      newFields.splice(dropIndex, 0, draggedField)
+      return {
+        ...prev,
+        form_fields_schema: {
+          ...prev.form_fields_schema,
+          fields: newFields,
+        },
+      }
+    })
+    setDraggedFieldIndex(null)
+  }
+
+  // Field type icon helper
+  const getFieldTypeIcon = (fieldType: string) => {
+    switch (fieldType) {
+      case 'email':
+        return <FiMail className="w-4 h-4" />
+      case 'tel':
+        return <FiPhone className="w-4 h-4" />
+      case 'number':
+        return <FiHash className="w-4 h-4" />
+      case 'select':
+        return <FiList className="w-4 h-4" />
+      case 'textarea':
+        return <FiType className="w-4 h-4" />
+      default:
+        return <FiType className="w-4 h-4" />
+    }
+  }
+
+  // Toggle section collapse
+  const toggleSection = (section: string) => {
+    setCollapsedSections(prev => ({
+      ...prev,
+      [section]: !prev[section],
+    }))
+  }
+
+  // Render form preview
+  const renderFormPreview = () => {
+    const defaultFields: FormField[] = [
+      { field_id: 'name', field_type: 'text', label: 'Name', required: true },
+      { field_id: 'email', field_type: 'email', label: 'Email', required: true },
+      { field_id: 'phone', field_type: 'tel', label: 'Phone', required: false },
+    ]
+    const allFields = [...defaultFields, ...formFormData.form_fields_schema.fields]
+
+    return (
+      <div className="bg-white border border-gray-200 rounded-lg p-6">
+        <h3 className="text-lg font-semibold mb-4">{formFormData.form_name || 'Form Preview'}</h3>
+        <div className="space-y-4">
+          {allFields.map((field) => (
+            <div key={field.field_id}>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {field.label}
+                {field.required && <span className="text-red-500 ml-1">*</span>}
+              </label>
+              {field.field_type === 'textarea' ? (
+                <textarea
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  placeholder={field.placeholder || ''}
+                  rows={4}
+                  disabled
+                />
+              ) : field.field_type === 'select' && field.options ? (
+                <select
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  disabled
+                >
+                  <option value="">Select an option...</option>
+                  {field.options.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type={field.field_type === 'email' ? 'email' : field.field_type === 'tel' ? 'tel' : field.field_type === 'number' ? 'number' : 'text'}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  placeholder={field.placeholder || ''}
+                  disabled
+                />
+              )}
+            </div>
+          ))}
+          <button
+            type="button"
+            className="w-full py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled
+          >
+            Submit
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Format HTML helper
+  const formatHTML = () => {
+    // Simple HTML formatting - indent based on tags
+    let formatted = templateData.html_content
+    formatted = formatted.replace(/>\s*</g, '>\n<')
+    const lines = formatted.split('\n')
+    let indent = 0
+    const formattedLines = lines.map(line => {
+      const trimmed = line.trim()
+      if (!trimmed) return ''
+      if (trimmed.startsWith('</')) {
+        indent = Math.max(0, indent - 2)
+      }
+      const indented = ' '.repeat(indent) + trimmed
+      if (trimmed.startsWith('<') && !trimmed.startsWith('</') && !trimmed.endsWith('/>')) {
+        indent += 2
+      }
+      return indented
+    })
+    setTemplateData(prev => ({ ...prev, html_content: formattedLines.join('\n') }))
+  }
+
+  // Insert placeholder helper
+  const insertPlaceholder = (placeholder: string) => {
+    const placeholderText = `{{${placeholder}}}`
+    setTemplateData(prev => ({
+      ...prev,
+      html_content: prev.html_content + placeholderText,
+    }))
+  }
+
+  // Get device preview width
+  const getDevicePreviewWidth = () => {
+    switch (devicePreviewSize) {
+      case 'mobile':
+        return '375px'
+      case 'tablet':
+        return '768px'
+      default:
+        return '100%'
+    }
+  }
+
   const handleTemplateChange = (field: string, value: any) => {
     setTemplateData(prev => ({ ...prev, [field]: value }))
   }
@@ -853,242 +1027,392 @@ export default function EditWorkflowPage() {
       )}
 
       {activeTab === 'form' && formId && (
-        <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 space-y-6">
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-            <p className="text-sm text-yellow-800">
-              <strong>Note:</strong> The form name is automatically synced with the lead magnet name. Name, email, and phone fields are always included and cannot be removed.
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Form Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={formFormData.form_name}
-              onChange={(e) => handleFormChange('form_name', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-              placeholder="Lead Magnet Form"
-              maxLength={200}
-              required
-            />
-            <p className="mt-1 text-xs text-gray-500">
-              This is automatically set to &quot;{formData.workflow_name} Form&quot;
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Public URL Slug <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={formFormData.public_slug}
-              onChange={(e) => handleFormChange('public_slug', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono text-sm"
-              placeholder="lead-magnet-form"
-              pattern="[a-z0-9-]+"
-              required
-            />
-            <p className="mt-1 text-xs text-gray-500">
-              URL-friendly identifier. Only lowercase letters, numbers, and hyphens allowed.
-            </p>
-            {formFormData.public_slug && (
-              <p className="mt-1 text-xs text-primary-600">
-                Form URL: {typeof window !== 'undefined' ? `${window.location.origin}/v1/forms/${formFormData.public_slug}` : `/v1/forms/${formFormData.public_slug}`}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <label className="block text-sm font-medium text-gray-700">
-                Form Fields
-              </label>
-              <button
-                type="button"
-                onClick={addField}
-                className="text-sm text-primary-600 hover:text-primary-900"
-              >
-                + Add Field
-              </button>
+        <div className="space-y-6">
+          {/* Form Preview Toggle */}
+          <div className="bg-white rounded-lg shadow p-4 flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <FiEye className="w-5 h-5 text-gray-500" />
+              <span className="text-sm font-medium text-gray-700">Form Preview</span>
             </div>
-            <div className="space-y-4">
-              {formFormData.form_fields_schema.fields.map((field, index) => (
-                <div key={field.field_id || index} className="border border-gray-200 rounded-lg p-4 space-y-3">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Field Type</label>
-                      <select
-                        value={field.field_type}
-                        onChange={(e) => handleFieldChange(index, 'field_type', e.target.value)}
-                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      >
-                        <option value="text">Text</option>
-                        <option value="email">Email</option>
-                        <option value="tel">Phone</option>
-                        <option value="textarea">Textarea</option>
-                        <option value="select">Select</option>
-                        <option value="number">Number</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Label</label>
-                      <input
-                        type="text"
-                        value={field.label}
-                        onChange={(e) => handleFieldChange(index, 'label', e.target.value)}
-                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500"
-                        placeholder="Field Label"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Placeholder</label>
-                    <input
-                      type="text"
-                      value={field.placeholder || ''}
-                      onChange={(e) => handleFieldChange(index, 'placeholder', e.target.value)}
-                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      placeholder="Placeholder text"
-                    />
-                  </div>
-                  {field.field_type === 'select' && (
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Options (comma-separated)</label>
-                      <input
-                        type="text"
-                        value={field.options?.join(', ') || ''}
-                        onChange={(e) => handleFieldChange(index, 'options', e.target.value.split(',').map(o => o.trim()).filter(o => o))}
-                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500"
-                        placeholder="Option 1, Option 2, Option 3"
-                      />
-                    </div>
-                  )}
-                  <div className="flex justify-between items-center">
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={field.required}
-                        onChange={(e) => handleFieldChange(index, 'required', e.target.checked)}
-                        className="mr-2"
-                      />
-                      <span className="text-xs text-gray-700">Required</span>
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => removeField(index)}
-                      className="text-xs text-red-600 hover:text-red-900"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </div>
-              ))}
-              {formFormData.form_fields_schema.fields.length === 0 && (
-                <p className="text-sm text-gray-500 text-center py-4">No custom fields. Name, email, and phone are always included.</p>
-              )}
-            </div>
-          </div>
-
-          <div className="border-t pt-6 space-y-4">
-            <div>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={formFormData.rate_limit_enabled}
-                  onChange={(e) => handleFormChange('rate_limit_enabled', e.target.checked)}
-                  className="mr-2"
-                />
-                <span className="text-sm font-medium text-gray-700">Enable Rate Limiting</span>
-              </label>
-            </div>
-            {formFormData.rate_limit_enabled && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Submissions Per Hour
-                </label>
-                <input
-                  type="number"
-                  value={formFormData.rate_limit_per_hour}
-                  onChange={(e) => handleFormChange('rate_limit_per_hour', parseInt(e.target.value) || 10)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  min={1}
-                  max={1000}
-                />
-              </div>
-            )}
-            <div>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={formFormData.captcha_enabled}
-                  onChange={(e) => handleFormChange('captcha_enabled', e.target.checked)}
-                  className="mr-2"
-                />
-                <span className="text-sm font-medium text-gray-700">Enable CAPTCHA</span>
-              </label>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Thank You Message
-            </label>
-            <textarea
-              value={formFormData.thank_you_message}
-              onChange={(e) => handleFormChange('thank_you_message', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-              placeholder="Thank you! Your submission is being processed."
-              rows={3}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Redirect URL (optional)
-            </label>
-            <input
-              type="url"
-              value={formFormData.redirect_url}
-              onChange={(e) => handleFormChange('redirect_url', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-              placeholder="https://example.com/thank-you"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Custom CSS (optional)
-            </label>
-            <textarea
-              value={formFormData.custom_css}
-              onChange={(e) => handleFormChange('custom_css', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono text-sm"
-              placeholder="/* Custom CSS styles */"
-              rows={6}
-            />
-          </div>
-
-          <div className="flex justify-end space-x-4 pt-4 border-t">
             <button
               type="button"
-              onClick={() => router.back()}
-              className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              onClick={() => setShowFormPreview(!showFormPreview)}
+              className="text-sm text-primary-600 hover:text-primary-700 flex items-center"
             >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="flex items-center px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <FiSave className="w-5 h-5 mr-2" />
-              {submitting ? 'Saving...' : 'Save Changes'}
+              {showFormPreview ? (
+                <>
+                  <FiMinimize2 className="w-4 h-4 mr-1" />
+                  Hide Preview
+                </>
+              ) : (
+                <>
+                  <FiMaximize2 className="w-4 h-4 mr-1" />
+                  Show Preview
+                </>
+              )}
             </button>
           </div>
-        </form>
+
+          {/* Split Layout: Form Settings and Preview */}
+          <div className={`grid gap-6 ${showFormPreview ? 'lg:grid-cols-2' : 'grid-cols-1'}`}>
+            {/* Form Settings */}
+            <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 space-y-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-800">
+                  <strong>Note:</strong> The form name is automatically synced with the lead magnet name. Name, email, and phone fields are always included and cannot be removed.
+                </p>
+              </div>
+
+              {/* Basic Settings Section */}
+              <div className="border border-gray-200 rounded-lg overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => toggleSection('basic')}
+                  className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 flex items-center justify-between transition-colors"
+                >
+                  <h3 className="text-sm font-semibold text-gray-900">Basic Settings</h3>
+                  {collapsedSections.basic ? (
+                    <FiChevronDown className="w-5 h-5 text-gray-500" />
+                  ) : (
+                    <FiChevronUp className="w-5 h-5 text-gray-500" />
+                  )}
+                </button>
+                {!collapsedSections.basic && (
+                  <div className="p-4 space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Form Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formFormData.form_name}
+                        onChange={(e) => handleFormChange('form_name', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        placeholder="Lead Magnet Form"
+                        maxLength={200}
+                        required
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        This is automatically set to &quot;{formData.workflow_name} Form&quot;
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Public URL Slug <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formFormData.public_slug}
+                        onChange={(e) => handleFormChange('public_slug', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono text-sm"
+                        placeholder="lead-magnet-form"
+                        pattern="[a-z0-9-]+"
+                        required
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        URL-friendly identifier. Only lowercase letters, numbers, and hyphens allowed.
+                      </p>
+                      {formFormData.public_slug && (
+                        <p className="mt-1 text-xs text-primary-600">
+                          Form URL: {typeof window !== 'undefined' ? `${window.location.origin}/v1/forms/${formFormData.public_slug}` : `/v1/forms/${formFormData.public_slug}`}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Form Fields Section */}
+              <div className="border border-gray-200 rounded-lg overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => toggleSection('fields')}
+                  className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 flex items-center justify-between transition-colors"
+                >
+                  <h3 className="text-sm font-semibold text-gray-900">Form Fields</h3>
+                  {collapsedSections.fields ? (
+                    <FiChevronDown className="w-5 h-5 text-gray-500" />
+                  ) : (
+                    <FiChevronUp className="w-5 h-5 text-gray-500" />
+                  )}
+                </button>
+                {!collapsedSections.fields && (
+                  <div className="p-4 space-y-4">
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={addField}
+                        className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm"
+                      >
+                        <FiPlus className="w-4 h-4 mr-2" />
+                        Add Field
+                      </button>
+                    </div>
+                    <div className="space-y-3">
+                      {formFormData.form_fields_schema.fields.map((field, index) => (
+                        <div
+                          key={field.field_id || index}
+                          draggable
+                          onDragStart={() => handleDragStart(index)}
+                          onDragOver={handleDragOver}
+                          onDrop={() => handleDrop(index)}
+                          className={`border-2 rounded-lg p-4 space-y-3 transition-all ${
+                            draggedFieldIndex === index
+                              ? 'border-primary-500 bg-primary-50 opacity-50'
+                              : 'border-gray-200 bg-white hover:border-gray-300'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center space-x-2 flex-1">
+                              <div className="cursor-move text-gray-400 hover:text-gray-600">
+                                <FiGripVertical className="w-5 h-5" />
+                              </div>
+                              <div className="flex items-center space-x-2 px-2 py-1 bg-gray-100 rounded text-gray-700">
+                                {getFieldTypeIcon(field.field_type)}
+                                <span className="text-xs font-medium capitalize">{field.field_type}</span>
+                              </div>
+                              {field.required && (
+                                <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-medium">
+                                  Required
+                                </span>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeField(index)}
+                              className="text-red-600 hover:text-red-700 p-1"
+                            >
+                              <FiMinus className="w-4 h-4" />
+                            </button>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Field Type</label>
+                              <select
+                                value={field.field_type}
+                                onChange={(e) => handleFieldChange(index, 'field_type', e.target.value)}
+                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                              >
+                                <option value="text">Text</option>
+                                <option value="email">Email</option>
+                                <option value="tel">Phone</option>
+                                <option value="textarea">Textarea</option>
+                                <option value="select">Select</option>
+                                <option value="number">Number</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Label</label>
+                              <input
+                                type="text"
+                                value={field.label}
+                                onChange={(e) => handleFieldChange(index, 'label', e.target.value)}
+                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                placeholder="Field Label"
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Placeholder</label>
+                            <input
+                              type="text"
+                              value={field.placeholder || ''}
+                              onChange={(e) => handleFieldChange(index, 'placeholder', e.target.value)}
+                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                              placeholder="Placeholder text"
+                            />
+                          </div>
+                          {field.field_type === 'select' && (
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Options (comma-separated)</label>
+                              <input
+                                type="text"
+                                value={field.options?.join(', ') || ''}
+                                onChange={(e) => handleFieldChange(index, 'options', e.target.value.split(',').map(o => o.trim()).filter(o => o))}
+                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                placeholder="Option 1, Option 2, Option 3"
+                              />
+                            </div>
+                          )}
+                          <div className="flex items-center">
+                            <label className="flex items-center cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={field.required}
+                                onChange={(e) => handleFieldChange(index, 'required', e.target.checked)}
+                                className="mr-2 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                              />
+                              <span className="text-xs text-gray-700">Required field</span>
+                            </label>
+                          </div>
+                        </div>
+                      ))}
+                      {formFormData.form_fields_schema.fields.length === 0 && (
+                        <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
+                          <p className="text-sm text-gray-500">No custom fields. Name, email, and phone are always included.</p>
+                          <button
+                            type="button"
+                            onClick={addField}
+                            className="mt-3 text-sm text-primary-600 hover:text-primary-700"
+                          >
+                            Add your first field
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Security & Limits Section */}
+              <div className="border border-gray-200 rounded-lg overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => toggleSection('security')}
+                  className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 flex items-center justify-between transition-colors"
+                >
+                  <h3 className="text-sm font-semibold text-gray-900">Security & Limits</h3>
+                  {collapsedSections.security ? (
+                    <FiChevronDown className="w-5 h-5 text-gray-500" />
+                  ) : (
+                    <FiChevronUp className="w-5 h-5 text-gray-500" />
+                  )}
+                </button>
+                {!collapsedSections.security && (
+                  <div className="p-4 space-y-4">
+                    <div>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={formFormData.rate_limit_enabled}
+                          onChange={(e) => handleFormChange('rate_limit_enabled', e.target.checked)}
+                          className="mr-2 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                        />
+                        <span className="text-sm font-medium text-gray-700">Enable Rate Limiting</span>
+                      </label>
+                    </div>
+                    {formFormData.rate_limit_enabled && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Submissions Per Hour
+                        </label>
+                        <input
+                          type="number"
+                          value={formFormData.rate_limit_per_hour}
+                          onChange={(e) => handleFormChange('rate_limit_per_hour', parseInt(e.target.value) || 10)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                          min={1}
+                          max={1000}
+                        />
+                      </div>
+                    )}
+                    <div>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={formFormData.captcha_enabled}
+                          onChange={(e) => handleFormChange('captcha_enabled', e.target.checked)}
+                          className="mr-2 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                        />
+                        <span className="text-sm font-medium text-gray-700">Enable CAPTCHA</span>
+                      </label>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Customization Section */}
+              <div className="border border-gray-200 rounded-lg overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => toggleSection('customization')}
+                  className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 flex items-center justify-between transition-colors"
+                >
+                  <h3 className="text-sm font-semibold text-gray-900">Customization</h3>
+                  {collapsedSections.customization ? (
+                    <FiChevronDown className="w-5 h-5 text-gray-500" />
+                  ) : (
+                    <FiChevronUp className="w-5 h-5 text-gray-500" />
+                  )}
+                </button>
+                {!collapsedSections.customization && (
+                  <div className="p-4 space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Thank You Message
+                      </label>
+                      <textarea
+                        value={formFormData.thank_you_message}
+                        onChange={(e) => handleFormChange('thank_you_message', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        placeholder="Thank you! Your submission is being processed."
+                        rows={3}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Redirect URL (optional)
+                      </label>
+                      <input
+                        type="url"
+                        value={formFormData.redirect_url}
+                        onChange={(e) => handleFormChange('redirect_url', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        placeholder="https://example.com/thank-you"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Custom CSS (optional)
+                      </label>
+                      <textarea
+                        value={formFormData.custom_css}
+                        onChange={(e) => handleFormChange('custom_css', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono text-sm"
+                        placeholder="/* Custom CSS styles */"
+                        rows={6}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end space-x-4 pt-4 border-t">
+                <button
+                  type="button"
+                  onClick={() => router.back()}
+                  className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="flex items-center px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <FiSave className="w-5 h-5 mr-2" />
+                  {submitting ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+
+            {/* Form Preview */}
+            {showFormPreview && (
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="mb-4 flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-gray-900">Live Preview</h3>
+                  <span className="text-xs text-gray-500">Updates in real-time</span>
+                </div>
+                <div className="border border-gray-200 rounded-lg overflow-auto max-h-[800px]">
+                  {renderFormPreview()}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {activeTab === 'form' && !formId && (
@@ -1099,9 +1423,9 @@ export default function EditWorkflowPage() {
       )}
 
       {activeTab === 'template' && (
-        <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
           {!formData.html_enabled && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
               <p className="text-sm text-yellow-800">
                 <strong>Note:</strong> Enable &quot;Generate Styled HTML&quot; in the Lead Magnet Settings tab to use templates.
               </p>
@@ -1109,135 +1433,124 @@ export default function EditWorkflowPage() {
           )}
 
           {templateLoading && (
-            <div className="text-center py-12">
+            <div className="bg-white rounded-lg shadow p-12 text-center">
               <p className="text-gray-600">Loading template...</p>
             </div>
           )}
 
           {!templateLoading && (
             <>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Template Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={templateData.template_name}
-                  onChange={(e) => handleTemplateChange('template_name', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  placeholder="Email Template"
-                  maxLength={200}
-                  required
-                />
+              {/* Template Metadata */}
+              <div className="bg-white rounded-lg shadow p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Template Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={templateData.template_name}
+                    onChange={(e) => handleTemplateChange('template_name', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="Email Template"
+                    maxLength={200}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    value={templateData.template_description}
+                    onChange={(e) => handleTemplateChange('template_description', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="Describe what this template is used for..."
+                    rows={3}
+                    maxLength={1000}
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Description
-                </label>
-                <textarea
-                  value={templateData.template_description}
-                  onChange={(e) => handleTemplateChange('template_description', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  placeholder="Describe what this template is used for..."
-                  rows={3}
-                  maxLength={1000}
-                />
-              </div>
-
-              {/* Preview Section */}
+              {/* View Mode Toggle */}
               {templateData.html_content.trim() && (
-                <div className="border border-gray-200 rounded-lg overflow-hidden">
-                  <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-gray-900 flex items-center">
-                      <FiEye className="w-4 h-4 mr-2" />
-                      HTML Preview
-                    </h3>
+                <div className="bg-white rounded-lg shadow p-4 flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <FiEye className="w-5 h-5 text-gray-500" />
+                    <span className="text-sm font-medium text-gray-700">View Mode</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
                     <button
                       type="button"
-                      onClick={() => setShowPreview(!showPreview)}
-                      className="text-sm text-gray-600 hover:text-gray-900"
+                      onClick={() => setTemplateViewMode('split')}
+                      className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                        templateViewMode === 'split'
+                          ? 'bg-primary-600 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
                     >
-                      {showPreview ? 'Hide Preview' : 'Show Preview'}
+                      Split
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTemplateViewMode('editor')}
+                      className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                        templateViewMode === 'editor'
+                          ? 'bg-primary-600 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      Editor
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTemplateViewMode('preview')}
+                      className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                        templateViewMode === 'preview'
+                          ? 'bg-primary-600 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      Preview
                     </button>
                   </div>
-                  {showPreview && (
-                    <div className="bg-white border-t border-gray-200" style={{ height: '600px' }}>
-                      <iframe
-                        key={`preview-${previewKey}-${templateData.html_content.length}`}
-                        srcDoc={getPreviewHtml()}
-                        className="w-full h-full border-0"
-                        title="HTML Preview"
-                        sandbox="allow-same-origin allow-scripts"
-                      />
-                    </div>
-                  )}
                 </div>
               )}
 
-              {/* Edit/Refine Section */}
-              {templateData.html_content.trim() && (
-                <div className="bg-gradient-to-r from-green-50 to-teal-50 border border-green-200 rounded-lg p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center">
-                        <FiEdit2 className={`w-5 h-5 mr-2 text-green-600 ${refining ? 'animate-pulse' : ''}`} />
-                        Refine Template
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        Want changes? Describe what you&apos;d like to modify, and AI will update the HTML for you.
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <textarea
-                      value={editPrompt}
-                      onChange={(e) => setEditPrompt(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                      placeholder="e.g., Make the colors more vibrant, change the layout to be more modern, remove placeholders, add more spacing..."
-                      rows={4}
-                      disabled={refining}
-                    />
-                    
-                    {generationStatus && (
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600 mr-3"></div>
-                        <span className="text-sm text-green-800 font-medium">{generationStatus}</span>
+              {/* Split View: Editor and Preview */}
+              <div className={`grid gap-6 ${templateViewMode === 'split' && templateData.html_content.trim() ? 'lg:grid-cols-2' : 'grid-cols-1'}`}>
+                {/* HTML Editor */}
+                {(templateViewMode === 'split' || templateViewMode === 'editor') && (
+                  <div className="bg-white rounded-lg shadow">
+                    <div className="border-b border-gray-200 px-4 py-3 flex items-center justify-between bg-gray-50">
+                      <div className="flex items-center space-x-3">
+                        <FiCode className="w-5 h-5 text-gray-500" />
+                        <h3 className="text-sm font-semibold text-gray-900">HTML Editor</h3>
                       </div>
-                    )}
-                    
-                    <button
-                      type="button"
-                      onClick={handleRefine}
-                      disabled={refining || !editPrompt.trim()}
-                      className="flex items-center justify-center px-6 py-2 bg-gradient-to-r from-green-600 to-teal-600 text-white rounded-lg hover:from-green-700 hover:to-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {refining ? (
-                        <>
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                          <span>Refining...</span>
-                        </>
-                      ) : (
-                        <>
-                          <FiZap className="w-5 h-5 mr-2" />
-                          <span>Apply Changes</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  HTML Content <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  value={templateData.html_content}
-                  onChange={(e) => handleHtmlChange(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono text-sm"
-                  placeholder={`<!DOCTYPE html>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          type="button"
+                          onClick={formatHTML}
+                          className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-gray-700 transition-colors"
+                          title="Format HTML"
+                        >
+                          Format
+                        </button>
+                      </div>
+                    </div>
+                    <div className="relative">
+                      <div className="absolute left-0 top-0 bottom-0 w-8 bg-gray-50 border-r border-gray-200 flex flex-col items-center py-2 text-xs text-gray-400 font-mono">
+                        {templateData.html_content.split('\n').map((_, i) => (
+                          <div key={i} className="leading-6">
+                            {i + 1}
+                          </div>
+                        ))}
+                      </div>
+                      <textarea
+                        value={templateData.html_content}
+                        onChange={(e) => handleHtmlChange(e.target.value)}
+                        className="w-full px-3 py-2 pl-12 border-0 focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono text-sm leading-6 resize-none"
+                        placeholder={`<!DOCTYPE html>
 <html>
 <head>
   <title>Lead Magnet</title>
@@ -1247,41 +1560,183 @@ export default function EditWorkflowPage() {
   <div>{{CONTENT}}</div>
 </body>
 </html>`}
-                  rows={20}
-                  required
-                />
-                <div className="mt-2 space-y-2">
-                  <p className="text-sm text-gray-500">
-                    Use <code className="px-1 py-0.5 bg-gray-100 rounded text-xs">&#123;&#123;PLACEHOLDER_NAME&#125;&#125;</code> syntax for dynamic content.
-                  </p>
-                  {detectedPlaceholders.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      <span className="text-sm font-medium text-gray-700">Detected placeholders:</span>
-                      {detectedPlaceholders.map((placeholder) => (
-                        <span
-                          key={placeholder}
-                          className="px-2 py-1 bg-primary-50 text-primary-700 rounded text-xs font-mono"
-                        >
-                          {`{{${placeholder}}}`}
-                        </span>
-                      ))}
+                        rows={20}
+                        required
+                        style={{ minHeight: '500px' }}
+                      />
                     </div>
-                  )}
-                  {detectedPlaceholders.length === 0 && templateData.html_content.trim() && (
-                    <p className="text-sm text-yellow-600">
-                      No placeholders detected. Use <code className="px-1 py-0.5 bg-yellow-100 rounded text-xs">&#123;&#123;PLACEHOLDER_NAME&#125;&#125;</code> format.
-                    </p>
-                  )}
-                </div>
+                    <div className="border-t border-gray-200 px-4 py-3 bg-gray-50">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xs text-gray-600">Placeholders:</span>
+                          {detectedPlaceholders.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {detectedPlaceholders.map((placeholder) => (
+                                <button
+                                  key={placeholder}
+                                  type="button"
+                                  onClick={() => insertPlaceholder(placeholder)}
+                                  className="px-2 py-0.5 bg-primary-100 text-primary-700 rounded text-xs font-mono hover:bg-primary-200 transition-colors flex items-center"
+                                  title={`Insert {{${placeholder}}}`}
+                                >
+                                  {`{{${placeholder}}}`}
+                                  <FiCopy className="w-3 h-3 ml-1" />
+                                </button>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-yellow-600">None detected</span>
+                          )}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Use <code className="px-1 py-0.5 bg-gray-200 rounded">&#123;&#123;NAME&#125;&#125;</code> for placeholders
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Preview Panel */}
+                {(templateViewMode === 'split' || templateViewMode === 'preview') && templateData.html_content.trim() && (
+                  <div className="bg-white rounded-lg shadow">
+                    <div className="border-b border-gray-200 px-4 py-3 flex items-center justify-between bg-gray-50">
+                      <div className="flex items-center space-x-3">
+                        <FiEye className="w-5 h-5 text-gray-500" />
+                        <h3 className="text-sm font-semibold text-gray-900">Preview</h3>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          type="button"
+                          onClick={() => setDevicePreviewSize('mobile')}
+                          className={`p-1.5 rounded transition-colors ${
+                            devicePreviewSize === 'mobile'
+                              ? 'bg-primary-600 text-white'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                          title="Mobile (375px)"
+                        >
+                          <FiSmartphone className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDevicePreviewSize('tablet')}
+                          className={`p-1.5 rounded transition-colors ${
+                            devicePreviewSize === 'tablet'
+                              ? 'bg-primary-600 text-white'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                          title="Tablet (768px)"
+                        >
+                          <FiTablet className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDevicePreviewSize('desktop')}
+                          className={`p-1.5 rounded transition-colors ${
+                            devicePreviewSize === 'desktop'
+                              ? 'bg-primary-600 text-white'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                          title="Desktop (Full Width)"
+                        >
+                          <FiMonitor className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="bg-gray-100 p-4 flex justify-center" style={{ minHeight: '500px' }}>
+                      <div
+                        className="bg-white border border-gray-300 rounded-lg shadow-lg overflow-auto"
+                        style={{
+                          width: getDevicePreviewWidth(),
+                          maxWidth: '100%',
+                          height: devicePreviewSize === 'desktop' ? '600px' : '800px',
+                        }}
+                      >
+                        <iframe
+                          key={`preview-${previewKey}-${templateData.html_content.length}-${devicePreviewSize}`}
+                          srcDoc={getPreviewHtml()}
+                          className="w-full h-full border-0"
+                          title="HTML Preview"
+                          sandbox="allow-same-origin allow-scripts"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <div>
+              {/* Refined Refine Section */}
+              {templateData.html_content.trim() && (
+                <div className="bg-white rounded-lg shadow border border-green-200">
+                  <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-green-50 to-teal-50">
+                    <div className="flex items-center space-x-2">
+                      <FiZap className="w-5 h-5 text-green-600" />
+                      <h3 className="text-sm font-semibold text-gray-900">AI Refine</h3>
+                      <span className="text-xs text-gray-500">(Optional)</span>
+                    </div>
+                  </div>
+                  <div className="p-4 space-y-3">
+                    <div>
+                      <textarea
+                        value={editPrompt}
+                        onChange={(e) => setEditPrompt(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed text-sm"
+                        placeholder="e.g., Make colors more vibrant, modernize layout, add spacing..."
+                        rows={3}
+                        disabled={refining}
+                      />
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        <span className="text-xs text-gray-500">Suggestions:</span>
+                        {['Make colors more vibrant', 'Modernize the layout', 'Add more spacing', 'Improve typography'].map((suggestion) => (
+                          <button
+                            key={suggestion}
+                            type="button"
+                            onClick={() => setEditPrompt(suggestion)}
+                            className="text-xs px-2 py-0.5 bg-gray-100 hover:bg-gray-200 rounded text-gray-700 transition-colors"
+                          >
+                            {suggestion}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    {generationStatus && (
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-2 flex items-center">
+                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-green-600 mr-2"></div>
+                        <span className="text-xs text-green-800 font-medium">{generationStatus}</span>
+                      </div>
+                    )}
+                    
+                    <button
+                      type="button"
+                      onClick={handleRefine}
+                      disabled={refining || !editPrompt.trim()}
+                      className="w-full flex items-center justify-center px-4 py-2 bg-gradient-to-r from-green-600 to-teal-600 text-white rounded-lg hover:from-green-700 hover:to-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    >
+                      {refining ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          <span>Refining...</span>
+                        </>
+                      ) : (
+                        <>
+                          <FiZap className="w-4 h-4 mr-2" />
+                          <span>Apply Changes</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Publish Settings */}
+              <div className="bg-white rounded-lg shadow p-6">
                 <label className="flex items-center">
                   <input
                     type="checkbox"
                     checked={templateData.is_published}
                     onChange={(e) => handleTemplateChange('is_published', e.target.checked)}
-                    className="mr-2"
+                    className="mr-2 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                   />
                   <span className="text-sm font-medium text-gray-700">Publish Template</span>
                 </label>
@@ -1290,7 +1745,8 @@ export default function EditWorkflowPage() {
                 </p>
               </div>
 
-              <div className="flex justify-end space-x-4 pt-4 border-t">
+              {/* Action Buttons */}
+              <div className="flex justify-end space-x-4 pt-4">
                 <button
                   type="button"
                   onClick={() => router.back()}
@@ -1324,6 +1780,20 @@ export default function EditWorkflowPage() {
         }}
         onChange={handleStepChange}
         onDelete={handleDeleteStep}
+        onMoveUp={(index) => {
+          handleMoveStepUp(index)
+          // Update selected index if needed (step moves to index - 1)
+          if (selectedStepIndex === index && index > 0) {
+            setSelectedStepIndex(index - 1)
+          }
+        }}
+        onMoveDown={(index) => {
+          handleMoveStepDown(index)
+          // Update selected index if needed (step moves to index + 1)
+          if (selectedStepIndex === index && index < steps.length - 1) {
+            setSelectedStepIndex(index + 1)
+          }
+        }}
       />
     </div>
   )
