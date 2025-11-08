@@ -33,9 +33,8 @@ RUN mkdir -p /opt/nodejs && \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install Playwright browsers by manually downloading Chromium
-# The Playwright Python package's Node.js driver has GLIBC 2.27+ requirements
-# We'll download Chromium directly and configure Playwright to use it
+# Install Playwright browsers using Playwright's installation command
+# This ensures the correct revision and directory structure
 ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright
 # Set PLAYWRIGHT_NODEJS_PATH to use our compatible Node.js 14 binary
 # This tells Playwright to use our Node.js instead of its bundled driver
@@ -46,20 +45,14 @@ RUN find /var/lang/lib/python3.11/site-packages/playwright -name "node" -type f 
         cp /opt/nodejs/node-playwright "$node_file" && \
         chmod +x "$node_file"; \
     done || echo "Node.js driver replacement attempted"
+# Install Chromium browser using Playwright's install command
+# This ensures the correct revision and directory structure that Playwright expects
 RUN mkdir -p /opt/playwright && \
-    cd /opt/playwright && \
-    # Get Chromium revision for Playwright 1.48.0 (hardcoded to avoid API calls)
-    CHROMIUM_REVISION="1305410" && \
-    # Download Chromium for Linux x64
-    curl -L "https://playwright.azureedge.net/builds/chromium/${CHROMIUM_REVISION}/chromium-linux.zip" -o chromium.zip && \
-    unzip -q chromium.zip -d chromium-${CHROMIUM_REVISION} && \
-    rm chromium.zip && \
-    # Playwright expects: chromium-{revision}/chrome-linux/chrome
-    # The zip extracts to chrome-linux/, so we need to move it
-    mv chromium-${CHROMIUM_REVISION}/chrome-linux chromium-${CHROMIUM_REVISION}/chrome-linux || \
-    (mkdir -p chromium-${CHROMIUM_REVISION} && mv chrome-linux chromium-${CHROMIUM_REVISION}/) && \
-    # Verify structure
-    ls -la chromium-${CHROMIUM_REVISION}/chrome-linux/chrome || echo "Chromium download completed"
+    export PLAYWRIGHT_BROWSERS_PATH=/opt/playwright && \
+    export PLAYWRIGHT_NODEJS_PATH=/opt/nodejs/node-playwright && \
+    python3 -m playwright install chromium --with-deps && \
+    # Verify installation
+    ls -la /opt/playwright/chromium-*/chrome-linux/chrome || (echo "Chromium installation check failed" && find /opt/playwright -name "chrome" -type f 2>/dev/null | head -5)
 
 # Copy application code (copy everything from build context)
 # This includes lambda_handler.py, all .py files, services/, and utils/ directories
