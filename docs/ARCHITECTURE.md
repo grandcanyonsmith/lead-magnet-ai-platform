@@ -45,9 +45,12 @@ This platform enables businesses to create automated workflows that transform fo
 - Secrets Manager for API keys
 
 **AI:**
-- OpenAI API (GPT-4o, GPT-4 Turbo)
+- OpenAI API (GPT-5, GPT-4.1, GPT-4o, GPT-4 Turbo, GPT-3.5 Turbo, O3 Deep Research)
 - Streaming support
 - Cost tracking
+- Multi-step workflow support with context accumulation
+- Image generation support (DALL-E integration)
+- Tool support (web_search_preview, file_search, computer_use_preview)
 
 ### Infrastructure
 - AWS CDK for Infrastructure as Code
@@ -78,11 +81,14 @@ lead-magnent-ai/
 │   │
 │   └── worker/              # ECS worker for AI processing
 │       ├── worker.py        # Main entry point
-│       ├── processor.py     # Job processor
-│       ├── ai_service.py    # OpenAI integration
+│       ├── processor.py     # Job processor (handles multi-step workflows)
+│       ├── ai_service.py    # OpenAI integration (refactored with helper methods)
 │       ├── db_service.py    # DynamoDB operations
 │       ├── s3_service.py    # S3 upload/download
 │       ├── template_service.py  # Template rendering
+│       ├── artifact_service.py  # Artifact storage service
+│       ├── delivery_service.py   # Webhook/SMS delivery service
+│       ├── legacy_processor.py  # Legacy workflow processor
 │       ├── Dockerfile
 │       └── requirements.txt
 │
@@ -154,6 +160,37 @@ npm run test:all
 # Lint all code
 npm run lint:all
 ```
+
+## 🤖 AI Service Architecture
+
+### Overview
+The `ai_service.py` module handles all OpenAI API interactions. It has been refactored to use helper methods for better maintainability and testability.
+
+### Key Components
+
+#### Main Methods
+- `generate_report()` - Main method for generating reports (reduced from 638 to ~93 lines)
+- `generate_html_from_submission()` - Generate HTML from form submission
+- `generate_styled_html()` - Generate styled HTML with template
+- `rewrite_html()` - Rewrite existing HTML content
+
+#### Helper Methods (Extracted)
+- `_is_o3_model()` - Detect if model is O3 Deep Research
+- `_validate_and_filter_tools()` - Single source of truth for tool validation
+- `_build_input_text()` - Construct input text from context
+- `_build_api_params()` - Build API parameters with safety checks
+- `_extract_image_urls()` - Extract image URLs from responses
+- `_process_api_response()` - Process API responses and calculate usage
+- `_handle_openai_error()` - Centralized error handling with retry logic
+- `_clean_html_markdown()` - Remove markdown code blocks from HTML
+
+### Multi-Step Workflow Support
+- Each step receives outputs from ALL previous steps
+- Image URLs from previous steps are included in context
+- Step order is normalized to handle DynamoDB type mismatches
+- Context accumulation ensures continuity across workflow steps
+
+See [AI_SERVICE_REFACTORING.md](./AI_SERVICE_REFACTORING.md) for detailed refactoring documentation.
 
 ## 📊 Database Schema
 
