@@ -123,11 +123,7 @@ class LegacyWorkflowProcessor:
                     workflow.get('template_version', 0)
                 )
                 if not template:
-                    raise ValueError(f"Template {template_id} (version {workflow.get('template_version', 0)}) not found. Please check that the template exists and is published.")
-                
-                # Check if template is published
-                if not template.get('is_published', False):
-                    raise ValueError(f"Template {template_id} (version {workflow.get('template_version', 0)}) exists but is not published. Please publish the template before using it in a workflow.")
+                    raise ValueError(f"Template {template_id} (version {workflow.get('template_version', 0)}) not found.")
             except ValueError:
                 raise
             except Exception as e:
