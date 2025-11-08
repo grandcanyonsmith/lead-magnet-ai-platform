@@ -372,6 +372,7 @@ export default function EditWorkflowPage() {
         step={selectedStepIndex !== null ? steps[selectedStepIndex] : null}
         index={selectedStepIndex}
         totalSteps={steps.length}
+        allSteps={steps}
         isOpen={isSidePanelOpen}
         onClose={() => {
           setIsSidePanelOpen(false)

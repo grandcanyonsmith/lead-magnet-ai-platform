@@ -266,6 +266,7 @@ export default function NewWorkflowPage() {
                   step={step}
                   index={index}
                 totalSteps={workflowSteps.steps.length}
+                allSteps={workflowSteps.steps}
                 onChange={workflowSteps.updateStep}
                 onDelete={workflowSteps.deleteStep}
                 onMoveUp={workflowSteps.moveStepUp}
