@@ -9,11 +9,14 @@ import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
+import { TableMap } from './types';
+import { createLambdaRole, grantDynamoDBPermissions, grantS3Permissions, grantSecretsAccess } from './utils/lambda-helpers';
+import { createTableEnvironmentVars } from './utils/environment-helpers';
 
 export interface ApiStackProps extends cdk.StackProps {
   userPool: cognito.UserPool;
   userPoolClient: cognito.UserPoolClient;
-  tablesMap: Record<string, dynamodb.ITable>;
+  tablesMap: TableMap;
   stateMachineArn: string;
   artifactsBucket: s3.Bucket;
   cloudfrontDomain?: string;
@@ -27,21 +30,15 @@ export class ApiStack extends cdk.Stack {
     super(scope, id, props);
 
     // Create Lambda execution role
-    const lambdaRole = new iam.Role(this, 'ApiLambdaRole', {
-      assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
-      managedPolicies: [
-        iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole'),
-        iam.ManagedPolicy.fromAwsManagedPolicyName('AWSXRayDaemonWriteAccess'),
-      ],
+    const lambdaRole = createLambdaRole(this, 'ApiLambdaRole', {
+      includeXRay: true,
     });
 
     // Grant DynamoDB permissions
-    Object.values(props.tablesMap).forEach((table) => {
-      table.grantReadWriteData(lambdaRole);
-    });
+    grantDynamoDBPermissions(lambdaRole, props.tablesMap);
 
     // Grant S3 permissions
-    props.artifactsBucket.grantReadWrite(lambdaRole);
+    grantS3Permissions(lambdaRole, props.artifactsBucket);
 
     // Grant Step Functions permissions
     lambdaRole.addToPolicy(
@@ -72,6 +69,9 @@ export class ApiStack extends cdk.Stack {
       })
     );
 
+    // Create environment variables from tables
+    const tableEnvVars = createTableEnvironmentVars(props.tablesMap);
+
     // Create API Lambda function
     // Note: Initially deploying with placeholder code, will update after building the app
     this.apiFunction = new lambda.Function(this, 'ApiFunction', {
@@ -90,15 +90,7 @@ export class ApiStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(900),
       role: lambdaRole,
       environment: {
-        WORKFLOWS_TABLE: props.tablesMap.workflows.tableName,
-        NOTIFICATIONS_TABLE: props.tablesMap.notifications.tableName,
-        FORMS_TABLE: props.tablesMap.forms.tableName,
-        SUBMISSIONS_TABLE: props.tablesMap.submissions.tableName,
-        JOBS_TABLE: props.tablesMap.jobs.tableName,
-        ARTIFACTS_TABLE: props.tablesMap.artifacts.tableName,
-        TEMPLATES_TABLE: props.tablesMap.templates.tableName,
-        USER_SETTINGS_TABLE: props.tablesMap.userSettings.tableName,
-        USAGE_RECORDS_TABLE: props.tablesMap.usageRecords.tableName,
+        ...tableEnvVars,
         STEP_FUNCTIONS_ARN: props.stateMachineArn,
         ARTIFACTS_BUCKET: props.artifactsBucket.bucketName,
         CLOUDFRONT_DOMAIN: props.cloudfrontDomain || '',
