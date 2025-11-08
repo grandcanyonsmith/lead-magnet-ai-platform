@@ -93,6 +93,104 @@ class AIService:
         input_text = OpenAIClient.build_input_text(context, previous_context)
         full_context = f"{previous_context}\n\n--- Current Step Context ---\n{context}" if previous_context else context
         
+        # Check if we need to use CUA loop (computer-use-preview model with computer_use_preview tool)
+        use_cua_loop = (
+            has_computer_use and 
+            (model == 'computer-use-preview' or 'computer-use' in model.lower())
+        )
+        
+        if use_cua_loop:
+            logger.info(f"[AI Service] Using CUA loop for computer-use-preview", extra={
+                'model': model,
+                'has_computer_use': has_computer_use
+            })
+            
+            try:
+                # Build API parameters for CUA loop
+                params = self.openai_client.build_api_params(
+                    model=model,
+                    instructions=instructions,
+                    input_text=input_text,
+                    tools=validated_tools,
+                    tool_choice=normalized_tool_choice,
+                    has_computer_use=has_computer_use,
+                    is_o3_model=is_o3_model,
+                    reasoning_level=None
+                )
+                
+                # Run CUA loop
+                final_report, screenshot_urls, cua_usage_info = self.image_handler.run_cua_loop(
+                    openai_client=self.openai_client,
+                    model=model,
+                    instructions=instructions,
+                    input_text=input_text,
+                    tools=validated_tools,
+                    tool_choice=normalized_tool_choice,
+                    params=params,
+                    max_iterations=50,
+                    max_duration_seconds=300
+                )
+                
+                # Build usage info from CUA loop
+                from utils.decimal_utils import convert_decimals_to_float
+                from cost_service import calculate_openai_cost
+                
+                cost_data = calculate_openai_cost(
+                    model,
+                    cua_usage_info.get('input_tokens', 0),
+                    cua_usage_info.get('output_tokens', 0)
+                )
+                
+                usage_info = {
+                    'model': model,
+                    'input_tokens': cua_usage_info.get('input_tokens', 0),
+                    'output_tokens': cua_usage_info.get('output_tokens', 0),
+                    'total_tokens': cua_usage_info.get('total_tokens', 0),
+                    'cost_usd': cost_data['cost_usd'],
+                    'service_type': 'openai_worker_report',
+                }
+                usage_info = convert_decimals_to_float(usage_info)
+                
+                # Build request details
+                request_details = {
+                    'model': model,
+                    'instructions': instructions,
+                    'input': input_text,
+                    'previous_context': previous_context,
+                    'context': context,
+                    'tools': validated_tools,
+                    'tool_choice': normalized_tool_choice,
+                    'truncation': params.get('truncation'),
+                    'used_cua_loop': True,
+                }
+                
+                # Build response details
+                response_details = {
+                    'output_text': final_report,
+                    'image_urls': screenshot_urls,  # Screenshot URLs from CUA loop
+                    'usage': {
+                        'input_tokens': usage_info['input_tokens'],
+                        'output_tokens': usage_info['output_tokens'],
+                        'total_tokens': usage_info['total_tokens'],
+                    },
+                    'model': model,
+                }
+                
+                logger.info(f"[AI Service] CUA loop completed", extra={
+                    'model': model,
+                    'total_tokens': usage_info['total_tokens'],
+                    'screenshots_captured': len(screenshot_urls),
+                    'cost_usd': usage_info['cost_usd']
+                })
+                
+                return final_report, usage_info, request_details, response_details
+                
+            except Exception as e:
+                logger.error(f"[AI Service] Error in CUA loop: {e}", exc_info=True)
+                # Fall through to regular error handling
+                raise
+        
+        # Regular API call flow (non-CUA)
         try:
             # Build API parameters
             # NOTE: reasoning_level is NOT supported in Responses API, so we don't pass it
