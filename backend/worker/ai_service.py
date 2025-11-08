@@ -266,8 +266,13 @@ class AIService:
         final_tools: List[Dict] = []
         if tool_choice != "none":
             final_tools = tools or []
+            # If tool_choice is 'required' but tools are empty, downgrade to 'auto' before adding default
+            # This prevents forcing 'required' with only a default tool the user didn't request
+            if tool_choice == "required" and not final_tools:
+                logger.warning("[AI Service] tool_choice='required' but no tools provided; downgrading to 'auto' before adding default tool")
+                tool_choice = "auto"
+            # Provide a safe default tool so that 'tool_choice' never goes out without 'tools'
             if not final_tools:
-                # Provide a safe default tool so that 'tool_choice' never goes out without 'tools'
                 logger.warning("[AI Service] No tools supplied; adding default web_search_preview tool")
                 final_tools = [{"type": "web_search_preview"}]
             params["tools"] = final_tools
