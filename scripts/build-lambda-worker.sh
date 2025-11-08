@@ -13,9 +13,16 @@ PACKAGE_DIR="/tmp/lambda-package-$$"
 rm -rf "$PACKAGE_DIR"
 mkdir -p "$PACKAGE_DIR"
 
-# Copy Python files
-echo "Copying Python files..."
+# Copy Python files and directories
+echo "Copying Python files and directories..."
 cp -r *.py "$PACKAGE_DIR/"
+# Copy services and utils directories
+if [ -d "services" ]; then
+    cp -r services "$PACKAGE_DIR/"
+fi
+if [ -d "utils" ]; then
+    cp -r utils "$PACKAGE_DIR/"
+fi
 
 # Install dependencies
 echo "Installing dependencies..."
