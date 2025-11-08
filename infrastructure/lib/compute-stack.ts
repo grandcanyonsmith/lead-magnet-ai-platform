@@ -34,15 +34,38 @@ export class ComputeStack extends cdk.Stack {
     });
 
         // Use container image if ECR repository is provided, otherwise use zip deployment
-        let lambdaCode: lambda.Code;
+        const lambdaEnv = {
+          CLOUDFRONT_DOMAIN: props.cloudfrontDomain || '',
+          OPENAI_SECRET_NAME: 'leadmagnet/openai-api-key',
+          TWILIO_SECRET_NAME: 'leadmagnet/twilio-credentials',
+          LOG_LEVEL: 'info',
+          // AWS_REGION is automatically set by Lambda runtime
+          // Playwright environment variables
+          PLAYWRIGHT_BROWSERS_PATH: '/opt/playwright',
+        };
+        
         if (props.ecrRepository) {
           // Use container image (required for Playwright with proper GLIBC)
-          lambdaCode = lambda.Code.fromEcrImage(props.ecrRepository, {
-            tag: 'latest',
+          const dockerCode = lambda.DockerImageCode.fromEcr(props.ecrRepository, {
+            tagOrDigest: 'latest',
           });
+          
+          this.jobProcessorLambda = createLambdaWithTables(
+            this,
+            'JobProcessorLambda',
+            props.tablesMap,
+            props.artifactsBucket,
+            {
+              code: dockerCode,
+              timeout: cdk.Duration.minutes(15),
+              memorySize: 3008,
+              environment: lambdaEnv,
+              logGroup: logGroup,
+            }
+          );
         } else {
           // Fallback to zip deployment (will have GLIBC issues with Playwright)
-          lambdaCode = lambda.Code.fromAsset('../backend/worker', {
+          const zipCode = lambda.Code.fromAsset('../backend/worker', {
             bundling: {
               image: lambda.Runtime.PYTHON_3_11.bundlingImage,
               command: [
@@ -51,31 +74,23 @@ export class ComputeStack extends cdk.Stack {
               ],
             },
           });
+          
+          this.jobProcessorLambda = createLambdaWithTables(
+            this,
+            'JobProcessorLambda',
+            props.tablesMap,
+            props.artifactsBucket,
+            {
+              runtime: lambda.Runtime.PYTHON_3_11,
+              handler: 'lambda_handler.lambda_handler',
+              code: zipCode,
+              timeout: cdk.Duration.minutes(15),
+              memorySize: 3008,
+              environment: lambdaEnv,
+              logGroup: logGroup,
+            }
+          );
         }
-
-        this.jobProcessorLambda = createLambdaWithTables(
-      this,
-      'JobProcessorLambda',
-      props.tablesMap,
-      props.artifactsBucket,
-      {
-        runtime: props.ecrRepository ? undefined : lambda.Runtime.PYTHON_3_11, // No runtime for container images
-        handler: props.ecrRepository ? undefined : 'lambda_handler.lambda_handler', // No handler for container images
-        code: lambdaCode,
-        timeout: cdk.Duration.minutes(15), // Maximum Lambda timeout (CUA loop may take time)
-        memorySize: 3008, // Increased memory for Playwright browser automation
-        environment: {
-          CLOUDFRONT_DOMAIN: props.cloudfrontDomain || '',
-          OPENAI_SECRET_NAME: 'leadmagnet/openai-api-key',
-          TWILIO_SECRET_NAME: 'leadmagnet/twilio-credentials',
-          LOG_LEVEL: 'info',
-          // AWS_REGION is automatically set by Lambda runtime
-          // Playwright environment variables
-          PLAYWRIGHT_BROWSERS_PATH: '/opt/playwright',
-        },
-        logGroup: logGroup,
-      }
-    );
 
     // Explicitly ensure usage_records table has PutItem permission (for usage tracking)
     props.tablesMap.usageRecords.grantWriteData(this.jobProcessorLambda);
