@@ -1,7 +1,10 @@
 # AI Service Refactoring Summary
 
-## Overview
-The `ai_service.py` file has been comprehensively refactored to reduce code duplication, improve maintainability, and simplify complex logic. The main `generate_report` method was reduced from 638 lines to ~93 lines by extracting reusable helper methods.
+> **Last Updated**: 2025-01-27  
+> **Status**: Current  
+> **Related Docs**: [Architecture Overview](./ARCHITECTURE.md), [Changelog](./CHANGELOG.md), [Troubleshooting Guide](./TROUBLESHOOTING.md)
+
+Documentation of the comprehensive refactoring of the `ai_service.py` module to improve maintainability and reduce complexity.
 
 ---
 
@@ -169,3 +172,11 @@ The `ai_service.py` file has been comprehensively refactored to reduce code dupl
 - Handles DynamoDB string/integer type mismatches
 - See `processor.py` changes for details
 
+## Related Documentation
+
+- [Architecture Overview](./ARCHITECTURE.md) - System architecture and AI service integration
+- [Changelog](./CHANGELOG.md) - Recent changes and fixes
+- [Troubleshooting Guide](./TROUBLESHOOTING.md) - AI service troubleshooting
+- [Flow Diagram](./FLOW_DIAGRAM.md) - Process flow visualization
+
+---

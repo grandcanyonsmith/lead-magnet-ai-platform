@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { api } from '@/lib/api'
+import { AIModel } from '@/types'
 import { WorkflowStep } from '@/app/dashboard/workflows/components/WorkflowStepEditor'
 
 export interface AIGenerationResult {
@@ -52,7 +53,11 @@ export function useAIGeneration() {
       const startTime = Date.now()
       
       // Step 1: Initiate async generation (returns 202 with job_id)
-      const initResponse = await api.generateWorkflowWithAI(description.trim(), model)
+      // Step 1: Initiate async generation (returns 202 with job_id)
+      const initResponse = await api.generateWorkflowWithAI({
+        description: description.trim(),
+        model: model as AIModel | undefined,
+      })
       
       // Check if we got a job_id (async flow)
       if (initResponse.job_id) {
@@ -115,24 +120,27 @@ export function useAIGeneration() {
       } else {
         // Fallback: synchronous response (legacy behavior)
         const syncResult = initResponse
+        if (!syncResult.result) {
+          throw new Error('No result in response')
+        }
         const duration = Date.now() - startTime
 
         console.log('[Workflow Generation] Success!', {
           duration: `${duration}ms`,
-          workflow: syncResult.workflow,
-          template: syncResult.template,
-          form: syncResult.form,
+          workflow: syncResult.result.workflow,
+          template: syncResult.result.template,
+          form: syncResult.result.form,
           timestamp: new Date().toISOString(),
         })
 
         setGenerationStatus('Generation complete!')
-        setResult(syncResult)
+        setResult(syncResult.result)
         
         setTimeout(() => {
           setGenerationStatus(null)
         }, 3000)
         
-        return syncResult
+        return syncResult.result
       }
     } catch (err: any) {
       console.error('[Workflow Generation] Failed:', err)

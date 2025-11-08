@@ -1,74 +1,121 @@
 # Quick Start Guide
 
-## 🚀 Getting Started
+> **Last Updated**: 2025-01-27  
+> **Status**: Current  
+> **Related Docs**: [Deployment Guide](./DEPLOYMENT.md), [Architecture Overview](./ARCHITECTURE.md), [Resources](./RESOURCES.md)
 
-Your complete AI-powered lead magnet generation platform is **LIVE** and **WORKING**!
+Get up and running quickly with the Lead Magnet AI Platform. This guide provides essential commands and verification steps.
 
-## 🌐 Platform URLs
+## Prerequisites
 
-### 🔥 Try It Now!
+Before starting, ensure you have:
+- AWS CLI configured with appropriate credentials
+- Access to your AWS account
+- Platform deployed (see [Deployment Guide](./DEPLOYMENT.md))
 
-**Test Form (Live & Working):**
-```
-https://czp5b77azd.execute-api.us-east-1.amazonaws.com/v1/forms/test-form
-```
-👆 **Click this URL to see your working form!**
+## Finding Your Platform URLs
 
-**Admin Dashboard:**
-```
-https://dmydkyj79auy7.cloudfront.net/app/
-```
+After deployment, retrieve your platform URLs using AWS CLI:
 
-**API Base:**
-```
-https://czp5b77azd.execute-api.us-east-1.amazonaws.com
-```
-
-## 🔐 Login Credentials
-
-```
-Email:    test@example.com
-Password: TempPass123!
-Tenant:   tenant_test_001
-```
-
-⚠️ **You'll need to change this password on first login**
-
-## 🧪 Test It Right Now!
-
-### Option 1: Web Browser
-1. Open: https://czp5b77azd.execute-api.us-east-1.amazonaws.com/v1/forms/test-form
-2. Fill out the form
-3. Submit
-4. You'll get a job ID back!
-
-### Option 2: Command Line
+### API Gateway URL
 ```bash
-curl -X POST "https://czp5b77azd.execute-api.us-east-1.amazonaws.com/v1/forms/test-form/submit" \
+API_URL=$(aws cloudformation describe-stacks \
+  --stack-name leadmagnet-api \
+  --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
+  --output text)
+echo $API_URL
+```
+
+### Frontend/Dashboard URL
+```bash
+FRONTEND_URL=$(aws cloudformation describe-stacks \
+  --stack-name leadmagnet-storage \
+  --query "Stacks[0].Outputs[?OutputKey=='DistributionDomainName'].OutputValue" \
+  --output text)
+echo "https://$FRONTEND_URL/app/"
+```
+
+### Form URLs
+Form URLs follow the pattern: `$API_URL/v1/forms/{slug}`
+
+Replace `{slug}` with your form's public slug.
+
+## Finding Your Credentials
+
+### Cognito User Pool Information
+```bash
+USER_POOL_ID=$(aws cloudformation describe-stacks \
+  --stack-name leadmagnet-auth \
+  --query "Stacks[0].Outputs[?OutputKey=='UserPoolId'].OutputValue" \
+  --output text)
+
+CLIENT_ID=$(aws cloudformation describe-stacks \
+  --stack-name leadmagnet-auth \
+  --query "Stacks[0].Outputs[?OutputKey=='UserPoolClientId'].OutputValue" \
+  --output text)
+
+echo "User Pool ID: $USER_POOL_ID"
+echo "Client ID: $CLIENT_ID"
+```
+
+### Creating a Test User
+```bash
+# Create a test user (replace with your values)
+aws cognito-idp admin-create-user \
+  --user-pool-id $USER_POOL_ID \
+  --username your-email@example.com \
+  --user-attributes Name=email,Value=your-email@example.com \
+  --temporary-password "TempPass123!" \
+  --message-action SUPPRESS
+```
+
+⚠️ **Security Note**: Change the temporary password on first login.
+
+## Testing the Platform
+
+### Option 1: Test Form Submission (Web Browser)
+1. Get your form URL: `$API_URL/v1/forms/{your-form-slug}`
+2. Open the URL in your browser
+3. Fill out and submit the form
+4. You'll receive a job ID in the response
+
+### Option 2: Test Form Submission (Command Line)
+```bash
+# Set your API URL (from above)
+API_URL="your-api-url-here"
+FORM_SLUG="your-form-slug"
+
+# Submit form
+curl -X POST "$API_URL/v1/forms/$FORM_SLUG/submit" \
   -H "Content-Type: application/json" \
   -d '{
     "submission_data": {
-      "name": "Your Name",
-      "email": "your@email.com",
-      "project": "I need a market research report for my business"
+      "name": "Test User",
+      "email": "test@example.com",
+      "project": "Test project description"
     }
   }'
 ```
 
 ### Option 3: Run Automated Tests
 ```bash
+# Run end-to-end tests
 ./scripts/test-e2e.sh
 ```
 
-## 🎯 Quick Commands
+## Quick Commands
 
 ### Test the API
 ```bash
-# Get form
-curl https://czp5b77azd.execute-api.us-east-1.amazonaws.com/v1/forms/test-form
+# Set your API URL
+API_URL="your-api-url-here"
+FORM_SLUG="your-form-slug"
+
+# Get form configuration
+curl "$API_URL/v1/forms/$FORM_SLUG"
 
 # Submit form
-curl -X POST "https://czp5b77azd.execute-api.us-east-1.amazonaws.com/v1/forms/test-form/submit" \
+curl -X POST "$API_URL/v1/forms/$FORM_SLUG/submit" \
   -H "Content-Type: application/json" \
   -d '{"submission_data":{"name":"Test","email":"test@test.com","project":"Testing"}}'
 
@@ -76,7 +123,7 @@ curl -X POST "https://czp5b77azd.execute-api.us-east-1.amazonaws.com/v1/forms/te
 ./scripts/test-e2e.sh
 ```
 
-### Check Status
+### Check Platform Status
 ```bash
 # View recent jobs
 aws dynamodb scan --table-name leadmagnet-jobs --max-items 5
@@ -84,65 +131,159 @@ aws dynamodb scan --table-name leadmagnet-jobs --max-items 5
 # View API logs
 aws logs tail /aws/lambda/leadmagnet-api-handler --follow
 
-# Check Step Functions
+# Get Step Functions state machine ARN
+STATE_MACHINE_ARN=$(aws cloudformation describe-stacks \
+  --stack-name leadmagnet-compute \
+  --query "Stacks[0].Outputs[?OutputKey=='StateMachineArn'].OutputValue" \
+  --output text)
+
+# Check Step Functions executions
 aws stepfunctions list-executions \
-  --state-machine-arn arn:aws:states:us-east-1:471112574622:stateMachine:leadmagnet-job-processor \
+  --state-machine-arn $STATE_MACHINE_ARN \
   --max-results 5
 ```
 
 ### Deploy Updates
+
+#### Update API Lambda
 ```bash
-# Update API
-cd backend/api && node build.js && cd bundle && zip -r ../api-bundle.zip . && cd .. && \
-  aws lambda update-function-code --function-name leadmagnet-api-handler --zip-file fileb://api-bundle.zip
+cd backend/api
+node build.js
+cd bundle
+zip -r ../api-bundle.zip .
+cd ..
 
-# Update Worker
-cd backend/worker && docker build -t 471112574622.dkr.ecr.us-east-1.amazonaws.com/leadmagnet/worker:latest . && \
-  docker push 471112574622.dkr.ecr.us-east-1.amazonaws.com/leadmagnet/worker:latest
+# Get Lambda function name
+FUNCTION_NAME=$(aws cloudformation describe-stacks \
+  --stack-name leadmagnet-api \
+  --query "Stacks[0].Outputs[?OutputKey=='ApiFunctionName'].OutputValue" \
+  --output text)
 
-# Update Frontend
-cd frontend && npm run build && \
-  aws s3 sync out/ s3://leadmagnet-artifacts-471112574622/app/ --delete && \
-  aws cloudfront create-invalidation --distribution-id E1GPKD58HXUDIV --paths "/app/*"
+aws lambda update-function-code \
+  --function-name $FUNCTION_NAME \
+  --zip-file fileb://api-bundle.zip
 ```
 
-## 📋 AWS Resource IDs
+#### Update Worker Docker Image
+```bash
+cd backend/worker
+
+# Get ECR repository URI
+ECR_REPO=$(aws cloudformation describe-stacks \
+  --stack-name leadmagnet-worker \
+  --query "Stacks[0].Outputs[?OutputKey=='EcrRepositoryUri'].OutputValue" \
+  --output text)
+
+# Login to ECR
+aws ecr get-login-password --region us-east-1 | \
+  docker login --username AWS --password-stdin $ECR_REPO
+
+# Build and push
+docker build -t $ECR_REPO:latest .
+docker push $ECR_REPO:latest
+```
+
+#### Update Frontend
+```bash
+cd frontend
+
+# Get environment variables (set these before building)
+API_URL=$(aws cloudformation describe-stacks \
+  --stack-name leadmagnet-api \
+  --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
+  --output text)
+
+USER_POOL_ID=$(aws cloudformation describe-stacks \
+  --stack-name leadmagnet-auth \
+  --query "Stacks[0].Outputs[?OutputKey=='UserPoolId'].OutputValue" \
+  --output text)
+
+CLIENT_ID=$(aws cloudformation describe-stacks \
+  --stack-name leadmagnet-auth \
+  --query "Stacks[0].Outputs[?OutputKey=='UserPoolClientId'].OutputValue" \
+  --output text)
+
+# Build
+NEXT_PUBLIC_API_URL=$API_URL \
+NEXT_PUBLIC_COGNITO_USER_POOL_ID=$USER_POOL_ID \
+NEXT_PUBLIC_COGNITO_CLIENT_ID=$CLIENT_ID \
+NEXT_PUBLIC_AWS_REGION=us-east-1 \
+npm run build && npm run export
+
+# Deploy to S3
+FRONTEND_BUCKET=$(aws cloudformation describe-stacks \
+  --stack-name leadmagnet-storage \
+  --query "Stacks[0].Outputs[?OutputKey=='ArtifactsBucketName'].OutputValue" \
+  --output text)
+
+aws s3 sync out/ s3://$FRONTEND_BUCKET/app/ --delete
+
+# Invalidate CloudFront
+DISTRIBUTION_ID=$(aws cloudformation describe-stacks \
+  --stack-name leadmagnet-storage \
+  --query "Stacks[0].Outputs[?OutputKey=='DistributionId'].OutputValue" \
+  --output text)
+
+aws cloudfront create-invalidation \
+  --distribution-id $DISTRIBUTION_ID \
+  --paths "/app/*"
+```
+
+## AWS Resource Names
+
+Resource names follow consistent patterns. Find specific values using CloudFormation outputs:
 
 ### DynamoDB Tables
-- leadmagnet-workflows
-- leadmagnet-forms  
-- leadmagnet-submissions
-- leadmagnet-jobs
-- leadmagnet-artifacts
-- leadmagnet-templates
-- leadmagnet-user-settings
+All tables follow the pattern: `leadmagnet-{resource-type}`
+- `leadmagnet-workflows`
+- `leadmagnet-forms`
+- `leadmagnet-submissions`
+- `leadmagnet-jobs`
+- `leadmagnet-artifacts`
+- `leadmagnet-templates`
+- `leadmagnet-user-settings`
 
-### Cognito
-- **User Pool:** us-east-1_asu0YOrBD
-- **Client ID:** 4lb3j8kqfvfgkvfeb4h4naani5
-
-### Lambda
-- **Function:** leadmagnet-api-handler
-- **ARN:** arn:aws:lambda:us-east-1:471112574622:function:leadmagnet-api-handler
+### Lambda Functions
+```bash
+# Get API Lambda function name
+aws cloudformation describe-stacks \
+  --stack-name leadmagnet-api \
+  --query "Stacks[0].Outputs[?OutputKey=='ApiFunctionName'].OutputValue" \
+  --output text
+```
 
 ### Step Functions
-- **State Machine:** leadmagnet-job-processor
-- **ARN:** arn:aws:states:us-east-1:471112574622:stateMachine:leadmagnet-job-processor
+```bash
+# Get state machine ARN
+aws cloudformation describe-stacks \
+  --stack-name leadmagnet-compute \
+  --query "Stacks[0].Outputs[?OutputKey=='StateMachineArn'].OutputValue" \
+  --output text
+```
 
 ### S3 & CloudFront
-- **Bucket:** leadmagnet-artifacts-471112574622
-- **Distribution:** E1GPKD58HXUDIV
+```bash
+# Get S3 bucket name
+aws cloudformation describe-stacks \
+  --stack-name leadmagnet-storage \
+  --query "Stacks[0].Outputs[?OutputKey=='ArtifactsBucketName'].OutputValue" \
+  --output text
 
-### ECS
-- **Cluster:** leadmagnet-cluster
-- **ECR:** 471112574622.dkr.ecr.us-east-1.amazonaws.com/leadmagnet/worker
+# Get CloudFront distribution ID
+aws cloudformation describe-stacks \
+  --stack-name leadmagnet-storage \
+  --query "Stacks[0].Outputs[?OutputKey=='DistributionId'].OutputValue" \
+  --output text
+```
 
-## 🎨 Create Your First Workflow
+For complete resource inventory, see [Resources](./RESOURCES.md).
+
+## Creating Your First Workflow
 
 ### Step 1: Create Template
 ```bash
 # Use admin dashboard or API:
-POST /admin/templates
+POST $API_URL/admin/templates
 {
   "template_name": "My Template",
   "html_content": "<!DOCTYPE html><html><body>{{REPORT_CONTENT}}</body></html>",
@@ -152,7 +293,7 @@ POST /admin/templates
 
 ### Step 2: Create Workflow
 ```bash
-POST /admin/workflows
+POST $API_URL/admin/workflows
 {
   "workflow_name": "My Workflow",
   "ai_instructions": "Generate a detailed report...",
@@ -164,7 +305,7 @@ POST /admin/workflows
 
 ### Step 3: Create Form
 ```bash
-POST /admin/forms
+POST $API_URL/admin/forms
 {
   "workflow_id": "wf_xxx",
   "form_name": "My Form",
@@ -179,11 +320,9 @@ POST /admin/forms
 ```
 
 ### Step 4: Share & Test
-```
-https://czp5b77azd.execute-api.us-east-1.amazonaws.com/v1/forms/my-form
-```
+Access your form at: `$API_URL/v1/forms/{your-form-slug}`
 
-## 🆘 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -199,10 +338,13 @@ aws dynamodb scan --table-name leadmagnet-forms
 
 **Job stuck:**
 ```bash
+# Get execution ARN from Step Functions console or logs
 aws stepfunctions describe-execution --execution-arn <arn>
 ```
 
-## 💡 Pro Tips
+For comprehensive troubleshooting, see [Troubleshooting Guide](./TROUBLESHOOTING.md).
+
+## Pro Tips
 
 1. **Monitor costs** - Check AWS Cost Explorer regularly
 2. **Watch logs** - CloudWatch shows all activity
@@ -210,26 +352,12 @@ aws stepfunctions describe-execution --execution-arn <arn>
 4. **Backup often** - Export templates and configurations
 5. **Iterate fast** - Update AI instructions based on results
 
-## 🎓 How to Use Your Platform
-
-### For End Users (Your Customers)
-1. Share public form URL with your audience
-2. They fill it out
-3. System automatically generates personalized report
-4. Report delivered via public URL
-
-### For You (Administrator)
-1. **Login** to admin dashboard
-2. **Create Workflows** with custom AI instructions
-3. **Design Templates** in HTML
-4. **Build Forms** and get public URLs
-5. **Monitor** submissions and jobs
-6. **Analyze** usage with built-in analytics
-
-## 🎉 Verification Checklist
+## Verification Checklist
 
 Run through this checklist to verify everything:
 
+- [ ] Retrieve platform URLs using CloudFormation outputs
+- [ ] Create test user in Cognito
 - [ ] Open test form URL in browser
 - [ ] Submit test form data
 - [ ] Check job was created in DynamoDB
@@ -239,19 +367,17 @@ Run through this checklist to verify everything:
 - [ ] Run E2E test script
 - [ ] Check CloudWatch logs
 
-**All should work!** ✅
+## Next Steps
 
-## 💡 Next Steps
-
-### Immediate (Do Today)
-1. ✅ **Test the platform** - Submit test forms
-2. ✅ **Login to dashboard** - Change password
-3. 🔄 **Create first real workflow** - For your business
-4. 🔄 **Share form URL** - Start collecting leads!
+### Immediate
+1. **Test the platform** - Submit test forms
+2. **Login to dashboard** - Change password
+3. **Create first real workflow** - For your business
+4. **Share form URL** - Start collecting leads!
 
 ### This Week
 1. **Customize branding** - Update colors in settings
-2. **Design templates** - Create beautiful HTML templates  
+2. **Design templates** - Create beautiful HTML templates
 3. **Set up monitoring** - Configure CloudWatch alarms
 4. **Add custom domain** - Use Route 53 (optional)
 
@@ -261,7 +387,14 @@ Run through this checklist to verify everything:
 3. **Optimize costs** - Review AWS billing
 4. **Scale up** - Add more forms and templates
 
+## Related Documentation
+
+- [Deployment Guide](./DEPLOYMENT.md) - Complete deployment instructions
+- [Architecture Overview](./ARCHITECTURE.md) - System architecture and design
+- [Resources](./RESOURCES.md) - AWS resource inventory
+- [Troubleshooting Guide](./TROUBLESHOOTING.md) - Common issues and solutions
+- [Flow Diagram](./FLOW_DIAGRAM.md) - Process flow visualization
+
 ---
 
 **Ready to revolutionize your lead generation? Start using the platform now!** 🚀
-

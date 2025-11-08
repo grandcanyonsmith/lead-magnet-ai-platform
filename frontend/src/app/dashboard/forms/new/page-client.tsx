@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { api } from '@/lib/api'
 import { FiArrowLeft, FiSave } from 'react-icons/fi'
 
@@ -18,11 +18,13 @@ type FormField = {
 
 export default function NewFormClient() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   
   const [formFormData, setFormFormData] = useState({
+    workflow_id: '',
     form_name: '',
     public_slug: '',
     form_fields_schema: {
@@ -35,6 +37,13 @@ export default function NewFormClient() {
     thank_you_message: '',
     redirect_url: '',
   })
+
+  useEffect(() => {
+    const workflowId = searchParams?.get('workflow_id')
+    if (workflowId) {
+      setFormFormData(prev => ({ ...prev, workflow_id: workflowId }))
+    }
+  }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -50,10 +59,16 @@ export default function NewFormClient() {
       return
     }
 
+    if (!formFormData.workflow_id.trim()) {
+      setError('Workflow ID is required. Please provide a workflow_id in the URL or select a workflow.')
+      return
+    }
+
     setSubmitting(true)
 
     try {
       await api.createForm({
+        workflow_id: formFormData.workflow_id.trim(),
         form_name: formFormData.form_name.trim(),
         public_slug: formFormData.public_slug.trim(),
         form_fields_schema: formFormData.form_fields_schema,

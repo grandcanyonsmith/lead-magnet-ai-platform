@@ -1,0 +1,105 @@
+'use client'
+
+import { useRouter } from 'next/navigation'
+import { FiExternalLink } from 'react-icons/fi'
+import { getStatusIcon, getStatusBadge, formatRelativeTime, formatDurationSeconds } from '@/utils/jobFormatting'
+
+interface JobDetailsProps {
+  job: any
+  workflow: any | null
+}
+
+export function JobDetails({ job, workflow }: JobDetailsProps) {
+  const router = useRouter()
+  
+  const duration = job.completed_at && job.created_at
+    ? Math.round((new Date(job.completed_at).getTime() - new Date(job.created_at).getTime()) / 1000)
+    : null
+
+  return (
+    <div className="bg-white rounded-lg shadow p-6 space-y-6">
+      <h2 className="text-lg font-semibold text-gray-900">Details</h2>
+      
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+        <div className="flex items-center space-x-3">
+          {getStatusIcon(job.status)}
+          {getStatusBadge(job.status)}
+        </div>
+      </div>
+
+      {workflow && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Workflow</label>
+          <button
+            onClick={() => router.push(`/dashboard/workflows/${job.workflow_id}`)}
+            className="text-primary-600 hover:text-primary-900 font-medium hover:underline"
+          >
+            {workflow.workflow_name || job.workflow_id}
+          </button>
+        </div>
+      )}
+
+      {!workflow && job.workflow_id && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Workflow</label>
+          <p className="text-sm text-gray-900">{job.workflow_id}</p>
+        </div>
+      )}
+
+      {job.output_url && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Document</label>
+          <a
+            href={job.output_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center text-primary-600 hover:text-primary-900 font-medium"
+          >
+            View Document
+            <FiExternalLink className="w-4 h-4 ml-1" />
+          </a>
+        </div>
+      )}
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Created</label>
+        <p className="text-sm text-gray-900">
+          {formatRelativeTime(job.created_at)}
+          <span className="text-gray-500 ml-2">({new Date(job.created_at).toLocaleString()})</span>
+        </p>
+      </div>
+
+      {duration !== null && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Processing Time</label>
+          <p className="text-sm text-gray-900">{formatDurationSeconds(duration)}</p>
+        </div>
+      )}
+
+      {job.completed_at && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Completed</label>
+          <p className="text-sm text-gray-900">
+            {formatRelativeTime(job.completed_at)}
+            <span className="text-gray-500 ml-2">({new Date(job.completed_at).toLocaleString()})</span>
+          </p>
+        </div>
+      )}
+
+      {job.status === 'failed' && job.error_message && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Error</label>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-sm text-red-800">
+              {job.error_message.includes('Error') || job.error_message.includes('error')
+                ? job.error_message
+                : `Generation failed: ${job.error_message}`}
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
