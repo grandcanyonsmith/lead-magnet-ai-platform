@@ -57,11 +57,9 @@ RUN mkdir -p /opt/playwright && \
     # Verify structure
     ls -la chromium-${CHROMIUM_REVISION}/chrome-linux/chrome || echo "Chromium download completed"
 
-# Copy application code (explicitly copy all necessary files and directories)
-COPY lambda_handler.py .
-COPY *.py ./
-COPY services/ ./services/
-COPY utils/ ./utils/
+# Copy application code (copy everything from build context)
+# This includes lambda_handler.py, all .py files, services/, and utils/ directories
+COPY . .
 
 # Set handler
 CMD ["lambda_handler.lambda_handler"]
