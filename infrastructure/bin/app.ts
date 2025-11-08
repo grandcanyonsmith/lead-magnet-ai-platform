@@ -6,7 +6,6 @@ import { AuthStack } from '../lib/auth-stack';
 import { StorageStack } from '../lib/storage-stack';
 import { ComputeStack } from '../lib/compute-stack';
 import { ApiStack } from '../lib/api-stack';
-import { WorkerStack } from '../lib/worker-stack';
 
 const app = new cdk.App();
 
@@ -59,25 +58,9 @@ const apiStack = new ApiStack(app, 'LeadMagnetApiStack', {
   cloudfrontDomain: storageStack.distribution.distributionDomainName,
 });
 
-// Stack 6: Worker (ECR Repository - Optional, kept for potential future use)
-// Note: Worker is now implemented as Lambda function in ComputeStack
-// ECR repository may be kept for potential future containerized workloads
-const workerStack = new WorkerStack(app, 'LeadMagnetWorkerStack', {
-  env,
-  stackName: 'leadmagnet-worker',
-  description: 'ECR repository for worker images (optional, Lambda is now primary)',
-  tablesMap: databaseStack.tablesMap,
-  artifactsBucket: storageStack.artifactsBucket,
-});
-
-// Add dependencies
-computeStack.addDependency(databaseStack);
-computeStack.addDependency(storageStack);
-apiStack.addDependency(databaseStack);
-apiStack.addDependency(authStack);
-apiStack.addDependency(computeStack);
-workerStack.addDependency(databaseStack);
-workerStack.addDependency(storageStack);
+// Note: WorkerStack removed - ECR repository was optional and unused.
+// Worker is implemented as Lambda function in ComputeStack.
+// If ECR is needed in the future, it can be added to ComputeStack.
 
 app.synth();
 
