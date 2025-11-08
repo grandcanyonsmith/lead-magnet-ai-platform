@@ -755,6 +755,7 @@ export default function EditWorkflowPage() {
                   >
                     <option value="o3-deep-research">O3 Deep Research</option>
                     <option value="gpt-5">GPT-5</option>
+                    <option value="gpt-4.1">GPT-4.1</option>
                     <option value="gpt-4o">GPT-4o</option>
                     <option value="gpt-4-turbo">GPT-4 Turbo</option>
                     <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
@@ -772,6 +773,7 @@ export default function EditWorkflowPage() {
                     disabled={!formData.html_enabled}
                   >
                     <option value="gpt-5">GPT-5</option>
+                    <option value="gpt-4.1">GPT-4.1</option>
                     <option value="gpt-4o">GPT-4o</option>
                     <option value="gpt-4-turbo">GPT-4 Turbo</option>
                     <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>

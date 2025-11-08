@@ -112,6 +112,28 @@ class AIService:
                     logger.warning(f"Skipping file_search tool - vector_store_ids not provided or empty")
                     continue
             
+            # Handle code_interpreter - container is REQUIRED, auto-add if missing
+            if tool_type == "code_interpreter":
+                container = tool_dict.get("container")
+                if not container:
+                    # Auto-add container for code_interpreter
+                    tool_dict["container"] = {"type": "auto"}
+                    logger.info("Auto-added container={'type': 'auto'} for code_interpreter tool")
+                elif isinstance(container, str) and container.strip() == "":
+                    # Empty string container - use auto mode
+                    tool_dict["container"] = {"type": "auto"}
+                    logger.warning("Empty container string for code_interpreter, using auto mode")
+                elif isinstance(container, dict) and container.get("type") == "auto":
+                    # Valid auto container
+                    logger.debug("code_interpreter has valid auto container")
+                elif isinstance(container, str) and container.strip():
+                    # Valid explicit container ID
+                    logger.debug(f"code_interpreter has explicit container: {container}")
+                else:
+                    # Invalid container format - filter out
+                    logger.warning(f"Invalid container format for code_interpreter, filtering out: {container}")
+                    continue
+            
             # Skip computer_use_preview if container is not provided or is empty
             # Container is REQUIRED for computer_use_preview (code interpreter)
             if tool_type == "computer_use_preview":
@@ -129,6 +151,22 @@ class AIService:
         for tool in filtered_tools:
             tool_type = tool.get("type") if isinstance(tool, dict) else tool
             tool_dict = tool if isinstance(tool, dict) else {"type": tool}
+            
+            # Final check for code_interpreter - must have container
+            if tool_type == "code_interpreter":
+                container = tool_dict.get("container")
+                if not container:
+                    # Auto-add container if somehow missing
+                    tool_dict["container"] = {"type": "auto"}
+                    logger.info("Auto-added container={'type': 'auto'} for code_interpreter tool in final validation")
+                elif isinstance(container, str) and container.strip() == "":
+                    # Empty string container - use auto mode
+                    tool_dict["container"] = {"type": "auto"}
+                    logger.warning("Empty container string for code_interpreter in final validation, using auto mode")
+                elif not (isinstance(container, dict) and container.get("type") == "auto") and not (isinstance(container, str) and container.strip()):
+                    # Invalid container format - filter out
+                    logger.error(f"CRITICAL: code_interpreter tool has invalid container format! Filtering it out now. container: {container}, tool_dict: {tool_dict}")
+                    continue
             
             # Final check for computer_use_preview - must have container
             if tool_type == "computer_use_preview":
