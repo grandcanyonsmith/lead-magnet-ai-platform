@@ -48,8 +48,8 @@ class AIService:
         Returns:
             Tuple of (generated report content, usage info dict, request details dict, response details dict)
         """
-        # Validate and filter tools
-        validated_tools, normalized_tool_choice = ToolValidator.validate_and_filter_tools(tools, tool_choice)
+        # Validate and filter tools (including model compatibility check)
+        validated_tools, normalized_tool_choice = ToolValidator.validate_and_filter_tools(tools, tool_choice, model=model)
         
         logger.debug(f"[AI Service] After tool validation", extra={
             'validated_tools_count': len(validated_tools) if validated_tools else 0,

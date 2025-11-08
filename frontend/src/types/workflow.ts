@@ -12,6 +12,7 @@ export type AIModel =
   | 'gpt-4o'
   | 'gpt-4-turbo'
   | 'gpt-3.5-turbo'
+  | 'computer-use-preview'
 
 export type ToolChoice = 'auto' | 'required' | 'none'
 
