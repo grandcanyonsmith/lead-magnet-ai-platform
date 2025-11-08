@@ -333,8 +333,6 @@ class JobProcessor:
                         )
                         if not template:
                             logger.warning(f"Template {template_id} not found, skipping HTML generation")
-                        elif not template.get('is_published', False):
-                            logger.warning(f"Template {template_id} not published, skipping HTML generation")
                     except Exception as e:
                         logger.warning(f"Failed to load template: {e}, skipping HTML generation")
                 
@@ -343,7 +341,7 @@ class JobProcessor:
                 final_artifact_type = ""
                 final_filename = ""
                 
-                if template and template.get('is_published'):
+                if template:
                     # Last step output should be HTML-ready, but if not, generate HTML
                     last_step_output = step_outputs[-1]['output'] if step_outputs else ""
                     
@@ -856,9 +854,6 @@ class JobProcessor:
             )
             if not template:
                 raise ValueError(f"Template {template_id} not found")
-            
-            if not template.get('is_published', False):
-                raise ValueError(f"Template {template_id} is not published")
             
             logger.info("Generating HTML from accumulated step outputs")
             html_start_time = datetime.utcnow()
