@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
-import { FiPlus, FiEdit, FiTrash2, FiEye, FiExternalLink, FiCopy, FiCheck, FiMoreVertical } from 'react-icons/fi'
+import { FiPlus, FiEdit, FiTrash2, FiEye, FiExternalLink, FiCopy, FiCheck, FiMoreVertical, FiLoader, FiCheckCircle, FiXCircle, FiClock } from 'react-icons/fi'
 
 export default function WorkflowsPage() {
   const router = useRouter()
@@ -12,11 +12,45 @@ export default function WorkflowsPage() {
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [workflowJobs, setWorkflowJobs] = useState<Record<string, any[]>>({})
+  const [loadingJobs, setLoadingJobs] = useState<Record<string, boolean>>({})
   const menuRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
   useEffect(() => {
     loadWorkflows()
   }, [])
+
+  // Load jobs for each workflow
+  useEffect(() => {
+    if (workflows.length > 0) {
+      workflows.forEach((workflow) => {
+        loadJobsForWorkflow(workflow.workflow_id)
+      })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workflows])
+
+  // Auto-refresh jobs for workflows that have processing jobs
+  useEffect(() => {
+    const hasProcessingJobs = Object.values(workflowJobs).some((jobs) =>
+      jobs.some((job: any) => job.status === 'processing' || job.status === 'pending')
+    )
+
+    if (!hasProcessingJobs) return
+
+    const interval = setInterval(() => {
+      workflows.forEach((workflow) => {
+        const jobs = workflowJobs[workflow.workflow_id] || []
+        const hasProcessing = jobs.some((job: any) => job.status === 'processing' || job.status === 'pending')
+        if (hasProcessing) {
+          loadJobsForWorkflow(workflow.workflow_id)
+        }
+      })
+    }, 5000)
+
+    return () => clearInterval(interval)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workflows, workflowJobs])
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -36,6 +70,21 @@ export default function WorkflowsPage() {
       document.removeEventListener('touchstart', handleClickOutside)
     }
   }, [openMenuId])
+
+  const loadJobsForWorkflow = async (workflowId: string) => {
+    if (loadingJobs[workflowId]) return
+    
+    setLoadingJobs((prev) => ({ ...prev, [workflowId]: true }))
+    try {
+      const data = await api.getJobs({ workflow_id: workflowId, limit: 5 })
+      setWorkflowJobs((prev) => ({ ...prev, [workflowId]: data.jobs || [] }))
+    } catch (error) {
+      console.error(`Failed to load jobs for workflow ${workflowId}:`, error)
+      setWorkflowJobs((prev) => ({ ...prev, [workflowId]: [] }))
+    } finally {
+      setLoadingJobs((prev) => ({ ...prev, [workflowId]: false }))
+    }
+  }
 
   const loadWorkflows = async () => {
     try {
@@ -105,6 +154,33 @@ export default function WorkflowsPage() {
       return url.substring(0, 37) + '...'
     }
     return url
+  }
+
+  const getJobStatusIcon = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return <FiCheckCircle className="w-3 h-3 text-green-600" />
+      case 'failed':
+        return <FiXCircle className="w-3 h-3 text-red-600" />
+      case 'processing':
+        return <FiLoader className="w-3 h-3 text-blue-600 animate-spin" />
+      default:
+        return <FiClock className="w-3 h-3 text-yellow-600" />
+    }
+  }
+
+  const formatRelativeTime = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+    
+    if (seconds < 60) return `${seconds}s ago`
+    const minutes = Math.floor(seconds / 60)
+    if (minutes < 60) return `${minutes}m ago`
+    const hours = Math.floor(minutes / 60)
+    if (hours < 24) return `${hours}h ago`
+    const days = Math.floor(hours / 24)
+    return `${days}d ago`
   }
 
   // Filter workflows based on search query
@@ -355,6 +431,69 @@ export default function WorkflowsPage() {
                       <span className="text-gray-500">Created:</span>
                       <span className="text-gray-600">{new Date(workflow.created_at).toLocaleDateString()}</span>
                     </div>
+                    
+                    {/* Jobs Section */}
+                    <div className="pt-2 border-t border-gray-100 mt-2">
+                      <div className="text-xs font-medium text-gray-700 mb-2">Generated Documents:</div>
+                      {loadingJobs[workflow.workflow_id] ? (
+                        <div className="text-xs text-gray-500 flex items-center">
+                          <FiLoader className="w-3 h-3 mr-1 animate-spin" />
+                          Loading...
+                        </div>
+                      ) : (() => {
+                        const jobs = workflowJobs[workflow.workflow_id] || []
+                        const processingJobs = jobs.filter((j: any) => j.status === 'processing' || j.status === 'pending')
+                        const completedJobs = jobs.filter((j: any) => j.status === 'completed')
+                        
+                        if (processingJobs.length > 0) {
+                          return (
+                            <div className="text-xs text-blue-600 flex items-center">
+                              <FiLoader className="w-3 h-3 mr-1 animate-spin" />
+                              Processing...
+                            </div>
+                          )
+                        } else if (completedJobs.length > 0) {
+                          return (
+                            <div className="space-y-1">
+                              {completedJobs.slice(0, 3).map((job: any) => (
+                                <div key={job.job_id} className="flex items-center justify-between text-xs">
+                                  <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                                    {getJobStatusIcon(job.status)}
+                                    <span className="text-gray-600 truncate">{formatRelativeTime(job.created_at)}</span>
+                                  </div>
+                                  {job.output_url && (
+                                    <a
+                                      href={job.output_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-primary-600 hover:text-primary-900 flex-shrink-0 ml-2"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <FiExternalLink className="w-3 h-3" />
+                                    </a>
+                                  )}
+                                </div>
+                              ))}
+                              {completedJobs.length > 3 && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    router.push(`/dashboard/jobs?workflow_id=${workflow.workflow_id}`)
+                                  }}
+                                  className="text-xs text-primary-600 hover:text-primary-900 mt-1"
+                                >
+                                  View all {completedJobs.length} documents
+                                </button>
+                              )}
+                            </div>
+                          )
+                        } else {
+                          return (
+                            <div className="text-xs text-gray-400 italic">No documents yet</div>
+                          )
+                        }
+                      })()}
+                    </div>
                   </div>
                 </div>
               )
@@ -382,6 +521,9 @@ export default function WorkflowsPage() {
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Created
                   </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Generated Documents
+                  </th>
                   <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Actions
                   </th>
@@ -390,6 +532,10 @@ export default function WorkflowsPage() {
               <tbody className="bg-white divide-y divide-gray-100">
                 {filteredWorkflows.map((workflow) => {
                   const formUrl = workflow.form ? publicUrlFor(workflow.form) : null
+                  const jobs = workflowJobs[workflow.workflow_id] || []
+                  const processingJobs = jobs.filter((j: any) => j.status === 'processing' || j.status === 'pending')
+                  const completedJobs = jobs.filter((j: any) => j.status === 'completed')
+                  
                   return (
                     <tr key={workflow.workflow_id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4">
@@ -464,6 +610,48 @@ export default function WorkflowsPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                         {new Date(workflow.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4">
+                        {loadingJobs[workflow.workflow_id] ? (
+                          <div className="text-xs text-gray-500 flex items-center">
+                            <FiLoader className="w-3 h-3 mr-1 animate-spin" />
+                            Loading...
+                          </div>
+                        ) : processingJobs.length > 0 ? (
+                          <div className="text-xs text-blue-600 flex items-center">
+                            <FiLoader className="w-3 h-3 mr-1 animate-spin" />
+                            Processing...
+                          </div>
+                        ) : completedJobs.length > 0 ? (
+                          <div className="space-y-1">
+                            {completedJobs.slice(0, 2).map((job: any) => (
+                              <div key={job.job_id} className="flex items-center gap-2 text-xs">
+                                {getJobStatusIcon(job.status)}
+                                <span className="text-gray-600">{formatRelativeTime(job.created_at)}</span>
+                                {job.output_url && (
+                                  <a
+                                    href={job.output_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-primary-600 hover:text-primary-900"
+                                  >
+                                    <FiExternalLink className="w-3 h-3" />
+                                  </a>
+                                )}
+                              </div>
+                            ))}
+                            {completedJobs.length > 2 && (
+                              <button
+                                onClick={() => router.push(`/dashboard/jobs?workflow_id=${workflow.workflow_id}`)}
+                                className="text-xs text-primary-600 hover:text-primary-900"
+                              >
+                                View all {completedJobs.length}
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400 italic">No documents yet</span>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
                         <div className="relative inline-block">

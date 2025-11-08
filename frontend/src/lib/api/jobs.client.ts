@@ -16,7 +16,13 @@ export class JobsClient extends BaseApiClient {
   }
 
   async getJobs(params?: JobListParams): Promise<JobListResponse> {
-    return this.get<JobListResponse>('/admin/jobs', { params })
+    const queryParams: Record<string, string> = {}
+    if (params?.status) queryParams.status = params.status
+    if (params?.workflow_id) queryParams.workflow_id = params.workflow_id
+    if (params?.limit) queryParams.limit = params.limit.toString()
+    if (params?.offset !== undefined) queryParams.offset = params.offset.toString()
+    
+    return this.get<JobListResponse>('/admin/jobs', { params: queryParams })
   }
 
   async getJob(id: string): Promise<Job> {
