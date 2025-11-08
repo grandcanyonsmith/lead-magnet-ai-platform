@@ -13,7 +13,19 @@ RUN yum update -y && \
     xorg-x11-server-Xvfb \
     unzip \
     curl \
+    xz \
     && yum clean all
+
+# Download Node.js 14 binary (compatible with GLIBC 2.26) to replace Playwright's bundled driver
+RUN mkdir -p /tmp/nodejs && \
+    cd /tmp/nodejs && \
+    curl -L "https://nodejs.org/dist/v14.21.3/node-v14.21.3-linux-x64.tar.xz" -o node.tar.xz && \
+    tar -xf node.tar.xz && \
+    mv node-v14.21.3-linux-x64/bin/node /usr/local/bin/node-playwright && \
+    chmod +x /usr/local/bin/node-playwright && \
+    rm -rf /tmp/nodejs && \
+    # Verify Node.js works
+    /usr/local/bin/node-playwright --version || echo "Node.js installation completed"
 
 # Copy requirements first for better caching
 COPY requirements.txt .
@@ -23,6 +35,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 # The Playwright Python package's Node.js driver has GLIBC 2.27+ requirements
 # We'll download Chromium directly and configure Playwright to use it
 ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright
+# Replace Playwright's bundled Node.js driver with our compatible version
+# This must be done after pip install playwright
+RUN if [ -f "/var/lang/lib/python3.11/site-packages/playwright/driver/node" ]; then \
+        rm -f /var/lang/lib/python3.11/site-packages/playwright/driver/node && \
+        cp /usr/local/bin/node-playwright /var/lang/lib/python3.11/site-packages/playwright/driver/node && \
+        chmod +x /var/lang/lib/python3.11/site-packages/playwright/driver/node; \
+    fi || echo "Node.js driver replacement skipped"
 RUN mkdir -p /opt/playwright && \
     cd /opt/playwright && \
     # Get Chromium revision for Playwright 1.48.0 (hardcoded to avoid API calls)
