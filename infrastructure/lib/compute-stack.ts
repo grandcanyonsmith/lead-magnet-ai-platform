@@ -114,7 +114,13 @@ export class ComputeStack extends cdk.Stack {
     grantS3Permissions(stateMachineRole, props.artifactsBucket);
 
     // Grant Lambda invoke permissions to Step Functions
-    this.jobProcessorLambda.grantInvoke(stateMachineRole);
+    stateMachineRole.addToPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ['lambda:InvokeFunction'],
+        resources: [this.jobProcessorLambda.functionArn],
+      })
+    );
 
     // Create Step Functions state machine definition
     const definition = createJobProcessorStateMachine(this, {
