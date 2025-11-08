@@ -220,6 +220,15 @@ export const router = async (
     return await jobsController.resubmit(tenantId, id);
   }
 
+  if (path.match(/^\/admin\/jobs\/[^/]+\/rerun-step$/) && method === 'POST') {
+    const id = pathSegments[2];
+    const stepIndex = body?.step_index;
+    if (stepIndex === undefined || stepIndex === null) {
+      throw new ApiError('step_index is required in request body', 400);
+    }
+    return await jobsController.rerunStep(tenantId, id, stepIndex);
+  }
+
   if (path.match(/^\/admin\/jobs\/[^/]+$/) && method === 'GET') {
     const id = pathSegments[2];
     return await jobsController.get(tenantId, id);
