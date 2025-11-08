@@ -172,7 +172,12 @@ Guidelines for selecting tools:
       );
     }
 
-    const workflowContent = workflowCompletion.output_text || '';
+    // Validate response has output_text
+    if (!workflowCompletion.output_text) {
+      throw new Error('OpenAI Responses API returned empty response. output_text is missing.');
+    }
+    
+    const workflowContent = workflowCompletion.output_text;
     const workflowData = this.parseWorkflowConfig(workflowContent, description);
 
     return { workflowData, usageInfo };
@@ -349,7 +354,12 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
       );
     }
 
-    let cleanedHtml = templateCompletion.output_text || '';
+    // Validate response has output_text
+    if (!templateCompletion.output_text) {
+      throw new Error('OpenAI Responses API returned empty response. output_text is missing for template HTML generation.');
+    }
+    
+    let cleanedHtml = templateCompletion.output_text;
     
     // Clean up markdown code blocks if present
     if (cleanedHtml.startsWith('```html')) {
@@ -432,7 +442,12 @@ Return JSON format: {"name": "...", "description": "..."}`;
       );
     }
 
-    const templateNameContent = templateNameCompletion.output_text || '';
+    // Validate response has output_text
+    if (!templateNameCompletion.output_text) {
+      throw new Error('OpenAI Responses API returned empty response. output_text is missing for template name generation.');
+    }
+    
+    const templateNameContent = templateNameCompletion.output_text;
     let templateName = 'Generated Template';
     let templateDescription = 'A professional HTML template for displaying lead magnet content';
 
@@ -545,7 +560,12 @@ The public_slug should be URL-friendly (lowercase, hyphens only, no spaces).`;
       );
     }
 
-    const formContent = formCompletion.output_text || '';
+    // Validate response has output_text
+    if (!formCompletion.output_text) {
+      throw new Error('OpenAI Responses API returned empty response. output_text is missing for form generation.');
+    }
+    
+    const formContent = formCompletion.output_text;
     let formData = {
       form_name: `Form for ${workflowName}`,
       public_slug: workflowName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
