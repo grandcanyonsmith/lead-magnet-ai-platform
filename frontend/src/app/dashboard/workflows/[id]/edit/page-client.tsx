@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { api } from '@/lib/api'
-import { FiArrowLeft, FiSave, FiSettings, FiFileText, FiLayout, FiZap, FiEdit2, FiEye, FiPlus, FiType, FiMail, FiPhone, FiHash, FiList, FiChevronDown, FiChevronUp, FiGripVertical, FiMinus, FiMaximize2, FiMinimize2, FiMonitor, FiTablet, FiSmartphone, FiCode, FiCopy } from 'react-icons/fi'
+import { FiArrowLeft, FiSave, FiSettings, FiFileText, FiLayout, FiZap, FiEdit2, FiEye, FiPlus, FiType, FiMail, FiPhone, FiHash, FiList, FiChevronDown, FiChevronUp, FiMove, FiMinus, FiMaximize2, FiMinimize2, FiMonitor, FiTablet, FiSmartphone, FiCode, FiCopy } from 'react-icons/fi'
 import WorkflowStepEditor, { WorkflowStep } from '../../components/WorkflowStepEditor'
 import WorkflowFlowchart from '../../components/WorkflowFlowchart'
 import FlowchartSidePanel from '../../components/FlowchartSidePanel'
@@ -1166,7 +1166,7 @@ export default function EditWorkflowPage() {
                           <div className="flex items-start justify-between">
                             <div className="flex items-center space-x-2 flex-1">
                               <div className="cursor-move text-gray-400 hover:text-gray-600">
-                                <FiGripVertical className="w-5 h-5" />
+                                <FiMove className="w-5 h-5" />
                               </div>
                               <div className="flex items-center space-x-2 px-2 py-1 bg-gray-100 rounded text-gray-700">
                                 {getFieldTypeIcon(field.field_type)}
