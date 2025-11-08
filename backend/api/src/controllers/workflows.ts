@@ -815,43 +815,19 @@ Return ONLY the modified instructions, no markdown formatting, no explanations.`
       });
 
       const refineStartTime = Date.now();
-      let completion;
-      try {
-        const completionParams: any = {
-          model,
-          instructions: 'You are an expert AI prompt engineer. Return only the modified instructions without markdown formatting.',
-          input: prompt,
-        };
-        // GPT-5 only supports default temperature (1), don't set custom temperature
-        if (model !== 'gpt-5') {
-          completionParams.temperature = 0.7;
-        }
-        completion = await callResponsesWithTimeout(
-          () => openai.responses.create(completionParams),
-          'workflow instructions refinement'
-        );
-      } catch (apiError: any) {
-        console.error('[Workflow Instructions Refinement] Responses API error, attempting fallback', {
-          error: apiError?.message,
-          errorType: apiError?.constructor?.name,
-          isTimeout: apiError?.message?.includes('timed out'),
-        });
-        // Fallback to chat.completions
-        completion = await openai.chat.completions.create({
-          model: model === 'gpt-5' ? 'gpt-4o' : model,
-          messages: [
-            {
-              role: 'system',
-              content: 'You are an expert AI prompt engineer. Return only the modified instructions without markdown formatting.',
-            },
-            {
-              role: 'user',
-              content: prompt,
-            },
-          ],
-          temperature: model === 'gpt-5' ? undefined : 0.7,
-        });
+      const completionParams: any = {
+        model,
+        instructions: 'You are an expert AI prompt engineer. Return only the modified instructions without markdown formatting.',
+        input: prompt,
+      };
+      // GPT-5 only supports default temperature (1), don't set custom temperature
+      if (model !== 'gpt-5') {
+        completionParams.temperature = 0.7;
       }
+      const completion = await callResponsesWithTimeout(
+        () => openai.responses.create(completionParams),
+        'workflow instructions refinement'
+      );
 
       const refineDuration = Date.now() - refineStartTime;
       const refinementModel = (completion as any).model || model;
@@ -861,11 +837,11 @@ Return ONLY the modified instructions, no markdown formatting, no explanations.`
         model: refinementModel,
       });
 
-      // Track usage - handle both response formats
+      // Track usage
       const usage = completion.usage;
       if (usage) {
-        const inputTokens = ('input_tokens' in usage ? usage.input_tokens : usage.prompt_tokens) || 0;
-        const outputTokens = ('output_tokens' in usage ? usage.output_tokens : usage.completion_tokens) || 0;
+        const inputTokens = usage.input_tokens || 0;
+        const outputTokens = usage.output_tokens || 0;
         const costData = calculateOpenAICost(refinementModel, inputTokens, outputTokens);
         
         await storeUsageRecord(
@@ -878,7 +854,7 @@ Return ONLY the modified instructions, no markdown formatting, no explanations.`
         );
       }
 
-      const refinedContent = ('output_text' in completion ? completion.output_text : completion.choices?.[0]?.message?.content) || '';
+      const refinedContent = completion.output_text || '';
       
       // Clean up markdown code blocks if present
       let cleanedContent = refinedContent.trim();
