@@ -5,19 +5,12 @@ Fetch job details including artifacts and their URLs.
 
 import os
 import boto3
-from decimal import Decimal
 from botocore.exceptions import ClientError
-from datetime import datetime, timedelta
 
 TENANT_ID = "84c8e438-0061-70f2-2ce0-7cb44989a329"
 JOBS_TABLE = "leadmagnet-jobs"
 ARTIFACTS_TABLE = "leadmagnet-artifacts"
 REGION = os.environ.get("AWS_REGION", "us-east-1")
-
-JOB_IDS = [
-    "wfgen_01K9J0X1NFKYCBM6TDJWKSKVXW",
-    "wfgen_01K9J140J1XXX79F2SD8J3C4YH"
-]
 
 
 def get_presigned_url(bucket: str, key: str, expiration: int = 3600 * 24 * 7) -> str:
@@ -161,13 +154,19 @@ def get_job_details(job_id: str):
 
 def main():
     """Main function."""
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="Fetch job details including artifacts and their URLs")
+    parser.add_argument("job_ids", nargs="+", help="Job ID(s) to fetch")
+    args = parser.parse_args()
+    
     print("=" * 80)
     print("Job Details and Artifact URLs")
     print("=" * 80)
     
     results = []
     
-    for job_id in JOB_IDS:
+    for job_id in args.job_ids:
         result = get_job_details(job_id)
         if result:
             results.append(result)
