@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { api } from '@/lib/api'
-import { FiArrowLeft, FiEdit, FiTrash2, FiClock, FiCheckCircle, FiXCircle, FiExternalLink, FiLink } from 'react-icons/fi'
+import { FiArrowLeft, FiEdit, FiTrash2, FiClock, FiCheckCircle, FiXCircle, FiExternalLink, FiLink, FiZap, FiSettings, FiFileText, FiCalendar, FiCopy } from 'react-icons/fi'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
@@ -143,13 +143,15 @@ export default function WorkflowDetailPage() {
 
   const getStatusBadge = (status: string) => {
     const colors: Record<string, string> = {
-      active: 'bg-green-100 text-green-800',
-      inactive: 'bg-gray-100 text-gray-800',
-      draft: 'bg-yellow-100 text-yellow-800',
+      active: 'bg-green-100 text-green-800 border-green-200',
+      inactive: 'bg-gray-100 text-gray-800 border-gray-200',
+      draft: 'bg-yellow-100 text-yellow-800 border-yellow-200',
     }
     return (
-      <span className={`px-2 py-1 text-xs font-medium rounded-full ${colors[status] || 'bg-gray-100 text-gray-800'}`}>
-        {status}
+      <span className={`inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-full border ${colors[status] || 'bg-gray-100 text-gray-800 border-gray-200'}`}>
+        {status === 'active' && <FiCheckCircle className="w-3 h-3 mr-1.5" />}
+        {status === 'draft' && <FiClock className="w-3 h-3 mr-1.5" />}
+        {status.charAt(0).toUpperCase() + status.slice(1)}
       </span>
     )
   }
@@ -241,174 +243,216 @@ export default function WorkflowDetailPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Workflow Details */}
-        <div className="bg-white rounded-lg shadow p-4 sm:p-6 space-y-4 sm:space-y-6">
-          <h2 className="text-lg font-semibold text-gray-900">Workflow Details</h2>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+          <div className="flex items-center gap-2 mb-6">
+            <FiSettings className="w-5 h-5 text-gray-600" />
+            <h2 className="text-lg font-semibold text-gray-900">Workflow Details</h2>
+          </div>
           
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-            <div>{getStatusBadge(workflow.status || 'draft')}</div>
-          </div>
+          <div className="space-y-5">
+            <div className="pb-4 border-b border-gray-100">
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Status</label>
+              <div>{getStatusBadge(workflow.status || 'draft')}</div>
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">AI Model</label>
-            <p className="text-sm text-gray-900 break-words">{workflow.ai_model || 'gpt-5'}</p>
-          </div>
+            <div>
+              <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                <FiZap className="w-3.5 h-3.5" />
+                AI Model
+              </label>
+              <p className="text-sm font-medium text-gray-900 break-words">{workflow.ai_model || 'gpt-5'}</p>
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Rewrite Model</label>
-            <p className="text-sm text-gray-900 break-words">{workflow.rewrite_model || 'gpt-5'}</p>
-          </div>
+            <div>
+              <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                <FiZap className="w-3.5 h-3.5" />
+                Rewrite Model
+              </label>
+              <p className="text-sm font-medium text-gray-900 break-words">{workflow.rewrite_model || 'gpt-5'}</p>
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Content Rewriting</label>
-            <p className="text-sm text-gray-900">{workflow.rewrite_enabled ? 'Enabled' : 'Disabled'}</p>
-          </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Content Rewriting</label>
+              <span className={`inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full ${
+                workflow.rewrite_enabled 
+                  ? 'bg-green-50 text-green-700 border border-green-200' 
+                  : 'bg-gray-50 text-gray-600 border border-gray-200'
+              }`}>
+                {workflow.rewrite_enabled ? 'Enabled' : 'Disabled'}
+              </span>
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Template ID</label>
-            <p className="text-sm text-gray-900 font-mono break-all">{workflow.template_id || '-'}</p>
-            {workflow.template_version && (
-              <p className="text-xs text-gray-500 mt-1">Version {workflow.template_version}</p>
-            )}
-          </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Template ID</label>
+              <div className="bg-gray-50 rounded-lg p-2.5 border border-gray-200">
+                <p className="text-xs font-mono text-gray-900 break-all">{workflow.template_id || '-'}</p>
+                {workflow.template_version && (
+                  <p className="text-xs text-gray-500 mt-1">Version {workflow.template_version}</p>
+                )}
+              </div>
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Form</label>
-            {workflow.form ? (
-              <div className="space-y-2">
-                <div>
-                  <p className="text-sm text-gray-900 font-medium break-words">{workflow.form.form_name || 'Form'}</p>
-                  {workflow.form.public_slug && (
-                    <p className="text-xs text-gray-500 mt-1 font-mono break-all">/{workflow.form.public_slug}</p>
-                  )}
-                </div>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  {workflow.form.public_slug && (
-                    <a
-                      href={`/v1/forms/${workflow.form.public_slug}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center px-4 py-3 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors touch-target"
-                    >
-                      <FiExternalLink className="w-4 h-4 mr-1.5" />
-                      View Form
-                    </a>
-                  )}
-                  {workflow.form.form_id && (
-                    <button
-                      onClick={() => router.push(`/dashboard/forms/${workflow.form.form_id}/edit`)}
-                      className="inline-flex items-center justify-center px-4 py-3 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors touch-target"
-                    >
-                      <FiEdit className="w-4 h-4 mr-1.5" />
-                      Edit Form
-                    </button>
-                  )}
-                </div>
-                {workflow.form.public_slug && (
-                  <div className="mt-2">
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Public Form URL</label>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="text"
-                        readOnly
-                        value={typeof window !== 'undefined' ? `${window.location.origin}/v1/forms/${workflow.form.public_slug}` : `/v1/forms/${workflow.form.public_slug}`}
-                        className="flex-1 text-xs font-mono bg-gray-50 border border-gray-200 rounded px-2 py-1 text-gray-700 break-all"
-                        onClick={(e) => (e.target as HTMLInputElement).select()}
-                      />
-                      <button
-                        onClick={() => {
-                          const url = typeof window !== 'undefined' 
-                            ? `${window.location.origin}/v1/forms/${workflow.form.public_slug}`
-                            : `/v1/forms/${workflow.form.public_slug}`
-                          navigator.clipboard.writeText(url)
-                        }}
-                        className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors flex-shrink-0 touch-target"
-                        title="Copy URL"
+            <div className="pb-4 border-b border-gray-100">
+              <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                <FiFileText className="w-3.5 h-3.5" />
+                Form
+              </label>
+              {workflow.form ? (
+                <div className="space-y-3">
+                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                    <p className="text-sm font-semibold text-gray-900 break-words">{workflow.form.form_name || 'Form'}</p>
+                    {workflow.form.public_slug && (
+                      <p className="text-xs text-gray-500 mt-1 font-mono break-all">/{workflow.form.public_slug}</p>
+                    )}
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    {workflow.form.public_slug && (
+                      <a
+                        href={`/v1/forms/${workflow.form.public_slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors touch-target"
                       >
-                        <FiLink className="w-4 h-4" />
+                        <FiExternalLink className="w-4 h-4 mr-1.5" />
+                        View Form
+                      </a>
+                    )}
+                    {workflow.form.form_id && (
+                      <button
+                        onClick={() => router.push(`/dashboard/forms/${workflow.form.form_id}/edit`)}
+                        className="inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors touch-target"
+                      >
+                        <FiEdit className="w-4 h-4 mr-1.5" />
+                        Edit Form
                       </button>
+                    )}
+                  </div>
+                  {workflow.form.public_slug && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <label className="block text-xs font-semibold text-blue-900 mb-2">Public Form URL</label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          readOnly
+                          value={typeof window !== 'undefined' ? `${window.location.origin}/v1/forms/${workflow.form.public_slug}` : `/v1/forms/${workflow.form.public_slug}`}
+                          className="flex-1 text-xs font-mono bg-white border border-blue-200 rounded px-3 py-2 text-gray-900 break-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          onClick={(e) => (e.target as HTMLInputElement).select()}
+                        />
+                        <button
+                          onClick={() => {
+                            const url = typeof window !== 'undefined' 
+                              ? `${window.location.origin}/v1/forms/${workflow.form.public_slug}`
+                              : `/v1/forms/${workflow.form.public_slug}`
+                            navigator.clipboard.writeText(url)
+                          }}
+                          className="p-2.5 text-blue-700 hover:text-blue-900 hover:bg-blue-100 rounded-lg transition-colors flex-shrink-0 touch-target border border-blue-200"
+                          title="Copy URL"
+                        >
+                          <FiCopy className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
+                  )}
+                </div>
+              ) : (
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 text-center">
+                  <p className="text-sm text-gray-600 mb-3">No form attached to this lead magnet yet.</p>
+                  <button
+                    onClick={handleCreateForm}
+                    disabled={creatingForm}
+                    className="inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-target"
+                  >
+                    {creatingForm ? (
+                      <>
+                        <FiClock className="w-4 h-4 mr-2 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <FiLink className="w-4 h-4 mr-2" />
+                        Create Form
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {workflow.delivery_webhook_url && (
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Webhook URL</label>
+                <div className="bg-gray-50 rounded-lg p-2.5 border border-gray-200">
+                  <p className="text-xs font-mono text-gray-900 break-all">{workflow.delivery_webhook_url}</p>
+                </div>
+              </div>
+            )}
+
+            {workflow.delivery_phone && (
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Delivery Phone</label>
+                <p className="text-sm font-medium text-gray-900 break-words">{workflow.delivery_phone}</p>
+              </div>
+            )}
+
+            <div className="pt-4 border-t border-gray-100">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                <FiCalendar className="w-3.5 h-3.5" />
+                Timeline
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Created</label>
+                  <p className="text-sm font-medium text-gray-900">
+                    {workflow.created_at ? new Date(workflow.created_at).toLocaleString() : '-'}
+                  </p>
+                </div>
+                {workflow.updated_at && (
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Last Updated</label>
+                    <p className="text-sm font-medium text-gray-900">{new Date(workflow.updated_at).toLocaleString()}</p>
                   </div>
                 )}
               </div>
-            ) : (
-              <div className="space-y-3">
-                <p className="text-sm text-gray-500">No form attached to this lead magnet yet.</p>
-                <button
-                  onClick={handleCreateForm}
-                  disabled={creatingForm}
-                  className="inline-flex items-center justify-center px-4 py-3 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-target"
-                >
-                  {creatingForm ? (
-                    <>
-                      <FiClock className="w-4 h-4 mr-2 animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    <>
-                      <FiLink className="w-4 h-4 mr-2" />
-                      Create Form
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
+            </div>
           </div>
-
-          {workflow.delivery_webhook_url && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Webhook URL</label>
-              <p className="text-sm text-gray-900 break-all">{workflow.delivery_webhook_url}</p>
-            </div>
-          )}
-
-          {workflow.delivery_phone && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Phone</label>
-              <p className="text-sm text-gray-900 break-words">{workflow.delivery_phone}</p>
-            </div>
-          )}
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Created</label>
-            <p className="text-sm text-gray-900">
-              {workflow.created_at ? new Date(workflow.created_at).toLocaleString() : '-'}
-            </p>
-          </div>
-
-          {workflow.updated_at && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Last Updated</label>
-              <p className="text-sm text-gray-900">{new Date(workflow.updated_at).toLocaleString()}</p>
-            </div>
-          )}
         </div>
 
         {/* AI Instructions */}
-        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">AI Instructions</h2>
-          <div className="prose prose-sm max-w-none bg-gray-50 rounded-lg p-3 sm:p-4 overflow-x-auto break-words">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <FiZap className="w-5 h-5 text-gray-600" />
+            <h2 className="text-lg font-semibold text-gray-900">AI Instructions</h2>
+          </div>
+          <div className="prose prose-sm max-w-none bg-gradient-to-br from-gray-50 to-gray-100/50 rounded-lg p-4 sm:p-5 border border-gray-200 overflow-x-auto break-words">
             {workflow.ai_instructions ? (
               <ReactMarkdown 
                 remarkPlugins={[remarkGfm]}
                 components={{
-                  p: ({node, ...props}) => <p className="mb-2 last:mb-0 break-words" {...props} />,
-                  li: ({node, ...props}) => <li className="mb-1 break-words" {...props} />,
-                  code: ({node, ...props}) => <code className="break-all whitespace-pre-wrap" {...props} />,
+                  p: ({node, ...props}) => <p className="mb-3 last:mb-0 break-words text-gray-800 leading-relaxed" {...props} />,
+                  li: ({node, ...props}) => <li className="mb-2 break-words text-gray-800" {...props} />,
+                  code: ({node, ...props}) => <code className="break-all whitespace-pre-wrap bg-gray-200 px-1.5 py-0.5 rounded text-xs" {...props} />,
+                  h1: ({node, ...props}) => <h1 className="text-lg font-bold mb-3 text-gray-900" {...props} />,
+                  h2: ({node, ...props}) => <h2 className="text-base font-semibold mb-2 mt-4 text-gray-900" {...props} />,
+                  h3: ({node, ...props}) => <h3 className="text-sm font-semibold mb-2 mt-3 text-gray-900" {...props} />,
                 }}
               >
                 {workflow.ai_instructions}
               </ReactMarkdown>
             ) : (
-              <p className="text-gray-500 text-sm">No instructions provided</p>
+              <div className="text-center py-8">
+                <p className="text-gray-500 text-sm">No instructions provided</p>
+              </div>
             )}
           </div>
         </div>
       </div>
 
       {/* Recent Jobs */}
-      <div className="mt-4 sm:mt-6 bg-white rounded-lg shadow p-4 sm:p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Jobs</h2>
+      <div className="mt-4 sm:mt-6 bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+        <div className="flex items-center gap-2 mb-6">
+          <FiClock className="w-5 h-5 text-gray-600" />
+          <h2 className="text-lg font-semibold text-gray-900">Recent Jobs</h2>
+        </div>
         {jobs.length === 0 ? (
           <p className="text-gray-500 text-sm">No jobs found for this workflow</p>
         ) : (
