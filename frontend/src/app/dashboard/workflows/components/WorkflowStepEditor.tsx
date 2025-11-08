@@ -171,7 +171,7 @@ export default function WorkflowStepEditor({
             type="button"
             onClick={() => onMoveUp(index)}
             disabled={index === 0}
-            className="p-2 text-gray-600 hover:text-gray-900 disabled:text-gray-300 disabled:cursor-not-allowed"
+            className="p-2 text-gray-600 hover:text-gray-900 disabled:text-gray-300 disabled:cursor-not-allowed touch-target"
             aria-label="Move step up"
           >
             <FiChevronUp className="w-5 h-5" />
@@ -180,7 +180,7 @@ export default function WorkflowStepEditor({
             type="button"
             onClick={() => onMoveDown(index)}
             disabled={index === totalSteps - 1}
-            className="p-2 text-gray-600 hover:text-gray-900 disabled:text-gray-300 disabled:cursor-not-allowed"
+            className="p-2 text-gray-600 hover:text-gray-900 disabled:text-gray-300 disabled:cursor-not-allowed touch-target"
             aria-label="Move step down"
           >
             <FiChevronDown className="w-5 h-5" />
@@ -188,7 +188,7 @@ export default function WorkflowStepEditor({
           <button
             type="button"
             onClick={() => onDelete(index)}
-            className="p-2 text-red-600 hover:text-red-700"
+            className="p-2 text-red-600 hover:text-red-700 touch-target"
             aria-label="Delete step"
           >
             <FiTrash2 className="w-5 h-5" />
@@ -286,7 +286,7 @@ export default function WorkflowStepEditor({
               <label className="block text-sm font-medium text-gray-700 mb-3">
                 Computer Use Preview Configuration
               </label>
-              <div className="grid grid-cols-2 gap-4 mb-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">
                     Display Width

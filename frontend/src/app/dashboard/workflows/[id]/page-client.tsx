@@ -203,7 +203,7 @@ export default function WorkflowDetailPage() {
       <div className="mb-4 sm:mb-6">
         <button
           onClick={() => router.back()}
-          className="flex items-center text-gray-600 hover:text-gray-900 mb-3 sm:mb-4 text-sm sm:text-base"
+          className="flex items-center text-gray-600 hover:text-gray-900 mb-3 sm:mb-4 text-sm sm:text-base py-2 touch-target"
         >
           <FiArrowLeft className="w-4 h-4 mr-2" />
           Back

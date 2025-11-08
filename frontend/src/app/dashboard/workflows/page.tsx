@@ -208,7 +208,7 @@ export default function WorkflowsPage() {
                     <div className="relative ml-2">
                       <button
                         onClick={() => setOpenMenuId(openMenuId === workflow.workflow_id ? null : workflow.workflow_id)}
-                        className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all"
+                        className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all touch-target"
                         aria-label="Actions"
                       >
                         <FiMoreVertical className="w-4 h-4" />
@@ -278,7 +278,7 @@ export default function WorkflowsPage() {
                         </a>
                         <button
                           onClick={() => copyToClipboard(formUrl, workflow.workflow_id)}
-                          className="text-gray-400 hover:text-gray-600 p-1 flex-shrink-0"
+                          className="text-gray-400 hover:text-gray-600 p-2 flex-shrink-0 touch-target"
                           title="Copy URL"
                         >
                           {copiedUrl === workflow.workflow_id ? (
@@ -389,7 +389,7 @@ export default function WorkflowsPage() {
                                 </a>
                                 <button
                                   onClick={() => copyToClipboard(formUrl, workflow.workflow_id)}
-                                  className="text-gray-400 hover:text-gray-600 p-1"
+                                  className="text-gray-400 hover:text-gray-600 p-2 touch-target"
                                   title="Copy URL"
                                 >
                                   {copiedUrl === workflow.workflow_id ? (
@@ -443,7 +443,7 @@ export default function WorkflowsPage() {
                         <div className="relative inline-block">
                           <button
                             onClick={() => setOpenMenuId(openMenuId === workflow.workflow_id ? null : workflow.workflow_id)}
-                            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all"
+                            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all touch-target"
                             title="Actions"
                           >
                             <FiMoreVertical className="w-5 h-5" />

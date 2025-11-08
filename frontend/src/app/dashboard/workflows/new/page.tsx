@@ -127,7 +127,7 @@ export default function NewWorkflowPage() {
         <div className="mb-6">
           <button
             onClick={() => router.back()}
-            className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
+            className="flex items-center text-gray-600 hover:text-gray-900 mb-4 py-2 touch-target"
           >
             <FiArrowLeft className="w-4 h-4 mr-2" />
             Back
@@ -249,7 +249,7 @@ export default function NewWorkflowPage() {
               <button
                 type="button"
               onClick={workflowSteps.addStep}
-                className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors touch-target"
               >
                 <FiPlus className="w-4 h-4" />
                 Add Step
