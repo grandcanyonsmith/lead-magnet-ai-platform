@@ -45,6 +45,79 @@ export default function JobDetailClient() {
     setShowResubmitModal(false)
   }
 
+  // Merge workflow steps with execution steps to show all steps
+  const getMergedSteps = () => {
+    if (!workflow?.steps || !Array.isArray(workflow.steps) || workflow.steps.length === 0) {
+      // Fallback to execution steps if no workflow steps available
+      return job.execution_steps || []
+    }
+
+    const executionSteps = job.execution_steps || []
+    const executionStepsMap = new Map<number, any>()
+    
+    // Create a map of execution steps by step_order
+    executionSteps.forEach((execStep: any) => {
+      const order = execStep.step_order
+      if (order !== undefined) {
+        executionStepsMap.set(order, execStep)
+      }
+    })
+
+    // Merge workflow steps with execution steps
+    const mergedSteps = workflow.steps.map((workflowStep: any, index: number) => {
+      // Workflow steps are 0-indexed, execution steps for workflow steps are 1-indexed
+      const executionStepOrder = index + 1
+      const executionStep = executionStepsMap.get(executionStepOrder)
+      
+      if (executionStep) {
+        // Step has been executed - merge workflow step info with execution step data
+        return {
+          ...executionStep,
+          // Override with workflow step info for consistency
+          step_name: workflowStep.step_name || executionStep.step_name,
+          model: workflowStep.model || executionStep.model,
+          tools: workflowStep.tools || executionStep.input?.tools,
+          tool_choice: workflowStep.tool_choice || executionStep.input?.tool_choice,
+          step_order: executionStepOrder,
+          _status: 'completed' as const,
+        }
+      } else {
+        // Step hasn't been executed yet - create pending step
+        const isJobProcessing = job.status === 'processing'
+        // Count workflow steps that have been executed (excluding form submission step_order 0)
+        const executedWorkflowSteps = executionSteps.filter((s: any) => s.step_order > 0).length
+        const isCurrentStep = isJobProcessing && index === executedWorkflowSteps
+        
+        return {
+          step_name: workflowStep.step_name,
+          step_order: executionStepOrder,
+          step_type: 'workflow_step',
+          model: workflowStep.model,
+          tools: workflowStep.tools || [],
+          tool_choice: workflowStep.tool_choice || 'auto',
+          instructions: workflowStep.instructions,
+          input: {
+            tools: workflowStep.tools || [],
+            tool_choice: workflowStep.tool_choice || 'auto',
+          },
+          output: null,
+          _status: isCurrentStep ? 'in_progress' as const : 'pending' as const,
+        }
+      }
+    })
+
+    // Add form submission step if it exists (step_order 0)
+    const formSubmissionStep = executionStepsMap.get(0)
+    if (formSubmissionStep) {
+      mergedSteps.unshift({
+        ...formSubmissionStep,
+        _status: 'completed' as const,
+      })
+    }
+
+    return mergedSteps
+  }
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -149,16 +222,18 @@ export default function JobDetailClient() {
       </div>
 
       {/* Execution Steps */}
-      {job.execution_steps && Array.isArray(job.execution_steps) && job.execution_steps.length > 0 && (
+      {(workflow?.steps && Array.isArray(workflow.steps) && workflow.steps.length > 0) || 
+       (job.execution_steps && Array.isArray(job.execution_steps) && job.execution_steps.length > 0) ? (
         <ExecutionSteps
-          steps={job.execution_steps}
+          steps={getMergedSteps()}
           expandedSteps={expandedSteps}
           showExecutionSteps={showExecutionSteps}
           onToggleShow={() => setShowExecutionSteps(!showExecutionSteps)}
           onToggleStep={toggleStep}
           onCopy={copyToClipboard}
+          jobStatus={job.status}
         />
-      )}
+      ) : null}
 
       {/* Technical Details */}
       <TechnicalDetails job={job} form={form} />
