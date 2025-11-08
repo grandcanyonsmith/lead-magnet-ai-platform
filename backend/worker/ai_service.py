@@ -187,21 +187,33 @@ class AIService:
         
         # If validation removed tools, use default
         if len(validated_tools) == 0:
-            logger.warning(f"All tools were removed during validation, using default web_search_preview")
+            logger.warning(f"[AI Service] All tools were removed during validation, using default web_search_preview", extra={
+                'original_tools_count': len(tools) if tools else 0,
+                'original_tools': [t.get('type') if isinstance(t, dict) else t for t in tools] if tools else [],
+                'tool_choice': tool_choice
+            })
             validated_tools = [{"type": "web_search_preview"}]
         
         # CRITICAL: Ensure tool_choice='required' never exists with empty tools
         # This is the single consolidated check (replaces 4-5 redundant checks)
         tools_length = len(validated_tools) if validated_tools else 0
         if tool_choice == "required" and tools_length == 0:
-            logger.warning(f"[AI Service] tool_choice is 'required' but tools array is empty (length={tools_length}). Changing tool_choice to 'auto' to prevent API error.")
+            logger.warning(f"[AI Service] tool_choice is 'required' but tools array is empty (length={tools_length}). Changing tool_choice to 'auto' to prevent API error.", extra={
+                'original_tool_choice': tool_choice,
+                'validated_tools_count': tools_length,
+                'original_tools': [t.get('type') if isinstance(t, dict) else t for t in tools] if tools else []
+            })
             tool_choice = "auto"
             # Ensure we have at least one tool
             if not validated_tools or len(validated_tools) == 0:
                 validated_tools = [{"type": "web_search_preview"}]
                 logger.info(f"[AI Service] Added default tool: web_search_preview")
         
-        logger.info(f"Final tools after filtering and validation: {validated_tools}")
+        logger.info(f"[AI Service] Final tools after filtering and validation", extra={
+            'tools_count': len(validated_tools) if validated_tools else 0,
+            'tools': [t.get('type') if isinstance(t, dict) else t for t in validated_tools] if validated_tools else [],
+            'tool_choice': tool_choice
+        })
         
         return validated_tools, tool_choice
     
@@ -246,23 +258,48 @@ class AIService:
             "input": input_text,
         }
         
+        logger.debug(f"[AI Service] Building API params", extra={
+            'model': model,
+            'tool_choice': tool_choice,
+            'tools_count': len(tools) if tools else 0,
+            'tools': [t.get('type') if isinstance(t, dict) else t for t in tools] if tools else [],
+            'has_computer_use': has_computer_use
+        })
+        
         # Only add tools parameter if:
         # 1. tools array is not empty
         # 2. tool_choice is not "none" (if tool_choice is "none", don't include tools)
         if tool_choice == "none":
             # Don't include tools parameter when tool_choice is "none"
-            logger.info("tool_choice is 'none', not including tools parameter")
+            logger.info("[AI Service] tool_choice is 'none', not including tools parameter", extra={
+                'tools_count': len(tools) if tools else 0
+            })
         elif tools and len(tools) > 0:
             params["tools"] = tools
+            logger.debug(f"[AI Service] Added {len(tools)} tools to params", extra={
+                'tools': [t.get('type') if isinstance(t, dict) else t for t in tools]
+            })
         else:
-            # If tool_choice is not "none" but tools is empty, add default tool
-            logger.warning("Tools array is empty but tool_choice is not 'none'. Adding default web_search_preview tool.")
+            # If tool_choice is not "none" but tools is empty, we have a problem
+            # If tool_choice is 'required', this is an error condition
+            if tool_choice == "required":
+                logger.error("[AI Service] CRITICAL: tool_choice='required' but tools array is empty after filtering! Cannot proceed.", extra={
+                    'tool_choice': tool_choice,
+                    'tools_count': 0,
+                    'tools': []
+                })
+                raise ValueError("Invalid workflow configuration: tool_choice='required' but no valid tools available. Please check your workflow step configuration.")
+            # For 'auto', add default tool
+            logger.warning("[AI Service] Tools array is empty but tool_choice is not 'none'. Adding default web_search_preview tool.", extra={
+                'tool_choice': tool_choice,
+                'tools_count': 0
+            })
             params["tools"] = [{"type": "web_search_preview"}]
         
         # Add truncation="auto" if computer_use_preview is used
         if has_computer_use:
             params["truncation"] = "auto"
-            logger.info("Added truncation='auto' for computer_use_preview tool")
+            logger.info("[AI Service] Added truncation='auto' for computer_use_preview tool")
         
         # Add tool_choice ONLY if:
         # 1. tool_choice is not "none"
@@ -270,20 +307,37 @@ class AIService:
         if tool_choice != "none":
             tools_in_params = params.get("tools", [])
             
+            logger.debug(f"[AI Service] Checking tool_choice parameter", extra={
+                'tool_choice': tool_choice,
+                'tools_in_params_count': len(tools_in_params) if tools_in_params else 0,
+                'has_tools_key': 'tools' in params
+            })
+            
             # CRITICAL: Never set tool_choice='required' if tools is empty
             if tool_choice == "required":
                 if not tools_in_params or len(tools_in_params) == 0:
-                    logger.error("[AI Service] ABORT: tool_choice='required' but tools is empty in params! Not setting tool_choice parameter.")
+                    logger.error("[AI Service] ABORT: tool_choice='required' but tools is empty in params! This should have been caught earlier.", extra={
+                        'tool_choice': tool_choice,
+                        'tools_in_params': tools_in_params,
+                        'has_tools_key': 'tools' in params,
+                        'params_keys': list(params.keys())
+                    })
+                    raise ValueError("Invalid API configuration: tool_choice='required' but tools array is empty. This indicates a bug in tool validation.")
                 else:
-                    if len(tools_in_params) > 0:
-                        params["tool_choice"] = tool_choice
-                        logger.debug(f"[AI Service] Set tool_choice='{tool_choice}' with {len(tools_in_params)} tools")
+                    # Only set tool_choice='required' if we have tools
+                    params["tool_choice"] = tool_choice
+                    logger.debug(f"[AI Service] Set tool_choice='{tool_choice}' with {len(tools_in_params)} tools", extra={
+                        'tools': [t.get('type') if isinstance(t, dict) else t for t in tools_in_params]
+                    })
             elif tools_in_params and len(tools_in_params) > 0:
                 # For 'auto', only set if tools exist
                 params["tool_choice"] = tool_choice
                 logger.debug(f"[AI Service] Set tool_choice='{tool_choice}' with {len(tools_in_params)} tools")
             else:
-                logger.warning(f"[AI Service] Not setting tool_choice='{tool_choice}' because tools array is empty in params.")
+                logger.warning(f"[AI Service] Not setting tool_choice='{tool_choice}' because tools array is empty in params.", extra={
+                    'tool_choice': tool_choice,
+                    'tools_in_params_count': len(tools_in_params) if tools_in_params else 0
+                })
         
         # NOTE: reasoning_level is NOT supported for o3 models in the Responses API
         # Do NOT add reasoning_level parameter for any model
@@ -295,19 +349,21 @@ class AIService:
         if "tool_choice" in params and params["tool_choice"] == "required":
             tools_in_params = params.get("tools", [])
             if not tools_in_params or len(tools_in_params) == 0:
-                logger.critical("[AI Service] CRITICAL: tool_choice='required' found in params with empty tools! Removing tool_choice parameter.")
-                del params["tool_choice"]
-                # Add default tool if we're going to use tools
-                if "tools" not in params or not params.get("tools"):
-                    params["tools"] = [{"type": "web_search_preview"}]
-                    logger.warning("[AI Service] Added default tool since tool_choice was removed")
+                logger.critical("[AI Service] CRITICAL: tool_choice='required' found in params with empty tools! This is a critical bug.", extra={
+                    'params_keys': list(params.keys()),
+                    'has_tools_key': 'tools' in params,
+                    'tools_in_params': tools_in_params,
+                    'tool_choice_value': params.get('tool_choice')
+                })
+                raise ValueError("CRITICAL BUG: tool_choice='required' found in params with empty tools array. This should never happen after validation.")
         
         logger.debug(f"[AI Service] Final params before API call", extra={
             'has_tools': 'tools' in params,
-            'tools_count': len(params.get('tools', [])),
+            'tools_count': len(params.get('tools', [])) if 'tools' in params else 0,
             'has_tool_choice': 'tool_choice' in params,
             'tool_choice_value': params.get('tool_choice'),
-            'model': model
+            'model': model,
+            'has_truncation': 'truncation' in params
         })
         
         return params
@@ -646,7 +702,14 @@ class AIService:
             logger.warning(f"[AI Service] Rate limit exceeded - request should be retried")
             raise Exception(f"OpenAI API rate limit exceeded. Please try again later: {error_message}")
         elif "tool_choice" in error_message.lower() and "required" in error_message.lower() and "tools" in error_message.lower():
-            logger.error(f"[AI Service] Invalid tool_choice configuration - tool_choice='required' but tools empty")
+            logger.error(f"[AI Service] Invalid tool_choice configuration - tool_choice='required' but tools empty", extra={
+                'error_message': error_message,
+                'error_type': error_type,
+                'tool_choice': tool_choice,
+                'tools_count': len(tools) if tools else 0,
+                'tools': [t.get('type') if isinstance(t, dict) else t for t in tools] if tools else []
+            })
+            # Don't retry - this is a configuration error that needs to be fixed
             raise Exception(f"OpenAI API error: Invalid workflow configuration. Tool choice 'required' was specified but no tools are available. This has been automatically fixed - please try again. Original error: {error_message}")
         elif "model" in error_message.lower() and "not found" in error_message.lower():
             logger.error(f"[AI Service] Invalid model specified: {model}")
@@ -697,6 +760,41 @@ class AIService:
         # Validate and filter tools
         validated_tools, normalized_tool_choice = self._validate_and_filter_tools(tools, tool_choice)
         
+        logger.debug(f"[AI Service] After tool validation", extra={
+            'validated_tools_count': len(validated_tools) if validated_tools else 0,
+            'validated_tools': [t.get('type') if isinstance(t, dict) else t for t in validated_tools] if validated_tools else [],
+            'normalized_tool_choice': normalized_tool_choice,
+            'original_tool_choice': tool_choice
+        })
+        
+        # Check if image_generation tool is present - if so, set tool_choice to 'required'
+        has_image_generation = any(
+            (isinstance(t, dict) and t.get("type") == "image_generation") or 
+            (isinstance(t, str) and t == "image_generation")
+            for t in validated_tools
+        )
+        if has_image_generation and normalized_tool_choice != "none":
+            # Image generation requires tool_choice='required' to ensure images are generated
+            # BUT: Only do this if we actually have tools (image_generation tool should be in validated_tools)
+            if not validated_tools or len(validated_tools) == 0:
+                logger.error("[AI Service] CRITICAL: image_generation tool detected but validated_tools is empty! This should not happen.")
+                raise ValueError("Invalid workflow configuration: image_generation tool was detected but no valid tools are available after validation.")
+            normalized_tool_choice = "required"
+            logger.info("[AI Service] image_generation tool detected, setting tool_choice='required'", extra={
+                'validated_tools_count': len(validated_tools),
+                'tools': [t.get('type') if isinstance(t, dict) else t for t in validated_tools]
+            })
+        
+        # CRITICAL VALIDATION: Ensure tool_choice='required' never exists with empty tools
+        if normalized_tool_choice == "required":
+            if not validated_tools or len(validated_tools) == 0:
+                logger.error("[AI Service] CRITICAL: tool_choice='required' but validated_tools is empty!", extra={
+                    'original_tool_choice': tool_choice,
+                    'has_image_generation': has_image_generation,
+                    'validated_tools_count': 0
+                })
+                raise ValueError("Invalid workflow configuration: tool_choice='required' but no valid tools available after validation. Please check your workflow step configuration and ensure at least one valid tool is included.")
+        
         # Check if computer_use_preview is in tools (requires truncation="auto")
         has_computer_use = any(
             (isinstance(t, dict) and t.get("type") == "computer_use_preview") or 
@@ -713,6 +811,7 @@ class AIService:
             'tools': [t.get('type') if isinstance(t, dict) else t for t in validated_tools] if validated_tools else [],
             'tool_choice': normalized_tool_choice,
             'has_computer_use': has_computer_use,
+            'has_image_generation': has_image_generation,
             'instructions_length': len(instructions),
             'context_length': len(context),
             'previous_context_length': len(previous_context)
@@ -725,6 +824,12 @@ class AIService:
         try:
             # Build API parameters
             # NOTE: reasoning_level is NOT supported in Responses API, so we don't pass it
+            logger.debug(f"[AI Service] About to build API params", extra={
+                'model': model,
+                'normalized_tool_choice': normalized_tool_choice,
+                'validated_tools_count': len(validated_tools) if validated_tools else 0
+            })
+            
             params = self._build_api_params(
                 model=model,
                 instructions=instructions,
@@ -736,7 +841,23 @@ class AIService:
                 reasoning_level=None  # Not supported in Responses API
             )
             
+            logger.debug(f"[AI Service] API params built successfully", extra={
+                'params_keys': list(params.keys()),
+                'has_tools': 'tools' in params,
+                'tools_count': len(params.get('tools', [])) if 'tools' in params else 0,
+                'has_tool_choice': 'tool_choice' in params,
+                'tool_choice_value': params.get('tool_choice')
+            })
+            
             # Make API call
+            logger.info(f"[AI Service] Making OpenAI API call", extra={
+                'model': model,
+                'has_tools': 'tools' in params,
+                'tools_count': len(params.get('tools', [])) if 'tools' in params else 0,
+                'has_tool_choice': 'tool_choice' in params,
+                'tool_choice': params.get('tool_choice')
+            })
+            
             response = self.client.responses.create(**params)
             
             # Process response
