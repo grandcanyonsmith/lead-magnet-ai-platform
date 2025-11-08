@@ -236,12 +236,11 @@ class AIService:
         Returns:
             Tuple of (validated tools list, normalized tool_choice)
         """
-        # Default to web_search_preview if no tools provided (backward compatibility)
-        if tools is None or len(tools) == 0:
-            tools = [self._default_tool()]
+        # Work with a copy of the provided tools (supporting strings or dicts)
+        input_tools = list(tools) if tools else []
         
         # Filter out invalid tools
-        filtered_tools = self._filter_invalid_tools(tools)
+        filtered_tools = self._filter_invalid_tools(input_tools)
         
         # Final validation pass
         validated_tools = self._final_validate_tools(filtered_tools)
@@ -253,7 +252,7 @@ class AIService:
             logger.warning(f"[AI Service] tool_choice is 'required' but tools array is empty (length={tools_length}). Changing tool_choice to 'auto' to prevent API error.", extra={
                 'original_tool_choice': tool_choice,
                 'validated_tools_count': tools_length,
-                'original_tools': [t.get('type') if isinstance(t, dict) else t for t in tools] if tools else []
+                'original_tools': [t.get('type') if isinstance(t, dict) else t for t in input_tools]
             })
             tool_choice = "auto"
         
