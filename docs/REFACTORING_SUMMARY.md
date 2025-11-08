@@ -83,12 +83,28 @@ All four phases of the comprehensive refactoring plan have been successfully com
   - **Before**: 1,365 lines
   - **After**: 886 lines
   - **Reduction**: 35% (479 lines removed)
+  
+- ✅ **Refactored `ai_service.py`** (NEW)
+  - **Before**: `generate_report()` method was 638 lines
+  - **After**: `generate_report()` method is ~93 lines
+  - **Reduction**: 85% reduction in main method complexity
+  - Extracted 8 helper methods:
+    - `_is_o3_model()` - Model detection
+    - `_validate_and_filter_tools()` - Consolidated tool validation
+    - `_build_input_text()` - Input text construction
+    - `_build_api_params()` - API parameter building
+    - `_extract_image_urls()` - Image URL extraction
+    - `_process_api_response()` - Response processing
+    - `_handle_openai_error()` - Centralized error handling
+    - `_clean_html_markdown()` - HTML cleanup
+  - See [AI_SERVICE_REFACTORING.md](./AI_SERVICE_REFACTORING.md) for details
 
 ### Impact
 - Clear separation of artifact, delivery, and legacy processing concerns
 - Improved testability of individual services
 - Easier to maintain and extend
 - Better error handling and logging
+- **AI service significantly simplified and more maintainable**
 
 ---
 
@@ -117,6 +133,32 @@ All four phases of the comprehensive refactoring plan have been successfully com
 
 ---
 
+## Phase 5: Workflow Step Processing Fixes ✅ (NEW)
+
+### Completed Tasks
+- ✅ **Fixed Previous Step Outputs Accumulation**
+  - Issue: Each step wasn't receiving outputs from all previous steps
+  - Fix: Updated `process_single_step()` and `process_job()` to correctly filter and accumulate previous step outputs
+  - Impact: Steps now receive all previous step outputs in correct order
+  
+- ✅ **Fixed Image URLs in Previous Context**
+  - Issue: Image URLs from previous steps weren't being passed to subsequent steps
+  - Fix: Added normalization logic to handle image URLs from DynamoDB (handles None, lists, strings)
+  - Impact: Image URLs are now included in previous context when present
+  
+- ✅ **Fixed Type Comparison Error**
+  - Issue: `'<' not supported between instances of 'int' and 'str'` error when comparing step_order
+  - Fix: Added `normalize_step_order()` helper function to handle DynamoDB type mismatches
+  - Impact: Step comparisons work regardless of how DynamoDB stores step_order values
+
+### Impact
+- Multi-step workflows now work correctly
+- Each step receives complete context from all previous steps
+- Image URLs properly passed between steps
+- Type-safe step order comparisons
+
+---
+
 ## Overall Metrics
 
 ### Code Reduction Summary
@@ -127,7 +169,8 @@ All four phases of the comprehensive refactoring plan have been successfully com
 | `new/page.tsx` | 1,262 | 322 | 940 | 74% |
 | `processor.py` | 1,365 | 886 | 479 | 35% |
 | `artifacts.ts` | 278 | 149 | 129 | 46% |
-| **Total** | **5,068** | **2,267** | **2,801** | **55%** |
+| `ai_service.py` (generate_report) | 638 | ~93 | 545 | 85% |
+| **Total** | **5,706** | **2,360** | **3,346** | **59%** |
 
 ### Files Created
 
