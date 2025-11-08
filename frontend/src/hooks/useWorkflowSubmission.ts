@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { api } from '@/lib/api'
+import { AIModel } from '@/types'
 import { WorkflowFormData, TemplateData, FormFieldsData } from './useWorkflowForm'
 import { WorkflowStep } from '@/app/dashboard/workflows/components/WorkflowStepEditor'
 
@@ -35,7 +36,6 @@ export function useWorkflowSubmission() {
             template_description: templateData.template_description || '',
             html_content: templateData.html_content.trim(),
             placeholder_tags: templateData.placeholder_tags.length > 0 ? templateData.placeholder_tags : undefined,
-            is_published: true,
           })
           templateId = template.template_id
           setGeneratedTemplateId(templateId)
@@ -46,7 +46,6 @@ export function useWorkflowSubmission() {
             template_description: templateData.template_description || '',
             html_content: templateData.html_content.trim(),
             placeholder_tags: templateData.placeholder_tags.length > 0 ? templateData.placeholder_tags : undefined,
-            is_published: true,
           })
           templateId = generatedTemplateId
         }
@@ -55,15 +54,17 @@ export function useWorkflowSubmission() {
       // Then create the workflow with steps
       const workflow = await api.createWorkflow({
         workflow_name: formData.workflow_name.trim(),
-        workflow_description: formData.workflow_description.trim() || undefined,
+        workflow_description: formData.workflow_description?.trim() || '',
         steps: steps.map((step, index) => ({
           ...step,
           step_order: index,
+          model: step.model as any,
+          tools: step.tools as any,
         })),
         // Keep legacy fields for backward compatibility (will be auto-migrated)
-        ai_model: formData.ai_model,
+        ai_model: formData.ai_model as AIModel,
         ai_instructions: steps[0]?.instructions || formData.ai_instructions.trim() || '',
-        rewrite_model: formData.rewrite_model,
+        rewrite_model: formData.rewrite_model as AIModel,
         research_enabled: formData.research_enabled,
         html_enabled: formData.html_enabled,
         template_id: templateId || undefined,

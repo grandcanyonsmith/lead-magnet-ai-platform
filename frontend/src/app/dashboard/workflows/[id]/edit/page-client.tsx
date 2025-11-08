@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { api } from '@/lib/api'
+import { AIModel, Tool } from '@/types'
 import { FiArrowLeft, FiSave, FiSettings, FiFileText, FiLayout, FiZap, FiEdit2, FiEye, FiPlus, FiType, FiMail, FiPhone, FiHash, FiList, FiChevronDown, FiChevronUp, FiMove, FiMinus, FiMaximize2, FiMinimize2, FiMonitor, FiTablet, FiSmartphone, FiCode, FiCopy } from 'react-icons/fi'
 import WorkflowStepEditor, { WorkflowStep } from '../../components/WorkflowStepEditor'
 import WorkflowFlowchart from '../../components/WorkflowFlowchart'
@@ -208,13 +209,13 @@ export default function EditWorkflowPage() {
         setFormFormData({
           form_name: workflow.form.form_name || '',
           public_slug: workflow.form.public_slug || '',
-          form_fields_schema: workflow.form.form_fields_schema || { fields: [] },
-          rate_limit_enabled: workflow.form.rate_limit_enabled !== undefined ? workflow.form.rate_limit_enabled : true,
-          rate_limit_per_hour: workflow.form.rate_limit_per_hour || 10,
-          captcha_enabled: workflow.form.captcha_enabled || false,
-          custom_css: workflow.form.custom_css || '',
-          thank_you_message: workflow.form.thank_you_message || '',
-          redirect_url: workflow.form.redirect_url || '',
+          form_fields_schema: (workflow.form as any).form_fields_schema || { fields: [] },
+          rate_limit_enabled: (workflow.form as any).rate_limit_enabled !== undefined ? (workflow.form as any).rate_limit_enabled : true,
+          rate_limit_per_hour: (workflow.form as any).rate_limit_per_hour || 10,
+          captcha_enabled: (workflow.form as any).captcha_enabled || false,
+          custom_css: (workflow.form as any).custom_css || '',
+          thank_you_message: (workflow.form as any).thank_you_message || '',
+          redirect_url: (workflow.form as any).redirect_url || '',
         })
       }
 
@@ -245,7 +246,7 @@ export default function EditWorkflowPage() {
         template_name: template.template_name || '',
         template_description: template.template_description || '',
         html_content: template.html_content || '',
-        is_published: template.is_published || false,
+        is_published: (template as any).is_published || false,
       })
       
       // Extract placeholders from loaded HTML
@@ -330,17 +331,15 @@ export default function EditWorkflowPage() {
             template_description: templateData.template_description.trim() || undefined,
             html_content: templateData.html_content.trim(),
             placeholder_tags: placeholders.length > 0 ? placeholders : undefined,
-            is_published: templateData.is_published,
           })
           finalTemplateId = templateId
         } else {
           // Create new template
           const template = await api.createTemplate({
             template_name: templateData.template_name.trim(),
-            template_description: templateData.template_description.trim() || undefined,
+            template_description: templateData.template_description.trim() || '',
             html_content: templateData.html_content.trim(),
             placeholder_tags: placeholders.length > 0 ? placeholders : undefined,
-            is_published: templateData.is_published,
           })
           finalTemplateId = template.template_id
           setTemplateId(template.template_id)
@@ -351,17 +350,19 @@ export default function EditWorkflowPage() {
       await api.updateWorkflow(workflowId, {
         workflow_name: formData.workflow_name.trim(),
         workflow_description: formData.workflow_description.trim() || undefined,
-        steps: steps.map((step, index) => ({
+        steps: steps.map((step: WorkflowStep, index: number) => ({
           ...step,
           step_order: index,
+          model: step.model as AIModel,
+          tools: step.tools as Tool[] | undefined,
         })),
         // Keep legacy fields for backward compatibility
-        ai_model: formData.ai_model,
+        ai_model: formData.ai_model as AIModel,
         ai_instructions: steps[0]?.instructions || formData.ai_instructions.trim() || '',
-        rewrite_model: formData.rewrite_model,
+        rewrite_model: formData.rewrite_model as AIModel,
         research_enabled: formData.research_enabled,
         html_enabled: formData.html_enabled,
-        template_id: formData.html_enabled ? finalTemplateId : undefined,
+        template_id: formData.html_enabled ? finalTemplateId || undefined : undefined,
         template_version: 0,
       })
 
@@ -370,7 +371,7 @@ export default function EditWorkflowPage() {
         await api.updateForm(formId, {
           form_name: formFormData.form_name.trim(),
           public_slug: formFormData.public_slug.trim(),
-          form_fields_schema: formFormData.form_fields_schema,
+          form_fields_schema: formFormData.form_fields_schema as any,
           rate_limit_enabled: formFormData.rate_limit_enabled,
           rate_limit_per_hour: formFormData.rate_limit_per_hour,
           captcha_enabled: formFormData.captcha_enabled,
@@ -688,11 +689,11 @@ export default function EditWorkflowPage() {
     setGenerationStatus('Refining template with AI...')
 
     try {
-      const result = await api.refineTemplateWithAI(
-        templateData.html_content,
-        editPrompt.trim(),
-        'gpt-5'
-      )
+      const result = await api.refineTemplateWithAI({
+        current_html: templateData.html_content,
+        edit_prompt: editPrompt.trim(),
+        model: 'gpt-5' as AIModel,
+      })
 
       const newHtml = result.html_content
       setTemplateData(prev => ({
@@ -700,7 +701,8 @@ export default function EditWorkflowPage() {
         html_content: newHtml,
       }))
       
-      const placeholders = result.placeholder_tags || []
+      // Extract placeholders from the HTML content
+      const placeholders = extractPlaceholders(newHtml)
       setDetectedPlaceholders(placeholders)
       
       // Force preview re-render by incrementing previewKey
