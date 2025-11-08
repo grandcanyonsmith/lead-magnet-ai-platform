@@ -286,7 +286,6 @@ export default function JobsPage() {
                       </h3>
                     </div>
                     <div className="ml-2 flex-shrink-0" data-tour="job-status">
-                      {getStatusBadge(job.status)}
                     </div>
                   </div>
                   
@@ -337,17 +336,6 @@ export default function JobsPage() {
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Lead Magnet
-                </th>
-                <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  onClick={() => sorting.handleSort('status')}
-                >
-                  <div className="flex items-center">
-                    Status
-                    {sorting.sortField === 'status' && (
-                      sorting.sortDirection === 'asc' ? <FiChevronUp className="w-3 h-3 ml-1" /> : <FiChevronDown className="w-3 h-3 ml-1" />
-                    )}
-                  </div>
                 </th>
                 <th 
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
@@ -407,9 +395,6 @@ export default function JobsPage() {
                         <div className="text-sm text-gray-900">
                           {workflowMap[job.workflow_id] || job.workflow_id || '-'}
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {getStatusBadge(job.status)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">

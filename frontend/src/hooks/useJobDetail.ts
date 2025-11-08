@@ -109,10 +109,6 @@ export function useJobDetail() {
   }
 
   const handleResubmit = async () => {
-    if (!confirm('Are you sure you want to resubmit this lead magnet? This will create a new job with the same submission data.')) {
-      return
-    }
-
     setResubmitting(true)
     setError(null)
 
