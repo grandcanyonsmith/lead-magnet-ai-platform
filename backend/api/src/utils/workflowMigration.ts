@@ -17,6 +17,7 @@ export interface WorkflowStep {
   model: string;
   instructions: string;
   step_order: number;
+  depends_on?: number[]; // Array of step indices this step depends on
   tools?: string[];
   tool_choice?: 'auto' | 'required' | 'none';
 }
@@ -100,16 +101,35 @@ export function migrateLegacyWorkflowOnUpdate(
 }
 
 /**
- * Ensure step defaults are set (step_order, tools, tool_choice, step_description)
+ * Ensure step defaults are set (step_order, tools, tool_choice, step_description, depends_on)
  */
 export function ensureStepDefaults(steps: WorkflowStep[]): WorkflowStep[] {
-  return steps.map((step: any, index: number) => ({
-    ...step,
-    step_order: step.step_order !== undefined ? step.step_order : index,
-    step_description: step.step_description || step.step_name || `Step ${index + 1}`,
-    tools: step.tools || (index === 0 ? ['web_search_preview'] : []),
-    tool_choice: (step.tool_choice || (index === 0 ? 'auto' : 'none')) as 'auto' | 'required' | 'none',
-  }));
+  return steps.map((step: any, index: number) => {
+    const stepOrder = step.step_order !== undefined ? step.step_order : index;
+    
+    // Auto-generate depends_on from step_order if not provided
+    let dependsOn = step.depends_on;
+    if (dependsOn === undefined && stepOrder > 0) {
+      // Find all steps with lower step_order
+      const lowerOrderSteps = steps
+        .map((s: any, i: number) => ({ step: s, index: i, order: s.step_order !== undefined ? s.step_order : i }))
+        .filter(({ order }) => order < stepOrder)
+        .map(({ index }) => index);
+      
+      // If there are lower order steps, depend on all of them
+      // Otherwise, depend on the previous step by index
+      dependsOn = lowerOrderSteps.length > 0 ? lowerOrderSteps : [index - 1];
+    }
+    
+    return {
+      ...step,
+      step_order: stepOrder,
+      step_description: step.step_description || step.step_name || `Step ${index + 1}`,
+      depends_on: dependsOn,
+      tools: step.tools || (index === 0 ? ['web_search_preview'] : []),
+      tool_choice: (step.tool_choice || (index === 0 ? 'auto' : 'none')) as 'auto' | 'required' | 'none',
+    };
+  });
 }
 
 /**

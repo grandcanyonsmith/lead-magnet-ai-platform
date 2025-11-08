@@ -11,6 +11,7 @@ import { callResponsesWithTimeout } from '../utils/openaiHelpers';
 import { formService } from '../services/formService';
 import { WorkflowGenerationService } from '../services/workflowGenerationService';
 import { migrateLegacyWorkflowToSteps, migrateLegacyWorkflowOnUpdate, ensureStepDefaults, WorkflowStep } from '../utils/workflowMigration';
+import { resolveExecutionGroups, validateDependencies } from '../utils/dependencyResolver';
 
 const WORKFLOWS_TABLE = process.env.WORKFLOWS_TABLE;
 const FORMS_TABLE = process.env.FORMS_TABLE;
@@ -963,6 +964,71 @@ Return ONLY the modified instructions:
         500
       );
     }
+  }
+
+  async getExecutionPlan(tenantId: string, workflowId: string): Promise<RouteResponse> {
+    if (!WORKFLOWS_TABLE) {
+      throw new ApiError('WORKFLOWS_TABLE environment variable is not configured', 500);
+    }
+
+    const workflow = await db.get(WORKFLOWS_TABLE!, { workflow_id: workflowId });
+
+    if (!workflow || workflow.deleted_at) {
+      throw new ApiError('This lead magnet doesn\'t exist or has been removed', 404);
+    }
+
+    if (workflow.tenant_id !== tenantId) {
+      throw new ApiError('You don\'t have permission to access this lead magnet', 403);
+    }
+
+    const steps = workflow.steps || [];
+    if (!steps || steps.length === 0) {
+      throw new ApiError('Workflow has no steps configured', 400);
+    }
+
+    // Resolve execution plan
+    const executionPlan = resolveExecutionGroups(steps);
+
+    return {
+      statusCode: 200,
+      body: {
+        workflow_id: workflowId,
+        execution_plan: executionPlan,
+      },
+    };
+  }
+
+  async validateDependencies(tenantId: string, workflowId: string, body: any): Promise<RouteResponse> {
+    if (!WORKFLOWS_TABLE) {
+      throw new ApiError('WORKFLOWS_TABLE environment variable is not configured', 500);
+    }
+
+    const workflow = await db.get(WORKFLOWS_TABLE!, { workflow_id: workflowId });
+
+    if (!workflow || workflow.deleted_at) {
+      throw new ApiError('This lead magnet doesn\'t exist or has been removed', 404);
+    }
+
+    if (workflow.tenant_id !== tenantId) {
+      throw new ApiError('You don\'t have permission to access this lead magnet', 403);
+    }
+
+    // Use steps from body if provided, otherwise use workflow steps
+    const steps = body.steps || workflow.steps || [];
+    if (!steps || steps.length === 0) {
+      throw new ApiError('No steps provided for validation', 400);
+    }
+
+    // Validate dependencies
+    const validation = validateDependencies(steps);
+
+    return {
+      statusCode: 200,
+      body: {
+        valid: validation.valid,
+        errors: validation.errors,
+      },
+    };
   }
 }
 

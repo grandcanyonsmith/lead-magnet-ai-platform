@@ -7,6 +7,7 @@ export const workflowStepSchema = z.object({
   model: z.string().min(1),
   instructions: z.string().min(1),
   step_order: z.number().int().min(0).optional(),
+  depends_on: z.array(z.number().int().min(0)).optional(), // Array of step indices this step depends on
   tools: z.array(
     z.union([
       z.string(), // Simple tool type string (e.g., "web_search_preview")
@@ -47,6 +48,69 @@ const baseWorkflowSchema = z.object({
   delivery_sms_ai_instructions: z.string().optional(), // Instructions for AI SMS generation
 });
 
+// Helper function to validate dependencies
+function validateDependencies(steps: any[]): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+  
+  if (!steps || steps.length === 0) {
+    return { valid: true, errors: [] };
+  }
+  
+  steps.forEach((step, index) => {
+    if (step.depends_on && Array.isArray(step.depends_on)) {
+      // Check that all dependency indices are valid
+      step.depends_on.forEach((depIndex: number) => {
+        if (depIndex < 0 || depIndex >= steps.length) {
+          errors.push(`Step ${index} (${step.step_name}): depends_on index ${depIndex} is out of range`);
+        }
+        if (depIndex === index) {
+          errors.push(`Step ${index} (${step.step_name}): cannot depend on itself`);
+        }
+      });
+    }
+  });
+  
+  // Check for circular dependencies using DFS
+  const visited = new Set<number>();
+  const recStack = new Set<number>();
+  
+  function hasCycle(nodeIndex: number): boolean {
+    if (recStack.has(nodeIndex)) {
+      return true; // Found a cycle
+    }
+    if (visited.has(nodeIndex)) {
+      return false; // Already processed
+    }
+    
+    visited.add(nodeIndex);
+    recStack.add(nodeIndex);
+    
+    const step = steps[nodeIndex];
+    if (step.depends_on && Array.isArray(step.depends_on)) {
+      for (const depIndex of step.depends_on) {
+        if (hasCycle(depIndex)) {
+          return true;
+        }
+      }
+    }
+    
+    recStack.delete(nodeIndex);
+    return false;
+  }
+  
+  for (let i = 0; i < steps.length; i++) {
+    if (!visited.has(i) && hasCycle(i)) {
+      errors.push(`Circular dependency detected involving step ${i} (${steps[i].step_name})`);
+      break;
+    }
+  }
+  
+  return {
+    valid: errors.length === 0,
+    errors,
+  };
+}
+
 // Workflow schemas with refinement
 export const createWorkflowSchema = baseWorkflowSchema.refine((data) => {
   // If steps array is provided, it must have at least one step
@@ -57,12 +121,30 @@ export const createWorkflowSchema = baseWorkflowSchema.refine((data) => {
   if (!data.steps || data.steps.length === 0) {
     return !!(data.ai_instructions || data.research_enabled || data.html_enabled);
   }
+  
+  // Validate dependencies
+  const depValidation = validateDependencies(data.steps);
+  if (!depValidation.valid) {
+    return false;
+  }
+  
   return true;
 }, {
-  message: 'Either provide steps array with at least one step, or use legacy fields (ai_instructions, research_enabled, html_enabled)',
+  message: 'Either provide steps array with at least one step, or use legacy fields (ai_instructions, research_enabled, html_enabled). Also ensure dependencies are valid and non-circular.',
 });
 
-export const updateWorkflowSchema = baseWorkflowSchema.partial();
+export const updateWorkflowSchema = baseWorkflowSchema.partial().refine((data) => {
+  // Only validate dependencies if steps are provided
+  if (data.steps !== undefined && Array.isArray(data.steps) && data.steps.length > 0) {
+    const depValidation = validateDependencies(data.steps);
+    if (!depValidation.valid) {
+      return false;
+    }
+  }
+  return true;
+}, {
+  message: 'Dependencies must be valid and non-circular',
+});
 
 // Form schemas
 export const createFormSchema = z.object({

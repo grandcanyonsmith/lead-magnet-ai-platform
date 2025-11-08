@@ -25,13 +25,15 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
     Lambda handler for processing lead magnet jobs.
     
-    Supports two modes:
-    1. Per-step processing: event contains 'step_index' - processes single step
-    2. Legacy full job processing: event contains only 'job_id' - processes all steps
+    Supports three modes:
+    1. Dependency resolution: event contains 'action': 'resolve_dependencies' - resolves step dependencies
+    2. Per-step processing: event contains 'step_index' - processes single step
+    3. Legacy full job processing: event contains only 'job_id' - processes all steps
     
     Args:
         event: Step Functions event containing:
             - job_id: Required - The job ID to process
+            - action: Optional - 'resolve_dependencies' to resolve dependencies
             - step_index: Optional - Index of step to process (for per-step mode)
             - step_type: Optional - Type of step ('workflow_step' or 'html_generation')
         context: Lambda context object
@@ -72,7 +74,40 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         processor = JobProcessor(db_service, s3_service)
         
         # Route to appropriate processing method
-        if step_index is not None:
+        action = event.get('action')
+        if action == 'resolve_dependencies':
+            # Dependency resolution mode
+            workflow_id = event.get('workflow_id')
+            if not workflow_id:
+                raise ValueError('workflow_id is required for dependency resolution')
+            
+            logger.info(f"Resolving dependencies for workflow {workflow_id}")
+            workflow = db_service.get_workflow(workflow_id)
+            if not workflow:
+                raise ValueError(f"Workflow {workflow_id} not found")
+            
+            steps = workflow.get('steps', [])
+            if not steps:
+                raise ValueError(f"Workflow {workflow_id} has no steps")
+            
+            execution_plan = processor.resolve_step_dependencies(steps)
+            
+            # Store execution plan in job
+            db_service.update_job(job_id, {
+                'execution_plan': execution_plan,
+                'updated_at': datetime.utcnow().isoformat()
+            }, s3_service=s3_service)
+            
+            logger.info(f"Dependencies resolved for workflow {workflow_id}", extra={
+                'execution_groups': len(execution_plan.get('executionGroups', [])),
+                'total_steps': execution_plan.get('totalSteps', 0)
+            })
+            
+            return {
+                'success': True,
+                'execution_plan': execution_plan
+            }
+        elif step_index is not None:
             # Per-step processing mode
             logger.info(f"Processing single step {step_index} for job {job_id}")
             result = processor.process_single_step(job_id, step_index, step_type)

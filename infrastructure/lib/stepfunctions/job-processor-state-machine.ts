@@ -171,6 +171,18 @@ export function createJobProcessorStateMachine(
     )
     .otherwise(incrementStep);
 
+  // Resolve step dependencies - calls Lambda to build execution plan
+  const resolveDependencies = new tasks.LambdaInvoke(scope, 'ResolveDependencies', {
+    lambdaFunction: jobProcessorLambda,
+    payload: sfn.TaskInput.fromObject({
+      'job_id': sfn.JsonPath.stringAt('$.job_id'),
+      'workflow_id': sfn.JsonPath.stringAt('$.workflow_id'),
+      'action': 'resolve_dependencies',
+    }),
+    resultPath: '$.executionPlan',
+    retryOnServiceExceptions: false,
+  });
+
   // Setup step loop for multi-step workflows
   const setupStepLoop = new sfn.Pass(scope, 'SetupStepLoop', {
     parameters: {
@@ -182,6 +194,7 @@ export function createJobProcessorStateMachine(
       'total_steps.$': '$.steps_length',
       'has_template.$': '$.has_template',
       'template_id.$': '$.template_id',
+      'execution_plan.$': '$.executionPlan.Payload',
     },
     resultPath: '$',
   }).next(processStep).next(checkStepResult);
@@ -233,7 +246,7 @@ export function createJobProcessorStateMachine(
       ),
       processLegacyJob
     )
-    .otherwise(setupStepLoop);
+    .otherwise(resolveDependencies.next(setupStepLoop));
 
   // Set has_template to true when template exists
   const setHasTemplateTrue = new sfn.Pass(scope, 'SetHasTemplateTrue', {
