@@ -28,7 +28,8 @@ RUN ln -sf /usr/bin/python3.11 /usr/bin/python && \
     python3 -m pip install --upgrade pip
 
 # Install Lambda Runtime Interface Client (RIC)
-RUN pip install awslambdaric
+RUN python3 -m pip install --no-cache-dir awslambdaric && \
+    python3 -c "import awslambdaric; print('awslambdaric installed successfully')"
 
 # Install system dependencies for Playwright
 RUN apt-get update && \
