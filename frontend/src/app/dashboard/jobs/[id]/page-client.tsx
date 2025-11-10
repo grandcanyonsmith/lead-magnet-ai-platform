@@ -112,6 +112,7 @@ export default function JobDetailClient() {
     }
 
     const executionStepsMap = new Map<number, any>()
+    const mergedStepsMap = new Map<number, any>()
     
     // Create a map of execution steps by step_order
     executionSteps.forEach((execStep: any) => {
@@ -121,32 +122,43 @@ export default function JobDetailClient() {
       }
     })
 
-    // Merge workflow steps with execution steps
-    const mergedSteps = workflow.steps.map((workflowStep: any, index: number) => {
+    // First, add ALL execution steps to the merged map
+    executionSteps.forEach((execStep: any) => {
+      const order = execStep.step_order
+      if (order !== undefined) {
+        mergedStepsMap.set(order, {
+          ...execStep,
+          _status: execStep.output !== null && execStep.output !== undefined && execStep.output !== '' 
+            ? 'completed' as const 
+            : 'pending' as const
+        })
+      }
+    })
+
+    // Then, enrich with workflow step metadata where available
+    workflow.steps.forEach((workflowStep: any, index: number) => {
       // Workflow steps are 0-indexed, execution steps for workflow steps are 1-indexed
       const executionStepOrder = index + 1
-      const executionStep = executionStepsMap.get(executionStepOrder)
+      const existingStep = mergedStepsMap.get(executionStepOrder)
       
-      if (executionStep) {
-        // Step has been executed - merge workflow step info with execution step data
-        return {
-          ...executionStep,
+      if (existingStep) {
+        // Step has been executed - enrich with workflow step info
+        mergedStepsMap.set(executionStepOrder, {
+          ...existingStep,
           // Override with workflow step info for consistency
-          step_name: workflowStep.step_name || executionStep.step_name,
-          model: workflowStep.model || executionStep.model,
-          tools: workflowStep.tools || executionStep.input?.tools,
-          tool_choice: workflowStep.tool_choice || executionStep.input?.tool_choice,
-          step_order: executionStepOrder,
-          _status: 'completed' as const,
-        }
+          step_name: workflowStep.step_name || existingStep.step_name,
+          model: workflowStep.model || existingStep.model,
+          tools: workflowStep.tools || existingStep.input?.tools || existingStep.tools,
+          tool_choice: workflowStep.tool_choice || existingStep.input?.tool_choice || existingStep.tool_choice,
+        })
       } else {
         // Step hasn't been executed yet - create pending step
         const isJobProcessing = job.status === 'processing'
-        // Count workflow steps that have been executed (excluding form submission step_order 0)
-        const executedWorkflowSteps = executionSteps.filter((s: any) => s.step_order > 0 && s.step_order <= workflow.steps.length).length
-        const isCurrentStep = isJobProcessing && index === executedWorkflowSteps
+        // Count how many steps have been executed
+        const executedStepsCount = executionSteps.filter((s: any) => s.step_order > 0).length
+        const isCurrentStep = isJobProcessing && executionStepOrder === executedStepsCount + 1
         
-        return {
+        mergedStepsMap.set(executionStepOrder, {
           step_name: workflowStep.step_name,
           step_order: executionStepOrder,
           step_type: 'workflow_step',
@@ -160,41 +172,12 @@ export default function JobDetailClient() {
           },
           output: null,
           _status: isCurrentStep ? 'in_progress' as const : 'pending' as const,
-        }
+        })
       }
     })
 
-    // Add form submission step if it exists (step_order 0)
-    const formSubmissionStep = executionStepsMap.get(0)
-    if (formSubmissionStep) {
-      mergedSteps.unshift({
-        ...formSubmissionStep,
-        _status: 'completed' as const,
-      })
-    }
-
-    // Add any additional execution steps that aren't workflow steps (HTML generation, final output, etc.)
-    // These typically have step_order > workflow.steps.length
-    const maxWorkflowStepOrder = workflow.steps.length
-    executionSteps.forEach((execStep: any) => {
-      const order = execStep.step_order
-      if (order !== undefined && order > maxWorkflowStepOrder) {
-        // This is an additional step (HTML generation, final output, etc.)
-        // Check if it's already in mergedSteps
-        const exists = mergedSteps.some((s: any) => s.step_order === order)
-        if (!exists) {
-          mergedSteps.push({
-            ...execStep,
-            _status: execStep.output !== null && execStep.output !== undefined && execStep.output !== '' 
-              ? 'completed' as const 
-              : 'pending' as const
-          })
-        }
-      }
-    })
-
-    // Sort by step_order to ensure correct order
-    return mergedSteps.sort((a: any, b: any) => (a.step_order || 0) - (b.step_order || 0))
+    // Convert map to array and sort by step_order
+    return Array.from(mergedStepsMap.values()).sort((a: any, b: any) => (a.step_order || 0) - (b.step_order || 0))
   }
 
   if (loading) {

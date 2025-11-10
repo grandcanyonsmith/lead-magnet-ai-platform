@@ -9,13 +9,14 @@ import { formatStepInput, formatStepOutput } from '@/utils/jobFormatting'
 import { FiChevronDown, FiChevronUp } from 'react-icons/fi'
 
 interface StepContentProps {
-  formatted: { content: any, type: 'json' | 'markdown' | 'text', structure?: 'ai_input' }
+  formatted: { content: any, type: 'json' | 'markdown' | 'text' | 'html', structure?: 'ai_input' }
 }
 
 const MAX_PREVIEW_LENGTH = 1000
 
 export function StepContent({ formatted }: StepContentProps) {
   const [isExpanded, setIsExpanded] = useState(false)
+  const [showRendered, setShowRendered] = useState(true)
   
   const getContentString = (): string => {
     if (formatted.type === 'json') {
@@ -143,6 +144,90 @@ export function StepContent({ formatted }: StepContentProps) {
             {displayContent}
           </SyntaxHighlighter>
         </div>
+      </div>
+    )
+  }
+  
+  if (formatted.type === 'html') {
+    const htmlContent = typeof formatted.content === 'string' 
+      ? formatted.content 
+      : JSON.stringify(formatted.content, null, 2)
+    
+    return (
+      <div className="space-y-3">
+        {/* Toggle between rendered and source */}
+        <div className="flex items-center justify-between">
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowRendered(true)}
+              className={`px-3 py-1.5 text-xs font-medium rounded ${
+                showRendered 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Rendered
+            </button>
+            <button
+              onClick={() => setShowRendered(false)}
+              className={`px-3 py-1.5 text-xs font-medium rounded ${
+                !showRendered 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Source
+            </button>
+          </div>
+          {!showRendered && htmlContent.length > MAX_PREVIEW_LENGTH && (
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+            >
+              {isExpanded ? (
+                <>
+                  <FiChevronUp className="w-3 h-3" />
+                  Show Less
+                </>
+              ) : (
+                <>
+                  <FiChevronDown className="w-3 h-3" />
+                  Show More ({htmlContent.length.toLocaleString()} chars)
+                </>
+              )}
+            </button>
+          )}
+        </div>
+
+        {showRendered ? (
+          <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+            <iframe
+              srcDoc={htmlContent}
+              className="w-full min-h-[600px] border-0"
+              sandbox=""
+              title="HTML Preview"
+            />
+          </div>
+        ) : (
+          <div className="rounded-lg overflow-hidden border border-gray-200">
+            <SyntaxHighlighter
+              language="html"
+              style={vscDarkPlus}
+              customStyle={{
+                margin: 0,
+                padding: '12px',
+                fontSize: '12px',
+                maxHeight: isExpanded ? 'none' : '400px',
+                overflow: 'auto',
+              }}
+              showLineNumbers={htmlContent.length > 500}
+            >
+              {isExpanded || htmlContent.length <= MAX_PREVIEW_LENGTH 
+                ? htmlContent 
+                : htmlContent.substring(0, MAX_PREVIEW_LENGTH) + '...'}
+            </SyntaxHighlighter>
+          </div>
+        )}
       </div>
     )
   }
