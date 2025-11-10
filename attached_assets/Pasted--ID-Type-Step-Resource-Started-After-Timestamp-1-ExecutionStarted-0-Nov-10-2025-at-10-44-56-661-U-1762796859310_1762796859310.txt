@@ -1,0 +1,2930 @@
+
+ID
+Type
+Step
+Resource
+Started After
+Timestamp
+
+1
+ExecutionStarted
+0
+Nov 10, 2025 at 10:44:56.661 (UTC-07:00)
+
+2
+TaskStateEntered
+UpdateJobStatus
+00:00:00.035
+Nov 10, 2025 at 10:44:56.696 (UTC-07:00)
+
+3
+TaskScheduled
+UpdateJobStatus
+dynamodb:updateItem
+00:00:00.035
+Nov 10, 2025 at 10:44:56.696 (UTC-07:00)
+
+4
+TaskStarted
+UpdateJobStatus
+dynamodb:updateItem
+00:00:00.082
+Nov 10, 2025 at 10:44:56.743 (UTC-07:00)
+
+5
+TaskSucceeded
+UpdateJobStatus
+dynamodb:updateItem
+00:00:00.168
+Nov 10, 2025 at 10:44:56.829 (UTC-07:00)
+
+6
+TaskStateExited
+UpdateJobStatus
+00:00:00.190
+Nov 10, 2025 at 10:44:56.851 (UTC-07:00)
+
+7
+TaskStateEntered
+InitializeSteps
+00:00:00.190
+Nov 10, 2025 at 10:44:56.851 (UTC-07:00)
+
+8
+TaskScheduled
+InitializeSteps
+dynamodb:getItem
+00:00:00.190
+Nov 10, 2025 at 10:44:56.851 (UTC-07:00)
+
+9
+TaskStarted
+InitializeSteps
+dynamodb:getItem
+00:00:00.234
+Nov 10, 2025 at 10:44:56.895 (UTC-07:00)
+
+10
+TaskSucceeded
+InitializeSteps
+dynamodb:getItem
+00:00:00.315
+Nov 10, 2025 at 10:44:56.976 (UTC-07:00)
+
+11
+TaskStateExited
+InitializeSteps
+00:00:00.336
+Nov 10, 2025 at 10:44:56.997 (UTC-07:00)
+
+12
+ChoiceStateEntered
+ComputeStepsLength
+00:00:00.336
+Nov 10, 2025 at 10:44:56.997 (UTC-07:00)
+
+13
+ChoiceStateExited
+ComputeStepsLength
+00:00:00.336
+Nov 10, 2025 at 10:44:56.997 (UTC-07:00)
+
+14
+PassStateEntered
+ComputeStepsLengthWithSteps
+00:00:00.336
+Nov 10, 2025 at 10:44:56.997 (UTC-07:00)
+
+15
+PassStateExited
+ComputeStepsLengthWithSteps
+00:00:00.336
+Nov 10, 2025 at 10:44:56.997 (UTC-07:00)
+
+16
+ChoiceStateEntered
+CheckTemplateExists
+00:00:00.336
+Nov 10, 2025 at 10:44:56.997 (UTC-07:00)
+
+17
+ChoiceStateExited
+CheckTemplateExists
+00:00:00.336
+Nov 10, 2025 at 10:44:56.997 (UTC-07:00)
+
+18
+PassStateEntered
+SetHasTemplateTrue
+00:00:00.336
+Nov 10, 2025 at 10:44:56.997 (UTC-07:00)
+
+19
+PassStateExited
+SetHasTemplateTrue
+00:00:00.336
+Nov 10, 2025 at 10:44:56.997 (UTC-07:00)
+
+20
+ChoiceStateEntered
+CheckWorkflowType
+00:00:00.336
+Nov 10, 2025 at 10:44:56.997 (UTC-07:00)
+
+21
+ChoiceStateExited
+CheckWorkflowType
+00:00:00.336
+Nov 10, 2025 at 10:44:56.997 (UTC-07:00)
+Formatted
+
+1
+{
+2
+  "name": "CheckWorkflowType",
+3
+  "output": {
+4
+    "has_template": true,
+5
+    "tenant_id": "84c8e438-0061-70f2-2ce0-7cb44989a329",
+6
+    "submission_id": "sub_01K9QBVS4JQBV4JZA3EG8AD6H6",
+7
+    "workflow_id": "wf_0019a642410349da68r06kf",
+8
+    "steps_length": 12,
+9
+    "workflowData": {
+10
+      "Item": {
+11
+        "tenant_id": {
+12
+          "S": "84c8e438-0061-70f2-2ce0-7cb44989a329"
+13
+        },
+14
+        "ai_model": {
+15
+          "S": "o3-deep-research"
+16
+        },
+17
+        "html_enabled": {
+18
+          "BOOL": true
+19
+        },
+20
+        "workflow_id": {
+21
+          "S": "wf_0019a642410349da68r06kf"
+22
+        },
+23
+        "ai_instructions": {
+24
+          "S": "Using the submission fields [name], [favorite_youtuber], [phone], [email], and [offer], produce a normalized brief. Tasks: (1) Derive [company_name] from [email] domain when possible; (2) Parse [offer] into product_category, product_description, target_audience, business_model, pricing_if_provided; (3) Identify assumed geo/market scope and stage (idea, MVP, pre-revenue, scaling) if implied; (4) List 5–8 clarifying questions to remove ambiguity; (5) Define success_criteria (business outcomes, time horizon). Output: JSON with keys {company_name, contact: {name, email, phone}, favorite_youtuber, offer_raw, parsed_offer: {product_category, product_description, target_audience, business_model, pricing_if_provided}, assumed_scope, stage_guess, clarifying_questions[], success_criteria[]}."
+25
+        },
+26
+        "template_version": {
+27
+          "N": "0"
+28
+        },
+29
+        "rewrite_model": {
+30
+          "S": "gpt-5"
+31
+        },
+32
+        "workflow_name": {
+33
+          "S": "ICP Blueprint"
+34
+        },
+35
+        "form_id": {
+36
+          "S": "form_0019a64241082pg1jbj8q0g"
+37
+        },
+38
+        "created_at": {
+39
+          "S": "2025-11-08T15:44:36.404620"
+40
+        },
+41
+        "workflow_description": {
+42
+          "S": "Turn a business idea into a complete Ideal Customer Profile and go-to-market plan. Personalizes outputs to [favorite_youtuber]’s style and aligns messaging to sell [offer] effectively."
+43
+        },
+44
+        "steps": {
+45
+          "L": [
+46
+            {
+47
+              "M": {
+48
+                "step_description": {
+49
+                  "S": "Parse form fields and derive a clean brief for ICP work."
+50
+                },
+51
+                "instructions": {
+52
+                  "S": "Using the submission fields [name], [favorite_youtuber], [phone], [email], and [offer], produce a normalized brief. Tasks: (1) Derive [company_name] from [email] domain when possible; (2) Parse [offer] into product_category, product_description, target_audience, business_model, pricing_if_provided; (3) Identify assumed geo/market scope and stage (idea, MVP, pre-revenue, scaling) if implied; (4) List 5–8 clarifying questions to remove ambiguity; (5) Define success_criteria (business outcomes, time horizon). Output: JSON with keys {company_name, contact: {name, email, phone}, favorite_youtuber, offer_raw, parsed_offer: {product_category, product_description, target_audience, business_model, pricing_if_provided}, assumed_scope, stage_guess, clarifying_questions[], success_criteria[]}."
+53
+                },
+54
+                "step_order": {
+55
+                  "N": "0"
+56
+                },
+57
+                "step_name": {
+58
+                  "S": "Intake Normalization"
+59
+                },
+60
+                "tool_choice": {
+61
+                  "S": "none"
+62
+                },
+63
+                "model": {
+64
+                  "S": "gpt-4o"
+65
+                },
+66
+                "tools": {
+67
+                  "L": []
+68
+                }
+69
+              }
+70
+            },
+71
+            {
+72
+              "M": {
+73
+                "step_description": {
+74
+                  "S": "Research the style and recent content patterns for [favorite_youtuber]."
+75
+                },
+76
+                "instructions": {
+77
+                  "S": "Identify the canonical YouTube channel for [favorite_youtuber]. Collect: channel URL, handle, approximate subscribers, and latest 5 video titles with publish dates. Extract stylistic cues: hook patterns, title formulas, thumbnail traits, pacing/editing, CTA patterns. Cite sources with clickable links. Output: Structured markdown with sections: Channel, Recent Videos (list), Style Cues (bullets), CTA Patterns (bullets), Sources."
+78
+                },
+79
+                "depends_on": {
+80
+                  "L": [
+81
+                    {
+82
+                      "N": "0"
+83
+                    }
+84
+                  ]
+85
+                },
+86
+                "step_order": {
+87
+                  "N": "1"
+88
+                },
+89
+                "step_name": {
+90
+                  "S": "Inspiration Channel Snapshot"
+91
+                },
+92
+                "tool_choice": {
+93
+                  "S": "auto"
+94
+                },
+95
+                "model": {
+96
+                  "S": "gpt-4o"
+97
+                },
+98
+                "tools": {
+99
+                  "L": [
+100
+                    {
+101
+                      "S": "web_search_preview"
+102
+                    }
+103
+                  ]
+104
+                }
+105
+              }
+106
+            },
+107
+            {
+108
+              "M": {
+109
+                "step_description": {
+110
+                  "S": "Map the target audience, problems, and competitive landscape for [offer]."
+111
+                },
+112
+                "instructions": {
+113
+                  "S": "Based on [offer] and the parsed target_audience from Step 0, research: (1) Top 10 pains and jobs-to-be-done (JTBD) for this audience; (2) Status quo alternatives and direct competitors (3–7), including brief positioning notes; (3) Channels where this audience congregates (forums, communities, podcasts, newsletters); (4) Common objections and triggers to buy; (5) Compliance or platform constraints relevant to selling [offer]. Include recent statistics and examples where available. Cite all sources with clickable links. Output: Markdown with headings: JTBD & Pains, Alternatives & Competitors, Communities & Channels, Objections & Triggers, Notable Stats, Sources."
+114
+                },
+115
+                "depends_on": {
+116
+                  "L": [
+117
+                    {
+118
+                      "N": "0"
+119
+                    },
+120
+                    {
+121
+                      "N": "1"
+122
+                    }
+123
+                  ]
+124
+                },
+125
+                "step_order": {
+126
+                  "N": "2"
+127
+                },
+128
+                "step_name": {
+129
+                  "S": "Audience & Market Research"
+130
+                },
+131
+                "tool_choice": {
+132
+                  "S": "auto"
+133
+                },
+134
+                "model": {
+135
+                  "S": "gpt-4o"
+136
+                },
+137
+                "tools": {
+138
+                  "L": [
+139
+                    {
+140
+                      "S": "web_search_preview"
+141
+                    }
+142
+                  ]
+143
+                }
+144
+              }
+145
+            },
+146
+            {
+147
+              "M": {
+148
+                "step_description": {
+149
+                  "S": "Create detailed personas and buying committee roles."
+150
+                },
+151
+                "instructions": {
+152
+                  "S": "Synthesize insights from Steps 0–2 into 2–3 personas: Primary Buyer, Secondary Influencer, and Anti-Buyer (who not to target). For each, provide: demographics/firmographics (if applicable), psychographics, JTBD, success criteria, buying triggers, top objections, decision criteria, evaluation checklist, favored content formats, message do’s/don’ts. Include a one-line positioning statement for each persona. Output: Well-structured markdown."
+153
+                },
+154
+                "depends_on": {
+155
+                  "L": [
+156
+                    {
+157
+                      "N": "0"
+158
+                    },
+159
+                    {
+160
+                      "N": "1"
+161
+                    },
+162
+                    {
+163
+                      "N": "2"
+164
+                    }
+165
+                  ]
+166
+                },
+167
+                "step_order": {
+168
+                  "N": "3"
+169
+                },
+170
+                "step_name": {
+171
+                  "S": "ICP Synthesis"
+172
+                },
+173
+                "tool_choice": {
+174
+                  "S": "none"
+175
+                },
+176
+                "model": {
+177
+                  "S": "gpt-4o"
+178
+                },
+179
+                "tools": {
+180
+                  "L": []
+181
+                }
+182
+              }
+183
+            },
+184
+            {
+185
+              "M": {
+186
+                "step_description": {
+187
+                  "S": "Estimate TAM/SAM/SOM and model basic SaaS economics."
+188
+                },
+189
+                "instructions": {
+190
+                  "S": "Using Step 0 and Step 2 inputs, estimate TAM/SAM/SOM with assumptions clearly stated. Build a simple unit economics model for [offer]: ARPU scenarios (monthly vs annual), gross margin assumptions, CAC ranges, payback period, churn and retention scenarios (good/base/poor). Produce 2 charts: (1) TAM/SAM/SOM bar chart, (2) LTV sensitivity by churn. If data is missing, create reasonable ranges and document them. Output: Markdown summary plus generated charts as images. Return the underlying data tables as CSV snippets."
+191
+                },
+192
+                "depends_on": {
+193
+                  "L": [
+194
+                    {
+195
+                      "N": "0"
+196
+                    },
+197
+                    {
+198
+                      "N": "1"
+199
+                    },
+200
+                    {
+201
+                      "N": "2"
+202
+                    },
+203
+                    {
+204
+                      "N": "3"
+205
+                    }
+206
+                  ]
+207
+                },
+208
+                "step_order": {
+209
+                  "N": "4"
+210
+                },
+211
+                "step_name": {
+212
+                  "S": "Market Sizing & Unit Economics"
+213
+                },
+214
+                "tool_choice": {
+215
+                  "S": "required"
+216
+                },
+217
+                "model": {
+218
+                  "S": "gpt-4.1"
+219
+                },
+220
+                "tools": {
+221
+                  "L": [
+222
+                    {
+223
+                      "S": "code_interpreter"
+224
+                    }
+225
+                  ]
+226
+                }
+227
+              }
+228
+            },
+229
+            {
+230
+              "M": {
+231
+                "step_description": {
+232
+                  "S": "Craft positioning, value props, and pricing ladder aligned to ICP."
+233
+                },
+234
+                "instructions": {
+235
+                  "S": "Create messaging aligned with Step 3 personas and Step 1 style cues. Deliver: (1) Core positioning statement (25–35 words); (2) 3 value proposition pillars with proof points; (3) A pricing ladder (Core/Pro/Elite) with feature differentiation, risk reversal, and an annual plan incentive; (4) 3 'Power Offer' variants (result + timeframe + guarantee) that remain compliant and realistic; (5) Objection-handling snippets for top 7 objections; (6) 10 headline hooks modeled on the inspiration channel’s style without copying. Output: Markdown with clear subheadings."
+236
+                },
+237
+                "depends_on": {
+238
+                  "L": [
+239
+                    {
+240
+                      "N": "0"
+241
+                    },
+242
+                    {
+243
+                      "N": "1"
+244
+                    },
+245
+                    {
+246
+                      "N": "2"
+247
+                    },
+248
+                    {
+249
+                      "N": "3"
+250
+                    },
+251
+                    {
+252
+                      "N": "4"
+253
+                    }
+254
+                  ]
+255
+                },
+256
+                "step_order": {
+257
+                  "N": "5"
+258
+                },
+259
+                "step_name": {
+260
+                  "S": "Messaging & Offers"
+261
+                },
+262
+                "tool_choice": {
+263
+                  "S": "none"
+264
+                },
+265
+                "model": {
+266
+                  "S": "gpt-4o"
+267
+                },
+268
+                "tools": {
+269
+                  "L": []
+270
+                }
+271
+              }
+272
+            },
+273
+            {
+274
+              "M": {
+275
+                "step_description": {
+276
+                  "S": "Generate a discoverability plan with SEO/YouTube/social hooks."
+277
+                },
+278
+                "instructions": {
+279
+                  "S": "Produce: (1) 20 primary problem/solution keywords and 40 long-tail variants relevant to [offer]; (2) 10 YouTube titles + 10 shorts hooks inspired by Step 1 style cues; (3) A 30-day content calendar (2 long-form/week, 8–10 shorts/week) with goals, CTAs, and repurposing notes; (4) Community engagement plan (forums, groups, collabs). If reliable search volume sources are found, include approximate volumes with citations; otherwise, label volumes as directional. Output: Markdown with tables for keywords and calendar. Cite any data sources."
+280
+                },
+281
+                "depends_on": {
+282
+                  "L": [
+283
+                    {
+284
+                      "N": "0"
+285
+                    },
+286
+                    {
+287
+                      "N": "1"
+288
+                    },
+289
+                    {
+290
+                      "N": "2"
+291
+                    },
+292
+                    {
+293
+                      "N": "3"
+294
+                    },
+295
+                    {
+296
+                      "N": "4"
+297
+                    },
+298
+                    {
+299
+                      "N": "5"
+300
+                    }
+301
+                  ]
+302
+                },
+303
+                "step_order": {
+304
+                  "N": "6"
+305
+                },
+306
+                "step_name": {
+307
+                  "S": "Keyword & Channel Plan"
+308
+                },
+309
+                "tool_choice": {
+310
+                  "S": "auto"
+311
+                },
+312
+                "model": {
+313
+                  "S": "gpt-4.1"
+314
+                },
+315
+                "tools": {
+316
+                  "L": [
+317
+                    {
+318
+                      "S": "web_search_preview"
+319
+                    }
+320
+                  ]
+321
+                }
+322
+              }
+323
+            },
+324
+            {
+325
+              "M": {
+326
+                "step_description": {
+327
+                  "S": "Create deliverable documents the audience can download and use."
+328
+                },
+329
+                "instructions": {
+330
+                  "S": "Produce three ready-to-use documents tailored to [offer] and the Primary Buyer persona from Step 3: (1) MRR Worksheet (inputs: price, conversion rate, churn; outputs: MRR forecast, break-even, annual scenario); (2) Continuity Planner (weekly deliverables, calendar templates, capacity calculator, community prompts); (3) 7-Day Onboarding Template (checklists, day-0 email, usage triggers, upgrade prompts). Output each as separate, cleanly formatted markdown sections with headings, numbered steps, and tables where useful."
+331
+                },
+332
+                "depends_on": {
+333
+                  "L": [
+334
+                    {
+335
+                      "N": "0"
+336
+                    },
+337
+                    {
+338
+                      "N": "1"
+339
+                    },
+340
+                    {
+341
+                      "N": "2"
+342
+                    },
+343
+                    {
+344
+                      "N": "3"
+345
+                    },
+346
+                    {
+347
+                      "N": "4"
+348
+                    },
+349
+                    {
+350
+                      "N": "5"
+351
+                    },
+352
+                    {
+353
+                      "N": "6"
+354
+                    }
+355
+                  ]
+356
+                },
+357
+                "step_order": {
+358
+                  "N": "7"
+359
+                },
+360
+                "step_name": {
+361
+                  "S": "Lead Magnet Docs"
+362
+                },
+363
+                "tool_choice": {
+364
+                  "S": "none"
+365
+                },
+366
+                "model": {
+367
+                  "S": "gpt-4o"
+368
+                },
+369
+                "tools": {
+370
+                  "L": []
+371
+                }
+372
+              }
+373
+            },
+374
+            {
+375
+              "M": {
+376
+                "step_description": {
+377
+                  "S": "Create brand-safe visuals: ICP infographic, journey map, and thumbnails."
+378
+                },
+379
+                "instructions": {
+380
+                  "S": "Generate prompts and request images for: (1) ICP Infographic summarizing Primary/Secondary personas (no logos, no celebrity likeness); (2) Customer Journey Map from awareness to retention, including key touchpoints and metrics; (3) Three YouTube thumbnails aligned to Step 1 style cues with minimal text and high contrast. For all images: 1280x720 for thumbnails; 1920x1080 for infographics; PNG; sRGB; include alt text. Use generic UI where applicable and avoid trademarks. Output: A list of images with titles, prompts, and alt text."
+381
+                },
+382
+                "depends_on": {
+383
+                  "L": [
+384
+                    {
+385
+                      "N": "0"
+386
+                    },
+387
+                    {
+388
+                      "N": "1"
+389
+                    },
+390
+                    {
+391
+                      "N": "2"
+392
+                    },
+393
+                    {
+394
+                      "N": "3"
+395
+                    },
+396
+                    {
+397
+                      "N": "4"
+398
+                    },
+399
+                    {
+400
+                      "N": "5"
+401
+                    },
+402
+                    {
+403
+                      "N": "6"
+404
+                    },
+405
+                    {
+406
+                      "N": "7"
+407
+                    }
+408
+                  ]
+409
+                },
+410
+                "step_order": {
+411
+                  "N": "8"
+412
+                },
+413
+                "step_name": {
+414
+                  "S": "Visual Asset Generation"
+415
+                },
+416
+                "tool_choice": {
+417
+                  "S": "required"
+418
+                },
+419
+                "model": {
+420
+                  "S": "gpt-4o"
+421
+                },
+422
+                "tools": {
+423
+                  "L": [
+424
+                    {
+425
+                      "S": "image_generation"
+426
+                    }
+427
+                  ]
+428
+                }
+429
+              }
+430
+            },
+431
+            {
+432
+              "M": {
+433
+                "step_description": {
+434
+                  "S": "Compile a polished, shareable HTML report."
+435
+                },
+436
+                "instructions": {
+437
+                  "S": "Assemble Steps 1–8 into a single, mobile-responsive HTML5 document. Include: cover, table of contents, executive summary, ICP personas, market sizing charts (embed images from Step 4), messaging/offer section, keyword/channel plan tables, the three lead magnet docs, and a visual assets gallery (images from Step 8). Add a sticky CTA bar with three keyword prompts: LEVER (MRR worksheet), RECURRING (continuity planner), ONBOARD (7-day template). Ensure accessible semantics, alt text, and basic inline CSS. Output: Complete HTML only."
+438
+                },
+439
+                "depends_on": {
+440
+                  "L": [
+441
+                    {
+442
+                      "N": "0"
+443
+                    },
+444
+                    {
+445
+                      "N": "1"
+446
+                    },
+447
+                    {
+448
+                      "N": "2"
+449
+                    },
+450
+                    {
+451
+                      "N": "3"
+452
+                    },
+453
+                    {
+454
+                      "N": "4"
+455
+                    },
+456
+                    {
+457
+                      "N": "5"
+458
+                    },
+459
+                    {
+460
+                      "N": "6"
+461
+                    },
+462
+                    {
+463
+                      "N": "7"
+464
+                    },
+465
+                    {
+466
+                      "N": "8"
+467
+                    }
+468
+                  ]
+469
+                },
+470
+                "step_order": {
+471
+                  "N": "9"
+472
+                },
+473
+                "step_name": {
+474
+                  "S": "HTML Report Assembly"
+475
+                },
+476
+                "tool_choice": {
+477
+                  "S": "none"
+478
+                },
+479
+                "model": {
+480
+                  "S": "gpt-4o"
+481
+                },
+482
+                "tools": {
+483
+                  "L": []
+484
+                }
+485
+              }
+486
+            },
+487
+            {
+488
+              "M": {
+489
+                "step_description": {
+490
+                  "S": "Produce copy assets to drive traffic and conversions."
+491
+                },
+492
+                "instructions": {
+493
+                  "S": "Create: (1) 5-email nurture sequence delivering each lead magnet and inviting a no-pitch walkthrough of [offer]; (2) 3 LinkedIn posts, 3 X posts, and 2 short DM scripts tailored to the Primary Buyer persona; (3) A landing page copy set (hero, subhead, social proof placeholders, offer stack, FAQ, risk reversal, CTA). Personalize with [name], [company_name], and [email] where appropriate. Output: Markdown with clear sections and copy blocks ready to paste."
+494
+                },
+495
+                "depends_on": {
+496
+                  "L": [
+497
+                    {
+498
+                      "N": "0"
+499
+                    },
+500
+                    {
+501
+                      "N": "1"
+502
+                    },
+503
+                    {
+504
+                      "N": "2"
+505
+                    },
+506
+                    {
+507
+                      "N": "3"
+508
+                    },
+509
+                    {
+510
+                      "N": "4"
+511
+                    },
+512
+                    {
+513
+                      "N": "5"
+514
+                    },
+515
+                    {
+516
+                      "N": "6"
+517
+                    },
+518
+                    {
+519
+                      "N": "7"
+520
+                    },
+521
+                    {
+522
+                      "N": "8"
+523
+                    },
+524
+                    {
+525
+                      "N": "9"
+526
+                    }
+527
+                  ]
+528
+                },
+529
+                "step_order": {
+530
+                  "N": "10"
+531
+                },
+532
+                "step_name": {
+533
+                  "S": "Outreach Kit"
+534
+                },
+535
+                "tool_choice": {
+536
+                  "S": "none"
+537
+                },
+538
+                "model": {
+539
+                  "S": "gpt-4o"
+540
+                },
+541
+                "tools": {
+542
+                  "L": []
+543
+                }
+544
+              }
+545
+            },
+546
+            {
+547
+              "M": {
+548
+                "step_description": {
+549
+                  "S": "Quality check, identify missing info, and summarize next actions."
+550
+                },
+551
+                "instructions": {
+552
+                  "S": "Run a checklist: (1) Consistency across personas, messaging, pricing; (2) Source links valid and labeled; (3) Claims realistic and compliant; (4) CTAs consistent with Step 9; (5) No proprietary logos or celebrity likeness in images. Produce: (a) a list of unresolved assumptions and questions for the client; (b) a 10-step implementation checklist with owners/timeframes; (c) a compact JSON summary of key ICP fields for API use: {primary_buyer:{title,company_size,geo,pains[],triggers[],objections[]}, messaging:{positioning,offers[]}, economics:{arpu,ltv,churn_scenarios}, assets:{html_report,lead_magnets[],images[]}}. Output: Markdown for narrative plus the final JSON block."
+553
+                },
+554
+                "depends_on": {
+555
+                  "L": [
+556
+                    {
+557
+                      "N": "0"
+558
+                    },
+559
+                    {
+560
+                      "N": "1"
+561
+                    },
+562
+                    {
+563
+                      "N": "2"
+564
+                    },
+565
+                    {
+566
+                      "N": "3"
+567
+                    },
+568
+                    {
+569
+                      "N": "4"
+570
+                    },
+571
+                    {
+572
+                      "N": "5"
+573
+                    },
+574
+                    {
+575
+                      "N": "6"
+576
+                    },
+577
+                    {
+578
+                      "N": "7"
+579
+                    },
+580
+                    {
+581
+                      "N": "8"
+582
+                    },
+583
+                    {
+584
+                      "N": "9"
+585
+                    },
+586
+                    {
+587
+                      "N": "10"
+588
+                    }
+589
+                  ]
+590
+                },
+591
+                "step_order": {
+592
+                  "N": "11"
+593
+                },
+594
+                "step_name": {
+595
+                  "S": "QA, Gaps, and Handoff"
+596
+                },
+597
+                "tool_choice": {
+598
+                  "S": "none"
+599
+                },
+600
+                "model": {
+601
+                  "S": "gpt-4-turbo"
+602
+                },
+603
+                "tools": {
+604
+                  "L": []
+605
+                }
+606
+              }
+607
+            }
+608
+          ]
+609
+        },
+610
+        "research_enabled": {
+611
+          "BOOL": true
+612
+        },
+613
+        "research_instructions": {
+614
+          "S": "Using the submission fields [name], [favorite_youtuber], [phone], [email], and [offer], produce a normalized brief. Tasks: (1) Derive [company_name] from [email] domain when possible; (2) Parse [offer] into product_category, product_description, target_audience, business_model, pricing_if_provided; (3) Identify assumed geo/market scope and stage (idea, MVP, pre-revenue, scaling) if implied; (4) List 5–8 clarifying questions to remove ambiguity; (5) Define success_criteria (business outcomes, time horizon). Output: JSON with keys {company_name, contact: {name, email, phone}, favorite_youtuber, offer_raw, parsed_offer: {product_category, product_description, target_audience, business_model, pricing_if_provided}, assumed_scope, stage_guess, clarifying_questions[], success_criteria[]}."
+615
+        },
+616
+        "updated_at": {
+617
+          "S": "2025-11-10T17:03:21.488Z"
+618
+        },
+619
+        "template_id": {
+620
+          "S": "tmpl_0019a64240f80hoslo74ewq"
+621
+        },
+622
+        "status": {
+623
+          "S": "draft"
+624
+        }
+625
+      },
+626
+      "SdkHttpMetadata": {
+627
+        "AllHttpHeaders": {
+628
+          "Server": [
+629
+            "Server"
+630
+          ],
+631
+          "x-amzn-requestid": [
+632
+            "PR4MU04LA1K77DAB2A58D9CHHJVV4KQNSO5AEMVJF66Q9ASUAAJG"
+633
+          ],
+634
+          "Connection": [
+635
+            "keep-alive"
+636
+          ],
+637
+          "x-amz-crc32": [
+638
+            "2765927759"
+639
+          ],
+640
+          "Content-Length": [
+641
+            "13178"
+642
+          ],
+643
+          "Date": [
+644
+            "Mon, 10 Nov 2025 17:44:56 GMT"
+645
+          ],
+646
+          "Content-Type": [
+647
+            "application/x-amz-json-1.0"
+648
+          ]
+649
+        },
+650
+        "HttpHeaders": {
+651
+          "Connection": "keep-alive",
+652
+          "Content-Length": "13178",
+653
+          "Content-Type": "application/x-amz-json-1.0",
+654
+          "Date": "Mon, 10 Nov 2025 17:44:56 GMT",
+655
+          "Server": "Server",
+656
+          "x-amz-crc32": "2765927759",
+657
+          "x-amzn-requestid": "PR4MU04LA1K77DAB2A58D9CHHJVV4KQNSO5AEMVJF66Q9ASUAAJG"
+658
+        },
+659
+        "HttpStatusCode": 200
+660
+      },
+661
+      "SdkResponseMetadata": {
+662
+        "RequestId": "PR4MU04LA1K77DAB2A58D9CHHJVV4KQNSO5AEMVJF66Q9ASUAAJG"
+663
+      }
+664
+    },
+665
+    "job_id": "job_01K9QBVS5X38CZ4ZYV3MTN0N9Q",
+666
+    "template_id": "tmpl_0019a64240f80hoslo74ewq"
+667
+  },
+668
+  "outputDetails": {
+669
+    "truncated": false
+670
+  }
+671
+}
+
+22
+TaskStateEntered
+ResolveDependencies
+00:00:00.336
+Nov 10, 2025 at 10:44:56.997 (UTC-07:00)
+Formatted
+
+1
+{
+2
+  "input": {
+3
+    "has_template": true,
+4
+    "tenant_id": "84c8e438-0061-70f2-2ce0-7cb44989a329",
+5
+    "submission_id": "sub_01K9QBVS4JQBV4JZA3EG8AD6H6",
+6
+    "workflow_id": "wf_0019a642410349da68r06kf",
+7
+    "steps_length": 12,
+8
+    "workflowData": {
+9
+      "Item": {
+10
+        "tenant_id": {
+11
+          "S": "84c8e438-0061-70f2-2ce0-7cb44989a329"
+12
+        },
+13
+        "ai_model": {
+14
+          "S": "o3-deep-research"
+15
+        },
+16
+        "html_enabled": {
+17
+          "BOOL": true
+18
+        },
+19
+        "workflow_id": {
+20
+          "S": "wf_0019a642410349da68r06kf"
+21
+        },
+22
+        "ai_instructions": {
+23
+          "S": "Using the submission fields [name], [favorite_youtuber], [phone], [email], and [offer], produce a normalized brief. Tasks: (1) Derive [company_name] from [email] domain when possible; (2) Parse [offer] into product_category, product_description, target_audience, business_model, pricing_if_provided; (3) Identify assumed geo/market scope and stage (idea, MVP, pre-revenue, scaling) if implied; (4) List 5–8 clarifying questions to remove ambiguity; (5) Define success_criteria (business outcomes, time horizon). Output: JSON with keys {company_name, contact: {name, email, phone}, favorite_youtuber, offer_raw, parsed_offer: {product_category, product_description, target_audience, business_model, pricing_if_provided}, assumed_scope, stage_guess, clarifying_questions[], success_criteria[]}."
+24
+        },
+25
+        "template_version": {
+26
+          "N": "0"
+27
+        },
+28
+        "rewrite_model": {
+29
+          "S": "gpt-5"
+30
+        },
+31
+        "workflow_name": {
+32
+          "S": "ICP Blueprint"
+33
+        },
+34
+        "form_id": {
+35
+          "S": "form_0019a64241082pg1jbj8q0g"
+36
+        },
+37
+        "created_at": {
+38
+          "S": "2025-11-08T15:44:36.404620"
+39
+        },
+40
+        "workflow_description": {
+41
+          "S": "Turn a business idea into a complete Ideal Customer Profile and go-to-market plan. Personalizes outputs to [favorite_youtuber]’s style and aligns messaging to sell [offer] effectively."
+42
+        },
+43
+        "steps": {
+44
+          "L": [
+45
+            {
+46
+              "M": {
+47
+                "step_description": {
+48
+                  "S": "Parse form fields and derive a clean brief for ICP work."
+49
+                },
+50
+                "instructions": {
+51
+                  "S": "Using the submission fields [name], [favorite_youtuber], [phone], [email], and [offer], produce a normalized brief. Tasks: (1) Derive [company_name] from [email] domain when possible; (2) Parse [offer] into product_category, product_description, target_audience, business_model, pricing_if_provided; (3) Identify assumed geo/market scope and stage (idea, MVP, pre-revenue, scaling) if implied; (4) List 5–8 clarifying questions to remove ambiguity; (5) Define success_criteria (business outcomes, time horizon). Output: JSON with keys {company_name, contact: {name, email, phone}, favorite_youtuber, offer_raw, parsed_offer: {product_category, product_description, target_audience, business_model, pricing_if_provided}, assumed_scope, stage_guess, clarifying_questions[], success_criteria[]}."
+52
+                },
+53
+                "step_order": {
+54
+                  "N": "0"
+55
+                },
+56
+                "step_name": {
+57
+                  "S": "Intake Normalization"
+58
+                },
+59
+                "tool_choice": {
+60
+                  "S": "none"
+61
+                },
+62
+                "model": {
+63
+                  "S": "gpt-4o"
+64
+                },
+65
+                "tools": {
+66
+                  "L": []
+67
+                }
+68
+              }
+69
+            },
+70
+            {
+71
+              "M": {
+72
+                "step_description": {
+73
+                  "S": "Research the style and recent content patterns for [favorite_youtuber]."
+74
+                },
+75
+                "instructions": {
+76
+                  "S": "Identify the canonical YouTube channel for [favorite_youtuber]. Collect: channel URL, handle, approximate subscribers, and latest 5 video titles with publish dates. Extract stylistic cues: hook patterns, title formulas, thumbnail traits, pacing/editing, CTA patterns. Cite sources with clickable links. Output: Structured markdown with sections: Channel, Recent Videos (list), Style Cues (bullets), CTA Patterns (bullets), Sources."
+77
+                },
+78
+                "depends_on": {
+79
+                  "L": [
+80
+                    {
+81
+                      "N": "0"
+82
+                    }
+83
+                  ]
+84
+                },
+85
+                "step_order": {
+86
+                  "N": "1"
+87
+                },
+88
+                "step_name": {
+89
+                  "S": "Inspiration Channel Snapshot"
+90
+                },
+91
+                "tool_choice": {
+92
+                  "S": "auto"
+93
+                },
+94
+                "model": {
+95
+                  "S": "gpt-4o"
+96
+                },
+97
+                "tools": {
+98
+                  "L": [
+99
+                    {
+100
+                      "S": "web_search_preview"
+101
+                    }
+102
+                  ]
+103
+                }
+104
+              }
+105
+            },
+106
+            {
+107
+              "M": {
+108
+                "step_description": {
+109
+                  "S": "Map the target audience, problems, and competitive landscape for [offer]."
+110
+                },
+111
+                "instructions": {
+112
+                  "S": "Based on [offer] and the parsed target_audience from Step 0, research: (1) Top 10 pains and jobs-to-be-done (JTBD) for this audience; (2) Status quo alternatives and direct competitors (3–7), including brief positioning notes; (3) Channels where this audience congregates (forums, communities, podcasts, newsletters); (4) Common objections and triggers to buy; (5) Compliance or platform constraints relevant to selling [offer]. Include recent statistics and examples where available. Cite all sources with clickable links. Output: Markdown with headings: JTBD & Pains, Alternatives & Competitors, Communities & Channels, Objections & Triggers, Notable Stats, Sources."
+113
+                },
+114
+                "depends_on": {
+115
+                  "L": [
+116
+                    {
+117
+                      "N": "0"
+118
+                    },
+119
+                    {
+120
+                      "N": "1"
+121
+                    }
+122
+                  ]
+123
+                },
+124
+                "step_order": {
+125
+                  "N": "2"
+126
+                },
+127
+                "step_name": {
+128
+                  "S": "Audience & Market Research"
+129
+                },
+130
+                "tool_choice": {
+131
+                  "S": "auto"
+132
+                },
+133
+                "model": {
+134
+                  "S": "gpt-4o"
+135
+                },
+136
+                "tools": {
+137
+                  "L": [
+138
+                    {
+139
+                      "S": "web_search_preview"
+140
+                    }
+141
+                  ]
+142
+                }
+143
+              }
+144
+            },
+145
+            {
+146
+              "M": {
+147
+                "step_description": {
+148
+                  "S": "Create detailed personas and buying committee roles."
+149
+                },
+150
+                "instructions": {
+151
+                  "S": "Synthesize insights from Steps 0–2 into 2–3 personas: Primary Buyer, Secondary Influencer, and Anti-Buyer (who not to target). For each, provide: demographics/firmographics (if applicable), psychographics, JTBD, success criteria, buying triggers, top objections, decision criteria, evaluation checklist, favored content formats, message do’s/don’ts. Include a one-line positioning statement for each persona. Output: Well-structured markdown."
+152
+                },
+153
+                "depends_on": {
+154
+                  "L": [
+155
+                    {
+156
+                      "N": "0"
+157
+                    },
+158
+                    {
+159
+                      "N": "1"
+160
+                    },
+161
+                    {
+162
+                      "N": "2"
+163
+                    }
+164
+                  ]
+165
+                },
+166
+                "step_order": {
+167
+                  "N": "3"
+168
+                },
+169
+                "step_name": {
+170
+                  "S": "ICP Synthesis"
+171
+                },
+172
+                "tool_choice": {
+173
+                  "S": "none"
+174
+                },
+175
+                "model": {
+176
+                  "S": "gpt-4o"
+177
+                },
+178
+                "tools": {
+179
+                  "L": []
+180
+                }
+181
+              }
+182
+            },
+183
+            {
+184
+              "M": {
+185
+                "step_description": {
+186
+                  "S": "Estimate TAM/SAM/SOM and model basic SaaS economics."
+187
+                },
+188
+                "instructions": {
+189
+                  "S": "Using Step 0 and Step 2 inputs, estimate TAM/SAM/SOM with assumptions clearly stated. Build a simple unit economics model for [offer]: ARPU scenarios (monthly vs annual), gross margin assumptions, CAC ranges, payback period, churn and retention scenarios (good/base/poor). Produce 2 charts: (1) TAM/SAM/SOM bar chart, (2) LTV sensitivity by churn. If data is missing, create reasonable ranges and document them. Output: Markdown summary plus generated charts as images. Return the underlying data tables as CSV snippets."
+190
+                },
+191
+                "depends_on": {
+192
+                  "L": [
+193
+                    {
+194
+                      "N": "0"
+195
+                    },
+196
+                    {
+197
+                      "N": "1"
+198
+                    },
+199
+                    {
+200
+                      "N": "2"
+201
+                    },
+202
+                    {
+203
+                      "N": "3"
+204
+                    }
+205
+                  ]
+206
+                },
+207
+                "step_order": {
+208
+                  "N": "4"
+209
+                },
+210
+                "step_name": {
+211
+                  "S": "Market Sizing & Unit Economics"
+212
+                },
+213
+                "tool_choice": {
+214
+                  "S": "required"
+215
+                },
+216
+                "model": {
+217
+                  "S": "gpt-4.1"
+218
+                },
+219
+                "tools": {
+220
+                  "L": [
+221
+                    {
+222
+                      "S": "code_interpreter"
+223
+                    }
+224
+                  ]
+225
+                }
+226
+              }
+227
+            },
+228
+            {
+229
+              "M": {
+230
+                "step_description": {
+231
+                  "S": "Craft positioning, value props, and pricing ladder aligned to ICP."
+232
+                },
+233
+                "instructions": {
+234
+                  "S": "Create messaging aligned with Step 3 personas and Step 1 style cues. Deliver: (1) Core positioning statement (25–35 words); (2) 3 value proposition pillars with proof points; (3) A pricing ladder (Core/Pro/Elite) with feature differentiation, risk reversal, and an annual plan incentive; (4) 3 'Power Offer' variants (result + timeframe + guarantee) that remain compliant and realistic; (5) Objection-handling snippets for top 7 objections; (6) 10 headline hooks modeled on the inspiration channel’s style without copying. Output: Markdown with clear subheadings."
+235
+                },
+236
+                "depends_on": {
+237
+                  "L": [
+238
+                    {
+239
+                      "N": "0"
+240
+                    },
+241
+                    {
+242
+                      "N": "1"
+243
+                    },
+244
+                    {
+245
+                      "N": "2"
+246
+                    },
+247
+                    {
+248
+                      "N": "3"
+249
+                    },
+250
+                    {
+251
+                      "N": "4"
+252
+                    }
+253
+                  ]
+254
+                },
+255
+                "step_order": {
+256
+                  "N": "5"
+257
+                },
+258
+                "step_name": {
+259
+                  "S": "Messaging & Offers"
+260
+                },
+261
+                "tool_choice": {
+262
+                  "S": "none"
+263
+                },
+264
+                "model": {
+265
+                  "S": "gpt-4o"
+266
+                },
+267
+                "tools": {
+268
+                  "L": []
+269
+                }
+270
+              }
+271
+            },
+272
+            {
+273
+              "M": {
+274
+                "step_description": {
+275
+                  "S": "Generate a discoverability plan with SEO/YouTube/social hooks."
+276
+                },
+277
+                "instructions": {
+278
+                  "S": "Produce: (1) 20 primary problem/solution keywords and 40 long-tail variants relevant to [offer]; (2) 10 YouTube titles + 10 shorts hooks inspired by Step 1 style cues; (3) A 30-day content calendar (2 long-form/week, 8–10 shorts/week) with goals, CTAs, and repurposing notes; (4) Community engagement plan (forums, groups, collabs). If reliable search volume sources are found, include approximate volumes with citations; otherwise, label volumes as directional. Output: Markdown with tables for keywords and calendar. Cite any data sources."
+279
+                },
+280
+                "depends_on": {
+281
+                  "L": [
+282
+                    {
+283
+                      "N": "0"
+284
+                    },
+285
+                    {
+286
+                      "N": "1"
+287
+                    },
+288
+                    {
+289
+                      "N": "2"
+290
+                    },
+291
+                    {
+292
+                      "N": "3"
+293
+                    },
+294
+                    {
+295
+                      "N": "4"
+296
+                    },
+297
+                    {
+298
+                      "N": "5"
+299
+                    }
+300
+                  ]
+301
+                },
+302
+                "step_order": {
+303
+                  "N": "6"
+304
+                },
+305
+                "step_name": {
+306
+                  "S": "Keyword & Channel Plan"
+307
+                },
+308
+                "tool_choice": {
+309
+                  "S": "auto"
+310
+                },
+311
+                "model": {
+312
+                  "S": "gpt-4.1"
+313
+                },
+314
+                "tools": {
+315
+                  "L": [
+316
+                    {
+317
+                      "S": "web_search_preview"
+318
+                    }
+319
+                  ]
+320
+                }
+321
+              }
+322
+            },
+323
+            {
+324
+              "M": {
+325
+                "step_description": {
+326
+                  "S": "Create deliverable documents the audience can download and use."
+327
+                },
+328
+                "instructions": {
+329
+                  "S": "Produce three ready-to-use documents tailored to [offer] and the Primary Buyer persona from Step 3: (1) MRR Worksheet (inputs: price, conversion rate, churn; outputs: MRR forecast, break-even, annual scenario); (2) Continuity Planner (weekly deliverables, calendar templates, capacity calculator, community prompts); (3) 7-Day Onboarding Template (checklists, day-0 email, usage triggers, upgrade prompts). Output each as separate, cleanly formatted markdown sections with headings, numbered steps, and tables where useful."
+330
+                },
+331
+                "depends_on": {
+332
+                  "L": [
+333
+                    {
+334
+                      "N": "0"
+335
+                    },
+336
+                    {
+337
+                      "N": "1"
+338
+                    },
+339
+                    {
+340
+                      "N": "2"
+341
+                    },
+342
+                    {
+343
+                      "N": "3"
+344
+                    },
+345
+                    {
+346
+                      "N": "4"
+347
+                    },
+348
+                    {
+349
+                      "N": "5"
+350
+                    },
+351
+                    {
+352
+                      "N": "6"
+353
+                    }
+354
+                  ]
+355
+                },
+356
+                "step_order": {
+357
+                  "N": "7"
+358
+                },
+359
+                "step_name": {
+360
+                  "S": "Lead Magnet Docs"
+361
+                },
+362
+                "tool_choice": {
+363
+                  "S": "none"
+364
+                },
+365
+                "model": {
+366
+                  "S": "gpt-4o"
+367
+                },
+368
+                "tools": {
+369
+                  "L": []
+370
+                }
+371
+              }
+372
+            },
+373
+            {
+374
+              "M": {
+375
+                "step_description": {
+376
+                  "S": "Create brand-safe visuals: ICP infographic, journey map, and thumbnails."
+377
+                },
+378
+                "instructions": {
+379
+                  "S": "Generate prompts and request images for: (1) ICP Infographic summarizing Primary/Secondary personas (no logos, no celebrity likeness); (2) Customer Journey Map from awareness to retention, including key touchpoints and metrics; (3) Three YouTube thumbnails aligned to Step 1 style cues with minimal text and high contrast. For all images: 1280x720 for thumbnails; 1920x1080 for infographics; PNG; sRGB; include alt text. Use generic UI where applicable and avoid trademarks. Output: A list of images with titles, prompts, and alt text."
+380
+                },
+381
+                "depends_on": {
+382
+                  "L": [
+383
+                    {
+384
+                      "N": "0"
+385
+                    },
+386
+                    {
+387
+                      "N": "1"
+388
+                    },
+389
+                    {
+390
+                      "N": "2"
+391
+                    },
+392
+                    {
+393
+                      "N": "3"
+394
+                    },
+395
+                    {
+396
+                      "N": "4"
+397
+                    },
+398
+                    {
+399
+                      "N": "5"
+400
+                    },
+401
+                    {
+402
+                      "N": "6"
+403
+                    },
+404
+                    {
+405
+                      "N": "7"
+406
+                    }
+407
+                  ]
+408
+                },
+409
+                "step_order": {
+410
+                  "N": "8"
+411
+                },
+412
+                "step_name": {
+413
+                  "S": "Visual Asset Generation"
+414
+                },
+415
+                "tool_choice": {
+416
+                  "S": "required"
+417
+                },
+418
+                "model": {
+419
+                  "S": "gpt-4o"
+420
+                },
+421
+                "tools": {
+422
+                  "L": [
+423
+                    {
+424
+                      "S": "image_generation"
+425
+                    }
+426
+                  ]
+427
+                }
+428
+              }
+429
+            },
+430
+            {
+431
+              "M": {
+432
+                "step_description": {
+433
+                  "S": "Compile a polished, shareable HTML report."
+434
+                },
+435
+                "instructions": {
+436
+                  "S": "Assemble Steps 1–8 into a single, mobile-responsive HTML5 document. Include: cover, table of contents, executive summary, ICP personas, market sizing charts (embed images from Step 4), messaging/offer section, keyword/channel plan tables, the three lead magnet docs, and a visual assets gallery (images from Step 8). Add a sticky CTA bar with three keyword prompts: LEVER (MRR worksheet), RECURRING (continuity planner), ONBOARD (7-day template). Ensure accessible semantics, alt text, and basic inline CSS. Output: Complete HTML only."
+437
+                },
+438
+                "depends_on": {
+439
+                  "L": [
+440
+                    {
+441
+                      "N": "0"
+442
+                    },
+443
+                    {
+444
+                      "N": "1"
+445
+                    },
+446
+                    {
+447
+                      "N": "2"
+448
+                    },
+449
+                    {
+450
+                      "N": "3"
+451
+                    },
+452
+                    {
+453
+                      "N": "4"
+454
+                    },
+455
+                    {
+456
+                      "N": "5"
+457
+                    },
+458
+                    {
+459
+                      "N": "6"
+460
+                    },
+461
+                    {
+462
+                      "N": "7"
+463
+                    },
+464
+                    {
+465
+                      "N": "8"
+466
+                    }
+467
+                  ]
+468
+                },
+469
+                "step_order": {
+470
+                  "N": "9"
+471
+                },
+472
+                "step_name": {
+473
+                  "S": "HTML Report Assembly"
+474
+                },
+475
+                "tool_choice": {
+476
+                  "S": "none"
+477
+                },
+478
+                "model": {
+479
+                  "S": "gpt-4o"
+480
+                },
+481
+                "tools": {
+482
+                  "L": []
+483
+                }
+484
+              }
+485
+            },
+486
+            {
+487
+              "M": {
+488
+                "step_description": {
+489
+                  "S": "Produce copy assets to drive traffic and conversions."
+490
+                },
+491
+                "instructions": {
+492
+                  "S": "Create: (1) 5-email nurture sequence delivering each lead magnet and inviting a no-pitch walkthrough of [offer]; (2) 3 LinkedIn posts, 3 X posts, and 2 short DM scripts tailored to the Primary Buyer persona; (3) A landing page copy set (hero, subhead, social proof placeholders, offer stack, FAQ, risk reversal, CTA). Personalize with [name], [company_name], and [email] where appropriate. Output: Markdown with clear sections and copy blocks ready to paste."
+493
+                },
+494
+                "depends_on": {
+495
+                  "L": [
+496
+                    {
+497
+                      "N": "0"
+498
+                    },
+499
+                    {
+500
+                      "N": "1"
+501
+                    },
+502
+                    {
+503
+                      "N": "2"
+504
+                    },
+505
+                    {
+506
+                      "N": "3"
+507
+                    },
+508
+                    {
+509
+                      "N": "4"
+510
+                    },
+511
+                    {
+512
+                      "N": "5"
+513
+                    },
+514
+                    {
+515
+                      "N": "6"
+516
+                    },
+517
+                    {
+518
+                      "N": "7"
+519
+                    },
+520
+                    {
+521
+                      "N": "8"
+522
+                    },
+523
+                    {
+524
+                      "N": "9"
+525
+                    }
+526
+                  ]
+527
+                },
+528
+                "step_order": {
+529
+                  "N": "10"
+530
+                },
+531
+                "step_name": {
+532
+                  "S": "Outreach Kit"
+533
+                },
+534
+                "tool_choice": {
+535
+                  "S": "none"
+536
+                },
+537
+                "model": {
+538
+                  "S": "gpt-4o"
+539
+                },
+540
+                "tools": {
+541
+                  "L": []
+542
+                }
+543
+              }
+544
+            },
+545
+            {
+546
+              "M": {
+547
+                "step_description": {
+548
+                  "S": "Quality check, identify missing info, and summarize next actions."
+549
+                },
+550
+                "instructions": {
+551
+                  "S": "Run a checklist: (1) Consistency across personas, messaging, pricing; (2) Source links valid and labeled; (3) Claims realistic and compliant; (4) CTAs consistent with Step 9; (5) No proprietary logos or celebrity likeness in images. Produce: (a) a list of unresolved assumptions and questions for the client; (b) a 10-step implementation checklist with owners/timeframes; (c) a compact JSON summary of key ICP fields for API use: {primary_buyer:{title,company_size,geo,pains[],triggers[],objections[]}, messaging:{positioning,offers[]}, economics:{arpu,ltv,churn_scenarios}, assets:{html_report,lead_magnets[],images[]}}. Output: Markdown for narrative plus the final JSON block."
+552
+                },
+553
+                "depends_on": {
+554
+                  "L": [
+555
+                    {
+556
+                      "N": "0"
+557
+                    },
+558
+                    {
+559
+                      "N": "1"
+560
+                    },
+561
+                    {
+562
+                      "N": "2"
+563
+                    },
+564
+                    {
+565
+                      "N": "3"
+566
+                    },
+567
+                    {
+568
+                      "N": "4"
+569
+                    },
+570
+                    {
+571
+                      "N": "5"
+572
+                    },
+573
+                    {
+574
+                      "N": "6"
+575
+                    },
+576
+                    {
+577
+                      "N": "7"
+578
+                    },
+579
+                    {
+580
+                      "N": "8"
+581
+                    },
+582
+                    {
+583
+                      "N": "9"
+584
+                    },
+585
+                    {
+586
+                      "N": "10"
+587
+                    }
+588
+                  ]
+589
+                },
+590
+                "step_order": {
+591
+                  "N": "11"
+592
+                },
+593
+                "step_name": {
+594
+                  "S": "QA, Gaps, and Handoff"
+595
+                },
+596
+                "tool_choice": {
+597
+                  "S": "none"
+598
+                },
+599
+                "model": {
+600
+                  "S": "gpt-4-turbo"
+601
+                },
+602
+                "tools": {
+603
+                  "L": []
+604
+                }
+605
+              }
+606
+            }
+607
+          ]
+608
+        },
+609
+        "research_enabled": {
+610
+          "BOOL": true
+611
+        },
+612
+        "research_instructions": {
+613
+          "S": "Using the submission fields [name], [favorite_youtuber], [phone], [email], and [offer], produce a normalized brief. Tasks: (1) Derive [company_name] from [email] domain when possible; (2) Parse [offer] into product_category, product_description, target_audience, business_model, pricing_if_provided; (3) Identify assumed geo/market scope and stage (idea, MVP, pre-revenue, scaling) if implied; (4) List 5–8 clarifying questions to remove ambiguity; (5) Define success_criteria (business outcomes, time horizon). Output: JSON with keys {company_name, contact: {name, email, phone}, favorite_youtuber, offer_raw, parsed_offer: {product_category, product_description, target_audience, business_model, pricing_if_provided}, assumed_scope, stage_guess, clarifying_questions[], success_criteria[]}."
+614
+        },
+615
+        "updated_at": {
+616
+          "S": "2025-11-10T17:03:21.488Z"
+617
+        },
+618
+        "template_id": {
+619
+          "S": "tmpl_0019a64240f80hoslo74ewq"
+620
+        },
+621
+        "status": {
+622
+          "S": "draft"
+623
+        }
+624
+      },
+625
+      "SdkHttpMetadata": {
+626
+        "AllHttpHeaders": {
+627
+          "Server": [
+628
+            "Server"
+629
+          ],
+630
+          "x-amzn-requestid": [
+631
+            "PR4MU04LA1K77DAB2A58D9CHHJVV4KQNSO5AEMVJF66Q9ASUAAJG"
+632
+          ],
+633
+          "Connection": [
+634
+            "keep-alive"
+635
+          ],
+636
+          "x-amz-crc32": [
+637
+            "2765927759"
+638
+          ],
+639
+          "Content-Length": [
+640
+            "13178"
+641
+          ],
+642
+          "Date": [
+643
+            "Mon, 10 Nov 2025 17:44:56 GMT"
+644
+          ],
+645
+          "Content-Type": [
+646
+            "application/x-amz-json-1.0"
+647
+          ]
+648
+        },
+649
+        "HttpHeaders": {
+650
+          "Connection": "keep-alive",
+651
+          "Content-Length": "13178",
+652
+          "Content-Type": "application/x-amz-json-1.0",
+653
+          "Date": "Mon, 10 Nov 2025 17:44:56 GMT",
+654
+          "Server": "Server",
+655
+          "x-amz-crc32": "2765927759",
+656
+          "x-amzn-requestid": "PR4MU04LA1K77DAB2A58D9CHHJVV4KQNSO5AEMVJF66Q9ASUAAJG"
+657
+        },
+658
+        "HttpStatusCode": 200
+659
+      },
+660
+      "SdkResponseMetadata": {
+661
+        "RequestId": "PR4MU04LA1K77DAB2A58D9CHHJVV4KQNSO5AEMVJF66Q9ASUAAJG"
+662
+      }
+663
+    },
+664
+    "job_id": "job_01K9QBVS5X38CZ4ZYV3MTN0N9Q",
+665
+    "template_id": "tmpl_0019a64240f80hoslo74ewq"
+666
+  },
+667
+  "inputDetails": {
+668
+    "truncated": false
+669
+  },
+670
+  "name": "ResolveDependencies"
+671
+}
+
+23
+TaskScheduled
+ResolveDependencies
+Lambda  | Log group 
+00:00:00.336
+Nov 10, 2025 at 10:44:56.997 (UTC-07:00)
+Formatted
+
+1
+{
+2
+  "parameters": {
+3
+    "FunctionName": "arn:aws:lambda:us-east-1:471112574622:function:leadmagnet-compute-JobProcessorLambda4949D7F4-QfZWMq9MkyHG",
+4
+    "Payload": {
+5
+      "action": "resolve_dependencies",
+6
+      "workflow_id": "wf_0019a642410349da68r06kf",
+7
+      "job_id": "job_01K9QBVS5X38CZ4ZYV3MTN0N9Q"
+8
+    }
+9
+  },
+10
+  "region": "us-east-1",
+11
+  "resource": "invoke",
+12
+  "resourceType": "lambda"
+13
+}
+
+24
+TaskStarted
+ResolveDependencies
+00:00:00.393
+Nov 10, 2025 at 10:44:57.054 (UTC-07:00)
+Formatted
+
+1
+{
+2
+  "resource": "invoke",
+3
+  "resourceType": "lambda"
+4
+}
+
+25
+TaskFailed
+ResolveDependencies
+00:00:01.471
+Nov 10, 2025 at 10:44:58.132 (UTC-07:00)
+Formatted
+
+1
+{
+2
+  "cause": {
+3
+    "errorType": "Runtime.ExitError",
+4
+    "errorMessage": "RequestId: e7eda521-62f3-4e83-9dc4-6920dddc2c64 Error: Runtime exited with error: exit status 1"
+5
+  },
+6
+  "error": "Runtime.ExitError",
+7
+  "resource": "invoke",
+8
+  "resourceType": "lambda"
+9
+}
+
+26
+ExecutionFailed
+00:00:01.603
+Nov 10, 2025 at 10:44:58.264 (UTC-07:00)
+Formatted
+
+1
+{
+2
+  "cause": {
+3
+    "errorType": "Runtime.ExitError",
+4
+    "errorMessage": "RequestId: e7eda521-62f3-4e83-9dc4-6920dddc2c64 Error: Runtime exited with error: exit status 1"
+5
+  },
+6
+  "error": "Runtime.ExitError"
+7
+}
