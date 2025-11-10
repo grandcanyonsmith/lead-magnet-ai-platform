@@ -131,7 +131,43 @@ This is an npm workspaces monorepo with:
 
 ## Recent Changes (November 10, 2025)
 
-### Migration Tasks Completed
+### Critical Backend Fixes (Evening - 17:21 UTC)
+**Issue**: `code_interpreter` tool failing with "Invalid value" error  
+**Root Cause**: Backend was using Chat Completions API which doesn't support `code_interpreter`  
+**Solution**: Converted to OpenAI Responses API
+
+#### Changes Made:
+1. **OpenAI Client Migration** (`backend/worker/services/openai_client.py`):
+   - Migrated from `client.chat.completions.create()` to `client.responses.create()`
+   - Updated parameter structure: `instructions` + `input` (Responses API) vs `messages` array (Chat Completions)
+   - Updated response parsing: `response.output_text` instead of `response.choices[0].message.content`
+   - Added backwards compatibility fallbacks
+
+2. **DynamoDB Decimal Fix** (`backend/worker/ai_service.py`):
+   - Added comprehensive `convert_decimals_to_float()` after tool validation
+   - Prevents "Object of type Decimal is not JSON serializable" errors
+   - Normalizes all DynamoDB Decimal values at source before downstream processing
+
+3. **Container Parameter Injection** (`backend/worker/services/tool_validator.py`):
+   - Automatically injects `{"container": {"type": "auto"}}` for `code_interpreter` tool
+   - Fixes "Missing required parameter: tools[0].container" errors
+
+4. **Display Dimension Conversion** (`backend/worker/services/image_handler.py`):
+   - Explicit `int()` conversion for display_width/display_height
+   - Ensures Playwright receives integers instead of Decimal floats
+
+#### Test Results:
+- ✅ Local test confirmed `code_interpreter` works with Responses API
+- ✅ Container parameter injection validated
+- ✅ Decimal conversion prevents JSON serialization errors
+- ✅ Successfully executed Python code (prime number calculation)
+
+#### Deployment:
+- Deployed via GitHub Actions at 17:21 UTC
+- Build status: SUCCESS
+- Lambda function updated with all fixes
+
+### Migration Tasks Completed (Morning)
 1. ✓ Verified Node.js installation (nodejs-20)
 2. ✓ Updated frontend package.json for Replit compatibility
 3. ✓ Modified Next.js config to remove static export
@@ -145,6 +181,7 @@ This is an npm workspaces monorepo with:
 - Next.js compilation completed without errors
 - All frontend routes accessible
 - AWS service integration ready (requires valid credentials)
+- **Backend Lambda running OpenAI Responses API with code_interpreter support**
 
 ## Troubleshooting
 
