@@ -15,6 +15,7 @@ interface StepContentProps {
 const MAX_PREVIEW_LENGTH = 1000
 
 export function StepContent({ formatted }: StepContentProps) {
+  // All hooks must be called at the top level before any conditional returns
   const [isExpanded, setIsExpanded] = useState(false)
   const [showRendered, setShowRendered] = useState(true)
   
@@ -35,7 +36,8 @@ export function StepContent({ formatted }: StepContentProps) {
     ? contentString.substring(0, MAX_PREVIEW_LENGTH) + '...'
     : contentString
   
-  if (formatted.type === 'json') {
+  // Render JSON content
+  const renderJsonContent = () => {
     // For AI input structure, show model and instructions separately, then formatted JSON input
     if (formatted.structure === 'ai_input' && typeof formatted.content === 'object') {
       return (
@@ -148,7 +150,8 @@ export function StepContent({ formatted }: StepContentProps) {
     )
   }
   
-  if (formatted.type === 'html') {
+  // Render HTML content
+  const renderHtmlContent = () => {
     const htmlContent = typeof formatted.content === 'string' 
       ? formatted.content 
       : JSON.stringify(formatted.content, null, 2)
@@ -234,7 +237,8 @@ export function StepContent({ formatted }: StepContentProps) {
     )
   }
   
-  if (formatted.type === 'markdown') {
+  // Render Markdown content
+  const renderMarkdownContent = () => {
     // For AI input structure, show model and instructions separately, then render markdown input
     if (formatted.structure === 'ai_input' && typeof formatted.content === 'object') {
       const markdownContent = formatted.content.input || ''
@@ -334,36 +338,47 @@ export function StepContent({ formatted }: StepContentProps) {
     )
   }
   
-  // Plain text content
+  // Render plain text content
+  const renderTextContent = () => {
+    return (
+      <div>
+        {contentString.length > MAX_PREVIEW_LENGTH && (
+          <div className="flex justify-end mb-2">
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+            >
+              {isExpanded ? (
+                <>
+                  <FiChevronUp className="w-3 h-3" />
+                  Show Less
+                </>
+              ) : (
+                <>
+                  <FiChevronDown className="w-3 h-3" />
+                  Show More ({contentString.length.toLocaleString()} chars)
+                </>
+              )}
+            </button>
+          </div>
+        )}
+        <pre className="text-sm whitespace-pre-wrap font-mono bg-gray-50 p-4 rounded-lg border border-gray-200 max-h-[600px] overflow-y-auto">
+          {displayContent}
+        </pre>
+      </div>
+    )
+  }
+  
+  // Single return statement with conditional rendering
   return (
-    <div>
-      {contentString.length > MAX_PREVIEW_LENGTH && (
-        <div className="flex justify-end mb-2">
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
-          >
-            {isExpanded ? (
-              <>
-                <FiChevronUp className="w-3 h-3" />
-                Show Less
-              </>
-            ) : (
-              <>
-                <FiChevronDown className="w-3 h-3" />
-                Show More ({contentString.length.toLocaleString()} chars)
-              </>
-            )}
-          </button>
-        </div>
-      )}
-      <pre className="text-sm whitespace-pre-wrap font-mono bg-gray-50 p-4 rounded-lg border border-gray-200 max-h-[600px] overflow-y-auto">
-        {displayContent}
-      </pre>
-    </div>
+    <>
+      {formatted.type === 'json' && renderJsonContent()}
+      {formatted.type === 'html' && renderHtmlContent()}
+      {formatted.type === 'markdown' && renderMarkdownContent()}
+      {formatted.type === 'text' && renderTextContent()}
+    </>
   )
 }
 
 // Export formatting functions for use in components
 export { formatStepInput, formatStepOutput }
-
