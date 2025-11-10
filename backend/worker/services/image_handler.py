@@ -68,9 +68,13 @@ class ImageHandler:
                     }
                     break
             
+            # Convert Decimal types to int for display dimensions
+            display_width = int(display_config.get("display_width", 1024))
+            display_height = int(display_config.get("display_height", 768))
+            
             browser.initialize(
-                display_width=display_config.get("display_width", 1024),
-                display_height=display_config.get("display_height", 768),
+                display_width=display_width,
+                display_height=display_height,
                 storage_state=None
             )
             
