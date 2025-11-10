@@ -131,6 +131,42 @@ This is an npm workspaces monorepo with:
 
 ## Recent Changes (November 10, 2025)
 
+### Downloads Page Redesign (Evening - 19:23 UTC)
+**Improvements**: Transformed downloads/artifacts page from basic table to modern gallery
+**User Request**: Better UI/UX with previews, pagination, and improved sorting
+
+#### Changes Made:
+1. **New Component Architecture** (`frontend/src/components/artifacts/`):
+   - `PreviewRenderer`: Lazy-loaded preview rendering for images, PDFs, HTML, and text files
+   - `PreviewCard`: Modern card layout with hover actions, metadata display, and file badges
+   - `FiltersBar`: Search and filter controls for finding specific artifacts
+   - `PaginationControls`: Smart pagination with page numbers and item count display
+
+2. **Enhanced Artifacts Page** (`frontend/src/app/dashboard/artifacts/page.tsx`):
+   - Replaced table with responsive card grid (1-4 columns based on screen size)
+   - Client-side pagination (12 items per page)
+   - Real-time search filtering by filename/artifact ID
+   - Filter by artifact type
+   - Maintained DESC sorting by created_at (most recent first)
+   - Empty state with helpful messages
+   - Improved loading states
+
+3. **Key Features**:
+   - Visual previews with lazy loading using IntersectionObserver
+   - Hover animations revealing download/preview actions
+   - Responsive design (mobile to desktop)
+   - File type badges (PDF, JPG, HTML, etc.)
+   - Relative time display (e.g., "2h ago", "3d ago")
+   - File size formatting in human-readable units
+   - Graceful fallbacks for missing data
+
+#### Technical Details:
+- Used Tailwind CSS for styling and animations
+- Implemented lazy image loading to improve performance
+- Sandboxed iframes for HTML previews
+- PDF preview with embedded viewer
+- Memoized filtering and pagination for performance
+
 ### Critical Backend Fixes (Evening - 17:21 UTC)
 **Issue**: `code_interpreter` tool failing with "Invalid value" error  
 **Root Cause**: Backend was using Chat Completions API which doesn't support `code_interpreter`  
