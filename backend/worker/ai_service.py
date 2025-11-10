@@ -11,6 +11,7 @@ from services.tool_validator import ToolValidator
 from services.image_handler import ImageHandler
 from services.html_generator import HTMLGenerator
 from services.openai_client import OpenAIClient
+from utils.decimal_utils import convert_decimals_to_float
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +51,10 @@ class AIService:
         """
         # Validate and filter tools (including model compatibility check)
         validated_tools, normalized_tool_choice = ToolValidator.validate_and_filter_tools(tools, tool_choice, model=model)
+        
+        # Normalize DynamoDB Decimal values to prevent JSON serialization errors
+        if validated_tools:
+            validated_tools = convert_decimals_to_float(validated_tools)
         
         logger.debug(f"[AI Service] After tool validation", extra={
             'validated_tools_count': len(validated_tools) if validated_tools else 0,
