@@ -63,6 +63,32 @@ The project is structured as an npm monorepo with the following components:
 
 ## Recent Changes (November 10, 2025)
 
+### Deployment Fixes & React Hooks Compliance (Evening - 23:20 UTC)
+**Issue**: Deployment failing due to React Hooks violations and incorrect run command
+**Root Cause**: StepContent.tsx had early returns after calling hooks, violating React's Rules of Hooks
+
+#### Changes Made:
+1. **Fixed React Hooks Violation** (`frontend/src/components/jobs/StepContent.tsx`):
+   - **Problem**: Component had multiple early returns based on `formatted.type` after calling `useState` hooks
+   - **Solution**: Refactored to use helper functions (`renderJsonContent`, `renderHtmlContent`, etc.) with single return statement
+   - All hooks now called at top level before any conditional logic
+   - Maintains exact same functionality and UI behavior
+   - ESLint and TypeScript compilation pass without errors
+
+2. **Fixed Deployment Configuration** (`.replit`):
+   - Updated run command from incomplete `["npm"]` to complete `["npm", "start"]`
+   - Ensures production server starts properly during deployment
+   - Uses monorepo's start script which runs `npm run start:deploy --workspace frontend`
+
+3. **Updated ESLint Configuration** (`frontend/next.config.js`):
+   - Added `dirs: ['src']` to specify linting scope more clearly
+   - Maintains strict error checking while allowing non-critical warnings
+
+#### Technical Details:
+- **React Hooks Rules**: All hooks must be called at the top level, never inside conditionals or after early returns
+- **Build Verification**: ESLint, TypeScript, and Next.js compilation all pass successfully
+- **Production Ready**: App now ready for deployment with proper autoscale configuration
+
 ### HTML Rendering & Complete Step Display (Evening - 22:31 UTC)
 **Features**: Added secure HTML rendering for job outputs and fixed missing execution steps display
 **User Issues**: HTML output not rendering, earlier completed steps not showing in execution view
