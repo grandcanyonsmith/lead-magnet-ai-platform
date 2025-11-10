@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
@@ -153,6 +153,18 @@ export function StepContent({ formatted }: StepContentProps) {
       ? formatted.content 
       : JSON.stringify(formatted.content, null, 2)
     
+    const [iframeUrl, setIframeUrl] = useState<string>('')
+    
+    useEffect(() => {
+      // Create a blob URL for the HTML content
+      const blob = new Blob([htmlContent], { type: 'text/html' })
+      const url = URL.createObjectURL(blob)
+      setIframeUrl(url)
+      
+      // Cleanup
+      return () => URL.revokeObjectURL(url)
+    }, [htmlContent])
+    
     return (
       <div className="space-y-3">
         {/* Toggle between rendered and source */}
@@ -201,12 +213,19 @@ export function StepContent({ formatted }: StepContentProps) {
 
         {showRendered ? (
           <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
-            <iframe
-              srcDoc={htmlContent}
-              className="w-full min-h-[600px] border-0"
-              sandbox=""
-              title="HTML Preview"
-            />
+            {iframeUrl ? (
+              <iframe
+                src={iframeUrl}
+                className="w-full border-0"
+                style={{ height: '600px', minHeight: '600px' }}
+                sandbox=""
+                title="HTML Preview"
+              />
+            ) : (
+              <div className="flex items-center justify-center h-96 text-gray-500">
+                Loading preview...
+              </div>
+            )}
           </div>
         ) : (
           <div className="rounded-lg overflow-hidden border border-gray-200">
