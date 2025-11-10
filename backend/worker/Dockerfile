@@ -15,7 +15,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY *.py ./
 COPY services/ ./services/
 COPY utils/ ./utils/
-COPY templates/ ./templates/ 2>/dev/null || true
 
 # Set the CMD to your handler
 ENTRYPOINT [ "python3", "-m", "awslambdaric" ]
