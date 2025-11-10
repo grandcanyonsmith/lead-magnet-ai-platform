@@ -32,6 +32,8 @@
   "license": "MIT",
   "devDependencies": {
     "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "react-hot-toast": "^2.6.0"
   }
 }
-

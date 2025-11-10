@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { FiChevronDown, FiChevronUp, FiCopy, FiCheckCircle, FiCircle, FiLoader, FiRefreshCw, FiXCircle } from 'react-icons/fi'
+import { FiChevronDown, FiChevronUp, FiCopy, FiCheckCircle, FiCircle, FiLoader, FiRefreshCw, FiXCircle, FiEdit2 } from 'react-icons/fi'
 import { formatStepInput, formatStepOutput, formatDurationMs } from '@/utils/jobFormatting'
 import { StepContent } from './StepContent'
 import { PreviousStepsContext } from './PreviousStepsContext'
@@ -18,6 +18,8 @@ interface ExecutionStepsProps {
   jobStatus?: string
   onRerunStep?: (stepIndex: number) => Promise<void>
   rerunningStep?: number | null
+  onEditStep?: (stepIndex: number) => void
+  canEdit?: boolean
 }
 
 export function ExecutionSteps({
@@ -30,6 +32,8 @@ export function ExecutionSteps({
   jobStatus,
   onRerunStep,
   rerunningStep,
+  onEditStep,
+  canEdit = false,
 }: ExecutionStepsProps) {
   // State for managing expanded previous steps (separate from main step expansion)
   const [expandedPrevSteps, setExpandedPrevSteps] = useState<Set<number>>(new Set())
@@ -299,24 +303,62 @@ export function ExecutionSteps({
                     )}
                   </div>
 
-                  {/* Right: Metrics and Actions - Only show for completed steps */}
-                  {isCompleted && (
-                    <div className="flex flex-col items-end gap-2 text-xs text-gray-500 flex-shrink-0">
-                      {step.duration_ms !== undefined && (
-                        <span className="font-medium text-gray-700">{formatDurationMs(step.duration_ms)}</span>
-                      )}
-                      {step.usage_info && (
-                        <div className="flex flex-col items-end gap-0.5">
-                          <span className="text-gray-600">
-                            {step.usage_info.input_tokens + step.usage_info.output_tokens} tokens
-                          </span>
-                          {step.usage_info.cost_usd && (
-                            <span className="text-gray-600 font-medium">
-                              ${step.usage_info.cost_usd.toFixed(2)}
+                  {/* Right: Metrics and Actions */}
+                  <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                    {/* Metrics - Only show for completed steps */}
+                    {isCompleted && (
+                      <div className="flex flex-col items-end gap-1 text-xs text-gray-500">
+                        {step.duration_ms !== undefined && (
+                          <span className="font-medium text-gray-700">{formatDurationMs(step.duration_ms)}</span>
+                        )}
+                        {step.usage_info && (
+                          <div className="flex flex-col items-end gap-0.5">
+                            <span className="text-gray-600">
+                              {step.usage_info.input_tokens + step.usage_info.output_tokens} tokens
                             </span>
-                          )}
-                        </div>
+                            {step.usage_info.cost_usd && (
+                              <span className="text-gray-600 font-medium">
+                                ${step.usage_info.cost_usd.toFixed(2)}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Action Buttons Row */}
+                    <div className="flex items-center gap-2">
+                      {/* Edit Step Button - Only for workflow template steps */}
+                      {canEdit && onEditStep && step.step_type === 'workflow_step' && step.step_order > 0 && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            // Don't allow editing while job is processing
+                            if (jobStatus === 'processing') {
+                              return
+                            }
+                            // Pass the workflow steps array index (step_order - 1)
+                            // because workflow.steps is 0-indexed and doesn't include form submission
+                            const workflowStepIndex = step.step_order - 1
+                            onEditStep(workflowStepIndex)
+                          }}
+                          disabled={jobStatus === 'processing'}
+                          title={
+                            jobStatus === 'processing'
+                              ? 'Editing disabled while run is in progress'
+                              : 'Edit workflow template step'
+                          }
+                          aria-label="Edit workflow template step"
+                          className={`p-2 rounded transition-colors ${
+                            jobStatus === 'processing'
+                              ? 'text-yellow-600 cursor-not-allowed opacity-60'
+                              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                          }`}
+                        >
+                          <FiEdit2 className="w-4 h-4" />
+                        </button>
                       )}
+
                       {/* Rerun Step Button */}
                       {onRerunStep && step.step_order > 0 && step.step_type === 'ai_generation' && (
                         <button
@@ -325,7 +367,7 @@ export function ExecutionSteps({
                             onRerunStep(stepIndex)
                           }}
                           disabled={rerunningStep === step.step_order - 1}
-                          className="mt-2 flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-target"
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-target"
                           title="Rerun this step"
                         >
                           {rerunningStep === step.step_order - 1 ? (
@@ -342,7 +384,7 @@ export function ExecutionSteps({
                         </button>
                       )}
                     </div>
-                  )}
+                  </div>
                 </div>
 
                 {/* Input/Output Section - Only show for completed steps */}
