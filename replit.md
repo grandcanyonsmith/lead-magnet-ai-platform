@@ -60,3 +60,44 @@ The project is structured as an npm monorepo with the following components:
 - **Axios**: HTTP client for API calls.
 - **React Hook Form / Zod**: Form management and validation.
 - **react-hot-toast**: For toast notifications.
+
+## Recent Changes (November 10, 2025)
+
+### HTML Rendering & Complete Step Display (Evening - 22:31 UTC)
+**Features**: Added secure HTML rendering for job outputs and fixed missing execution steps display
+**User Issues**: HTML output not rendering, earlier completed steps not showing in execution view
+
+#### Changes Made:
+1. **HTML Rendering Support** (`frontend/src/components/jobs/StepContent.tsx`):
+   - Added 'html' type support for rendering HTML outputs
+   - Toggle between "Rendered" and "Source" views
+   - Rendered view: Secure iframe with empty sandbox attribute (no script execution)
+   - Source view: Syntax-highlighted HTML code with expand/collapse
+   - Security: `sandbox=""` provides complete isolation - no XSS risk
+   - HTML renders visually but cannot execute scripts or access parent origin
+
+2. **HTML Detection** (`frontend/src/utils/jobFormatting.tsx`):
+   - Added `isHTML()` function to detect HTML content
+   - Checks for DOCTYPE, html tags, closing tags, and HTML comments
+   - Updated `formatStepOutput()` to check HTML before JSON (correct priority)
+   - Returns 'html' type when HTML content detected
+
+3. **Fixed Missing Steps** (`frontend/src/app/dashboard/jobs/[id]/page-client.tsx`):
+   - Complete rewrite of `getMergedSteps()` function
+   - OLD: Only showed steps matching workflow.steps array + additional steps
+   - NEW: Shows ALL execution steps from job.execution_steps first
+   - Uses Map-based approach to ensure no steps are skipped
+   - Enriches execution steps with workflow metadata where available
+   - Handles edge case where workflow was edited after job execution
+
+#### Technical Details:
+- **Security**: Empty iframe sandbox (`sandbox=""`) prevents script execution and same-origin access
+- **Step Merging**: All execution steps populate mergedStepsMap first, then workflow metadata overlays
+- **HTML Detection Order**: HTML → JSON → Markdown → Text (prevents HTML being parsed as JSON)
+- **Trade-offs**: Interactive HTML (forms, scripts, links) won't work due to security restrictions
+
+#### Architect Review:
+✅ **Approved** - Production-ready
+- Security: XSS risk eliminated with proper iframe isolation
+- Step merging: Correctly aggregates all execution steps
+- Recommended: Manual QA with real job data for HTML rendering and step ordering
