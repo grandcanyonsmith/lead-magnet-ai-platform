@@ -6,7 +6,9 @@ expertMode = true
 channel = "stable-25_05"
 
 [deployment]
-deploymentTarget = "cloudrun"
+deploymentTarget = "autoscale"
+run = ["bash", "-c", "cd frontend && npm start"]
+build = ["bash", "-c", "cd frontend && npm install && npm run build"]
 
 [workflows]
 runButton = "Project"
