@@ -1,9 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { FiChevronDown, FiChevronUp, FiCopy, FiCheckCircle, FiCircle, FiLoader, FiRefreshCw } from 'react-icons/fi'
+import { FiChevronDown, FiChevronUp, FiCopy, FiCheckCircle, FiCircle, FiLoader, FiRefreshCw, FiXCircle } from 'react-icons/fi'
 import { formatStepInput, formatStepOutput, formatDurationMs } from '@/utils/jobFormatting'
 import { StepContent } from './StepContent'
+import { PreviousStepsContext } from './PreviousStepsContext'
 
 type StepStatus = 'pending' | 'in_progress' | 'completed' | 'failed'
 
@@ -30,62 +31,21 @@ export function ExecutionSteps({
   onRerunStep,
   rerunningStep,
 }: ExecutionStepsProps) {
-  const [activeTab, setActiveTab] = useState<Record<number, 'input' | 'output'>>({})
+  // State for managing expanded previous steps (separate from main step expansion)
+  const [expandedPrevSteps, setExpandedPrevSteps] = useState<Set<number>>(new Set())
+
   if (!steps || steps.length === 0) {
     return null
   }
 
-  // Build previous context from previous steps (similar to backend ContextBuilder)
-  const buildPreviousContext = (currentStep: any, allSteps: any[]): string => {
-    const currentOrder = currentStep.step_order || 0
-    
-    // Get all previous steps that have outputs (completed steps)
-    const previousSteps = allSteps
-      .filter((step: any) => {
-        const stepOrder = step.step_order || 0
-        return stepOrder < currentOrder && 
-               step.output !== null && 
-               step.output !== undefined && 
-               step.output !== ''
-      })
-      .sort((a: any, b: any) => (a.step_order || 0) - (b.step_order || 0))
-    
-    if (previousSteps.length === 0) {
-      return ''
+  const togglePrevStep = (stepOrder: number) => {
+    const newExpanded = new Set(expandedPrevSteps)
+    if (newExpanded.has(stepOrder)) {
+      newExpanded.delete(stepOrder)
+    } else {
+      newExpanded.add(stepOrder)
     }
-    
-    const contextParts: string[] = []
-    
-    // Add form submission if it exists
-    const formSubmissionStep = previousSteps.find((s: any) => s.step_order === 0)
-    if (formSubmissionStep) {
-      const submissionData = formSubmissionStep.output
-      if (submissionData && typeof submissionData === 'object') {
-        const formatted = Object.entries(submissionData)
-          .map(([key, value]) => `${key}: ${value}`)
-          .join('\n')
-        contextParts.push(`=== Form Submission ===\n${formatted}`)
-      }
-    }
-    
-    // Add previous workflow steps
-    previousSteps
-      .filter((s: any) => s.step_order > 0)
-      .forEach((step: any) => {
-        const stepName = step.step_name || `Step ${step.step_order}`
-        const stepOutput = typeof step.output === 'string' ? step.output : JSON.stringify(step.output, null, 2)
-        
-        let stepContext = `\n=== Step ${step.step_order}: ${stepName} ===\n${stepOutput}`
-        
-        // Add image URLs if present
-        if (step.image_urls && Array.isArray(step.image_urls) && step.image_urls.length > 0) {
-          stepContext += `\n\nGenerated Images:\n${step.image_urls.map((url: string) => `- ${url}`).join('\n')}`
-        }
-        
-        contextParts.push(stepContext)
-      })
-    
-    return contextParts.join('\n\n')
+    setExpandedPrevSteps(newExpanded)
   }
 
   // Get step status
@@ -128,17 +88,44 @@ export function ExecutionSteps({
     return 'pending'
   }
 
+  // Get previous steps for context
+  const getPreviousSteps = (currentStep: any) => {
+    const currentOrder = currentStep.step_order || 0
+    
+    const previousSteps = steps
+      .filter((step: any) => {
+        const stepOrder = step.step_order || 0
+        return (
+          stepOrder < currentOrder &&
+          stepOrder > 0 && // Exclude form submission (step 0)
+          step.output !== null &&
+          step.output !== undefined &&
+          step.output !== ''
+        )
+      })
+      .sort((a: any, b: any) => (a.step_order || 0) - (b.step_order || 0))
+    
+    return previousSteps
+  }
+
+  // Get form submission data
+  const getFormSubmission = (currentStep: any) => {
+    const formSubmissionStep = steps.find((s: any) => s.step_order === 0)
+    if (formSubmissionStep && formSubmissionStep.output) {
+      return formSubmissionStep.output
+    }
+    return null
+  }
+
   // Get status icon
   const getStatusIcon = (status: StepStatus) => {
     switch (status) {
       case 'completed':
         return <FiCheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
       case 'in_progress':
-        return <FiLoader className="w-5 h-5 text-blue-600 flex-shrink-0 animate-spin" />
+        return <FiLoader className="w-5 h-5 text-yellow-500 flex-shrink-0 animate-spin" />
       case 'failed':
-        return <div className="w-5 h-5 rounded-full border-2 border-red-600 flex items-center justify-center flex-shrink-0">
-          <span className="text-red-600 text-xs font-bold">×</span>
-        </div>
+        return <FiXCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
       case 'pending':
       default:
         return <FiCircle className="w-5 h-5 text-gray-400 flex-shrink-0" />
@@ -374,61 +361,13 @@ export function ExecutionSteps({
                     </button>
 
                     {isExpanded && (
-                    <div className="mt-3 space-y-4">
-                      {/* Previous Context Section - Show context from previous steps */}
-                      {(() => {
-                        const previousContext = buildPreviousContext(step, steps)
-                        if (previousContext) {
-                          return (
-                            <div>
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm font-semibold text-gray-700">Context from Previous Steps</span>
-                                <button
-                                  onClick={() => onCopy(previousContext)}
-                                  className="text-xs text-gray-500 hover:text-gray-700 flex items-center space-x-1 px-2 py-1.5 rounded hover:bg-gray-50 touch-target"
-                                >
-                                  <FiCopy className="w-3.5 h-3.5" />
-                                  <span>Copy</span>
-                                </button>
-                              </div>
-                              <div className="bg-blue-50 rounded-lg p-3 text-xs text-gray-800 overflow-x-auto max-h-96 overflow-y-auto border border-blue-200">
-                                <pre className="whitespace-pre-wrap font-mono text-xs">{previousContext}</pre>
-                              </div>
-                            </div>
-                          )
-                        }
-                        return null
-                      })()}
-                      
-                      {/* Tabs for Input/Output */}
-                      <div className="border border-gray-200 rounded-lg overflow-hidden">
-                        <div className="flex border-b border-gray-200 bg-gray-50">
-                          <button
-                            onClick={() => setActiveTab({ ...activeTab, [step.step_order]: 'input' })}
-                            className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
-                              (activeTab[step.step_order] || 'input') !== 'output'
-                                ? 'bg-white text-gray-900 border-b-2 border-blue-600'
-                                : 'text-gray-600 hover:text-gray-900'
-                            }`}
-                          >
-                            Input
-                          </button>
-                          <button
-                            onClick={() => setActiveTab({ ...activeTab, [step.step_order]: 'output' })}
-                            className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
-                              (activeTab[step.step_order] || 'input') === 'output'
-                                ? 'bg-white text-gray-900 border-b-2 border-blue-600'
-                                : 'text-gray-600 hover:text-gray-900'
-                            }`}
-                          >
-                            Output
-                          </button>
-                        </div>
-                        
-                        <div className="p-4 bg-white">
-                          {(activeTab[step.step_order] || 'input') !== 'output' ? (
-                            <div>
-                              <div className="flex items-center justify-between mb-3">
+                      <div className="mt-3">
+                        {/* Fixed layout: Input and Output side by side on desktop, stacked on mobile */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* Input Section */}
+                          <div className="border border-gray-200 rounded-lg overflow-hidden">
+                            <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
+                              <div className="flex items-center justify-between">
                                 <span className="text-sm font-semibold text-gray-700">Input</span>
                                 <button
                                   onClick={() => {
@@ -440,17 +379,32 @@ export function ExecutionSteps({
                                         : formatted.content.input || JSON.stringify(formatted.content, null, 2)
                                     onCopy(text)
                                   }}
-                                  className="text-xs text-gray-500 hover:text-gray-700 flex items-center space-x-1 px-2 py-1.5 rounded hover:bg-gray-50 touch-target"
+                                  className="text-xs text-gray-500 hover:text-gray-700 flex items-center space-x-1 px-2 py-1.5 rounded hover:bg-gray-100 touch-target"
                                 >
                                   <FiCopy className="w-3.5 h-3.5" />
                                   <span>Copy</span>
                                 </button>
                               </div>
+                            </div>
+                            <div className="p-4 bg-white max-h-96 overflow-y-auto">
+                              {/* Previous Steps Context - Collapsible */}
+                              <PreviousStepsContext
+                                previousSteps={getPreviousSteps(step)}
+                                formSubmission={getFormSubmission(step)}
+                                expandedPrevSteps={expandedPrevSteps}
+                                onTogglePrevStep={togglePrevStep}
+                                currentStepOrder={step.step_order}
+                              />
+                              
+                              {/* Current Step Input */}
                               <StepContent formatted={formatStepInput(step)} />
                             </div>
-                          ) : (
-                            <div>
-                              <div className="flex items-center justify-between mb-3">
+                          </div>
+
+                          {/* Output Section */}
+                          <div className="border border-gray-200 rounded-lg overflow-hidden">
+                            <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
+                              <div className="flex items-center justify-between">
                                 <span className="text-sm font-semibold text-gray-700">Output</span>
                                 <button
                                   onClick={() => {
@@ -462,18 +416,21 @@ export function ExecutionSteps({
                                         : JSON.stringify(formatted.content, null, 2)
                                     onCopy(text)
                                   }}
-                                  className="text-xs text-gray-500 hover:text-gray-700 flex items-center space-x-1 px-2 py-1.5 rounded hover:bg-gray-50 touch-target"
+                                  className="text-xs text-gray-500 hover:text-gray-700 flex items-center space-x-1 px-2 py-1.5 rounded hover:bg-gray-100 touch-target"
                                 >
                                   <FiCopy className="w-3.5 h-3.5" />
                                   <span>Copy</span>
                                 </button>
                               </div>
+                            </div>
+                            <div className="p-4 bg-white max-h-96 overflow-y-auto">
                               <StepContent formatted={formatStepOutput(step)} />
+                              
                               {/* Display image URLs if present */}
                               {step.image_urls && Array.isArray(step.image_urls) && step.image_urls.length > 0 && (
                                 <div className="mt-4 pt-4 border-t border-gray-200">
                                   <span className="text-sm font-semibold text-gray-700 mb-3 block">Generated Images:</span>
-                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                  <div className="grid grid-cols-1 gap-3">
                                     {step.image_urls.map((imageUrl: string, imgIdx: number) => (
                                       <div key={imgIdx} className="border border-gray-200 rounded-lg overflow-hidden">
                                         <img 
@@ -500,17 +457,16 @@ export function ExecutionSteps({
                                 </div>
                               )}
                             </div>
-                          )}
+                          </div>
                         </div>
-                      </div>
 
-                      {step.artifact_id && (
-                        <div className="text-xs text-gray-500">
-                          Artifact ID: <span className="font-mono break-all">{step.artifact_id}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                        {step.artifact_id && (
+                          <div className="mt-4 text-xs text-gray-500">
+                            Artifact ID: <span className="font-mono break-all">{step.artifact_id}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                 </div>
                 )}
               </div>
