@@ -161,13 +161,41 @@ This is an npm workspaces monorepo with:
 
 ## Production Deployment
 
+### Replit Autoscale Deployment (November 10, 2025)
+Configured for Replit Autoscale Deployments with the following setup:
+
+**Deployment Configuration**:
+- **Build Command**: `npm run build` (builds Next.js via workspace)
+- **Run Command**: `npm start` (starts Next.js on port 80 for autoscale)
+- **Deployment Target**: autoscale
+- **Port**: Automatically uses PORT environment variable (defaults to 80)
+
+**Key Scripts** (package.json):
+- Root `build`: `npm run build --workspace frontend` - Uses npm workspaces to build frontend
+- Root `start`: `npm run start:deploy --workspace frontend` - Uses deployment script
+- Frontend `start:deploy`: `next start -p ${PORT:-80} -H 0.0.0.0` - Production server on port 80
+
+**Changes Made for Autoscale**:
+1. Added `start:deploy` script in `frontend/package.json` that uses port 80 (required for autoscale)
+2. Updated root scripts to use npm workspace commands instead of shell wrappers
+3. Removed redundant `npm install` from build script (platform handles dependencies)
+4. Ensured Next.js server binds to `0.0.0.0` (required for autoscale)
+5. Configured `output: 'standalone'` in `next.config.js` for optimized production builds
+
+**Deployment Requirements**:
+- Server must listen on port 80 (handled by PORT environment variable)
+- Server must bind to `0.0.0.0` (not localhost)
+- Application must be stateless (no persistent local state)
+- Only one external port exposed
+
+### AWS Deployment (Original)
 This application was originally designed for AWS deployment via CDK:
 - Frontend: Static export to S3 + CloudFront
 - Backend: Lambda functions behind API Gateway
 - Database: DynamoDB tables
 - Storage: S3 buckets for artifacts
 
-For Replit deployment, consider using Replit's deployment features or maintaining the AWS infrastructure while using Replit for development.
+AWS infrastructure can be maintained for backend services while using Replit Autoscale for frontend hosting.
 
 ## Documentation
 Additional documentation available in `docs/`:
