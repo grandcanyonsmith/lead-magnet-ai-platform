@@ -73,4 +73,21 @@ jobs:
             -t $ECR_REGISTRY:$IMAGE_TAG \
             -t $ECR_REGISTRY:latest \
             --push .
+      
+      - name: Update Lambda function
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-repo.outputs.repository }}
+        run: |
+          echo "Updating Lambda function to use new image..."
+          aws lambda update-function-code \
+            --function-name leadmagnet-job-processor \
+            --image-uri $ECR_REGISTRY:latest \
+            --region ${{ env.AWS_REGION }}
+          
+          echo "Waiting for Lambda update to complete..."
+          aws lambda wait function-updated \
+            --function-name leadmagnet-job-processor \
+            --region ${{ env.AWS_REGION }}
+          
+          echo "Lambda function updated successfully!"
 
