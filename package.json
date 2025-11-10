@@ -15,8 +15,8 @@
     "dev:api": "cd backend/api && npm run dev",
     "dev": "concurrently \"npm run dev:api\" \"npm run dev:frontend\"",
     "build:frontend": "cd frontend && npm run build",
-    "build": "cd frontend && npm install && npm run build",
-    "start": "cd frontend && npm start",
+    "build": "npm run build --workspace frontend",
+    "start": "npm run start:deploy --workspace frontend",
     "deploy:infra": "cd infrastructure && npm run deploy",
     "test:all": "npm run test --workspaces",
     "lint:all": "npm run lint --workspaces"
