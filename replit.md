@@ -71,10 +71,10 @@ The project is structured as an npm monorepo with the following components:
 1. **HTML Rendering Support** (`frontend/src/components/jobs/StepContent.tsx`):
    - Added 'html' type support for rendering HTML outputs
    - Toggle between "Rendered" and "Source" views
-   - Rendered view: Secure iframe with empty sandbox attribute (no script execution)
+   - Rendered view: Secure iframe with `sandbox="allow-same-origin"` and `referrerPolicy="no-referrer"`
    - Source view: Syntax-highlighted HTML code with expand/collapse
-   - Security: `sandbox=""` provides complete isolation - no XSS risk
-   - HTML renders visually but cannot execute scripts or access parent origin
+   - Security: Blocks ALL JavaScript execution while allowing external resources (fonts, images)
+   - Privacy: `referrerPolicy="no-referrer"` prevents data leakage to third-party hosts
 
 2. **HTML Detection** (`frontend/src/utils/jobFormatting.tsx`):
    - Added `isHTML()` function to detect HTML content
@@ -91,13 +91,20 @@ The project is structured as an npm monorepo with the following components:
    - Handles edge case where workflow was edited after job execution
 
 #### Technical Details:
-- **Security**: Empty iframe sandbox (`sandbox=""`) prevents script execution and same-origin access
+- **Security**: `sandbox="allow-same-origin"` without `allow-scripts` prevents XSS attacks
+  - JavaScript execution: ❌ Blocked (no `allow-scripts`)
+  - External resources: ✅ Allowed (fonts, stylesheets, images load properly)
+  - Form submission: ❌ Blocked
+  - Top-level navigation: ❌ Blocked
+  - Event handlers: ❌ Blocked (remain inert)
+- **Privacy**: `referrerPolicy="no-referrer"` reduces metadata leakage to external resource hosts
 - **Step Merging**: All execution steps populate mergedStepsMap first, then workflow metadata overlays
 - **HTML Detection Order**: HTML → JSON → Markdown → Text (prevents HTML being parsed as JSON)
-- **Trade-offs**: Interactive HTML (forms, scripts, links) won't work due to security restrictions
+- **Trade-offs**: Interactive HTML (forms, scripts) won't work due to security restrictions
 
 #### Architect Review:
 ✅ **Approved** - Production-ready
-- Security: XSS risk eliminated with proper iframe isolation
+- Security: XSS blocked by disabling scripts; same-origin access safe without script capability
+- Privacy: Referrer policy added to minimize data leakage
 - Step merging: Correctly aggregates all execution steps
-- Recommended: Manual QA with real job data for HTML rendering and step ordering
+- External resources will load (fonts/images) which is expected behavior for proper rendering
