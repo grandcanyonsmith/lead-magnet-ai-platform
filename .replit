@@ -8,7 +8,7 @@ packages = ["gitFull", "playwright-driver"]
 
 [deployment]
 deploymentTarget = "autoscale"
-run = ["npm", "start"]
+run = ["npm"]
 build = ["npm", "run", "build"]
 
 [workflows]
