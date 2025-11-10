@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { FiCheckCircle, FiXCircle, FiClock, FiLoader, FiRefreshCw, FiExternalLink, FiChevronDown, FiChevronUp } from 'react-icons/fi'
@@ -417,9 +417,8 @@ export default function JobsPage() {
                   : null
 
                 return (
-                  <>
+                  <React.Fragment key={job.job_id}>
                     <tr 
-                      key={job.job_id} 
                       className="hover:bg-gray-50 cursor-pointer transition-colors"
                       onClick={() => {
                         // Use window.location for static export compatibility
@@ -525,7 +524,7 @@ export default function JobsPage() {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </React.Fragment>
                 )
               })}
             </tbody>
