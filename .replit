@@ -1,9 +1,10 @@
-modules = ["nodejs-20", "python-3.12", "bash"]
+modules = ["nodejs-20", "bash", "python-3.11"]
 [agent]
 expertMode = true
 
 [nix]
 channel = "stable-25_05"
+packages = ["gitFull", "playwright-driver"]
 
 [deployment]
 deploymentTarget = "autoscale"
@@ -37,6 +38,10 @@ outputType = "webview"
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 34313
+externalPort = 3001
 
 [[ports]]
 localPort = 37929
