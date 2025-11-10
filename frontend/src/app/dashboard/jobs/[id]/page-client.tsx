@@ -10,10 +10,15 @@ import { JobDetails } from '@/components/jobs/JobDetails'
 import { ExecutionSteps } from '@/components/jobs/ExecutionSteps'
 import { TechnicalDetails } from '@/components/jobs/TechnicalDetails'
 import { ResubmitModal } from '@/components/jobs/ResubmitModal'
+import { StepEditModal } from '@/components/jobs/StepEditModal'
+import { api } from '@/lib/api'
+import { WorkflowStep } from '@/types'
+import { toast } from 'react-hot-toast'
 
 export default function JobDetailClient() {
   const router = useRouter()
   const [showResubmitModal, setShowResubmitModal] = useState(false)
+  const [editingStepIndex, setEditingStepIndex] = useState<number | null>(null)
   const {
     job,
     workflow,
@@ -45,6 +50,51 @@ export default function JobDetailClient() {
   const handleResubmitConfirm = async () => {
     await handleResubmit()
     setShowResubmitModal(false)
+  }
+
+  const handleEditStep = (stepIndex: number) => {
+    setEditingStepIndex(stepIndex)
+  }
+
+  const handleSaveStep = async (updatedStep: WorkflowStep) => {
+    if (!workflow || editingStepIndex === null || !workflow.steps) {
+      toast.error('Unable to save: Workflow data not available')
+      return
+    }
+
+    try {
+      // Clone the steps array and merge updated step with original to preserve all fields
+      const updatedSteps = [...workflow.steps]
+      const originalStep = updatedSteps[editingStepIndex]
+      
+      // Merge: keep all original fields, override with updated form fields
+      updatedSteps[editingStepIndex] = {
+        ...originalStep,
+        ...updatedStep,
+      }
+
+      // Update the workflow via API
+      await api.updateWorkflow(workflow.workflow_id, {
+        steps: updatedSteps,
+      })
+
+      // Show success toast
+      toast.success('Step updated successfully')
+
+      // Close the modal
+      setEditingStepIndex(null)
+
+      // Refresh the page to show updated data
+      router.refresh()
+    } catch (error: any) {
+      console.error('Failed to save step:', error)
+      toast.error(error.message || 'Failed to save step changes')
+      throw error
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setEditingStepIndex(null)
   }
 
   // Merge workflow steps with execution steps to show all steps
@@ -250,6 +300,15 @@ export default function JobDetailClient() {
         ) : null}
       </div>
 
+      {/* Step Edit Modal */}
+      <StepEditModal
+        step={editingStepIndex !== null && workflow?.steps?.[editingStepIndex] ? workflow.steps[editingStepIndex] : null}
+        isOpen={editingStepIndex !== null}
+        onClose={handleCancelEdit}
+        onSave={handleSaveStep}
+        jobStatus={job.status}
+      />
+
       {/* Execution Steps */}
       {(workflow?.steps && Array.isArray(workflow.steps) && workflow.steps.length > 0) || 
        (job.execution_steps && Array.isArray(job.execution_steps) && job.execution_steps.length > 0) ? (
@@ -263,6 +322,8 @@ export default function JobDetailClient() {
           jobStatus={job.status}
           onRerunStep={handleRerunStep}
           rerunningStep={rerunningStep}
+          onEditStep={handleEditStep}
+          canEdit={!!workflow}
         />
       ) : null}
 
