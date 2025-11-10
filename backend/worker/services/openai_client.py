@@ -46,7 +46,7 @@ class OpenAIClient:
         reasoning_level: Optional[str] = None
     ) -> Dict:
         """
-        Build parameters for OpenAI API call.
+        Build parameters for OpenAI Responses API call.
         
         Args:
             model: Model name
@@ -59,14 +59,12 @@ class OpenAIClient:
             reasoning_level: Reasoning level for o3 models
             
         Returns:
-            API parameters dictionary
+            API parameters dictionary for Responses API
         """
         params = {
             "model": model,
-            "messages": [
-                {"role": "system", "content": instructions},
-                {"role": "user", "content": input_text}
-            ]
+            "instructions": instructions,
+            "input": input_text
         }
         
         if tools and len(tools) > 0:
@@ -74,32 +72,34 @@ class OpenAIClient:
             if tool_choice != "none":
                 params["tool_choice"] = tool_choice
         
-        if has_computer_use:
-            params["truncation"] = "auto"
-        
         return params
     
-    def create_chat_completion(self, **params):
+    def create_response(self, **params):
         """
-        Create a chat completion using OpenAI API.
+        Create a response using OpenAI Responses API.
+        Supports code_interpreter and other modern tools natively.
         
         Args:
-            **params: Parameters to pass to OpenAI API
+            **params: Parameters to pass to OpenAI Responses API
             
         Returns:
             OpenAI API response
         """
         try:
             client = openai.OpenAI()
-            response = client.chat.completions.create(**params)
+            response = client.responses.create(**params)
             return response
         except Exception as e:
-            logger.error(f"Error calling OpenAI API: {e}", exc_info=True)
+            logger.error(f"Error calling OpenAI Responses API: {e}", exc_info=True)
             raise
     
+    def create_chat_completion(self, **params):
+        """Legacy method for backwards compatibility - now uses Responses API."""
+        return self.create_response(**params)
+    
     def make_api_call(self, params: Dict):
-        """Make API call to OpenAI."""
-        return self.create_chat_completion(**params)
+        """Make API call to OpenAI Responses API."""
+        return self.create_response(**params)
     
     def process_api_response(
         self,
@@ -114,16 +114,19 @@ class OpenAIClient:
         params: Dict,
         image_handler
     ):
-        """Process API response and return formatted results."""
+        """Process Responses API response and return formatted results."""
         from cost_service import calculate_openai_cost
         
-        content = ""
-        if response.choices and len(response.choices) > 0:
-            content = response.choices[0].message.content or ""
+        # Responses API uses output_text instead of choices[0].message.content
+        content = getattr(response, "output_text", "")
+        if not content and hasattr(response, "choices"):
+            # Fallback for backwards compatibility
+            if response.choices and len(response.choices) > 0:
+                content = response.choices[0].message.content or ""
         
-        usage = response.usage if response.usage else None
-        input_tokens = getattr(usage, "prompt_tokens", 0) if usage else 0
-        output_tokens = getattr(usage, "completion_tokens", 0) if usage else 0
+        usage = response.usage if hasattr(response, "usage") and response.usage else None
+        input_tokens = getattr(usage, "input_tokens", 0) if usage else getattr(usage, "prompt_tokens", 0) if usage else 0
+        output_tokens = getattr(usage, "output_tokens", 0) if usage else getattr(usage, "completion_tokens", 0) if usage else 0
         total_tokens = getattr(usage, "total_tokens", 0) if usage else 0
         
         cost_data = calculate_openai_cost(model, input_tokens, output_tokens)
