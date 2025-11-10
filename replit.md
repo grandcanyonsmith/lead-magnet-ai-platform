@@ -131,6 +131,44 @@ This is an npm workspaces monorepo with:
 
 ## Recent Changes (November 10, 2025)
 
+### Job Execution Steps UI Improvements (Evening - 20:41 UTC)
+**Improvements**: Redesigned job execution steps display with better layout and context visibility
+**User Request**: Replace tabbed Input/Output with side-by-side view and integrate previous step context
+
+#### Changes Made:
+1. **ExecutionSteps Component Refactor** (`frontend/src/components/jobs/ExecutionSteps.tsx`):
+   - Removed separate "Context from Previous Steps" section
+   - Replaced slidable Input/Output tabs with fixed two-column layout (responsive grid)
+   - Added state management for collapsible previous steps dropdowns
+   - Updated status icons: yellow spinner for processing (was blue), red X for failed
+   - Side-by-side display on desktop, stacked on mobile
+
+2. **New PreviousStepsContext Component** (`frontend/src/components/jobs/PreviousStepsContext.tsx`):
+   - Collapsible accordion-style dropdowns for each previous step
+   - Shows form submission data (Step 0) if available
+   - Displays previous workflow steps with outputs and generated images
+   - Parent-managed state to persist expansion across re-renders
+   - Unique keys per step to prevent React reconciliation issues
+
+3. **Job List Enhancements** (`frontend/src/app/dashboard/jobs/page.tsx`):
+   - Added step progress counter (e.g., "Step 2/5") to job cards
+   - Progress calculation accounts for failed jobs (stops at failed step)
+   - Added status icons to both mobile and desktop views:
+     - ✅ Green check for completed
+     - ❌ Red X for failed
+     - 🔄 Yellow spinner for processing
+     - ✅ Yellow check for pending
+   - New "Status" column in desktop table with icon + badge
+   - Updated badge colors to match icon scheme (yellow for processing/pending)
+   - Fixed React key warning with React.Fragment
+
+#### Technical Details:
+- Fixed two-column layout: Input (left) | Output (right) on desktop
+- Input section includes collapsible previous steps context + current step input
+- Output section shows current step output + generated images
+- State management lifted to parent to prevent accordion re-initialization
+- Responsive design with proper mobile stacking
+
 ### Downloads Page Redesign (Evening - 19:23 UTC)
 **Improvements**: Transformed downloads/artifacts page from basic table to modern gallery
 **User Request**: Better UI/UX with previews, pagination, and improved sorting
