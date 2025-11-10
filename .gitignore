@@ -46,6 +46,8 @@ backend/worker/typing_extensions.py
 !backend/worker/lambda_handler.py
 !backend/worker/worker.py
 !backend/worker/*.py
+!backend/worker/services/
+!backend/worker/utils/
 
 # IDE
 .vscode/
