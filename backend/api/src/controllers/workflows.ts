@@ -10,6 +10,7 @@ import { calculateOpenAICost } from '../services/costService';
 import { callResponsesWithTimeout } from '../utils/openaiHelpers';
 import { formService } from '../services/formService';
 import { WorkflowGenerationService } from '../services/workflowGenerationService';
+import { WorkflowStepAIService, AIStepGenerationRequest } from '../services/workflowStepAIService';
 import { migrateLegacyWorkflowToSteps, migrateLegacyWorkflowOnUpdate, ensureStepDefaults, WorkflowStep } from '../utils/workflowMigration';
 import { resolveExecutionGroups, validateDependencies } from '../utils/dependencyResolver';
 
@@ -1029,6 +1030,82 @@ Return ONLY the modified instructions:
         errors: validation.errors,
       },
     };
+  }
+
+  async aiGenerateStep(tenantId: string, workflowId: string, body: any): Promise<RouteResponse> {
+    if (!WORKFLOWS_TABLE) {
+      throw new ApiError('WORKFLOWS_TABLE environment variable is not configured', 500);
+    }
+
+    // Validate required fields
+    if (!body.userPrompt || typeof body.userPrompt !== 'string') {
+      throw new ApiError('userPrompt is required and must be a string', 400);
+    }
+
+    // Get the workflow
+    const workflow = await db.get(WORKFLOWS_TABLE!, { workflow_id: workflowId });
+
+    if (!workflow || workflow.deleted_at) {
+      throw new ApiError('This lead magnet doesn\'t exist or has been removed', 404);
+    }
+
+    if (workflow.tenant_id !== tenantId) {
+      throw new ApiError('You don\'t have permission to access this lead magnet', 403);
+    }
+
+    console.log('[AI Step Generation] Starting generation', {
+      workflowId,
+      workflowName: workflow.workflow_name,
+      userPrompt: body.userPrompt.substring(0, 100),
+      action: body.action,
+      currentStepIndex: body.currentStepIndex,
+    });
+
+    try {
+      // Get OpenAI client
+      const openai = await getOpenAIClient();
+      const aiService = new WorkflowStepAIService(openai);
+
+      // Prepare the request
+      const aiRequest: AIStepGenerationRequest = {
+        userPrompt: body.userPrompt,
+        action: body.action,
+        workflowContext: {
+          workflow_id: workflowId,
+          workflow_name: workflow.workflow_name || 'Untitled Workflow',
+          workflow_description: workflow.workflow_description || '',
+          current_steps: (workflow.steps || []).map((step: any) => ({
+            step_name: step.step_name,
+            step_description: step.step_description,
+            model: step.model,
+            tools: step.tools,
+          })),
+        },
+        currentStep: body.currentStep,
+        currentStepIndex: body.currentStepIndex,
+      };
+
+      // Generate the step
+      const result = await aiService.generateStep(aiRequest);
+
+      console.log('[AI Step Generation] Generation successful', {
+        workflowId,
+        action: result.action,
+        stepName: result.step.step_name,
+      });
+
+      return {
+        statusCode: 200,
+        body: result,
+      };
+    } catch (error: any) {
+      console.error('[AI Step Generation] Error', {
+        workflowId,
+        error: error.message,
+        stack: error.stack,
+      });
+      throw new ApiError(`Failed to generate step: ${error.message}`, 500);
+    }
   }
 }
 
