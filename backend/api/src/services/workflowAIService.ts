@@ -108,7 +108,7 @@ export class WorkflowAIService {
     } else {
       workflowContext.current_steps.forEach((step, index) => {
         const tools = step.tools && step.tools.length > 0 
-          ? ` [Tools: ${step.tools.map(t => typeof t === 'string' ? t : t.type).join(', ')}]`
+          ? ` [Tools: ${step.tools.map((t: any) => typeof t === 'string' ? t : t.type).join(', ')}]`
           : '';
         const deps = step.depends_on && step.depends_on.length > 0
           ? ` [Depends on: ${step.depends_on.map(d => d + 1).join(', ')}]`
@@ -160,8 +160,8 @@ Please generate the updated workflow configuration with all necessary changes.`;
         throw new Error('Invalid response structure from AI - missing steps array');
       }
 
-      // Validate and normalize each step with proper defaults
-      const normalizedSteps: WorkflowStep[] = parsedResponse.steps.map((step: any, index: number) => {
+      // Validate and normalize each step
+      const validatedSteps: WorkflowStep[] = parsedResponse.steps.map((step: any, index: number) => {
         // Validate required fields
         if (!step.step_name || !step.instructions) {
           throw new Error(`Step ${index + 1} is missing required fields (step_name or instructions)`);
@@ -175,8 +175,8 @@ Please generate the updated workflow configuration with all necessary changes.`;
 
         // Validate and sanitize tools
         if (step.tools && Array.isArray(step.tools)) {
-          step.tools = step.tools.filter((tool: string | { type: string }) => {
-            const toolName = typeof tool === 'string' ? tool : (tool as { type: string }).type;
+          step.tools = step.tools.filter((tool: any) => {
+            const toolName = typeof tool === 'string' ? tool : tool.type;
             return AVAILABLE_TOOLS.includes(toolName);
           });
         }
@@ -196,9 +196,11 @@ Please generate the updated workflow configuration with all necessary changes.`;
         // Set step_order
         step.step_order = index;
 
-        // Use ensureStepDefaults to add all required fields (step_id, step_group, etc.)
-        return ensureStepDefaults(step, index);
+        return step;
       });
+
+      // Apply defaults to all steps (adds step_id, step_group, etc.)
+      const normalizedSteps = ensureStepDefaults(validatedSteps);
 
       // Validate dependencies across all steps
       try {
