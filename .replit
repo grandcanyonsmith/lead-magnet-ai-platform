@@ -23,6 +23,10 @@ author = "agent"
 task = "workflow.run"
 args = "dev"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "backend"
+
 [[workflows.workflow]]
 name = "dev"
 author = "agent"
@@ -34,6 +38,18 @@ waitForPort = 5000
 
 [workflows.workflow.metadata]
 outputType = "webview"
+
+[[workflows.workflow]]
+name = "backend"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd backend/api && npm run dev"
+waitForPort = 3001
+
+[workflows.workflow.metadata]
+outputType = "console"
 
 [[ports]]
 localPort = 5000
@@ -54,6 +70,10 @@ externalPort = 3002
 [[ports]]
 localPort = 46743
 externalPort = 3003
+
+[[ports]]
+localPort = 3001
+externalPort = 3001
 
 [objectStorage]
 defaultBucketID = "replit-objstore-46f6876a-bd2a-4fa0-b91a-84c9eafa5f93"
