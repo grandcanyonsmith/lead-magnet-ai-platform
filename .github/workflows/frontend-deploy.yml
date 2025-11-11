@@ -1,12 +1,7 @@
-name: Deploy Frontend
+name: Deploy Frontend (Disabled - Using Vercel)
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'frontend/**'
-      - '.github/workflows/frontend-deploy.yml'
+  # Disabled - Frontend is deployed via Vercel
   workflow_dispatch:
 
 jobs:
