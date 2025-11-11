@@ -392,6 +392,7 @@ export default function EditWorkflowPage() {
             setSelectedStepIndex(index + 1)
           }
         }}
+        workflowId={workflowId}
       />
     </div>
   )
