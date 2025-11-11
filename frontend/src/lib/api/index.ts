@@ -161,6 +161,10 @@ class ApiClientImpl implements ApiClient {
     return this.workflows.refineInstructions(request)
   }
 
+  async generateStepWithAI(workflowId: string, request: Parameters<WorkflowsClient['generateStepWithAI']>[1]) {
+    return this.workflows.generateStepWithAI(workflowId, request)
+  }
+
   // Template AI - delegate to templates client
   async generateTemplateWithAI(request: Parameters<TemplatesClient['generateTemplateWithAI']>[0]) {
     return this.templates.generateTemplateWithAI(request)
