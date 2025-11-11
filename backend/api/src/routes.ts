@@ -133,6 +133,12 @@ export const router = async (
     return await workflowsController.aiGenerateStep(tenantId, id, body);
   }
 
+  if (path.match(/^\/admin\/workflows\/[^/]+\/ai-edit$/) && method === 'POST') {
+    const id = pathSegments[2];
+    console.log('[Router] Matched /admin/workflows/:id/ai-edit route', { id });
+    return await workflowsController.aiEditWorkflow(tenantId, id, body);
+  }
+
   if (path.match(/^\/admin\/workflows\/[^/]+$/) && method === 'GET') {
     const id = pathSegments[2];
     return await workflowsController.get(tenantId, id);

@@ -87,5 +87,20 @@ export class WorkflowsClient extends BaseApiClient {
   }> {
     return this.post(`/admin/workflows/${workflowId}/ai-step`, request)
   }
+
+  async editWorkflowWithAI(
+    workflowId: string,
+    request: {
+      userPrompt: string
+    }
+  ): Promise<{
+    workflow_name?: string
+    workflow_description?: string
+    html_enabled?: boolean
+    steps: any[]
+    changes_summary: string
+  }> {
+    return this.post(`/admin/workflows/${workflowId}/ai-edit`, request)
+  }
 }
 
