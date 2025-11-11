@@ -90,7 +90,7 @@ class TemplatesController {
   async list(tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {
     const limit = queryParams.limit ? parseInt(queryParams.limit) : 50;
 
-    const templates = await db.query(
+    const result = await db.query(
       TEMPLATES_TABLE,
       'gsi_tenant_id',
       'tenant_id = :tenant_id',
@@ -98,6 +98,7 @@ class TemplatesController {
       undefined,
       limit
     );
+    const templates = result.items;
 
     return {
       statusCode: 200,
@@ -118,7 +119,7 @@ class TemplatesController {
       template = await db.get(TEMPLATES_TABLE, { template_id: id, version });
     } else {
       // Get latest version
-      const templates = await db.query(
+      const result = await db.query(
         TEMPLATES_TABLE,
         undefined,
         'template_id = :template_id',
@@ -126,6 +127,7 @@ class TemplatesController {
         undefined,
         1
       );
+      const templates = result.items;
       template = templates[0];
     }
 
@@ -172,7 +174,7 @@ class TemplatesController {
     const [id] = templateId.split(':');
 
     // Get latest version
-    const existingTemplates = await db.query(
+    const result = await db.query(
       TEMPLATES_TABLE,
       undefined,
       'template_id = :template_id',
@@ -180,6 +182,7 @@ class TemplatesController {
       undefined,
       1
     );
+    const existingTemplates = result.items;
 
     if (existingTemplates.length === 0) {
       throw new ApiError('This template doesn\'t exist', 404);

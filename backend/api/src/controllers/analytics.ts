@@ -36,12 +36,13 @@ class AnalyticsController {
 
     try {
       // Get all jobs for tenant in date range
-      jobs = await db.query(
+      const jobsResult = await db.query(
         JOBS_TABLE!,
         'gsi_tenant_created',
         'tenant_id = :tenant_id AND created_at >= :start_date',
         { ':tenant_id': tenantId, ':start_date': startDateStr }
       );
+      jobs = jobsResult.items;
       console.log('[Analytics] Jobs query completed', { count: jobs.length });
     } catch (error: any) {
       console.error('[Analytics] Jobs query error', {
@@ -56,12 +57,13 @@ class AnalyticsController {
 
     try {
       // Get all submissions for tenant in date range
-      submissions = await db.query(
+      const submissionsResult = await db.query(
         SUBMISSIONS_TABLE!,
         'gsi_tenant_created',
         'tenant_id = :tenant_id AND created_at >= :start_date',
         { ':tenant_id': tenantId, ':start_date': startDateStr }
       );
+      submissions = submissionsResult.items;
       console.log('[Analytics] Submissions query completed', { count: submissions.length });
     } catch (error: any) {
       console.error('[Analytics] Submissions query error', {
@@ -76,12 +78,13 @@ class AnalyticsController {
 
     try {
       // Get all workflows for tenant
-      workflows = await db.query(
+      const workflowsResult = await db.query(
         WORKFLOWS_TABLE!,
         'gsi_tenant_status',
         'tenant_id = :tenant_id',
         { ':tenant_id': tenantId }
       );
+      workflows = workflowsResult.items;
       console.log('[Analytics] Workflows query completed', { count: workflows.length });
     } catch (error: any) {
       console.error('[Analytics] Workflows query error', {

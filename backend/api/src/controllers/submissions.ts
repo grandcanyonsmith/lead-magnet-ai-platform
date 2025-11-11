@@ -11,7 +11,7 @@ class SubmissionsController {
 
     let submissions;
     if (formId) {
-      submissions = await db.query(
+      const result = await db.query(
         SUBMISSIONS_TABLE,
         'gsi_form_created',
         'form_id = :form_id',
@@ -19,8 +19,9 @@ class SubmissionsController {
         undefined,
         limit
       );
+      submissions = result.items;
     } else {
-      submissions = await db.query(
+      const result = await db.query(
         SUBMISSIONS_TABLE,
         'gsi_tenant_created',
         'tenant_id = :tenant_id',
@@ -28,6 +29,7 @@ class SubmissionsController {
         undefined,
         limit
       );
+      submissions = result.items;
     }
 
     return {

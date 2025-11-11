@@ -50,12 +50,13 @@ export class FormService {
     }
 
     // Check if workflow already has a form
-    const existingForms = await db.query(
+    const result = await db.query(
       FORMS_TABLE,
       'gsi_workflow_id',
       'workflow_id = :workflow_id',
       { ':workflow_id': workflowId }
     );
+    const existingForms = result.items;
 
     if (existingForms.length > 0 && !existingForms[0].deleted_at) {
       // Workflow already has a form, return existing form_id
@@ -70,12 +71,13 @@ export class FormService {
 
     // Ensure slug is unique
     while (true) {
-      const slugCheck = await db.query(
+      const slugResult = await db.query(
         FORMS_TABLE!,
         'gsi_public_slug',
         'public_slug = :slug',
         { ':slug': publicSlug }
       );
+      const slugCheck = slugResult.items;
     
       if (slugCheck.length === 0 || slugCheck[0].deleted_at) {
         break;
@@ -124,12 +126,13 @@ export class FormService {
     }
 
     try {
-      const forms = await db.query(
+      const result = await db.query(
         FORMS_TABLE!,
         'gsi_workflow_id',
         'workflow_id = :workflow_id',
         { ':workflow_id': workflowId }
       );
+      const forms = result.items;
       
       const activeForm = forms.find((f: any) => !f.deleted_at);
       return activeForm || null;
@@ -151,12 +154,13 @@ export class FormService {
     }
 
     try {
-      const forms = await db.query(
+      const result = await db.query(
         FORMS_TABLE!,
         'gsi_workflow_id',
         'workflow_id = :workflow_id',
         { ':workflow_id': workflowId }
       );
+      const forms = result.items;
       
       const activeForm = forms.find((f: any) => !f.deleted_at);
       if (activeForm) {
@@ -184,12 +188,13 @@ export class FormService {
     }
 
     try {
-      const forms = await db.query(
+      const result = await db.query(
         FORMS_TABLE!,
         'gsi_workflow_id',
         'workflow_id = :workflow_id',
         { ':workflow_id': workflowId }
       );
+      const forms = result.items;
       
       for (const form of forms) {
         if (!form.deleted_at) {

@@ -124,7 +124,7 @@ class WorkflowsController {
             { '#status': 'status' },
             limit
           );
-          workflows = Array.isArray(result) ? result : result.items;
+          workflows = result.items;
         } else {
           const result = await db.query(
             WORKFLOWS_TABLE!,
@@ -134,7 +134,7 @@ class WorkflowsController {
             undefined,
             limit
           );
-          workflows = Array.isArray(result) ? result : result.items;
+          workflows = result.items;
         }
       } catch (dbError: any) {
         console.error('[Workflows List] Database query error', {

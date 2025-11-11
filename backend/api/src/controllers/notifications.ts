@@ -53,7 +53,7 @@ class NotificationsController {
           undefined,
           limit * 2 // Get more to filter unread
         );
-        notifications = Array.isArray(result) ? result : (result.items || []);
+        notifications = result.items;
         // Filter for unread notifications
         notifications = notifications.filter((n: any) => !n.read && !n.read_at);
       } else {
@@ -65,7 +65,7 @@ class NotificationsController {
           undefined,
           limit
         );
-        notifications = Array.isArray(result) ? result : (result.items || []);
+        notifications = result.items;
       }
 
       // Sort by created_at DESC (most recent first)
@@ -192,7 +192,7 @@ class NotificationsController {
         1000 // Large limit to get all
       );
 
-      const notifications = Array.isArray(result) ? result : (result.items || []);
+      const notifications = result.items;
       const unreadNotifications = notifications.filter((n: any) => !n.read && !n.read_at);
       const now = new Date().toISOString();
 
@@ -252,7 +252,7 @@ class NotificationsController {
         1000 // Large limit to count all
       );
 
-      const notifications = Array.isArray(result) ? result : (result.items || []);
+      const notifications = result.items;
       return notifications.filter((n: any) => !n.read && !n.read_at).length;
     } catch (error) {
       console.error('Error getting unread count:', error);
