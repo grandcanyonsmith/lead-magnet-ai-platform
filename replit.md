@@ -34,6 +34,10 @@ The project is structured as an npm monorepo with the following components:
 - **Job Processing**: Asynchronous job execution coordinated by AWS Step Functions, processed by AI workers.
 - **Inline Step Editing**: Allows direct modification of workflow steps during job execution, preserving metadata and providing immediate feedback.
 - **Job Execution Display**: Redesigned to show previous step context and current step input/output side-by-side, with clear progress indicators.
+- **AI-Powered Workflow Editing**: 
+  - **Step-Level AI**: Natural language editing for individual workflow steps with diff preview and accept/reject flow
+  - **Workflow-Level AI**: Complete workflow restructuring with AI - add, remove, modify, or reorder multiple steps at once using natural language prompts
+  - Both AI features use validated, normalized responses to prevent data corruption
 
 ### System Design Choices
 - **Monorepo**: Facilitates shared code, consistent tooling, and streamlined development across different components.
@@ -61,7 +65,70 @@ The project is structured as an npm monorepo with the following components:
 - **React Hook Form / Zod**: Form management and validation.
 - **react-hot-toast**: For toast notifications.
 
-## Recent Changes (November 10, 2025)
+## Recent Changes
+
+### Workflow-Level AI Editing (November 11, 2025)
+**Feature**: Added AI-powered workflow restructuring capability that allows users to modify entire workflows with natural language
+**User Request**: "Add a generate with AI prompt that will edit the entire thing not just one step at a time"
+
+#### Changes Made:
+1. **Backend Service** (`backend/api/src/services/workflowAIService.ts`):
+   - Created `WorkflowAIService` for whole-workflow AI editing
+   - Uses OpenAI GPT-4o to interpret natural language prompts
+   - Supports adding, removing, modifying, and reordering steps
+   - Validates and normalizes all AI-generated steps using `ensureStepDefaults`
+   - Runs `validateDependencies` to ensure step dependencies are valid
+   - Returns structured proposals with workflow metadata and step changes
+
+2. **Backend Controller & Routes** (`backend/api/src/controllers/workflows.ts`, `backend/api/src/routes.ts`):
+   - Added `aiEditWorkflow` controller method
+   - Created POST `/admin/workflows/:id/ai-edit` endpoint
+   - Validates user permissions and workflow existence
+   - Returns normalized, validated proposals only
+
+3. **Frontend API Client** (`frontend/src/lib/api/workflows.client.ts`, `frontend/src/lib/api/index.ts`):
+   - Added `editWorkflowWithAI` method to WorkflowsClient
+   - Integrated into main API client for easy access
+
+4. **Frontend Hook** (`frontend/src/hooks/useWorkflowAI.ts`):
+   - Created `useWorkflowAI` hook for state management
+   - Handles API calls, loading states, and error handling
+   - Manages proposal lifecycle (generate → review → accept/reject)
+
+5. **WorkflowDiffPreview Component** (`frontend/src/components/workflows/edit/WorkflowDiffPreview.tsx`):
+   - Displays comprehensive diff of all proposed changes
+   - Shows workflow metadata changes (name, description, HTML setting)
+   - Color-coded step changes: green (new), yellow (modified), red (removed)
+   - Displays model, tools, and dependencies for each step
+   - Accept/reject actions with loading states
+
+6. **WorkflowTab UI Integration** (`frontend/src/components/workflows/edit/WorkflowTab.tsx`):
+   - Added collapsible "AI Workflow Assistant" panel with purple gradient styling
+   - Prominent placement between workflow settings and steps
+   - Natural language prompt input with example suggestions
+   - Validates proposals before applying to prevent data corruption
+   - Preserves proposals on error for user recovery
+   - Success/error feedback via toast notifications
+
+7. **EditWorkflowPage Updates** (`frontend/src/app/dashboard/workflows/[id]/edit/page-client.tsx`):
+   - Passed `workflowId` and `onStepsChange` props to WorkflowTab
+   - Enables workflow-level AI editing in the edit flow
+
+#### Technical Details:
+- **Validation Pipeline**: AI responses → sanitize models/tools → `ensureStepDefaults` → `validateDependencies` → client
+- **Required Fields**: All steps get `step_id`, `step_group`, `step_order`, and other defaults before reaching frontend
+- **Error Recovery**: Frontend validates proposals before applying; keeps proposal visible on error so user can reject
+- **State Management**: Changes applied to local state only; user must click "Save Changes" to persist
+- **Security**: All proposals validated server-side; malformed AI responses rejected before reaching client
+
+#### Architect Review:
+✅ **Approved** - Production-ready
+- Normalization and validation prevent data corruption
+- Frontend guards against corrupt proposals
+- Error handling provides user recovery path
+- No security vulnerabilities observed
+
+### Changes from November 10, 2025
 
 ### Deployment Fixes & React Hooks Compliance (Evening - 23:20 UTC)
 **Issue**: Deployment failing due to React Hooks violations and incorrect run command
