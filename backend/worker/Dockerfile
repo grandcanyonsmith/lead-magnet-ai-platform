@@ -18,4 +18,8 @@ COPY utils/ ./utils/
 
 # Set the CMD to your handler
 ENTRYPOINT [ "python3", "-m", "awslambdaric" ]
+<<<<<<< HEAD
 CMD [ "lambda_handler.lambda_handler" ]
+=======
+CMD [ "lambda_handler.lambda_handler" ]
+>>>>>>> c6fffa18d4c7774dea8267c84ac587437f06bbe3
