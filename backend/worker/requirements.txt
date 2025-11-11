@@ -6,8 +6,4 @@ markdown==3.5.2
 beautifulsoup4==4.12.3
 requests==2.31.0
 ulid-py==1.1.0
-<<<<<<< HEAD
 httpx>=0.27.0
-=======
-httpx>=0.27.0
->>>>>>> c6fffa18d4c7774dea8267c84ac587437f06bbe3
