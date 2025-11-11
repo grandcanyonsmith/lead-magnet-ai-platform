@@ -1,0 +1,61 @@
+
+
+git commit -m "Add workflow-level AI editing feature"
+git push origin main
+On branch main
+Your branch is ahead of 'origin/main' by 2 commits.
+  (use "git push" to publish your local commits)
+
+nothing to commit, working tree clean
+Enumerating objects: 48, done.
+Counting objects: 100% (35/35), done.
+Delta compression using up to 8 threads
+Compressing objects: 100% (9/9), done.
+Writing objects: 100% (10/10), 2.02 KiB | 2.02 MiB/s, done.
+Total 10 (delta 7), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (7/7), completed with 5 local objects.
+To https://github.com/grandcanyonsmith/lead-magnet-ai-platform
+ ! [remote rejected] main -> main (refusing to allow an OAuth App to create or update workflow `.github/workflows/frontend-deploy.yml` without `workflow` scope)
+error: failed to push some refs to 'https://github.com/grandcanyonsmith/lead-magnet-ai-platform'
+~/workspace$ # Step 1: Revert the workflow file
+git checkout HEAD -- .github/workflows/frontend-deploy.yml
+
+# Step 2: Stage only the feature files
+git add backend/api/src/services/workflowAIService.ts
+git add backend/api/src/controllers/workflows.ts
+git add backend/api/src/routes.ts
+git add frontend/src/hooks/useWorkflowAI.ts
+git add frontend/src/components/workflows/edit/WorkflowDiffPreview.tsx
+git add frontend/src/components/workflows/edit/WorkflowTab.tsx
+git add frontend/src/app/dashboard/workflows/[id]/edit/page-client.tsx
+git add frontend/src/lib/api/workflows.client.ts
+git add frontend/src/lib/api/index.ts
+git add replit.md
+
+# Step 3: Commit and push
+git commit -m "Add workflow-level AI editing feature"
+git push origin main
+On branch main
+Your branch is ahead of 'origin/main' by 2 commits.
+  (use "git push" to publish your local commits)
+
+nothing to commit, working tree clean
+Enumerating objects: 48, done.
+Counting objects: 100% (35/35), done.
+Delta compression using up to 8 threads
+Compressing objects: 100% (9/9), done.
+Writing objects: 100% (10/10), 2.02 KiB | 2.02 MiB/s, done.
+Total 10 (delta 7), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (7/7), completed with 5 local objects.
+To https://github.com/grandcanyonsmith/lead-magnet-ai-platform
+ ! [remote rejected] main -> main (refusing to allow an OAuth App to create or update workflow `.github/workflows/frontend-deploy.yml` without `workflow` scope)
+error: failed to push some refs to 'https://github.com/grandcanyonsmith/lead-magnet-ai-platform'
+~/workspace$ 
+
+
+
+
+
+
+
+
