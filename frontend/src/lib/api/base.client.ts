@@ -22,6 +22,7 @@ export class BaseApiClient {
       headers: {
         'Content-Type': 'application/json',
       },
+      timeout: 120000,
     })
 
     this.setupInterceptors()
