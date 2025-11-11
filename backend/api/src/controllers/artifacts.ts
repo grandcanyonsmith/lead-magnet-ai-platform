@@ -21,7 +21,7 @@ class ArtifactsController {
 
     let artifacts;
     if (jobId) {
-      artifacts = await db.query(
+      const result = await db.query(
         ARTIFACTS_TABLE!,
         'gsi_job_id',
         'job_id = :job_id',
@@ -29,8 +29,9 @@ class ArtifactsController {
         undefined,
         limit
       );
+      artifacts = result.items;
     } else if (artifactType) {
-      artifacts = await db.query(
+      const result = await db.query(
         ARTIFACTS_TABLE!,
         'gsi_tenant_type',
         'tenant_id = :tenant_id AND artifact_type = :artifact_type',
@@ -38,8 +39,9 @@ class ArtifactsController {
         undefined,
         limit
       );
+      artifacts = result.items;
     } else {
-      artifacts = await db.query(
+      const result = await db.query(
         ARTIFACTS_TABLE!,
         'gsi_tenant_type',
         'tenant_id = :tenant_id',
@@ -47,6 +49,7 @@ class ArtifactsController {
         undefined,
         limit
       );
+      artifacts = result.items;
     }
 
     // Filter out report.md artifacts - they're for internal use only

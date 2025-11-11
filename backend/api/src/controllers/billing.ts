@@ -86,7 +86,7 @@ class BillingController {
     // DynamoDB requires BETWEEN for sort key range queries
     let usageRecords: any[] = [];
     try {
-      usageRecords = await db.query(
+      const result = await db.query(
         USAGE_RECORDS_TABLE,
         'gsi_tenant_date',
         'tenant_id = :tenant_id AND created_at BETWEEN :start_date AND :end_date',
@@ -96,6 +96,7 @@ class BillingController {
           ':end_date': endDateStr,
         }
       );
+      usageRecords = result.items;
     } catch (error: any) {
       // If table doesn't exist yet or permissions are missing, return empty results
       if (

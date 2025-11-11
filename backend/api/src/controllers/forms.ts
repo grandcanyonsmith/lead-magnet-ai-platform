@@ -94,7 +94,7 @@ class FormsController {
   async list(tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {
     const limit = queryParams.limit ? parseInt(queryParams.limit) : 50;
 
-    const forms = await db.query(
+    const result = await db.query(
       FORMS_TABLE,
       'gsi_tenant_id',
       'tenant_id = :tenant_id',
@@ -102,6 +102,7 @@ class FormsController {
       undefined,
       limit
     );
+    const forms = result.items;
 
     // Filter out soft-deleted items
     const activeForms = forms.filter((f: any) => !f.deleted_at);
@@ -137,12 +138,13 @@ class FormsController {
     console.log('getPublicForm called with slug:', slug, 'type:', typeof slug);
     
     try {
-      const forms = await db.query(
+      const result = await db.query(
         FORMS_TABLE,
         'gsi_public_slug',
         'public_slug = :slug',
         { ':slug': slug }
       );
+      const forms = result.items;
       
       console.log('Query returned forms:', forms);
 
@@ -205,12 +207,13 @@ class FormsController {
 
   async submitForm(slug: string, body: any, sourceIp: string): Promise<RouteResponse> {
     // Get form by slug
-    const forms = await db.query(
+    const result = await db.query(
       FORMS_TABLE,
       'gsi_public_slug',
       'public_slug = :slug',
       { ':slug': slug }
     );
+    const forms = result.items;
 
     if (forms.length === 0) {
       throw new ApiError('This form doesn\'t exist or has been removed', 404);
@@ -336,12 +339,13 @@ class FormsController {
     const data = validate(createFormSchema, body);
 
     // Enforce 1:1 relationship: Check if workflow already has a form
-    const existingForms = await db.query(
+    const result1 = await db.query(
       FORMS_TABLE,
       'gsi_workflow_id',
       'workflow_id = :workflow_id',
       { ':workflow_id': data.workflow_id }
     );
+    const existingForms = result1.items;
 
     const activeForm = existingForms.find((f: any) => !f.deleted_at);
     if (activeForm) {
@@ -349,12 +353,13 @@ class FormsController {
     }
 
     // Check if slug is unique
-    const slugCheck = await db.query(
+    const result2 = await db.query(
       FORMS_TABLE,
       'gsi_public_slug',
       'public_slug = :slug',
       { ':slug': data.public_slug }
     );
+    const slugCheck = result2.items;
 
     if (slugCheck.length > 0 && !slugCheck[0].deleted_at) {
       throw new ApiError('This form URL is already taken. Please choose a different one', 400);
@@ -404,12 +409,13 @@ class FormsController {
 
     // If updating slug, check uniqueness
     if (data.public_slug && data.public_slug !== existing.public_slug) {
-      const existingForms = await db.query(
+      const result = await db.query(
         FORMS_TABLE,
         'gsi_public_slug',
         'public_slug = :slug',
         { ':slug': data.public_slug }
       );
+      const existingForms = result.items;
 
       if (existingForms.length > 0) {
         throw new ApiError('This form URL is already taken. Please choose a different one', 400);
