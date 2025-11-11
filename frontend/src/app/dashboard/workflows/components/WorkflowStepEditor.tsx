@@ -1,7 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { FiTrash2, FiChevronUp, FiChevronDown } from 'react-icons/fi'
+import { FiTrash2, FiChevronUp, FiChevronDown, FiZap, FiChevronDown as FiChevronCollapse, FiChevronUp as FiChevronExpand } from 'react-icons/fi'
+import { useWorkflowStepAI } from '@/hooks/useWorkflowStepAI'
+import StepDiffPreview from '@/components/workflows/edit/StepDiffPreview'
+import toast from 'react-hot-toast'
 
 export interface WorkflowStep {
   step_name: string
@@ -23,6 +26,7 @@ interface WorkflowStepEditorProps {
   onDelete: (index: number) => void
   onMoveUp: (index: number) => void
   onMoveDown: (index: number) => void
+  workflowId?: string // Required for AI features
 }
 
 const MODEL_OPTIONS = [
@@ -59,6 +63,7 @@ export default function WorkflowStepEditor({
   onDelete,
   onMoveUp,
   onMoveDown,
+  workflowId,
 }: WorkflowStepEditorProps) {
   const [localStep, setLocalStep] = useState<WorkflowStep>(step)
   const [computerUseConfig, setComputerUseConfig] = useState({
@@ -66,6 +71,11 @@ export default function WorkflowStepEditor({
     display_height: 768,
     environment: 'browser' as 'browser' | 'mac' | 'windows' | 'ubuntu',
   })
+  const [aiPrompt, setAiPrompt] = useState('')
+  const [showAIAssist, setShowAIAssist] = useState(false)
+
+  // Always call hook unconditionally to comply with Rules of Hooks
+  const { isGenerating, error: aiError, proposal, generateStep, acceptProposal, rejectProposal } = useWorkflowStepAI(workflowId)
 
   // Sync localStep when step prop changes
   useEffect(() => {
@@ -159,6 +169,39 @@ export default function WorkflowStepEditor({
     handleChange('tools', updatedTools)
   }
 
+  const handleAIGenerate = async () => {
+    if (!generateStep || !aiPrompt.trim()) {
+      toast.error('Please enter a prompt')
+      return
+    }
+
+    try {
+      await generateStep(aiPrompt, localStep, index, 'update')
+    } catch (err: any) {
+      toast.error(aiError || 'Failed to generate step configuration')
+    }
+  }
+
+  const handleAcceptProposal = () => {
+    if (!proposal || !acceptProposal) return
+
+    const acceptedProposal = acceptProposal()
+    if (acceptedProposal) {
+      const { proposed } = acceptedProposal
+      setLocalStep(proposed)
+      onChange(index, proposed)
+      setAiPrompt('')
+      toast.success('AI changes applied successfully')
+    }
+  }
+
+  const handleRejectProposal = () => {
+    if (!rejectProposal) return
+    rejectProposal()
+    setAiPrompt('')
+    toast('AI proposal rejected')
+  }
+
   return (
     <div className="border border-gray-300 rounded-lg p-6 bg-white shadow-sm">
       <div className="flex items-start justify-between mb-4">
@@ -199,6 +242,92 @@ export default function WorkflowStepEditor({
           </button>
         </div>
       </div>
+
+      {/* AI Assist Section */}
+      {workflowId && (
+        <div className="mb-6">
+          <button
+            type="button"
+            onClick={() => setShowAIAssist(!showAIAssist)}
+            className="w-full flex items-center justify-between px-4 py-3 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg hover:from-purple-100 hover:to-blue-100 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <FiZap className="w-5 h-5 text-purple-600" />
+              <span className="font-semibold text-purple-900">AI Assist</span>
+              <span className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded-full">
+                Beta
+              </span>
+            </div>
+            {showAIAssist ? (
+              <FiChevronExpand className="w-5 h-5 text-purple-600" />
+            ) : (
+              <FiChevronCollapse className="w-5 h-5 text-purple-600" />
+            )}
+          </button>
+
+          {showAIAssist && (
+            <div className="mt-3 p-4 border border-purple-200 rounded-lg bg-white">
+              <p className="text-sm text-gray-600 mb-3">
+                Describe how you want to change this step, and AI will generate an updated configuration for you to review.
+              </p>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    What would you like to change?
+                  </label>
+                  <textarea
+                    value={aiPrompt}
+                    onChange={(e) => setAiPrompt(e.target.value)}
+                    placeholder="e.g., 'Change the model to GPT-4o and add web search tool' or 'Update instructions to focus on competitive analysis'"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                    rows={3}
+                    disabled={isGenerating}
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleAIGenerate}
+                  disabled={!aiPrompt.trim() || isGenerating}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm transition-colors"
+                >
+                  {isGenerating ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <FiZap className="w-4 h-4" />
+                      Generate with AI
+                    </>
+                  )}
+                </button>
+
+                {aiError && (
+                  <div className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded border border-red-200">
+                    {aiError}
+                  </div>
+                )}
+
+                {proposal && (
+                  <div className="mt-4">
+                    <StepDiffPreview
+                      original={proposal.original}
+                      proposed={proposal.proposed}
+                      action={proposal.action}
+                      onAccept={handleAcceptProposal}
+                      onReject={handleRejectProposal}
+                      isLoading={false}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="space-y-4">
         <div>

@@ -17,7 +17,7 @@ export interface AIStepProposal {
   step_index?: number
 }
 
-export function useWorkflowStepAI(workflowId: string) {
+export function useWorkflowStepAI(workflowId?: string) {
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [proposal, setProposal] = useState<AIStepProposal | null>(null)
@@ -28,6 +28,11 @@ export function useWorkflowStepAI(workflowId: string) {
     currentStepIndex?: number,
     suggestedAction?: 'update' | 'add'
   ) => {
+    if (!workflowId) {
+      setError('Workflow ID is required for AI generation')
+      return null
+    }
+
     setIsGenerating(true)
     setError(null)
     setProposal(null)
