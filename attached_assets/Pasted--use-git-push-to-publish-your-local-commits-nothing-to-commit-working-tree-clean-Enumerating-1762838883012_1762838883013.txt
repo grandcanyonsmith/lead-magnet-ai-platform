@@ -1,0 +1,63 @@
+
+  (use "git push" to publish your local commits)
+
+nothing to commit, working tree clean
+Enumerating objects: 43, done.
+Counting objects: 100% (30/30), done.
+Delta compression using up to 8 threads
+Compressing objects: 100% (5/5), done.
+Writing objects: 100% (6/6), 846 bytes | 846.00 KiB/s, done.
+Total 6 (delta 4), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (4/4), completed with 4 local objects.
+To https://github.com/grandcanyonsmith/lead-magnet-ai-platform
+ ! [remote rejected] main -> main (refusing to allow an OAuth App to create or update workflow `.github/workflows/frontend-deploy.yml` without `workflow` scope)
+error: failed to push some refs to 'https://github.com/grandcanyonsmith/lead-magnet-ai-platform'
+~/workspace$ 
+~/workspace$ 
+~/workspace$ 
+~/workspace$ 
+~/workspace$ 
+~/workspace$ # Pull the latest changes from remote
+git pull origin main
+
+# If there are merge conflicts, resolve them, then:
+git add .
+git commit -m "Merge remote changes"
+
+# Now push your changes
+git push origin main
+From https://github.com/grandcanyonsmith/lead-magnet-ai-platform
+ * branch            main       -> FETCH_HEAD
+Already up to date.
+On branch main
+Your branch is ahead of 'origin/main' by 1 commit.
+  (use "git push" to publish your local commits)
+
+nothing to commit, working tree clean
+Enumerating objects: 43, done.
+Counting objects: 100% (30/30), done.
+Delta compression using up to 8 threads
+Compressing objects: 100% (5/5), done.
+Writing objects: 100% (6/6), 846 bytes | 846.00 KiB/s, done.
+Total 6 (delta 4), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (4/4), completed with 4 local objects.
+To https://github.com/grandcanyonsmith/lead-magnet-ai-platform
+ ! [remote rejected] main -> main (refusing to allow an OAuth App to create or update workflow `.github/workflows/frontend-deploy.yml` without `workflow` scope)
+error: failed to push some refs to 'https://github.com/grandcanyonsmith/lead-magnet-ai-platform'
+~/workspace$ git pull --rebase origin main
+# Resolve any conflicts if they appear
+git push origin main
+From https://github.com/grandcanyonsmith/lead-magnet-ai-platform
+ * branch            main       -> FETCH_HEAD
+Current branch main is up to date.
+Enumerating objects: 43, done.
+Counting objects: 100% (30/30), done.
+Delta compression using up to 8 threads
+Compressing objects: 100% (5/5), done.
+Writing objects: 100% (6/6), 846 bytes | 846.00 KiB/s, done.
+Total 6 (delta 4), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (4/4), completed with 4 local objects.
+To https://github.com/grandcanyonsmith/lead-magnet-ai-platform
+ ! [remote rejected] main -> main (refusing to allow an OAuth App to create or update workflow `.github/workflows/frontend-deploy.yml` without `workflow` scope)
+error: failed to push some refs to 'https://github.com/grandcanyonsmith/lead-magnet-ai-platform'
+~/workspace$ 
