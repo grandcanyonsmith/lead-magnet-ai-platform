@@ -1,0 +1,107 @@
+Skip to content
+Navigation Menu
+grandcanyonsmith
+lead-magnet-ai-platform
+ 
+Type / to search
+Code
+Issues
+Pull requests
+Actions
+Projects
+Wiki
+Security
+Insights
+Settings
+Build and Push Worker Docker Image
+ 
+Add toast notification system for user feedback and alerts #166
+Jobs
+Run details
+Annotations
+1 error
+build-and-push
+failed now in 35s
+
+2s
+1s
+0s
+0s
+3s
+1s
+0s
+6s
+16s
+#5 extracting sha256:c148946d84752e19a1dc1575d304b403ca8bfb5cb0d230d5cbb6e4492ea68d5b
+#5 sha256:bab4df8c200f2522e351e1a8b60c655e05a14abe1421bca075980fbb865a245f 448.79MB / 616.73MB 1.4s
+#5 sha256:bab4df8c200f2522e351e1a8b60c655e05a14abe1421bca075980fbb865a245f 509.61MB / 616.73MB 1.5s
+#5 sha256:bab4df8c200f2522e351e1a8b60c655e05a14abe1421bca075980fbb865a245f 564.13MB / 616.73MB 1.7s
+#5 sha256:bab4df8c200f2522e351e1a8b60c655e05a14abe1421bca075980fbb865a245f 616.73MB / 616.73MB 1.8s
+#5 sha256:bab4df8c200f2522e351e1a8b60c655e05a14abe1421bca075980fbb865a245f 616.73MB / 616.73MB 3.1s done
+#5 extracting sha256:c148946d84752e19a1dc1575d304b403ca8bfb5cb0d230d5cbb6e4492ea68d5b 1.9s done
+#5 extracting sha256:95e2718619a9cdadbf6a0a16111c5e51d30c039f93494732adc43f88653004b0
+#5 extracting sha256:95e2718619a9cdadbf6a0a16111c5e51d30c039f93494732adc43f88653004b0 0.2s done
+#5 DONE 3.3s
+
+#5 [1/8] FROM mcr.microsoft.com/playwright/python:v1.48.0-jammy@sha256:6bbd515848db4042068571135979b6ee6d330a794b28e037e3a6ccd7f2abfa26
+#5 extracting sha256:bab4df8c200f2522e351e1a8b60c655e05a14abe1421bca075980fbb865a245f
+#5 extracting sha256:bab4df8c200f2522e351e1a8b60c655e05a14abe1421bca075980fbb865a245f 9.6s done
+#5 DONE 13.0s
+
+#6 [2/8] WORKDIR /var/task
+#6 DONE 2.0s
+
+#7 [3/8] RUN pip install --no-cache-dir awslambdaric
+#7 0.414 Collecting awslambdaric
+#7 0.430   Downloading awslambdaric-3.1.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (7.4 kB)
+#7 0.528 Collecting simplejson>=3.20.1 (from awslambdaric)
+#7 0.532   Downloading simplejson-3.20.2-cp310-cp310-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (3.2 kB)
+#7 0.538 Collecting snapshot-restore-py>=1.0.0 (from awslambdaric)
+#7 0.542   Downloading snapshot_restore_py-1.0.0-py3-none-any.whl.metadata (3.8 kB)
+#7 0.548 Downloading awslambdaric-3.1.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (344 kB)
+#7 0.559 Downloading simplejson-3.20.2-cp310-cp310-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl (138 kB)
+#7 0.563 Downloading snapshot_restore_py-1.0.0-py3-none-any.whl (3.8 kB)
+#7 0.593 Installing collected packages: snapshot-restore-py, simplejson, awslambdaric
+#7 0.657 Successfully installed awslambdaric-3.1.1 simplejson-3.20.2 snapshot-restore-py-1.0.0
+#7 0.657 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable.It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+#7 0.755 
+#7 0.755 [notice] A new release of pip is available: 24.2 -> 25.3
+#7 0.755 [notice] To update, run: python -m pip install --upgrade pip
+#7 DONE 0.8s
+
+#8 [4/8] COPY requirements.txt .
+#8 DONE 0.0s
+
+#9 [5/8] RUN pip install --no-cache-dir -r requirements.txt
+#9 0.440 
+#9 0.440 [notice] A new release of pip is available: 24.2 -> 25.3
+#9 0.440 [notice] To update, run: python -m pip install --upgrade pip
+#9 0.441 ERROR: Invalid requirement: '<<<<<<< HEAD': Expected package name at the start of dependency specifier
+#9 0.441     <<<<<<< HEAD
+#9 0.441     ^ (from line 9 of requirements.txt)
+#9 ERROR: process "/bin/sh -c pip install --no-cache-dir -r requirements.txt" did not complete successfully: exit code: 1
+------
+ > [5/8] RUN pip install --no-cache-dir -r requirements.txt:
+0.440 
+Notice: 0.440 [notice] A new release of pip is available: 24.2 -> 25.3
+Notice: 0.440 [notice] To update, run: python -m pip install --upgrade pip
+0.441 ERROR: Invalid requirement: '<<<<<<< HEAD': Expected package name at the start of dependency specifier
+0.441     <<<<<<< HEAD
+0.441     ^ (from line 9 of requirements.txt)
+------
+Dockerfile:12
+--------------------
+  10 |     # Copy requirements and install Python dependencies
+  11 |     COPY requirements.txt .
+  12 | >>> RUN pip install --no-cache-dir -r requirements.txt
+  13 |     
+  14 |     # Copy application code
+--------------------
+ERROR: failed to build: failed to solve: process "/bin/sh -c pip install --no-cache-dir -r requirements.txt" did not complete successfully: exit code: 1
+Error: Process completed with exit code 1.
+2s
+0s
+0s
+1s
+0s
+Add toast notification system for user feedback and alerts · grandcanyonsmith/lead-magnet-ai-platform@a2d0548
