@@ -211,6 +211,80 @@ export default function SettingsPage() {
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Your Webhook URL
+                  <span className="ml-2 text-xs text-gray-500" title="Public webhook endpoint for triggering workflows">
+                    ℹ️
+                  </span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={settings.webhook_url || ''}
+                    readOnly
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm"
+                    placeholder="Loading webhook URL..."
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (settings.webhook_url) {
+                        navigator.clipboard.writeText(settings.webhook_url)
+                        alert('Webhook URL copied to clipboard!')
+                      }
+                    }}
+                    disabled={!settings.webhook_url}
+                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Copy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!confirm('Are you sure you want to regenerate your webhook token? The old URL will stop working.')) {
+                        return
+                      }
+                      try {
+                        const data = await api.settings.regenerateWebhookToken()
+                        if (data?.webhook_url) {
+                          setSettings({ ...settings, webhook_url: data.webhook_url })
+                          alert('Webhook token regenerated successfully!')
+                        } else {
+                          alert('Failed to regenerate webhook token')
+                        }
+                      } catch (error: any) {
+                        console.error('Failed to regenerate webhook:', error)
+                        alert(error.message || 'Failed to regenerate webhook token')
+                      }
+                    }}
+                    className="px-4 py-2 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition-colors"
+                  >
+                    Regenerate
+                  </button>
+                </div>
+                <p className="mt-1 text-sm text-gray-500">
+                  Public webhook endpoint for triggering workflows. POST requests to this URL with workflow_id/workflow_name and form_data will trigger workflow execution.
+                </p>
+                {settings.webhook_url && (
+                  <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-xs font-medium text-blue-900 mb-1">Example Usage:</p>
+                    <pre className="text-xs text-blue-800 overflow-x-auto">
+{`curl -X POST "${settings.webhook_url}" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "workflow_id": "wf_xxxxx",
+    "form_data": {
+      "name": "John Doe",
+      "email": "john@example.com",
+      "phone": "+14155551234"
+    }
+  }'`}
+                    </pre>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   GHL Webhook URL
                   <span className="ml-2 text-xs text-gray-500" title="Your GoHighLevel webhook endpoint for SMS/Email delivery">
                     ℹ️
