@@ -6,7 +6,7 @@ import { ulid } from 'ulid';
 import { SFNClient, StartExecutionCommand } from '@aws-sdk/client-sfn';
 import { logger } from '../utils/logger';
 import { ArtifactUrlService } from '../services/artifactUrlService';
-import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { GetObjectCommand, PutObjectCommand, HeadObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import OpenAI from 'openai';
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
 
@@ -296,19 +296,57 @@ class JobsController {
     // Generate public URL for execution_steps so frontend can fetch them directly from S3.
     // Uses CloudFront URL (non-expiring) if available, otherwise falls back to presigned URL.
     if (job.execution_steps_s3_key) {
-      const executionStepsUrl = await generateExecutionStepsUrl(job.execution_steps_s3_key);
-      if (executionStepsUrl) {
-        job.execution_steps_s3_url = executionStepsUrl;
-        const isCloudFront = !ArtifactUrlService.isPresignedUrl(executionStepsUrl);
-        logger.info(`Generated ${isCloudFront ? 'CloudFront' : 'presigned'} URL for execution_steps for job ${jobId}`, {
+      try {
+        // Verify S3 file exists before generating URL
+        try {
+          const headCommand = new HeadObjectCommand({
+            Bucket: ARTIFACTS_BUCKET,
+            Key: job.execution_steps_s3_key,
+          });
+          await s3Client.send(headCommand);
+          logger.debug(`Verified execution_steps S3 file exists for job ${jobId}`, {
+            s3Key: job.execution_steps_s3_key,
+          });
+        } catch (s3Error: any) {
+          if (s3Error.name === 'NotFound' || s3Error.$metadata?.httpStatusCode === 404) {
+            logger.warn(`Execution steps S3 file not found for job ${jobId}`, {
+              s3Key: job.execution_steps_s3_key,
+              error: s3Error.message,
+            });
+            // Don't generate URL if file doesn't exist
+          } else {
+            logger.error(`Error checking execution steps S3 file for job ${jobId}`, {
+              s3Key: job.execution_steps_s3_key,
+              error: s3Error.message,
+            });
+            // Continue anyway - might be a transient error
+          }
+        }
+
+        const executionStepsUrl = await generateExecutionStepsUrl(job.execution_steps_s3_key);
+        if (executionStepsUrl) {
+          job.execution_steps_s3_url = executionStepsUrl;
+          const isCloudFront = !ArtifactUrlService.isPresignedUrl(executionStepsUrl);
+          logger.info(`Generated ${isCloudFront ? 'CloudFront' : 'presigned'} URL for execution_steps for job ${jobId}`, {
+            s3Key: job.execution_steps_s3_key,
+            isCloudFront,
+            url: executionStepsUrl.substring(0, 100) + '...', // Log partial URL for debugging
+          });
+        } else {
+          logger.warn(`Failed to generate URL for execution_steps for job ${jobId}`, {
+            s3Key: job.execution_steps_s3_key,
+          });
+        }
+      } catch (error: any) {
+        logger.error(`Error processing execution_steps URL for job ${jobId}`, {
           s3Key: job.execution_steps_s3_key,
-          isCloudFront,
+          error: error.message,
+          errorStack: error.stack,
         });
-      } else {
-        logger.warn(`Failed to generate URL for execution_steps for job ${jobId}`, {
-          s3Key: job.execution_steps_s3_key,
-        });
+        // Continue without URL - frontend will handle gracefully
       }
+    } else {
+      logger.debug(`No execution_steps_s3_key for job ${jobId} - steps may not be created yet`);
     }
 
     // Refresh output_url from artifacts if job is completed and has artifacts
