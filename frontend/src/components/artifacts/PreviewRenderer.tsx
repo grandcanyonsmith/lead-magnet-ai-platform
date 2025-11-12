@@ -37,6 +37,14 @@ export function PreviewRenderer({ contentType, objectUrl, fileName, className = 
 
   // Fetch markdown content when in view
   useEffect(() => {
+    // Reset error state when objectUrl changes (switching to different artifact)
+    if (objectUrl) {
+      setMarkdownError(false)
+      setMarkdownContent(null)
+    }
+  }, [objectUrl])
+
+  useEffect(() => {
     if (isInView && contentType === 'text/markdown' && objectUrl && !markdownContent && !markdownError) {
       fetch(objectUrl)
         .then(res => res.text())
