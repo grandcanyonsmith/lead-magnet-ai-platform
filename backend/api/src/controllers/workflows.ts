@@ -379,6 +379,14 @@ class WorkflowsController {
     const hasLegacyFields = data.ai_instructions !== undefined || data.research_enabled !== undefined || data.html_enabled !== undefined;
     const hasSteps = data.steps !== undefined && data.steps.length > 0;
     
+    console.log('[Workflows Update] Step update debug', {
+      workflowId,
+      hasSteps,
+      stepsInRequest: data.steps?.length || 0,
+      existingStepsCount: existing.steps?.length || 0,
+      requestStepNames: data.steps?.map((s: any) => s.step_name) || [],
+    });
+    
     // If updating legacy fields and workflow doesn't have steps yet, migrate
     if (hasLegacyFields && (!existing.steps || existing.steps.length === 0) && !hasSteps) {
       const steps = migrateLegacyWorkflowOnUpdate(data, existing);
@@ -388,12 +396,25 @@ class WorkflowsController {
     } else if (hasSteps) {
       // Ensure step_order is set for each step
       updateData.steps = ensureStepDefaults(data.steps);
+      console.log('[Workflows Update] After ensureStepDefaults', {
+        workflowId,
+        stepsToSave: updateData.steps?.length || 0,
+        stepNames: updateData.steps?.map((s: any) => s.step_name) || [],
+      });
     }
 
     const updated = await db.update(WORKFLOWS_TABLE!, { workflow_id: workflowId }, {
       ...updateData,
       updated_at: new Date().toISOString(),
     });
+    
+    if (updated) {
+      console.log('[Workflows Update] After DB update', {
+        workflowId,
+        savedStepsCount: updated.steps?.length || 0,
+        savedStepNames: updated.steps?.map((s: any) => s.step_name) || [],
+      });
+    }
 
     // If workflow name changed, update form name
     if (data.workflow_name && data.workflow_name !== existing.workflow_name) {
