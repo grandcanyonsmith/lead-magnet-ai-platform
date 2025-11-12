@@ -3,13 +3,22 @@ import { ApiError } from '../utils/errors';
 import { RouteResponse } from '../routes';
 import { ArtifactUrlService } from '../services/artifactUrlService';
 import { logger } from '../utils/logger';
+import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
 
 const ARTIFACTS_TABLE = process.env.ARTIFACTS_TABLE;
 const JOBS_TABLE = process.env.JOBS_TABLE;
+const ARTIFACTS_BUCKET_ENV = process.env.ARTIFACTS_BUCKET;
 
 if (!ARTIFACTS_TABLE) {
   logger.error('[Artifacts Controller] ARTIFACTS_TABLE environment variable is not set');
 }
+
+if (!ARTIFACTS_BUCKET_ENV) {
+  throw new Error('ARTIFACTS_BUCKET environment variable is required');
+}
+
+const ARTIFACTS_BUCKET: string = ARTIFACTS_BUCKET_ENV;
+const s3Client = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
 
 class ArtifactsController {
   async list(tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {
@@ -176,6 +185,63 @@ class ArtifactsController {
       statusCode: 200,
       body: artifact,
     };
+  }
+
+  /**
+   * Get artifact content by fetching directly from S3.
+   * This endpoint proxies the artifact content to avoid presigned URL expiration issues.
+   */
+  async getContent(tenantId: string, artifactId: string): Promise<RouteResponse> {
+    if (!ARTIFACTS_TABLE) {
+      throw new ApiError('ARTIFACTS_TABLE environment variable is not configured', 500);
+    }
+
+    const artifact = await db.get(ARTIFACTS_TABLE, { artifact_id: artifactId });
+
+    if (!artifact) {
+      throw new ApiError('Artifact not found', 404);
+    }
+
+    if (artifact.tenant_id !== tenantId) {
+      throw new ApiError('You don\'t have permission to access this artifact', 403);
+    }
+
+    if (!artifact.s3_key) {
+      throw new ApiError('Artifact S3 key not found', 404);
+    }
+
+    try {
+      const command = new GetObjectCommand({
+        Bucket: ARTIFACTS_BUCKET,
+        Key: artifact.s3_key,
+      });
+      
+      const response = await s3Client.send(command);
+      
+      if (!response.Body) {
+        throw new ApiError(`S3 object body is empty for key: ${artifact.s3_key}`, 500);
+      }
+      
+      const content = await response.Body.transformToString();
+      const contentType = response.ContentType || 'text/plain';
+      
+      return {
+        statusCode: 200,
+        body: content,
+        headers: {
+          'Content-Type': contentType,
+        },
+      };
+    } catch (error: any) {
+      if (error.name === 'NoSuchKey' || error.$metadata?.httpStatusCode === 404) {
+        throw new ApiError('Artifact file not found in S3', 404);
+      }
+      logger.error(`Error fetching artifact content for ${artifactId}`, {
+        s3Key: artifact.s3_key,
+        error: error.message,
+      });
+      throw new ApiError(`Failed to fetch artifact content: ${error.message}`, 500);
+    }
   }
 }
 

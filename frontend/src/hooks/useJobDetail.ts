@@ -81,10 +81,8 @@ export function useJobDetail() {
           updated_at: data.updated_at,
         }))
         
-        // Load execution steps if URL is available
-        if (data.execution_steps_s3_url) {
-          await loadExecutionSteps(data)
-        }
+        // Load execution steps through API
+        await loadExecutionSteps(data)
       } catch (err) {
         // Silently fail during polling - don't spam console
         if (process.env.NODE_ENV === 'development') {
@@ -95,117 +93,45 @@ export function useJobDetail() {
 
     return () => clearInterval(pollInterval)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [job?.status, job?.execution_steps_s3_url, jobId])
+  }, [job?.status, jobId])
 
-  // Load execution steps from S3 (can be called independently for polling)
+  // Load execution steps from API (proxied from S3)
   const loadExecutionSteps = async (jobData?: any) => {
     const data = jobData || job
     if (!data) return
 
-    // Execution steps are ALWAYS stored in S3 (never in DynamoDB).
-    // Fetch execution steps from S3 using the provided URL.
-    if (data.execution_steps_s3_url) {
-      try {
-        // Add cache-busting query parameter to ensure we get fresh data during polling
-        const url = new URL(data.execution_steps_s3_url)
-        url.searchParams.set('_t', Date.now().toString())
-        
-        const response = await fetch(url.toString())
-        if (response.ok) {
-          // Check Content-Type to ensure we're getting JSON, not HTML
-          const contentType = response.headers.get('content-type') || ''
-          if (!contentType.includes('application/json')) {
-            // Response is not JSON - might be HTML error page
-            const text = await response.text()
-            const errorMsg = `Invalid response format: expected JSON, got ${contentType}. Response preview: ${text.substring(0, 100)}`
-            console.error(`❌ ${errorMsg} for job ${jobId}`, {
-              url: data.execution_steps_s3_url,
-              contentType,
-              status: response.status,
-            })
-            if (!jobData) {
-              setExecutionStepsError(`Failed to fetch execution steps: server returned ${contentType} instead of JSON`)
-            }
-            return
-          }
-          
-          const executionSteps = await response.json()
-          
-          // Only update if we got valid data
-          if (Array.isArray(executionSteps)) {
-            setJob((prevJob: any) => ({
-              ...prevJob,
-              execution_steps: executionSteps,
-            }))
-            setExecutionStepsError(null) // Clear any previous errors
-            if (process.env.NODE_ENV === 'development') {
-              console.log(`✅ Loaded execution_steps from S3 for job ${jobId}`, {
-                stepsCount: executionSteps.length,
-                url: data.execution_steps_s3_url,
-              })
-            }
-          } else {
-            const errorMsg = `Invalid execution steps data format: expected array, got ${typeof executionSteps}`
-            console.error(`❌ ${errorMsg} for job ${jobId}`)
-            if (!jobData) {
-              setExecutionStepsError(errorMsg)
-            }
-          }
-        } else if (response.status === 404) {
-          // S3 file doesn't exist yet (job just started) - this is normal
-          const errorMsg = `Execution steps file not found in S3 (404)`
-          if (process.env.NODE_ENV === 'development') {
-            console.warn(`⚠️ ${errorMsg} for job ${jobId}`, {
-              url: data.execution_steps_s3_url,
-              s3Key: data.execution_steps_s3_key,
-            })
-          }
-          if (!jobData) {
-            setExecutionStepsError(errorMsg)
-          }
-        } else {
-          // Don't overwrite existing steps if fetch fails during polling
-          const errorMsg = `Failed to fetch execution steps: ${response.status} ${response.statusText}`
-          console.error(`❌ ${errorMsg} for job ${jobId}`, {
-            url: data.execution_steps_s3_url,
-            status: response.status,
-            statusText: response.statusText,
+    // Fetch execution steps through the API endpoint (which proxies from S3)
+    // This avoids presigned URL expiration issues
+    try {
+      const executionSteps = await api.getExecutionSteps(jobId)
+      
+      // Only update if we got valid data
+      if (Array.isArray(executionSteps)) {
+        setJob((prevJob: any) => ({
+          ...prevJob,
+          execution_steps: executionSteps,
+        }))
+        setExecutionStepsError(null) // Clear any previous errors
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`✅ Loaded execution_steps from API for job ${jobId}`, {
+            stepsCount: executionSteps.length,
           })
-          if (!jobData) {
-            setExecutionStepsError(errorMsg)
-          }
         }
-      } catch (err: any) {
-        // Don't overwrite existing steps if fetch fails during polling
-        // Handle JSON parsing errors specifically
-        let errorMsg = `Error fetching execution steps: ${err.message || 'Unknown error'}`
-        if (err.message && err.message.includes('JSON')) {
-          errorMsg = `Failed to parse execution steps: received non-JSON response (possibly HTML error page)`
-        }
-        console.error(`❌ ${errorMsg} for job ${jobId}`, {
-          url: data.execution_steps_s3_url,
-          error: err,
-        })
+      } else {
+        const errorMsg = `Invalid execution steps data format: expected array, got ${typeof executionSteps}`
+        console.error(`❌ ${errorMsg} for job ${jobId}`)
         if (!jobData) {
           setExecutionStepsError(errorMsg)
         }
       }
-    } else {
-      // No S3 URL available
-      if (data.execution_steps_s3_key) {
-        const errorMsg = `execution_steps_s3_key exists but no URL was generated`
-        console.warn(`⚠️ ${errorMsg} for job ${jobId}`, {
-          s3Key: data.execution_steps_s3_key,
-        })
-        if (!jobData) {
-          setExecutionStepsError(errorMsg)
-        }
-      } else {
-        // No S3 key - execution steps may not have been created yet
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`ℹ️ No execution_steps_s3_key for job ${jobId} - steps may not be created yet`)
-        }
-        setExecutionStepsError(null)
+    } catch (err: any) {
+      // Don't overwrite existing steps if fetch fails during polling
+      let errorMsg = `Error fetching execution steps: ${err.message || 'Unknown error'}`
+      console.error(`❌ ${errorMsg} for job ${jobId}`, {
+        error: err,
+      })
+      if (!jobData) {
+        setExecutionStepsError(errorMsg)
       }
     }
   }
@@ -214,83 +140,40 @@ export function useJobDetail() {
     try {
       const data = await api.getJob(jobId)
       
-      // Load execution steps from S3
-      if (data.execution_steps_s3_url) {
-        try {
-          const response = await fetch(data.execution_steps_s3_url)
-          if (response.ok) {
-            // Check Content-Type to ensure we're getting JSON, not HTML
-            const contentType = response.headers.get('content-type') || ''
-            if (!contentType.includes('application/json')) {
-              // Response is not JSON - might be HTML error page
-              const text = await response.text()
-              const errorMsg = `Invalid response format: expected JSON, got ${contentType}. Response preview: ${text.substring(0, 100)}`
-              console.error(`❌ ${errorMsg} for job ${jobId}`, {
-                url: data.execution_steps_s3_url,
-                contentType,
-                status: response.status,
-              })
-              setExecutionStepsError(`Failed to fetch execution steps: server returned ${contentType} instead of JSON`)
-              data.execution_steps = []
-            } else {
-              const executionSteps = await response.json()
-              if (Array.isArray(executionSteps)) {
-                data.execution_steps = executionSteps
-                setExecutionStepsError(null)
-                if (process.env.NODE_ENV === 'development') {
-                  console.log(`✅ Loaded execution_steps from S3 for job ${jobId}`, {
-                    stepsCount: executionSteps.length,
-                    url: data.execution_steps_s3_url,
-                  })
-                }
-              } else {
-                const errorMsg = `Invalid execution steps data format: expected array, got ${typeof executionSteps}`
-                console.error(`❌ ${errorMsg} for job ${jobId}`)
-                setExecutionStepsError(errorMsg)
-                data.execution_steps = []
-              }
-            }
-          } else {
-            const errorMsg = `Failed to fetch execution steps: ${response.status} ${response.statusText}`
-            console.error(`❌ ${errorMsg} for job ${jobId}`, {
-              url: data.execution_steps_s3_url,
-              status: response.status,
-              statusText: response.statusText,
+      // Load execution steps from API (proxied from S3)
+      try {
+        const executionSteps = await api.getExecutionSteps(jobId)
+        if (Array.isArray(executionSteps)) {
+          data.execution_steps = executionSteps
+          setExecutionStepsError(null)
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`✅ Loaded execution_steps from API for job ${jobId}`, {
+              stepsCount: executionSteps.length,
             })
-            setExecutionStepsError(errorMsg)
-            // Set empty array if fetch fails
-            data.execution_steps = []
           }
-        } catch (err: any) {
-          // Handle JSON parsing errors specifically
-          let errorMsg = `Error fetching execution steps: ${err.message || 'Unknown error'}`
-          if (err.message && err.message.includes('JSON')) {
-            errorMsg = `Failed to parse execution steps: received non-JSON response (possibly HTML error page)`
+        } else {
+          const errorMsg = `Invalid execution steps data format: expected array, got ${typeof executionSteps}`
+          console.error(`❌ ${errorMsg} for job ${jobId}`)
+          setExecutionStepsError(errorMsg)
+          data.execution_steps = []
+        }
+      } catch (err: any) {
+        // Handle errors gracefully - execution steps may not exist yet
+        if (err.response?.status === 404 || err.message?.includes('not found')) {
+          // Execution steps may not have been created yet (job still processing)
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`ℹ️ No execution_steps for job ${jobId} - steps may not be created yet`)
           }
+          setExecutionStepsError(null)
+          data.execution_steps = []
+        } else {
+          const errorMsg = `Error fetching execution steps: ${err.message || 'Unknown error'}`
           console.error(`❌ ${errorMsg} for job ${jobId}`, {
-            url: data.execution_steps_s3_url,
             error: err,
           })
           setExecutionStepsError(errorMsg)
-          // Set empty array if fetch fails
           data.execution_steps = []
         }
-      } else {
-        // No S3 URL means no execution steps yet (job may still be processing)
-        if (data.execution_steps_s3_key) {
-          const errorMsg = `execution_steps_s3_key exists but no URL was generated`
-          console.warn(`⚠️ ${errorMsg} for job ${jobId}`, {
-            s3Key: data.execution_steps_s3_key,
-          })
-          setExecutionStepsError(errorMsg)
-        } else {
-          // No S3 key - execution steps may not have been created yet
-          if (process.env.NODE_ENV === 'development') {
-            console.log(`ℹ️ No execution_steps_s3_key for job ${jobId} - steps may not be created yet`)
-          }
-          setExecutionStepsError(null)
-        }
-        data.execution_steps = []
       }
       
       setJob(data)

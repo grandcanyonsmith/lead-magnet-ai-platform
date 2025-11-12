@@ -54,6 +54,7 @@ export function PreviewCard({ artifact }: PreviewCardProps) {
           objectUrl={downloadUrl}
           fileName={artifact.file_name || artifact.artifact_name}
           className="w-full h-full"
+          artifactId={artifact.artifact_id}
         />
         
         <div className="absolute top-2 right-2 bg-primary-600 text-white text-xs font-bold px-2 py-1 rounded">

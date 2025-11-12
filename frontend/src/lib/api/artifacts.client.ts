@@ -21,5 +21,12 @@ export class ArtifactsClient extends BaseApiClient {
   async getArtifact(id: string): Promise<Artifact> {
     return this.get<Artifact>(`/admin/artifacts/${id}`)
   }
+
+  async getArtifactContent(id: string): Promise<string> {
+    const response = await this.client.get(`/admin/artifacts/${id}/content`, {
+      responseType: 'text',
+    })
+    return response.data
+  }
 }
 
