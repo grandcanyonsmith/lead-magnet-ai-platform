@@ -20,7 +20,6 @@
     "client-only": "^0.0.1",
     "clsx": "^2.1.0",
     "date-fns": "^3.2.0",
-    "graceful-fs": "^4.2.11",
     "nanoid": "^5.0.0",
     "next": "^14.2.33",
     "picocolors": "^1.0.0",
@@ -36,6 +35,7 @@
     "recharts": "^2.10.3",
     "remark-gfm": "^4.0.1",
     "source-map-js": "^1.2.1",
+    "styled-jsx": "5.1.1",
     "tailwind-merge": "^2.2.1",
     "zod": "^3.22.4"
   },
