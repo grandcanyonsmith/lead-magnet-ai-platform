@@ -145,13 +145,19 @@ export const handler = async (
       path: event.rawPath,
     });
     
+    // Determine content type and body format
+    const contentType = result.headers?.['Content-Type'] || 'application/json';
+    const isTextContent = contentType.startsWith('text/') || contentType.includes('markdown');
+    const body = isTextContent ? result.body : JSON.stringify(result.body);
+    
     return {
       statusCode: result.statusCode || 200,
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': contentType,
+        ...result.headers, // Merge any additional headers from RouteResponse
         // CORS headers are handled by API Gateway corsPreflight configuration
       },
-      body: JSON.stringify(result.body),
+      body,
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);

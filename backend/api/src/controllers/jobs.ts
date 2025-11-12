@@ -378,6 +378,43 @@ class JobsController {
     };
   }
 
+  /**
+   * Get execution steps for a job by fetching directly from S3.
+   * This endpoint proxies the execution steps to avoid presigned URL expiration issues.
+   */
+  async getExecutionSteps(tenantId: string, jobId: string): Promise<RouteResponse> {
+    const job = await db.get(JOBS_TABLE, { job_id: jobId });
+
+    if (!job) {
+      throw new ApiError('Job not found', 404);
+    }
+
+    if (job.tenant_id !== tenantId) {
+      throw new ApiError('You don\'t have permission to access this job', 403);
+    }
+
+    if (!job.execution_steps_s3_key) {
+      return {
+        statusCode: 200,
+        body: [],
+      };
+    }
+
+    try {
+      const executionSteps = await fetchExecutionStepsFromS3(job.execution_steps_s3_key);
+      return {
+        statusCode: 200,
+        body: executionSteps,
+      };
+    } catch (error: any) {
+      logger.error(`Error fetching execution steps for job ${jobId}`, {
+        s3Key: job.execution_steps_s3_key,
+        error: error.message,
+      });
+      throw new ApiError(`Failed to fetch execution steps: ${error.message}`, 500);
+    }
+  }
+
   async getPublicStatus(jobId: string): Promise<RouteResponse> {
     const job = await db.get(JOBS_TABLE, { job_id: jobId });
 

@@ -16,6 +16,7 @@ import { logger } from './utils/logger';
 export interface RouteResponse {
   statusCode: number;
   body: any;
+  headers?: Record<string, string>;
 }
 
 export const router = async (
@@ -281,6 +282,11 @@ export const router = async (
     return await jobsController.quickEditStep(tenantId, id, body);
   }
 
+  if (path.match(/^\/admin\/jobs\/[^/]+\/execution-steps$/) && method === 'GET') {
+    const id = pathSegments[2];
+    return await jobsController.getExecutionSteps(tenantId, id);
+  }
+
   if (path.match(/^\/admin\/jobs\/[^/]+$/) && method === 'GET') {
     const id = pathSegments[2];
     return await jobsController.get(tenantId, id);
@@ -299,6 +305,11 @@ export const router = async (
   // Admin routes - Artifacts
   if (path === '/admin/artifacts' && method === 'GET') {
     return await artifactsController.list(tenantId, queryParams);
+  }
+
+  if (path.match(/^\/admin\/artifacts\/[^/]+\/content$/) && method === 'GET') {
+    const id = pathSegments[2];
+    return await artifactsController.getContent(tenantId, id);
   }
 
   if (path.match(/^\/admin\/artifacts\/[^/]+$/) && method === 'GET') {

@@ -2,15 +2,17 @@ import { useState, useEffect, useRef } from 'react'
 import { FiFile, FiImage, FiFileText, FiCode } from 'react-icons/fi'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { api } from '@/lib/api'
 
 interface PreviewRendererProps {
   contentType?: string
   objectUrl?: string
   fileName?: string
   className?: string
+  artifactId?: string
 }
 
-export function PreviewRenderer({ contentType, objectUrl, fileName, className = '' }: PreviewRendererProps) {
+export function PreviewRenderer({ contentType, objectUrl, fileName, className = '', artifactId }: PreviewRendererProps) {
   const [imageLoaded, setImageLoaded] = useState(false)
   const [imageError, setImageError] = useState(false)
   const [isInView, setIsInView] = useState(false)
@@ -45,24 +47,34 @@ export function PreviewRenderer({ contentType, objectUrl, fileName, className = 
 
   // Fetch markdown content when in view
   useEffect(() => {
-    if (isInView && contentType === 'text/markdown' && objectUrl && !markdownContent && !markdownError) {
-      fetch(objectUrl)
-        .then(res => {
-          if (!res.ok) {
-            throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+    if (isInView && contentType === 'text/markdown' && !markdownContent && !markdownError) {
+      // Use API endpoint if artifactId is available, otherwise fall back to direct URL
+      const fetchMarkdown = async () => {
+        try {
+          let text: string
+          if (artifactId) {
+            // Use API endpoint to proxy from S3 (avoids presigned URL expiration)
+            text = await api.artifacts.getArtifactContent(artifactId)
+          } else if (objectUrl) {
+            // Fallback to direct URL fetch
+            const res = await fetch(objectUrl)
+            if (!res.ok) {
+              throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+            }
+            text = await res.text()
+          } else {
+            throw new Error('No artifact ID or URL provided')
           }
-          return res.text()
-        })
-        .then(text => {
           setMarkdownContent(text)
           setMarkdownError(false) // Clear any previous error on success
-        })
-        .catch(err => {
+        } catch (err) {
           console.error('Failed to fetch markdown:', err)
           setMarkdownError(true)
-        })
+        }
+      }
+      fetchMarkdown()
     }
-  }, [isInView, contentType, objectUrl, markdownContent, markdownError])
+  }, [isInView, contentType, objectUrl, artifactId, markdownContent, markdownError])
 
   if (!objectUrl || !contentType) {
     return (

@@ -103,6 +103,7 @@ function ArtifactPreview({ artifactId }: ArtifactPreviewProps) {
               objectUrl={artifactUrl}
               fileName={fileName}
               className="w-full h-full"
+              artifactId={artifactId}
             />
           </div>
         </div>
@@ -156,6 +157,13 @@ export function ExecutionSteps({
     return null
   }
 
+  // Sort steps by step_order to ensure correct display order
+  const sortedSteps = [...steps].sort((a: any, b: any) => {
+    const orderA = a.step_order ?? 0
+    const orderB = b.step_order ?? 0
+    return orderA - orderB
+  })
+
   const togglePrevStep = (stepOrder: number) => {
     const newExpanded = new Set(expandedPrevSteps)
     if (newExpanded.has(stepOrder)) {
@@ -181,22 +189,22 @@ export function ExecutionSteps({
     // Check if job is processing and this might be the current step
     if (jobStatus === 'processing') {
       // Find all completed steps (have output)
-      const completedSteps = steps.filter((s: any) => 
+      const completedSteps = sortedSteps.filter((s: any) => 
         s.output !== null && s.output !== undefined && s.output !== ''
       )
-      const stepIndex = steps.indexOf(step)
+      const stepIndex = sortedSteps.indexOf(step)
       // If this step comes right after the last completed step, it's in progress
-      if (stepIndex === completedSteps.length && stepIndex < steps.length) {
+      if (stepIndex === completedSteps.length && stepIndex < sortedSteps.length) {
         return 'in_progress'
       }
     }
     
     // Check if job failed and step has no output
     if (jobStatus === 'failed') {
-      const completedSteps = steps.filter((s: any) => 
+      const completedSteps = sortedSteps.filter((s: any) => 
         s.output !== null && s.output !== undefined && s.output !== ''
       )
-      const stepIndex = steps.indexOf(step)
+      const stepIndex = sortedSteps.indexOf(step)
       // If step was supposed to run but didn't complete, mark as failed
       if (stepIndex <= completedSteps.length && step.output === null) {
         return 'failed'
@@ -210,7 +218,7 @@ export function ExecutionSteps({
   const getPreviousSteps = (currentStep: any) => {
     const currentOrder = currentStep.step_order || 0
     
-    const previousSteps = steps
+    const previousSteps = sortedSteps
       .filter((step: any) => {
         const stepOrder = step.step_order || 0
         return (
@@ -228,7 +236,7 @@ export function ExecutionSteps({
 
   // Get form submission data
   const getFormSubmission = (currentStep: any) => {
-    const formSubmissionStep = steps.find((s: any) => s.step_order === 0)
+    const formSubmissionStep = sortedSteps.find((s: any) => s.step_order === 0)
     if (formSubmissionStep && formSubmissionStep.output) {
       return formSubmissionStep.output
     }
@@ -260,19 +268,19 @@ export function ExecutionSteps({
           <h2 className="text-lg font-semibold text-gray-900">Execution Steps</h2>
           {(() => {
             // Calculate progress: current step / total steps
-            const totalSteps = steps.length
+            const totalSteps = sortedSteps.length
             if (totalSteps === 0) return null
             
             // Find completed and in-progress steps
             let completedCount = 0
             let currentStepNumber = 0
             
-            for (const step of steps) {
+            for (const step of sortedSteps) {
               const status = getStepStatus(step)
               if (status === 'completed') {
                 completedCount++
               } else if (status === 'in_progress') {
-                currentStepNumber = step.step_order || steps.indexOf(step) + 1
+                currentStepNumber = step.step_order || sortedSteps.indexOf(step) + 1
                 break
               }
             }
@@ -315,7 +323,7 @@ export function ExecutionSteps({
 
       {showExecutionSteps && (
         <div className="space-y-2 pt-4 border-t border-gray-200">
-          {steps.map((step: any, index: number) => {
+          {sortedSteps.map((step: any, index: number) => {
             const isExpanded = expandedSteps.has(step.step_order)
             const stepStatus = getStepStatus(step)
             const isCompleted = stepStatus === 'completed'
