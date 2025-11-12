@@ -715,6 +715,10 @@ class JobProcessor:
             
             step_start_time = datetime.utcnow()
             
+            # Initialize image_artifact_ids early to ensure it's always available in return value
+            # This ensures image artifacts are tracked even if errors occur after they're stored
+            image_artifact_ids = []
+            
             # step_index is 0-indexed, step_order is 1-indexed
             current_step_order = step_index + 1
             
@@ -807,7 +811,6 @@ class JobProcessor:
             image_urls = response_details.get('image_urls', [])
             
             # Store images as artifacts
-            image_artifact_ids = []
             for idx, image_url in enumerate(image_urls):
                 if image_url:
                     try:
@@ -905,11 +908,15 @@ class JobProcessor:
             except Exception as update_error:
                 logger.error(f"Failed to update job status: {update_error}")
             
+            # Return error result - include image_artifact_ids if any were stored before the error
+            # This ensures image artifacts are tracked even when step processing fails
+            # image_artifact_ids is initialized early in the try block, so it's always available
             return {
                 'success': False,
                 'error': descriptive_error,
                 'error_type': error_type,
-                'step_index': step_index
+                'step_index': step_index,
+                'image_artifact_ids': image_artifact_ids
             }
     
     def _process_html_generation_step(

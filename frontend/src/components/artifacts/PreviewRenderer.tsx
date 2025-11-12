@@ -35,20 +35,28 @@ export function PreviewRenderer({ contentType, objectUrl, fileName, className = 
     return () => observer.disconnect()
   }, [])
 
-  // Fetch markdown content when in view
+  // Reset error state when objectUrl changes (switching to different artifact)
   useEffect(() => {
-    // Reset error state when objectUrl changes (switching to different artifact)
     if (objectUrl) {
       setMarkdownError(false)
       setMarkdownContent(null)
     }
   }, [objectUrl])
 
+  // Fetch markdown content when in view
   useEffect(() => {
     if (isInView && contentType === 'text/markdown' && objectUrl && !markdownContent && !markdownError) {
       fetch(objectUrl)
-        .then(res => res.text())
-        .then(text => setMarkdownContent(text))
+        .then(res => {
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+          }
+          return res.text()
+        })
+        .then(text => {
+          setMarkdownContent(text)
+          setMarkdownError(false) // Clear any previous error on success
+        })
         .catch(err => {
           console.error('Failed to fetch markdown:', err)
           setMarkdownError(true)
