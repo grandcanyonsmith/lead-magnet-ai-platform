@@ -856,7 +856,19 @@ class JobProcessor:
                 # Append new step (first run case)
                 execution_steps.append(step_data)
             
-            self.db.update_job(job_id, {'execution_steps': execution_steps}, s3_service=self.s3)
+            # Update job with execution steps and add image artifacts to job's artifacts list
+            artifacts_list = job.get('artifacts', [])
+            if step_artifact_id not in artifacts_list:
+                artifacts_list.append(step_artifact_id)
+            # Add image artifact IDs to job's artifacts list
+            for image_artifact_id in image_artifact_ids:
+                if image_artifact_id not in artifacts_list:
+                    artifacts_list.append(image_artifact_id)
+            
+            self.db.update_job(job_id, {
+                'execution_steps': execution_steps,
+                'artifacts': artifacts_list
+            }, s3_service=self.s3)
             
             logger.info(f"Step {step_index + 1} completed successfully in {step_duration:.0f}ms")
             
@@ -868,6 +880,7 @@ class JobProcessor:
                 'step_output': step_output,
                 'artifact_id': step_artifact_id,
                 'image_urls': image_urls,
+                'image_artifact_ids': image_artifact_ids,  # Include image artifact IDs so they can be added to job's artifacts list
                 'usage_info': usage_info,
                 'duration_ms': int(step_duration)
             }
