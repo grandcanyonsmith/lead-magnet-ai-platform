@@ -149,5 +149,15 @@ export class DynamoDBService {
   }
 }
 
+/**
+ * Normalize query result to always return an array
+ * Handles both array return format and paginated object format
+ */
+export function normalizeQueryResult<T = any>(
+  result: T[] | { items: T[]; lastEvaluatedKey?: Record<string, any> }
+): T[] {
+  return Array.isArray(result) ? result : result.items;
+}
+
 export const db = new DynamoDBService();
 

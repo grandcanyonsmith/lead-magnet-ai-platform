@@ -84,7 +84,7 @@ export default function FlowchartSidePanel({
             <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
               <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">Model</div>
               <div className="mt-1 text-sm font-semibold text-slate-700">
-                {step.model === 'o3-deep-research' ? 'O3 Deep Research' : step.model === 'computer-use-preview' ? 'Computer Use Preview' : step.model.replace('gpt-', 'GPT-').replace('turbo', 'Turbo')}
+                {step.model === 'computer-use-preview' ? 'Computer Use Preview' : step.model.replace('gpt-', 'GPT-').replace('turbo', 'Turbo')}
               </div>
             </div>
             <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">

@@ -79,9 +79,6 @@ class AIService:
         # Check if computer_use_preview is in tools (requires truncation="auto")
         has_computer_use = ToolValidator.has_computer_use(validated_tools)
         
-        # Check if model is o3
-        is_o3_model = OpenAIClient.is_o3_model(model)
-        
         logger.info(f"[AI Service] Generating report", extra={
             'model': model,
             'tools_count': len(validated_tools) if validated_tools else 0,
@@ -119,7 +116,6 @@ class AIService:
                     tools=validated_tools,
                     tool_choice=normalized_tool_choice,
                     has_computer_use=has_computer_use,
-                    is_o3_model=is_o3_model,
                     reasoning_level=None
                 )
                 
@@ -212,7 +208,6 @@ class AIService:
                 tools=validated_tools,
                 tool_choice=normalized_tool_choice,
                 has_computer_use=has_computer_use,
-                is_o3_model=is_o3_model,
                 reasoning_level=None  # Not supported in Responses API
             )
             
@@ -258,7 +253,6 @@ class AIService:
                 tool_choice=normalized_tool_choice,
                 instructions=instructions,
                 context=context,
-                is_o3_model=is_o3_model,
                 full_context=full_context,
                 previous_context=previous_context,
                 image_handler=self.image_handler

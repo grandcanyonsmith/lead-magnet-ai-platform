@@ -14,6 +14,7 @@ import { WorkflowStepAIService, AIStepGenerationRequest } from '../services/work
 import { WorkflowAIService, WorkflowAIEditRequest } from '../services/workflowAIService';
 import { migrateLegacyWorkflowToSteps, migrateLegacyWorkflowOnUpdate, ensureStepDefaults, WorkflowStep } from '../utils/workflowMigration';
 import { resolveExecutionGroups, validateDependencies } from '../utils/dependencyResolver';
+import { logger } from '../utils/logger';
 
 const WORKFLOWS_TABLE = process.env.WORKFLOWS_TABLE;
 const FORMS_TABLE = process.env.FORMS_TABLE;
@@ -25,10 +26,10 @@ const secretsClient = new SecretsManagerClient({ region: process.env.AWS_REGION 
 const lambdaClient = new LambdaClient({ region: process.env.AWS_REGION || 'us-east-1' });
 
 if (!WORKFLOWS_TABLE) {
-  console.error('[Workflows Controller] WORKFLOWS_TABLE environment variable is not set');
+  logger.error('[Workflows Controller] WORKFLOWS_TABLE environment variable is not set');
 }
 if (!FORMS_TABLE) {
-  console.error('[Workflows Controller] FORMS_TABLE environment variable is not set');
+  logger.error('[Workflows Controller] FORMS_TABLE environment variable is not set');
 }
 
 
@@ -83,7 +84,7 @@ async function storeUsageRecord(
     };
 
     await db.put(USAGE_RECORDS_TABLE, usageRecord);
-    console.log('[Usage Tracking] Usage record stored', {
+    logger.info('[Usage Tracking] Usage record stored', {
       usageId,
       tenantId,
       serviceType,
@@ -93,7 +94,7 @@ async function storeUsageRecord(
       costUsd,
     });
   } catch (error: any) {
-    console.error('[Usage Tracking] Failed to store usage record', {
+    logger.error('[Usage Tracking] Failed to store usage record', {
       error: error.message,
       tenantId,
       serviceType,
@@ -111,7 +112,7 @@ class WorkflowsController {
       const status = queryParams.status;
       const limit = queryParams.limit ? parseInt(queryParams.limit) : 50;
 
-      console.log('[Workflows List] Starting query', { tenantId, status, limit });
+      logger.info('[Workflows List] Starting query', { tenantId, status, limit });
 
       let workflows: any[] = [];
       try {
@@ -137,7 +138,7 @@ class WorkflowsController {
           workflows = Array.isArray(result) ? result : result.items;
         }
       } catch (dbError: any) {
-        console.error('[Workflows List] Database query error', {
+        logger.error('[Workflows List] Database query error', {
           error: dbError.message,
           errorName: dbError.name,
           table: WORKFLOWS_TABLE,
@@ -173,7 +174,7 @@ class WorkflowsController {
             // Auto-create form if it doesn't exist
             if (!activeForm && workflow.workflow_name) {
               try {
-                console.log('[Workflows List] Auto-creating form for workflow', {
+                logger.info('[Workflows List] Auto-creating form for workflow', {
                   workflowId: workflow.workflow_id,
                   workflowName: workflow.workflow_name,
                 });
@@ -186,7 +187,7 @@ class WorkflowsController {
                 // Fetch the newly created form
                 activeForm = await formService.getFormForWorkflow(workflow.workflow_id);
               } catch (createError) {
-                console.error('[Workflows List] Error auto-creating form', {
+                logger.error('[Workflows List] Error auto-creating form', {
                   workflowId: workflow.workflow_id,
                   error: (createError as any).message,
                 });
@@ -203,7 +204,7 @@ class WorkflowsController {
               } : null,
             };
           } catch (error) {
-            console.error('[Workflows List] Error fetching form for workflow', {
+            logger.error('[Workflows List] Error fetching form for workflow', {
               workflowId: workflow.workflow_id,
               error: (error as any).message,
             });
@@ -215,7 +216,7 @@ class WorkflowsController {
         })
       );
 
-      console.log('[Workflows List] Query completed', {
+      logger.info('[Workflows List] Query completed', {
         tenantId,
         workflowsFound: workflowsWithForms.length,
       });
@@ -228,7 +229,7 @@ class WorkflowsController {
         },
       };
 
-      console.log('[Workflows List] Returning response', {
+      logger.info('[Workflows List] Returning response', {
         statusCode: response.statusCode,
         bodyKeys: Object.keys(response.body),
         workflowsCount: response.body.count,
@@ -237,7 +238,7 @@ class WorkflowsController {
 
       return response;
     } catch (error: any) {
-      console.error('[Workflows List] Error', {
+      logger.error('[Workflows List] Error', {
         error: error.message,
         errorName: error.name,
         stack: error.stack,
@@ -260,6 +261,16 @@ class WorkflowsController {
 
     if (workflow.tenant_id !== tenantId) {
       throw new ApiError('You don\'t have permission to access this lead magnet', 403);
+    }
+
+    // Log workflow steps count for debugging
+    if (workflow.steps) {
+      logger.debug(`Workflow ${workflowId} steps count`, {
+        stepsCount: Array.isArray(workflow.steps) ? workflow.steps.length : 0,
+        stepNames: Array.isArray(workflow.steps) 
+          ? workflow.steps.map((s: any, i: number) => ({ index: i, step_name: s.step_name, step_order: s.step_order }))
+          : [],
+      });
     }
 
     // Fetch associated form
@@ -322,7 +333,7 @@ class WorkflowsController {
       });
       (workflow as any).form_id = formId;
     } catch (error) {
-      console.error('[Workflows Create] Error creating form for workflow', {
+      logger.error('[Workflows Create] Error creating form for workflow', {
         workflowId,
         error: (error as any).message,
       });
@@ -344,7 +355,7 @@ class WorkflowsController {
         'workflow'
       );
     } catch (error) {
-      console.error('[Workflows Create] Error creating notification', error);
+      logger.error('[Workflows Create] Error creating notification', error);
       // Don't fail workflow creation if notification fails
     }
 
@@ -400,7 +411,7 @@ class WorkflowsController {
       try {
         await formService.updateFormName(workflowId, data.workflow_name);
       } catch (error) {
-        console.error('[Workflows Update] Error updating form name', {
+        logger.error('[Workflows Update] Error updating form name', {
           workflowId,
           error: (error as any).message,
         });
@@ -443,7 +454,7 @@ class WorkflowsController {
     try {
       await formService.deleteFormsForWorkflow(workflowId);
     } catch (error) {
-      console.error('[Workflows Delete] Error deleting associated form', {
+      logger.error('[Workflows Delete] Error deleting associated form', {
         workflowId,
         error: (error as any).message,
       });
@@ -463,7 +474,7 @@ class WorkflowsController {
       throw new ApiError('Description is required', 400);
     }
 
-    console.log('[Workflow Generation] Starting async generation', {
+    logger.info('[Workflow Generation] Starting async generation', {
       tenantId,
       model,
       descriptionLength: description.length,
@@ -486,19 +497,19 @@ class WorkflowsController {
     };
 
     await db.put(JOBS_TABLE, job);
-    console.log('[Workflow Generation] Created job record', { jobId });
+    logger.info('[Workflow Generation] Created job record', { jobId });
 
     // Invoke Lambda asynchronously to process workflow generation
     try {
       // Check if we're in local development - process synchronously
       if (process.env.IS_LOCAL === 'true' || process.env.NODE_ENV === 'development') {
-        console.log('[Workflow Generation] Local mode detected, processing synchronously', { jobId });
+        logger.info('[Workflow Generation] Local mode detected, processing synchronously', { jobId });
         // Process the job synchronously in local dev (fire and forget, but with error handling)
         setImmediate(async () => {
           try {
             await this.processWorkflowGenerationJob(jobId, tenantId, description, model);
           } catch (error: any) {
-            console.error('[Workflow Generation] Error processing job in local mode', {
+            logger.error('[Workflow Generation] Error processing job in local mode', {
               jobId,
               error: error.message,
               errorStack: error.stack,
@@ -527,7 +538,7 @@ class WorkflowsController {
         });
 
         const invokeResponse = await lambdaClient.send(invokeCommand);
-        console.log('[Workflow Generation] Triggered async processing', { 
+        logger.info('[Workflow Generation] Triggered async processing', { 
           jobId, 
           functionArn,
           statusCode: invokeResponse.StatusCode,
@@ -540,7 +551,7 @@ class WorkflowsController {
         }
       }
     } catch (error: any) {
-      console.error('[Workflow Generation] Failed to trigger async processing', {
+      logger.error('[Workflow Generation] Failed to trigger async processing', {
         error: error.message,
         errorStack: error.stack,
         jobId,
@@ -567,7 +578,7 @@ class WorkflowsController {
   }
 
   async processWorkflowGenerationJob(jobId: string, tenantId: string, description: string, model: string): Promise<void> {
-    console.log('[Workflow Generation] Processing job', { jobId, tenantId });
+    logger.info('[Workflow Generation] Processing job', { jobId, tenantId });
 
     try {
       // Update job status to processing
@@ -581,7 +592,7 @@ class WorkflowsController {
       const generationService = new WorkflowGenerationService(openai, storeUsageRecord);
       
       const workflowStartTime = Date.now();
-      console.log('[Workflow Generation] OpenAI client initialized');
+      logger.info('[Workflow Generation] OpenAI client initialized');
 
       // Generate workflow config first (needed for form generation)
       const workflowResult = await generationService.generateWorkflowConfig(description, model, tenantId, jobId);
@@ -600,7 +611,7 @@ class WorkflowsController {
       ]);
 
       const totalDuration = Date.now() - workflowStartTime;
-      console.log('[Workflow Generation] Success!', {
+      logger.info('[Workflow Generation] Success!', {
         tenantId,
         workflowName: workflowResult.workflowData.workflow_name,
         templateName: templateMetadataResult.templateName,
@@ -626,9 +637,9 @@ class WorkflowsController {
         updated_at: new Date().toISOString(),
       });
 
-      console.log('[Workflow Generation] Job completed successfully', { jobId });
+      logger.info('[Workflow Generation] Job completed successfully', { jobId });
     } catch (error: any) {
-      console.error('[Workflow Generation] Job failed', {
+      logger.error('[Workflow Generation] Job failed', {
         jobId,
         error: error.message,
       });
@@ -660,7 +671,7 @@ class WorkflowsController {
       
       // Only try once per job (check if there's a processing_attempted flag or just try if old enough)
       if (ageSeconds > 30 && !job.processing_attempted) {
-        console.log('[Workflow Generation] Job stuck in pending, attempting to process', {
+        logger.info('[Workflow Generation] Job stuck in pending, attempting to process', {
           jobId,
           ageSeconds,
         });
@@ -678,7 +689,7 @@ class WorkflowsController {
           try {
             await this.processWorkflowGenerationJob(jobId, tenantId, description, model);
           } catch (error: any) {
-            console.error('[Workflow Generation] Error processing stuck job', {
+            logger.error('[Workflow Generation] Error processing stuck job', {
               jobId,
               error: error.message,
               errorStack: error.stack,
@@ -709,7 +720,7 @@ class WorkflowsController {
       throw new ApiError('Description is required', 400);
     }
 
-    console.log('[Workflow Generation] Starting AI generation (sync)', {
+    logger.info('[Workflow Generation] Starting AI generation (sync)', {
       tenantId,
       model,
       descriptionLength: description.length,
@@ -719,7 +730,7 @@ class WorkflowsController {
     try {
       const openai = await getOpenAIClient();
       const generationService = new WorkflowGenerationService(openai, storeUsageRecord);
-      console.log('[Workflow Generation] OpenAI client initialized');
+      logger.info('[Workflow Generation] OpenAI client initialized');
 
       const workflowStartTime = Date.now();
       
@@ -739,7 +750,7 @@ class WorkflowsController {
       ]);
 
       const totalDuration = Date.now() - workflowStartTime;
-      console.log('[Workflow Generation] Success!', {
+      logger.info('[Workflow Generation] Success!', {
         tenantId,
         workflowName: workflowResult.workflowData.workflow_name,
         templateName: templateMetadataResult.templateName,
@@ -763,7 +774,7 @@ class WorkflowsController {
         body: result,
       };
     } catch (error: any) {
-      console.error('[Workflow Generation] Error occurred', {
+      logger.error('[Workflow Generation] Error occurred', {
         tenantId,
         errorMessage: error.message,
         errorName: error.name,
@@ -788,7 +799,7 @@ class WorkflowsController {
       throw new ApiError('Edit prompt is required', 400);
     }
 
-    console.log('[Workflow Instructions Refinement] Starting refinement', {
+    logger.info('[Workflow Instructions Refinement] Starting refinement', {
       tenantId,
       model,
       currentInstructionsLength: current_instructions.length,
@@ -798,7 +809,7 @@ class WorkflowsController {
 
     try {
       const openai = await getOpenAIClient();
-      console.log('[Workflow Instructions Refinement] OpenAI client initialized');
+      logger.info('[Workflow Instructions Refinement] OpenAI client initialized');
 
       const prompt = `You are an expert AI prompt engineer specializing in creating effective instructions for AI lead magnet generators. Modify the following research instructions based on these requests: "${edit_prompt}"
 
@@ -889,7 +900,7 @@ Return ONLY the modified instructions:
 - Just the improved instructions text
 - Maintain the same general structure unless changes require restructuring`;
 
-      console.log('[Workflow Instructions Refinement] Calling OpenAI for refinement...', {
+      logger.info('[Workflow Instructions Refinement] Calling OpenAI for refinement...', {
         model,
         promptLength: prompt.length,
       });
@@ -911,7 +922,7 @@ Return ONLY the modified instructions:
 
       const refineDuration = Date.now() - refineStartTime;
       const refinementModel = (completion as any).model || model;
-      console.log('[Workflow Instructions Refinement] Refinement completed', {
+      logger.info('[Workflow Instructions Refinement] Refinement completed', {
         duration: `${refineDuration}ms`,
         tokensUsed: completion.usage?.total_tokens,
         model: refinementModel,
@@ -954,7 +965,7 @@ Return ONLY the modified instructions:
         },
       };
     } catch (error: any) {
-      console.error('[Workflow Instructions Refinement] Error occurred', {
+      logger.error('[Workflow Instructions Refinement] Error occurred', {
         tenantId,
         errorMessage: error.message,
         errorName: error.name,
@@ -1054,7 +1065,7 @@ Return ONLY the modified instructions:
       throw new ApiError('You don\'t have permission to access this lead magnet', 403);
     }
 
-    console.log('[AI Step Generation] Starting generation', {
+    logger.info('[AI Step Generation] Starting generation', {
       workflowId,
       workflowName: workflow.workflow_name,
       userPrompt: body.userPrompt.substring(0, 100),
@@ -1089,7 +1100,7 @@ Return ONLY the modified instructions:
       // Generate the step
       const result = await aiService.generateStep(aiRequest);
 
-      console.log('[AI Step Generation] Generation successful', {
+      logger.info('[AI Step Generation] Generation successful', {
         workflowId,
         action: result.action,
         stepName: result.step.step_name,
@@ -1100,7 +1111,7 @@ Return ONLY the modified instructions:
         body: result,
       };
     } catch (error: any) {
-      console.error('[AI Step Generation] Error', {
+      logger.error('[AI Step Generation] Error', {
         workflowId,
         error: error.message,
         stack: error.stack,
@@ -1130,7 +1141,7 @@ Return ONLY the modified instructions:
       throw new ApiError('You don\'t have permission to access this lead magnet', 403);
     }
 
-    console.log('[AI Workflow Edit] Starting edit', {
+    logger.info('[AI Workflow Edit] Starting edit', {
       workflowId,
       workflowName: workflow.workflow_name,
       userPrompt: body.userPrompt.substring(0, 100),
@@ -1157,7 +1168,7 @@ Return ONLY the modified instructions:
       // Edit the workflow
       const result = await aiService.editWorkflow(aiRequest);
 
-      console.log('[AI Workflow Edit] Edit successful', {
+      logger.info('[AI Workflow Edit] Edit successful', {
         workflowId,
         newStepCount: result.steps.length,
         changesSummary: result.changes_summary,
@@ -1168,7 +1179,7 @@ Return ONLY the modified instructions:
         body: result,
       };
     } catch (error: any) {
-      console.error('[AI Workflow Edit] Error', {
+      logger.error('[AI Workflow Edit] Error', {
         workflowId,
         error: error.message,
         stack: error.stack,

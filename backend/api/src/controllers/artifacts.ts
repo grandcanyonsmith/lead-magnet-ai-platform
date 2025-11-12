@@ -1,12 +1,13 @@
-import { db } from '../utils/db';
+import { db, normalizeQueryResult } from '../utils/db';
 import { ApiError } from '../utils/errors';
 import { RouteResponse } from '../routes';
 import { ArtifactUrlService } from '../services/artifactUrlService';
+import { logger } from '../utils/logger';
 
 const ARTIFACTS_TABLE = process.env.ARTIFACTS_TABLE;
 
 if (!ARTIFACTS_TABLE) {
-  console.error('[Artifacts Controller] ARTIFACTS_TABLE environment variable is not set');
+  logger.error('[Artifacts Controller] ARTIFACTS_TABLE environment variable is not set');
 }
 
 class ArtifactsController {
@@ -19,9 +20,9 @@ class ArtifactsController {
     const artifactType = queryParams.artifact_type;
     const limit = queryParams.limit ? parseInt(queryParams.limit) : 50;
 
-    let artifacts;
+    let artifactsResult;
     if (jobId) {
-      artifacts = await db.query(
+      artifactsResult = await db.query(
         ARTIFACTS_TABLE!,
         'gsi_job_id',
         'job_id = :job_id',
@@ -30,7 +31,7 @@ class ArtifactsController {
         limit
       );
     } else if (artifactType) {
-      artifacts = await db.query(
+      artifactsResult = await db.query(
         ARTIFACTS_TABLE!,
         'gsi_tenant_type',
         'tenant_id = :tenant_id AND artifact_type = :artifact_type',
@@ -39,7 +40,7 @@ class ArtifactsController {
         limit
       );
     } else {
-      artifacts = await db.query(
+      artifactsResult = await db.query(
         ARTIFACTS_TABLE!,
         'gsi_tenant_type',
         'tenant_id = :tenant_id',
@@ -48,6 +49,7 @@ class ArtifactsController {
         limit
       );
     }
+    let artifacts = normalizeQueryResult(artifactsResult);
 
     // Filter out report.md artifacts - they're for internal use only
     artifacts = artifacts.filter((artifact: any) => {
@@ -86,7 +88,7 @@ class ArtifactsController {
             size_bytes: artifact.file_size_bytes ? parseInt(artifact.file_size_bytes) : artifact.size_bytes,
           };
         } catch (error) {
-          console.error(`Error generating URL for artifact ${artifact.artifact_id}:`, error);
+          logger.error(`Error generating URL for artifact ${artifact.artifact_id}`, { error, artifact_id: artifact.artifact_id });
           return {
             ...artifact,
             object_url: artifact.public_url || null,
