@@ -150,11 +150,31 @@ export default function JobDetailClient() {
     executionSteps.forEach((execStep: any) => {
       const order = execStep.step_order
       if (order !== undefined && order !== null) {
+        // Determine step status more accurately
+        let stepStatus: 'pending' | 'in_progress' | 'completed' | 'failed' = 'pending'
+        
+        if (execStep.output !== null && execStep.output !== undefined && execStep.output !== '') {
+          stepStatus = 'completed'
+        } else if (job.status === 'processing') {
+          // If job is processing and step has no output, check if it's the current step
+          const completedStepsCount = executionSteps.filter((s: any) => 
+            s.step_order > 0 && 
+            s.output !== null && 
+            s.output !== undefined && 
+            s.output !== ''
+          ).length
+          // If this step comes right after the last completed step, it's in progress
+          if (order === completedStepsCount + 1) {
+            stepStatus = 'in_progress'
+          }
+        } else if (job.status === 'failed') {
+          // If job failed and step has no output, it might have failed
+          stepStatus = 'failed'
+        }
+        
         mergedStepsMap.set(order, {
           ...execStep,
-          _status: execStep.output !== null && execStep.output !== undefined && execStep.output !== '' 
-            ? 'completed' as const 
-            : 'pending' as const
+          _status: stepStatus
         })
       }
     })
@@ -176,31 +196,59 @@ export default function JobDetailClient() {
           tool_choice: workflowStep.tool_choice || existingStep.input?.tool_choice || existingStep.tool_choice,
         })
       } else {
-        // Step hasn't been executed yet - create pending step
+        // Step hasn't been executed yet - check if it's currently executing
         const isJobProcessing = job.status === 'processing'
-        // Count how many workflow steps have been executed (only count ai_generation steps with step_order matching workflow step indices)
-        const executedWorkflowStepsCount = executionSteps.filter((s: any) => 
+        
+        // Count completed workflow steps (have output)
+        const completedWorkflowStepsCount = executionSteps.filter((s: any) => 
           s.step_order > 0 && 
           s.step_order <= workflowSteps.length &&
-          (s.step_type === 'ai_generation' || s.step_type === 'workflow_step')
+          (s.step_type === 'ai_generation' || s.step_type === 'workflow_step') &&
+          s.output !== null && 
+          s.output !== undefined && 
+          s.output !== ''
         ).length
-        const isCurrentStep = isJobProcessing && executionStepOrder === executedWorkflowStepsCount + 1
         
-        mergedStepsMap.set(executionStepOrder, {
-          step_name: workflowStep.step_name,
-          step_order: executionStepOrder,
-          step_type: 'workflow_step',
-          model: workflowStep.model,
-          tools: workflowStep.tools || [],
-          tool_choice: workflowStep.tool_choice || 'auto',
-          instructions: workflowStep.instructions,
-          input: {
+        // Check if there's an execution step for this order that's currently executing (exists but no output)
+        const executingStep = executionSteps.find((s: any) => 
+          s.step_order === executionStepOrder &&
+          (s.step_type === 'ai_generation' || s.step_type === 'workflow_step') &&
+          (s.output === null || s.output === undefined || s.output === '')
+        )
+        
+        // Determine if this is the current step being executed
+        const isCurrentStep = isJobProcessing && (
+          executingStep !== undefined || // Step exists but has no output (currently executing)
+          executionStepOrder === completedWorkflowStepsCount + 1 // Next step to execute
+        )
+        
+        // If step exists but has no output, use its data; otherwise create new pending step
+        if (executingStep) {
+          mergedStepsMap.set(executionStepOrder, {
+            ...executingStep,
+            step_name: workflowStep.step_name || executingStep.step_name,
+            model: workflowStep.model || executingStep.model,
+            tools: workflowStep.tools || executingStep.tools || [],
+            tool_choice: workflowStep.tool_choice || executingStep.tool_choice || 'auto',
+            _status: 'in_progress' as const,
+          })
+        } else {
+          mergedStepsMap.set(executionStepOrder, {
+            step_name: workflowStep.step_name,
+            step_order: executionStepOrder,
+            step_type: 'workflow_step',
+            model: workflowStep.model,
             tools: workflowStep.tools || [],
             tool_choice: workflowStep.tool_choice || 'auto',
-          },
-          output: null,
-          _status: isCurrentStep ? 'in_progress' as const : 'pending' as const,
-        })
+            instructions: workflowStep.instructions,
+            input: {
+              tools: workflowStep.tools || [],
+              tool_choice: workflowStep.tool_choice || 'auto',
+            },
+            output: null,
+            _status: isCurrentStep ? 'in_progress' as const : 'pending' as const,
+          })
+        }
       }
     })
 
