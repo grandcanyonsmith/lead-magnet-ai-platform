@@ -186,10 +186,13 @@ Please generate the updated workflow configuration with all necessary changes.`;
           step.tool_choice = 'auto';
         }
 
-        // Validate depends_on
+        // Validate and clean up depends_on
         if (step.depends_on) {
           step.depends_on = step.depends_on.filter((dep: number) => 
-            dep >= 0 && dep < parsedResponse.steps.length
+            typeof dep === 'number' &&
+            dep >= 0 && 
+            dep < parsedResponse.steps.length &&
+            dep !== index // Cannot depend on itself
           );
         }
 
