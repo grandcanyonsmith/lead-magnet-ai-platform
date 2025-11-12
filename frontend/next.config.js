@@ -15,12 +15,6 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
-  eslint: {
-    // Allow warnings during builds but still fail on errors
-    ignoreDuringBuilds: false,
-    // Only fail builds on errors, not warnings
-    dirs: ['src'],
-  },
   async headers() {
     return [
       {

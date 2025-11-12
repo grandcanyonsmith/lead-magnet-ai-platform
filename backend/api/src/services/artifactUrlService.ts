@@ -41,6 +41,8 @@ export class ArtifactUrlService {
 
   /**
    * Generate a presigned URL as fallback when CloudFront is not available
+   * Note: Maximum expiration is 7 days (604800 seconds) per AWS limits
+   * CloudFront URLs should be preferred as they don't expire
    */
   static async generatePresignedUrl(s3Key: string, expiresIn: number = 604800): Promise<{ url: string; expiresAt: string }> {
     if (!ARTIFACTS_BUCKET) {

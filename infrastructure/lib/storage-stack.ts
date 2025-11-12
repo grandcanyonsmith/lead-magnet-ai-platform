@@ -30,12 +30,11 @@ export class StorageStack extends cdk.Stack {
           maxAge: 3600,
         },
       ],
+      // No lifecycle rules - artifacts should never expire
+      // Removed expiration rule to ensure artifacts remain accessible indefinitely
       lifecycleRules: [
-        {
-          id: 'delete-old-artifacts',
-          enabled: true,
-          expiration: cdk.Duration.days(90),
-        },
+        // Optional: Transition to Infrequent Access after 30 days to reduce costs
+        // while keeping artifacts accessible
         {
           id: 'transition-to-ia',
           enabled: true,

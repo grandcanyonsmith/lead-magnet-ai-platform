@@ -96,11 +96,12 @@ def upload_artifact_to_s3(tenant_id: str, job_id: str, filename: str, content: s
     if cloudfront_domain:
         public_url = f"https://{cloudfront_domain}/{s3_key}"
     else:
-        # Generate presigned URL as fallback (valid for 1 year)
+        # Generate presigned URL as fallback (max 7 days per AWS limits)
+        # Note: CloudFront URLs should be preferred as they don't expire
         public_url = s3_client.generate_presigned_url(
             'get_object',
             Params={'Bucket': ARTIFACTS_BUCKET, 'Key': s3_key},
-            ExpiresIn=31536000  # 1 year
+            ExpiresIn=604800  # Maximum allowed: 7 days (604800 seconds)
         )
     
     return s3_url, public_url

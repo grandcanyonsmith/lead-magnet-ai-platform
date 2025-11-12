@@ -97,30 +97,27 @@ export default function JobDetailClient() {
     setEditingStepIndex(null)
   }
 
-  // Merge workflow steps with execution steps to show all steps
+  /**
+   * Merge workflow steps with execution steps to display all steps in the UI.
+   * 
+   * This function:
+   * - Maps execution steps to workflow steps by step_order
+   * - Includes all execution steps (even those not in workflow, like html_generation)
+   * - Creates pending steps for workflow steps that haven't executed yet
+   * - Enriches execution steps with workflow step metadata
+   */
   const getMergedSteps = () => {
     const executionSteps = job.execution_steps || []
     const workflowSteps = workflow?.steps || []
     
-    // Debug logging to track step counts
-    console.log('[getMergedSteps] Debug info:', {
-      executionStepsCount: executionSteps.length,
-      workflowStepsCount: workflowSteps.length,
-      executionSteps: executionSteps.map((s: any) => ({ step_order: s.step_order, step_name: s.step_name, step_type: s.step_type })),
-      workflowSteps: workflowSteps.map((s: any, i: number) => ({ index: i, step_name: s.step_name, step_order: s.step_order })),
-      jobStatus: job.status,
-    })
-    
     if (!workflowSteps || !Array.isArray(workflowSteps) || workflowSteps.length === 0) {
       // Fallback to execution steps if no workflow steps available
-      const fallbackSteps = executionSteps.map((step: any) => ({
+      return executionSteps.map((step: any) => ({
         ...step,
         _status: step.output !== null && step.output !== undefined && step.output !== '' 
           ? 'completed' as const 
           : 'pending' as const
       }))
-      console.log('[getMergedSteps] Using fallback (no workflow steps), returning:', fallbackSteps.length, 'steps')
-      return fallbackSteps
     }
 
     const executionStepsMap = new Map<number, any>()
@@ -211,10 +208,7 @@ export default function JobDetailClient() {
     })
 
     // Convert map to array and sort by step_order
-    const mergedSteps = Array.from(mergedStepsMap.values()).sort((a: any, b: any) => (a.step_order || 0) - (b.step_order || 0))
-    console.log('[getMergedSteps] Final merged steps count:', mergedSteps.length, 'steps')
-    console.log('[getMergedSteps] Final merged steps:', mergedSteps.map((s: any) => ({ step_order: s.step_order, step_name: s.step_name, step_type: s.step_type, _status: s._status })))
-    return mergedSteps
+    return Array.from(mergedStepsMap.values()).sort((a: any, b: any) => (a.step_order || 0) - (b.step_order || 0))
   }
 
   if (loading) {

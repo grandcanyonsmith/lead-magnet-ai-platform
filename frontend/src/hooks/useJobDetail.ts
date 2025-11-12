@@ -64,6 +64,38 @@ export function useJobDetail() {
   const loadJob = async () => {
     try {
       const data = await api.getJob(jobId)
+      
+      // Execution steps are ALWAYS stored in S3 (never in DynamoDB).
+      // Fetch execution steps from S3 using the provided URL.
+      if (data.execution_steps_s3_url) {
+        try {
+          const response = await fetch(data.execution_steps_s3_url)
+          if (response.ok) {
+            const executionSteps = await response.json()
+            data.execution_steps = executionSteps
+            if (process.env.NODE_ENV === 'development') {
+              console.log(`Loaded execution_steps from S3 for job ${jobId}`, {
+                stepsCount: Array.isArray(executionSteps) ? executionSteps.length : 0,
+              })
+            }
+          } else {
+            console.warn(`Failed to fetch execution_steps from S3 for job ${jobId}`, {
+              status: response.status,
+              statusText: response.statusText,
+            })
+            // Set empty array if fetch fails
+            data.execution_steps = []
+          }
+        } catch (err) {
+          console.error(`Error fetching execution_steps from S3 for job ${jobId}:`, err)
+          // Set empty array if fetch fails
+          data.execution_steps = []
+        }
+      } else {
+        // No S3 URL means no execution steps yet (job may still be processing)
+        data.execution_steps = []
+      }
+      
       setJob(data)
       
       // Load workflow details if workflow_id exists
