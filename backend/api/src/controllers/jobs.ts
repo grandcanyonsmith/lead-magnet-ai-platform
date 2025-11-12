@@ -6,12 +6,18 @@ import { ulid } from 'ulid';
 import { SFNClient, StartExecutionCommand } from '@aws-sdk/client-sfn';
 import { logger } from '../utils/logger';
 import { ArtifactUrlService } from '../services/artifactUrlService';
+import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import OpenAI from 'openai';
+import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
 
 const JOBS_TABLE = process.env.JOBS_TABLE!;
 const SUBMISSIONS_TABLE = process.env.SUBMISSIONS_TABLE!;
 const STEP_FUNCTIONS_ARN = process.env.STEP_FUNCTIONS_ARN!;
+const ARTIFACTS_BUCKET = process.env.ARTIFACTS_BUCKET!;
 
 const sfnClient = STEP_FUNCTIONS_ARN ? new SFNClient({ region: process.env.AWS_REGION || 'us-east-1' }) : null;
+const s3Client = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
+const secretsClient = new SecretsManagerClient({ region: process.env.AWS_REGION || 'us-east-1' });
 
 /**
  * Generate a public URL for execution_steps stored in S3.
@@ -33,6 +39,70 @@ async function generateExecutionStepsUrl(s3Key: string): Promise<string | null> 
   } catch (error) {
     logger.error(`Error generating URL for execution_steps: ${s3Key}`, error);
     return null;
+  }
+}
+
+async function getOpenAIClient(): Promise<OpenAI> {
+  const OPENAI_SECRET_NAME = process.env.OPENAI_SECRET_NAME || 'openai-api-key';
+  
+  try {
+    const command = new GetSecretValueCommand({ SecretId: OPENAI_SECRET_NAME });
+    const response = await secretsClient.send(command);
+    
+    if (!response.SecretString) {
+      throw new ApiError('OpenAI API key not found in secret', 500);
+    }
+    
+    const secret = JSON.parse(response.SecretString);
+    const apiKey = secret.api_key || secret.OPENAI_API_KEY || secret.openai_api_key;
+    
+    if (!apiKey || typeof apiKey !== 'string' || apiKey.trim() === '') {
+      throw new ApiError('OpenAI API key is empty', 500);
+    }
+    
+    return new OpenAI({ apiKey });
+  } catch (error: any) {
+    logger.error('[Quick Edit Step] Error getting OpenAI client', { error: error.message });
+    throw new ApiError(`Failed to initialize OpenAI client: ${error.message}`, 500);
+  }
+}
+
+async function fetchExecutionStepsFromS3(s3Key: string): Promise<any[]> {
+  try {
+    const command = new GetObjectCommand({
+      Bucket: ARTIFACTS_BUCKET,
+      Key: s3Key,
+    });
+    
+    const response = await s3Client.send(command);
+    const bodyContents = await response.Body!.transformToString();
+    return JSON.parse(bodyContents);
+  } catch (error: any) {
+    logger.error('[Quick Edit Step] Error fetching execution steps from S3', {
+      s3Key,
+      error: error.message,
+    });
+    throw new ApiError(`Failed to fetch execution steps: ${error.message}`, 500);
+  }
+}
+
+async function saveExecutionStepsToS3(s3Key: string, executionSteps: any[]): Promise<void> {
+  try {
+    const command = new PutObjectCommand({
+      Bucket: ARTIFACTS_BUCKET,
+      Key: s3Key,
+      Body: JSON.stringify(executionSteps, null, 2),
+      ContentType: 'application/json',
+    });
+    
+    await s3Client.send(command);
+    logger.info('[Quick Edit Step] Saved execution steps to S3', { s3Key, stepsCount: executionSteps.length });
+  } catch (error: any) {
+    logger.error('[Quick Edit Step] Error saving execution steps to S3', {
+      s3Key,
+      error: error.message,
+    });
+    throw new ApiError(`Failed to save execution steps: ${error.message}`, 500);
   }
 }
 
@@ -401,6 +471,168 @@ class JobsController {
         errorStack: error.stack,
       });
       throw new ApiError(`Failed to rerun step: ${error.message}`, 500);
+    }
+  }
+
+  async quickEditStep(tenantId: string, jobId: string, body: any): Promise<RouteResponse> {
+    const { step_order, user_prompt, save } = body;
+
+    // Validate required fields
+    if (step_order === undefined || step_order === null) {
+      throw new ApiError('step_order is required', 400);
+    }
+    if (!user_prompt || typeof user_prompt !== 'string' || user_prompt.trim() === '') {
+      throw new ApiError('user_prompt is required and must be a non-empty string', 400);
+    }
+
+    // Get the job
+    const job = await db.get(JOBS_TABLE, { job_id: jobId });
+
+    if (!job) {
+      throw new ApiError('Job not found', 404);
+    }
+
+    if (job.tenant_id !== tenantId) {
+      throw new ApiError('You don\'t have permission to edit steps for this job', 403);
+    }
+
+    // Check if execution steps exist
+    if (!job.execution_steps_s3_key) {
+      throw new ApiError('Execution steps not found for this job', 404);
+    }
+
+    // Fetch execution steps from S3
+    const executionSteps = await fetchExecutionStepsFromS3(job.execution_steps_s3_key);
+
+    // Find the step to edit
+    const stepIndex = executionSteps.findIndex((step: any) => step.step_order === step_order);
+    if (stepIndex === -1) {
+      throw new ApiError(`Step with order ${step_order} not found`, 404);
+    }
+
+    const step = executionSteps[stepIndex];
+
+    // Check if step has output to edit
+    if (step.output === null || step.output === undefined || step.output === '') {
+      throw new ApiError('Step has no output to edit', 400);
+    }
+
+    const originalOutput = typeof step.output === 'string' ? step.output : JSON.stringify(step.output, null, 2);
+
+    logger.info('[Quick Edit Step] Starting AI edit', {
+      jobId,
+      stepOrder: step_order,
+      stepName: step.step_name,
+      promptLength: user_prompt.length,
+    });
+
+    try {
+      // Get OpenAI client
+      const openai = await getOpenAIClient();
+
+      // Build context for AI
+      const systemPrompt = `You are an AI assistant that helps edit execution step outputs for a lead magnet generation platform.
+
+The user will provide:
+1. The original step output (text or JSON)
+2. A prompt describing how they want to edit it
+
+Your job is to generate an edited version of the output that follows the user's instructions while maintaining the same format and structure.
+
+Guidelines:
+- Preserve the format of the original output (if it's JSON, return JSON; if it's markdown, return markdown)
+- Make only the changes requested by the user
+- Keep the overall structure and style consistent
+- If the output contains structured data, maintain the same schema unless explicitly asked to change it
+- Return only the edited output, not explanations or metadata`;
+
+      const userMessage = `Original Step Output:
+${originalOutput}
+
+Step Name: ${step.step_name || 'Unknown'}
+Step Order: ${step_order}
+
+User Request: ${user_prompt}
+
+Please generate the edited output based on the user's request. Return only the edited output, maintaining the same format as the original.`;
+
+      // Call OpenAI
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userMessage },
+        ],
+        temperature: 0.7,
+        max_tokens: 4000,
+      });
+
+      const editedOutput = completion.choices[0]?.message?.content;
+      if (!editedOutput) {
+        throw new Error('No response from OpenAI');
+      }
+
+      // Parse edited output if original was JSON
+      let parsedEditedOutput: any = editedOutput;
+      try {
+        if (typeof step.output !== 'string') {
+          parsedEditedOutput = JSON.parse(editedOutput);
+        }
+      } catch {
+        // If parsing fails, use as string
+        parsedEditedOutput = editedOutput;
+      }
+
+      // Generate changes summary
+      const changesSummary = `Edited step output based on user prompt: "${user_prompt.substring(0, 100)}${user_prompt.length > 100 ? '...' : ''}"`;
+
+      logger.info('[Quick Edit Step] AI edit completed', {
+        jobId,
+        stepOrder: step_order,
+        originalLength: originalOutput.length,
+        editedLength: editedOutput.length,
+      });
+
+      // If save is true, update the execution step
+      if (save === true) {
+        // Update the step output
+        executionSteps[stepIndex] = {
+          ...step,
+          output: parsedEditedOutput,
+          updated_at: new Date().toISOString(),
+        };
+
+        // Save back to S3
+        await saveExecutionStepsToS3(job.execution_steps_s3_key, executionSteps);
+
+        // Update job updated_at timestamp
+        await db.update(JOBS_TABLE, { job_id: jobId }, {
+          updated_at: new Date().toISOString(),
+        });
+
+        logger.info('[Quick Edit Step] Changes saved', {
+          jobId,
+          stepOrder: step_order,
+        });
+      }
+
+      return {
+        statusCode: 200,
+        body: {
+          original_output: step.output,
+          edited_output: parsedEditedOutput,
+          changes_summary: changesSummary,
+          saved: save === true,
+        },
+      };
+    } catch (error: any) {
+      logger.error('[Quick Edit Step] Error', {
+        jobId,
+        stepOrder: step_order,
+        error: error.message,
+        stack: error.stack,
+      });
+      throw new ApiError(`Failed to edit step: ${error.message}`, 500);
     }
   }
 }

@@ -126,6 +126,10 @@ class ApiClientImpl implements ApiClient {
     return this.jobs.rerunStep(jobId, stepIndex)
   }
 
+  async quickEditStep(jobId: string, stepOrder: number, userPrompt: string, save?: boolean) {
+    return this.jobs.quickEditStep(jobId, stepOrder, userPrompt, save)
+  }
+
   // Artifacts - delegate to artifacts client
   async getArtifacts(params?: ArtifactListParams): Promise<ArtifactListResponse> {
     return this.artifacts.getArtifacts(params)

@@ -74,6 +74,7 @@ class ArtifactsController {
             object_url: artifact.public_url || null,
             file_name: artifact.artifact_name || artifact.file_name,
             size_bytes: artifact.file_size_bytes ? parseInt(artifact.file_size_bytes) : artifact.size_bytes,
+            content_type: artifact.mime_type || artifact.content_type, // Map mime_type to content_type for frontend
           };
         }
 
@@ -86,6 +87,7 @@ class ArtifactsController {
             public_url: objectUrl,
             file_name: artifact.artifact_name || artifact.file_name,
             size_bytes: artifact.file_size_bytes ? parseInt(artifact.file_size_bytes) : artifact.size_bytes,
+            content_type: artifact.mime_type || artifact.content_type, // Map mime_type to content_type for frontend
           };
         } catch (error) {
           logger.error(`Error generating URL for artifact ${artifact.artifact_id}`, { error, artifact_id: artifact.artifact_id });
@@ -94,6 +96,7 @@ class ArtifactsController {
             object_url: artifact.public_url || null,
             file_name: artifact.artifact_name || artifact.file_name,
             size_bytes: artifact.file_size_bytes ? parseInt(artifact.file_size_bytes) : artifact.size_bytes,
+            content_type: artifact.mime_type || artifact.content_type, // Map mime_type to content_type for frontend
           };
         }
       })

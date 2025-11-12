@@ -9,7 +9,6 @@ import { processJobLocally } from '../services/jobProcessor';
 
 const USER_SETTINGS_TABLE = process.env.USER_SETTINGS_TABLE!;
 const WORKFLOWS_TABLE = process.env.WORKFLOWS_TABLE!;
-const FORMS_TABLE = process.env.FORMS_TABLE!;
 const SUBMISSIONS_TABLE = process.env.SUBMISSIONS_TABLE!;
 const JOBS_TABLE = process.env.JOBS_TABLE!;
 const STEP_FUNCTIONS_ARN = process.env.STEP_FUNCTIONS_ARN!;
@@ -88,10 +87,9 @@ class WebhooksController {
 
     // Create submission record
     const submissionId = `sub_${ulid()}`;
-    const submission = {
+    const submission: any = {
       submission_id: submissionId,
       tenant_id: tenantId,
-      form_id: workflow.form_id || null,
       workflow_id: workflow.workflow_id,
       submission_data: submissionData,
       submitter_ip: sourceIp,
@@ -101,6 +99,11 @@ class WebhooksController {
       created_at: new Date().toISOString(),
       ttl: Math.floor(Date.now() / 1000) + 90 * 24 * 60 * 60, // 90 days
     };
+    
+    // Only include form_id if it exists (DynamoDB GSI doesn't allow null for index keys)
+    if (workflow.form_id) {
+      submission.form_id = workflow.form_id;
+    }
 
     await db.put(SUBMISSIONS_TABLE, submission);
 
