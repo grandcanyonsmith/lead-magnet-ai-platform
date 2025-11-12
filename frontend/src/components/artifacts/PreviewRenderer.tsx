@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { FiFile, FiImage, FiFileText, FiCode } from 'react-icons/fi'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 interface PreviewRendererProps {
   contentType?: string
@@ -12,6 +14,8 @@ export function PreviewRenderer({ contentType, objectUrl, fileName, className = 
   const [imageLoaded, setImageLoaded] = useState(false)
   const [imageError, setImageError] = useState(false)
   const [isInView, setIsInView] = useState(false)
+  const [markdownContent, setMarkdownContent] = useState<string | null>(null)
+  const [markdownError, setMarkdownError] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -30,6 +34,19 @@ export function PreviewRenderer({ contentType, objectUrl, fileName, className = 
 
     return () => observer.disconnect()
   }, [])
+
+  // Fetch markdown content when in view
+  useEffect(() => {
+    if (isInView && contentType === 'text/markdown' && objectUrl && !markdownContent && !markdownError) {
+      fetch(objectUrl)
+        .then(res => res.text())
+        .then(text => setMarkdownContent(text))
+        .catch(err => {
+          console.error('Failed to fetch markdown:', err)
+          setMarkdownError(true)
+        })
+    }
+  }, [isInView, contentType, objectUrl, markdownContent, markdownError])
 
   if (!objectUrl || !contentType) {
     return (
@@ -98,6 +115,43 @@ export function PreviewRenderer({ contentType, objectUrl, fileName, className = 
           ) : (
             <div className="flex items-center justify-center h-full bg-gray-100">
               <FiCode className="w-12 h-12 text-blue-400" />
+            </div>
+          )}
+        </div>
+      )
+    }
+
+    if (contentType === 'text/markdown') {
+      return (
+        <div className="relative w-full h-full bg-white overflow-auto">
+          {isInView ? (
+            markdownError ? (
+              <div className="flex items-center justify-center h-full bg-gray-50">
+                <div className="text-center">
+                  <FiFileText className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                  <p className="text-xs text-gray-500">Failed to load markdown</p>
+                </div>
+              </div>
+            ) : markdownContent ? (
+              <div className="p-4 prose prose-sm max-w-none">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {markdownContent}
+                </ReactMarkdown>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-full bg-gray-50">
+                <div className="text-center">
+                  <FiFileText className="w-12 h-12 text-gray-400 mx-auto mb-2 animate-pulse" />
+                  <p className="text-xs text-gray-500">Loading markdown...</p>
+                </div>
+              </div>
+            )
+          ) : (
+            <div className="flex items-center justify-center h-full bg-gray-50">
+              <div className="text-center">
+                <FiFileText className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                <p className="text-xs text-gray-500">Markdown File</p>
+              </div>
             </div>
           )}
         </div>

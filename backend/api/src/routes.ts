@@ -265,6 +265,22 @@ export const router = async (
     return await jobsController.rerunStep(tenantId, id, stepIndex);
   }
 
+  // Debug logging for quick-edit-step route
+  const quickEditMatch = path.match(/^\/admin\/jobs\/[^/]+\/quick-edit-step\/?$/);
+  logger.info('[Router] Checking quick-edit-step route', {
+    path,
+    method,
+    quickEditMatch: !!quickEditMatch,
+    pathSegments,
+    pathSegmentsLength: pathSegments.length,
+  });
+
+  if (quickEditMatch && method === 'POST') {
+    const id = pathSegments[2];
+    logger.info('[Router] Matched /admin/jobs/:id/quick-edit-step route', { id, pathSegments });
+    return await jobsController.quickEditStep(tenantId, id, body);
+  }
+
   if (path.match(/^\/admin\/jobs\/[^/]+$/) && method === 'GET') {
     const id = pathSegments[2];
     return await jobsController.get(tenantId, id);

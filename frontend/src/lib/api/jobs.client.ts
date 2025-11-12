@@ -38,5 +38,28 @@ export class JobsClient extends BaseApiClient {
       step_index: stepIndex,
     })
   }
+
+  async quickEditStep(
+    jobId: string,
+    stepOrder: number,
+    userPrompt: string,
+    save?: boolean
+  ): Promise<{
+    original_output: any
+    edited_output: any
+    changes_summary: string
+    saved: boolean
+  }> {
+    return this.post<{
+      original_output: any
+      edited_output: any
+      changes_summary: string
+      saved: boolean
+    }>(`/admin/jobs/${jobId}/quick-edit-step`, {
+      step_order: stepOrder,
+      user_prompt: userPrompt,
+      save: save === true,
+    })
+  }
 }
 

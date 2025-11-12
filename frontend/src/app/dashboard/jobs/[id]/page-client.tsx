@@ -11,6 +11,7 @@ import { ExecutionSteps } from '@/components/jobs/ExecutionSteps'
 import { TechnicalDetails } from '@/components/jobs/TechnicalDetails'
 import { ResubmitModal } from '@/components/jobs/ResubmitModal'
 import { StepEditModal } from '@/components/jobs/StepEditModal'
+import { QuickEditStepModal } from '@/components/jobs/QuickEditStepModal'
 import { api } from '@/lib/api'
 import { WorkflowStep } from '@/types'
 import { toast } from 'react-hot-toast'
@@ -19,6 +20,7 @@ export default function JobDetailClient() {
   const router = useRouter()
   const [showResubmitModal, setShowResubmitModal] = useState(false)
   const [editingStepIndex, setEditingStepIndex] = useState<number | null>(null)
+  const [quickEditStep, setQuickEditStep] = useState<{ stepOrder: number; stepName: string } | null>(null)
   const {
     job,
     workflow,
@@ -95,6 +97,19 @@ export default function JobDetailClient() {
 
   const handleCancelEdit = () => {
     setEditingStepIndex(null)
+  }
+
+  const handleQuickEdit = (stepOrder: number, stepName: string) => {
+    setQuickEditStep({ stepOrder, stepName })
+  }
+
+  const handleQuickEditClose = () => {
+    setQuickEditStep(null)
+  }
+
+  const handleQuickEditSave = () => {
+    // Refresh job data to show updated step
+    router.refresh()
   }
 
   /**
@@ -325,6 +340,18 @@ export default function JobDetailClient() {
         currentStepIndex={editingStepIndex ?? undefined}
       />
 
+      {/* Quick Edit Step Modal */}
+      {quickEditStep && (
+        <QuickEditStepModal
+          isOpen={true}
+          onClose={handleQuickEditClose}
+          jobId={job.job_id}
+          stepOrder={quickEditStep.stepOrder}
+          stepName={quickEditStep.stepName}
+          onSave={handleQuickEditSave}
+        />
+      )}
+
       {/* Execution Steps */}
       {(workflow?.steps && Array.isArray(workflow.steps) && workflow.steps.length > 0) || 
        (job.execution_steps && Array.isArray(job.execution_steps) && job.execution_steps.length > 0) ? (
@@ -340,6 +367,7 @@ export default function JobDetailClient() {
           rerunningStep={rerunningStep}
           onEditStep={handleEditStep}
           canEdit={!!workflow}
+          onQuickEdit={handleQuickEdit}
         />
       ) : null}
 

@@ -29,7 +29,9 @@ export function PreviousStepsContext({
     return null
   }
 
-  const getStepKey = (stepOrder: number) => `${currentStepOrder}-prev-${stepOrder}`
+  // Create unique key that includes current step order and previous step order
+  // Also include a unique identifier to handle cases where same step appears multiple times
+  const getStepKey = (stepOrder: number, index: number) => `${currentStepOrder}-prev-${stepOrder}-${index}`
 
   return (
     <div className="space-y-2 mb-4">
@@ -72,7 +74,7 @@ export function PreviousStepsContext({
       )}
 
       {/* Previous Workflow Steps */}
-      {previousSteps.map((step) => {
+      {previousSteps.map((step, index) => {
         const isExpanded = expandedPrevSteps.has(step.step_order)
         const stepOutput =
           typeof step.output === 'string'
@@ -80,7 +82,7 @@ export function PreviousStepsContext({
             : JSON.stringify(step.output, null, 2)
 
         return (
-          <div key={getStepKey(step.step_order)} className="border border-gray-200 rounded-lg overflow-hidden">
+          <div key={getStepKey(step.step_order, index)} className="border border-gray-200 rounded-lg overflow-hidden">
             <button
               onClick={() => onTogglePrevStep(step.step_order)}
               className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 transition-colors"

@@ -208,6 +208,7 @@ class JobProcessor:
                 # New multi-step workflow processing
                 accumulated_context = ""
                 step_outputs = []
+                all_image_artifact_ids = []  # Track all image artifacts
                 submission_data = submission.get('submission_data', {})
                 
                 # Format initial submission data as context with labels
@@ -290,16 +291,42 @@ class JobProcessor:
                         # Store usage record
                         self.store_usage_record(job['tenant_id'], job_id, usage_info)
                         
+                        # Determine file extension based on content
+                        # Check if content looks like HTML (starts with < tag)
+                        file_ext = '.html' if step_output.strip().startswith('<') else '.md'
+                        
                         # Store step output as artifact
                         step_artifact_id = self.artifact_service.store_artifact(
                             tenant_id=job['tenant_id'],
                             job_id=job_id,
                             artifact_type='step_output',
                             content=step_output,
-                            filename=f'step_{step_index + 1}_{step_name.lower().replace(" ", "_")}.md'
+                            filename=f'step_{step_index + 1}_{step_name.lower().replace(" ", "_")}{file_ext}'
                         )
                         # Extract image URLs from response
                         image_urls = response_details.get('image_urls', [])
+                        
+                        # Store images as artifacts
+                        image_artifact_ids = []
+                        for idx, image_url in enumerate(image_urls):
+                            if image_url:
+                                try:
+                                    # Extract filename from URL or generate one
+                                    import re
+                                    filename_match = re.search(r'/([^/?]+\.(png|jpg|jpeg))', image_url)
+                                    filename = filename_match.group(1) if filename_match else f"image_{step_index + 1}_{idx + 1}.png"
+                                    
+                                    image_artifact_id = self.artifact_service.store_image_artifact(
+                                        tenant_id=job['tenant_id'],
+                                        job_id=job_id,
+                                        image_url=image_url,
+                                        filename=filename
+                                    )
+                                    image_artifact_ids.append(image_artifact_id)
+                                    all_image_artifact_ids.append(image_artifact_id)
+                                    logger.info(f"Stored image artifact: {image_artifact_id} for URL: {image_url[:80]}...")
+                                except Exception as e:
+                                    logger.warning(f"Failed to store image artifact for URL {image_url[:80]}...: {e}", exc_info=True)
                         
                         step_outputs.append({
                             'step_name': step_name,
@@ -445,6 +472,8 @@ class JobProcessor:
             if report_artifact_id:
                 artifacts_list.append(report_artifact_id)
             artifacts_list.append(final_artifact_id)
+            # Add all image artifacts
+            artifacts_list.extend(all_image_artifact_ids)
             
             self.db.update_job(job_id, {
                 'status': 'completed',
@@ -761,17 +790,42 @@ class JobProcessor:
             # Store usage record
             self.store_usage_record(job['tenant_id'], job_id, usage_info)
             
+            # Determine file extension based on content
+            # Check if content looks like HTML (starts with < tag)
+            file_ext = '.html' if step_output.strip().startswith('<') else '.md'
+            
             # Store step output as artifact
             step_artifact_id = self.artifact_service.store_artifact(
                 tenant_id=job['tenant_id'],
                 job_id=job_id,
                 artifact_type='step_output',
                 content=step_output,
-                filename=f'step_{step_index + 1}_{step_name.lower().replace(" ", "_")}.md'
+                filename=f'step_{step_index + 1}_{step_name.lower().replace(" ", "_")}{file_ext}'
             )
             
             # Extract image URLs from response
             image_urls = response_details.get('image_urls', [])
+            
+            # Store images as artifacts
+            image_artifact_ids = []
+            for idx, image_url in enumerate(image_urls):
+                if image_url:
+                    try:
+                        # Extract filename from URL or generate one
+                        import re
+                        filename_match = re.search(r'/([^/?]+\.(png|jpg|jpeg))', image_url)
+                        filename = filename_match.group(1) if filename_match else f"image_{step_index + 1}_{idx + 1}.png"
+                        
+                        image_artifact_id = self.artifact_service.store_image_artifact(
+                            tenant_id=job['tenant_id'],
+                            job_id=job_id,
+                            image_url=image_url,
+                            filename=filename
+                        )
+                        image_artifact_ids.append(image_artifact_id)
+                        logger.info(f"Stored image artifact: {image_artifact_id} for URL: {image_url[:80]}...")
+                    except Exception as e:
+                        logger.warning(f"Failed to store image artifact for URL {image_url[:80]}...: {e}", exc_info=True)
             
             # Add execution step (convert floats to Decimal for DynamoDB)
             step_data = ExecutionStepManager.create_ai_generation_step(

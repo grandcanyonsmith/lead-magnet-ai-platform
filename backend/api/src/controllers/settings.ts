@@ -34,7 +34,7 @@ class SettingsController {
     }
 
     // Auto-generate webhook_token if missing
-    if (!settings.webhook_token) {
+    if (!settings?.webhook_token) {
       const webhookToken = generateWebhookToken();
       settings = await db.update(USER_SETTINGS_TABLE, { tenant_id: tenantId }, {
         webhook_token: webhookToken,
@@ -43,7 +43,7 @@ class SettingsController {
     }
 
     // Construct webhook URL
-    const webhookUrl = settings.webhook_token
+    const webhookUrl = settings?.webhook_token
       ? `${API_URL}/v1/webhooks/${settings.webhook_token}`
       : null;
 
@@ -79,7 +79,7 @@ class SettingsController {
     }
 
     // Ensure webhook_token exists
-    if (!existing.webhook_token) {
+    if (!existing?.webhook_token) {
       const webhookToken = generateWebhookToken();
       existing = await db.update(USER_SETTINGS_TABLE, { tenant_id: tenantId }, {
         webhook_token: webhookToken,
@@ -88,7 +88,7 @@ class SettingsController {
     }
 
     // Construct webhook URL
-    const webhookUrl = existing.webhook_token
+    const webhookUrl = existing?.webhook_token
       ? `${API_URL}/v1/webhooks/${existing.webhook_token}`
       : null;
 
