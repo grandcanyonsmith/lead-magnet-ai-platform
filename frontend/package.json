@@ -21,6 +21,7 @@
     "clsx": "^2.1.0",
     "date-fns": "^3.2.0",
     "graceful-fs": "^4.2.11",
+    "nanoid": "^5.0.0",
     "next": "^14.2.33",
     "picocolors": "^1.0.0",
     "react": "^18.2.0",
