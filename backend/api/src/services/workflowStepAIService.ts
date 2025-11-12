@@ -132,6 +132,8 @@ export class WorkflowStepAIService {
       contextParts.push('');
       contextParts.push(`Editing Step ${currentStepIndex + 1}:`);
       contextParts.push(JSON.stringify(currentStep, null, 2));
+      contextParts.push('');
+      contextParts.push('IMPORTANT: If you are not changing the dependencies (depends_on field), you MUST return the existing depends_on array unchanged.');
     }
 
     const contextMessage = contextParts.join('\n');
@@ -204,11 +206,29 @@ Please generate the workflow step configuration.`;
         parsedResponse.step_index = currentStepIndex;
       }
 
+      // CRITICAL: Preserve existing dependencies if AI didn't return them
+      // This ensures we don't accidentally delete dependency relationships
+      if (parsedResponse.action === 'update' && currentStep) {
+        // If AI didn't provide depends_on, preserve the original
+        if (parsedResponse.step.depends_on === undefined || parsedResponse.step.depends_on === null) {
+          parsedResponse.step.depends_on = currentStep.depends_on || [];
+          console.log('[WorkflowStepAI] Preserved existing dependencies', {
+            depends_on: parsedResponse.step.depends_on,
+          });
+        }
+        
+        // Also preserve step_order if not provided
+        if (parsedResponse.step.step_order === undefined) {
+          parsedResponse.step.step_order = currentStep.step_order;
+        }
+      }
+
       console.log('[WorkflowStepAI] Step generated successfully', {
         action: parsedResponse.action,
         stepName: parsedResponse.step.step_name,
         model: parsedResponse.step.model,
         tools: parsedResponse.step.tools,
+        depends_on: parsedResponse.step.depends_on,
       });
 
       return parsedResponse;
