@@ -112,6 +112,23 @@ export function useJobDetail() {
         
         const response = await fetch(url.toString())
         if (response.ok) {
+          // Check Content-Type to ensure we're getting JSON, not HTML
+          const contentType = response.headers.get('content-type') || ''
+          if (!contentType.includes('application/json')) {
+            // Response is not JSON - might be HTML error page
+            const text = await response.text()
+            const errorMsg = `Invalid response format: expected JSON, got ${contentType}. Response preview: ${text.substring(0, 100)}`
+            console.error(`❌ ${errorMsg} for job ${jobId}`, {
+              url: data.execution_steps_s3_url,
+              contentType,
+              status: response.status,
+            })
+            if (!jobData) {
+              setExecutionStepsError(`Failed to fetch execution steps: server returned ${contentType} instead of JSON`)
+            }
+            return
+          }
+          
           const executionSteps = await response.json()
           
           // Only update if we got valid data
@@ -160,7 +177,11 @@ export function useJobDetail() {
         }
       } catch (err: any) {
         // Don't overwrite existing steps if fetch fails during polling
-        const errorMsg = `Error fetching execution steps: ${err.message || 'Unknown error'}`
+        // Handle JSON parsing errors specifically
+        let errorMsg = `Error fetching execution steps: ${err.message || 'Unknown error'}`
+        if (err.message && err.message.includes('JSON')) {
+          errorMsg = `Failed to parse execution steps: received non-JSON response (possibly HTML error page)`
+        }
         console.error(`❌ ${errorMsg} for job ${jobId}`, {
           url: data.execution_steps_s3_url,
           error: err,
@@ -198,21 +219,36 @@ export function useJobDetail() {
         try {
           const response = await fetch(data.execution_steps_s3_url)
           if (response.ok) {
-            const executionSteps = await response.json()
-            if (Array.isArray(executionSteps)) {
-              data.execution_steps = executionSteps
-              setExecutionStepsError(null)
-              if (process.env.NODE_ENV === 'development') {
-                console.log(`✅ Loaded execution_steps from S3 for job ${jobId}`, {
-                  stepsCount: executionSteps.length,
-                  url: data.execution_steps_s3_url,
-                })
-              }
-            } else {
-              const errorMsg = `Invalid execution steps data format: expected array, got ${typeof executionSteps}`
-              console.error(`❌ ${errorMsg} for job ${jobId}`)
-              setExecutionStepsError(errorMsg)
+            // Check Content-Type to ensure we're getting JSON, not HTML
+            const contentType = response.headers.get('content-type') || ''
+            if (!contentType.includes('application/json')) {
+              // Response is not JSON - might be HTML error page
+              const text = await response.text()
+              const errorMsg = `Invalid response format: expected JSON, got ${contentType}. Response preview: ${text.substring(0, 100)}`
+              console.error(`❌ ${errorMsg} for job ${jobId}`, {
+                url: data.execution_steps_s3_url,
+                contentType,
+                status: response.status,
+              })
+              setExecutionStepsError(`Failed to fetch execution steps: server returned ${contentType} instead of JSON`)
               data.execution_steps = []
+            } else {
+              const executionSteps = await response.json()
+              if (Array.isArray(executionSteps)) {
+                data.execution_steps = executionSteps
+                setExecutionStepsError(null)
+                if (process.env.NODE_ENV === 'development') {
+                  console.log(`✅ Loaded execution_steps from S3 for job ${jobId}`, {
+                    stepsCount: executionSteps.length,
+                    url: data.execution_steps_s3_url,
+                  })
+                }
+              } else {
+                const errorMsg = `Invalid execution steps data format: expected array, got ${typeof executionSteps}`
+                console.error(`❌ ${errorMsg} for job ${jobId}`)
+                setExecutionStepsError(errorMsg)
+                data.execution_steps = []
+              }
             }
           } else {
             const errorMsg = `Failed to fetch execution steps: ${response.status} ${response.statusText}`
@@ -226,7 +262,11 @@ export function useJobDetail() {
             data.execution_steps = []
           }
         } catch (err: any) {
-          const errorMsg = `Error fetching execution steps: ${err.message || 'Unknown error'}`
+          // Handle JSON parsing errors specifically
+          let errorMsg = `Error fetching execution steps: ${err.message || 'Unknown error'}`
+          if (err.message && err.message.includes('JSON')) {
+            errorMsg = `Failed to parse execution steps: received non-JSON response (possibly HTML error page)`
+          }
           console.error(`❌ ${errorMsg} for job ${jobId}`, {
             url: data.execution_steps_s3_url,
             error: err,
