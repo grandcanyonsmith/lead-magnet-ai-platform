@@ -5,6 +5,7 @@ import { ArtifactUrlService } from '../services/artifactUrlService';
 import { logger } from '../utils/logger';
 
 const ARTIFACTS_TABLE = process.env.ARTIFACTS_TABLE;
+const JOBS_TABLE = process.env.JOBS_TABLE;
 
 if (!ARTIFACTS_TABLE) {
   logger.error('[Artifacts Controller] ARTIFACTS_TABLE environment variable is not set');
@@ -57,6 +58,36 @@ class ArtifactsController {
       return !fileName.includes('report.md') && artifact.artifact_type !== 'report_markdown';
     });
 
+    // Fetch workflow_id for artifacts that have job_id
+    // Collect unique job_ids
+    const jobIds = new Set<string>();
+    artifacts.forEach((artifact: any) => {
+      if (artifact.job_id) {
+        jobIds.add(artifact.job_id);
+      }
+    });
+
+    // Batch fetch jobs to get workflow_ids
+    const jobIdToWorkflowId = new Map<string, string>();
+    if (jobIds.size > 0 && JOBS_TABLE) {
+      try {
+        await Promise.all(
+          Array.from(jobIds).map(async (jobId) => {
+            try {
+              const job = await db.get(JOBS_TABLE, { job_id: jobId });
+              if (job && job.workflow_id) {
+                jobIdToWorkflowId.set(jobId, job.workflow_id);
+              }
+            } catch (error) {
+              logger.warn(`Failed to fetch workflow_id for job ${jobId}`, { error, job_id: jobId });
+            }
+          })
+        );
+      } catch (error) {
+        logger.error('Error batch fetching workflow_ids', { error });
+      }
+    }
+
     // Sort by created_at DESC (most recent first)
     artifacts.sort((a: any, b: any) => {
       const dateA = new Date(a.created_at || 0).getTime();
@@ -64,10 +95,11 @@ class ArtifactsController {
       return dateB - dateA; // DESC order
     });
 
-    // Ensure all artifacts have accessible URLs
+    // Ensure all artifacts have accessible URLs and include workflow_id
     // Use CloudFront URLs (non-expiring) when available, fallback to presigned URLs
     const artifactsWithUrls = await Promise.all(
       artifacts.map(async (artifact: any) => {
+        const workflowId = artifact.job_id ? jobIdToWorkflowId.get(artifact.job_id) : undefined;
         if (!artifact.s3_key) {
           return {
             ...artifact,
@@ -75,6 +107,7 @@ class ArtifactsController {
             file_name: artifact.artifact_name || artifact.file_name,
             size_bytes: artifact.file_size_bytes ? parseInt(artifact.file_size_bytes) : artifact.size_bytes,
             content_type: artifact.mime_type || artifact.content_type, // Map mime_type to content_type for frontend
+            workflow_id: workflowId, // Include workflow_id from job lookup
           };
         }
 
@@ -88,6 +121,7 @@ class ArtifactsController {
             file_name: artifact.artifact_name || artifact.file_name,
             size_bytes: artifact.file_size_bytes ? parseInt(artifact.file_size_bytes) : artifact.size_bytes,
             content_type: artifact.mime_type || artifact.content_type, // Map mime_type to content_type for frontend
+            workflow_id: workflowId, // Include workflow_id from job lookup
           };
         } catch (error) {
           logger.error(`Error generating URL for artifact ${artifact.artifact_id}`, { error, artifact_id: artifact.artifact_id });
@@ -97,6 +131,7 @@ class ArtifactsController {
             file_name: artifact.artifact_name || artifact.file_name,
             size_bytes: artifact.file_size_bytes ? parseInt(artifact.file_size_bytes) : artifact.size_bytes,
             content_type: artifact.mime_type || artifact.content_type, // Map mime_type to content_type for frontend
+            workflow_id: workflowId, // Include workflow_id from job lookup
           };
         }
       })

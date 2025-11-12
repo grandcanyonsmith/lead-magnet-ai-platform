@@ -13,7 +13,14 @@ import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-sec
 const JOBS_TABLE = process.env.JOBS_TABLE!;
 const SUBMISSIONS_TABLE = process.env.SUBMISSIONS_TABLE!;
 const STEP_FUNCTIONS_ARN = process.env.STEP_FUNCTIONS_ARN!;
-const ARTIFACTS_BUCKET = process.env.ARTIFACTS_BUCKET!;
+const ARTIFACTS_BUCKET_ENV = process.env.ARTIFACTS_BUCKET;
+
+if (!ARTIFACTS_BUCKET_ENV) {
+  throw new Error('ARTIFACTS_BUCKET environment variable is required');
+}
+
+// Type assertion: we've validated it's not undefined above
+const ARTIFACTS_BUCKET: string = ARTIFACTS_BUCKET_ENV;
 
 const sfnClient = STEP_FUNCTIONS_ARN ? new SFNClient({ region: process.env.AWS_REGION || 'us-east-1' }) : null;
 const s3Client = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
@@ -69,40 +76,123 @@ async function getOpenAIClient(): Promise<OpenAI> {
 
 async function fetchExecutionStepsFromS3(s3Key: string): Promise<any[]> {
   try {
+    if (!ARTIFACTS_BUCKET) {
+      throw new ApiError('ARTIFACTS_BUCKET environment variable is not configured', 500);
+    }
+
     const command = new GetObjectCommand({
       Bucket: ARTIFACTS_BUCKET,
       Key: s3Key,
     });
     
     const response = await s3Client.send(command);
-    const bodyContents = await response.Body!.transformToString();
-    return JSON.parse(bodyContents);
+    
+    if (!response.Body) {
+      throw new ApiError(`S3 object body is empty for key: ${s3Key}`, 500);
+    }
+    
+    const bodyContents = await response.Body.transformToString();
+    
+    if (!bodyContents || bodyContents.trim() === '') {
+      throw new ApiError(`S3 object content is empty for key: ${s3Key}`, 500);
+    }
+    
+    let parsedData;
+    try {
+      parsedData = JSON.parse(bodyContents);
+    } catch (parseError: any) {
+      logger.error('[Quick Edit Step] Failed to parse execution steps JSON', {
+        s3Key,
+        parseError: parseError.message,
+        contentLength: bodyContents.length,
+      });
+      throw new ApiError(`Failed to parse execution steps JSON from S3: ${parseError.message}`, 500);
+    }
+    
+    // Validate that parsed data is an array
+    if (!Array.isArray(parsedData)) {
+      logger.error('[Quick Edit Step] Execution steps from S3 is not an array', {
+        s3Key,
+        dataType: typeof parsedData,
+        isArray: Array.isArray(parsedData),
+      });
+      throw new ApiError(`Execution steps from S3 is not an array. Expected array, got ${typeof parsedData}`, 500);
+    }
+    
+    // Empty array is valid, but log it for debugging
+    if (parsedData.length === 0) {
+      logger.warn('[Quick Edit Step] Execution steps array is empty', { s3Key });
+    }
+    
+    return parsedData;
   } catch (error: any) {
+    // If it's already an ApiError, re-throw it
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    
     logger.error('[Quick Edit Step] Error fetching execution steps from S3', {
       s3Key,
       error: error.message,
+      errorStack: error.stack,
     });
-    throw new ApiError(`Failed to fetch execution steps: ${error.message}`, 500);
+    throw new ApiError(`Failed to fetch execution steps from S3: ${error.message}`, 500);
   }
 }
 
 async function saveExecutionStepsToS3(s3Key: string, executionSteps: any[]): Promise<void> {
   try {
+    if (!ARTIFACTS_BUCKET) {
+      throw new ApiError('ARTIFACTS_BUCKET environment variable is not configured', 500);
+    }
+
+    // Validate executionSteps is an array
+    if (!Array.isArray(executionSteps)) {
+      logger.error('[Quick Edit Step] Cannot save: execution steps is not an array', {
+        s3Key,
+        executionStepsType: typeof executionSteps,
+        isArray: Array.isArray(executionSteps),
+      });
+      throw new ApiError('Cannot save execution steps: expected array', 500);
+    }
+
+    let jsonBody: string;
+    try {
+      jsonBody = JSON.stringify(executionSteps, null, 2);
+    } catch (stringifyError: any) {
+      logger.error('[Quick Edit Step] Failed to stringify execution steps for S3', {
+        s3Key,
+        stepsCount: executionSteps.length,
+        error: stringifyError.message,
+      });
+      throw new ApiError(`Failed to serialize execution steps: ${stringifyError.message}`, 500);
+    }
+
     const command = new PutObjectCommand({
       Bucket: ARTIFACTS_BUCKET,
       Key: s3Key,
-      Body: JSON.stringify(executionSteps, null, 2),
+      Body: jsonBody,
       ContentType: 'application/json',
     });
     
     await s3Client.send(command);
-    logger.info('[Quick Edit Step] Saved execution steps to S3', { s3Key, stepsCount: executionSteps.length });
+    logger.info('[Quick Edit Step] Saved execution steps to S3', { 
+      s3Key, 
+      stepsCount: executionSteps.length,
+      bodySize: jsonBody.length,
+    });
   } catch (error: any) {
+    // If it's already an ApiError, re-throw it
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    
     logger.error('[Quick Edit Step] Error saving execution steps to S3', {
       s3Key,
       error: error.message,
+      errorStack: error.stack,
     });
-    throw new ApiError(`Failed to save execution steps: ${error.message}`, 500);
+    throw new ApiError(`Failed to save execution steps to S3: ${error.message}`, 500);
   }
 }
 
@@ -502,22 +592,75 @@ class JobsController {
     }
 
     // Fetch execution steps from S3
-    const executionSteps = await fetchExecutionStepsFromS3(job.execution_steps_s3_key);
+    let executionSteps: any[];
+    try {
+      executionSteps = await fetchExecutionStepsFromS3(job.execution_steps_s3_key);
+    } catch (error: any) {
+      logger.error('[Quick Edit Step] Failed to fetch execution steps', {
+        jobId,
+        s3Key: job.execution_steps_s3_key,
+        error: error.message,
+      });
+      throw error; // Re-throw ApiError from fetchExecutionStepsFromS3
+    }
+
+    // Validate executionSteps is an array (defensive check)
+    if (!Array.isArray(executionSteps)) {
+      logger.error('[Quick Edit Step] Execution steps is not an array after fetch', {
+        jobId,
+        stepOrder: step_order,
+        executionStepsType: typeof executionSteps,
+        isArray: Array.isArray(executionSteps),
+      });
+      throw new ApiError('Execution steps data is invalid: expected array', 500);
+    }
 
     // Find the step to edit
     const stepIndex = executionSteps.findIndex((step: any) => step.step_order === step_order);
     if (stepIndex === -1) {
-      throw new ApiError(`Step with order ${step_order} not found`, 404);
+      logger.warn('[Quick Edit Step] Step not found', {
+        jobId,
+        stepOrder: step_order,
+        availableSteps: executionSteps.map((s: any) => s.step_order),
+      });
+      throw new ApiError(`Step with order ${step_order} not found in execution steps`, 404);
     }
 
     const step = executionSteps[stepIndex];
 
-    // Check if step has output to edit
-    if (step.output === null || step.output === undefined || step.output === '') {
-      throw new ApiError('Step has no output to edit', 400);
+    // Validate step structure
+    if (!step || typeof step !== 'object') {
+      logger.error('[Quick Edit Step] Invalid step structure', {
+        jobId,
+        stepOrder: step_order,
+        stepType: typeof step,
+      });
+      throw new ApiError(`Step with order ${step_order} has invalid structure`, 500);
     }
 
-    const originalOutput = typeof step.output === 'string' ? step.output : JSON.stringify(step.output, null, 2);
+    // Check if step has output to edit
+    if (step.output === null || step.output === undefined || step.output === '') {
+      throw new ApiError(`Step with order ${step_order} has no output to edit`, 400);
+    }
+
+    // Convert step output to string for processing
+    let originalOutput: string;
+    try {
+      if (typeof step.output === 'string') {
+        originalOutput = step.output;
+      } else {
+        // Try to stringify, handle circular references and large objects
+        originalOutput = JSON.stringify(step.output, null, 2);
+      }
+    } catch (stringifyError: any) {
+      logger.error('[Quick Edit Step] Failed to stringify step output', {
+        jobId,
+        stepOrder: step_order,
+        outputType: typeof step.output,
+        error: stringifyError.message,
+      });
+      throw new ApiError(`Step output is too large or contains circular references: ${stringifyError.message}`, 500);
+    }
 
     logger.info('[Quick Edit Step] Starting AI edit', {
       jobId,
@@ -626,10 +769,23 @@ Please generate the edited output based on the user's request. Return only the e
         },
       };
     } catch (error: any) {
-      logger.error('[Quick Edit Step] Error', {
+      // If it's already an ApiError, re-throw it with original status code
+      if (error instanceof ApiError) {
+        logger.error('[Quick Edit Step] Error (ApiError)', {
+          jobId,
+          stepOrder: step_order,
+          errorMessage: error.message,
+          statusCode: error.statusCode,
+        });
+        throw error;
+      }
+      
+      // For other errors, wrap in ApiError with 500 status
+      logger.error('[Quick Edit Step] Unexpected error', {
         jobId,
         stepOrder: step_order,
         error: error.message,
+        errorType: error.constructor?.name || typeof error,
         stack: error.stack,
       });
       throw new ApiError(`Failed to edit step: ${error.message}`, 500);
