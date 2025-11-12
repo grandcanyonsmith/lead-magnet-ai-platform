@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { FiChevronDown, FiChevronUp, FiCopy, FiCheckCircle, FiCircle, FiLoader, FiRefreshCw, FiXCircle, FiEdit2 } from 'react-icons/fi'
+import { FiChevronDown, FiChevronUp, FiCopy, FiCheckCircle, FiCircle, FiLoader, FiRefreshCw, FiXCircle, FiEdit2, FiZap } from 'react-icons/fi'
 import { formatStepInput, formatStepOutput, formatDurationMs } from '@/utils/jobFormatting'
 import { StepContent } from './StepContent'
 import { PreviousStepsContext } from './PreviousStepsContext'
@@ -20,6 +20,7 @@ interface ExecutionStepsProps {
   rerunningStep?: number | null
   onEditStep?: (stepIndex: number) => void
   canEdit?: boolean
+  onQuickEdit?: (stepOrder: number, stepName: string) => void
 }
 
 export function ExecutionSteps({
@@ -34,6 +35,7 @@ export function ExecutionSteps({
   rerunningStep,
   onEditStep,
   canEdit = false,
+  onQuickEdit,
 }: ExecutionStepsProps) {
   // State for managing expanded previous steps (separate from main step expansion)
   const [expandedPrevSteps, setExpandedPrevSteps] = useState<Set<number>>(new Set())
@@ -217,9 +219,12 @@ export function ExecutionSteps({
             }
             const stepTypeColor = stepTypeColors[step.step_type] || 'bg-gray-100 text-gray-800'
 
+            // Create unique key combining step_order, step_type, and index to avoid duplicates
+            const uniqueKey = `${step.step_order || index}-${step.step_type || 'unknown'}-${index}`
+
             return (
               <div 
-                key={step.step_order || index} 
+                key={uniqueKey} 
                 className={`border rounded-lg transition-colors ${
                   isPending 
                     ? 'border-gray-200 bg-gray-50' 
@@ -359,6 +364,21 @@ export function ExecutionSteps({
                           }`}
                         >
                           <FiEdit2 className="w-4 h-4" />
+                        </button>
+                      )}
+
+                      {/* Quick Edit Button - Available for all steps with output */}
+                      {onQuickEdit && step.step_order > 0 && step.output !== null && step.output !== undefined && step.output !== '' && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onQuickEdit(step.step_order, step.step_name || `Step ${step.step_order}`)
+                          }}
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-purple-600 hover:text-purple-800 hover:bg-purple-50 rounded-lg transition-colors touch-target"
+                          title="Quick edit this step with AI"
+                        >
+                          <FiZap className="w-3.5 h-3.5" />
+                          Quick Edit
                         </button>
                       )}
 

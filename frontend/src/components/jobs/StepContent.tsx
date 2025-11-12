@@ -379,6 +379,3 @@ export function StepContent({ formatted }: StepContentProps) {
     </>
   )
 }
-
-// Export formatting functions for use in components
-export { formatStepInput, formatStepOutput }

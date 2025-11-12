@@ -110,23 +110,43 @@ class ImageHandler:
                 except Exception as cleanup_error:
                     logger.warning(f"Error during browser cleanup: {cleanup_error}")
     
-    def _upload_screenshot_to_s3(self, screenshot_b64: str) -> Optional[str]:
-        """Upload screenshot to S3 and return URL."""
+    def upload_base64_image_to_s3(self, image_b64: str, content_type: str = 'image/png') -> Optional[str]:
+        """
+        Upload base64 image to S3 and return public URL.
+        
+        Args:
+            image_b64: Base64-encoded image data
+            content_type: MIME type (e.g., 'image/png', 'image/jpeg')
+            
+        Returns:
+            Public URL string or None if upload fails
+        """
         try:
             import uuid
             import time
             
-            screenshot_id = f"screenshot-{int(time.time())}-{str(uuid.uuid4())[:8]}.png"
-            screenshot_bytes = base64.b64decode(screenshot_b64)
+            # Generate unique filename
+            ext = 'png' if 'png' in content_type else ('jpg' if 'jpeg' in content_type or 'jpg' in content_type else 'png')
+            image_id = f"image-{int(time.time())}-{str(uuid.uuid4())[:8]}.{ext}"
             
-            url = self.s3_service.upload_artifact(
-                content=screenshot_bytes,
-                file_name=screenshot_id,
-                content_type="image/png"
+            # Decode base64 to bytes
+            image_bytes = base64.b64decode(image_b64)
+            
+            # Upload using upload_image which accepts bytes
+            s3_key = f"images/{image_id}"
+            s3_url, public_url = self.s3_service.upload_image(
+                key=s3_key,
+                image_data=image_bytes,
+                content_type=content_type,
+                public=True
             )
             
-            logger.info(f"Screenshot uploaded to S3: {url}")
-            return url
+            logger.info(f"Image uploaded to S3: {public_url[:80]}...")
+            return public_url
         except Exception as e:
-            logger.error(f"Failed to upload screenshot to S3: {e}", exc_info=True)
+            logger.error(f"Failed to upload image to S3: {e}", exc_info=True)
             return None
+    
+    def _upload_screenshot_to_s3(self, screenshot_b64: str) -> Optional[str]:
+        """Upload screenshot to S3 and return URL."""
+        return self.upload_base64_image_to_s3(screenshot_b64, 'image/png')
