@@ -61,5 +61,9 @@ export class JobsClient extends BaseApiClient {
       save: save === true,
     })
   }
+
+  async getExecutionSteps(jobId: string): Promise<any[]> {
+    return this.get<any[]>(`/admin/jobs/${jobId}/execution-steps`)
+  }
 }
 

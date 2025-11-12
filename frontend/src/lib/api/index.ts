@@ -130,6 +130,10 @@ class ApiClientImpl implements ApiClient {
     return this.jobs.quickEditStep(jobId, stepOrder, userPrompt, save)
   }
 
+  async getExecutionSteps(jobId: string) {
+    return this.jobs.getExecutionSteps(jobId)
+  }
+
   // Artifacts - delegate to artifacts client
   async getArtifacts(params?: ArtifactListParams): Promise<ArtifactListResponse> {
     return this.artifacts.getArtifacts(params)
@@ -137,6 +141,10 @@ class ApiClientImpl implements ApiClient {
 
   async getArtifact(id: string): Promise<Artifact> {
     return this.artifacts.getArtifact(id)
+  }
+
+  async getArtifactContent(id: string): Promise<string> {
+    return this.artifacts.getArtifactContent(id)
   }
 
   // Submissions - delegate to submissions client
