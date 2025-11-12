@@ -291,9 +291,20 @@ class JobProcessor:
                         # Store usage record
                         self.store_usage_record(job['tenant_id'], job_id, usage_info)
                         
-                        # Determine file extension based on content
-                        # Check if content looks like HTML (starts with < tag)
-                        file_ext = '.html' if step_output.strip().startswith('<') else '.md'
+                        # Determine file extension based on content and step name
+                        # Check if content looks like HTML (DOCTYPE, html tag, or common HTML tags)
+                        step_output_stripped = step_output.strip()
+                        step_name_lower = step_name.lower()
+                        is_html = (
+                            step_output_stripped.startswith('<!DOCTYPE') or
+                            step_output_stripped.startswith('<!doctype') or
+                            step_output_stripped.startswith('<html') or
+                            step_output_stripped.startswith('<HTML') or
+                            (step_output_stripped.startswith('<') and 
+                             any(tag in step_output_stripped[:200].lower() for tag in ['<html', '<head', '<body', '<div', '<p>', '<h1', '<h2', '<h3'])) or
+                            'html' in step_name_lower  # Step name hint (e.g., "Landing Page HTML")
+                        )
+                        file_ext = '.html' if is_html else '.md'
                         
                         # Store step output as artifact
                         step_artifact_id = self.artifact_service.store_artifact(
@@ -794,9 +805,20 @@ class JobProcessor:
             # Store usage record
             self.store_usage_record(job['tenant_id'], job_id, usage_info)
             
-            # Determine file extension based on content
-            # Check if content looks like HTML (starts with < tag)
-            file_ext = '.html' if step_output.strip().startswith('<') else '.md'
+            # Determine file extension based on content and step name
+            # Check if content looks like HTML (DOCTYPE, html tag, or common HTML tags)
+            step_output_stripped = step_output.strip()
+            step_name_lower = step_name.lower()
+            is_html = (
+                step_output_stripped.startswith('<!DOCTYPE') or
+                step_output_stripped.startswith('<!doctype') or
+                step_output_stripped.startswith('<html') or
+                step_output_stripped.startswith('<HTML') or
+                (step_output_stripped.startswith('<') and 
+                 any(tag in step_output_stripped[:200].lower() for tag in ['<html', '<head', '<body', '<div', '<p>', '<h1', '<h2', '<h3'])) or
+                'html' in step_name_lower  # Step name hint (e.g., "Landing Page HTML")
+            )
+            file_ext = '.html' if is_html else '.md'
             
             # Store step output as artifact
             step_artifact_id = self.artifact_service.store_artifact(
