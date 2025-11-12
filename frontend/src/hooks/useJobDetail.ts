@@ -61,12 +61,98 @@ export function useJobDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId])
 
+  // Poll for job and execution steps updates when job is processing
+  useEffect(() => {
+    if (!job || job.status !== 'processing') {
+      return
+    }
+
+    // Poll every 3 seconds for updates
+    const pollInterval = setInterval(async () => {
+      try {
+        // Refresh job status and execution steps
+        const data = await api.getJob(jobId)
+        
+        // Update job status
+        setJob((prevJob: any) => ({
+          ...prevJob,
+          status: data.status,
+          updated_at: data.updated_at,
+        }))
+        
+        // Load execution steps if URL is available
+        if (data.execution_steps_s3_url) {
+          await loadExecutionSteps(data)
+        }
+      } catch (err) {
+        // Silently fail during polling - don't spam console
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('Polling error:', err)
+        }
+      }
+    }, 3000)
+
+    return () => clearInterval(pollInterval)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [job?.status, job?.execution_steps_s3_url, jobId])
+
+  // Load execution steps from S3 (can be called independently for polling)
+  const loadExecutionSteps = async (jobData?: any) => {
+    const data = jobData || job
+    if (!data) return
+
+    // Execution steps are ALWAYS stored in S3 (never in DynamoDB).
+    // Fetch execution steps from S3 using the provided URL.
+    if (data.execution_steps_s3_url) {
+      try {
+        // Add cache-busting query parameter to ensure we get fresh data during polling
+        const url = new URL(data.execution_steps_s3_url)
+        url.searchParams.set('_t', Date.now().toString())
+        
+        const response = await fetch(url.toString())
+        if (response.ok) {
+          const executionSteps = await response.json()
+          
+          // Only update if we got valid data
+          if (Array.isArray(executionSteps)) {
+            setJob((prevJob: any) => ({
+              ...prevJob,
+              execution_steps: executionSteps,
+            }))
+            if (process.env.NODE_ENV === 'development') {
+              console.log(`Loaded execution_steps from S3 for job ${jobId}`, {
+                stepsCount: executionSteps.length,
+              })
+            }
+          }
+        } else if (response.status === 404) {
+          // S3 file doesn't exist yet (job just started) - this is normal
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`Execution steps not yet available in S3 for job ${jobId}`)
+          }
+        } else {
+          // Don't overwrite existing steps if fetch fails during polling
+          if (!jobData) {
+            console.warn(`Failed to fetch execution_steps from S3 for job ${jobId}`, {
+              status: response.status,
+              statusText: response.statusText,
+            })
+          }
+        }
+      } catch (err) {
+        // Don't overwrite existing steps if fetch fails during polling
+        if (!jobData) {
+          console.error(`Error fetching execution_steps from S3 for job ${jobId}:`, err)
+        }
+      }
+    }
+  }
+
   const loadJob = async () => {
     try {
       const data = await api.getJob(jobId)
       
-      // Execution steps are ALWAYS stored in S3 (never in DynamoDB).
-      // Fetch execution steps from S3 using the provided URL.
+      // Load execution steps from S3
       if (data.execution_steps_s3_url) {
         try {
           const response = await fetch(data.execution_steps_s3_url)
