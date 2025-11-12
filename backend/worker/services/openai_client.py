@@ -3,6 +3,8 @@ import logging
 import openai
 from typing import Dict, List, Optional
 
+from services.api_key_manager import APIKeyManager
+
 logger = logging.getLogger(__name__)
 
 
@@ -10,8 +12,9 @@ class OpenAIClient:
     """Wrapper for OpenAI API calls."""
     
     def __init__(self):
-        """Initialize OpenAI client."""
-        pass
+        """Initialize OpenAI client with API key from Secrets Manager."""
+        self.openai_api_key = APIKeyManager.get_openai_key()
+        self.client = openai.OpenAI(api_key=self.openai_api_key)
     
     @staticmethod
     def build_input_text(context: str, previous_context: str = "") -> str:
@@ -79,8 +82,7 @@ class OpenAIClient:
             OpenAI API response
         """
         try:
-            client = openai.OpenAI()
-            response = client.responses.create(**params)
+            response = self.client.responses.create(**params)
             return response
         except Exception as e:
             logger.error(f"Error calling OpenAI Responses API: {e}", exc_info=True)

@@ -170,12 +170,19 @@ export default function EditWorkflowPage() {
       await api.updateWorkflow(workflowId, {
         workflow_name: formData.workflow_name.trim(),
         workflow_description: formData.workflow_description.trim() || undefined,
-        steps: steps.map((step, index: number) => ({
-          ...step,
-          step_order: index,
-          model: step.model as AIModel,
-          tools: step.tools as Tool[] | undefined,
-        })),
+        steps: steps.map((step, index: number) => {
+          // Clean up tools if tool_choice is 'none'
+          const cleanedTools = step.tool_choice === 'none' ? [] : (step.tools || [])
+          
+          return {
+            ...step,
+            step_order: index,
+            model: step.model as AIModel,
+            tools: cleanedTools.length > 0 ? cleanedTools as Tool[] : undefined,
+            tool_choice: step.tool_choice || 'auto',
+            depends_on: step.depends_on && step.depends_on.length > 0 ? step.depends_on : undefined,
+          }
+        }),
         // Keep legacy fields for backward compatibility
         ai_model: formData.ai_model as AIModel,
         ai_instructions: steps[0]?.instructions || formData.ai_instructions.trim() || '',
