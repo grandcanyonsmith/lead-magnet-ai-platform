@@ -11,6 +11,7 @@ from services.tool_validator import ToolValidator
 from services.image_handler import ImageHandler
 from services.html_generator import HTMLGenerator
 from services.openai_client import OpenAIClient
+from services.cua_loop_service import CUALoopService
 from utils.decimal_utils import convert_decimals_to_float
 
 logger = logging.getLogger(__name__)
@@ -25,6 +26,7 @@ class AIService:
         self.openai_client = OpenAIClient()
         self.image_handler = ImageHandler(self.s3_service)
         self.html_generator = HTMLGenerator(self.openai_client)
+        self.cua_loop_service = CUALoopService(self.image_handler)
     
     def generate_report(
         self,
@@ -120,7 +122,7 @@ class AIService:
                 )
                 
                 # Run CUA loop
-                final_report, screenshot_urls, cua_usage_info = self.image_handler.run_cua_loop(
+                final_report, screenshot_urls, cua_usage_info = self.cua_loop_service.run_cua_loop(
                     openai_client=self.openai_client,
                     model=model,
                     instructions=instructions,
