@@ -49,7 +49,7 @@ This platform enables businesses to create automated workflows that transform fo
 - Secrets Manager for API keys
 
 **AI:**
-- OpenAI API (GPT-5, GPT-4.1, GPT-4o, GPT-4 Turbo, GPT-3.5 Turbo, O3 Deep Research)
+- OpenAI API (GPT-5, GPT-4.1, GPT-4o, GPT-4 Turbo, GPT-3.5 Turbo)
 - Streaming support
 - Cost tracking
 - Multi-step workflow support with context accumulation
@@ -179,7 +179,6 @@ The `ai_service.py` module handles all OpenAI API interactions. It has been refa
 - `rewrite_html()` - Rewrite existing HTML content
 
 #### Helper Methods (Extracted)
-- `_is_o3_model()` - Detect if model is O3 Deep Research
 - `_validate_and_filter_tools()` - Single source of truth for tool validation
 - `_build_input_text()` - Construct input text from context
 - `_build_api_params()` - Build API parameters with safety checks

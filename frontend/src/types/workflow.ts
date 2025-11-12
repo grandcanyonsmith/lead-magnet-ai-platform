@@ -6,7 +6,6 @@ import { BaseEntity } from './common'
 import { FormField } from './form'
 
 export type AIModel = 
-  | 'o3-deep-research'
   | 'gpt-5'
   | 'gpt-4.1'
   | 'gpt-4o'
@@ -41,6 +40,7 @@ export interface WorkflowStep {
   step_order?: number
   tools?: Tool[]
   tool_choice?: ToolChoice
+  depends_on?: number[] // Array of step indices this step depends on
 }
 
 export type DeliveryMethod = 'webhook' | 'sms' | 'none'

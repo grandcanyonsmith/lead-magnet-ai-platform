@@ -7,7 +7,7 @@ const defaultSteps: WorkflowStep[] = [
   {
     step_name: 'Deep Research',
     step_description: 'Generate comprehensive research report',
-    model: 'o3-deep-research',
+    model: 'gpt-5',
     instructions: '',
     step_order: 0,
     tools: ['web_search_preview'],

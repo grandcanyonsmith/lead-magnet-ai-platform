@@ -1,11 +1,12 @@
 import { ulid } from 'ulid';
 import { db } from '../utils/db';
 import { ApiError } from '../utils/errors';
+import { logger } from '../utils/logger';
 
 const FORMS_TABLE = process.env.FORMS_TABLE;
 
 if (!FORMS_TABLE) {
-  console.error('[FormService] FORMS_TABLE environment variable is not set');
+  logger.error('[FormService] FORMS_TABLE environment variable is not set');
 }
 
 /**
@@ -50,12 +51,13 @@ export class FormService {
     }
 
     // Check if workflow already has a form
-    const existingForms = await db.query(
+    const existingFormsResult = await db.query(
       FORMS_TABLE,
       'gsi_workflow_id',
       'workflow_id = :workflow_id',
       { ':workflow_id': workflowId }
     );
+    const existingForms = Array.isArray(existingFormsResult) ? existingFormsResult : existingFormsResult.items;
 
     if (existingForms.length > 0 && !existingForms[0].deleted_at) {
       // Workflow already has a form, return existing form_id
@@ -70,12 +72,13 @@ export class FormService {
 
     // Ensure slug is unique
     while (true) {
-      const slugCheck = await db.query(
+      const slugCheckResult = await db.query(
         FORMS_TABLE!,
         'gsi_public_slug',
         'public_slug = :slug',
         { ':slug': publicSlug }
       );
+      const slugCheck = Array.isArray(slugCheckResult) ? slugCheckResult : slugCheckResult.items;
     
       if (slugCheck.length === 0 || slugCheck[0].deleted_at) {
         break;
@@ -124,17 +127,18 @@ export class FormService {
     }
 
     try {
-      const forms = await db.query(
+      const formsResult = await db.query(
         FORMS_TABLE!,
         'gsi_workflow_id',
         'workflow_id = :workflow_id',
         { ':workflow_id': workflowId }
       );
+      const forms = Array.isArray(formsResult) ? formsResult : formsResult.items;
       
       const activeForm = forms.find((f: any) => !f.deleted_at);
       return activeForm || null;
     } catch (error) {
-      console.error('[FormService] Error fetching form for workflow', {
+      logger.error('[FormService] Error fetching form for workflow', {
         workflowId,
         error: (error as any).message,
       });
@@ -151,12 +155,13 @@ export class FormService {
     }
 
     try {
-      const forms = await db.query(
+      const formsResult = await db.query(
         FORMS_TABLE!,
         'gsi_workflow_id',
         'workflow_id = :workflow_id',
         { ':workflow_id': workflowId }
       );
+      const forms = Array.isArray(formsResult) ? formsResult : formsResult.items;
       
       const activeForm = forms.find((f: any) => !f.deleted_at);
       if (activeForm) {
@@ -167,7 +172,7 @@ export class FormService {
         });
       }
     } catch (error) {
-      console.error('[FormService] Error updating form name', {
+      logger.error('[FormService] Error updating form name', {
         workflowId,
         error: (error as any).message,
       });
@@ -184,12 +189,13 @@ export class FormService {
     }
 
     try {
-      const forms = await db.query(
+      const formsResult = await db.query(
         FORMS_TABLE!,
         'gsi_workflow_id',
         'workflow_id = :workflow_id',
         { ':workflow_id': workflowId }
       );
+      const forms = Array.isArray(formsResult) ? formsResult : formsResult.items;
       
       for (const form of forms) {
         if (!form.deleted_at) {
@@ -199,7 +205,7 @@ export class FormService {
         }
       }
     } catch (error) {
-      console.error('[FormService] Error deleting forms for workflow', {
+      logger.error('[FormService] Error deleting forms for workflow', {
         workflowId,
         error: (error as any).message,
       });

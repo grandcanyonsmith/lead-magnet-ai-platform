@@ -139,7 +139,25 @@ class JobsController {
       const executionSteps = await loadExecutionStepsFromS3(job.execution_steps_s3_key);
       if (executionSteps) {
         job.execution_steps = executionSteps;
+        logger.info(`Loaded execution_steps from S3 for job ${jobId}`, {
+          s3Key: job.execution_steps_s3_key,
+          stepsCount: Array.isArray(executionSteps) ? executionSteps.length : 0,
+        });
+      } else {
+        logger.warn(`Failed to load execution_steps from S3 for job ${jobId}`, {
+          s3Key: job.execution_steps_s3_key,
+        });
       }
+    }
+    
+    // Log execution_steps count for debugging
+    if (job.execution_steps) {
+      logger.debug(`Job ${jobId} execution_steps count`, {
+        stepsCount: Array.isArray(job.execution_steps) ? job.execution_steps.length : 0,
+        stepOrders: Array.isArray(job.execution_steps) 
+          ? job.execution_steps.map((s: any) => s.step_order).filter((o: any) => o !== undefined)
+          : [],
+      });
     }
 
     // Refresh output_url from artifacts if job is completed and has artifacts

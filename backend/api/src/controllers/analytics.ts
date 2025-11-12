@@ -1,24 +1,25 @@
-import { db } from '../utils/db';
+import { db, normalizeQueryResult } from '../utils/db';
 import { RouteResponse } from '../routes';
 import { ApiError } from '../utils/errors';
+import { logger } from '../utils/logger';
 
 const JOBS_TABLE = process.env.JOBS_TABLE;
 const SUBMISSIONS_TABLE = process.env.SUBMISSIONS_TABLE;
 const WORKFLOWS_TABLE = process.env.WORKFLOWS_TABLE;
 
 if (!JOBS_TABLE) {
-  console.error('[Analytics Controller] JOBS_TABLE environment variable is not set');
+  logger.error('[Analytics Controller] JOBS_TABLE environment variable is not set');
 }
 if (!SUBMISSIONS_TABLE) {
-  console.error('[Analytics Controller] SUBMISSIONS_TABLE environment variable is not set');
+  logger.error('[Analytics Controller] SUBMISSIONS_TABLE environment variable is not set');
 }
 if (!WORKFLOWS_TABLE) {
-  console.error('[Analytics Controller] WORKFLOWS_TABLE environment variable is not set');
+  logger.error('[Analytics Controller] WORKFLOWS_TABLE environment variable is not set');
 }
 
 class AnalyticsController {
   async getAnalytics(tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {
-    console.log('[Analytics] Starting analytics query', { tenantId, queryParams });
+    logger.info('[Analytics] Starting analytics query', { tenantId, queryParams });
     
     // Validate environment variables
     if (!JOBS_TABLE || !SUBMISSIONS_TABLE || !WORKFLOWS_TABLE) {
@@ -36,15 +37,16 @@ class AnalyticsController {
 
     try {
       // Get all jobs for tenant in date range
-      jobs = await db.query(
+      const jobsResult = await db.query(
         JOBS_TABLE!,
         'gsi_tenant_created',
         'tenant_id = :tenant_id AND created_at >= :start_date',
         { ':tenant_id': tenantId, ':start_date': startDateStr }
       );
-      console.log('[Analytics] Jobs query completed', { count: jobs.length });
+      jobs = normalizeQueryResult(jobsResult);
+      logger.info('[Analytics] Jobs query completed', { count: jobs.length });
     } catch (error: any) {
-      console.error('[Analytics] Jobs query error', {
+      logger.error('[Analytics] Jobs query error', {
         error: error.message,
         errorName: error.name,
         table: JOBS_TABLE,
@@ -56,15 +58,16 @@ class AnalyticsController {
 
     try {
       // Get all submissions for tenant in date range
-      submissions = await db.query(
+      const submissionsResult = await db.query(
         SUBMISSIONS_TABLE!,
         'gsi_tenant_created',
         'tenant_id = :tenant_id AND created_at >= :start_date',
         { ':tenant_id': tenantId, ':start_date': startDateStr }
       );
-      console.log('[Analytics] Submissions query completed', { count: submissions.length });
+      submissions = normalizeQueryResult(submissionsResult);
+      logger.info('[Analytics] Submissions query completed', { count: submissions.length });
     } catch (error: any) {
-      console.error('[Analytics] Submissions query error', {
+      logger.error('[Analytics] Submissions query error', {
         error: error.message,
         errorName: error.name,
         table: SUBMISSIONS_TABLE,
@@ -76,15 +79,16 @@ class AnalyticsController {
 
     try {
       // Get all workflows for tenant
-      workflows = await db.query(
+      const workflowsResult = await db.query(
         WORKFLOWS_TABLE!,
         'gsi_tenant_status',
         'tenant_id = :tenant_id',
         { ':tenant_id': tenantId }
       );
-      console.log('[Analytics] Workflows query completed', { count: workflows.length });
+      workflows = normalizeQueryResult(workflowsResult);
+      logger.info('[Analytics] Workflows query completed', { count: workflows.length });
     } catch (error: any) {
-      console.error('[Analytics] Workflows query error', {
+      logger.error('[Analytics] Workflows query error', {
         error: error.message,
         errorName: error.name,
         table: WORKFLOWS_TABLE,
@@ -173,7 +177,7 @@ class AnalyticsController {
       },
     };
 
-    console.log('[Analytics] Returning response', {
+    logger.info('[Analytics] Returning response', {
       statusCode: response.statusCode,
       bodyKeys: Object.keys(response.body),
       overview: response.body.overview,

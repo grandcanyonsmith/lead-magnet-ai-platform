@@ -27,7 +27,6 @@ export interface AIStepGenerationResponse {
 
 const AVAILABLE_MODELS = [
   'gpt-5',
-  'o3-deep-research',
   'gpt-4o',
   'gpt-4o-mini',
   'claude-3-7-sonnet-20250219',
@@ -77,7 +76,6 @@ You must respond with a JSON object that follows this schema:
 
 Guidelines:
 1. Choose the most appropriate model based on the task:
-   - o3-deep-research: For comprehensive research tasks
    - gpt-5: For creative content, rewriting, general tasks
    - claude-3-7-sonnet: For complex reasoning and long-form content
    - gpt-4o/gpt-4o-mini: For balanced performance tasks

@@ -32,7 +32,7 @@ export function migrateLegacyWorkflowToSteps(workflowData: LegacyWorkflowData): 
     steps.push({
       step_name: 'Deep Research',
       step_description: 'Generate comprehensive research report',
-      model: workflowData.ai_model || 'o3-deep-research',
+      model: workflowData.ai_model || 'gpt-5',
       instructions: workflowData.ai_instructions,
       step_order: 0,
       tools: ['web_search_preview'],
@@ -77,7 +77,7 @@ export function migrateLegacyWorkflowOnUpdate(
     steps.push({
       step_name: 'Deep Research',
       step_description: 'Generate comprehensive research report',
-      model: updateData.ai_model || existingWorkflow.ai_model || 'o3-deep-research',
+      model: updateData.ai_model || existingWorkflow.ai_model || 'gpt-5',
       instructions: aiInstructions,
       step_order: 0,
       tools: ['web_search_preview'],
