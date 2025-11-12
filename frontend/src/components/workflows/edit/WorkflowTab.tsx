@@ -74,9 +74,11 @@ export function WorkflowTab({
       // Validate each step has required fields
       for (let i = 0; i < proposal.steps.length; i++) {
         const step = proposal.steps[i]
-        if (!step.step_name || !step.instructions || !step.step_id) {
-          throw new Error(`Invalid step ${i + 1}: missing required fields`)
+        if (!step.step_name || !step.instructions) {
+          throw new Error(`Invalid step ${i + 1}: missing required fields (step_name or instructions)`)
         }
+        // Model is required but backend will default to 'gpt-5' if missing
+        // We don't need to validate it here as the backend handles defaults
       }
 
       // Apply workflow metadata changes

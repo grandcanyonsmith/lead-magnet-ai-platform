@@ -107,18 +107,47 @@ export function ensureStepDefaults(steps: WorkflowStep[]): WorkflowStep[] {
   return steps.map((step: any, index: number) => {
     const stepOrder = step.step_order !== undefined ? step.step_order : index;
     
-    // Auto-generate depends_on from step_order if not provided
+    // Clean up and validate depends_on array
     let dependsOn = step.depends_on;
+    
+    // If depends_on is explicitly provided (even if empty array), clean it up
+    if (dependsOn !== undefined && dependsOn !== null) {
+      if (Array.isArray(dependsOn)) {
+        // Filter out invalid indices: must be >= 0, < steps.length, and not equal to current index
+        dependsOn = dependsOn.filter((depIndex: number) => 
+          typeof depIndex === 'number' && 
+          depIndex >= 0 && 
+          depIndex < steps.length && 
+          depIndex !== index
+        );
+      } else {
+        // Invalid type, reset to undefined to auto-generate
+        dependsOn = undefined;
+      }
+    }
+    
+    // Auto-generate depends_on from step_order if not provided
     if (dependsOn === undefined && stepOrder > 0) {
       // Find all steps with lower step_order
       const lowerOrderSteps = steps
         .map((s: any, i: number) => ({ step: s, index: i, order: s.step_order !== undefined ? s.step_order : i }))
         .filter(({ order }) => order < stepOrder)
-        .map(({ index }) => index);
+        .map(({ index }) => index)
+        .filter((depIndex: number) => depIndex >= 0 && depIndex < steps.length && depIndex !== index);
       
       // If there are lower order steps, depend on all of them
-      // Otherwise, depend on the previous step by index
-      dependsOn = lowerOrderSteps.length > 0 ? lowerOrderSteps : [index - 1];
+      // Otherwise, if index > 0, depend on the previous step by index
+      if (lowerOrderSteps.length > 0) {
+        dependsOn = lowerOrderSteps;
+      } else if (index > 0) {
+        dependsOn = [index - 1];
+      } else {
+        // First step (index 0) with stepOrder > 0 but no lower order steps - no dependencies
+        dependsOn = [];
+      }
+    } else if (dependsOn === undefined) {
+      // First step (stepOrder === 0) - no dependencies
+      dependsOn = [];
     }
     
     return {
