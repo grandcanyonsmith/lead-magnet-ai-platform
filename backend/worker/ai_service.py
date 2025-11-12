@@ -11,6 +11,7 @@ from services.tool_validator import ToolValidator
 from services.image_handler import ImageHandler
 from services.html_generator import HTMLGenerator
 from services.openai_client import OpenAIClient
+from services.cua_loop_service import CUALoopService
 from utils.decimal_utils import convert_decimals_to_float
 
 logger = logging.getLogger(__name__)
@@ -25,6 +26,7 @@ class AIService:
         self.openai_client = OpenAIClient()
         self.image_handler = ImageHandler(self.s3_service)
         self.html_generator = HTMLGenerator(self.openai_client)
+        self.cua_loop_service = CUALoopService(self.image_handler)
     
     def generate_report(
         self,
@@ -79,9 +81,6 @@ class AIService:
         # Check if computer_use_preview is in tools (requires truncation="auto")
         has_computer_use = ToolValidator.has_computer_use(validated_tools)
         
-        # Check if model is o3
-        is_o3_model = OpenAIClient.is_o3_model(model)
-        
         logger.info(f"[AI Service] Generating report", extra={
             'model': model,
             'tools_count': len(validated_tools) if validated_tools else 0,
@@ -119,12 +118,11 @@ class AIService:
                     tools=validated_tools,
                     tool_choice=normalized_tool_choice,
                     has_computer_use=has_computer_use,
-                    is_o3_model=is_o3_model,
                     reasoning_level=None
                 )
                 
                 # Run CUA loop
-                final_report, screenshot_urls, cua_usage_info = self.image_handler.run_cua_loop(
+                final_report, screenshot_urls, cua_usage_info = self.cua_loop_service.run_cua_loop(
                     openai_client=self.openai_client,
                     model=model,
                     instructions=instructions,
@@ -212,7 +210,6 @@ class AIService:
                 tools=validated_tools,
                 tool_choice=normalized_tool_choice,
                 has_computer_use=has_computer_use,
-                is_o3_model=is_o3_model,
                 reasoning_level=None  # Not supported in Responses API
             )
             
@@ -258,7 +255,6 @@ class AIService:
                 tool_choice=normalized_tool_choice,
                 instructions=instructions,
                 context=context,
-                is_o3_model=is_o3_model,
                 full_context=full_context,
                 previous_context=previous_context,
                 image_handler=self.image_handler

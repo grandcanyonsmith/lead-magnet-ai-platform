@@ -2,7 +2,7 @@
 import logging
 import base64
 from typing import Optional
-from playwright.sync_api import sync_playwright, Browser, Page, BrowserContext
+from playwright.sync_api import sync_playwright, Browser, Page, BrowserContext  # type: ignore
 from utils.decimal_utils import convert_decimals_to_float
 
 logger = logging.getLogger(__name__)

@@ -30,7 +30,7 @@ const baseWorkflowSchema = z.object({
   // New multi-step workflow support
   steps: z.array(workflowStepSchema).optional(),
   // Legacy fields (kept for backward compatibility)
-  ai_model: z.string().default('o3-deep-research'),
+  ai_model: z.string().default('gpt-5'),
   ai_instructions: z.string().min(1).optional(),
   rewrite_model: z.string().default('gpt-5'),
   rewrite_enabled: z.boolean().default(true),

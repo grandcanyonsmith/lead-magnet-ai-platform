@@ -32,10 +32,6 @@ OPENAI_PRICING = {
         'input_per_1k_tokens_usd': Decimal('0.005'),
         'output_per_1k_tokens_usd': Decimal('0.015'),
     },
-    'o3-deep-research': {
-        'input_per_1k_tokens_usd': Decimal('0.01'),  # $10 per 1M tokens
-        'output_per_1k_tokens_usd': Decimal('0.04'),  # $40 per 1M tokens
-    },
     'computer-use-preview': {
         'input_per_1k_tokens_usd': Decimal('0.005'),  # $5 per 1M tokens (similar to gpt-5)
         'output_per_1k_tokens_usd': Decimal('0.015'),  # $15 per 1M tokens (similar to gpt-5)

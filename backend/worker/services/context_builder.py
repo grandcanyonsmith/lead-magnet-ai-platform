@@ -1,4 +1,7 @@
-"""Context builder for AI step processing."""
+"""
+Context Builder Service
+Handles building context for workflow steps from submission data and previous step outputs.
+"""
 
 import logging
 from typing import Dict, Any, List
@@ -7,36 +10,30 @@ logger = logging.getLogger(__name__)
 
 
 class ContextBuilder:
-    """Builds context strings for AI processing from submission data and previous steps."""
+    """Service for building context strings for workflow steps."""
     
     @staticmethod
-    def format_submission_data_with_labels(
-        data: Dict[str, Any],
-        field_label_map: Dict[str, str]
-    ) -> str:
+    def format_submission_data_with_labels(data: Dict[str, Any], field_label_map: Dict[str, str]) -> str:
         """
         Format submission data using field labels instead of field IDs.
         
         Args:
-            data: Submission data dictionary with field IDs as keys
-            field_label_map: Map of field IDs to human-readable labels
+            data: Submission data dictionary
+            field_label_map: Map of field IDs to labels
             
         Returns:
-            Formatted string with labeled data
+            Formatted string with labels
         """
-        formatted_lines = []
+        from utils.decimal_utils import convert_decimals_to_float
         
-        for field_id, value in data.items():
-            label = field_label_map.get(field_id, field_id)
-            
-            # Skip empty values
-            if value is None or value == '':
-                continue
-            
-            # Format as key-value pair
-            formatted_lines.append(f"{label}: {value}")
+        # Convert Decimal values to float for proper string formatting
+        serializable_data = convert_decimals_to_float(data)
         
-        return '\n'.join(formatted_lines) if formatted_lines else ''
+        lines = []
+        for key, value in serializable_data.items():
+            label = field_label_map.get(key, key)  # Use label if available, otherwise use key
+            lines.append(f"{label}: {value}")
+        return "\n".join(lines)
     
     @staticmethod
     def build_previous_context_from_step_outputs(
@@ -45,93 +42,108 @@ class ContextBuilder:
         sorted_steps: List[Dict[str, Any]]
     ) -> str:
         """
-        Build context from step outputs for a given step.
+        Build previous context string from step outputs.
         
         Args:
-            initial_context: Initial context (form submission)
-            step_outputs: List of step output dictionaries with 'output', 'step_name', etc.
-            sorted_steps: List of sorted workflow steps
+            initial_context: Formatted submission context
+            step_outputs: List of step output dictionaries
+            sorted_steps: List of step configurations sorted by order
             
         Returns:
-            Accumulated context string
+            Combined previous context string
         """
-        context_parts = []
+        all_previous_outputs = []
+        all_previous_outputs.append(f"=== Form Submission ===\n{initial_context}")
         
-        # Add initial context (form submission)
-        if initial_context:
-            context_parts.append(f"FORM SUBMISSION:\n{initial_context}")
-        
-        # Add all previous step outputs
-        for i, step_output in enumerate(step_outputs):
-            output_text = step_output.get('output', '')
-            step_name = step_output.get('step_name', f'Step {i + 1}')
+        # Include all previous step outputs explicitly (with image URLs if present)
+        for prev_idx, prev_step_output in enumerate(step_outputs):
+            prev_step_name = sorted_steps[prev_idx].get('step_name', f'Step {prev_idx + 1}')
+            prev_output_text = prev_step_output['output']
             
-            if output_text:
-                context_parts.append(f"STEP {i + 1} ({step_name}):\n{output_text}")
-                
-                # Add image URLs if present
-                image_urls = step_output.get('image_urls', [])
-                if image_urls:
-                    context_parts.append(f"Generated Images:\n" + "\n".join([f"- {url}" for url in image_urls]))
+            # Extract image URLs - handle both list and None cases
+            prev_image_urls_raw = prev_step_output.get('image_urls', [])
+            # Normalize to list: handle None, empty list, or already a list
+            if prev_image_urls_raw is None:
+                prev_image_urls = []
+            elif isinstance(prev_image_urls_raw, list):
+                prev_image_urls = [url for url in prev_image_urls_raw if url]  # Filter out None/empty strings
+            else:
+                # If it's not a list, try to convert (shouldn't happen, but be safe)
+                prev_image_urls = [str(prev_image_urls_raw)] if prev_image_urls_raw else []
+            
+            step_context = f"\n=== Step {prev_idx + 1}: {prev_step_name} ===\n{prev_output_text}"
+            if prev_image_urls:
+                step_context += f"\n\nGenerated Images:\n" + "\n".join([f"- {url}" for url in prev_image_urls])
+            all_previous_outputs.append(step_context)
         
-        return '\n\n'.join(context_parts)
+        # Combine all previous outputs into context
+        return "\n\n".join(all_previous_outputs)
     
     @staticmethod
     def build_previous_context_from_execution_steps(
         initial_context: str,
         execution_steps: List[Dict[str, Any]],
-        dependency_indices: List[int]
+        current_step_order: int,
+        dependency_indices: List[int] = None
     ) -> str:
         """
-        Build context from execution steps (for dependency-based execution).
+        Build previous context from execution_steps stored in DynamoDB.
         
         Args:
-            initial_context: Initial context (form submission)
-            execution_steps: List of execution step dictionaries
-            dependency_indices: List of step indices this step depends on
+            initial_context: Formatted submission context
+            execution_steps: List of execution step dictionaries from DynamoDB
+            current_step_order: Order of current step (1-indexed)
+            dependency_indices: Optional list of step indices to include (if None, includes all previous steps)
             
         Returns:
-            Accumulated context string
+            Combined previous context string
         """
-        context_parts = []
+        from utils.step_utils import normalize_step_order
         
-        # Add initial context (form submission)
-        if initial_context:
-            context_parts.append(f"FORM SUBMISSION:\n{initial_context}")
+        all_previous_outputs = []
+        all_previous_outputs.append(f"=== Form Submission ===\n{initial_context}")
         
-        # Add outputs from dependency steps only
-        for step in execution_steps:
-            if step.get('step_type') != 'ai_generation':
-                continue
+        # Load previous step outputs from execution_steps
+        # Filter to only include steps with step_order < current_step_order OR in dependency_indices
+        sorted_execution_steps = sorted(
+            [s for s in execution_steps if s.get('step_type') == 'ai_generation'],
+            key=normalize_step_order
+        )
+        
+        for prev_step_data in sorted_execution_steps:
+            prev_step_order = normalize_step_order(prev_step_data)
             
-            step_order = step.get('step_order', 0)
-            step_index = step_order - 1  # Convert to 0-indexed
+            # Determine if this step should be included
+            should_include = False
+            if dependency_indices is not None:
+                # Include if step_order matches a dependency index (step_order is 1-indexed, so subtract 1)
+                should_include = (prev_step_order - 1) in dependency_indices
+            else:
+                # Default: include all steps that come before the current step
+                should_include = prev_step_order < current_step_order
             
-            # Only include if this is a dependency
-            if step_index in dependency_indices:
-                output = step.get('output', '')
-                if output:
-                    context_parts.append(f"STEP {step_order} OUTPUT:\n{output}")
+            if should_include:
+                prev_step_name = prev_step_data.get('step_name', 'Unknown Step')
+                prev_output_text = prev_step_data.get('output', '')
+                
+                # Extract image URLs - handle both list and None cases
+                prev_image_urls_raw = prev_step_data.get('image_urls', [])
+                # Normalize to list: handle None, empty list, or already a list
+                if prev_image_urls_raw is None:
+                    prev_image_urls = []
+                elif isinstance(prev_image_urls_raw, list):
+                    prev_image_urls = [url for url in prev_image_urls_raw if url]  # Filter out None/empty strings
+                else:
+                    # If it's not a list, try to convert (shouldn't happen, but be safe)
+                    prev_image_urls = [str(prev_image_urls_raw)] if prev_image_urls_raw else []
+                
+                step_context = f"\n=== Step {prev_step_order}: {prev_step_name} ===\n{prev_output_text}"
+                if prev_image_urls:
+                    step_context += f"\n\nGenerated Images:\n" + "\n".join([f"- {url}" for url in prev_image_urls])
+                all_previous_outputs.append(step_context)
         
-        return '\n\n'.join(context_parts)
-    
-    @staticmethod
-    def get_current_step_context(step_index: int, initial_context: str) -> str:
-        """
-        Get context for the current step.
-        For first step (index 0), returns initial_context.
-        For subsequent steps, returns empty string (they get context from previous steps).
-        
-        Args:
-            step_index: 0-indexed step index
-            initial_context: Initial context from form submission
-            
-        Returns:
-            Context string for current step
-        """
-        if step_index == 0:
-            return initial_context
-        return ''
+        # Combine all previous outputs into context
+        return "\n\n".join(all_previous_outputs)
     
     @staticmethod
     def build_accumulated_context_for_html(
@@ -139,29 +151,39 @@ class ContextBuilder:
         execution_steps: List[Dict[str, Any]]
     ) -> str:
         """
-        Build accumulated context for HTML generation from all workflow steps.
+        Build accumulated context from all workflow steps for HTML generation.
         
         Args:
-            initial_context: Initial context (form submission)
+            initial_context: Formatted submission context
             execution_steps: List of execution step dictionaries
             
         Returns:
-            Accumulated context string for HTML generation
+            Accumulated context string
         """
-        context_parts = []
-        
-        # Add initial context (form submission)
-        if initial_context:
-            context_parts.append(f"FORM SUBMISSION:\n{initial_context}")
-        
-        # Add all AI generation step outputs
-        for step in execution_steps:
-            if step.get('step_type') == 'ai_generation':
-                step_order = step.get('step_order', 0)
-                output = step.get('output', '')
+        accumulated_context = f"=== Form Submission ===\n{initial_context}\n\n"
+        for step_data in execution_steps:
+            if step_data.get('step_type') == 'ai_generation':
+                step_name = step_data.get('step_name', 'Unknown Step')
+                step_output = step_data.get('output', '')
+                image_urls = step_data.get('image_urls', [])
                 
-                if output:
-                    step_name = step.get('step_name', f'Step {step_order}')
-                    context_parts.append(f"{step_name.upper()} (STEP {step_order}):\n{output}")
+                accumulated_context += f"--- {step_name} ---\n{step_output}\n\n"
+                if image_urls:
+                    accumulated_context += f"Generated Images:\n" + "\n".join([f"- {url}" for url in image_urls]) + "\n\n"
         
-        return '\n\n'.join(context_parts)
+        return accumulated_context
+    
+    @staticmethod
+    def get_current_step_context(step_index: int, initial_context: str) -> str:
+        """
+        Get current step context (empty for subsequent steps, initial_context for first step).
+        
+        Args:
+            step_index: Index of current step (0-based)
+            initial_context: Formatted submission context
+            
+        Returns:
+            Current step context string
+        """
+        return initial_context if step_index == 0 else ""
+

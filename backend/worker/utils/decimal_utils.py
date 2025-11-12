@@ -41,3 +41,23 @@ def convert_decimals_to_int(obj: Any) -> Any:
     elif isinstance(obj, list):
         return [convert_decimals_to_int(item) for item in obj]
     return obj
+
+
+def convert_floats_to_decimal(obj: Any) -> Any:
+    """
+    Recursively convert float types to Decimal for DynamoDB storage.
+    DynamoDB requires Decimal type for numeric values to maintain precision.
+    
+    Args:
+        obj: Object that may contain float values (dict, list, or float)
+        
+    Returns:
+        Object with floats converted to Decimal
+    """
+    if isinstance(obj, float):
+        return Decimal(str(obj))  # Convert via string to avoid precision issues
+    elif isinstance(obj, dict):
+        return {k: convert_floats_to_decimal(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_floats_to_decimal(item) for item in obj]
+    return obj

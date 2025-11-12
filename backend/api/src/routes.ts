@@ -10,6 +10,7 @@ import { analyticsController } from './controllers/analytics';
 import { billingController } from './controllers/billing';
 import { notificationsController } from './controllers/notifications';
 import { ApiError } from './utils/errors';
+import { logger } from './utils/logger';
 
 export interface RouteResponse {
   statusCode: number;
@@ -26,7 +27,7 @@ export const router = async (
   const queryParams = event.queryStringParameters || {};
 
   // Debug logging for route matching
-  console.log('[Router] Request received', {
+  logger.info('[Router] Request received', {
     method,
     path,
     rawPath: event.rawPath,
@@ -59,7 +60,7 @@ export const router = async (
   // Public job status endpoint (for form submissions)
   if (path.match(/^\/v1\/jobs\/[^/]+\/status$/) && method === 'GET') {
     const jobId = pathSegments[2]; // /v1/jobs/{jobId}/status
-    console.log('[Router] Matched /v1/jobs/:jobId/status route', { jobId, pathSegments });
+    logger.info('[Router] Matched /v1/jobs/:jobId/status route', { jobId, pathSegments });
     return await jobsController.getPublicStatus(jobId);
   }
 
@@ -70,9 +71,9 @@ export const router = async (
 
   // Admin routes - Workflows
   if (path === '/admin/workflows' && method === 'GET') {
-    console.log('[Router] Matched /admin/workflows GET route');
+    logger.info('[Router] Matched /admin/workflows GET route');
     const result = await workflowsController.list(tenantId, queryParams);
-    console.log('[Router] Workflows list result', {
+    logger.info('[Router] Workflows list result', {
       statusCode: result.statusCode,
       hasBody: !!result.body,
       bodyKeys: result.body ? Object.keys(result.body) : null,
@@ -85,20 +86,20 @@ export const router = async (
   }
 
   if (path === '/admin/workflows/generate-with-ai' && method === 'POST') {
-    console.log('[Router] Matched /admin/workflows/generate-with-ai route');
+    logger.info('[Router] Matched /admin/workflows/generate-with-ai route');
     return await workflowsController.generateWithAI(tenantId, body);
   }
 
   if (path.match(/^\/admin\/workflows\/generation-status\/[^/]+$/) && method === 'GET') {
     const jobId = pathSegments[3];
-    console.log('[Router] Matched /admin/workflows/generation-status/:jobId route', { jobId });
+    logger.info('[Router] Matched /admin/workflows/generation-status/:jobId route', { jobId });
     return await workflowsController.getGenerationStatus(tenantId, jobId);
   }
 
   // Manual job processing endpoint (for local development)
   if (path.match(/^\/admin\/workflows\/process-job\/[^/]+$/) && method === 'POST') {
     const jobId = pathSegments[3];
-    console.log('[Router] Matched /admin/workflows/process-job/:jobId route', { jobId });
+    logger.info('[Router] Matched /admin/workflows/process-job/:jobId route', { jobId });
     // Process the job synchronously (for local dev)
     await workflowsController.processWorkflowGenerationJob(
       jobId,
@@ -113,7 +114,7 @@ export const router = async (
   }
 
   if (path === '/admin/workflows/refine-instructions' && method === 'POST') {
-    console.log('[Router] Matched /admin/workflows/refine-instructions route');
+    logger.info('[Router] Matched /admin/workflows/refine-instructions route');
     return await workflowsController.refineInstructions(tenantId, body);
   }
 
@@ -129,13 +130,13 @@ export const router = async (
 
   if (path.match(/^\/admin\/workflows\/[^/]+\/ai-step$/) && method === 'POST') {
     const id = pathSegments[2];
-    console.log('[Router] Matched /admin/workflows/:id/ai-step route', { id });
+    logger.info('[Router] Matched /admin/workflows/:id/ai-step route', { id });
     return await workflowsController.aiGenerateStep(tenantId, id, body);
   }
 
   if (path.match(/^\/admin\/workflows\/[^/]+\/ai-edit$/) && method === 'POST') {
     const id = pathSegments[2];
-    console.log('[Router] Matched /admin/workflows/:id/ai-edit route', { id });
+    logger.info('[Router] Matched /admin/workflows/:id/ai-edit route', { id });
     return await workflowsController.aiEditWorkflow(tenantId, id, body);
   }
 
@@ -164,12 +165,12 @@ export const router = async (
   }
 
   if (path === '/admin/forms/generate-css' && method === 'POST') {
-    console.log('[Router] Matched /admin/forms/generate-css route');
+    logger.info('[Router] Matched /admin/forms/generate-css route');
     return await formsController.generateCSS(tenantId, body);
   }
 
   if (path === '/admin/forms/refine-css' && method === 'POST') {
-    console.log('[Router] Matched /admin/forms/refine-css route');
+    logger.info('[Router] Matched /admin/forms/refine-css route');
     return await formsController.refineCSS(tenantId, body);
   }
 
@@ -198,12 +199,12 @@ export const router = async (
   }
 
   if (path === '/admin/templates/generate' && method === 'POST') {
-    console.log('[Router] Matched /admin/templates/generate route');
+    logger.info('[Router] Matched /admin/templates/generate route');
     return await templatesController.generateWithAI(tenantId, body);
   }
 
   if (path === '/admin/templates/refine' && method === 'POST') {
-    console.log('[Router] Matched /admin/templates/refine route');
+    logger.info('[Router] Matched /admin/templates/refine route');
     return await templatesController.refineWithAI(tenantId, body);
   }
 
@@ -229,13 +230,13 @@ export const router = async (
 
   if (path.match(/^\/admin\/jobs\/[^/]+\/resubmit$/) && method === 'POST') {
     const id = pathSegments[2];
-    console.log('[Router] Matched /admin/jobs/:id/resubmit route', { id, pathSegments });
+    logger.info('[Router] Matched /admin/jobs/:id/resubmit route', { id, pathSegments });
     return await jobsController.resubmit(tenantId, id);
   }
 
   // Debug logging for rerun-step route
   const rerunStepMatch = path.match(/^\/admin\/jobs\/[^/]+\/rerun-step\/?$/);
-  console.log('[Router] Checking rerun-step route', {
+  logger.info('[Router] Checking rerun-step route', {
     path,
     method,
     rerunStepMatch: !!rerunStepMatch,
@@ -248,7 +249,7 @@ export const router = async (
 
   if (rerunStepMatch && method === 'POST') {
     const id = pathSegments[2];
-    console.log('[Router] Matched /admin/jobs/:id/rerun-step route', { id, stepIndex: body?.step_index, pathSegments });
+    logger.info('[Router] Matched /admin/jobs/:id/rerun-step route', { id, stepIndex: body?.step_index, pathSegments });
     const stepIndex = body?.step_index;
     if (stepIndex === undefined || stepIndex === null) {
       throw new ApiError('step_index is required in request body', 400);
@@ -297,9 +298,9 @@ export const router = async (
 
   // Admin routes - Analytics
   if (path === '/admin/analytics' && method === 'GET') {
-    console.log('[Router] Matched /admin/analytics GET route');
+    logger.info('[Router] Matched /admin/analytics GET route');
     const result = await analyticsController.getAnalytics(tenantId, queryParams);
-    console.log('[Router] Analytics result', {
+    logger.info('[Router] Analytics result', {
       statusCode: result.statusCode,
       hasBody: !!result.body,
       bodyKeys: result.body ? Object.keys(result.body) : null,

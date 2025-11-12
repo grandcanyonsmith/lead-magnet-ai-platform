@@ -1,16 +1,31 @@
 #!/usr/bin/env python3
 """
-Local Job Processor Test Script
-Run this directly to test job processing locally with full debug output
+Local Job Execution Script for Debugging
+Run jobs locally with full debug output to troubleshoot issues.
+
+Usage:
+    python test_local.py <job_id>
+    
+Example:
+    python test_local.py 01ARZ3NDEKTSV4RRFFQ69G5FAV
 """
 
-import os
 import sys
+import os
 import json
 import logging
-from datetime import datetime
+from pathlib import Path
 
-# Setup detailed logging
+# Add the worker directory to Python path so imports work
+worker_dir = Path(__file__).parent
+sys.path.insert(0, str(worker_dir))
+
+# Now we can import the worker modules
+from processor import JobProcessor
+from db_service import DynamoDBService
+from s3_service import S3Service
+
+# Setup detailed logging for debugging
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -20,115 +35,51 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Import worker modules
-from processor import JobProcessor
-from db_service import DynamoDBService
-from s3_service import S3Service
 
-
-def test_job_processing(job_id: str):
-    """
-    Test processing a job locally with full debug output.
+def main():
+    """Main entry point for local job execution."""
+    if len(sys.argv) < 2:
+        print("Usage: python test_local.py <job_id>")
+        print("\nExample:")
+        print("  python test_local.py 01ARZ3NDEKTSV4RRFFQ69G5FAV")
+        sys.exit(1)
     
-    Args:
-        job_id: The job ID to process
-    """
-    print("="*80)
-    print(f"LOCAL JOB PROCESSOR TEST")
-    print(f"Job ID: {job_id}")
-    print(f"Started: {datetime.utcnow().isoformat()}")
-    print("="*80)
-    print()
+    job_id = sys.argv[1]
+    logger.info(f"Starting local job execution for job_id: {job_id}")
     
     try:
         # Initialize services
         logger.info("Initializing services...")
         db_service = DynamoDBService()
         s3_service = S3Service()
+        
+        # Create processor
+        logger.info("Creating job processor...")
         processor = JobProcessor(db_service, s3_service)
         
-        # Get job details first
-        logger.info(f"Fetching job details for {job_id}")
-        job = db_service.get_job(job_id, s3_service=s3_service)
-        if not job:
-            print(f"ERROR: Job {job_id} not found!")
-            return
-        
-        print(f"\nJob Status: {job.get('status')}")
-        print(f"Workflow ID: {job.get('workflow_id')}")
-        print(f"Submission ID: {job.get('submission_id')}")
-        
-        # Get workflow details
-        workflow_id = job.get('workflow_id')
-        if workflow_id:
-            workflow = db_service.get_workflow(workflow_id)
-            if workflow:
-                steps = workflow.get('steps', [])
-                print(f"\nWorkflow: {workflow.get('workflow_name')}")
-                print(f"Total Steps Defined: {len(steps)}")
-                print("\nWorkflow Steps:")
-                for i, step in enumerate(steps):
-                    print(f"  {i+1}. {step.get('step_name')} (model: {step.get('model', 'gpt-5')})")
-                print()
-        
         # Process the job
-        logger.info(f"Starting job processing for {job_id}")
-        print("\n" + "="*80)
-        print("STARTING JOB PROCESSING")
-        print("="*80 + "\n")
-        
+        logger.info(f"Processing job {job_id}...")
         result = processor.process_job(job_id)
         
+        # Print results
         print("\n" + "="*80)
-        print("JOB PROCESSING COMPLETED")
+        print("JOB EXECUTION COMPLETE")
         print("="*80)
-        print(f"\nSuccess: {result.get('success')}")
+        print(json.dumps(result, indent=2, default=str))
+        print("="*80)
         
         if result.get('success'):
-            print("\n✅ Job completed successfully!")
-            
-            # Get updated job details
-            updated_job = db_service.get_job(job_id, s3_service=s3_service)
-            execution_steps = updated_job.get('execution_steps', [])
-            
-            print(f"\nTotal Execution Steps: {len(execution_steps)}")
-            print("\nExecution Steps:")
-            for step in execution_steps:
-                step_name = step.get('step_name', 'Unknown')
-                step_order = step.get('step_order', '?')
-                step_type = step.get('step_type', 'unknown')
-                print(f"  Step {step_order}: {step_name} ({step_type})")
-                
-                if 'usage_info' in step:
-                    usage = step['usage_info']
-                    print(f"    - Tokens: {usage.get('total_tokens', 0)} | Cost: ${usage.get('cost_usd', 0):.4f}")
-                if 'duration_ms' in step:
-                    print(f"    - Duration: {step['duration_ms']:.0f}ms")
+            logger.info("Job completed successfully!")
+            sys.exit(0)
         else:
-            print("\n❌ Job failed!")
-            print(f"Error: {result.get('error')}")
-            print(f"Error Type: {result.get('error_type')}")
-        
-        print("\n" + "="*80)
-        print(f"Test completed at: {datetime.utcnow().isoformat()}")
-        print("="*80)
-        
-        return result
-        
+            logger.error(f"Job failed: {result.get('error', 'Unknown error')}")
+            sys.exit(1)
+            
     except Exception as e:
-        logger.exception("Fatal error during local job processing test")
-        print(f"\n❌ FATAL ERROR: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return {'success': False, 'error': str(e)}
-
-
-if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        print("Usage: python test_local.py <job_id>")
-        print("\nExample:")
-        print("  python test_local.py job_01K9TR7WXEC3X17YA4MNBSMQ9S")
+        logger.error(f"Fatal error during job execution: {e}", exc_info=True)
+        print(f"\nERROR: {e}")
         sys.exit(1)
-    
-    job_id = sys.argv[1]
-    test_job_processing(job_id)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import { WorkflowStep, ensureStepDefaults } from '../utils/workflowMigration';
 import { validateDependencies } from '../utils/dependencyResolver';
+import { logger } from '../utils/logger';
 
 export interface WorkflowAIEditRequest {
   userPrompt: string;
@@ -23,7 +24,6 @@ export interface WorkflowAIEditResponse {
 
 const AVAILABLE_MODELS = [
   'gpt-5',
-  'o3-deep-research',
   'gpt-4o',
   'gpt-4o-mini',
   'claude-3-7-sonnet-20250219',
@@ -107,11 +107,11 @@ export class WorkflowAIService {
       contextParts.push('(No steps yet)');
     } else {
       workflowContext.current_steps.forEach((step, index) => {
-        const tools = step.tools && step.tools.length > 0 
-          ? ` [Tools: ${step.tools.map((t: any) => typeof t === 'string' ? t : t.type).join(', ')}]`
+        const tools = step.tools && Array.isArray(step.tools) && step.tools.length > 0 
+          ? ` [Tools: ${step.tools.map((t: any) => typeof t === 'string' ? t : (t?.type || 'unknown')).join(', ')}]`
           : '';
-        const deps = step.depends_on && step.depends_on.length > 0
-          ? ` [Depends on: ${step.depends_on.map(d => d + 1).join(', ')}]`
+        const deps = step.depends_on && Array.isArray(step.depends_on) && step.depends_on.length > 0
+          ? ` [Depends on: ${step.depends_on.map((d: number) => d + 1).join(', ')}]`
           : '';
         contextParts.push(
           `${index + 1}. ${step.step_name} (${step.model})${tools}${deps}`
@@ -130,7 +130,7 @@ User Request: ${userPrompt}
 
 Please generate the updated workflow configuration with all necessary changes.`;
 
-    console.log('[WorkflowAI] Editing workflow', {
+    logger.info('[WorkflowAI] Editing workflow', {
       workflow: workflowContext.workflow_name,
       userPrompt: userPrompt.substring(0, 100),
       currentStepCount: workflowContext.current_steps.length,
@@ -160,8 +160,8 @@ Please generate the updated workflow configuration with all necessary changes.`;
         throw new Error('Invalid response structure from AI - missing steps array');
       }
 
-      // Validate and normalize each step
-      const validatedSteps: WorkflowStep[] = parsedResponse.steps.map((step: any, index: number) => {
+      // Validate and normalize each step with proper defaults
+      const validatedSteps = parsedResponse.steps.map((step: any, index: number) => {
         // Validate required fields
         if (!step.step_name || !step.instructions) {
           throw new Error(`Step ${index + 1} is missing required fields (step_name or instructions)`);
@@ -169,14 +169,14 @@ Please generate the updated workflow configuration with all necessary changes.`;
 
         // Validate model
         if (!AVAILABLE_MODELS.includes(step.model)) {
-          console.warn(`[WorkflowAI] Invalid model ${step.model}, defaulting to gpt-5`);
+          logger.warn(`[WorkflowAI] Invalid model ${step.model}, defaulting to gpt-5`);
           step.model = 'gpt-5';
         }
 
         // Validate and sanitize tools
         if (step.tools && Array.isArray(step.tools)) {
-          step.tools = step.tools.filter((tool: any) => {
-            const toolName = typeof tool === 'string' ? tool : tool.type;
+          step.tools = step.tools.filter((tool: string | { type: string }) => {
+            const toolName = typeof tool === 'string' ? tool : (tool as { type: string }).type;
             return AVAILABLE_TOOLS.includes(toolName);
           });
         }
@@ -189,7 +189,7 @@ Please generate the updated workflow configuration with all necessary changes.`;
         // Validate depends_on
         if (step.depends_on) {
           step.depends_on = step.depends_on.filter((dep: number) => 
-            dep >= 0 && dep < index
+            dep >= 0 && dep < parsedResponse.steps.length
           );
         }
 
@@ -199,20 +199,20 @@ Please generate the updated workflow configuration with all necessary changes.`;
         return step;
       });
 
-      // Apply defaults to all steps (adds step_id, step_group, etc.)
-      const normalizedSteps = ensureStepDefaults(validatedSteps);
+      // Use ensureStepDefaults to add all required fields (step_id, step_group, etc.)
+      const normalizedSteps: WorkflowStep[] = ensureStepDefaults(validatedSteps);
 
       // Validate dependencies across all steps
       try {
         validateDependencies(normalizedSteps);
       } catch (error: any) {
-        console.error('[WorkflowAI] Dependency validation failed', { error: error.message });
+        logger.error('[WorkflowAI] Dependency validation failed', { error: error.message });
         throw new Error(`Invalid step dependencies: ${error.message}`);
       }
 
       parsedResponse.steps = normalizedSteps;
 
-      console.log('[WorkflowAI] Workflow edited successfully', {
+      logger.info('[WorkflowAI] Workflow edited successfully', {
         newStepCount: parsedResponse.steps.length,
         nameChanged: !!parsedResponse.workflow_name,
         descriptionChanged: !!parsedResponse.workflow_description,
@@ -220,7 +220,7 @@ Please generate the updated workflow configuration with all necessary changes.`;
 
       return parsedResponse;
     } catch (error: any) {
-      console.error('[WorkflowAI] Error editing workflow', {
+      logger.error('[WorkflowAI] Error editing workflow', {
         error: error.message,
         stack: error.stack,
       });

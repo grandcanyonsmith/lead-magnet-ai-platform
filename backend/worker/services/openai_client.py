@@ -3,6 +3,8 @@ import logging
 import openai
 from typing import Dict, List, Optional
 
+from services.api_key_manager import APIKeyManager
+
 logger = logging.getLogger(__name__)
 
 
@@ -10,13 +12,9 @@ class OpenAIClient:
     """Wrapper for OpenAI API calls."""
     
     def __init__(self):
-        """Initialize OpenAI client."""
-        pass
-    
-    @staticmethod
-    def is_o3_model(model: str) -> bool:
-        """Check if model is an o3 model."""
-        return model.startswith("o3") or "o3-" in model.lower()
+        """Initialize OpenAI client with API key from Secrets Manager."""
+        self.openai_api_key = APIKeyManager.get_openai_key()
+        self.client = openai.OpenAI(api_key=self.openai_api_key)
     
     @staticmethod
     def build_input_text(context: str, previous_context: str = "") -> str:
@@ -42,7 +40,6 @@ class OpenAIClient:
         tools: Optional[List[Dict]] = None,
         tool_choice: str = "auto",
         has_computer_use: bool = False,
-        is_o3_model: bool = False,
         reasoning_level: Optional[str] = None
     ) -> Dict:
         """
@@ -55,8 +52,7 @@ class OpenAIClient:
             tools: List of tools
             tool_choice: Tool choice setting
             has_computer_use: Whether computer_use_preview is in tools
-            is_o3_model: Whether model is o3
-            reasoning_level: Reasoning level for o3 models
+            reasoning_level: Reasoning level (deprecated, kept for compatibility)
             
         Returns:
             API parameters dictionary for Responses API
@@ -86,8 +82,7 @@ class OpenAIClient:
             OpenAI API response
         """
         try:
-            client = openai.OpenAI()
-            response = client.responses.create(**params)
+            response = self.client.responses.create(**params)
             return response
         except Exception as e:
             logger.error(f"Error calling OpenAI Responses API: {e}", exc_info=True)
@@ -171,7 +166,6 @@ class OpenAIClient:
         tool_choice: str,
         instructions: str,
         context: str,
-        is_o3_model: bool,
         full_context: str,
         previous_context: str,
         image_handler

@@ -35,7 +35,6 @@ const MODEL_STYLES: Record<
     accent: string
   }
 > = {
-  'o3-deep-research': { badge: 'bg-purple-100 text-purple-800 border-purple-300', accent: 'from-purple-100/70' },
   'gpt-5': { badge: 'bg-blue-100 text-blue-800 border-blue-300', accent: 'from-blue-100/70' },
   'gpt-4.1': { badge: 'bg-indigo-100 text-indigo-800 border-indigo-300', accent: 'from-indigo-100/70' },
   'gpt-4o': { badge: 'bg-emerald-100 text-emerald-800 border-emerald-300', accent: 'from-emerald-100/70' },
@@ -139,7 +138,7 @@ function FlowchartNode({ data, selected }: NodeProps<FlowchartNodeData>) {
           <span
             className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-semibold ${modelStyle.badge}`}
           >
-            {step.model === 'o3-deep-research' ? 'O3 Deep Research' : step.model === 'computer-use-preview' ? 'Computer Use Preview' : step.model.replace('gpt-', 'GPT-').replace('turbo', 'Turbo')}
+            {step.model === 'computer-use-preview' ? 'Computer Use Preview' : step.model.replace('gpt-', 'GPT-').replace('turbo', 'Turbo')}
           </span>
           {step.tool_choice && step.tool_choice !== 'none' && (
             <span className="inline-flex items-center gap-1 rounded-full bg-primary-50 px-2 py-0.5 text-[11px] font-medium text-primary-700">

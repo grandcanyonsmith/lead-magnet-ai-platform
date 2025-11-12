@@ -107,12 +107,6 @@ export class WorkflowGenerationService {
 
 ## Available Models
 
-### o3-deep-research
-- **Best for**: Deep research, comprehensive analysis, complex reasoning
-- **Use when**: Step requires extensive research or deep analytical thinking
-- **Cost**: Higher cost, highest quality research output
-- **Speed**: Slower than other models
-
 ### gpt-5
 - **Best for**: High-quality content generation, HTML rewriting, general-purpose tasks
 - **Use when**: You need the best quality output for content generation
@@ -227,7 +221,7 @@ Common patterns:
     {
       "step_name": "Deep Research",
       "step_description": "Conduct comprehensive market research using web search",
-      "model": "o3-deep-research",
+      "model": "gpt-5",
       "instructions": "Generate a comprehensive market research report for [company_name] in the [industry] industry. Research current market trends, competitor landscape, and growth opportunities. Include specific statistics, recent developments, and actionable insights. Personalize all recommendations based on [company_name]'s size and target market.",
       "step_order": 0,
       "depends_on": [],
@@ -372,7 +366,7 @@ Important: Return ONLY the JSON, no markdown formatting, no explanations.`;
         {
           step_name: 'Deep Research',
           step_description: 'Generate comprehensive research report',
-          model: 'o3-deep-research',
+          model: 'gpt-5',
           instructions: `Generate a personalized report based on form submission data. Use [field_name] to reference form fields.`,
           step_order: 0,
           tools: ['web_search_preview'],
@@ -402,7 +396,7 @@ Important: Return ONLY the JSON, no markdown formatting, no explanations.`;
             steps: parsed.steps.map((step: any, index: number) => ({
               step_name: step.step_name || `Step ${index + 1}`,
               step_description: step.step_description || '',
-              model: step.model || (index === 0 ? 'o3-deep-research' : 'gpt-5'),
+              model: step.model || 'gpt-5',
               instructions: step.instructions || '',
               step_order: step.step_order !== undefined ? step.step_order : index,
               depends_on: step.depends_on !== undefined ? step.depends_on : undefined, // Preserve depends_on if provided
@@ -419,7 +413,7 @@ Important: Return ONLY the JSON, no markdown formatting, no explanations.`;
               {
                 step_name: 'Deep Research',
                 step_description: 'Generate comprehensive research report',
-                model: 'o3-deep-research',
+                model: 'gpt-5',
                 instructions: parsed.research_instructions,
                 step_order: 0,
                 tools: ['web_search_preview'],

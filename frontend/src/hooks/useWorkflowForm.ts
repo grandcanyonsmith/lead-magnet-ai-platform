@@ -40,7 +40,7 @@ export interface FormFieldsData {
 const defaultFormData: WorkflowFormData = {
   workflow_name: '',
   workflow_description: '',
-  ai_model: 'o3-deep-research',
+  ai_model: 'gpt-5',
   ai_instructions: '',
   rewrite_model: 'gpt-5',
   research_enabled: true,

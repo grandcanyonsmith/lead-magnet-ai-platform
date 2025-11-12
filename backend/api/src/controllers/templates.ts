@@ -7,6 +7,7 @@ import { ApiError } from '../utils/errors';
 import { RouteResponse } from '../routes';
 import { calculateOpenAICost } from '../services/costService';
 import { callResponsesWithTimeout } from '../utils/openaiHelpers';
+import { logger } from '../utils/logger';
 
 const TEMPLATES_TABLE = process.env.TEMPLATES_TABLE!;
 const USAGE_RECORDS_TABLE = process.env.USAGE_RECORDS_TABLE || 'leadmagnet-usage-records';
@@ -67,7 +68,7 @@ async function storeUsageRecord(
     };
 
     await db.put(USAGE_RECORDS_TABLE, usageRecord);
-    console.log('[Usage Tracking] Usage record stored', {
+    logger.info('[Usage Tracking] Usage record stored', {
       usageId,
       tenantId,
       serviceType,
@@ -78,7 +79,7 @@ async function storeUsageRecord(
     });
   } catch (error: any) {
     // Don't fail the request if usage tracking fails
-    console.error('[Usage Tracking] Failed to store usage record', {
+    logger.error('[Usage Tracking] Failed to store usage record', {
       error: error.message,
       tenantId,
       serviceType,
@@ -90,7 +91,7 @@ class TemplatesController {
   async list(tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {
     const limit = queryParams.limit ? parseInt(queryParams.limit) : 50;
 
-    const result = await db.query(
+    const templatesResult = await db.query(
       TEMPLATES_TABLE,
       'gsi_tenant_id',
       'tenant_id = :tenant_id',
@@ -98,7 +99,7 @@ class TemplatesController {
       undefined,
       limit
     );
-    const templates = result.items;
+    const templates = Array.isArray(templatesResult) ? templatesResult : templatesResult.items;
 
     return {
       statusCode: 200,
@@ -119,7 +120,7 @@ class TemplatesController {
       template = await db.get(TEMPLATES_TABLE, { template_id: id, version });
     } else {
       // Get latest version
-      const result = await db.query(
+      const templatesResult = await db.query(
         TEMPLATES_TABLE,
         undefined,
         'template_id = :template_id',
@@ -127,7 +128,7 @@ class TemplatesController {
         undefined,
         1
       );
-      const templates = result.items;
+      const templates = Array.isArray(templatesResult) ? templatesResult : templatesResult.items;
       template = templates[0];
     }
 
@@ -174,7 +175,7 @@ class TemplatesController {
     const [id] = templateId.split(':');
 
     // Get latest version
-    const result = await db.query(
+    const existingTemplatesResult = await db.query(
       TEMPLATES_TABLE,
       undefined,
       'template_id = :template_id',
@@ -182,7 +183,7 @@ class TemplatesController {
       undefined,
       1
     );
-    const existingTemplates = result.items;
+    const existingTemplates = Array.isArray(existingTemplatesResult) ? existingTemplatesResult : existingTemplatesResult.items;
 
     if (existingTemplates.length === 0) {
       throw new ApiError('This template doesn\'t exist', 404);
@@ -266,7 +267,7 @@ class TemplatesController {
       throw new ApiError('Edit prompt is required', 400);
     }
 
-    console.log('[Template Refinement] Starting refinement', {
+    logger.info('[Template Refinement] Starting refinement', {
       tenantId,
       model,
       currentHtmlLength: current_html.length,
@@ -276,7 +277,7 @@ class TemplatesController {
 
     try {
       const openai = await getOpenAIClient();
-      console.log('[Template Refinement] OpenAI client initialized');
+      logger.info('[Template Refinement] OpenAI client initialized');
 
       // Check if user wants to remove placeholders
       const shouldRemovePlaceholders = edit_prompt.toLowerCase().includes('remove placeholder') || 
@@ -303,7 +304,7 @@ ${shouldRemovePlaceholders
 
 Return ONLY the modified HTML code, no markdown formatting, no explanations.`;
 
-      console.log('[Template Refinement] Calling OpenAI for refinement...', {
+      logger.info('[Template Refinement] Calling OpenAI for refinement...', {
         model,
         promptLength: prompt.length,
       });
@@ -327,7 +328,7 @@ Return ONLY the modified HTML code, no markdown formatting, no explanations.`;
 
       const refineDuration = Date.now() - refineStartTime;
       const refinementModelUsed = (completion as any).model || model;
-      console.log('[Template Refinement] Refinement completed', {
+      logger.info('[Template Refinement] Refinement completed', {
         duration: `${refineDuration}ms`,
         tokensUsed: completion.usage?.total_tokens,
         model: refinementModelUsed,
@@ -356,7 +357,7 @@ Return ONLY the modified HTML code, no markdown formatting, no explanations.`;
       }
       
       const htmlContent = completion.output_text;
-      console.log('[Template Refinement] Refined HTML received', {
+      logger.info('[Template Refinement] Refined HTML received', {
         htmlLength: htmlContent.length,
         firstChars: htmlContent.substring(0, 100),
       });
@@ -365,21 +366,21 @@ Return ONLY the modified HTML code, no markdown formatting, no explanations.`;
       let cleanedHtml = htmlContent.trim();
       if (cleanedHtml.startsWith('```html')) {
         cleanedHtml = cleanedHtml.replace(/^```html\s*/i, '').replace(/\s*```$/i, '');
-        console.log('[Template Refinement] Removed ```html markers');
+        logger.info('[Template Refinement] Removed ```html markers');
       } else if (cleanedHtml.startsWith('```')) {
         cleanedHtml = cleanedHtml.replace(/^```\s*/i, '').replace(/\s*```$/i, '');
-        console.log('[Template Refinement] Removed ``` markers');
+        logger.info('[Template Refinement] Removed ``` markers');
       }
 
       // Extract placeholder tags (disabled - no longer using placeholder syntax)
       const placeholderTags: string[] = [];
-      console.log('[Template Refinement] Extracted placeholders', {
+      logger.info('[Template Refinement] Extracted placeholders', {
         placeholderCount: placeholderTags.length,
         placeholders: placeholderTags,
       });
 
       const totalDuration = Date.now() - refineStartTime;
-      console.log('[Template Refinement] Success!', {
+      logger.info('[Template Refinement] Success!', {
         tenantId,
         htmlLength: cleanedHtml.length,
         placeholderCount: placeholderTags.length,
@@ -395,7 +396,7 @@ Return ONLY the modified HTML code, no markdown formatting, no explanations.`;
         },
       };
     } catch (error: any) {
-      console.error('[Template Refinement] Error occurred', {
+      logger.error('[Template Refinement] Error occurred', {
         tenantId,
         errorMessage: error.message,
         errorName: error.name,
@@ -416,7 +417,7 @@ Return ONLY the modified HTML code, no markdown formatting, no explanations.`;
       throw new ApiError('Description is required', 400);
     }
 
-    console.log('[Template Generation] Starting AI generation', {
+    logger.info('[Template Generation] Starting AI generation', {
       tenantId,
       model,
       descriptionLength: description.length,
@@ -425,7 +426,7 @@ Return ONLY the modified HTML code, no markdown formatting, no explanations.`;
 
     try {
       const openai = await getOpenAIClient();
-      console.log('[Template Generation] OpenAI client initialized');
+      logger.info('[Template Generation] OpenAI client initialized');
 
       const prompt = `You are an expert HTML template designer for lead magnets. Create a professional HTML template based on this description: "${description}"
 
@@ -441,7 +442,7 @@ Requirements:
 
 Return ONLY the HTML code, no markdown formatting, no explanations.`;
 
-      console.log('[Template Generation] Calling OpenAI for HTML generation...', {
+      logger.info('[Template Generation] Calling OpenAI for HTML generation...', {
         model,
         promptLength: prompt.length,
       });
@@ -463,7 +464,7 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
 
       const htmlDuration = Date.now() - htmlStartTime;
       const htmlModelUsed = (completion as any).model || model;
-      console.log('[Template Generation] HTML generation completed', {
+      logger.info('[Template Generation] HTML generation completed', {
         duration: `${htmlDuration}ms`,
         tokensUsed: completion.usage?.total_tokens,
         model: htmlModelUsed,
@@ -492,7 +493,7 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
       }
       
       const htmlContent = completion.output_text;
-      console.log('[Template Generation] Raw HTML received', {
+      logger.info('[Template Generation] Raw HTML received', {
         htmlLength: htmlContent.length,
         firstChars: htmlContent.substring(0, 100),
       });
@@ -501,15 +502,15 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
       let cleanedHtml = htmlContent.trim();
       if (cleanedHtml.startsWith('```html')) {
         cleanedHtml = cleanedHtml.replace(/^```html\s*/i, '').replace(/\s*```$/i, '');
-        console.log('[Template Generation] Removed ```html markers');
+        logger.info('[Template Generation] Removed ```html markers');
       } else if (cleanedHtml.startsWith('```')) {
         cleanedHtml = cleanedHtml.replace(/^```\s*/i, '').replace(/\s*```$/i, '');
-        console.log('[Template Generation] Removed ``` markers');
+        logger.info('[Template Generation] Removed ``` markers');
       }
 
       // Extract placeholder tags (disabled - no longer using placeholder syntax)
       const placeholderTags: string[] = [];
-      console.log('[Template Generation] Extracted placeholders', {
+      logger.info('[Template Generation] Extracted placeholders', {
         placeholderCount: placeholderTags.length,
         placeholders: placeholderTags,
       });
@@ -521,7 +522,7 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
 
 Return JSON format: {"name": "...", "description": "..."}`;
 
-      console.log('[Template Generation] Calling OpenAI for name/description generation...');
+      logger.info('[Template Generation] Calling OpenAI for name/description generation...');
       const nameStartTime = Date.now();
       const nameCompletionParams: any = {
         model,
@@ -538,7 +539,7 @@ Return JSON format: {"name": "...", "description": "..."}`;
 
       const nameDuration = Date.now() - nameStartTime;
       const namingModelUsed = (nameCompletion as any).model || model;
-      console.log('[Template Generation] Name/description generation completed', {
+      logger.info('[Template Generation] Name/description generation completed', {
         duration: `${nameDuration}ms`,
         tokensUsed: nameCompletion.usage?.total_tokens,
         modelUsed: namingModelUsed,
@@ -577,7 +578,7 @@ Return JSON format: {"name": "...", "description": "..."}`;
           const parsed = JSON.parse(jsonMatch[0]);
           templateName = parsed.name || templateName;
           templateDescription = parsed.description || templateDescription;
-          console.log('[Template Generation] Parsed name/description from JSON', {
+          logger.info('[Template Generation] Parsed name/description from JSON', {
             templateName,
             templateDescriptionLength: templateDescription.length,
           });
@@ -585,14 +586,14 @@ Return JSON format: {"name": "...", "description": "..."}`;
       } catch (e) {
         // If JSON parsing fails, use defaults
         templateName = description.split(' ').slice(0, 3).join(' ') + ' Template';
-        console.log('[Template Generation] JSON parsing failed, using fallback', {
+        logger.info('[Template Generation] JSON parsing failed, using fallback', {
           error: e instanceof Error ? e.message : String(e),
           fallbackName: templateName,
         });
       }
 
       const totalDuration = Date.now() - htmlStartTime;
-      console.log('[Template Generation] Success!', {
+      logger.info('[Template Generation] Success!', {
         tenantId,
         templateName,
         htmlLength: cleanedHtml.length,
@@ -611,7 +612,7 @@ Return JSON format: {"name": "...", "description": "..."}`;
         },
       };
     } catch (error: any) {
-      console.error('[Template Generation] Error occurred', {
+      logger.error('[Template Generation] Error occurred', {
         tenantId,
         errorMessage: error.message,
         errorName: error.name,

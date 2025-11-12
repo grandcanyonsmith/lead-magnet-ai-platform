@@ -10,11 +10,14 @@ interface StepEditModalProps {
   onClose: () => void
   onSave: (updatedStep: WorkflowStep) => Promise<void>
   jobStatus?: string
+  allSteps?: WorkflowStep[] // All steps for dependency selection
+  currentStepIndex?: number // Array index of the current step being edited (for consistent dependency indexing)
 }
 
 const AI_MODELS: AIModel[] = [
-  'gpt-4o',
+  'gpt-5',
   'gpt-4.1',
+  'gpt-4o',
   'gpt-4-turbo',
   'gpt-3.5-turbo',
   'computer-use-preview',
@@ -37,13 +40,16 @@ export function StepEditModal({
   onClose,
   onSave,
   jobStatus,
+  allSteps = [],
+  currentStepIndex,
 }: StepEditModalProps) {
   const [formData, setFormData] = useState<WorkflowStep>({
     step_name: '',
     instructions: '',
-    model: 'gpt-4o',
+    model: 'gpt-5',
     tools: [],
     tool_choice: 'auto',
+    depends_on: [],
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -59,6 +65,7 @@ export function StepEditModal({
         step_order: step.step_order,
         tools: step.tools || [],
         tool_choice: step.tool_choice || 'auto',
+        depends_on: step.depends_on || [],
       })
       setError(null)
     }
@@ -268,6 +275,57 @@ export function StepEditModal({
                 Controls how the AI uses the selected tools
               </p>
             </div>
+
+            {/* Dependencies */}
+            {allSteps.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Dependencies (optional)
+                </label>
+                <p className="text-xs text-gray-500 mb-2">
+                  Select which steps must complete before this step runs. Leave empty to auto-detect from step order.
+                </p>
+                <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-3">
+                  {allSteps.map((otherStep, otherIndex) => {
+                    // Use provided currentStepIndex, or fallback to finding by step reference
+                    // This ensures we use array indices consistently, not step_order values
+                    const editingIndex = currentStepIndex !== undefined 
+                      ? currentStepIndex
+                      : (step ? allSteps.findIndex(s => s === step) : -1)
+                    
+                    // Can't depend on itself - skip if this is the current step being edited
+                    if (otherIndex === editingIndex && editingIndex !== -1) return null
+                    
+                    // depends_on stores array indices (0, 1, 2, ...), not step_order values
+                    const isSelected = (formData.depends_on || []).includes(otherIndex)
+                    return (
+                      <label key={otherIndex} className="flex items-center space-x-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            const currentDeps = formData.depends_on || []
+                            const newDeps = e.target.checked
+                              ? [...currentDeps, otherIndex]
+                              : currentDeps.filter((dep: number) => dep !== otherIndex)
+                            setFormData({ ...formData, depends_on: newDeps })
+                          }}
+                          className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                        />
+                        <span className="text-sm text-gray-900">
+                          Step {otherIndex + 1}: {otherStep.step_name}
+                        </span>
+                      </label>
+                    )
+                  })}
+                </div>
+                {formData.depends_on && formData.depends_on.length > 0 && (
+                  <p className="mt-2 text-xs text-gray-600">
+                    Depends on: {formData.depends_on.map((dep: number) => `Step ${dep + 1}`).join(', ')}
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Actions */}
             <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
