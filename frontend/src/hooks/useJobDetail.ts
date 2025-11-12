@@ -42,6 +42,7 @@ export function useJobDetail() {
   const [error, setError] = useState<string | null>(null)
   const [resubmitting, setResubmitting] = useState(false)
   const [rerunningStep, setRerunningStep] = useState<number | null>(null)
+  const [executionStepsError, setExecutionStepsError] = useState<string | null>(null)
   
   // Update jobId when params change (for client-side navigation)
   useEffect(() => {
@@ -119,31 +120,71 @@ export function useJobDetail() {
               ...prevJob,
               execution_steps: executionSteps,
             }))
+            setExecutionStepsError(null) // Clear any previous errors
             if (process.env.NODE_ENV === 'development') {
-              console.log(`Loaded execution_steps from S3 for job ${jobId}`, {
+              console.log(`✅ Loaded execution_steps from S3 for job ${jobId}`, {
                 stepsCount: executionSteps.length,
+                url: data.execution_steps_s3_url,
               })
+            }
+          } else {
+            const errorMsg = `Invalid execution steps data format: expected array, got ${typeof executionSteps}`
+            console.error(`❌ ${errorMsg} for job ${jobId}`)
+            if (!jobData) {
+              setExecutionStepsError(errorMsg)
             }
           }
         } else if (response.status === 404) {
           // S3 file doesn't exist yet (job just started) - this is normal
+          const errorMsg = `Execution steps file not found in S3 (404)`
           if (process.env.NODE_ENV === 'development') {
-            console.log(`Execution steps not yet available in S3 for job ${jobId}`)
+            console.warn(`⚠️ ${errorMsg} for job ${jobId}`, {
+              url: data.execution_steps_s3_url,
+              s3Key: data.execution_steps_s3_key,
+            })
+          }
+          if (!jobData) {
+            setExecutionStepsError(errorMsg)
           }
         } else {
           // Don't overwrite existing steps if fetch fails during polling
+          const errorMsg = `Failed to fetch execution steps: ${response.status} ${response.statusText}`
+          console.error(`❌ ${errorMsg} for job ${jobId}`, {
+            url: data.execution_steps_s3_url,
+            status: response.status,
+            statusText: response.statusText,
+          })
           if (!jobData) {
-            console.warn(`Failed to fetch execution_steps from S3 for job ${jobId}`, {
-              status: response.status,
-              statusText: response.statusText,
-            })
+            setExecutionStepsError(errorMsg)
           }
         }
-      } catch (err) {
+      } catch (err: any) {
         // Don't overwrite existing steps if fetch fails during polling
+        const errorMsg = `Error fetching execution steps: ${err.message || 'Unknown error'}`
+        console.error(`❌ ${errorMsg} for job ${jobId}`, {
+          url: data.execution_steps_s3_url,
+          error: err,
+        })
         if (!jobData) {
-          console.error(`Error fetching execution_steps from S3 for job ${jobId}:`, err)
+          setExecutionStepsError(errorMsg)
         }
+      }
+    } else {
+      // No S3 URL available
+      if (data.execution_steps_s3_key) {
+        const errorMsg = `execution_steps_s3_key exists but no URL was generated`
+        console.warn(`⚠️ ${errorMsg} for job ${jobId}`, {
+          s3Key: data.execution_steps_s3_key,
+        })
+        if (!jobData) {
+          setExecutionStepsError(errorMsg)
+        }
+      } else {
+        // No S3 key - execution steps may not have been created yet
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`ℹ️ No execution_steps_s3_key for job ${jobId} - steps may not be created yet`)
+        }
+        setExecutionStepsError(null)
       }
     }
   }
@@ -158,27 +199,57 @@ export function useJobDetail() {
           const response = await fetch(data.execution_steps_s3_url)
           if (response.ok) {
             const executionSteps = await response.json()
-            data.execution_steps = executionSteps
-            if (process.env.NODE_ENV === 'development') {
-              console.log(`Loaded execution_steps from S3 for job ${jobId}`, {
-                stepsCount: Array.isArray(executionSteps) ? executionSteps.length : 0,
-              })
+            if (Array.isArray(executionSteps)) {
+              data.execution_steps = executionSteps
+              setExecutionStepsError(null)
+              if (process.env.NODE_ENV === 'development') {
+                console.log(`✅ Loaded execution_steps from S3 for job ${jobId}`, {
+                  stepsCount: executionSteps.length,
+                  url: data.execution_steps_s3_url,
+                })
+              }
+            } else {
+              const errorMsg = `Invalid execution steps data format: expected array, got ${typeof executionSteps}`
+              console.error(`❌ ${errorMsg} for job ${jobId}`)
+              setExecutionStepsError(errorMsg)
+              data.execution_steps = []
             }
           } else {
-            console.warn(`Failed to fetch execution_steps from S3 for job ${jobId}`, {
+            const errorMsg = `Failed to fetch execution steps: ${response.status} ${response.statusText}`
+            console.error(`❌ ${errorMsg} for job ${jobId}`, {
+              url: data.execution_steps_s3_url,
               status: response.status,
               statusText: response.statusText,
             })
+            setExecutionStepsError(errorMsg)
             // Set empty array if fetch fails
             data.execution_steps = []
           }
-        } catch (err) {
-          console.error(`Error fetching execution_steps from S3 for job ${jobId}:`, err)
+        } catch (err: any) {
+          const errorMsg = `Error fetching execution steps: ${err.message || 'Unknown error'}`
+          console.error(`❌ ${errorMsg} for job ${jobId}`, {
+            url: data.execution_steps_s3_url,
+            error: err,
+          })
+          setExecutionStepsError(errorMsg)
           // Set empty array if fetch fails
           data.execution_steps = []
         }
       } else {
         // No S3 URL means no execution steps yet (job may still be processing)
+        if (data.execution_steps_s3_key) {
+          const errorMsg = `execution_steps_s3_key exists but no URL was generated`
+          console.warn(`⚠️ ${errorMsg} for job ${jobId}`, {
+            s3Key: data.execution_steps_s3_key,
+          })
+          setExecutionStepsError(errorMsg)
+        } else {
+          // No S3 key - execution steps may not have been created yet
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`ℹ️ No execution_steps_s3_key for job ${jobId} - steps may not be created yet`)
+          }
+          setExecutionStepsError(null)
+        }
         data.execution_steps = []
       }
       
@@ -277,6 +348,7 @@ export function useJobDetail() {
     handleResubmit,
     rerunningStep,
     handleRerunStep,
+    executionStepsError,
   }
 }
 
