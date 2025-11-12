@@ -30,13 +30,18 @@ The project is an npm monorepo comprising:
   - **Step-Level AI**: Natural language editing for individual workflow steps with diff preview.
   - **Workflow-Level AI**: AI-driven restructuring of entire workflows (add, remove, modify, reorder steps) using natural language prompts, with server-side validation and normalization.
 
-### System Design Choices
+#### System Design Choices
 - **Monorepo**: For shared code and consistent tooling.
 - **Serverless Architecture**: AWS Lambda for scalable and cost-effective services.
 - **Cloud-Native**: Deep integration with AWS services.
 - **OpenAI Integration**: Central to AI processing.
 - **Separation of Concerns**: Clear distinction between frontend, backend API, worker, and infrastructure.
 - **Production Deployment**: Frontend configured for Replit Autoscale deployments (port 80), with backend services on AWS.
+
+### Debugging Tools
+- **Local Job Execution**: Python test script (`backend/worker/test_local.py`) for running jobs locally with full debug output
+- **Debug Guide**: Comprehensive debugging documentation in `DEBUG_JOBS.md`
+- **LSP Diagnostics**: TypeScript type checking to catch errors before deployment
 
 ## External Dependencies
 

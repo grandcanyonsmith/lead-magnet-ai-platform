@@ -12,7 +12,7 @@ from ai_service import AIService
 from db_service import DynamoDBService
 from s3_service import S3Service
 from artifact_service import ArtifactService
-from utils.decimal_utils import convert_floats_to_decimal
+from utils.decimal_utils import convert_decimals_to_float
 
 logger = logging.getLogger(__name__)
 

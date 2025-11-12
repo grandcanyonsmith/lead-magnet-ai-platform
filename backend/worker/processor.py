@@ -16,7 +16,7 @@ from s3_service import S3Service
 from artifact_service import ArtifactService
 from delivery_service import DeliveryService
 from legacy_processor import LegacyWorkflowProcessor
-from utils.decimal_utils import convert_floats_to_decimal
+from utils.decimal_utils import convert_decimals_to_float
 from utils.error_utils import create_descriptive_error, normalize_error_message
 from utils.step_utils import normalize_step_order
 from services.context_builder import ContextBuilder
