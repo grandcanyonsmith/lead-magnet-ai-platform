@@ -47,7 +47,7 @@ def test_sequential_workflow():
         {
             'step_name': 'Research',
             'step_description': 'Conduct research',
-            'model': 'o3-deep-research',
+            'model': 'gpt-5',
             'instructions': 'Research the topic',
             'step_order': 0,
             'tools': ['web_search_preview'],
@@ -92,7 +92,7 @@ def test_parallel_workflow():
         {
             'step_name': 'Research A',
             'step_description': 'Research topic A',
-            'model': 'o3-deep-research',
+            'model': 'gpt-5',
             'instructions': 'Research topic A',
             'step_order': 0,
             'tools': ['web_search_preview'],
@@ -101,7 +101,7 @@ def test_parallel_workflow():
         {
             'step_name': 'Research B',
             'step_description': 'Research topic B',
-            'model': 'o3-deep-research',
+            'model': 'gpt-5',
             'instructions': 'Research topic B',
             'step_order': 0,  # Same order - can run in parallel
             'tools': ['web_search_preview'],
@@ -138,7 +138,7 @@ def test_explicit_dependencies():
         {
             'step_name': 'Research',
             'step_description': 'Conduct research',
-            'model': 'o3-deep-research',
+            'model': 'gpt-5',
             'instructions': 'Research the topic',
             'step_order': 0,
             'depends_on': [],
@@ -280,7 +280,7 @@ def test_step_readiness():
         {
             'step_name': 'Research',
             'step_description': 'Research',
-            'model': 'o3-deep-research',
+            'model': 'gpt-5',
             'instructions': 'Research',
             'step_order': 0,
             'depends_on': [],
@@ -338,7 +338,7 @@ def test_step_status():
         {
             'step_name': 'Research',
             'step_description': 'Research',
-            'model': 'o3-deep-research',
+            'model': 'gpt-5',
             'instructions': 'Research',
             'step_order': 0,
             'depends_on': [],
@@ -372,7 +372,7 @@ def test_complex_dependency_graph():
         {
             'step_name': 'Research A',
             'step_description': 'Research A',
-            'model': 'o3-deep-research',
+            'model': 'gpt-5',
             'instructions': 'Research A',
             'step_order': 0,
             'depends_on': [],
@@ -382,7 +382,7 @@ def test_complex_dependency_graph():
         {
             'step_name': 'Research B',
             'step_description': 'Research B',
-            'model': 'o3-deep-research',
+            'model': 'gpt-5',
             'instructions': 'Research B',
             'step_order': 0,
             'depends_on': [],

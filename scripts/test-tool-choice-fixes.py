@@ -45,7 +45,7 @@ def test_build_api_params():
         # Create a minimal instance just for testing the method
         class MockAIService:
             def _build_api_params(self, model, instructions, input_text, tools, tool_choice, 
-                                 has_computer_use, is_o3_model, reasoning_level=None):
+                                 has_computer_use, reasoning_level=None):
                 # Copy the actual implementation
                 params = {
                     "model": model,
@@ -153,7 +153,6 @@ def test_build_api_params():
                 tools=test_case["tools"],
                 tool_choice=test_case["tool_choice"],
                 has_computer_use=False,
-                is_o3_model=False,
                 reasoning_level=None
             )
             
