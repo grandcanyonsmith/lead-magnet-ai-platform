@@ -1,26 +1,37 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { api } from '@/lib/api'
-import { FiExternalLink, FiDownload, FiFileText, FiRefreshCw } from 'react-icons/fi'
+import { FiRefreshCw, FiInbox } from 'react-icons/fi'
+import { PreviewCard } from '@/components/artifacts/PreviewCard'
+import { FiltersBar } from '@/components/artifacts/FiltersBar'
+import { PaginationControls } from '@/components/artifacts/PaginationControls'
 
 type Artifact = {
   artifact_id: string
   job_id?: string
   artifact_type?: string
   file_name?: string
+  artifact_name?: string
   content_type?: string
   size_bytes?: number
+  file_size_bytes?: number
   s3_bucket?: string
   s3_key?: string
   object_url?: string
+  public_url?: string
   created_at?: string
 }
+
+const ITEMS_PER_PAGE = 12
 
 export default function ArtifactsPage() {
   const [artifacts, setArtifacts] = useState<Artifact[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedType, setSelectedType] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
 
   useEffect(() => {
     loadArtifacts()
@@ -28,14 +39,15 @@ export default function ArtifactsPage() {
 
   const loadArtifacts = async () => {
     try {
-      const data = await api.getArtifacts({ limit: 100 })
+      const data = await api.getArtifacts({ limit: 500 })
       const artifactsList = data.artifacts || []
-      // Sort by created_at DESC (most recent first)
+      
       artifactsList.sort((a: Artifact, b: Artifact) => {
         const dateA = new Date(a.created_at || 0).getTime()
         const dateB = new Date(b.created_at || 0).getTime()
-        return dateB - dateA // DESC order
+        return dateB - dateA
       })
+      
       setArtifacts(artifactsList)
     } catch (error) {
       console.error('Failed to load artifacts:', error)
@@ -53,143 +65,122 @@ export default function ArtifactsPage() {
     }
   }
 
-  const formatBytes = (bytes?: number) => {
-    if (!bytes && bytes !== 0) return '-'
-    if (bytes === 0) return '0 B'
-    const k = 1024
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`
-  }
+  const artifactTypes = useMemo(() => {
+    const types = new Set<string>()
+    artifacts.forEach(a => {
+      if (a.artifact_type) types.add(a.artifact_type)
+    })
+    return Array.from(types).sort()
+  }, [artifacts])
+
+  const filteredArtifacts = useMemo(() => {
+    return artifacts.filter(artifact => {
+      const matchesSearch = !searchQuery || 
+        (artifact.file_name || artifact.artifact_name || '')
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        artifact.artifact_id.toLowerCase().includes(searchQuery.toLowerCase())
+      
+      const matchesType = !selectedType || artifact.artifact_type === selectedType
+      
+      return matchesSearch && matchesType
+    })
+  }, [artifacts, searchQuery, selectedType])
+
+  const totalPages = Math.ceil(filteredArtifacts.length / ITEMS_PER_PAGE)
+  
+  const paginatedArtifacts = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
+    const endIndex = startIndex + ITEMS_PER_PAGE
+    return filteredArtifacts.slice(startIndex, endIndex)
+  }, [filteredArtifacts, currentPage])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, selectedType])
 
   if (loading) {
-    return <div className="text-center py-12">Loading downloads...</div>
+    return (
+      <div className="flex items-center justify-center py-24">
+        <div className="text-center">
+          <div className="inline-block w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mb-4"></div>
+          <p className="text-gray-600">Loading downloads...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
+    <div className="max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Downloads</h1>
-          <p className="text-gray-600">Generated lead magnet files and documents</p>
+          <h1 className="text-3xl font-bold text-gray-900">Downloads</h1>
+          <p className="text-gray-600 mt-1">
+            {filteredArtifacts.length} {filteredArtifacts.length === 1 ? 'file' : 'files'} available
+          </p>
         </div>
         <button
           onClick={refresh}
-          className="inline-flex items-center px-3 py-2 bg-white border rounded-lg text-gray-700 hover:bg-gray-50"
+          disabled={refreshing}
+          className="inline-flex items-center px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <FiRefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
           Refresh
         </button>
       </div>
 
-      {artifacts.length === 0 ? (
-        <div className="bg-white rounded-lg shadow p-12 text-center">
-          <p className="text-gray-600">No downloads found</p>
+      {artifacts.length > 0 && (
+        <FiltersBar
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          selectedType={selectedType}
+          onTypeChange={setSelectedType}
+          artifactTypes={artifactTypes}
+        />
+      )}
+
+      {filteredArtifacts.length === 0 ? (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-16 text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
+            <FiInbox className="w-8 h-8 text-gray-400" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            {artifacts.length === 0 ? 'No downloads yet' : 'No matching files'}
+          </h3>
+          <p className="text-gray-600">
+            {artifacts.length === 0 
+              ? 'Generated files will appear here after you run workflows' 
+              : 'Try adjusting your search or filter criteria'}
+          </p>
+          {(searchQuery || selectedType) && (
+            <button
+              onClick={() => {
+                setSearchQuery('')
+                setSelectedType('')
+              }}
+              className="mt-4 text-primary-600 hover:text-primary-700 font-medium"
+            >
+              Clear filters
+            </button>
+          )}
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">File</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Generated For</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Size</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Download URL</th>
-                <th className="px-6 py-3" />
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {artifacts.map((a) => (
-                <tr key={a.artifact_id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <FiFileText className="w-4 h-4 text-gray-500 mr-2" />
-                      <div>
-                        {a.object_url ? (
-                          <a
-                            href={a.object_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm font-medium text-primary-600 hover:text-primary-900 hover:underline"
-                            title="Click to preview"
-                          >
-                            {a.file_name || a.artifact_id}
-                          </a>
-                        ) : (
-                          <div className="text-sm font-medium text-gray-900">{a.file_name || a.artifact_id}</div>
-                        )}
-                        {a.content_type && (
-                          <div className="text-xs text-gray-500">{a.content_type}</div>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {a.artifact_type || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {a.job_id ? (
-                      <span className="font-mono">{a.job_id.substring(0, 12)}...</span>
-                    ) : (
-                      <span className="text-gray-400">-</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {formatBytes(a.size_bytes)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {a.created_at ? new Date(a.created_at).toLocaleString() : '-'}
-                  </td>
-                  <td className="px-6 py-4 text-sm max-w-md">
-                    {a.object_url ? (
-                      <a
-                        href={a.object_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary-600 hover:text-primary-900 break-all hover:underline"
-                        title={a.object_url}
-                      >
-                        <span className="truncate block max-w-md">{a.object_url}</span>
-                      </a>
-                    ) : (
-                      <span className="text-gray-400">-</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    {a.object_url ? (
-                      <div className="flex items-center justify-end space-x-3">
-                        <a
-                          href={a.object_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-primary-600 hover:text-primary-900 p-2 rounded hover:bg-gray-100 touch-target"
-                          title="Preview in new tab"
-                        >
-                          <FiExternalLink className="w-5 h-5" />
-                        </a>
-                        <a
-                          href={a.object_url}
-                          download={a.file_name || `${a.artifact_id}.${a.content_type?.split('/')[1] || 'txt'}`}
-                          className="text-primary-600 hover:text-primary-900 p-2 rounded hover:bg-gray-100 touch-target"
-                          title="Download"
-                        >
-                          <FiDownload className="w-5 h-5" />
-                        </a>
-                      </div>
-                    ) : (
-                      <span className="text-gray-400">-</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {paginatedArtifacts.map((artifact) => (
+              <PreviewCard key={artifact.artifact_id} artifact={artifact} />
+            ))}
+          </div>
+
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredArtifacts.length}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={setCurrentPage}
+          />
+        </>
       )}
     </div>
   )
 }
-
-

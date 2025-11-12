@@ -71,5 +71,36 @@ export class WorkflowsClient extends BaseApiClient {
       model: request.model || 'gpt-4o',
     })
   }
+
+  async generateStepWithAI(
+    workflowId: string,
+    request: {
+      userPrompt: string
+      action?: 'update' | 'add'
+      currentStep?: any
+      currentStepIndex?: number
+    }
+  ): Promise<{
+    action: 'update' | 'add'
+    step_index?: number
+    step: any
+  }> {
+    return this.post(`/admin/workflows/${workflowId}/ai-step`, request)
+  }
+
+  async editWorkflowWithAI(
+    workflowId: string,
+    request: {
+      userPrompt: string
+    }
+  ): Promise<{
+    workflow_name?: string
+    workflow_description?: string
+    html_enabled?: boolean
+    steps: any[]
+    changes_summary: string
+  }> {
+    return this.post(`/admin/workflows/${workflowId}/ai-edit`, request)
+  }
 }
 

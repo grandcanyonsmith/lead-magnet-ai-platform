@@ -295,12 +295,14 @@ export default function EditWorkflowPage() {
 
       {activeTab === 'workflow' && (
         <WorkflowTab
+          workflowId={workflowId || ''}
           formData={formData}
           steps={steps}
           submitting={submitting}
           selectedStepIndex={selectedStepIndex}
           isSidePanelOpen={isSidePanelOpen}
           onFormDataChange={handleChange}
+          onStepsChange={setSteps}
           onAddStep={handleAddStep}
           onStepClick={(index) => {
             setSelectedStepIndex(index)
@@ -392,6 +394,7 @@ export default function EditWorkflowPage() {
             setSelectedStepIndex(index + 1)
           }
         }}
+        workflowId={workflowId}
       />
     </div>
   )

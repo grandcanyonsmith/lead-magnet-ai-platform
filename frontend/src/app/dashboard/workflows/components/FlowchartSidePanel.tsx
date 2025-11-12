@@ -15,6 +15,7 @@ interface FlowchartSidePanelProps {
   onDelete: (index: number) => void
   onMoveUp: (index: number) => void
   onMoveDown: (index: number) => void
+  workflowId?: string // Required for AI features
 }
 
 export default function FlowchartSidePanel({
@@ -28,6 +29,7 @@ export default function FlowchartSidePanel({
   onDelete,
   onMoveUp,
   onMoveDown,
+  workflowId,
 }: FlowchartSidePanelProps) {
   const [localStep, setLocalStep] = useState<WorkflowStep | null>(step)
 
@@ -117,6 +119,7 @@ export default function FlowchartSidePanel({
               onDelete={handleDelete}
               onMoveUp={onMoveUp}
               onMoveDown={onMoveDown}
+              workflowId={workflowId}
             />
           )}
         </div>

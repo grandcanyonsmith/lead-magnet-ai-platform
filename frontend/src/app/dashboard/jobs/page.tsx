@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { FiCheckCircle, FiXCircle, FiClock, FiLoader, FiRefreshCw, FiExternalLink, FiChevronDown, FiChevronUp } from 'react-icons/fi'
@@ -23,9 +23,11 @@ const getStatusIcon = (status: string) => {
     case 'failed':
       return <FiXCircle className="w-5 h-5 text-red-600" />
     case 'processing':
-      return <FiLoader className="w-5 h-5 text-blue-600 animate-spin" />
+      return <FiLoader className="w-5 h-5 text-yellow-600 animate-spin" />
+    case 'pending':
+      return <FiCheckCircle className="w-5 h-5 text-yellow-600" />
     default:
-      return <FiClock className="w-5 h-5 text-yellow-600" />
+      return <FiCheckCircle className="w-5 h-5 text-yellow-600" />
   }
 }
 
@@ -33,7 +35,7 @@ const getStatusBadge = (status: string) => {
   const colors: Record<string, string> = {
     completed: 'bg-green-100 text-green-800',
     failed: 'bg-red-100 text-red-800',
-    processing: 'bg-blue-100 text-blue-800',
+    processing: 'bg-yellow-100 text-yellow-800',
     pending: 'bg-yellow-100 text-yellow-800',
   }
   return (
@@ -66,6 +68,31 @@ const formatDuration = (seconds: number) => {
   const hours = Math.floor(minutes / 60)
   const remainingMinutes = minutes % 60
   return `${hours}h ${remainingMinutes}m`
+}
+
+const getStepProgress = (job: any) => {
+  const steps = job.execution_steps || []
+  if (steps.length === 0) return null
+  
+  // For failed jobs, count steps with outputs but cap at failed step
+  // For other jobs, count all steps with outputs
+  let completedSteps = 0
+  
+  for (let i = 0; i < steps.length; i++) {
+    const step = steps[i]
+    const hasOutput = step.output !== null && step.output !== undefined && step.output !== ''
+    
+    // If this step has explicit failed status, stop counting here
+    if (step._status === 'failed' || (job.status === 'failed' && !hasOutput)) {
+      break
+    }
+    
+    if (hasOutput) {
+      completedSteps++
+    }
+  }
+  
+  return { completed: completedSteps, total: steps.length }
 }
 
 export default function JobsPage() {
@@ -284,8 +311,17 @@ export default function JobsPage() {
                       <h3 className="text-sm font-semibold text-gray-900 truncate">
                         {workflowMap[job.workflow_id] || job.workflow_id || '-'}
                       </h3>
+                      {(() => {
+                        const progress = getStepProgress(job)
+                        return progress && (
+                          <div className="text-xs text-gray-500 mt-0.5">
+                            Step {progress.completed}/{progress.total}
+                          </div>
+                        )
+                      })()}
                     </div>
                     <div className="ml-2 flex-shrink-0" data-tour="job-status">
+                      {getStatusIcon(job.status)}
                     </div>
                   </div>
                   
@@ -337,6 +373,9 @@ export default function JobsPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Lead Magnet
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
                 <th 
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   onClick={() => sorting.handleSort('date')}
@@ -378,9 +417,8 @@ export default function JobsPage() {
                   : null
 
                 return (
-                  <>
+                  <React.Fragment key={job.job_id}>
                     <tr 
-                      key={job.job_id} 
                       className="hover:bg-gray-50 cursor-pointer transition-colors"
                       onClick={() => {
                         // Use window.location for static export compatibility
@@ -392,8 +430,22 @@ export default function JobsPage() {
                       }}
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
+                        <div className="text-sm font-medium text-gray-900">
                           {workflowMap[job.workflow_id] || job.workflow_id || '-'}
+                        </div>
+                        {(() => {
+                          const progress = getStepProgress(job)
+                          return progress && (
+                            <div className="text-xs text-gray-500 mt-0.5">
+                              Step {progress.completed}/{progress.total}
+                            </div>
+                          )
+                        })()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap" data-tour="job-status">
+                        <div className="flex items-center gap-2">
+                          {getStatusIcon(job.status)}
+                          {getStatusBadge(job.status)}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -472,7 +524,7 @@ export default function JobsPage() {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </React.Fragment>
                 )
               })}
             </tbody>
