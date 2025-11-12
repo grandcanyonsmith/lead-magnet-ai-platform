@@ -83,22 +83,20 @@ export default function ArtifactsPage() {
       return matchesSearch && matchesType
     })
     
-    // Sort by workflow_id/job_id first (group by parent), then by created_at within each group
-    // This ensures artifacts from the same workflow/job appear together, ordered by creation time
+    // Sort by created_at DESC (most recent first), then by workflow_id/job_id as secondary sort
     filtered.sort((a: Artifact, b: Artifact) => {
-      // Group by workflow_id if available, otherwise by job_id, otherwise treat as separate groups
-      const groupA = a.workflow_id || a.job_id || `no-group-${a.artifact_id}`
-      const groupB = b.workflow_id || b.job_id || `no-group-${b.artifact_id}`
-      
-      // If different groups, sort by group (alphabetically for consistency)
-      if (groupA !== groupB) {
-        return groupA.localeCompare(groupB)
-      }
-      
-      // Within same group, sort by created_at DESC (most recent first)
+      // Primary sort: created_at DESC (most recent first)
       const dateA = new Date(a.created_at || 0).getTime()
       const dateB = new Date(b.created_at || 0).getTime()
-      return dateB - dateA
+      
+      if (dateB !== dateA) {
+        return dateB - dateA
+      }
+      
+      // Secondary sort: by workflow_id/job_id for consistency when dates are the same
+      const groupA = a.workflow_id || a.job_id || `no-group-${a.artifact_id}`
+      const groupB = b.workflow_id || b.job_id || `no-group-${b.artifact_id}`
+      return groupA.localeCompare(groupB)
     })
     
     return filtered
