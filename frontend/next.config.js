@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Only enable static export in production builds, not in dev mode
-  ...(process.env.NODE_ENV === 'production' && { output: 'export' }),
+  output: 'export',
   reactStrictMode: true,
   images: {
     unoptimized: true,
@@ -12,12 +11,27 @@ const nextConfig = {
     NEXT_PUBLIC_COGNITO_CLIENT_ID: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID,
     NEXT_PUBLIC_AWS_REGION: process.env.NEXT_PUBLIC_AWS_REGION,
   },
-  // Skip type checking during build to avoid blocking
   typescript: {
     ignoreBuildErrors: false,
   },
   eslint: {
+    // Allow warnings during builds but still fail on errors
     ignoreDuringBuilds: false,
+    // Only fail builds on errors, not warnings
+    dirs: ['src'],
+  },
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-cache, no-store, must-revalidate',
+          },
+        ],
+      },
+    ];
   },
 }
 

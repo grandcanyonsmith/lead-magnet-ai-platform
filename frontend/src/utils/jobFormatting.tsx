@@ -100,6 +100,24 @@ export function isMarkdown(str: string): boolean {
   return markdownPatterns.some(pattern => pattern.test(str))
 }
 
+export function isHTML(str: string): boolean {
+  if (typeof str !== 'string') return false
+  const trimmed = str.trim()
+  // Check for HTML patterns
+  const htmlPatterns = [
+    /^<!DOCTYPE\s+html/i,           // DOCTYPE declaration
+    /^<html[\s>]/i,                  // HTML tag
+    /<\/html>\s*$/i,                 // Closing HTML tag
+    /^<\!--[\s\S]*?-->/,            // HTML comment
+  ]
+  // Check if it contains HTML tags
+  const hasHTMLTags = /<[a-z][\s\S]*>/i.test(trimmed)
+  const hasClosingTags = /<\/[a-z]+>/i.test(trimmed)
+  
+  // If it has both opening and closing tags, or matches specific patterns
+  return htmlPatterns.some(pattern => pattern.test(trimmed)) || (hasHTMLTags && hasClosingTags)
+}
+
 export function formatStepInput(step: any): { content: string | any, type: 'json' | 'markdown' | 'text', structure?: 'ai_input' } {
   if (step.step_type === 'form_submission') {
     return { content: step.input, type: 'json' }
@@ -136,11 +154,15 @@ export function formatStepInput(step: any): { content: string | any, type: 'json
   return { content: step.input, type: 'json' }
 }
 
-export function formatStepOutput(step: any): { content: string | any, type: 'json' | 'markdown' | 'text' } {
+export function formatStepOutput(step: any): { content: string | any, type: 'json' | 'markdown' | 'text' | 'html' } {
   if (step.step_type === 'final_output') {
     return { content: step.output, type: 'json' }
   }
   if (typeof step.output === 'string') {
+    // Check if it's HTML first (before JSON, as HTML might contain JSON-like syntax)
+    if (isHTML(step.output)) {
+      return { content: step.output, type: 'html' }
+    }
     // Check if it's JSON
     if (isJSON(step.output)) {
       try {
