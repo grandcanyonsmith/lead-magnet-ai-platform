@@ -1,8 +1,10 @@
 import { db } from '../utils/db';
 import { validate, updateSettingsSchema } from '../utils/validation';
 import { RouteResponse } from '../routes';
+import { generateWebhookToken } from '../utils/webhookToken';
 
 const USER_SETTINGS_TABLE = process.env.USER_SETTINGS_TABLE!;
+const API_URL = process.env.API_URL || process.env.API_GATEWAY_URL || '';
 
 class SettingsController {
   async get(tenantId: string): Promise<RouteResponse> {
@@ -31,9 +33,26 @@ class SettingsController {
       await db.put(USER_SETTINGS_TABLE, settings);
     }
 
+    // Auto-generate webhook_token if missing
+    if (!settings.webhook_token) {
+      const webhookToken = generateWebhookToken();
+      settings = await db.update(USER_SETTINGS_TABLE, { tenant_id: tenantId }, {
+        webhook_token: webhookToken,
+        updated_at: new Date().toISOString(),
+      });
+    }
+
+    // Construct webhook URL
+    const webhookUrl = settings.webhook_token
+      ? `${API_URL}/v1/webhooks/${settings.webhook_token}`
+      : null;
+
     return {
       statusCode: 200,
-      body: settings,
+      body: {
+        ...settings,
+        webhook_url: webhookUrl,
+      },
     };
   }
 
@@ -59,9 +78,80 @@ class SettingsController {
       });
     }
 
+    // Ensure webhook_token exists
+    if (!existing.webhook_token) {
+      const webhookToken = generateWebhookToken();
+      existing = await db.update(USER_SETTINGS_TABLE, { tenant_id: tenantId }, {
+        webhook_token: webhookToken,
+        updated_at: new Date().toISOString(),
+      });
+    }
+
+    // Construct webhook URL
+    const webhookUrl = existing.webhook_token
+      ? `${API_URL}/v1/webhooks/${existing.webhook_token}`
+      : null;
+
     return {
       statusCode: 200,
-      body: existing,
+      body: {
+        ...existing,
+        webhook_url: webhookUrl,
+      },
+    };
+  }
+
+  /**
+   * Regenerate webhook token for a user
+   */
+  async regenerateWebhookToken(tenantId: string): Promise<RouteResponse> {
+    const webhookToken = generateWebhookToken();
+    
+    const updated = await db.update(USER_SETTINGS_TABLE, { tenant_id: tenantId }, {
+      webhook_token: webhookToken,
+      updated_at: new Date().toISOString(),
+    });
+
+    const webhookUrl = `${API_URL}/v1/webhooks/${webhookToken}`;
+
+    return {
+      statusCode: 200,
+      body: {
+        ...updated,
+        webhook_url: webhookUrl,
+        message: 'Webhook token regenerated successfully',
+      },
+    };
+  }
+
+  /**
+   * Get webhook URL for a user
+   */
+  async getWebhookUrl(tenantId: string): Promise<RouteResponse> {
+    const settings = await db.get(USER_SETTINGS_TABLE, { tenant_id: tenantId });
+
+    if (!settings) {
+      throw new Error('Settings not found');
+    }
+
+    // Auto-generate webhook_token if missing
+    let webhookToken = settings.webhook_token;
+    if (!webhookToken) {
+      webhookToken = generateWebhookToken();
+      await db.update(USER_SETTINGS_TABLE, { tenant_id: tenantId }, {
+        webhook_token: webhookToken,
+        updated_at: new Date().toISOString(),
+      });
+    }
+
+    const webhookUrl = `${API_URL}/v1/webhooks/${webhookToken}`;
+
+    return {
+      statusCode: 200,
+      body: {
+        webhook_url: webhookUrl,
+        webhook_token: webhookToken,
+      },
     };
   }
 }

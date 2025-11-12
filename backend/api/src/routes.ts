@@ -9,6 +9,7 @@ import { settingsController } from './controllers/settings';
 import { analyticsController } from './controllers/analytics';
 import { billingController } from './controllers/billing';
 import { notificationsController } from './controllers/notifications';
+import { webhooksController } from './controllers/webhooks';
 import { ApiError } from './utils/errors';
 import { logger } from './utils/logger';
 
@@ -62,6 +63,13 @@ export const router = async (
     const jobId = pathSegments[2]; // /v1/jobs/{jobId}/status
     logger.info('[Router] Matched /v1/jobs/:jobId/status route', { jobId, pathSegments });
     return await jobsController.getPublicStatus(jobId);
+  }
+
+  // Public webhook endpoint
+  if (path.match(/^\/v1\/webhooks\/[^/]+$/) && method === 'POST') {
+    const token = pathSegments[2]; // /v1/webhooks/{token}
+    logger.info('[Router] Matched /v1/webhooks/:token route', { token, pathSegments });
+    return await webhooksController.handleWebhook(token, body, event.requestContext.http.sourceIp);
   }
 
   // All admin routes require tenantId
@@ -289,6 +297,14 @@ export const router = async (
 
   if (path === '/admin/settings' && method === 'PUT') {
     return await settingsController.update(tenantId, body);
+  }
+
+  if (path === '/admin/settings/webhook' && method === 'GET') {
+    return await settingsController.getWebhookUrl(tenantId);
+  }
+
+  if (path === '/admin/settings/webhook/regenerate' && method === 'POST') {
+    return await settingsController.regenerateWebhookToken(tenantId);
   }
 
   // Admin routes - Billing
