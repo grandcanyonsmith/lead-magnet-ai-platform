@@ -1,6 +1,7 @@
-import { db } from '../utils/db';
+import { db, normalizeQueryResult } from '../utils/db';
 import { RouteResponse } from '../routes';
 import { ApiError } from '../utils/errors';
+import { logger } from '../utils/logger';
 
 const USAGE_RECORDS_TABLE = process.env.USAGE_RECORDS_TABLE || 'leadmagnet-usage-records';
 
@@ -76,7 +77,7 @@ class BillingController {
     const startDateStr = startDate.toISOString();
     const endDateStr = endDate.toISOString();
 
-    console.log('[Billing] Fetching usage records', {
+    logger.info('[Billing] Fetching usage records', {
       tenantId,
       startDate: startDateStr,
       endDate: endDateStr,
@@ -86,7 +87,7 @@ class BillingController {
     // DynamoDB requires BETWEEN for sort key range queries
     let usageRecords: any[] = [];
     try {
-      const result = await db.query(
+      const usageRecordsResult = await db.query(
         USAGE_RECORDS_TABLE,
         'gsi_tenant_date',
         'tenant_id = :tenant_id AND created_at BETWEEN :start_date AND :end_date',
@@ -96,7 +97,7 @@ class BillingController {
           ':end_date': endDateStr,
         }
       );
-      usageRecords = result.items;
+      usageRecords = normalizeQueryResult(usageRecordsResult);
     } catch (error: any) {
       // If table doesn't exist yet or permissions are missing, return empty results
       if (
@@ -105,7 +106,7 @@ class BillingController {
         error.message?.includes('not found') ||
         error.message?.includes('not authorized')
       ) {
-        console.warn('[Billing] Usage records table not accessible', {
+        logger.warn('[Billing] Usage records table not accessible', {
           table: USAGE_RECORDS_TABLE,
           errorName: error.name,
           message: error.message,
@@ -113,7 +114,7 @@ class BillingController {
         });
         usageRecords = [];
       } else {
-        console.error('[Billing] Error querying usage records', {
+        logger.error('[Billing] Error querying usage records', {
           error: error.message,
           errorName: error.name,
         });
@@ -121,7 +122,7 @@ class BillingController {
       }
     }
 
-    console.log('[Billing] Found usage records', {
+    logger.info('[Billing] Found usage records', {
       tenantId,
       count: usageRecords.length,
     });

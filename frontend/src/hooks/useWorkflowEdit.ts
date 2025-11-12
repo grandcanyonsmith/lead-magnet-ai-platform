@@ -30,7 +30,7 @@ export function useWorkflowEdit() {
   const [formData, setFormData] = useState<WorkflowFormData>({
     workflow_name: '',
     workflow_description: '',
-    ai_model: 'o3-deep-research',
+    ai_model: 'gpt-5',
     ai_instructions: '',
     rewrite_model: 'gpt-5',
     research_enabled: true,
@@ -56,7 +56,7 @@ export function useWorkflowEdit() {
       setFormData({
         workflow_name: workflow.workflow_name || '',
         workflow_description: workflow.workflow_description || '',
-        ai_model: workflow.ai_model || 'o3-deep-research',
+        ai_model: workflow.ai_model || 'gpt-5',
         ai_instructions: workflow.ai_instructions || '',
         rewrite_model: workflow.rewrite_model || 'gpt-5',
         research_enabled: workflow.research_enabled !== undefined ? workflow.research_enabled : true,
@@ -95,7 +95,7 @@ export function useWorkflowEdit() {
           migratedSteps.push({
             step_name: 'Deep Research',
             step_description: 'Generate comprehensive research report',
-            model: workflow.ai_model || 'o3-deep-research',
+            model: workflow.ai_model || 'gpt-5',
             instructions: workflow.ai_instructions,
             step_order: 0,
             tools: ['web_search_preview'],
@@ -117,7 +117,7 @@ export function useWorkflowEdit() {
           migratedSteps.push({
             step_name: 'Deep Research',
             step_description: 'Generate comprehensive research report',
-            model: 'o3-deep-research',
+            model: 'gpt-5',
             instructions: workflow.ai_instructions || 'Generate a comprehensive research report based on the form submission data.',
             step_order: 0,
             tools: ['web_search_preview'],

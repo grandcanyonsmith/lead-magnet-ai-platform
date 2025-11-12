@@ -2,7 +2,7 @@ import { ulid } from 'ulid';
 import { SFNClient, StartExecutionCommand } from '@aws-sdk/client-sfn';
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
 import OpenAI from 'openai';
-import { db } from '../utils/db';
+import { db, normalizeQueryResult } from '../utils/db';
 import { validate, createFormSchema, updateFormSchema, submitFormSchema } from '../utils/validation';
 import { ApiError } from '../utils/errors';
 import { RouteResponse } from '../routes';
@@ -72,7 +72,7 @@ async function storeUsageRecord(
     };
 
     await db.put(USAGE_RECORDS_TABLE, usageRecord);
-    console.log('[Usage Tracking] Usage record stored', {
+    logger.info('[Usage Tracking] Usage record stored', {
       usageId,
       tenantId,
       serviceType,
@@ -82,7 +82,7 @@ async function storeUsageRecord(
       costUsd,
     });
   } catch (error: any) {
-    console.error('[Usage Tracking] Failed to store usage record', {
+    logger.error('[Usage Tracking] Failed to store usage record', {
       error: error.message,
       tenantId,
       serviceType,
@@ -94,7 +94,7 @@ class FormsController {
   async list(tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {
     const limit = queryParams.limit ? parseInt(queryParams.limit) : 50;
 
-    const result = await db.query(
+    const formsResult = await db.query(
       FORMS_TABLE,
       'gsi_tenant_id',
       'tenant_id = :tenant_id',
@@ -102,7 +102,7 @@ class FormsController {
       undefined,
       limit
     );
-    const forms = result.items;
+    const forms = normalizeQueryResult(formsResult);
 
     // Filter out soft-deleted items
     const activeForms = forms.filter((f: any) => !f.deleted_at);
@@ -134,19 +134,18 @@ class FormsController {
   }
 
   async getPublicForm(slug: string): Promise<RouteResponse> {
-    // DEBUG: Log the slug value
-    console.log('getPublicForm called with slug:', slug, 'type:', typeof slug);
+    logger.info('getPublicForm called with slug', { slug, type: typeof slug });
     
     try {
-      const result = await db.query(
+      const formsResult = await db.query(
         FORMS_TABLE,
         'gsi_public_slug',
         'public_slug = :slug',
         { ':slug': slug }
       );
-      const forms = result.items;
+      const forms = normalizeQueryResult(formsResult);
       
-      console.log('Query returned forms:', forms);
+      logger.info('Query returned forms', { count: forms.length });
 
       if (forms.length === 0) {
         throw new ApiError('This form doesn\'t exist or has been removed', 404);
@@ -164,7 +163,7 @@ class FormsController {
         const settings = await db.get(USER_SETTINGS_TABLE, { tenant_id: form.tenant_id });
         logoUrl = settings?.logo_url;
       } catch (error) {
-        console.warn('Failed to fetch user settings for logo:', error);
+        logger.warn('Failed to fetch user settings for logo', { error });
         // Continue without logo if settings fetch fails
       }
 
@@ -200,20 +199,20 @@ class FormsController {
         },
       };
     } catch (error) {
-      console.error('Error in getPublicForm:', error);
+      logger.error('Error in getPublicForm', { error });
       throw error;
     }
   }
 
   async submitForm(slug: string, body: any, sourceIp: string): Promise<RouteResponse> {
     // Get form by slug
-    const result = await db.query(
+    const formsResult = await db.query(
       FORMS_TABLE,
       'gsi_public_slug',
       'public_slug = :slug',
       { ':slug': slug }
     );
-    const forms = result.items;
+    const forms = normalizeQueryResult(formsResult);
 
     if (forms.length === 0) {
       throw new ApiError('This form doesn\'t exist or has been removed', 404);
@@ -228,7 +227,7 @@ class FormsController {
     // Validate submission data
     const { submission_data } = validate(submitFormSchema, body);
 
-    // TODO: Add rate limiting check based on sourceIp and form.rate_limit_per_hour
+    // Note: Rate limiting can be implemented here based on sourceIp and form.rate_limit_per_hour if needed
 
     // Ensure name, email, and phone are present (validation should catch this, but double-check)
     if (!submission_data.name || !submission_data.email || !submission_data.phone) {
@@ -339,13 +338,13 @@ class FormsController {
     const data = validate(createFormSchema, body);
 
     // Enforce 1:1 relationship: Check if workflow already has a form
-    const result1 = await db.query(
+    const existingFormsResult = await db.query(
       FORMS_TABLE,
       'gsi_workflow_id',
       'workflow_id = :workflow_id',
       { ':workflow_id': data.workflow_id }
     );
-    const existingForms = result1.items;
+    const existingForms = normalizeQueryResult(existingFormsResult);
 
     const activeForm = existingForms.find((f: any) => !f.deleted_at);
     if (activeForm) {
@@ -353,13 +352,13 @@ class FormsController {
     }
 
     // Check if slug is unique
-    const result2 = await db.query(
+    const slugCheckResult = await db.query(
       FORMS_TABLE,
       'gsi_public_slug',
       'public_slug = :slug',
       { ':slug': data.public_slug }
     );
-    const slugCheck = result2.items;
+    const slugCheck = normalizeQueryResult(slugCheckResult);
 
     if (slugCheck.length > 0 && !slugCheck[0].deleted_at) {
       throw new ApiError('This form URL is already taken. Please choose a different one', 400);
@@ -409,13 +408,13 @@ class FormsController {
 
     // If updating slug, check uniqueness
     if (data.public_slug && data.public_slug !== existing.public_slug) {
-      const result = await db.query(
+      const existingFormsResult = await db.query(
         FORMS_TABLE,
         'gsi_public_slug',
         'public_slug = :slug',
         { ':slug': data.public_slug }
       );
-      const existingForms = result.items;
+      const existingForms = normalizeQueryResult(existingFormsResult);
 
       if (existingForms.length > 0) {
         throw new ApiError('This form URL is already taken. Please choose a different one', 400);
@@ -487,7 +486,7 @@ class FormsController {
       throw new ApiError('CSS prompt is required', 400);
     }
 
-    console.log('[Form CSS Generation] Starting CSS generation', {
+    logger.info('[Form CSS Generation] Starting CSS generation', {
       tenantId,
       model,
       fieldCount: form_fields_schema.fields.length,
@@ -497,7 +496,7 @@ class FormsController {
 
     try {
       const openai = await getOpenAIClient();
-      console.log('[Form CSS Generation] OpenAI client initialized');
+      logger.info('[Form CSS Generation] OpenAI client initialized');
 
       const fieldsDescription = form_fields_schema.fields.map((f: any) => 
         `- ${f.field_type}: ${f.label} (${f.required ? 'required' : 'optional'})`
@@ -517,7 +516,7 @@ Requirements:
 
 Return ONLY the CSS code, no markdown formatting, no explanations.`;
 
-      console.log('[Form CSS Generation] Calling OpenAI for CSS generation...', {
+      logger.info('[Form CSS Generation] Calling OpenAI for CSS generation', {
         model,
         promptLength: prompt.length,
       });
@@ -539,7 +538,7 @@ Return ONLY the CSS code, no markdown formatting, no explanations.`;
 
       const cssDuration = Date.now() - cssStartTime;
       const cssModelUsed = (completion as any).model || model;
-      console.log('[Form CSS Generation] CSS generation completed', {
+      logger.info('[Form CSS Generation] CSS generation completed', {
         duration: `${cssDuration}ms`,
         tokensUsed: completion.usage?.total_tokens,
         model: cssModelUsed,
@@ -568,7 +567,7 @@ Return ONLY the CSS code, no markdown formatting, no explanations.`;
       }
       
       const cssContent = completion.output_text;
-      console.log('[Form CSS Generation] Raw CSS received', {
+      logger.info('[Form CSS Generation] Raw CSS received', {
         cssLength: cssContent.length,
         firstChars: cssContent.substring(0, 100),
       });
@@ -577,14 +576,14 @@ Return ONLY the CSS code, no markdown formatting, no explanations.`;
       let cleanedCss = cssContent.trim();
       if (cleanedCss.startsWith('```css')) {
         cleanedCss = cleanedCss.replace(/^```css\s*/i, '').replace(/\s*```$/i, '');
-        console.log('[Form CSS Generation] Removed ```css markers');
+        logger.info('[Form CSS Generation] Removed ```css markers');
       } else if (cleanedCss.startsWith('```')) {
         cleanedCss = cleanedCss.replace(/^```\s*/i, '').replace(/\s*```$/i, '');
-        console.log('[Form CSS Generation] Removed ``` markers');
+        logger.info('[Form CSS Generation] Removed ``` markers');
       }
 
       const totalDuration = Date.now() - cssStartTime;
-      console.log('[Form CSS Generation] Success!', {
+      logger.info('[Form CSS Generation] Success!', {
         tenantId,
         cssLength: cleanedCss.length,
         totalDuration: `${totalDuration}ms`,
@@ -598,7 +597,7 @@ Return ONLY the CSS code, no markdown formatting, no explanations.`;
         },
       };
     } catch (error: any) {
-      console.error('[Form CSS Generation] Error occurred', {
+      logger.error('[Form CSS Generation] Error occurred', {
         tenantId,
         errorMessage: error.message,
         errorName: error.name,
@@ -623,7 +622,7 @@ Return ONLY the CSS code, no markdown formatting, no explanations.`;
       throw new ApiError('CSS prompt is required', 400);
     }
 
-    console.log('[Form CSS Refinement] Starting refinement', {
+    logger.info('[Form CSS Refinement] Starting refinement', {
       tenantId,
       model,
       currentCssLength: current_css.length,
@@ -633,7 +632,7 @@ Return ONLY the CSS code, no markdown formatting, no explanations.`;
 
     try {
       const openai = await getOpenAIClient();
-      console.log('[Form CSS Refinement] OpenAI client initialized');
+      logger.info('[Form CSS Refinement] OpenAI client initialized');
 
       const prompt = `You are an expert CSS designer. Modify the following CSS based on these instructions: "${css_prompt}"
 
@@ -648,7 +647,7 @@ Requirements:
 
 Return ONLY the modified CSS code, no markdown formatting, no explanations.`;
 
-      console.log('[Form CSS Refinement] Calling OpenAI for refinement...', {
+      logger.info('[Form CSS Refinement] Calling OpenAI for refinement', {
         model,
         promptLength: prompt.length,
       });
@@ -670,7 +669,7 @@ Return ONLY the modified CSS code, no markdown formatting, no explanations.`;
 
       const refineDuration = Date.now() - refineStartTime;
       const refineCssModel = (completion as any).model || model;
-      console.log('[Form CSS Refinement] Refinement completed', {
+      logger.info('[Form CSS Refinement] Refinement completed', {
         duration: `${refineDuration}ms`,
         tokensUsed: completion.usage?.total_tokens,
         model: refineCssModel,
@@ -699,7 +698,7 @@ Return ONLY the modified CSS code, no markdown formatting, no explanations.`;
       }
       
       const cssContent = completion.output_text;
-      console.log('[Form CSS Refinement] Refined CSS received', {
+      logger.info('[Form CSS Refinement] Refined CSS received', {
         cssLength: cssContent.length,
         firstChars: cssContent.substring(0, 100),
       });
@@ -708,14 +707,14 @@ Return ONLY the modified CSS code, no markdown formatting, no explanations.`;
       let cleanedCss = cssContent.trim();
       if (cleanedCss.startsWith('```css')) {
         cleanedCss = cleanedCss.replace(/^```css\s*/i, '').replace(/\s*```$/i, '');
-        console.log('[Form CSS Refinement] Removed ```css markers');
+        logger.info('[Form CSS Refinement] Removed ```css markers');
       } else if (cleanedCss.startsWith('```')) {
         cleanedCss = cleanedCss.replace(/^```\s*/i, '').replace(/\s*```$/i, '');
-        console.log('[Form CSS Refinement] Removed ``` markers');
+        logger.info('[Form CSS Refinement] Removed ``` markers');
       }
 
       const totalDuration = Date.now() - refineStartTime;
-      console.log('[Form CSS Refinement] Success!', {
+      logger.info('[Form CSS Refinement] Success!', {
         tenantId,
         cssLength: cleanedCss.length,
         totalDuration: `${totalDuration}ms`,
@@ -729,7 +728,7 @@ Return ONLY the modified CSS code, no markdown formatting, no explanations.`;
         },
       };
     } catch (error: any) {
-      console.error('[Form CSS Refinement] Error occurred', {
+      logger.error('[Form CSS Refinement] Error occurred', {
         tenantId,
         errorMessage: error.message,
         errorName: error.name,

@@ -12,11 +12,6 @@ Documentation of the comprehensive refactoring of the `ai_service.py` module to 
 
 ### 1. Extracted Helper Methods
 
-#### `_is_o3_model(self, model: str) -> bool`
-- **Purpose**: Check if a model is an o3 model
-- **Location**: Lines 76-79
-- **Impact**: Eliminates duplicate model checking logic
-
 #### `_validate_and_filter_tools(self, tools: Optional[list], tool_choice: str) -> Tuple[List[Dict], str]`
 - **Purpose**: Consolidates all tool validation and filtering logic
 - **Location**: Lines 81-150
@@ -32,13 +27,12 @@ Documentation of the comprehensive refactoring of the `ai_service.py` module to 
 - **Location**: Lines 152-160
 - **Impact**: Centralizes input text construction logic
 
-#### `_build_api_params(self, model: str, instructions: str, input_text: str, tools: List[Dict], tool_choice: str, has_computer_use: bool, is_o3_model: bool, reasoning_level: Optional[str] = "medium") -> Dict`
+#### `_build_api_params(self, model: str, instructions: str, input_text: str, tools: List[Dict], tool_choice: str, has_computer_use: bool, reasoning_level: Optional[str] = None) -> Dict`
 - **Purpose**: Builds the parameters dictionary for the OpenAI API call
 - **Location**: Lines 176-270
 - **Key Features**:
   - Handles truncation for computer_use_preview
   - Sets tool_choice appropriately
-  - Adds reasoning_level for o3 models
   - Multiple safety checks to prevent invalid configurations
 - **Impact**: Consolidates parameter building from both main path and retry path
 
@@ -52,7 +46,7 @@ Documentation of the comprehensive refactoring of the `ai_service.py` module to 
 - **Location**: Lines 400-495
 - **Impact**: Centralizes response processing logic
 
-#### `_handle_openai_error(self, error: Exception, model: str, tools: List[Dict], tool_choice: str, instructions: str, context: str, is_o3_model: bool, full_context: str, previous_context: str) -> Tuple[str, Dict, Dict, Dict]`
+#### `_handle_openai_error(self, error: Exception, model: str, tools: List[Dict], tool_choice: str, instructions: str, context: str, full_context: str, previous_context: str) -> Tuple[str, Dict, Dict, Dict]`
 - **Purpose**: Centralizes error handling with retry logic
 - **Location**: Lines 497-583
 - **Key Features**:

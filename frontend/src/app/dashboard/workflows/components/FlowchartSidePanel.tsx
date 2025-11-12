@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { FiX } from 'react-icons/fi'
 import WorkflowStepEditor, { WorkflowStep } from './WorkflowStepEditor'
 
@@ -32,9 +32,11 @@ export default function FlowchartSidePanel({
   workflowId,
 }: FlowchartSidePanelProps) {
   const [localStep, setLocalStep] = useState<WorkflowStep | null>(step)
+  const latestStepRef = useRef<WorkflowStep | null>(step)
 
   useEffect(() => {
     setLocalStep(step)
+    latestStepRef.current = step
   }, [step])
 
   if (!isOpen || !step || index === null) {
@@ -43,7 +45,18 @@ export default function FlowchartSidePanel({
 
   const handleChange = (idx: number, updatedStep: WorkflowStep) => {
     setLocalStep(updatedStep)
+    latestStepRef.current = updatedStep
     onChange(idx, updatedStep)
+  }
+
+  const handleClose = () => {
+    // Ensure any pending changes are saved before closing
+    // Use ref to get the latest state, as localStep might be stale
+    const latestStep = latestStepRef.current
+    if (latestStep && index !== null) {
+      onChange(index, latestStep)
+    }
+    onClose()
   }
 
   const handleDelete = () => {
@@ -56,7 +69,7 @@ export default function FlowchartSidePanel({
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm transition-opacity" onClick={onClose} />
+      <div className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm transition-opacity" onClick={handleClose} />
 
       {/* Side Panel */}
       <div
@@ -72,7 +85,7 @@ export default function FlowchartSidePanel({
               <p className="mt-1 text-sm text-slate-500">{step.step_description || 'Configure what this step should accomplish.'}</p>
             </div>
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="rounded-full border border-slate-200 bg-white p-2 text-slate-400 shadow-sm transition hover:border-primary-200 hover:text-primary-600"
               aria-label="Close panel"
             >
@@ -84,7 +97,7 @@ export default function FlowchartSidePanel({
             <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
               <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">Model</div>
               <div className="mt-1 text-sm font-semibold text-slate-700">
-                {step.model === 'o3-deep-research' ? 'O3 Deep Research' : step.model === 'computer-use-preview' ? 'Computer Use Preview' : step.model.replace('gpt-', 'GPT-').replace('turbo', 'Turbo')}
+                {step.model === 'computer-use-preview' ? 'Computer Use Preview' : step.model.replace('gpt-', 'GPT-').replace('turbo', 'Turbo')}
               </div>
             </div>
             <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">

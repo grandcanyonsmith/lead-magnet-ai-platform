@@ -100,34 +100,27 @@ export default function JobDetailClient() {
   // Merge workflow steps with execution steps to show all steps
   const getMergedSteps = () => {
     const executionSteps = job.execution_steps || []
+    const workflowSteps = workflow?.steps || []
     
-    console.log('[Job Detail] Raw data:', {
-      jobId: job.job_id,
-      jobStatus: job.status,
+    // Debug logging to track step counts
+    console.log('[getMergedSteps] Debug info:', {
       executionStepsCount: executionSteps.length,
-      workflowStepsCount: workflow?.steps?.length || 0,
-      executionSteps: executionSteps.map((s: any) => ({
-        step_order: s.step_order,
-        step_name: s.step_name,
-        hasOutput: !!s.output,
-      })),
-      workflowSteps: workflow?.steps?.map((s: any, i: number) => ({
-        index: i,
-        step_name: s.step_name,
-        step_description: s.step_description,
-        model: s.model,
-        instructions: s.instructions?.substring(0, 50) + '...',
-      })) || [],
+      workflowStepsCount: workflowSteps.length,
+      executionSteps: executionSteps.map((s: any) => ({ step_order: s.step_order, step_name: s.step_name, step_type: s.step_type })),
+      workflowSteps: workflowSteps.map((s: any, i: number) => ({ index: i, step_name: s.step_name, step_order: s.step_order })),
+      jobStatus: job.status,
     })
     
-    if (!workflow?.steps || !Array.isArray(workflow.steps) || workflow.steps.length === 0) {
+    if (!workflowSteps || !Array.isArray(workflowSteps) || workflowSteps.length === 0) {
       // Fallback to execution steps if no workflow steps available
-      return executionSteps.map((step: any) => ({
+      const fallbackSteps = executionSteps.map((step: any) => ({
         ...step,
         _status: step.output !== null && step.output !== undefined && step.output !== '' 
           ? 'completed' as const 
           : 'pending' as const
       }))
+      console.log('[getMergedSteps] Using fallback (no workflow steps), returning:', fallbackSteps.length, 'steps')
+      return fallbackSteps
     }
 
     const executionStepsMap = new Map<number, any>()
@@ -136,7 +129,7 @@ export default function JobDetailClient() {
     // Create a map of execution steps by step_order
     executionSteps.forEach((execStep: any) => {
       const order = execStep.step_order
-      if (order !== undefined) {
+      if (order !== undefined && order !== null) {
         executionStepsMap.set(order, execStep)
       }
     })
@@ -144,7 +137,7 @@ export default function JobDetailClient() {
     // First, add ALL execution steps to the merged map
     executionSteps.forEach((execStep: any) => {
       const order = execStep.step_order
-      if (order !== undefined) {
+      if (order !== undefined && order !== null) {
         mergedStepsMap.set(order, {
           ...execStep,
           _status: execStep.output !== null && execStep.output !== undefined && execStep.output !== '' 
@@ -154,8 +147,8 @@ export default function JobDetailClient() {
       }
     })
 
-    // Then, enrich with workflow step metadata where available
-    workflow.steps.forEach((workflowStep: any, index: number) => {
+    // Then, ensure ALL workflow steps are included (both executed and pending)
+    workflowSteps.forEach((workflowStep: any, index: number) => {
       // Workflow steps are 0-indexed, execution steps for workflow steps are 1-indexed
       const executionStepOrder = index + 1
       const existingStep = mergedStepsMap.get(executionStepOrder)
@@ -173,13 +166,16 @@ export default function JobDetailClient() {
       } else {
         // Step hasn't been executed yet - create pending step
         const isJobProcessing = job.status === 'processing'
-        // Count how many steps have been executed
-        const executedStepsCount = executionSteps.filter((s: any) => s.step_order > 0).length
-        const isCurrentStep = isJobProcessing && executionStepOrder === executedStepsCount + 1
+        // Count how many workflow steps have been executed (only count ai_generation steps with step_order matching workflow step indices)
+        const executedWorkflowStepsCount = executionSteps.filter((s: any) => 
+          s.step_order > 0 && 
+          s.step_order <= workflowSteps.length &&
+          (s.step_type === 'ai_generation' || s.step_type === 'workflow_step')
+        ).length
+        const isCurrentStep = isJobProcessing && executionStepOrder === executedWorkflowStepsCount + 1
         
-        const pendingStep = {
+        mergedStepsMap.set(executionStepOrder, {
           step_name: workflowStep.step_name,
-          step_description: workflowStep.step_description,
           step_order: executionStepOrder,
           step_type: 'workflow_step',
           model: workflowStep.model,
@@ -192,24 +188,32 @@ export default function JobDetailClient() {
           },
           output: null,
           _status: isCurrentStep ? 'in_progress' as const : 'pending' as const,
+        })
+      }
+    })
+
+    // Also include any execution steps that don't map to workflow steps (like form_submission, html_generation, final_output)
+    // Only add if they're not already in the map (to avoid overwriting enriched workflow steps)
+    executionSteps.forEach((execStep: any) => {
+      const order = execStep.step_order
+      if (order !== undefined && order !== null && !mergedStepsMap.has(order)) {
+        // If it's not a workflow step (step_order > workflowSteps.length or step_order === 0), ensure it's included
+        if (order === 0 || order > workflowSteps.length || 
+            (execStep.step_type !== 'ai_generation' && execStep.step_type !== 'workflow_step')) {
+          mergedStepsMap.set(order, {
+            ...execStep,
+            _status: execStep.output !== null && execStep.output !== undefined && execStep.output !== '' 
+              ? 'completed' as const 
+              : 'pending' as const
+          })
         }
-        
-        console.log(`[Job Detail] Creating pending step ${executionStepOrder}:`, pendingStep)
-        mergedStepsMap.set(executionStepOrder, pendingStep)
       }
     })
 
     // Convert map to array and sort by step_order
     const mergedSteps = Array.from(mergedStepsMap.values()).sort((a: any, b: any) => (a.step_order || 0) - (b.step_order || 0))
-    
-    console.log('[Job Detail] Final merged steps:', mergedSteps.map((s: any) => ({
-      step_order: s.step_order,
-      step_name: s.step_name,
-      _status: s._status,
-      hasInstructions: !!s.instructions,
-      hasDescription: !!s.step_description,
-    })))
-    
+    console.log('[getMergedSteps] Final merged steps count:', mergedSteps.length, 'steps')
+    console.log('[getMergedSteps] Final merged steps:', mergedSteps.map((s: any) => ({ step_order: s.step_order, step_name: s.step_name, step_type: s.step_type, _status: s._status })))
     return mergedSteps
   }
 
@@ -323,6 +327,8 @@ export default function JobDetailClient() {
         onClose={handleCancelEdit}
         onSave={handleSaveStep}
         jobStatus={job.status}
+        allSteps={workflow?.steps || []}
+        currentStepIndex={editingStepIndex ?? undefined}
       />
 
       {/* Execution Steps */}

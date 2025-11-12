@@ -1,4 +1,4 @@
-import { db } from '../utils/db';
+import { db, normalizeQueryResult } from '../utils/db';
 import { ApiError } from '../utils/errors';
 import { RouteResponse } from '../routes';
 
@@ -9,9 +9,9 @@ class SubmissionsController {
     const formId = queryParams.form_id;
     const limit = queryParams.limit ? parseInt(queryParams.limit) : 50;
 
-    let submissions;
+    let submissionsResult;
     if (formId) {
-      const result = await db.query(
+      submissionsResult = await db.query(
         SUBMISSIONS_TABLE,
         'gsi_form_created',
         'form_id = :form_id',
@@ -19,9 +19,8 @@ class SubmissionsController {
         undefined,
         limit
       );
-      submissions = result.items;
     } else {
-      const result = await db.query(
+      submissionsResult = await db.query(
         SUBMISSIONS_TABLE,
         'gsi_tenant_created',
         'tenant_id = :tenant_id',
@@ -29,8 +28,8 @@ class SubmissionsController {
         undefined,
         limit
       );
-      submissions = result.items;
     }
+    const submissions = normalizeQueryResult(submissionsResult);
 
     return {
       statusCode: 200,
