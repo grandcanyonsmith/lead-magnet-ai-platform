@@ -151,6 +151,7 @@ export default function EditWorkflowPage() {
             template_description: templateData.template_description.trim() || undefined,
             html_content: templateData.html_content.trim(),
             placeholder_tags: placeholders.length > 0 ? placeholders : undefined,
+            is_published: templateData.is_published,
           })
           finalTemplateId = templateId
         } else {
@@ -160,6 +161,7 @@ export default function EditWorkflowPage() {
             template_description: templateData.template_description.trim() || '',
             html_content: templateData.html_content.trim(),
             placeholder_tags: placeholders.length > 0 ? placeholders : undefined,
+            is_published: templateData.is_published,
           })
           finalTemplateId = template.template_id
           setTemplateId(template.template_id)
