@@ -455,7 +455,6 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
       };
       // GPT-5 only supports default temperature (1), don't set custom temperature
       if (model !== 'gpt-5') {
-        completionParams.temperature = 0.7;
       }
       const completion = await callResponsesWithTimeout(
         () => openai.responses.create(completionParams),

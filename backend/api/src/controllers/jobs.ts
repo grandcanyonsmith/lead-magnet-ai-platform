@@ -4,36 +4,34 @@ import { RouteResponse } from '../routes';
 import { artifactsController } from './artifacts';
 import { ulid } from 'ulid';
 import { SFNClient, StartExecutionCommand } from '@aws-sdk/client-sfn';
-import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { logger } from '../utils/logger';
+import { ArtifactUrlService } from '../services/artifactUrlService';
 
 const JOBS_TABLE = process.env.JOBS_TABLE!;
 const SUBMISSIONS_TABLE = process.env.SUBMISSIONS_TABLE!;
 const STEP_FUNCTIONS_ARN = process.env.STEP_FUNCTIONS_ARN!;
-const ARTIFACTS_BUCKET = process.env.ARTIFACTS_BUCKET!;
 
 const sfnClient = STEP_FUNCTIONS_ARN ? new SFNClient({ region: process.env.AWS_REGION || 'us-east-1' }) : null;
-const s3Client = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
 
 /**
- * Download execution_steps from S3 if stored there
+ * Generate a public URL for execution_steps stored in S3.
+ * 
+ * Execution steps are always stored in S3 (never in DynamoDB) to ensure
+ * complete data storage without size limitations.
+ * 
+ * Uses CloudFront URL (non-expiring) if available, otherwise falls back to
+ * a long-lived presigned URL. This ensures execution steps are always accessible.
+ * 
+ * @param s3Key - S3 key for the execution_steps JSON file
+ * @returns Public URL string or null if generation fails
  */
-async function loadExecutionStepsFromS3(s3Key: string): Promise<any[] | null> {
+async function generateExecutionStepsUrl(s3Key: string): Promise<string | null> {
   try {
-    const command = new GetObjectCommand({
-      Bucket: ARTIFACTS_BUCKET,
-      Key: s3Key,
-    });
-    
-    const response = await s3Client.send(command);
-    const body = await response.Body?.transformToString();
-    if (!body) {
-      return null;
-    }
-    
-    return JSON.parse(body);
+    // Use ArtifactUrlService to get CloudFront URL (non-expiring) or long-lived presigned URL
+    const { url } = await ArtifactUrlService.generateUrl(s3Key);
+    return url;
   } catch (error) {
-    logger.error(`Error loading execution_steps from S3: ${s3Key}`, error);
+    logger.error(`Error generating URL for execution_steps: ${s3Key}`, error);
     return null;
   }
 }
@@ -134,30 +132,23 @@ class JobsController {
       throw new ApiError('You don\'t have permission to access this lead magnet', 403);
     }
 
-    // Load execution_steps from S3 if stored there
-    if (job.execution_steps_s3_key && !job.execution_steps) {
-      const executionSteps = await loadExecutionStepsFromS3(job.execution_steps_s3_key);
-      if (executionSteps) {
-        job.execution_steps = executionSteps;
-        logger.info(`Loaded execution_steps from S3 for job ${jobId}`, {
+    // Execution steps are ALWAYS stored in S3 (never in DynamoDB).
+    // Generate public URL for execution_steps so frontend can fetch them directly from S3.
+    // Uses CloudFront URL (non-expiring) if available, otherwise falls back to presigned URL.
+    if (job.execution_steps_s3_key) {
+      const executionStepsUrl = await generateExecutionStepsUrl(job.execution_steps_s3_key);
+      if (executionStepsUrl) {
+        job.execution_steps_s3_url = executionStepsUrl;
+        const isCloudFront = !ArtifactUrlService.isPresignedUrl(executionStepsUrl);
+        logger.info(`Generated ${isCloudFront ? 'CloudFront' : 'presigned'} URL for execution_steps for job ${jobId}`, {
           s3Key: job.execution_steps_s3_key,
-          stepsCount: Array.isArray(executionSteps) ? executionSteps.length : 0,
+          isCloudFront,
         });
       } else {
-        logger.warn(`Failed to load execution_steps from S3 for job ${jobId}`, {
+        logger.warn(`Failed to generate URL for execution_steps for job ${jobId}`, {
           s3Key: job.execution_steps_s3_key,
         });
       }
-    }
-    
-    // Log execution_steps count for debugging
-    if (job.execution_steps) {
-      logger.debug(`Job ${jobId} execution_steps count`, {
-        stepsCount: Array.isArray(job.execution_steps) ? job.execution_steps.length : 0,
-        stepOrders: Array.isArray(job.execution_steps) 
-          ? job.execution_steps.map((s: any) => s.step_order).filter((o: any) => o !== undefined)
-          : [],
-      });
     }
 
     // Refresh output_url from artifacts if job is completed and has artifacts

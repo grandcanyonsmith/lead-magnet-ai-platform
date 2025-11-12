@@ -94,17 +94,22 @@ class ExecutionStepManager:
         """
         Create execution step for HTML generation.
         
+        Note: Execution steps are ALWAYS stored in S3 (never in DynamoDB) to ensure
+        complete data storage without size limitations. The full HTML output is stored
+        without truncation. The db_service.update_job() method automatically stores
+        all execution steps in S3.
+        
         Args:
-            model: Model used
+            model: Model used for HTML generation
             html_request_details: Request details dictionary
-            html_response_details: Response details dictionary
+            html_response_details: Response details dictionary (contains full HTML output)
             html_usage_info: Usage information dictionary
             html_start_time: Start time of HTML generation
             html_duration: Duration in milliseconds
             step_order: Order of the step
             
         Returns:
-            Execution step dictionary
+            Execution step dictionary with full HTML output (no truncation)
         """
         return {
             'step_name': 'HTML Generation',
@@ -112,7 +117,7 @@ class ExecutionStepManager:
             'step_type': 'html_generation',
             'model': model,
             'input': html_request_details,
-            'output': html_response_details.get('output_text', '')[:5000],  # Truncate for storage
+            'output': html_response_details.get('output_text', ''),  # Full output - always stored in S3
             'usage_info': convert_floats_to_decimal(html_usage_info),
             'timestamp': html_start_time.isoformat(),
             'duration_ms': int(html_duration),

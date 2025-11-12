@@ -93,14 +93,14 @@ class S3Service:
                     'cloudfront_domain': self.cloudfront_domain
                 })
             else:
-                # Generate presigned URL (valid for 1 year to prevent expiration issues)
-                # Presigned URLs work regardless of ACL settings
-                # Note: API will refresh these URLs on access, but longer expiration provides better UX
-                logger.debug(f"[S3] Generating presigned URL", extra={'key': key, 'expires_in': 31536000})
+                # Generate presigned URL as fallback (max 7 days per AWS limits)
+                # Note: CloudFront URLs should be preferred as they don't expire
+                # Presigned URLs work regardless of ACL settings but will expire
+                logger.debug(f"[S3] Generating presigned URL", extra={'key': key, 'expires_in': 604800})
                 public_url = self.s3_client.generate_presigned_url(
                     'get_object',
                     Params={'Bucket': self.bucket_name, 'Key': key},
-                    ExpiresIn=31536000  # 1 year (31536000 seconds)
+                    ExpiresIn=604800  # Maximum allowed: 7 days (604800 seconds)
                 )
                 if public:
                     logger.warning(f"[S3] CloudFront domain not configured, using presigned URL instead", extra={
@@ -166,11 +166,12 @@ class S3Service:
                 public_url = f"https://{self.cloudfront_domain}/{key}"
                 logger.info(f"Using CloudFront URL for public image: {public_url}")
             else:
-                # Generate presigned URL (valid for 1 year)
+                # Generate presigned URL as fallback (max 7 days per AWS limits)
+                # Note: CloudFront URLs should be preferred as they don't expire
                 public_url = self.s3_client.generate_presigned_url(
                     'get_object',
                     Params={'Bucket': self.bucket_name, 'Key': key},
-                    ExpiresIn=31536000  # 1 year
+                    ExpiresIn=604800  # Maximum allowed: 7 days (604800 seconds)
                 )
                 if public:
                     logger.warning(f"CloudFront domain not configured, using presigned URL for image")

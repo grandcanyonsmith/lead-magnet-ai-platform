@@ -269,7 +269,16 @@ class FormsController {
     // Update submission with job_id
     await db.update(SUBMISSIONS_TABLE, { submission_id: submissionId }, { job_id: jobId });
 
-    // Start Step Functions execution
+    // Execution Path Selection:
+    // The platform supports two execution paths:
+    // 1. Step Functions (Production): AWS Step Functions orchestrates workflow execution
+    //    - Used when STEP_FUNCTIONS_ARN is set and not in local/dev mode
+    //    - Provides automatic retry, error handling, and state management
+    // 2. Direct Processing (Local): Lambda function processes jobs directly
+    //    - Used when IS_LOCAL=true OR NODE_ENV=development OR STEP_FUNCTIONS_ARN not set
+    //    - Faster iteration and easier debugging for local development
+    //
+    // See docs/EXECUTION_PATHS.md for detailed explanation.
     try {
       // Check if we're in local development - process job directly
       if (process.env.IS_LOCAL === 'true' || process.env.NODE_ENV === 'development' || !STEP_FUNCTIONS_ARN) {

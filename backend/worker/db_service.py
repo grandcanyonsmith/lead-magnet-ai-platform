@@ -14,10 +14,9 @@ from ulid import new as ulid
 
 logger = logging.getLogger(__name__)
 
-# DynamoDB item size limit is 400KB
-# We'll use 300KB as a safe threshold to leave room for other fields in the item
-# This accounts for other job fields like status, timestamps, artifacts, etc.
-MAX_DYNAMODB_ITEM_SIZE = 300 * 1024  # 300KB in bytes
+# Note: Execution steps are always stored in S3 (never in DynamoDB) to ensure
+# complete data storage without size limitations. The MAX_DYNAMODB_ITEM_SIZE
+# constant is kept for reference but is no longer used for execution steps.
 
 
 class DynamoDBService:
@@ -71,9 +70,12 @@ class DynamoDBService:
         """
         Get job by ID.
         
+        Note: Execution steps are stored in S3, not DynamoDB. If s3_service is provided
+        and execution_steps_s3_key exists, execution_steps will be loaded from S3.
+        
         Args:
             job_id: Job ID
-            s3_service: Optional S3Service instance to load execution_steps from S3 if stored there
+            s3_service: Optional S3Service instance to load execution_steps from S3
         """
         logger.debug(f"[DynamoDB] Getting job", extra={'job_id': job_id})
         try:
@@ -147,13 +149,14 @@ class DynamoDBService:
         """
         Update job with given fields.
         
-        If execution_steps is too large (>300KB), it will be stored in S3
-        and only the S3 key will be stored in DynamoDB.
+        Execution steps are ALWAYS stored in S3 (never in DynamoDB) to ensure
+        complete data storage without size limitations. Only the S3 key reference
+        is stored in DynamoDB.
         
         Args:
             job_id: Job ID
             updates: Dictionary of fields to update
-            s3_service: Optional S3Service instance to store large execution_steps in S3
+            s3_service: Required S3Service instance to store execution_steps in S3
         """
         logger.debug(f"[DynamoDB] Updating job", extra={
             'job_id': job_id,
@@ -162,59 +165,43 @@ class DynamoDBService:
         })
         
         try:
-            execution_steps_stored_in_s3 = False
-            
-            # Check if execution_steps is in updates and if it's too large
-            if 'execution_steps' in updates and s3_service:
-                execution_steps = updates['execution_steps']
-                estimated_size = self._estimate_dynamodb_size(execution_steps)
+            # Always store execution_steps in S3 (simplified approach - single source of truth)
+            if 'execution_steps' in updates:
+                if not s3_service:
+                    raise ValueError("s3_service is required when updating execution_steps")
                 
-                logger.debug(f"[DynamoDB] Checking execution_steps size", extra={
+                execution_steps = updates['execution_steps']
+                
+                logger.debug(f"[DynamoDB] Storing execution_steps in S3", extra={
                     'job_id': job_id,
-                    'estimated_size_bytes': estimated_size,
-                    'max_size_bytes': MAX_DYNAMODB_ITEM_SIZE
+                    'steps_count': len(execution_steps) if isinstance(execution_steps, list) else 0
                 })
                 
-                if estimated_size > MAX_DYNAMODB_ITEM_SIZE:
-                    logger.info(f"[DynamoDB] execution_steps too large, storing in S3", extra={
-                        'job_id': job_id,
-                        'estimated_size_bytes': estimated_size,
-                        'max_size_bytes': MAX_DYNAMODB_ITEM_SIZE
-                    })
-                    # Store in S3
-                    s3_key = f"jobs/{job_id}/execution_steps.json"
-                    execution_steps_json = json.dumps(execution_steps, default=str)
-                    s3_service.upload_artifact(s3_key, execution_steps_json, content_type='application/json', public=False)
-                    
-                    # Replace execution_steps with S3 key reference
-                    updates['execution_steps_s3_key'] = s3_key
-                    # Remove execution_steps from updates to avoid storing it in DynamoDB
-                    del updates['execution_steps']
-                    execution_steps_stored_in_s3 = True
-                    logger.info(f"[DynamoDB] Stored execution_steps in S3", extra={
-                        'job_id': job_id,
-                        's3_key': s3_key,
-                        'steps_count': len(execution_steps)
-                    })
-            
-            # If we're storing execution_steps directly (it's in updates and wasn't moved to S3),
-            # we need to remove any existing execution_steps_s3_key from DynamoDB
-            if 'execution_steps' in updates and not execution_steps_stored_in_s3:
-                # Mark execution_steps_s3_key for removal from DynamoDB
-                # We'll handle this in the update expression
-                if 'execution_steps_s3_key' not in updates:
-                    updates['execution_steps_s3_key'] = None  # Mark for removal
+                # Always store in S3 - single source of truth
+                s3_key = f"jobs/{job_id}/execution_steps.json"
+                execution_steps_json = json.dumps(execution_steps, default=str)
+                s3_service.upload_artifact(s3_key, execution_steps_json, content_type='application/json', public=True)  # Public so URLs never expire
+                
+                # Store S3 key reference in DynamoDB, remove execution_steps from updates
+                updates['execution_steps_s3_key'] = s3_key
+                del updates['execution_steps']
+                
+                logger.info(f"[DynamoDB] Stored execution_steps in S3", extra={
+                    'job_id': job_id,
+                    's3_key': s3_key,
+                    'steps_count': len(execution_steps) if isinstance(execution_steps, list) else 0
+                })
             
             if not updates:
                 logger.debug(f"[DynamoDB] No updates to apply", extra={'job_id': job_id})
                 return
             
-            # Build update expression, handling removal of execution_steps_s3_key if needed
+            # Build update expression
             set_updates = {}
             remove_attributes = []
             
             for key, value in updates.items():
-                if value is None and key == 'execution_steps_s3_key':
+                if value is None:
                     # Remove this attribute from DynamoDB
                     remove_attributes.append(key)
                 else:
