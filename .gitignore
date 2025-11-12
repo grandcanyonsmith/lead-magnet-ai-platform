@@ -33,21 +33,15 @@ __pycache__/
 venv/
 ENV/
 env/
-# Python package metadata
 *.dist-info/
 *.egg-info/
-# Installed Python packages (but keep source files)
+
+# Python worker - ignore installed packages but keep source
 backend/worker/*/
-backend/worker/six.py
-backend/worker/typing_extensions.py
-!backend/worker/*.py
-!backend/worker/requirements.txt
-!backend/worker/Dockerfile
-!backend/worker/lambda_handler.py
-!backend/worker/worker.py
-!backend/worker/*.py
 !backend/worker/services/
+!backend/worker/services/**
 !backend/worker/utils/
+!backend/worker/utils/**
 
 # IDE
 .vscode/
@@ -80,24 +74,21 @@ coverage/
 # Docker
 docker-compose.override.yml
 
+# Lambda packages
 *.zip
 lambda-package/
 backend/api/package/
 backend/api/bundle/
 
-# Compiled TypeScript/JavaScript files
-# Infrastructure compiled outputs
+# Compiled TypeScript outputs
 infrastructure/lib/*.js
 infrastructure/lib/*.d.ts
 infrastructure/bin/*.js
 infrastructure/bin/*.d.ts
-
-# Backend API compiled outputs
 backend/api/dist/
 backend/api/index.js
-backend/api/*.zip
 
-# Frontend build outputs
+# Frontend
 frontend/out/
 frontend/.next/
 
