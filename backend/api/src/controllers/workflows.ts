@@ -383,7 +383,35 @@ class WorkflowsController {
       throw new ApiError('You don\'t have permission to access this lead magnet', 403);
     }
 
-    const data = validate(updateWorkflowSchema, body) as any;
+    // Normalize steps BEFORE validation to clean up dependencies
+    // This prevents validation errors from invalid dependency indices
+    let normalizedBody = { ...body };
+    if (normalizedBody.steps && Array.isArray(normalizedBody.steps) && normalizedBody.steps.length > 0) {
+      // Clean up dependencies before validation
+      normalizedBody.steps = normalizedBody.steps.map((step: any, index: number) => {
+        // Ensure step_order is set
+        const stepOrder = step.step_order !== undefined ? step.step_order : index;
+        
+        // Clean up depends_on array
+        let dependsOn = step.depends_on;
+        if (dependsOn !== undefined && dependsOn !== null && Array.isArray(dependsOn)) {
+          dependsOn = dependsOn.filter((depIndex: number) => 
+            typeof depIndex === 'number' && 
+            depIndex >= 0 && 
+            depIndex < normalizedBody.steps.length && 
+            depIndex !== index
+          );
+        }
+        
+        return {
+          ...step,
+          step_order: stepOrder,
+          depends_on: dependsOn,
+        };
+      });
+    }
+    
+    const data = validate(updateWorkflowSchema, normalizedBody) as any;
 
     // Auto-migrate legacy workflows to steps format if updating legacy fields
     let updateData: any = { ...data };
@@ -405,7 +433,7 @@ class WorkflowsController {
         updateData.steps = steps;
       }
     } else if (hasSteps) {
-      // Ensure step_order is set for each step
+      // Ensure step_order is set for each step and apply full defaults
       updateData.steps = ensureStepDefaults(data.steps);
       console.log('[Workflows Update] After ensureStepDefaults', {
         workflowId,

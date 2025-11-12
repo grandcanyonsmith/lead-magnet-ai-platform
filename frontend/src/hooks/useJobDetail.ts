@@ -126,9 +126,13 @@ export function useJobDetail() {
       }
     } catch (err: any) {
       // Don't overwrite existing steps if fetch fails during polling
-      let errorMsg = `Error fetching execution steps: ${err.message || 'Unknown error'}`
+      let errorMsg = `Error fetching execution steps: ${err.response?.data?.message || err.message || 'Unknown error'}`
+      if (data?.execution_steps_s3_key) {
+        errorMsg += ` (S3 Key: ${data.execution_steps_s3_key})`
+      }
       console.error(`❌ ${errorMsg} for job ${jobId}`, {
         error: err,
+        response: err.response,
       })
       if (!jobData) {
         setExecutionStepsError(errorMsg)
@@ -167,9 +171,13 @@ export function useJobDetail() {
           setExecutionStepsError(null)
           data.execution_steps = []
         } else {
-          const errorMsg = `Error fetching execution steps: ${err.message || 'Unknown error'}`
+          let errorMsg = `Error fetching execution steps: ${err.response?.data?.message || err.message || 'Unknown error'}`
+          if (data?.execution_steps_s3_key) {
+            errorMsg += ` (S3 Key: ${data.execution_steps_s3_key})`
+          }
           console.error(`❌ ${errorMsg} for job ${jobId}`, {
             error: err,
+            response: err.response,
           })
           setExecutionStepsError(errorMsg)
           data.execution_steps = []

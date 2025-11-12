@@ -138,12 +138,23 @@ export const updateWorkflowSchema = baseWorkflowSchema.partial().refine((data) =
   if (data.steps !== undefined && Array.isArray(data.steps) && data.steps.length > 0) {
     const depValidation = validateDependencies(data.steps);
     if (!depValidation.valid) {
+      // Store error details in the data object for better error reporting
+      (data as any).__validationErrors = depValidation.errors;
       return false;
     }
   }
   return true;
-}, {
-  message: 'Dependencies must be valid and non-circular',
+}, (data) => {
+  // Provide more detailed error message if available
+  const errors = (data as any).__validationErrors;
+  if (errors && Array.isArray(errors) && errors.length > 0) {
+    return {
+      message: `Dependency validation failed: ${errors.join('; ')}`,
+    };
+  }
+  return {
+    message: 'Dependencies must be valid and non-circular',
+  };
 });
 
 // Form schemas
