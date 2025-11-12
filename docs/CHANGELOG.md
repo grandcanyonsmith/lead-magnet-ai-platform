@@ -8,6 +8,18 @@ All notable changes to the Lead Magnet AI platform are documented in this file.
 
 ---
 
+## [Unreleased] - 2025-11-12
+
+### Added
+- **Webhook Feature**: Public webhook endpoints for triggering workflows
+  - Each user gets a unique webhook URL (`/v1/webhooks/{token}`)
+  - Supports both `workflow_id` and `workflow_name` for workflow identification
+  - Accepts flexible form data structure (no strict validation)
+  - Auto-generates webhook tokens when users access settings
+  - Token regeneration endpoint for security
+  - Frontend UI in settings page with copy/regenerate buttons
+  - See [Webhook Feature Documentation](./WEBHOOK_FEATURE.md) for details
+
 ## [Unreleased] - 2025-11-07
 
 ### Added
