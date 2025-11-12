@@ -227,6 +227,22 @@ export const submitFormSchema = z.object({
   ),
 });
 
+// Webhook request schema
+export const webhookRequestSchema = z.object({
+  workflow_id: z.string().optional(),
+  workflow_name: z.string().optional(),
+  form_data: z.record(z.any()).optional(),
+  submission_data: z.record(z.any()).optional(),
+}).refine(
+  (data) => {
+    // At least one of workflow_id or workflow_name must be provided
+    return !!(data.workflow_id || data.workflow_name);
+  },
+  {
+    message: 'Either workflow_id or workflow_name is required',
+  }
+);
+
 export const validate = <T>(schema: z.ZodSchema<T>, data: unknown): T => {
   return schema.parse(data);
 };

@@ -33,5 +33,13 @@ export class SettingsClient extends BaseApiClient {
       onboarding_checklist: checklist,
     })
   }
+
+  async regenerateWebhookToken(): Promise<Settings> {
+    return this.post<Settings>('/admin/settings/webhook/regenerate')
+  }
+
+  async getWebhookUrl(): Promise<{ webhook_url: string; webhook_token: string }> {
+    return this.get<{ webhook_url: string; webhook_token: string }>('/admin/settings/webhook')
+  }
 }
 
