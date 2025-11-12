@@ -17,6 +17,8 @@ export interface Job extends BaseEntity {
   output_url?: string
   output_s3_key?: string
   submission_id?: string
+  execution_steps_s3_url?: string
+  execution_steps?: any[]
 }
 
 export interface JobListResponse {
