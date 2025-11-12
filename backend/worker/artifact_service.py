@@ -28,7 +28,7 @@ class ArtifactService:
         artifact_type: str,
         content: str,
         filename: str,
-        public: bool = False
+        public: bool = True  # Default to True - all artifacts should be public
     ) -> str:
         """
         Store an artifact in S3 and DynamoDB.

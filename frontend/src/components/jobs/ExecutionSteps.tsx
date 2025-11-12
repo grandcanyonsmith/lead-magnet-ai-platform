@@ -314,11 +314,14 @@ export function ExecutionSteps({
                         {step.usage_info && (
                           <div className="flex flex-col items-end gap-0.5">
                             <span className="text-gray-600">
-                              {step.usage_info.input_tokens + step.usage_info.output_tokens} tokens
+                              {(step.usage_info.input_tokens || 0) + (step.usage_info.output_tokens || 0)} tokens
                             </span>
-                            {step.usage_info.cost_usd && (
+                            {step.usage_info?.cost_usd && (
                               <span className="text-gray-600 font-medium">
-                                ${step.usage_info.cost_usd.toFixed(2)}
+                                {/* Handle both number and string types (S3 data may have different format) */}
+                                ${typeof step.usage_info.cost_usd === 'number' 
+                                  ? step.usage_info.cost_usd.toFixed(2) 
+                                  : parseFloat(step.usage_info.cost_usd || '0').toFixed(2)}
                               </span>
                             )}
                           </div>

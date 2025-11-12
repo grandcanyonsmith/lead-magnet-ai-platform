@@ -87,11 +87,14 @@ class ContextBuilder:
         dependency_indices: List[int] = None
     ) -> str:
         """
-        Build previous context from execution_steps stored in DynamoDB.
+        Build previous context from execution_steps.
+        
+        Note: Execution steps are stored in S3 (not DynamoDB), but are loaded into memory
+        by db_service.get_job() when s3_service is provided.
         
         Args:
             initial_context: Formatted submission context
-            execution_steps: List of execution step dictionaries from DynamoDB
+            execution_steps: List of execution step dictionaries (loaded from S3)
             current_step_order: Order of current step (1-indexed)
             dependency_indices: Optional list of step indices to include (if None, includes all previous steps)
             

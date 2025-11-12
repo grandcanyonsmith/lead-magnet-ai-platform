@@ -1,6 +1,13 @@
 """
 Legacy Workflow Processor
+
 Handles processing of legacy workflow formats (research_enabled, html_enabled, ai_instructions).
+
+DEPRECATION NOTICE:
+The legacy format is maintained for backward compatibility but is not recommended for new workflows.
+Consider migrating to the new steps-based format for better flexibility and features.
+
+See docs/WORKFLOW_FORMATS.md for migration guide.
 """
 
 import logging
@@ -12,7 +19,7 @@ from ai_service import AIService
 from db_service import DynamoDBService
 from s3_service import S3Service
 from artifact_service import ArtifactService
-from utils.decimal_utils import convert_decimals_to_float
+from utils.decimal_utils import convert_floats_to_decimal
 
 logger = logging.getLogger(__name__)
 
@@ -173,7 +180,7 @@ class LegacyWorkflowProcessor:
                     'step_type': 'html_generation',
                     'model': workflow.get('rewrite_model', 'gpt-5'),
                     'input': html_request_details,
-                    'output': html_response_details.get('output_text', '')[:5000],  # Truncate for storage
+                    'output': html_response_details.get('output_text', ''),  # Full output - will be stored in S3 if too large
                     'usage_info': convert_floats_to_decimal(html_usage_info),
                     'timestamp': html_start_time.isoformat(),
                     'duration_ms': int(html_duration),

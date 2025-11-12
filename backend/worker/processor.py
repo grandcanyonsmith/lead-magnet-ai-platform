@@ -189,7 +189,17 @@ class JobProcessor:
             )
             self.db.update_job(job_id, {'execution_steps': execution_steps}, s3_service=self.s3)
             
-            # Check if workflow uses new steps format or legacy format
+            # Workflow Format Detection:
+            # The system supports two workflow formats:
+            # 1. Legacy Format: Uses boolean flags (research_enabled, html_enabled) with ai_instructions
+            #    - Limited to 2 steps (research + HTML)
+            #    - Processed by LegacyWorkflowProcessor
+            # 2. Steps Format: Uses steps array with dependencies and parallel execution support
+            #    - Supports unlimited steps with dependencies
+            #    - Processed by multi-step workflow logic below
+            # 
+            # Detection: If workflow has a non-empty 'steps' array, use steps format.
+            # Otherwise, fall back to legacy format processing.
             steps = workflow.get('steps', [])
             use_steps_format = steps and len(steps) > 0
             
@@ -591,7 +601,8 @@ class JobProcessor:
             
             initial_context = format_submission_data_with_labels(submission_data)
             
-            # Load existing execution_steps from DynamoDB
+            # Load existing execution_steps (stored in S3, loaded via db_service.get_job if s3_service provided)
+            # If not loaded yet, start with empty array
             execution_steps = job.get('execution_steps', [])
             
             # Handle HTML generation step (special case)
