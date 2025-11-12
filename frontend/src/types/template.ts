@@ -19,6 +19,7 @@ export interface TemplateCreateRequest {
   template_description: string
   html_content: string
   placeholder_tags?: string[]
+  is_published?: boolean
 }
 
 export interface TemplateUpdateRequest extends Partial<TemplateCreateRequest> {}
