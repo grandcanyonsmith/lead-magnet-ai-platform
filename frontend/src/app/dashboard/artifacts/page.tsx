@@ -10,6 +10,7 @@ import { PaginationControls } from '@/components/artifacts/PaginationControls'
 type Artifact = {
   artifact_id: string
   job_id?: string
+  workflow_id?: string
   artifact_type?: string
   file_name?: string
   artifact_name?: string
@@ -42,12 +43,8 @@ export default function ArtifactsPage() {
       const data = await api.getArtifacts({ limit: 500 })
       const artifactsList = data.artifacts || []
       
-      artifactsList.sort((a: Artifact, b: Artifact) => {
-        const dateA = new Date(a.created_at || 0).getTime()
-        const dateB = new Date(b.created_at || 0).getTime()
-        return dateB - dateA
-      })
-      
+      // Don't sort here - sorting will be done in filteredArtifacts useMemo
+      // to group by workflow/job, then by created_at
       setArtifacts(artifactsList)
     } catch (error) {
       console.error('Failed to load artifacts:', error)
@@ -74,7 +71,7 @@ export default function ArtifactsPage() {
   }, [artifacts])
 
   const filteredArtifacts = useMemo(() => {
-    return artifacts.filter(artifact => {
+    const filtered = artifacts.filter(artifact => {
       const matchesSearch = !searchQuery || 
         (artifact.file_name || artifact.artifact_name || '')
           .toLowerCase()
@@ -85,6 +82,26 @@ export default function ArtifactsPage() {
       
       return matchesSearch && matchesType
     })
+    
+    // Sort by workflow_id/job_id first (group by parent), then by created_at within each group
+    // This ensures artifacts from the same workflow/job appear together, ordered by creation time
+    filtered.sort((a: Artifact, b: Artifact) => {
+      // Group by workflow_id if available, otherwise by job_id, otherwise treat as separate groups
+      const groupA = a.workflow_id || a.job_id || `no-group-${a.artifact_id}`
+      const groupB = b.workflow_id || b.job_id || `no-group-${b.artifact_id}`
+      
+      // If different groups, sort by group (alphabetically for consistency)
+      if (groupA !== groupB) {
+        return groupA.localeCompare(groupB)
+      }
+      
+      // Within same group, sort by created_at DESC (most recent first)
+      const dateA = new Date(a.created_at || 0).getTime()
+      const dateB = new Date(b.created_at || 0).getTime()
+      return dateB - dateA
+    })
+    
+    return filtered
   }, [artifacts, searchQuery, selectedType])
 
   const totalPages = Math.ceil(filteredArtifacts.length / ITEMS_PER_PAGE)

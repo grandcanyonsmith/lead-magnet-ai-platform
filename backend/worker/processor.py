@@ -715,6 +715,10 @@ class JobProcessor:
             
             step_start_time = datetime.utcnow()
             
+            # Initialize image_artifact_ids early to ensure it's always available in return value
+            # This ensures image artifacts are tracked even if errors occur after they're stored
+            image_artifact_ids = []
+            
             # step_index is 0-indexed, step_order is 1-indexed
             current_step_order = step_index + 1
             
@@ -807,7 +811,6 @@ class JobProcessor:
             image_urls = response_details.get('image_urls', [])
             
             # Store images as artifacts
-            image_artifact_ids = []
             for idx, image_url in enumerate(image_urls):
                 if image_url:
                     try:
@@ -856,7 +859,19 @@ class JobProcessor:
                 # Append new step (first run case)
                 execution_steps.append(step_data)
             
-            self.db.update_job(job_id, {'execution_steps': execution_steps}, s3_service=self.s3)
+            # Update job with execution steps and add image artifacts to job's artifacts list
+            artifacts_list = job.get('artifacts', [])
+            if step_artifact_id not in artifacts_list:
+                artifacts_list.append(step_artifact_id)
+            # Add image artifact IDs to job's artifacts list
+            for image_artifact_id in image_artifact_ids:
+                if image_artifact_id not in artifacts_list:
+                    artifacts_list.append(image_artifact_id)
+            
+            self.db.update_job(job_id, {
+                'execution_steps': execution_steps,
+                'artifacts': artifacts_list
+            }, s3_service=self.s3)
             
             logger.info(f"Step {step_index + 1} completed successfully in {step_duration:.0f}ms")
             
@@ -868,6 +883,7 @@ class JobProcessor:
                 'step_output': step_output,
                 'artifact_id': step_artifact_id,
                 'image_urls': image_urls,
+                'image_artifact_ids': image_artifact_ids,  # Include image artifact IDs so they can be added to job's artifacts list
                 'usage_info': usage_info,
                 'duration_ms': int(step_duration)
             }
@@ -892,11 +908,15 @@ class JobProcessor:
             except Exception as update_error:
                 logger.error(f"Failed to update job status: {update_error}")
             
+            # Return error result - include image_artifact_ids if any were stored before the error
+            # This ensures image artifacts are tracked even when step processing fails
+            # image_artifact_ids is initialized early in the try block, so it's always available
             return {
                 'success': False,
                 'error': descriptive_error,
                 'error_type': error_type,
-                'step_index': step_index
+                'step_index': step_index,
+                'image_artifact_ids': image_artifact_ids
             }
     
     def _process_html_generation_step(
