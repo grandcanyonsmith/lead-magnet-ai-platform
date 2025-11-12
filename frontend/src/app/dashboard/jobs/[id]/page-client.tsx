@@ -416,7 +416,7 @@ export default function JobDetailClient() {
                 <div className="ml-3 flex-1">
                   <h3 className="text-sm font-medium">Execution Steps Loading Error</h3>
                   <p className="mt-1 text-sm">{executionStepsError}</p>
-                  {process.env.NODE_ENV === 'development' && job?.execution_steps_s3_key && (
+                  {job?.execution_steps_s3_key && !executionStepsError?.includes('S3 Key:') && (
                     <p className="mt-2 text-xs font-mono break-all">
                       S3 Key: {job.execution_steps_s3_key}
                     </p>
