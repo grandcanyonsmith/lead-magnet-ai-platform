@@ -7,48 +7,21 @@ This is useful when ProcessHTMLStep timed out but the last workflow step complet
 import os
 import sys
 import json
-import boto3
+import argparse
+from pathlib import Path
 from datetime import datetime
-from decimal import Decimal
-from botocore.exceptions import ClientError
 from ulid import new as ulid
 
-# Set environment variables if not already set
-REGION = os.environ.get('AWS_REGION', 'us-east-1')
-JOBS_TABLE = os.environ.get('JOBS_TABLE', 'leadmagnet-jobs')
-WORKFLOWS_TABLE = os.environ.get('WORKFLOWS_TABLE', 'leadmagnet-workflows')
-ARTIFACTS_TABLE = os.environ.get('ARTIFACTS_TABLE', 'leadmagnet-artifacts')
-TEMPLATES_TABLE = os.environ.get('TEMPLATES_TABLE', 'leadmagnet-templates')
+# Add lib directory to path
+sys.path.insert(0, str(Path(__file__).parent))
 
-# Get artifacts bucket name
-try:
-    sts = boto3.client('sts', region_name=REGION)
-    account_id = sts.get_caller_identity()['Account']
-    ARTIFACTS_BUCKET = os.environ.get('ARTIFACTS_BUCKET', f'leadmagnet-artifacts-{account_id}')
-except Exception as e:
-    print(f"Warning: Could not determine artifacts bucket: {e}")
-    ARTIFACTS_BUCKET = os.environ.get('ARTIFACTS_BUCKET')
-    if not ARTIFACTS_BUCKET:
-        print("Please set ARTIFACTS_BUCKET environment variable")
-        sys.exit(1)
-
-# Initialize AWS clients
-dynamodb = boto3.resource('dynamodb', region_name=REGION)
-s3_client = boto3.client('s3', region_name=REGION)
-cloudfront_domain = os.environ.get('CLOUDFRONT_DOMAIN', '').strip()
-
-
-def convert_decimals(obj):
-    """Convert Decimal types to float/int for JSON serialization."""
-    if isinstance(obj, Decimal):
-        if obj % 1 == 0:
-            return int(obj)
-        return float(obj)
-    elif isinstance(obj, dict):
-        return {k: convert_decimals(v) for k, v in obj.items()}
-    elif isinstance(obj, list):
-        return [convert_decimals(item) for item in obj]
-    return obj
+from lib.common import (
+    get_dynamodb_resource,
+    get_s3_client,
+    get_table_name,
+    get_artifacts_bucket,
+    print_section,
+)
 
 
 def get_content_type(filename: str) -> str:
@@ -68,8 +41,11 @@ def get_content_type(filename: str) -> str:
 
 def load_execution_steps_from_s3(s3_key: str) -> list:
     """Load execution_steps from S3."""
+    s3_client = get_s3_client()
+    bucket_name = get_artifacts_bucket()
+    
     try:
-        response = s3_client.get_object(Bucket=ARTIFACTS_BUCKET, Key=s3_key)
+        response = s3_client.get_object(Bucket=bucket_name, Key=s3_key)
         content = response['Body'].read().decode('utf-8')
         return json.loads(content)
     except Exception as e:
@@ -81,16 +57,19 @@ def upload_artifact_to_s3(tenant_id: str, job_id: str, filename: str, content: s
     """Upload artifact to S3 and return S3 URL and public URL."""
     s3_key = f"{tenant_id}/jobs/{job_id}/{filename}"
     content_type = get_content_type(filename)
+    s3_client = get_s3_client()
+    bucket_name = get_artifacts_bucket()
+    cloudfront_domain = os.environ.get('CLOUDFRONT_DOMAIN', '').strip()
     
     # Upload to S3 (without ACL - bucket policy handles public access)
     s3_client.put_object(
-        Bucket=ARTIFACTS_BUCKET,
+        Bucket=bucket_name,
         Key=s3_key,
         Body=content.encode('utf-8'),
         ContentType=content_type
     )
     
-    s3_url = f"s3://{ARTIFACTS_BUCKET}/{s3_key}"
+    s3_url = f"s3://{bucket_name}/{s3_key}"
     
     # Generate public URL (CloudFront or presigned S3 URL)
     if cloudfront_domain:
@@ -100,7 +79,7 @@ def upload_artifact_to_s3(tenant_id: str, job_id: str, filename: str, content: s
         # Note: CloudFront URLs should be preferred as they don't expire
         public_url = s3_client.generate_presigned_url(
             'get_object',
-            Params={'Bucket': ARTIFACTS_BUCKET, 'Key': s3_key},
+            Params={'Bucket': bucket_name, 'Key': s3_key},
             ExpiresIn=604800  # Maximum allowed: 7 days (604800 seconds)
         )
     
@@ -110,6 +89,7 @@ def upload_artifact_to_s3(tenant_id: str, job_id: str, filename: str, content: s
 def store_artifact(tenant_id: str, job_id: str, artifact_type: str, content: str, filename: str) -> tuple:
     """Store artifact in S3 and DynamoDB, return artifact_id and public_url."""
     artifact_id = f"art_{ulid()}"
+    dynamodb = get_dynamodb_resource()
     
     # Upload to S3
     s3_url, public_url = upload_artifact_to_s3(tenant_id, job_id, filename, content)
@@ -131,7 +111,7 @@ def store_artifact(tenant_id: str, job_id: str, artifact_type: str, content: str
     }
     
     # Store in DynamoDB
-    artifacts_table = dynamodb.Table(ARTIFACTS_TABLE)
+    artifacts_table = dynamodb.Table(get_table_name("artifacts"))
     artifacts_table.put_item(Item=artifact)
     
     return artifact_id, public_url
@@ -139,14 +119,13 @@ def store_artifact(tenant_id: str, job_id: str, artifact_type: str, content: str
 
 def complete_failed_job(job_id: str):
     """Complete a failed job by extracting last step output."""
-    print(f"=" * 60)
-    print(f"Completing Failed Job")
-    print(f"=" * 60)
+    print_section("Completing Failed Job")
     print(f"Job ID: {job_id}")
-    print(f"=" * 60)
+    print_section("")
     
-    jobs_table = dynamodb.Table(JOBS_TABLE)
-    workflows_table = dynamodb.Table(WORKFLOWS_TABLE)
+    dynamodb = get_dynamodb_resource()
+    jobs_table = dynamodb.Table(get_table_name("jobs"))
+    workflows_table = dynamodb.Table(get_table_name("workflows"))
     
     # Get job
     print(f"\n1. Fetching job {job_id}...")
@@ -280,7 +259,7 @@ def complete_failed_job(job_id: str):
     else:
         # Verify template exists and is published
         try:
-            templates_table = dynamodb.Table(TEMPLATES_TABLE)
+            templates_table = dynamodb.Table(get_table_name("templates"))
             response = templates_table.get_item(Key={'template_id': template_id})
             if 'Item' in response:
                 template = response['Item']
@@ -362,24 +341,31 @@ def complete_failed_job(job_id: str):
         traceback.print_exc()
         return False
     
-    print(f"\n" + "=" * 60)
-    print(f"✓ Job completed successfully!")
-    print(f"=" * 60)
+    print_section("✓ Job completed successfully!")
     print(f"Job ID: {job_id}")
     print(f"Output URL: {public_url}")
     print(f"Artifact ID: {final_artifact_id}")
-    print(f"=" * 60)
+    print_section("")
     
     return True
 
 
 def main():
     """Main function."""
-    import argparse
-    
-    parser = argparse.ArgumentParser(description="Complete a failed job by extracting last step output")
+    parser = argparse.ArgumentParser(
+        description="Complete a failed job by extracting last step output"
+    )
     parser.add_argument("job_id", help="Job ID to complete")
+    parser.add_argument(
+        "--region",
+        help="AWS region (default: from environment or us-east-1)",
+        default=None,
+    )
     args = parser.parse_args()
+    
+    if args.region:
+        import os
+        os.environ["AWS_REGION"] = args.region
     
     success = complete_failed_job(args.job_id)
     

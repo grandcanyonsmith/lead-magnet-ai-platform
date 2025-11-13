@@ -48,8 +48,14 @@ const checklistItems: ChecklistItem[] = [
 
 export function OnboardingChecklist({ settings, onStartTour }: OnboardingChecklistProps) {
   const router = useRouter()
-  const [isOpen, setIsOpen] = useState(true)
-  const [isMinimized, setIsMinimized] = useState(false)
+  const [isOpen, setIsOpen] = useState(() => {
+    // Check localStorage for dismissed state
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('onboarding-checklist-dismissed') !== 'true'
+    }
+    return true
+  })
+  const [isMinimized, setIsMinimized] = useState(true) // Start minimized
   const [updating, setUpdating] = useState<string | null>(null)
 
   const checklist = settings.onboarding_checklist || {
@@ -83,6 +89,10 @@ export function OnboardingChecklist({ settings, onStartTour }: OnboardingCheckli
 
   const handleDismiss = () => {
     setIsOpen(false)
+    // Persist dismissal in localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('onboarding-checklist-dismissed', 'true')
+    }
   }
 
   if (!isOpen) {
@@ -116,15 +126,14 @@ export function OnboardingChecklist({ settings, onStartTour }: OnboardingCheckli
               </svg>
             )}
           </button>
-          {allCompleted && (
-            <button
-              onClick={handleDismiss}
-              className="text-gray-500 hover:text-gray-700 p-2 rounded hover:bg-gray-100 touch-target"
-              aria-label="Close"
-            >
-              <FiX className="w-4 h-4" />
-            </button>
-          )}
+          <button
+            onClick={handleDismiss}
+            className="text-gray-500 hover:text-gray-700 p-2 rounded hover:bg-gray-100 touch-target"
+            aria-label="Dismiss"
+            title="Dismiss checklist"
+          >
+            <FiX className="w-4 h-4" />
+          </button>
         </div>
       </div>
 

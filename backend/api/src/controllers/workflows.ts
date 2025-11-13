@@ -1,7 +1,5 @@
 import { ulid } from 'ulid';
-import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
 import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
-import OpenAI from 'openai';
 import { db } from '../utils/db';
 import { validate, createWorkflowSchema, updateWorkflowSchema } from '../utils/validation';
 import { ApiError } from '../utils/errors';
@@ -15,14 +13,13 @@ import { WorkflowAIService, WorkflowAIEditRequest } from '../services/workflowAI
 import { migrateLegacyWorkflowToSteps, migrateLegacyWorkflowOnUpdate, ensureStepDefaults, WorkflowStep } from '../utils/workflowMigration';
 import { resolveExecutionGroups, validateDependencies } from '../utils/dependencyResolver';
 import { logger } from '../utils/logger';
+import { getOpenAIClient } from '../services/openaiService';
+import { usageTrackingService } from '../services/usageTrackingService';
 
 const WORKFLOWS_TABLE = process.env.WORKFLOWS_TABLE;
 const FORMS_TABLE = process.env.FORMS_TABLE;
 const JOBS_TABLE = process.env.JOBS_TABLE || 'leadmagnet-jobs';
-const USAGE_RECORDS_TABLE = process.env.USAGE_RECORDS_TABLE || 'leadmagnet-usage-records';
-const OPENAI_SECRET_NAME = process.env.OPENAI_SECRET_NAME || 'leadmagnet/openai-api-key';
 const LAMBDA_FUNCTION_NAME = process.env.LAMBDA_FUNCTION_NAME || 'leadmagnet-api-handler';
-const secretsClient = new SecretsManagerClient({ region: process.env.AWS_REGION || 'us-east-1' });
 const lambdaClient = new LambdaClient({ region: process.env.AWS_REGION || 'us-east-1' });
 
 if (!WORKFLOWS_TABLE) {
@@ -30,76 +27,6 @@ if (!WORKFLOWS_TABLE) {
 }
 if (!FORMS_TABLE) {
   logger.error('[Workflows Controller] FORMS_TABLE environment variable is not set');
-}
-
-
-async function getOpenAIClient(): Promise<OpenAI> {
-  const command = new GetSecretValueCommand({ SecretId: OPENAI_SECRET_NAME });
-  const response = await secretsClient.send(command);
-  
-  if (!response.SecretString) {
-    throw new ApiError('OpenAI API key not found in secret', 500);
-  }
-
-  let apiKey: string;
-  
-  try {
-    const parsed = JSON.parse(response.SecretString);
-    apiKey = parsed.OPENAI_API_KEY || parsed.apiKey || response.SecretString;
-  } catch {
-    apiKey = response.SecretString;
-  }
-  
-  if (!apiKey || apiKey.trim().length === 0) {
-    throw new ApiError('OpenAI API key is empty', 500);
-  }
-
-  return new OpenAI({ apiKey });
-}
-
-/**
- * Helper function to store usage record in DynamoDB.
- */
-async function storeUsageRecord(
-  tenantId: string,
-  serviceType: string,
-  model: string,
-  inputTokens: number,
-  outputTokens: number,
-  costUsd: number,
-  jobId?: string
-): Promise<void> {
-  try {
-    const usageId = `usage_${ulid()}`;
-    const usageRecord = {
-      usage_id: usageId,
-      tenant_id: tenantId,
-      job_id: jobId || null,
-      service_type: serviceType,
-      model,
-      input_tokens: inputTokens,
-      output_tokens: outputTokens,
-      cost_usd: costUsd,
-      created_at: new Date().toISOString(),
-    };
-
-    await db.put(USAGE_RECORDS_TABLE, usageRecord);
-    logger.info('[Usage Tracking] Usage record stored', {
-      usageId,
-      tenantId,
-      serviceType,
-      model,
-      inputTokens,
-      outputTokens,
-      costUsd,
-    });
-  } catch (error: any) {
-    logger.error('[Usage Tracking] Failed to store usage record', {
-      error: error.message,
-      tenantId,
-      serviceType,
-    });
-  }
 }
 
 class WorkflowsController {
@@ -638,7 +565,20 @@ class WorkflowsController {
 
       // Initialize OpenAI client and generation service
       const openai = await getOpenAIClient();
-      const generationService = new WorkflowGenerationService(openai, storeUsageRecord);
+      const generationService = new WorkflowGenerationService(
+        openai,
+        async (tenantId, serviceType, model, inputTokens, outputTokens, costUsd, jobId) => {
+          await usageTrackingService.storeUsageRecord({
+            tenantId,
+            serviceType,
+            model,
+            inputTokens,
+            outputTokens,
+            costUsd,
+            jobId,
+          });
+        }
+      );
       
       const workflowStartTime = Date.now();
       logger.info('[Workflow Generation] OpenAI client initialized');
@@ -778,7 +718,20 @@ class WorkflowsController {
 
     try {
       const openai = await getOpenAIClient();
-      const generationService = new WorkflowGenerationService(openai, storeUsageRecord);
+      const generationService = new WorkflowGenerationService(
+        openai,
+        async (tenantId, serviceType, model, inputTokens, outputTokens, costUsd, jobId) => {
+          await usageTrackingService.storeUsageRecord({
+            tenantId,
+            serviceType,
+            model,
+            inputTokens,
+            outputTokens,
+            costUsd,
+            jobId,
+          });
+        }
+      );
       logger.info('[Workflow Generation] OpenAI client initialized');
 
       const workflowStartTime = Date.now();
@@ -984,14 +937,14 @@ Return ONLY the modified instructions:
         const outputTokens = usage.output_tokens || 0;
         const costData = calculateOpenAICost(refinementModel, inputTokens, outputTokens);
         
-        await storeUsageRecord(
+        await usageTrackingService.storeUsageRecord({
           tenantId,
-          'openai_workflow_refine',
-          refinementModel,
+          serviceType: 'openai_workflow_refine',
+          model: refinementModel,
           inputTokens,
           outputTokens,
-          costData.cost_usd
-        );
+          costUsd: costData.cost_usd,
+        });
       }
 
       // Validate response has output_text

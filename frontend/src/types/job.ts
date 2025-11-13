@@ -4,6 +4,47 @@
 
 import { BaseEntity, Status } from './common'
 
+export type StepStatus = 'pending' | 'in_progress' | 'completed' | 'failed'
+
+export type StepType = 'workflow_step' | 'ai_generation' | 'form_submission' | 'html_generation' | 'final_output'
+
+export interface ExecutionStepUsageInfo {
+  prompt_tokens?: number
+  completion_tokens?: number
+  total_tokens?: number
+  cost_usd?: number
+}
+
+export interface ExecutionStepInput {
+  tools?: string[] | unknown[]
+  tool_choice?: string
+  [key: string]: unknown
+}
+
+export interface ExecutionStep {
+  step_order: number
+  step_type: StepType
+  step_name?: string
+  model?: string
+  tools?: string[] | unknown[]
+  tool_choice?: string
+  instructions?: string
+  input?: ExecutionStepInput
+  output?: string | null
+  error?: string
+  started_at?: string
+  completed_at?: string
+  duration_ms?: number
+  usage_info?: ExecutionStepUsageInfo
+  _status?: StepStatus
+  artifact_id?: string
+  image_urls?: string[]
+}
+
+export interface MergedStep extends ExecutionStep {
+  _status: StepStatus
+}
+
 export interface Job extends BaseEntity {
   job_id: string
   tenant_id: string
@@ -19,7 +60,7 @@ export interface Job extends BaseEntity {
   submission_id?: string
   execution_steps_s3_key?: string
   execution_steps_s3_url?: string
-  execution_steps?: any[]
+  execution_steps?: ExecutionStep[]
 }
 
 export interface JobListResponse {

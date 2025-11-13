@@ -3,19 +3,26 @@
 Fetch job details including artifacts and their URLs.
 """
 
-import os
-import boto3
-from botocore.exceptions import ClientError
+import sys
+import argparse
+from pathlib import Path
 
-TENANT_ID = "84c8e438-0061-70f2-2ce0-7cb44989a329"
-JOBS_TABLE = "leadmagnet-jobs"
-ARTIFACTS_TABLE = "leadmagnet-artifacts"
-REGION = os.environ.get("AWS_REGION", "us-east-1")
+# Add lib directory to path
+sys.path.insert(0, str(Path(__file__).parent))
+
+from lib.common import (
+    get_dynamodb_resource,
+    get_s3_client,
+    get_table_name,
+    get_artifacts_bucket,
+    print_section,
+    format_timestamp,
+)
 
 
 def get_presigned_url(bucket: str, key: str, expiration: int = 3600 * 24 * 7) -> str:
     """Generate a presigned URL for S3 object."""
-    s3_client = boto3.client("s3", region_name=REGION)
+    s3_client = get_s3_client()
     try:
         url = s3_client.generate_presigned_url(
             'get_object',
@@ -30,8 +37,8 @@ def get_presigned_url(bucket: str, key: str, expiration: int = 3600 * 24 * 7) ->
 
 def get_artifact_url(artifact_id: str):
     """Get artifact details and generate URL."""
-    dynamodb = boto3.resource("dynamodb", region_name=REGION)
-    table = dynamodb.Table(ARTIFACTS_TABLE)
+    dynamodb = get_dynamodb_resource()
+    table = dynamodb.Table(get_table_name("artifacts"))
     
     try:
         response = table.get_item(Key={"artifact_id": artifact_id})
@@ -48,9 +55,7 @@ def get_artifact_url(artifact_id: str):
         # Generate presigned URL from S3 key
         s3_key = artifact.get('s3_key')
         if s3_key:
-            # Extract bucket name from environment or construct it
-            account_id = boto3.client("sts", region_name=REGION).get_caller_identity()["Account"]
-            bucket_name = f"leadmagnet-artifacts-{account_id}"
+            bucket_name = get_artifacts_bucket()
             return get_presigned_url(bucket_name, s3_key)
         
         return None
@@ -62,13 +67,11 @@ def get_artifact_url(artifact_id: str):
 
 def get_job_details(job_id: str):
     """Retrieve job from DynamoDB and get artifact URLs."""
-    dynamodb = boto3.resource("dynamodb", region_name=REGION)
-    table = dynamodb.Table(JOBS_TABLE)
+    dynamodb = get_dynamodb_resource()
+    table = dynamodb.Table(get_table_name("jobs"))
     
     try:
-        print(f"\n{'=' * 80}")
-        print(f"Job: {job_id}")
-        print(f"{'=' * 80}")
+        print_section(f"Job: {job_id}")
         
         response = table.get_item(Key={"job_id": job_id})
         
@@ -79,8 +82,8 @@ def get_job_details(job_id: str):
         job = response["Item"]
         
         print(f"Status: {job.get('status', 'unknown')}")
-        print(f"Created: {job.get('created_at', 'unknown')}")
-        print(f"Updated: {job.get('updated_at', 'unknown')}")
+        print(f"Created: {format_timestamp(job.get('created_at', 'unknown'))}")
+        print(f"Updated: {format_timestamp(job.get('updated_at', 'unknown'))}")
         
         output_url = job.get('output_url')
         if output_url:
@@ -93,15 +96,13 @@ def get_job_details(job_id: str):
         if artifacts:
             print(f"\n📦 Found {len(artifacts)} artifact(s):")
             
-            # Get account ID for bucket name
-            account_id = boto3.client("sts", region_name=REGION).get_caller_identity()["Account"]
-            bucket_name = f"leadmagnet-artifacts-{account_id}"
+            bucket_name = get_artifacts_bucket()
             
             for i, artifact_id in enumerate(artifacts, 1):
                 print(f"\n  Artifact {i}: {artifact_id}")
                 
                 # Get artifact details
-                artifact_table = dynamodb.Table(ARTIFACTS_TABLE)
+                artifact_table = dynamodb.Table(get_table_name("artifacts"))
                 try:
                     artifact_response = artifact_table.get_item(Key={"artifact_id": artifact_id})
                     if "Item" in artifact_response:
@@ -154,15 +155,22 @@ def get_job_details(job_id: str):
 
 def main():
     """Main function."""
-    import argparse
-    
-    parser = argparse.ArgumentParser(description="Fetch job details including artifacts and their URLs")
+    parser = argparse.ArgumentParser(
+        description="Fetch job details including artifacts and their URLs"
+    )
     parser.add_argument("job_ids", nargs="+", help="Job ID(s) to fetch")
+    parser.add_argument(
+        "--region",
+        help="AWS region (default: from environment or us-east-1)",
+        default=None,
+    )
     args = parser.parse_args()
     
-    print("=" * 80)
-    print("Job Details and Artifact URLs")
-    print("=" * 80)
+    if args.region:
+        import os
+        os.environ["AWS_REGION"] = args.region
+    
+    print_section("Job Details and Artifact URLs")
     
     results = []
     
@@ -172,9 +180,7 @@ def main():
             results.append(result)
     
     # Summary
-    print("\n" + "=" * 80)
-    print("SUMMARY")
-    print("=" * 80)
+    print_section("SUMMARY")
     
     for result in results:
         print(f"\nJob: {result['job_id']}")
@@ -186,9 +192,8 @@ def main():
         else:
             print(f"  ❌ No output URL and no artifacts")
     
-    print("\n" + "=" * 80)
+    print_section("")
 
 
 if __name__ == "__main__":
     main()
-

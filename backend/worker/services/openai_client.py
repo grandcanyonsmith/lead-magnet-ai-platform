@@ -1,7 +1,7 @@
 """OpenAI API client wrapper."""
 import logging
 import openai
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from services.api_key_manager import APIKeyManager
 
@@ -141,6 +141,131 @@ class OpenAIClient:
         """Make API call to OpenAI Responses API."""
         return self.create_response(**params)
     
+    def _extract_and_convert_base64_images(
+        self,
+        content: str,
+        image_handler,
+        tenant_id: Optional[str] = None,
+        job_id: Optional[str] = None
+    ) -> Tuple[str, List[str]]:
+        """
+        Extract base64-encoded images from JSON response and convert them to URLs.
+        
+        Args:
+            content: Response text that may contain JSON with base64 images
+            image_handler: ImageHandler instance for uploading images
+            tenant_id: Optional tenant ID for S3 path structure
+            job_id: Optional job ID for S3 path structure
+            
+        Returns:
+            Tuple of (updated_content, list_of_image_urls)
+        """
+        import json
+        
+        image_urls = []
+        updated_content = content
+        
+        try:
+            # Try to parse content as JSON
+            try:
+                data = json.loads(content)
+            except (json.JSONDecodeError, ValueError):
+                # Not JSON, return original content
+                return content, []
+            
+            # Check if this is an assets structure
+            if not isinstance(data, dict):
+                return content, []
+            
+            assets = data.get('assets', [])
+            if not isinstance(assets, list):
+                return content, []
+            
+            # Process each asset
+            modified = False
+            for asset in assets:
+                if not isinstance(asset, dict):
+                    continue
+                
+                # Check if this asset has base64 image data
+                encoding = asset.get('encoding', '').lower()
+                content_type = asset.get('content_type', '')
+                data_field = asset.get('data', '')
+                
+                # Must have encoding="base64", content_type starting with "image/", and data field
+                if (encoding == 'base64' and 
+                    content_type.startswith('image/') and 
+                    isinstance(data_field, str) and 
+                    len(data_field) > 0):
+                    
+                    try:
+                        # Extract filename from asset if available
+                        filename = asset.get('name', '')
+                        if not filename:
+                            # Generate filename from asset ID or index
+                            asset_id = asset.get('id', '')
+                            if asset_id:
+                                # Try to determine extension from content_type
+                                ext = 'png'
+                                if 'jpeg' in content_type or 'jpg' in content_type:
+                                    ext = 'jpg'
+                                elif 'png' in content_type:
+                                    ext = 'png'
+                                filename = f"{asset_id}.{ext}"
+                            else:
+                                import time
+                                import uuid
+                                ext = 'png'
+                                if 'jpeg' in content_type or 'jpg' in content_type:
+                                    ext = 'jpg'
+                                filename = f"image_{int(time.time())}_{str(uuid.uuid4())[:8]}.{ext}"
+                        
+                        # Upload base64 image to S3
+                        image_url = image_handler.upload_base64_image_to_s3(
+                            image_b64=data_field,
+                            content_type=content_type,
+                            tenant_id=tenant_id,
+                            job_id=job_id,
+                            filename=filename
+                        )
+                        
+                        if image_url:
+                            # Replace base64 data with URL
+                            asset['data'] = image_url
+                            asset['encoding'] = 'url'
+                            # Keep original data in a backup field for reference
+                            asset['original_data_encoding'] = 'base64'
+                            image_urls.append(image_url)
+                            modified = True
+                            
+                            logger.info("[OpenAI Client] Converted base64 image to URL", extra={
+                                'asset_id': asset.get('id', 'unknown'),
+                                'image_filename': filename,
+                                'image_url_preview': image_url[:80] + '...' if len(image_url) > 80 else image_url,
+                                'content_type': content_type
+                            })
+                        else:
+                            logger.warning(f"[OpenAI Client] Failed to upload base64 image for asset {asset.get('id', 'unknown')}")
+                    except Exception as e:
+                        logger.error(f"[OpenAI Client] Error converting base64 image: {e}", exc_info=True)
+                        # Continue processing other assets even if one fails
+            
+            # If we modified any assets, update the content
+            if modified:
+                updated_content = json.dumps(data, indent=2)
+                logger.info(f"[OpenAI Client] Converted {len(image_urls)} base64 image(s) to URLs", extra={
+                    'image_count': len(image_urls),
+                    'tenant_id': tenant_id,
+                    'job_id': job_id
+                })
+            
+            return updated_content, image_urls
+            
+        except Exception as e:
+            logger.error(f"[OpenAI Client] Error processing base64 images: {e}", exc_info=True)
+            # Return original content on error
+            return content, []
+    
     def process_api_response(
         self,
         response,
@@ -152,7 +277,9 @@ class OpenAIClient:
         tools: List[Dict],
         tool_choice: str,
         params: Dict,
-        image_handler
+        image_handler,
+        tenant_id: Optional[str] = None,
+        job_id: Optional[str] = None
     ):
         """Process Responses API response and return formatted results."""
         from cost_service import calculate_openai_cost
@@ -163,6 +290,27 @@ class OpenAIClient:
             # Fallback for backwards compatibility
             if response.choices and len(response.choices) > 0:
                 content = response.choices[0].message.content or ""
+        
+        # Extract and convert base64 images in JSON responses
+        base64_image_urls = []
+        if content and image_handler:
+            try:
+                updated_content, base64_image_urls = self._extract_and_convert_base64_images(
+                    content=content,
+                    image_handler=image_handler,
+                    tenant_id=tenant_id,
+                    job_id=job_id
+                )
+                if updated_content != content:
+                    content = updated_content
+                    logger.info(f"[OpenAI Client] Converted {len(base64_image_urls)} base64 image(s) in response", extra={
+                        'base64_image_count': len(base64_image_urls),
+                        'tenant_id': tenant_id,
+                        'job_id': job_id
+                    })
+            except Exception as e:
+                logger.warning(f"[OpenAI Client] Error converting base64 images: {e}", exc_info=True)
+                # Continue with original content if conversion fails
         
         usage = response.usage if hasattr(response, "usage") and response.usage else None
         input_tokens = getattr(usage, "input_tokens", 0) if usage else getattr(usage, "prompt_tokens", 0) if usage else 0
@@ -286,9 +434,13 @@ class OpenAIClient:
                                         image_urls.append(img_url)
                                         logger.debug(f"[OpenAI Client] Extracted image URL from tool_calls: {img_url[:80]}...")
             
+            # Add base64-converted URLs to the image_urls list
+            image_urls.extend(base64_image_urls)
+            
             if image_urls:
                 logger.info(f"[OpenAI Client] Extracted {len(image_urls)} image URL(s) from response", extra={
                     'image_count': len(image_urls),
+                    'base64_converted_count': len(base64_image_urls),
                     'has_image_generation_tool': any(
                         isinstance(t, dict) and t.get('type') == 'image_generation' 
                         for t in tools
@@ -297,6 +449,8 @@ class OpenAIClient:
         except Exception as e:
             logger.warning(f"[OpenAI Client] Error extracting image URLs from response: {e}", exc_info=True)
             # Don't fail the request if image extraction fails, just log it
+            # Still include base64-converted URLs if available
+            image_urls.extend(base64_image_urls)
         
         response_details = {
             "output_text": content,

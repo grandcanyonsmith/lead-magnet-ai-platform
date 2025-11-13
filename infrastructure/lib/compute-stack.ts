@@ -7,9 +7,10 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
 import { Construct } from 'constructs';
-import { TableMap } from './types';
+import { TableMap, TableKey } from './types';
 import { createLambdaWithTables, grantSecretsAccess, grantDynamoDBPermissions, grantS3Permissions } from './utils/lambda-helpers';
 import { createJobProcessorStateMachine } from './stepfunctions/job-processor-state-machine';
+import { SECRET_NAMES, LAMBDA_DEFAULTS, ENV_VAR_NAMES, DEFAULT_LOG_LEVEL, PLAYWRIGHT_BROWSERS_PATH, RESOURCE_PREFIXES, STEP_FUNCTIONS_DEFAULTS } from './config/constants';
 
 export interface ComputeStackProps extends cdk.StackProps {
   tablesMap: TableMap;
@@ -35,14 +36,14 @@ export class ComputeStack extends cdk.Stack {
 
         // Use container image if ECR repository is provided, otherwise use zip deployment
         const lambdaEnv = {
-          CLOUDFRONT_DOMAIN: props.cloudfrontDomain || '',
-          OPENAI_SECRET_NAME: 'leadmagnet/openai-api-key',
-          TWILIO_SECRET_NAME: 'leadmagnet/twilio-credentials',
-          LOG_LEVEL: 'info',
+          [ENV_VAR_NAMES.CLOUDFRONT_DOMAIN]: props.cloudfrontDomain || '',
+          [ENV_VAR_NAMES.OPENAI_SECRET_NAME]: SECRET_NAMES.OPENAI_API_KEY,
+          [ENV_VAR_NAMES.TWILIO_SECRET_NAME]: SECRET_NAMES.TWILIO_CREDENTIALS,
+          [ENV_VAR_NAMES.LOG_LEVEL]: DEFAULT_LOG_LEVEL,
           // AWS_REGION is automatically set by Lambda runtime
           // Playwright environment variables
           // Set browsers path to match Dockerfile installation location
-          PLAYWRIGHT_BROWSERS_PATH: '/ms-playwright',
+          [ENV_VAR_NAMES.PLAYWRIGHT_BROWSERS_PATH]: PLAYWRIGHT_BROWSERS_PATH,
         };
         
         if (props.ecrRepository) {
@@ -58,8 +59,8 @@ export class ComputeStack extends cdk.Stack {
             props.artifactsBucket,
             {
               code: dockerCode,
-              timeout: cdk.Duration.minutes(15),
-              memorySize: 3008,
+              timeout: cdk.Duration.minutes(LAMBDA_DEFAULTS.JOB_PROCESSOR.TIMEOUT_MINUTES),
+              memorySize: LAMBDA_DEFAULTS.JOB_PROCESSOR.MEMORY_SIZE,
               environment: lambdaEnv,
               logGroup: logGroup,
             }
@@ -85,8 +86,8 @@ export class ComputeStack extends cdk.Stack {
               runtime: lambda.Runtime.PYTHON_3_11,
               handler: 'lambda_handler.lambda_handler',
               code: zipCode,
-              timeout: cdk.Duration.minutes(15),
-              memorySize: 3008,
+              timeout: cdk.Duration.minutes(LAMBDA_DEFAULTS.JOB_PROCESSOR.TIMEOUT_MINUTES),
+              memorySize: LAMBDA_DEFAULTS.JOB_PROCESSOR.MEMORY_SIZE,
               environment: lambdaEnv,
               logGroup: logGroup,
             }
@@ -94,13 +95,13 @@ export class ComputeStack extends cdk.Stack {
         }
 
     // Explicitly ensure usage_records table has PutItem permission (for usage tracking)
-    props.tablesMap.usageRecords.grantWriteData(this.jobProcessorLambda);
+    props.tablesMap[TableKey.USAGE_RECORDS].grantWriteData(this.jobProcessorLambda);
 
     // Grant Secrets Manager permissions
     grantSecretsAccess(
       this.jobProcessorLambda,
       this,
-      ['leadmagnet/openai-api-key', 'leadmagnet/twilio-credentials']
+      [SECRET_NAMES.OPENAI_API_KEY, SECRET_NAMES.TWILIO_CREDENTIALS]
     );
 
     // Create IAM role for Step Functions
@@ -125,23 +126,23 @@ export class ComputeStack extends cdk.Stack {
 
     // Create Step Functions state machine definition
     const definition = createJobProcessorStateMachine(this, {
-      jobsTable: props.tablesMap.jobs,
-      workflowsTable: props.tablesMap.workflows,
+      jobsTable: props.tablesMap[TableKey.JOBS],
+      workflowsTable: props.tablesMap[TableKey.WORKFLOWS],
       jobProcessorLambda: this.jobProcessorLambda,
     });
 
     // Create State Machine
     this.stateMachine = new sfn.StateMachine(this, 'JobProcessorStateMachine', {
-      stateMachineName: 'leadmagnet-job-processor',
+      stateMachineName: RESOURCE_PREFIXES.STATE_MACHINE,
       definitionBody: sfn.DefinitionBody.fromChainable(definition),
       role: stateMachineRole,
       logs: {
         destination: new logs.LogGroup(this, 'StateMachineLogGroup', {
-          logGroupName: '/aws/stepfunctions/leadmagnet-job-processor',
+          logGroupName: `/aws/stepfunctions/${RESOURCE_PREFIXES.STATE_MACHINE}`,
           retention: logs.RetentionDays.ONE_WEEK,
           removalPolicy: cdk.RemovalPolicy.DESTROY,
         }),
-        level: sfn.LogLevel.ALL,
+        level: sfn.LogLevel[STEP_FUNCTIONS_DEFAULTS.LOG_LEVEL as keyof typeof sfn.LogLevel],
         includeExecutionData: true,
       },
       tracingEnabled: true,

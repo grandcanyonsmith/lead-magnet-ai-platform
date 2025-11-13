@@ -19,6 +19,7 @@ from ai_service import AIService
 from db_service import DynamoDBService
 from s3_service import S3Service
 from artifact_service import ArtifactService
+from services.usage_service import UsageService
 from utils.decimal_utils import convert_floats_to_decimal
 
 logger = logging.getLogger(__name__)
@@ -38,6 +39,7 @@ class LegacyWorkflowProcessor:
         self.s3 = s3_service
         self.ai_service = ai_service
         self.artifact_service = artifact_service
+        self.usage_service = UsageService(db_service)
     
     def process_legacy_workflow(
         self,
@@ -85,7 +87,7 @@ class LegacyWorkflowProcessor:
                 report_duration = (datetime.utcnow() - report_start_time).total_seconds() * 1000
                 
                 # Store usage record
-                self._store_usage_record(job['tenant_id'], job_id, usage_info)
+                self.usage_service.store_usage_record(job['tenant_id'], job_id, usage_info)
                 
                 # Store report as artifact
                 report_artifact_id = self.artifact_service.store_artifact(
@@ -268,45 +270,4 @@ class LegacyWorkflowProcessor:
         
         return "\n".join(content_parts)
     
-    def _store_usage_record(
-        self,
-        tenant_id: str,
-        job_id: str,
-        usage_info: Dict[str, Any]
-    ):
-        """
-        Store usage record in DynamoDB.
-        
-        Args:
-            tenant_id: Tenant ID
-            job_id: Job ID
-            usage_info: Usage information dictionary
-        """
-        try:
-            from decimal import Decimal
-            from ulid import new as ulid
-            
-            usage_id = f"usage_{ulid()}"
-            # Convert cost_usd to Decimal for DynamoDB compatibility
-            cost_usd = usage_info.get('cost_usd', 0.0)
-            if isinstance(cost_usd, float):
-                cost_usd = Decimal(str(cost_usd))
-            elif not isinstance(cost_usd, Decimal):
-                cost_usd = Decimal(str(cost_usd))
-            
-            usage_record = {
-                'usage_id': usage_id,
-                'tenant_id': tenant_id,
-                'job_id': job_id,
-                'service_type': usage_info.get('service_type', 'openai_workflow'),
-                'model': usage_info.get('model', 'gpt-5'),
-                'input_tokens': usage_info.get('input_tokens', 0),
-                'output_tokens': usage_info.get('output_tokens', 0),
-                'cost_usd': cost_usd,
-                'created_at': datetime.utcnow().isoformat(),
-            }
-            self.db.put_usage_record(usage_record)
-        except Exception as e:
-            logger.error(f"Failed to store usage record: {e}")
-            # Don't fail the job if usage record fails
 

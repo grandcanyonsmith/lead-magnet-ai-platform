@@ -14,6 +14,7 @@ if (!ARTIFACTS_BUCKET) {
 }
 
 const s3Client = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
+const AWS_REGION = process.env.AWS_REGION || 'us-east-1';
 
 export class ArtifactUrlService {
   /**
@@ -27,6 +28,40 @@ export class ArtifactUrlService {
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Check if a URL is a direct S3 public URL (bucket.s3.region.amazonaws.com)
+   */
+  static isDirectS3Url(url: string | null | undefined): boolean {
+    if (!url) return false;
+    return url.includes('.s3.') && url.includes('.amazonaws.com/') && !this.isPresignedUrl(url);
+  }
+
+  /**
+   * Check if an artifact is an image based on file extension or content type
+   */
+  static isImage(artifact: any): boolean {
+    const fileName = artifact.artifact_name || artifact.file_name || '';
+    const contentType = artifact.mime_type || artifact.content_type || '';
+    const artifactType = artifact.artifact_type || '';
+    
+    const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
+    const imageContentTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp', 'image/svg+xml'];
+    
+    return artifactType === 'image' ||
+           imageExtensions.some(ext => fileName.toLowerCase().endsWith(ext)) ||
+           imageContentTypes.some(type => contentType.toLowerCase().includes(type));
+  }
+
+  /**
+   * Generate a direct S3 public URL for an S3 key
+   */
+  static getDirectS3Url(s3Key: string): string {
+    if (!ARTIFACTS_BUCKET) {
+      throw new Error('ARTIFACTS_BUCKET is not configured');
+    }
+    return `https://${ARTIFACTS_BUCKET}.s3.${AWS_REGION}.amazonaws.com/${s3Key}`;
   }
 
   /**
@@ -66,7 +101,13 @@ export class ArtifactUrlService {
   static needsUrlRefresh(artifact: any): boolean {
     if (!artifact.s3_key) return false;
 
-    // Check if artifact already has a valid CloudFront URL
+    // For images, check if URL is a direct S3 URL (permanent, public)
+    if (this.isImage(artifact)) {
+      const hasValidDirectS3Url = artifact.public_url && this.isDirectS3Url(artifact.public_url);
+      return !artifact.public_url || !hasValidDirectS3Url || this.isPresignedUrl(artifact.public_url);
+    }
+
+    // For non-images, check if artifact already has a valid CloudFront URL
     const hasValidCloudFrontUrl = artifact.public_url && 
       !this.isPresignedUrl(artifact.public_url) &&
       artifact.public_url.startsWith('https://');
@@ -79,9 +120,20 @@ export class ArtifactUrlService {
   }
 
   /**
-   * Generate URL for an artifact (CloudFront preferred, presigned as fallback)
+   * Generate URL for an artifact
+   * For images: direct S3 public URL (permanent, non-expiring)
+   * For other artifacts: CloudFront preferred, presigned as fallback
    */
-  static async generateUrl(s3Key: string): Promise<{ url: string; expiresAt: string | null }> {
+  static async generateUrl(s3Key: string, artifact?: any): Promise<{ url: string; expiresAt: string | null }> {
+    // For images, always use direct S3 public URL (permanent, non-expiring, publicly accessible)
+    if (artifact && this.isImage(artifact)) {
+      return {
+        url: this.getDirectS3Url(s3Key),
+        expiresAt: null,
+      };
+    }
+
+    // For non-images, use CloudFront if available
     if (CLOUDFRONT_DOMAIN) {
       // Use CloudFront URL (non-expiring)
       return {
@@ -110,7 +162,7 @@ export class ArtifactUrlService {
       };
     }
 
-    const { url, expiresAt } = await this.generateUrl(artifact.s3_key);
+    const { url, expiresAt } = await this.generateUrl(artifact.s3_key, artifact);
 
     // Update artifact in database with new URL
     const updateData: any = {

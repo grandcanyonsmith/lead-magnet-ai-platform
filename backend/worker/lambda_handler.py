@@ -4,14 +4,14 @@ Processes jobs by generating AI reports and rendering HTML templates.
 """
 
 import os
-import json
 import logging
-from datetime import datetime
 from typing import Dict, Any
 
 from processor import JobProcessor
 from db_service import DynamoDBService
 from s3_service import S3Service
+from services.error_handler_service import ErrorHandlerService
+from services.lambda_router import LambdaRouter
 
 # Setup logging
 logging.basicConfig(
@@ -41,8 +41,6 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     Returns:
         Dictionary with success status and optional error
     """
-    handler_start_time = datetime.utcnow()
-    
     # Extract job_id from event
     job_id = event.get('job_id')
     if not job_id:
@@ -53,17 +51,15 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             'error_type': 'ValueError'
         }
     
-    # Extract step_index if present (per-step mode)
     step_index = event.get('step_index')
-    step_type = event.get('step_type', 'workflow_step')  # 'workflow_step' or 'html_generation'
+    step_type = event.get('step_type', 'workflow_step')
     
     logger.info(f"[LambdaHandler] Starting Lambda handler", extra={
         'job_id': job_id,
         'step_index': step_index,
         'step_type': step_type,
         'request_id': getattr(context, 'aws_request_id', None) if context else None,
-        'function_name': getattr(context, 'function_name', None) if context else None,
-        'start_time': handler_start_time.isoformat()
+        'function_name': getattr(context, 'function_name', None) if context else None
     })
     
     try:
@@ -72,93 +68,37 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         db_service = DynamoDBService()
         s3_service = S3Service()
         processor = JobProcessor(db_service, s3_service)
+        router = LambdaRouter(processor)
         
-        # Route to appropriate processing method
-        action = event.get('action')
-        if action == 'resolve_dependencies':
-            # Dependency resolution mode
-            workflow_id = event.get('workflow_id')
-            if not workflow_id:
-                raise ValueError('workflow_id is required for dependency resolution')
-            
-            logger.info(f"Resolving dependencies for workflow {workflow_id}")
-            workflow = db_service.get_workflow(workflow_id)
-            if not workflow:
-                raise ValueError(f"Workflow {workflow_id} not found")
-            
-            steps = workflow.get('steps', [])
-            if not steps:
-                raise ValueError(f"Workflow {workflow_id} has no steps")
-            
-            execution_plan = processor.resolve_step_dependencies(steps)
-            
-            # Store execution plan in job
-            db_service.update_job(job_id, {
-                'execution_plan': execution_plan,
-                'updated_at': datetime.utcnow().isoformat()
-            }, s3_service=s3_service)
-            
-            logger.info(f"Dependencies resolved for workflow {workflow_id}", extra={
-                'execution_groups': len(execution_plan.get('executionGroups', [])),
-                'total_steps': execution_plan.get('totalSteps', 0)
-            })
-            
-            return {
-                'success': True,
-                'execution_plan': execution_plan
-            }
-        elif step_index is not None or step_type == 'html_generation':
-            # Per-step processing mode (including HTML generation)
-            if step_type == 'html_generation':
-                logger.info(f"Processing HTML generation step for job {job_id}")
-                # HTML generation doesn't need step_index, use -1 as placeholder
-                result = processor.process_single_step(job_id, -1, step_type)
-            else:
-                logger.info(f"Processing single step {step_index} for job {job_id}")
-                result = processor.process_single_step(job_id, step_index, step_type)
-        else:
-            # Legacy full job processing mode (backward compatibility)
-            logger.info(f"Processing full job {job_id} (legacy mode)")
-            result = processor.process_job(job_id)
+        # Route event to appropriate handler
+        result = router.route(event)
         
         if result['success']:
             step_description = 'HTML generation' if step_type == 'html_generation' else (f'step {step_index}' if step_index is not None else 'all')
             logger.info(f"Job {job_id} {step_description} completed successfully")
-            return result
         else:
             step_description = 'HTML generation' if step_type == 'html_generation' else (f'step {step_index}' if step_index is not None else 'all')
             logger.error(f"Job {job_id} {step_description} failed: {result.get('error')}")
-            return result
-            
+        
+        return result
+        
     except Exception as e:
-        step_description = 'HTML generation' if step_type == 'html_generation' else (f'step {step_index}' if step_index is not None else 'all')
-        logger.exception(f"Fatal error processing job {job_id}, {step_description}")
-        
-        # Create descriptive error message
-        error_type = type(e).__name__
-        error_message = str(e)
-        
-        if not error_message or error_message == error_type:
-            error_message = f"{error_type}: {error_message}" if error_message else error_type
-        
-        descriptive_error = f"Fatal error during job processing: {error_message}"
-        
-        # Try to update job status to failed
+        # Use error handler service for consistent error handling
         try:
             db_service = DynamoDBService()
-            db_service.update_job(job_id, {
-                'status': 'failed',
-                'error_message': descriptive_error,
-                'error_type': error_type,
-                'updated_at': datetime.utcnow().isoformat()
-            })
-        except Exception as update_error:
-            logger.error(f"Failed to update job status: {update_error}")
+        except Exception:
+            # If we can't initialize db_service, create a minimal error response
+            logger.exception("Failed to initialize DynamoDB service for error handling")
+            return {
+                'success': False,
+                'error': f"Fatal error: {str(e)}",
+                'error_type': type(e).__name__
+            }
         
-        return {
-            'success': False,
-            'error': descriptive_error,
-            'error_type': error_type,
-            'step_index': step_index
-        }
-
+        error_handler = ErrorHandlerService(db_service)
+        return error_handler.handle_job_error(
+            job_id=job_id,
+            error=e,
+            step_index=step_index,
+            step_type=step_type
+        )

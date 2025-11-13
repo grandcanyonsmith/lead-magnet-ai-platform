@@ -1,5 +1,5 @@
 import { handler } from './src/index';
-import { APIGatewayProxyEventV2, Context } from 'aws-lambda';
+import { APIGatewayProxyEventV2, APIGatewayProxyResultV2, Context } from 'aws-lambda';
 
 // Mock JWT claims for testing
 const mockClaims = {
@@ -56,17 +56,17 @@ function createMockEvent(
       stage: '$default',
       time: new Date().toISOString(),
       timeEpoch: Date.now(),
+      authorizer: {
+        jwt: {
+          claims: mockClaims,
+          scopes: [],
+        },
+      },
     } as any,
     pathParameters: {},
     queryStringParameters: queryParams || undefined,
     body: body ? JSON.stringify(body) : undefined,
     isBase64Encoded: false,
-    authorizer: {
-      jwt: {
-        claims: mockClaims,
-        scopes: [],
-      },
-    } as any,
   } as APIGatewayProxyEventV2;
 }
 
@@ -80,20 +80,27 @@ async function testEndpoint(name: string, path: string, method: string, body?: a
   const event = createMockEvent(path, method, body, queryParams);
   
   try {
-    const result = await handler(event, mockContext);
-    console.log('\n✅ Response Status:', result.statusCode);
-    console.log('Response Headers:', JSON.stringify(result.headers, null, 2));
+    const result: any = await handler(event, mockContext);
+    // Type guard to ensure result is an object, not a string
+    if (typeof result === 'string') {
+      console.log('\n✅ Response (string):', result.substring(0, 500));
+      return { statusCode: 200, body: result } as APIGatewayProxyResultV2;
+    }
     
-    if (result.body) {
+    const response: any = result;
+    console.log('\n✅ Response Status:', response.statusCode);
+    console.log('Response Headers:', JSON.stringify(response.headers, null, 2));
+    
+    if (response.body) {
       try {
-        const parsedBody = JSON.parse(result.body);
+        const parsedBody = typeof response.body === 'string' ? JSON.parse(response.body) : response.body;
         console.log('Response Body:', JSON.stringify(parsedBody, null, 2));
       } catch (e) {
-        console.log('Response Body (raw):', result.body.substring(0, 500));
+        console.log('Response Body (raw):', typeof response.body === 'string' ? response.body.substring(0, 500) : String(response.body).substring(0, 500));
       }
     }
     
-    return result;
+    return response;
   } catch (error: any) {
     console.error('\n❌ Error:', error.message);
     console.error('Stack:', error.stack);
