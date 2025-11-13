@@ -92,6 +92,15 @@ class CUALoopService:
         try:
             browser.initialize(display_width=display_width, display_height=display_height)
             
+            # Navigate to a default page first to ensure browser is ready
+            # This helps avoid "browser has been closed" errors
+            try:
+                browser.navigate("about:blank")
+                logger.info("[CUALoopService] Browser initialized and ready")
+            except Exception as nav_error:
+                logger.warning(f"[CUALoopService] Failed to navigate to initial page: {nav_error}")
+                # Continue anyway - browser might still work
+            
             # Build initial request params (use string format for initial request)
             initial_params = {
                 'model': model,
