@@ -337,6 +337,152 @@ def test_responses_api_integration():
         return False
 
 
+def test_image_url_extraction():
+    """Test image URL extraction from Responses API responses."""
+    logger.info("Testing image URL extraction...")
+    
+    try:
+        from services.openai_client import OpenAIClient
+        
+        client = OpenAIClient()
+        
+        # Create a mock response object with image items in output
+        class MockUsage:
+            def __init__(self):
+                self.input_tokens = 100
+                self.output_tokens = 50
+                self.total_tokens = 150
+        
+        class MockImageItem:
+            def __init__(self, url):
+                self.type = 'image'
+                self.image_url = url
+        
+        class MockResponse1:
+            def __init__(self):
+                self.output_text = "Here is the logo"
+                self.output = [
+                    MockImageItem("https://example.com/image1.png"),
+                    MockImageItem("https://example.com/image2.png")
+                ]
+                self.usage = MockUsage()
+        
+        # Test extraction from response.output with image items
+        response1 = MockResponse1()
+        content, usage_info, request_details, response_details = client.process_api_response(
+            response=response1,
+            model="gpt-4o",
+            instructions="Generate a logo",
+            input_text="Create a logo",
+            previous_context="",
+            context="",
+            tools=[{"type": "image_generation"}],
+            tool_choice="auto",
+            params={},
+            image_handler=None
+        )
+        
+        assert len(response_details['image_urls']) == 2
+        assert "https://example.com/image1.png" in response_details['image_urls']
+        assert "https://example.com/image2.png" in response_details['image_urls']
+        logger.info("✅ Image URL extraction from response.output works")
+        
+        # Test with tool_call items
+        class MockToolCallItem:
+            def __init__(self):
+                self.type = 'tool_call'
+                self.name = 'image_generation'
+                self.result = [
+                    {"url": "https://example.com/image3.png"},
+                    {"url": "https://example.com/image4.png"}
+                ]
+        
+        class MockResponse2:
+            def __init__(self):
+                self.output_text = "Generated images"
+                self.output = [MockToolCallItem()]
+                self.usage = MockUsage()
+        
+        response2 = MockResponse2()
+        content, usage_info, request_details, response_details = client.process_api_response(
+            response=response2,
+            model="gpt-4o",
+            instructions="Generate images",
+            input_text="Create images",
+            previous_context="",
+            context="",
+            tools=[{"type": "image_generation"}],
+            tool_choice="auto",
+            params={},
+            image_handler=None
+        )
+        
+        assert len(response_details['image_urls']) == 2
+        assert "https://example.com/image3.png" in response_details['image_urls']
+        assert "https://example.com/image4.png" in response_details['image_urls']
+        logger.info("✅ Image URL extraction from tool_call items works")
+        
+        # Test with single image result
+        class MockToolCallItemSingle:
+            def __init__(self):
+                self.type = 'tool_call'
+                self.name = 'image_generation'
+                self.result = {"url": "https://example.com/image5.png"}
+        
+        class MockResponse3:
+            def __init__(self):
+                self.output_text = "Generated image"
+                self.output = [MockToolCallItemSingle()]
+                self.usage = MockUsage()
+        
+        response3 = MockResponse3()
+        content, usage_info, request_details, response_details = client.process_api_response(
+            response=response3,
+            model="gpt-4o",
+            instructions="Generate image",
+            input_text="Create image",
+            previous_context="",
+            context="",
+            tools=[{"type": "image_generation"}],
+            tool_choice="auto",
+            params={},
+            image_handler=None
+        )
+        
+        assert len(response_details['image_urls']) == 1
+        assert "https://example.com/image5.png" in response_details['image_urls']
+        logger.info("✅ Image URL extraction from single image result works")
+        
+        # Test with no images (should return empty list)
+        class MockResponse4:
+            def __init__(self):
+                self.output_text = "No images here"
+                self.output = []
+                self.usage = MockUsage()
+        
+        response4 = MockResponse4()
+        content, usage_info, request_details, response_details = client.process_api_response(
+            response=response4,
+            model="gpt-4o",
+            instructions="Generate text",
+            input_text="Create text",
+            previous_context="",
+            context="",
+            tools=[],
+            tool_choice="none",
+            params={},
+            image_handler=None
+        )
+        
+        assert response_details['image_urls'] == []
+        logger.info("✅ No images case returns empty list")
+        
+        return True
+    except Exception as e:
+        logger.error(f"❌ Image URL extraction test failed: {e}", exc_info=True)
+        return False
+
+
 def main():
     """Run all end-to-end tests."""
     logger.info("=" * 80)
@@ -352,6 +498,7 @@ def main():
         ("Execution Step Manager", test_execution_step_manager),
         ("Error Handler", test_error_handler),
         ("Responses API Integration", test_responses_api_integration),
+        ("Image URL Extraction", test_image_url_extraction),
     ]
     
     results = []
