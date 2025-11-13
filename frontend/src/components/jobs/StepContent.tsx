@@ -133,8 +133,8 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
     console.log(`[StepContent] Rendering ${imageUrls.length} inline images:`, imageUrls)
     
     return (
-      <div className="mt-4 md:mt-4 space-y-3 md:space-y-2">
-        <div className="text-xs font-medium text-gray-600 mb-2.5 md:mb-2">Generated Images:</div>
+      <div className="mt-5 md:mt-4 space-y-4 md:space-y-2">
+        <div className="text-sm md:text-xs font-medium text-gray-600 mb-3 md:mb-2">Generated Images:</div>
         {imageUrls.map((url, idx) => (
           <InlineImage key={`inline-image-${idx}`} url={url} alt={`Image ${idx + 1}`} />
         ))}
@@ -194,16 +194,17 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
             content={contentString}
             renderContent={(displayContent, isExpanded) => (
               <>
-                <div className="rounded-lg overflow-hidden border border-gray-200">
+                <div className="rounded-xl overflow-hidden border border-gray-200">
                   <SyntaxHighlighter
                     language="json"
                     style={vscDarkPlus}
                     customStyle={{
                       margin: 0,
-                      padding: '12px',
-                      fontSize: '12px',
+                      padding: '16px',
+                      fontSize: '13px',
                       maxHeight: isExpanded ? 'none' : '400px',
                       overflow: 'auto',
+                      lineHeight: '1.6',
                     }}
                     showLineNumbers={contentString.length > 500}
                   >
@@ -212,7 +213,7 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
                 </div>
                 {/* Render images found in JSON */}
                 {extractedImageUrls.length > 0 && (
-                  <div className="mt-4 space-y-2">
+                  <div className="mt-5 md:mt-4 space-y-4 md:space-y-2">
                     {extractedImageUrls.map((url, idx) => (
                       <InlineImage key={`json-image-${idx}`} url={url} alt={`Image from JSON ${idx + 1}`} />
                     ))}
@@ -263,16 +264,16 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
 
         {showRendered ? (
           <>
-            <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
-              <iframe
-                srcDoc={htmlContent}
-                className="w-full border-0"
-                style={{ height: '600px', minHeight: '600px' }}
-                sandbox="allow-same-origin"
-                referrerPolicy="no-referrer"
-                title="HTML Preview"
-              />
-            </div>
+          <div className="border-2 border-gray-200 rounded-xl overflow-hidden bg-white">
+            <iframe
+              srcDoc={htmlContent}
+              className="w-full border-0"
+              style={{ height: '600px', minHeight: '600px' }}
+              sandbox="allow-same-origin"
+              referrerPolicy="no-referrer"
+              title="HTML Preview"
+            />
+          </div>
             {/* Render images from imageUrls prop even when showing rendered HTML */}
             {renderInlineImages()}
           </>
@@ -281,16 +282,17 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
             <ExpandableContent
               content={htmlContent}
               renderContent={(displayContent) => (
-                <div className="rounded-lg overflow-hidden border border-gray-200">
+                <div className="rounded-xl overflow-hidden border border-gray-200">
                   <SyntaxHighlighter
                     language="html"
                     style={vscDarkPlus}
                     customStyle={{
                       margin: 0,
-                      padding: '12px',
-                      fontSize: '12px',
+                      padding: '16px',
+                      fontSize: '13px',
                       maxHeight: '400px',
                       overflow: 'auto',
+                      lineHeight: '1.6',
                     }}
                     showLineNumbers={htmlContent.length > 500}
                   >
@@ -303,7 +305,7 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
             {(() => {
               const extractedUrls = extractImageUrls(htmlContent)
               return extractedUrls.length > 0 || imageUrls.length > 0 ? (
-                <div className="mt-4 space-y-2">
+                <div className="mt-5 md:mt-4 space-y-4 md:space-y-2">
                   {extractedUrls.map((url, idx) => (
                     <InlineImage key={`html-image-${idx}`} url={url} alt={`Image from HTML ${idx + 1}`} />
                   ))}
@@ -344,14 +346,14 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
             content={markdownText}
             renderContent={(displayContent) => (
               <>
-                <div className="prose prose-sm max-w-none bg-white p-4 rounded-lg border border-gray-200 max-h-[600px] overflow-y-auto">
+                <div className="prose prose-sm max-w-none bg-white p-4 md:p-4 rounded-xl border border-gray-200 max-h-[600px] overflow-y-auto leading-relaxed">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {displayContent}
                   </ReactMarkdown>
                 </div>
                 {/* Render plain image URLs that aren't in markdown format */}
                 {extractedImageUrls.length > 0 && (
-                  <div className="mt-4 space-y-2">
+                  <div className="mt-5 md:mt-4 space-y-4 md:space-y-2">
                     {extractedImageUrls.map((url, idx) => (
                       <InlineImage key={`md-image-${idx}`} url={url} alt={`Image from markdown ${idx + 1}`} />
                     ))}
@@ -380,7 +382,7 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
             // No images in text or prop, render as plain text
             return (
               <>
-                <pre className="text-xs md:text-sm whitespace-pre-wrap font-mono bg-gray-50 p-3 md:p-4 rounded-lg border border-gray-200 max-h-[500px] md:max-h-[600px] overflow-y-auto leading-relaxed">
+                <pre className="text-sm md:text-xs whitespace-pre-wrap font-mono bg-gray-50 p-4 md:p-4 rounded-xl border border-gray-200 max-h-[500px] md:max-h-[600px] overflow-y-auto leading-relaxed">
                   {displayContent}
                 </pre>
                 {/* Always check for images from prop */}
@@ -391,8 +393,8 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
           
           // Has images in text, render with inline images
           return (
-            <div className="bg-gray-50 p-3 md:p-4 rounded-lg border border-gray-200 max-h-[500px] md:max-h-[600px] overflow-y-auto">
-              <pre className="text-xs md:text-sm whitespace-pre-wrap font-mono leading-relaxed">
+            <div className="bg-gray-50 p-4 md:p-4 rounded-xl border border-gray-200 max-h-[500px] md:max-h-[600px] overflow-y-auto">
+              <pre className="text-sm md:text-xs whitespace-pre-wrap font-mono leading-relaxed">
                 {renderTextWithImages(displayContent)}
               </pre>
               {/* Render images from imageUrls prop */}
