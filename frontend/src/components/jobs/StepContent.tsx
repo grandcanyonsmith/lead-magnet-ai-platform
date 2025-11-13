@@ -1,16 +1,70 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { FiChevronDown, FiChevronUp } from 'react-icons/fi'
+import { extractImageUrls, extractImageUrlsFromObject } from '@/utils/imageUtils'
+import { InlineImage } from './InlineImage'
 
 const MAX_PREVIEW_LENGTH = 1000
 
 interface StepContentProps {
   formatted: { content: any, type: 'json' | 'markdown' | 'text' | 'html', structure?: 'ai_input' }
+}
+
+/**
+ * Render text content with inline images
+ * Splits text by image URLs and renders images inline
+ */
+function renderTextWithImages(text: string): React.ReactNode {
+  const imageUrls = extractImageUrls(text)
+  
+  if (imageUrls.length === 0) {
+    return <>{text}</>
+  }
+
+  // Split text by image URLs and render images inline
+  let remainingText = text
+  const parts: React.ReactNode[] = []
+  let partIndex = 0
+
+  imageUrls.forEach((url, idx) => {
+    const urlIndex = remainingText.indexOf(url)
+    if (urlIndex === -1) return
+
+    // Add text before the URL
+    if (urlIndex > 0) {
+      parts.push(
+        <span key={`text-${partIndex++}`}>
+          {remainingText.substring(0, urlIndex)}
+        </span>
+      )
+    }
+
+    // Add the image
+    parts.push(
+      <div key={`image-${idx}`} className="block">
+        <InlineImage url={url} alt={`Image ${idx + 1}`} />
+      </div>
+    )
+
+    // Update remaining text
+    remainingText = remainingText.substring(urlIndex + url.length)
+  })
+
+  // Add any remaining text
+  if (remainingText.length > 0) {
+    parts.push(
+      <span key={`text-${partIndex}`}>
+        {remainingText}
+      </span>
+    )
+  }
+
+  return <>{parts}</>
 }
 
 // Inline expandable content component
@@ -104,6 +158,9 @@ export function StepContent({ formatted }: StepContentProps) {
   const renderJsonContent = () => {
     const hasMetadata = formatted.structure === 'ai_input' && typeof formatted.content === 'object'
     
+    // Extract image URLs from the JSON object
+    const imageUrls = extractImageUrlsFromObject(formatted.content)
+    
     return (
       <div className="space-y-4">
         {hasMetadata && renderMetadata()}
@@ -116,22 +173,32 @@ export function StepContent({ formatted }: StepContentProps) {
           <ExpandableContent
             content={contentString}
             renderContent={(displayContent, isExpanded) => (
-              <div className="rounded-lg overflow-hidden border border-gray-200">
-                <SyntaxHighlighter
-                  language="json"
-                  style={vscDarkPlus}
-                  customStyle={{
-                    margin: 0,
-                    padding: '12px',
-                    fontSize: '12px',
-                    maxHeight: isExpanded ? 'none' : '400px',
-                    overflow: 'auto',
-                  }}
-                  showLineNumbers={contentString.length > 500}
-                >
-                  {displayContent}
-                </SyntaxHighlighter>
-              </div>
+              <>
+                <div className="rounded-lg overflow-hidden border border-gray-200">
+                  <SyntaxHighlighter
+                    language="json"
+                    style={vscDarkPlus}
+                    customStyle={{
+                      margin: 0,
+                      padding: '12px',
+                      fontSize: '12px',
+                      maxHeight: isExpanded ? 'none' : '400px',
+                      overflow: 'auto',
+                    }}
+                    showLineNumbers={contentString.length > 500}
+                  >
+                    {displayContent}
+                  </SyntaxHighlighter>
+                </div>
+                {/* Render images found in JSON */}
+                {imageUrls.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    {imageUrls.map((url, idx) => (
+                      <InlineImage key={`json-image-${idx}`} url={url} alt={`Image from JSON ${idx + 1}`} />
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           />
         </div>
@@ -184,27 +251,40 @@ export function StepContent({ formatted }: StepContentProps) {
             />
           </div>
         ) : (
-          <ExpandableContent
-            content={htmlContent}
-            renderContent={(displayContent) => (
-              <div className="rounded-lg overflow-hidden border border-gray-200">
-                <SyntaxHighlighter
-                  language="html"
-                  style={vscDarkPlus}
-                  customStyle={{
-                    margin: 0,
-                    padding: '12px',
-                    fontSize: '12px',
-                    maxHeight: '400px',
-                    overflow: 'auto',
-                  }}
-                  showLineNumbers={htmlContent.length > 500}
-                >
-                  {displayContent}
-                </SyntaxHighlighter>
-              </div>
-            )}
-          />
+          <>
+            <ExpandableContent
+              content={htmlContent}
+              renderContent={(displayContent) => (
+                <div className="rounded-lg overflow-hidden border border-gray-200">
+                  <SyntaxHighlighter
+                    language="html"
+                    style={vscDarkPlus}
+                    customStyle={{
+                      margin: 0,
+                      padding: '12px',
+                      fontSize: '12px',
+                      maxHeight: '400px',
+                      overflow: 'auto',
+                    }}
+                    showLineNumbers={htmlContent.length > 500}
+                  >
+                    {displayContent}
+                  </SyntaxHighlighter>
+                </div>
+              )}
+            />
+            {/* Extract and render images from HTML source */}
+            {(() => {
+              const imageUrls = extractImageUrls(htmlContent)
+              return imageUrls.length > 0 ? (
+                <div className="mt-4 space-y-2">
+                  {imageUrls.map((url, idx) => (
+                    <InlineImage key={`html-image-${idx}`} url={url} alt={`Image from HTML ${idx + 1}`} />
+                  ))}
+                </div>
+              ) : null
+            })()}
+          </>
         )}
       </div>
     )
@@ -219,6 +299,9 @@ export function StepContent({ formatted }: StepContentProps) {
         ? formatted.content
         : formatted.content.input || JSON.stringify(formatted.content, null, 2)
     
+    // Extract image URLs from markdown (ReactMarkdown handles markdown image syntax, but we also want plain URLs)
+    const imageUrls = extractImageUrls(markdownText)
+    
     return (
       <div className="space-y-4">
         {hasMetadata && renderMetadata()}
@@ -231,11 +314,21 @@ export function StepContent({ formatted }: StepContentProps) {
           <ExpandableContent
             content={markdownText}
             renderContent={(displayContent) => (
-              <div className="prose prose-sm max-w-none bg-white p-4 rounded-lg border border-gray-200 max-h-[600px] overflow-y-auto">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {displayContent}
-                </ReactMarkdown>
-              </div>
+              <>
+                <div className="prose prose-sm max-w-none bg-white p-4 rounded-lg border border-gray-200 max-h-[600px] overflow-y-auto">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {displayContent}
+                  </ReactMarkdown>
+                </div>
+                {/* Render plain image URLs that aren't in markdown format */}
+                {imageUrls.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    {imageUrls.map((url, idx) => (
+                      <InlineImage key={`md-image-${idx}`} url={url} alt={`Image from markdown ${idx + 1}`} />
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           />
         </div>
@@ -248,11 +341,28 @@ export function StepContent({ formatted }: StepContentProps) {
     return (
       <ExpandableContent
         content={contentString}
-        renderContent={(displayContent) => (
-          <pre className="text-sm whitespace-pre-wrap font-mono bg-gray-50 p-4 rounded-lg border border-gray-200 max-h-[600px] overflow-y-auto">
-            {displayContent}
-          </pre>
-        )}
+        renderContent={(displayContent) => {
+          // Check if there are image URLs in the text
+          const imageUrls = extractImageUrls(displayContent)
+          
+          if (imageUrls.length === 0) {
+            // No images, render as plain text
+            return (
+              <pre className="text-sm whitespace-pre-wrap font-mono bg-gray-50 p-4 rounded-lg border border-gray-200 max-h-[600px] overflow-y-auto">
+                {displayContent}
+              </pre>
+            )
+          }
+          
+          // Has images, render with inline images
+          return (
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 max-h-[600px] overflow-y-auto">
+              <pre className="text-sm whitespace-pre-wrap font-mono">
+                {renderTextWithImages(displayContent)}
+              </pre>
+            </div>
+          )
+        }}
       />
     )
   }
