@@ -1,9 +1,7 @@
-import { APIGatewayProxyEventV2 } from 'aws-lambda';
 import { formsController } from '../controllers/forms';
 import { jobsController } from '../controllers/jobs';
 import { webhooksController } from '../controllers/webhooks';
-import { get, post } from './routeBuilder';
-import { routeRegistry } from './routeRegistry';
+import { router } from './router';
 import { logger } from '../utils/logger';
 
 /**
@@ -12,59 +10,27 @@ import { logger } from '../utils/logger';
  */
 export function registerPublicRoutes(): void {
   // Public form rendering
-  routeRegistry.register(
-    get('/v1/forms/:slug')
-    .handler(async (event: APIGatewayProxyEventV2) => {
-      const slug = event.pathParameters?.slug || event.rawPath.split('/').pop() || '';
-      logger.info('[Public Routes] GET /v1/forms/:slug', { slug });
-      return await formsController.getPublicForm(slug);
-    })
-    .requiresAuth(false)
-    .priority(100)
-    .build()
-  );
+  router.register('GET', '/v1/forms/:slug', async (params) => {
+    logger.info('[Public Routes] GET /v1/forms/:slug', { slug: params.slug });
+    return await formsController.getPublicForm(params.slug);
+  }, false);
 
   // Public form submission
-  routeRegistry.register(
-    post('/v1/forms/:slug/submit')
-    .handler(async (event: APIGatewayProxyEventV2) => {
-      const slug = event.pathParameters?.slug || event.rawPath.split('/')[2] || '';
-      const body = event.body ? JSON.parse(event.body) : undefined;
-      const sourceIp = event.requestContext.http.sourceIp;
-      logger.info('[Public Routes] POST /v1/forms/:slug/submit', { slug });
-      return await formsController.submitForm(slug, body, sourceIp);
-    })
-    .requiresAuth(false)
-    .priority(100)
-    .build()
-  );
+  router.register('POST', '/v1/forms/:slug/submit', async (params, body, _query, _tenantId, context) => {
+    logger.info('[Public Routes] POST /v1/forms/:slug/submit', { slug: params.slug });
+    return await formsController.submitForm(params.slug, body, context?.sourceIp || '');
+  }, false);
 
   // Public job status endpoint (for form submissions)
-  routeRegistry.register(
-    get('/v1/jobs/:jobId/status')
-    .handler(async (event: APIGatewayProxyEventV2) => {
-      const jobId = event.pathParameters?.jobId || event.rawPath.split('/')[3] || '';
-      logger.info('[Public Routes] GET /v1/jobs/:jobId/status', { jobId });
-      return await jobsController.getPublicStatus(jobId);
-    })
-    .requiresAuth(false)
-    .priority(100)
-    .build()
-  );
+  router.register('GET', '/v1/jobs/:jobId/status', async (params) => {
+    logger.info('[Public Routes] GET /v1/jobs/:jobId/status', { jobId: params.jobId });
+    return await jobsController.getPublicStatus(params.jobId);
+  }, false);
 
   // Public webhook endpoint
-  routeRegistry.register(
-    post('/v1/webhooks/:token')
-    .handler(async (event: APIGatewayProxyEventV2) => {
-      const token = event.pathParameters?.token || event.rawPath.split('/')[2] || '';
-      const body = event.body ? JSON.parse(event.body) : undefined;
-      const sourceIp = event.requestContext.http.sourceIp;
-      logger.info('[Public Routes] POST /v1/webhooks/:token', { token });
-      return await webhooksController.handleWebhook(token, body, sourceIp);
-    })
-    .requiresAuth(false)
-    .priority(100)
-    .build()
-  );
+  router.register('POST', '/v1/webhooks/:token', async (params, body, _query, _tenantId, context) => {
+    logger.info('[Public Routes] POST /v1/webhooks/:token', { token: params.token });
+    return await webhooksController.handleWebhook(params.token, body, context?.sourceIp || '');
+  }, false);
 }
 

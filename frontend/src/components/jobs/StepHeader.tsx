@@ -5,8 +5,17 @@
 
 import { MergedStep, StepStatus } from '@/types/job'
 import { formatDurationMs } from '@/utils/jobFormatting'
-import { StepStatusIndicator } from './StepStatusIndicator'
-import { FiEdit2, FiZap, FiRefreshCw, FiLoader } from 'react-icons/fi'
+import { FiEdit2, FiRefreshCw, FiLoader, FiCheckCircle, FiCircle, FiXCircle } from 'react-icons/fi'
+
+const STEP_TYPE_COLORS: Record<string, string> = {
+  form_submission: 'bg-blue-100 text-blue-800',
+  ai_generation: 'bg-purple-100 text-purple-800',
+  html_generation: 'bg-green-100 text-green-800',
+  final_output: 'bg-gray-100 text-gray-800',
+  workflow_step: 'bg-gray-100 text-gray-800',
+}
+
+const DEFAULT_STEP_TYPE_COLOR = 'bg-gray-100 text-gray-800'
 
 interface StepHeaderProps {
   step: MergedStep
@@ -15,8 +24,60 @@ interface StepHeaderProps {
   canEdit?: boolean
   rerunningStep?: number | null
   onEditStep?: (stepIndex: number) => void
-  onQuickEdit?: (stepOrder: number, stepName: string) => void
   onRerunStep?: (stepIndex: number) => Promise<void>
+}
+
+// Helper to get tool name from tool object or string
+function getToolName(tool: any): string {
+  return typeof tool === 'string' ? tool : tool.type || 'unknown'
+}
+
+// Render status icon inline
+function renderStatusIcon(status: StepStatus) {
+  const iconClass = "w-5 h-5 flex-shrink-0"
+  switch (status) {
+    case 'completed':
+      return <FiCheckCircle className={`${iconClass} text-green-600`} />
+    case 'in_progress':
+      return <FiLoader className={`${iconClass} text-yellow-500 animate-spin`} />
+    case 'failed':
+      return <FiXCircle className={`${iconClass} text-red-600`} />
+    case 'pending':
+    default:
+      return <FiCircle className={`${iconClass} text-gray-400`} />
+  }
+}
+
+// Render tool badges inline
+function renderToolBadges(tools?: string[] | unknown[], toolChoice?: string) {
+  if (!tools || !Array.isArray(tools) || tools.length === 0) {
+    return (
+      <span className="px-2 py-0.5 text-xs bg-gray-50 text-gray-600 rounded border border-gray-200">
+        None
+      </span>
+    )
+  }
+
+  return (
+    <>
+      <div className="flex flex-wrap gap-1">
+        {tools.map((tool: any, toolIdx: number) => {
+          const toolName = getToolName(tool)
+          return (
+            <span
+              key={toolIdx}
+              className="px-2 py-0.5 text-xs bg-blue-50 text-blue-700 rounded border border-blue-200 whitespace-nowrap"
+            >
+              {toolName}
+            </span>
+          )
+        })}
+      </div>
+      {toolChoice && (
+        <span className="text-gray-500">({toolChoice})</span>
+      )}
+    </>
+  )
 }
 
 export function StepHeader({
@@ -26,27 +87,19 @@ export function StepHeader({
   canEdit = false,
   rerunningStep,
   onEditStep,
-  onQuickEdit,
   onRerunStep,
 }: StepHeaderProps) {
   const isPending = status === 'pending'
   const isCompleted = status === 'completed'
   const isInProgress = status === 'in_progress'
   
-  const stepTypeColors: Record<string, string> = {
-    form_submission: 'bg-blue-100 text-blue-800',
-    ai_generation: 'bg-purple-100 text-purple-800',
-    html_generation: 'bg-green-100 text-green-800',
-    final_output: 'bg-gray-100 text-gray-800',
-    workflow_step: 'bg-gray-100 text-gray-800',
-  }
-  const stepTypeColor = stepTypeColors[step.step_type] || 'bg-gray-100 text-gray-800'
+  const stepTypeColor = STEP_TYPE_COLORS[step.step_type] || DEFAULT_STEP_TYPE_COLOR
 
   return (
     <div className="flex items-start gap-3 p-3 sm:p-4">
       {/* Status Icon */}
       <div className="flex-shrink-0 mt-0.5">
-        <StepStatusIndicator status={status} />
+        {renderStatusIcon(status)}
       </div>
       
       {/* Step Content */}
@@ -74,47 +127,7 @@ export function StepHeader({
         {!isPending && (
           <div className="flex items-center flex-wrap gap-1.5 text-xs">
             <span className="text-gray-500 font-medium">Tools:</span>
-            {step.input?.tools && Array.isArray(step.input.tools) && step.input.tools.length > 0 ? (
-              <>
-                <div className="flex flex-wrap gap-1">
-                  {step.input.tools.map((tool: any, toolIdx: number) => {
-                    const toolName = typeof tool === 'string' ? tool : tool.type || 'unknown'
-                    return (
-                      <span key={toolIdx} className="px-2 py-0.5 text-xs bg-blue-50 text-blue-700 rounded border border-blue-200 whitespace-nowrap">
-                        {toolName}
-                      </span>
-                    )
-                  })}
-                </div>
-                {step.input.tool_choice && (
-                  <span className="text-gray-500">
-                    ({step.input.tool_choice})
-                  </span>
-                )}
-              </>
-            ) : step.tools && Array.isArray(step.tools) && step.tools.length > 0 ? (
-              <>
-                <div className="flex flex-wrap gap-1">
-                  {step.tools.map((tool: any, toolIdx: number) => {
-                    const toolName = typeof tool === 'string' ? tool : tool.type || 'unknown'
-                    return (
-                      <span key={toolIdx} className="px-2 py-0.5 text-xs bg-blue-50 text-blue-700 rounded border border-blue-200 whitespace-nowrap">
-                        {toolName}
-                      </span>
-                    )
-                  })}
-                </div>
-                {step.tool_choice && (
-                  <span className="text-gray-500">
-                    ({step.tool_choice})
-                  </span>
-                )}
-              </>
-            ) : (
-              <span className="px-2 py-0.5 text-xs bg-gray-50 text-gray-600 rounded border border-gray-200">
-                None
-              </span>
-            )}
+            {renderToolBadges(step.input?.tools || step.tools, step.input?.tool_choice || step.tool_choice)}
           </div>
         )}
       </div>
@@ -171,21 +184,6 @@ export function StepHeader({
               }`}
             >
               <FiEdit2 className="w-4 h-4" />
-            </button>
-          )}
-
-          {/* Quick Edit Button - Available for all steps with output */}
-          {onQuickEdit && step.step_order > 0 && step.output !== null && step.output !== undefined && step.output !== '' && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                onQuickEdit(step.step_order, step.step_name || `Step ${step.step_order}`)
-              }}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-purple-600 hover:text-purple-800 hover:bg-purple-50 rounded-lg transition-colors touch-target"
-              title="Quick edit this step with AI"
-            >
-              <FiZap className="w-3.5 h-3.5" />
-              Quick Edit
             </button>
           )}
 

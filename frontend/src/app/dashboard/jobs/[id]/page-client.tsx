@@ -2,7 +2,6 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { FiRefreshCw } from 'react-icons/fi'
 import { useJobDetail } from '@/hooks/useJobDetail'
 import { useJobExecutionSteps } from '@/hooks/useJobExecutionSteps'
 import { useMergedSteps } from '@/hooks/useMergedSteps'
@@ -12,7 +11,6 @@ import { ExecutionSteps } from '@/components/jobs/ExecutionSteps'
 import { TechnicalDetails } from '@/components/jobs/TechnicalDetails'
 import { ResubmitModal } from '@/components/jobs/ResubmitModal'
 import { StepEditModal } from '@/components/jobs/StepEditModal'
-import { QuickEditStepModal } from '@/components/jobs/QuickEditStepModal'
 import { api } from '@/lib/api'
 import { WorkflowStep } from '@/types'
 import { toast } from 'react-hot-toast'
@@ -21,7 +19,6 @@ export default function JobDetailClient() {
   const router = useRouter()
   const [showResubmitModal, setShowResubmitModal] = useState(false)
   const [editingStepIndex, setEditingStepIndex] = useState<number | null>(null)
-  const [quickEditStep, setQuickEditStep] = useState<{ stepOrder: number; stepName: string } | null>(null)
   const {
     job,
     workflow,
@@ -104,19 +101,6 @@ export default function JobDetailClient() {
     setEditingStepIndex(null)
   }
 
-  const handleQuickEdit = (stepOrder: number, stepName: string) => {
-    setQuickEditStep({ stepOrder, stepName })
-  }
-
-  const handleQuickEditClose = () => {
-    setQuickEditStep(null)
-  }
-
-  const handleQuickEditSave = () => {
-    // Refresh job data to show updated step
-    router.refresh()
-  }
-
 
   if (loading) {
     return (
@@ -161,26 +145,7 @@ export default function JobDetailClient() {
         {/* Form Submission Details */}
         {submission && submission.submission_data ? (
           <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Form Submission Details</h2>
-              <button
-                onClick={handleResubmitClick}
-                disabled={resubmitting}
-                className="flex items-center justify-center px-3 py-1.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium touch-target"
-              >
-                {resubmitting ? (
-                  <>
-                    <FiRefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    Resubmitting...
-                  </>
-                ) : (
-                  <>
-                    <FiRefreshCw className="w-4 h-4 mr-2" />
-                    Resubmit
-                  </>
-                )}
-              </button>
-            </div>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Form Submission Details</h2>
             <div className="space-y-3">
               {Object.entries(submission.submission_data).map(([key, value]: [string, any]) => (
                 <div key={key} className="border-b border-gray-100 pb-3 last:border-b-0">
@@ -196,26 +161,7 @@ export default function JobDetailClient() {
           </div>
         ) : submission ? (
           <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Form Submission Details</h2>
-              <button
-                onClick={handleResubmitClick}
-                disabled={resubmitting}
-                className="flex items-center justify-center px-3 py-1.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium touch-target"
-              >
-                {resubmitting ? (
-                  <>
-                    <FiRefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    Resubmitting...
-                  </>
-                ) : (
-                  <>
-                    <FiRefreshCw className="w-4 h-4 mr-2" />
-                    Resubmit
-                  </>
-                )}
-              </button>
-            </div>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Form Submission Details</h2>
             <p className="text-sm text-gray-500">No submission data available</p>
           </div>
         ) : null}
@@ -231,18 +177,6 @@ export default function JobDetailClient() {
         allSteps={workflow?.steps || []}
         currentStepIndex={editingStepIndex ?? undefined}
       />
-
-      {/* Quick Edit Step Modal */}
-      {quickEditStep && (
-        <QuickEditStepModal
-          isOpen={true}
-          onClose={handleQuickEditClose}
-          jobId={job.job_id}
-          stepOrder={quickEditStep.stepOrder}
-          stepName={quickEditStep.stepName}
-          onSave={handleQuickEditSave}
-        />
-      )}
 
       {/* Execution Steps */}
       {(workflow?.steps && Array.isArray(workflow.steps) && workflow.steps.length > 0) || 
@@ -280,7 +214,6 @@ export default function JobDetailClient() {
             rerunningStep={rerunningStep}
             onEditStep={handleEditStep}
             canEdit={!!workflow}
-            onQuickEdit={handleQuickEdit}
             jobId={job.job_id}
           />
         </>
