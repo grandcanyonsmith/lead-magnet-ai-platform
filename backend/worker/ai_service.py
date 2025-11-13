@@ -135,7 +135,6 @@ class AIService:
                 )
                 
                 # Build usage info from CUA loop
-                from utils.decimal_utils import convert_decimals_to_float
                 from cost_service import calculate_openai_cost
                 
                 cost_data = calculate_openai_cost(
