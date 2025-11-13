@@ -9,6 +9,7 @@ import { useQuery } from '@/hooks/useQuery'
 import { useMutation } from '@/hooks/useMutation'
 import { api } from '@/lib/api'
 import { Job, JobListParams, JobListResponse, JobResubmitResponse } from '@/types'
+import { normalizeError, extractListData } from './hookHelpers'
 
 // Query keys factory
 export const jobKeys = {
@@ -70,7 +71,7 @@ export function useJob(id: string | null): UseJobResult {
   return {
     job: data || null,
     loading: isLoading,
-    error: error instanceof Error ? error.message : error ? String(error) : null,
+    error: normalizeError(error),
     refetch: () => refetch(),
   }
 }
