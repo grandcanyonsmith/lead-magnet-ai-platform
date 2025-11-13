@@ -10,7 +10,6 @@ from typing import Dict, Any, List, Tuple, Optional
 from ai_service import AIService
 from db_service import DynamoDBService
 from s3_service import S3Service
-from services.context_builder import ContextBuilder
 from services.execution_step_manager import ExecutionStepManager
 from services.step_processor import StepProcessor
 from services.field_label_service import FieldLabelService
@@ -110,7 +109,28 @@ class WorkflowOrchestrator:
             # Accumulate context for next step (include image URLs if present)
             step_name = step_output_dict['step_name']
             step_output = step_output_dict['output']
-            image_urls = step_output_dict.get('image_urls', [])
+            
+            # Extract image URLs from multiple sources:
+            # 1. From image_urls array
+            image_urls_from_array = step_output_dict.get('image_urls', [])
+            if image_urls_from_array is None:
+                image_urls_from_array = []
+            elif not isinstance(image_urls_from_array, list):
+                image_urls_from_array = [str(image_urls_from_array)] if image_urls_from_array else []
+            else:
+                image_urls_from_array = [url for url in image_urls_from_array if url]
+            
+            # 2. Extract image URLs from the output text itself
+            from utils.image_utils import extract_image_urls, extract_image_urls_from_object
+            image_urls_from_text = []
+            if isinstance(step_output, str):
+                image_urls_from_text = extract_image_urls(step_output)
+            elif isinstance(step_output, (dict, list)):
+                image_urls_from_text = extract_image_urls_from_object(step_output)
+            
+            # Combine and deduplicate all image URLs
+            all_image_urls = set(image_urls_from_array) | set(image_urls_from_text)
+            image_urls = sorted(list(all_image_urls))  # Sort for consistent output
             
             accumulated_context += f"\n\n--- Step {step_index + 1}: {step_name} ---\n{step_output}"
             if image_urls:

@@ -113,15 +113,6 @@ export function ArtifactPreview({ artifactId }: ArtifactPreviewProps) {
           </div>
         </div>
       )}
-      
-      <div className="mt-2 md:mt-1 text-xs text-gray-500">
-        <span className="font-mono break-all">ID: {artifactId}</span>
-        {artifact.size_bytes && (
-          <span className="ml-2">
-            ({(artifact.size_bytes / 1024).toFixed(1)} KB)
-          </span>
-        )}
-      </div>
     </div>
   )
 }
