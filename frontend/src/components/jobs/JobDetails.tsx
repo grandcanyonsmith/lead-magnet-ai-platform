@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { FiExternalLink } from 'react-icons/fi'
 import { formatRelativeTime, formatDurationSeconds } from '@/utils/jobFormatting'
+import { api } from '@/lib/api'
 
 interface JobDetailsProps {
   job: any
@@ -50,15 +51,23 @@ export function JobDetails({ job, workflow }: JobDetailsProps) {
       {job.output_url && (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Document</label>
-          <a
-            href={job.output_url}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            onClick={async () => {
+              try {
+                const blobUrl = await api.getJobDocumentBlobUrl(job.job_id)
+                window.open(blobUrl, '_blank', 'noopener,noreferrer')
+                // Clean up blob URL after a delay
+                setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)
+              } catch (error) {
+                console.error('Failed to open document:', error)
+                alert('Failed to open document. Please try again.')
+              }
+            }}
             className="inline-flex items-center text-primary-600 hover:text-primary-900 font-medium"
           >
             View Document
             <FiExternalLink className="w-4 h-4 ml-1" />
-          </a>
+          </button>
         </div>
       )}
 
