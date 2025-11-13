@@ -168,14 +168,13 @@ class S3Service:
             Tuple of (s3_url, public_url)
         """
         try:
-            # Images are always public - set ACL to public-read
-            # Bucket policy allows public read access for image files
+            # Images are always public - bucket policy allows public read access
+            # Note: We don't set ACL='public-read' because the bucket blocks public ACLs.
             put_params = {
                 'Bucket': self.bucket_name,
                 'Key': key,
                 'Body': image_data,
                 'ContentType': content_type,
-                'ACL': 'public-read',  # Make image publicly accessible
                 # Ensure Cache-Control for images
                 'CacheControl': 'public, max-age=31536000, immutable',
             }
