@@ -172,7 +172,7 @@ export function StepInputOutput({
         )}
         
         {/* Render from image_urls if available */}
-        {hasImageUrls ? (
+        {hasImageUrls && step.image_urls ? (
           <div className="grid grid-cols-1 gap-3">
             {step.image_urls.map((imageUrl: string, imgIdx: number) => (
               <div key={`url-${imgIdx}`} className="border border-gray-200 rounded-lg overflow-hidden">
