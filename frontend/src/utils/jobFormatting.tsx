@@ -122,6 +122,17 @@ export function formatStepInput(step: any): { content: string | any, type: 'json
   if (step.step_type === 'form_submission') {
     return { content: step.input, type: 'json' }
   }
+  if (step.step_type === 'webhook') {
+    // For webhook steps, show webhook URL and payload
+    const inputObj = step.input as any
+    return {
+      content: {
+        webhook_url: inputObj?.webhook_url || 'N/A',
+        payload: inputObj?.payload || {}
+      },
+      type: 'json'
+    }
+  }
   if (step.input && typeof step.input === 'object') {
     // For AI steps, show instructions and input
     const inputObj = step.input as any
@@ -157,6 +168,19 @@ export function formatStepInput(step: any): { content: string | any, type: 'json
 export function formatStepOutput(step: any): { content: string | any, type: 'json' | 'markdown' | 'text' | 'html' } {
   if (step.step_type === 'final_output') {
     return { content: step.output, type: 'json' }
+  }
+  if (step.step_type === 'webhook') {
+    // For webhook steps, show response details
+    const outputObj = step.output as any
+    return {
+      content: {
+        success: outputObj?.success ?? false,
+        response_status: outputObj?.response_status || 'N/A',
+        response_body: outputObj?.response_body || null,
+        error: outputObj?.error || null
+      },
+      type: 'json'
+    }
   }
   if (typeof step.output === 'string') {
     // Check if it's HTML first (before JSON, as HTML might contain JSON-like syntax)

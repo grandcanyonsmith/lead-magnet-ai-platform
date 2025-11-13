@@ -4,8 +4,9 @@ import { z } from 'zod';
 export const workflowStepSchema = z.object({
   step_name: z.string().min(1).max(200),
   step_description: z.string().max(500).optional(),
-  model: z.string().min(1),
-  instructions: z.string().min(1),
+  step_type: z.enum(['ai_generation', 'webhook']).optional().default('ai_generation'),
+  model: z.string().min(1).optional(), // Optional for webhook steps
+  instructions: z.string().min(1).optional(), // Optional for webhook steps
   step_order: z.number().int().min(0).optional(),
   depends_on: z.array(z.number().int().min(0)).optional(), // Array of step indices this step depends on
   tools: z.array(
@@ -21,6 +22,26 @@ export const workflowStepSchema = z.object({
     ])
   ).optional(), // Array of tool types or tool objects with configuration
   tool_choice: z.enum(['auto', 'required', 'none']).optional().default('auto'), // How model should use tools
+  // Webhook step fields
+  webhook_url: z.string().url().optional(),
+  webhook_headers: z.record(z.string()).optional(),
+  webhook_data_selection: z.object({
+    include_submission: z.boolean().optional().default(true),
+    exclude_step_indices: z.array(z.number().int().min(0)).optional(),
+    include_job_info: z.boolean().optional().default(true),
+  }).optional(),
+}).refine((data) => {
+  // If step_type is 'webhook', webhook_url is required
+  if (data.step_type === 'webhook') {
+    return !!data.webhook_url;
+  }
+  // If step_type is 'ai_generation' (default), model and instructions are required
+  if (data.step_type === 'ai_generation' || !data.step_type) {
+    return !!(data.model && data.instructions);
+  }
+  return true;
+}, {
+  message: 'Webhook steps require webhook_url. AI generation steps require model and instructions.',
 });
 
 // Base workflow schema without refinement

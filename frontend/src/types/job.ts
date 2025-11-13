@@ -6,7 +6,7 @@ import { BaseEntity, Status } from './common'
 
 export type StepStatus = 'pending' | 'in_progress' | 'completed' | 'failed'
 
-export type StepType = 'workflow_step' | 'ai_generation' | 'form_submission' | 'html_generation' | 'final_output'
+export type StepType = 'workflow_step' | 'ai_generation' | 'form_submission' | 'html_generation' | 'final_output' | 'webhook'
 
 export interface ExecutionStepUsageInfo {
   prompt_tokens?: number

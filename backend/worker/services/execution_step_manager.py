@@ -5,7 +5,7 @@ Handles creation and management of execution steps for workflow processing.
 
 import logging
 from datetime import datetime
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 from utils.decimal_utils import convert_floats_to_decimal
 
@@ -165,5 +165,54 @@ class ExecutionStepManager:
             'timestamp': datetime.utcnow().isoformat(),
             'duration_ms': 0,
             'artifact_id': final_artifact_id,
+        }
+    
+    @staticmethod
+    def create_webhook_step(
+        step_name: str,
+        step_order: int,
+        webhook_url: str,
+        payload: Dict[str, Any],
+        response_status: Optional[int],
+        response_body: Optional[str],
+        success: bool,
+        error: Optional[str],
+        step_start_time: datetime,
+        duration_ms: int
+    ) -> Dict[str, Any]:
+        """
+        Create execution step for webhook step.
+        
+        Args:
+            step_name: Name of the step
+            step_order: Order of the step (1-indexed)
+            webhook_url: Webhook URL that was called
+            payload: Payload that was sent
+            response_status: HTTP response status code
+            response_body: Response body (may be truncated)
+            success: Whether the webhook call succeeded
+            error: Error message if failed
+            step_start_time: Start time of the step
+            duration_ms: Duration in milliseconds
+            
+        Returns:
+            Execution step dictionary
+        """
+        return {
+            'step_name': step_name,
+            'step_order': step_order,
+            'step_type': 'webhook',
+            'input': {
+                'webhook_url': webhook_url,
+                'payload': payload
+            },
+            'output': {
+                'response_status': response_status,
+                'response_body': response_body,
+                'success': success,
+                'error': error
+            },
+            'timestamp': step_start_time.isoformat(),
+            'duration_ms': duration_ms,
         }
 

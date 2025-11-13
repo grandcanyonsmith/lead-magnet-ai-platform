@@ -35,12 +35,21 @@ export type Tool = ToolType | ComputerUseToolConfig
 export interface WorkflowStep {
   step_name: string
   step_description?: string
+  step_type?: 'ai_generation' | 'webhook' // Default: 'ai_generation'
   model: AIModel
   instructions: string
   step_order?: number
   tools?: Tool[]
   tool_choice?: ToolChoice
   depends_on?: number[] // Array of step indices this step depends on
+  // Webhook step fields
+  webhook_url?: string
+  webhook_headers?: Record<string, string>
+  webhook_data_selection?: {
+    include_submission: boolean
+    exclude_step_indices?: number[] // Steps to exclude (all included by default)
+    include_job_info: boolean
+  }
 }
 
 export type DeliveryMethod = 'webhook' | 'sms' | 'none'
