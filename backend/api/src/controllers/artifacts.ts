@@ -181,9 +181,18 @@ class ArtifactsController {
       artifact.public_url = await ArtifactUrlService.ensureValidUrl(artifact);
     }
 
+    // Map mime_type to content_type for frontend consistency (same as list endpoint)
+    const artifactResponse = {
+      ...artifact,
+      object_url: artifact.public_url || artifact.object_url || null,
+      file_name: artifact.artifact_name || artifact.file_name,
+      size_bytes: artifact.file_size_bytes ? parseInt(artifact.file_size_bytes) : artifact.size_bytes,
+      content_type: artifact.mime_type || artifact.content_type, // Map mime_type to content_type for frontend
+    };
+
     return {
       statusCode: 200,
-      body: artifact,
+      body: artifactResponse,
     };
   }
 

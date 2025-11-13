@@ -50,7 +50,7 @@ export function PreviewCard({ artifact }: PreviewCardProps) {
     <div className="group bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 hover:border-primary-200">
       <div className="relative aspect-video bg-gray-100">
         <PreviewRenderer
-          contentType={artifact.content_type}
+          contentType={artifact.content_type || (artifact as any).mime_type}
           objectUrl={downloadUrl}
           fileName={artifact.file_name || artifact.artifact_name}
           className="w-full h-full"
@@ -58,7 +58,7 @@ export function PreviewCard({ artifact }: PreviewCardProps) {
         />
         
         <div className="absolute top-2 right-2 bg-primary-600 text-white text-xs font-bold px-2 py-1 rounded">
-          {getFileExtension(artifact.file_name || artifact.artifact_name, artifact.content_type)}
+          {getFileExtension(artifact.file_name || artifact.artifact_name, artifact.content_type || (artifact as any).mime_type)}
         </div>
 
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-end p-4 gap-2">
