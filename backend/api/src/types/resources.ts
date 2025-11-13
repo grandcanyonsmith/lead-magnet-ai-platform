@@ -35,12 +35,21 @@ export interface Workflow {
 export interface WorkflowStep {
   step_name: string;
   step_description?: string;
+  step_type?: 'ai_generation' | 'webhook'; // Default: 'ai_generation'
   model: string;
   instructions: string;
   step_order: number;
   depends_on?: number[];
   tools?: (string | ToolConfig)[];
   tool_choice?: 'auto' | 'required' | 'none';
+  // Webhook step fields
+  webhook_url?: string;
+  webhook_headers?: Record<string, string>;
+  webhook_data_selection?: {
+    include_submission: boolean;
+    exclude_step_indices?: number[]; // Steps to exclude (all included by default)
+    include_job_info: boolean;
+  };
 }
 
 export interface ToolConfig {
