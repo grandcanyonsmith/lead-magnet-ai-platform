@@ -14,11 +14,11 @@ export interface Workflow {
   created_at: string;
   updated_at: string;
   deleted_at?: string;
-  // Legacy fields
+  // Legacy fields (deprecated - kept for backward compatibility with existing database records)
+  // All new workflows must use the steps format. These fields are ignored.
   ai_model?: string;
   ai_instructions?: string;
   rewrite_model?: string;
-  rewrite_enabled?: boolean;
   research_enabled?: boolean;
   html_enabled?: boolean;
   template_id?: string;

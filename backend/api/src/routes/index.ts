@@ -8,6 +8,9 @@ import { registerTemplateRoutes } from './templateRoutes';
 import { registerJobRoutes } from './jobRoutes';
 import { registerAdminRoutes } from './adminRoutes';
 
+// Re-export RouteResponse for use in other modules
+export type { RouteResponse };
+
 // Register all routes on module load
 registerPublicRoutes();
 registerWorkflowRoutes();

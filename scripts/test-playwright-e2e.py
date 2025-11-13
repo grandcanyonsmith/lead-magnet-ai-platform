@@ -191,8 +191,7 @@ def main():
             }
         ],
         "research_enabled": False,
-        "html_enabled": False,
-        "rewrite_enabled": False
+        "html_enabled": False
     }
     
     workflow_id = create_workflow_via_dynamodb(workflow_data)

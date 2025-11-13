@@ -88,9 +88,6 @@ export function WorkflowTab({
       if (proposal.workflow_description !== undefined) {
         onFormDataChange('workflow_description', proposal.workflow_description)
       }
-      if (proposal.html_enabled !== undefined) {
-        onFormDataChange('html_enabled', proposal.html_enabled)
-      }
 
       // Apply validated step changes
       onStepsChange(proposal.steps)
@@ -220,7 +217,6 @@ export function WorkflowTab({
                 currentWorkflow={{
                   workflow_name: formData.workflow_name,
                   workflow_description: formData.workflow_description,
-                  html_enabled: formData.html_enabled,
                   steps: steps,
                 }}
                 proposal={proposal}
@@ -258,10 +254,10 @@ export function WorkflowTab({
         />
       </div>
 
-      {formData.html_enabled && (
+      {formData.template_id && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <p className="text-sm text-blue-800">
-            <strong>Note:</strong> Templates are managed in the Template tab above. Enable &quot;Generate Styled HTML&quot; to access template editing.
+            <strong>Note:</strong> Templates are managed in the Template tab above.
           </p>
         </div>
       )}
@@ -276,7 +272,7 @@ export function WorkflowTab({
         </button>
         <button
           type="submit"
-          disabled={submitting || (formData.html_enabled && !formData.template_id)}
+          disabled={submitting}
           className="flex items-center justify-center px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-target"
         >
           <FiSave className="w-5 h-5 mr-2" />

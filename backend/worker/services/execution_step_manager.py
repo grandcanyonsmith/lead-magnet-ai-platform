@@ -67,6 +67,17 @@ class ExecutionStepManager:
         """
         image_urls = response_details.get('image_urls', [])
         
+        # Store response_details for debugging (but limit size to avoid S3 issues)
+        # Include key fields that help debug image extraction
+        debug_response_details = {
+            'image_urls': image_urls,
+            'image_urls_count': len(image_urls),
+            'output_text_length': len(response_details.get('output_text', '')),
+            'has_output_text': bool(response_details.get('output_text')),
+            # Store a summary of what was in response_details for debugging
+            'response_keys': list(response_details.keys()) if isinstance(response_details, dict) else [],
+        }
+        
         return {
             'step_name': step_name,
             'step_order': step_order,
@@ -75,6 +86,7 @@ class ExecutionStepManager:
             'input': request_details,
             'output': response_details.get('output_text', ''),
             'image_urls': image_urls,
+            'response_details': debug_response_details,  # Add for debugging
             'usage_info': convert_floats_to_decimal(usage_info),
             'timestamp': step_start_time.isoformat(),
             'duration_ms': int(step_duration),

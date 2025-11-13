@@ -606,7 +606,7 @@ Return ONLY the modified instructions:
           workflow_id: workflowId,
           workflow_name: workflow.workflow_name || 'Untitled Workflow',
           workflow_description: workflow.workflow_description || '',
-          html_enabled: workflow.html_enabled || false,
+          template_id: workflow.template_id,
           current_steps: workflow.steps || [],
         },
       };

@@ -234,7 +234,16 @@ class AIService:
             })
             
             response = self.openai_client.make_api_call(params)
-            
+            print("YO")
+            print(response)
+            print(params)
+            print(validated_tools)
+            print(normalized_tool_choice)
+            print(instructions)
+            print(context)
+            print(previous_context)
+            print(tenant_id)
+            print(job_id)
             # Process response
             return self.openai_client.process_api_response(
                 response=response,
@@ -270,20 +279,17 @@ class AIService:
         submission_data: dict,
         template_html: str,
         template_style: str = '',
-        ai_instructions: str = '',
         model: str = 'gpt-5',
     ) -> Tuple[str, Dict, Dict, Dict]:
         """
         Generate HTML document directly from submission data and template.
         
-        Used when research is disabled but HTML generation is enabled.
         Takes submission data and generates HTML styled to match the template.
         
         Args:
             submission_data: Form submission data
             template_html: The HTML template to style the output after
             template_style: Optional style description/guidance
-            ai_instructions: AI instructions from workflow
             model: OpenAI model to use
             
         Returns:
@@ -293,7 +299,6 @@ class AIService:
             submission_data=submission_data,
             template_html=template_html,
             template_style=template_style,
-            ai_instructions=ai_instructions,
             model=model
         )
 

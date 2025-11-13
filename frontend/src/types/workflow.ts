@@ -60,11 +60,6 @@ export interface Workflow extends BaseEntity {
   tenant_id: string
   workflow_name: string
   workflow_description: string
-  ai_model: AIModel
-  ai_instructions: string
-  rewrite_model: AIModel
-  research_enabled: boolean
-  html_enabled: boolean
   template_id: string
   template_version: number
   steps?: WorkflowStep[]
@@ -75,19 +70,27 @@ export interface Workflow extends BaseEntity {
     public_slug: string
     status: string
   }
-}
-
-export interface WorkflowCreateRequest {
-  workflow_name: string
-  workflow_description: string
+  // Legacy fields (deprecated - kept for backward compatibility with existing database records)
+  // All new workflows must use the steps format. These fields are ignored.
   ai_model?: AIModel
   ai_instructions?: string
   rewrite_model?: AIModel
   research_enabled?: boolean
   html_enabled?: boolean
+}
+
+export interface WorkflowCreateRequest {
+  workflow_name: string
+  workflow_description: string
   template_id?: string
   template_version?: number
   steps?: WorkflowStep[]
+  // Legacy fields (deprecated - kept for backward compatibility, but ignored)
+  ai_model?: AIModel
+  ai_instructions?: string
+  rewrite_model?: AIModel
+  research_enabled?: boolean
+  html_enabled?: boolean
   delivery_method?: DeliveryMethod
   delivery_webhook_url?: string
   delivery_webhook_headers?: Record<string, string>
