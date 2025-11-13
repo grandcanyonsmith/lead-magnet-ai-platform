@@ -334,19 +334,21 @@ export function WorkflowTab({
     </form>
 
     {/* Step Editor Side Panel */}
-    <FlowchartSidePanel
-      step={selectedStep}
-      index={selectedStepIndex}
-      totalSteps={steps.length}
-      allSteps={steps}
-      isOpen={isSidePanelOpen && selectedStepIndex !== null && selectedStepIndex >= 0}
-      onClose={handleCloseSidePanel}
-      onChange={handleStepChange}
-      onDelete={handleDeleteStep}
-      onMoveUp={handleMoveStepUp}
-      onMoveDown={handleMoveStepDown}
-      workflowId={workflowId}
-    />
+    {selectedStepIndex !== null && selectedStepIndex >= 0 && (
+      <FlowchartSidePanel
+        step={selectedStep}
+        index={selectedStepIndex}
+        totalSteps={steps.length}
+        allSteps={steps}
+        isOpen={isSidePanelOpen}
+        onClose={handleCloseSidePanel}
+        onChange={handleStepChange}
+        onDelete={handleDeleteStep}
+        onMoveUp={handleMoveStepUp}
+        onMoveDown={handleMoveStepDown}
+        workflowId={workflowId}
+      />
+    )}
   </>
   )
 }
