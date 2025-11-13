@@ -3,12 +3,15 @@
  * Displays step input and output sections with copy functionality
  */
 
+import React from 'react'
 import { FiCopy, FiChevronDown, FiChevronUp, FiLoader } from 'react-icons/fi'
 import { formatStepInput, formatStepOutput } from '@/utils/jobFormatting'
 import { StepContent } from './StepContent'
 import { MergedStep, StepStatus } from '@/types/job'
 import { PreviewRenderer } from '@/components/artifacts/PreviewRenderer'
 import { Artifact } from '@/types/artifact'
+import { extractImageUrls } from '@/utils/imageUtils'
+import { InlineImage } from './InlineImage'
 
 interface StepInputOutputProps {
   step: MergedStep
@@ -59,6 +62,55 @@ function renderToolBadges(tools?: string[] | unknown[], toolChoice?: string, sho
   )
 }
 
+// Render text with inline images
+function renderTextWithImages(text: string): React.ReactNode {
+  const imageUrls = extractImageUrls(text)
+  
+  if (imageUrls.length === 0) {
+    return <>{text}</>
+  }
+
+  // Split text by image URLs and render images inline
+  let remainingText = text
+  const parts: React.ReactNode[] = []
+  let partIndex = 0
+
+  imageUrls.forEach((url, idx) => {
+    const urlIndex = remainingText.indexOf(url)
+    if (urlIndex === -1) return
+
+    // Add text before the URL
+    if (urlIndex > 0) {
+      parts.push(
+        <span key={`text-${partIndex++}`}>
+          {remainingText.substring(0, urlIndex)}
+        </span>
+      )
+    }
+
+    // Add the image
+    parts.push(
+      <div key={`image-${idx}`} className="block my-2">
+        <InlineImage url={url} alt={`Image ${idx + 1}`} />
+      </div>
+    )
+
+    // Update remaining text
+    remainingText = remainingText.substring(urlIndex + url.length)
+  })
+
+  // Add any remaining text
+  if (remainingText.length > 0) {
+    parts.push(
+      <span key={`text-${partIndex}`}>
+        {remainingText}
+      </span>
+    )
+  }
+
+  return <>{parts}</>
+}
+
 // Render previous steps context inline
 function renderPreviousStepsContext(previousSteps: any[], formSubmission: any, currentStepOrder: number) {
   if (!previousSteps.length && !formSubmission) {
@@ -72,20 +124,33 @@ function renderPreviousStepsContext(previousSteps: any[], formSubmission: any, c
       </div>
 
       {/* Form Submission - Show inline */}
-      {formSubmission && (
-        <div className="mb-2">
-          <div className="text-xs font-medium text-gray-600 mb-1">
-            Form Submission <span className="text-gray-500">(Step 0)</span>
+      {formSubmission && (() => {
+        const formText = typeof formSubmission === 'object'
+          ? Object.entries(formSubmission)
+              .map(([key, value]) => `${key}: ${value}`)
+              .join('\n')
+          : String(formSubmission)
+        const formImageUrls = extractImageUrls(formText)
+        
+        return (
+          <div className="mb-2">
+            <div className="text-xs font-medium text-gray-600 mb-1">
+              Form Submission <span className="text-gray-500">(Step 0)</span>
+            </div>
+            <div className="text-xs text-gray-700 whitespace-pre-wrap font-mono overflow-x-auto bg-gray-50 p-2 rounded border border-gray-200 max-h-32 overflow-y-auto">
+              {renderTextWithImages(formText)}
+            </div>
+            {/* Render images found in form submission */}
+            {formImageUrls.length > 0 && (
+              <div className="mt-2 space-y-2">
+                {formImageUrls.map((url, idx) => (
+                  <InlineImage key={`form-image-${idx}`} url={url} alt={`Form submission image ${idx + 1}`} />
+                ))}
+              </div>
+            )}
           </div>
-          <pre className="text-xs text-gray-700 whitespace-pre-wrap font-mono overflow-x-auto bg-gray-50 p-2 rounded border border-gray-200 max-h-32 overflow-y-auto">
-            {typeof formSubmission === 'object'
-              ? Object.entries(formSubmission)
-                  .map(([key, value]) => `${key}: ${value}`)
-                  .join('\n')
-              : formSubmission}
-          </pre>
-        </div>
-      )}
+        )
+      })()}
 
       {/* Previous Workflow Steps - Show inline */}
       {previousSteps.map((step, index) => {
@@ -93,31 +158,33 @@ function renderPreviousStepsContext(previousSteps: any[], formSubmission: any, c
           typeof step.output === 'string'
             ? step.output
             : JSON.stringify(step.output, null, 2)
+        const stepImageUrls = extractImageUrls(stepOutput)
 
         return (
           <div key={`${currentStepOrder}-prev-${step.step_order}-${index}`} className="mb-2 last:mb-0">
             <div className="text-xs font-medium text-gray-600 mb-1">
               {step.step_name || `Step ${step.step_order}`} <span className="text-gray-500">(Step {step.step_order})</span>
             </div>
-            <pre className="text-xs text-gray-700 whitespace-pre-wrap font-mono overflow-x-auto bg-gray-50 p-2 rounded border border-gray-200 max-h-32 overflow-y-auto">
-              {stepOutput}
-            </pre>
+            <div className="text-xs text-gray-700 whitespace-pre-wrap font-mono overflow-x-auto bg-gray-50 p-2 rounded border border-gray-200 max-h-32 overflow-y-auto">
+              {renderTextWithImages(stepOutput)}
+            </div>
+            {/* Render images found in step output */}
+            {stepImageUrls.length > 0 && (
+              <div className="mt-2 space-y-2">
+                {stepImageUrls.map((url, idx) => (
+                  <InlineImage key={`step-output-image-${idx}`} url={url} alt={`Step ${step.step_order} output image ${idx + 1}`} />
+                ))}
+              </div>
+            )}
+            {/* Also show image_urls if they exist (for backwards compatibility) */}
             {step.image_urls && step.image_urls.length > 0 && (
               <div className="mt-2">
                 <div className="text-xs font-medium text-gray-600 mb-1">
                   Generated Images:
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-2">
                   {step.image_urls.map((url: string, idx: number) => (
-                    <a
-                      key={idx}
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block text-xs text-blue-600 hover:text-blue-800 hover:underline truncate"
-                    >
-                      {url}
-                    </a>
+                    <InlineImage key={`step-image-url-${idx}`} url={url} alt={`Generated image ${idx + 1}`} />
                   ))}
                 </div>
               </div>
