@@ -15,6 +15,7 @@ from services.context_builder import ContextBuilder
 from services.execution_step_manager import ExecutionStepManager
 from services.usage_service import UsageService
 from services.image_artifact_service import ImageArtifactService
+from services.webhook_step_service import WebhookStepService
 from utils.content_detector import detect_content_type
 from utils.step_utils import normalize_step_order
 from dependency_resolver import get_ready_steps, get_step_status
@@ -51,6 +52,7 @@ class StepProcessor:
         self.s3 = s3_service
         self.usage_service = usage_service
         self.image_artifact_service = image_artifact_service
+        self.webhook_step_service = WebhookStepService()
     
     def process_step_batch_mode(
         self,
@@ -85,6 +87,22 @@ class StepProcessor:
             Exception: If step processing fails
         """
         step_name = step.get('step_name', f'Step {step_index + 1}')
+        step_type = step.get('step_type', 'ai_generation')
+        
+        # Check if this is a webhook step
+        if step_type == 'webhook' or step.get('webhook_url'):
+            return self._process_webhook_step_batch_mode(
+                step=step,
+                step_index=step_index,
+                job_id=job_id,
+                tenant_id=tenant_id,
+                step_outputs=step_outputs,
+                sorted_steps=sorted_steps,
+                execution_steps=execution_steps,
+                all_image_artifact_ids=all_image_artifact_ids
+            )
+        
+        # Regular AI generation step
         step_model = step.get('model', 'gpt-5')
         step_instructions = step.get('instructions', '')
         
@@ -233,6 +251,230 @@ class StepProcessor:
         
         return step_output_dict, image_artifact_ids
     
+    def _process_webhook_step_batch_mode(
+        self,
+        step: Dict[str, Any],
+        step_index: int,
+        job_id: str,
+        tenant_id: str,
+        step_outputs: List[Dict[str, Any]],
+        sorted_steps: List[Dict[str, Any]],
+        execution_steps: List[Dict[str, Any]],
+        all_image_artifact_ids: List[str]
+    ) -> Tuple[Dict[str, Any], List[str]]:
+        """
+        Process a webhook step in batch mode.
+        
+        Args:
+            step: Step configuration dictionary
+            step_index: Step index (0-based)
+            job_id: Job ID
+            tenant_id: Tenant ID
+            step_outputs: List of previous step outputs
+            sorted_steps: List of all steps sorted by order
+            execution_steps: List of execution steps (will be updated)
+            all_image_artifact_ids: List to append image artifact IDs to (not used for webhook steps)
+            
+        Returns:
+            Tuple of (step_output_dict, image_artifact_ids)
+        """
+        step_name = step.get('step_name', f'Webhook Step {step_index + 1}')
+        step_start_time = datetime.utcnow()
+        
+        logger.info(f"[StepProcessor] Processing webhook step {step_index + 1}/{len(sorted_steps)}", extra={
+            'job_id': job_id,
+            'step_index': step_index,
+            'step_name': step_name,
+            'webhook_url': step.get('webhook_url')
+        })
+        
+        # Get job and submission data
+        job = self.db.get_job(job_id)
+        if not job:
+            raise ValueError(f"Job {job_id} not found")
+        
+        submission_id = job.get('submission_id')
+        submission = None
+        if submission_id:
+            submission = self.db.get_submission(submission_id)
+        if not submission:
+            # Create a minimal submission dict
+            submission = {'submission_data': {}}
+        
+        # Execute webhook step
+        webhook_result, success = self.webhook_step_service.execute_webhook_step(
+            step=step,
+            step_index=step_index,
+            job_id=job_id,
+            job=job,
+            submission=submission,
+            step_outputs=step_outputs,
+            sorted_steps=sorted_steps
+        )
+        
+        # Create execution step record
+        step_data = ExecutionStepManager.create_webhook_step(
+            step_name=step_name,
+            step_order=step_index + 1,
+            webhook_url=webhook_result.get('webhook_url', ''),
+            payload=webhook_result.get('payload', {}),
+            response_status=webhook_result.get('response_status'),
+            response_body=webhook_result.get('response_body'),
+            success=success,
+            error=webhook_result.get('error'),
+            step_start_time=step_start_time,
+            duration_ms=webhook_result.get('duration_ms', 0)
+        )
+        execution_steps.append(step_data)
+        self.db.update_job(job_id, {'execution_steps': execution_steps}, s3_service=self.s3)
+        
+        # Create step output dict (webhook steps don't produce content artifacts)
+        step_output_dict = {
+            'step_name': step_name,
+            'step_index': step_index,
+            'output': f"Webhook sent to {webhook_result.get('webhook_url', 'N/A')}. Status: {webhook_result.get('response_status', 'N/A')}",
+            'artifact_id': None,
+            'image_urls': [],
+            'webhook_result': webhook_result
+        }
+        
+        logger.info(f"[StepProcessor] Webhook step completed", extra={
+            'job_id': job_id,
+            'step_index': step_index,
+            'step_name': step_name,
+            'success': success,
+            'response_status': webhook_result.get('response_status')
+        })
+        
+        # Webhook failures don't fail the workflow (log error but continue)
+        if not success:
+            logger.warning(f"[StepProcessor] Webhook step failed but continuing workflow", extra={
+                'job_id': job_id,
+                'step_index': step_index,
+                'error': webhook_result.get('error')
+            })
+        
+        return step_output_dict, []
+    
+    def _process_webhook_step_single_mode(
+        self,
+        step: Dict[str, Any],
+        step_index: int,
+        steps: List[Dict[str, Any]],
+        job_id: str,
+        job: Dict[str, Any],
+        execution_steps: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """
+        Process a webhook step in single mode.
+        
+        Args:
+            step: Step configuration dictionary
+            step_index: Step index (0-based)
+            steps: List of all steps
+            job_id: Job ID
+            job: Job dictionary
+            execution_steps: List of execution steps (will be updated)
+            
+        Returns:
+            Dictionary with step result
+        """
+        step_name = step.get('step_name', f'Webhook Step {step_index + 1}')
+        step_start_time = datetime.utcnow()
+        
+        logger.info(f"[StepProcessor] Processing webhook step {step_index + 1} in single mode", extra={
+            'job_id': job_id,
+            'step_index': step_index,
+            'step_name': step_name,
+            'webhook_url': step.get('webhook_url')
+        })
+        
+        # Get submission data
+        submission_id = job.get('submission_id')
+        submission = None
+        if submission_id:
+            submission = self.db.get_submission(submission_id)
+        if not submission:
+            submission = {'submission_data': {}}
+        
+        # Build step_outputs from execution_steps
+        step_outputs = []
+        sorted_steps = sorted(steps, key=lambda s: s.get('step_order', 0))
+        for i, exec_step in enumerate(execution_steps):
+            if exec_step.get('step_type') == 'ai_generation' and exec_step.get('step_order', 0) > 0:
+                step_outputs.append({
+                    'step_name': exec_step.get('step_name', f'Step {i}'),
+                    'output': exec_step.get('output', ''),
+                    'artifact_id': exec_step.get('artifact_id'),
+                    'image_urls': exec_step.get('image_urls', [])
+                })
+        
+        # Execute webhook step
+        webhook_result, success = self.webhook_step_service.execute_webhook_step(
+            step=step,
+            step_index=step_index,
+            job_id=job_id,
+            job=job,
+            submission=submission,
+            step_outputs=step_outputs,
+            sorted_steps=sorted_steps
+        )
+        
+        # Create execution step record
+        step_data = ExecutionStepManager.create_webhook_step(
+            step_name=step_name,
+            step_order=step_index + 1,
+            webhook_url=webhook_result.get('webhook_url', ''),
+            payload=webhook_result.get('payload', {}),
+            response_status=webhook_result.get('response_status'),
+            response_body=webhook_result.get('response_body'),
+            success=success,
+            error=webhook_result.get('error'),
+            step_start_time=step_start_time,
+            duration_ms=webhook_result.get('duration_ms', 0)
+        )
+        
+        # Check if this step already exists (for reruns) and replace it, otherwise append
+        step_order = step_index + 1
+        existing_step_index = None
+        for i, existing_step in enumerate(execution_steps):
+            if existing_step.get('step_order') == step_order and existing_step.get('step_type') == 'webhook':
+                existing_step_index = i
+                break
+        
+        if existing_step_index is not None:
+            logger.info(f"Replacing existing webhook execution step for step_order {step_order} (rerun)")
+            execution_steps[existing_step_index] = step_data
+        else:
+            execution_steps.append(step_data)
+        
+        # Update job with execution steps
+        self.db.update_job(job_id, {
+            'execution_steps': execution_steps
+        }, s3_service=self.s3)
+        
+        logger.info(f"Webhook step {step_index + 1} completed successfully in {webhook_result.get('duration_ms', 0):.0f}ms")
+        
+        # Webhook failures don't fail the workflow (log error but continue)
+        if not success:
+            logger.warning(f"[StepProcessor] Webhook step failed but continuing workflow", extra={
+                'job_id': job_id,
+                'step_index': step_index,
+                'error': webhook_result.get('error')
+            })
+        
+        return {
+            'success': success,
+            'step_index': step_index,
+            'step_name': step_name,
+            'step_output': f"Webhook sent to {webhook_result.get('webhook_url', 'N/A')}. Status: {webhook_result.get('response_status', 'N/A')}",
+            'artifact_id': None,
+            'image_urls': [],
+            'image_artifact_ids': [],
+            'webhook_result': webhook_result,
+            'duration_ms': webhook_result.get('duration_ms', 0)
+        }
+    
     def process_single_step(
         self,
         step: Dict[str, Any],
@@ -263,6 +505,20 @@ class StepProcessor:
             Exception: If step processing fails
         """
         step_name = step.get('step_name', f'Step {step_index + 1}')
+        step_type = step.get('step_type', 'ai_generation')
+        
+        # Check if this is a webhook step
+        if step_type == 'webhook' or step.get('webhook_url'):
+            return self._process_webhook_step_single_mode(
+                step=step,
+                step_index=step_index,
+                steps=steps,
+                job_id=job_id,
+                job=job,
+                execution_steps=execution_steps
+            )
+        
+        # Regular AI generation step
         step_model = step.get('model', 'gpt-5')
         step_instructions = step.get('instructions', '')
         
@@ -276,11 +532,11 @@ class StepProcessor:
                 if s.get('step_order', i) < step_order
             ]
         
-        # Get completed step indices from execution_steps
+        # Get completed step indices from execution_steps (include both AI and webhook steps)
         completed_step_indices = [
             normalize_step_order(s) - 1  # Convert 1-indexed step_order to 0-indexed
             for s in execution_steps
-            if s.get('step_type') == 'ai_generation' and normalize_step_order(s) > 0
+            if s.get('step_type') in ['ai_generation', 'webhook'] and normalize_step_order(s) > 0
         ]
         
         # Check if all dependencies are completed
@@ -298,20 +554,21 @@ class StepProcessor:
             })
             raise ValueError(f"Step {step_index + 1} ({step_name}) cannot execute yet. Missing dependencies: {missing_deps}")
         
-        # Get ready steps for logging
-        ready_steps = get_ready_steps(completed_step_indices, steps)
-        step_status_map = get_step_status(completed_step_indices, [], steps)
-        
-        logger.info(f"[StepProcessor] Step readiness check", extra={
-            'job_id': job_id,
-            'step_index': step_index,
-            'step_name': step_name,
-            'step_status': 'ready',
-            'dependencies': step_deps,
-            'all_dependencies_completed': all_deps_completed,
-            'ready_steps': ready_steps,
-            'step_status_map': {k: v for k, v in step_status_map.items()}
-        })
+        # Get ready steps for logging (only for AI steps)
+        if step_type != 'webhook':
+            ready_steps = get_ready_steps(completed_step_indices, steps)
+            step_status_map = get_step_status(completed_step_indices, [], steps)
+            
+            logger.info(f"[StepProcessor] Step readiness check", extra={
+                'job_id': job_id,
+                'step_index': step_index,
+                'step_name': step_name,
+                'step_status': 'ready',
+                'dependencies': step_deps,
+                'all_dependencies_completed': all_deps_completed,
+                'ready_steps': ready_steps,
+                'step_status_map': {k: v for k, v in step_status_map.items()}
+            })
         
         # Extract tools and tool_choice from step config
         step_tools_raw = step.get('tools', ['web_search_preview'])
