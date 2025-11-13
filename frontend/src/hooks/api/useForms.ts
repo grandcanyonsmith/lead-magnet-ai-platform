@@ -39,7 +39,7 @@ export function useForms(params?: Record<string, unknown>): UseFormsResult {
   )
 
   return {
-    forms: extractListData(data, 'forms'),
+    forms: data?.forms ?? [],
     loading: isLoading,
     error: normalizeError(error),
     refetch: () => refetch(),
