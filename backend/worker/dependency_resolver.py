@@ -256,10 +256,13 @@ def validate_dependencies(steps: List[Dict]) -> Tuple[bool, List[str]]:
     # Check for invalid dependency indices
     for index, step in enumerate(steps):
         if step.get('depends_on') and isinstance(step.get('depends_on'), list):
+            step_order = step.get('step_order', index + 1)
+            step_name = step.get('step_name', 'Unknown')
+            
             for dep_value in step['depends_on']:
                 if not isinstance(dep_value, int):
                     errors.append(
-                        f"Step {index} ({step.get('step_name', 'Unknown')}): "
+                        f"Step {step_order} ({step_name}): "
                         f"depends_on contains non-integer value {dep_value}"
                     )
                     continue
@@ -269,17 +272,42 @@ def validate_dependencies(steps: List[Dict]) -> Tuple[bool, List[str]]:
                 )
                 
                 if dep_index is None:
-                    errors.append(
-                        f"Step {index} ({step.get('step_name', 'Unknown')}): "
-                        f"depends_on index {dep_value} is out of range"
-                    )
+                    # Provide more helpful error message
+                    # Check if dep_value matches a step_order
+                    matching_order = None
+                    for order, idx in order_to_index.items():
+                        if order == dep_value:
+                            matching_order = order
+                            break
+                    
+                    if matching_order is not None:
+                        # It matched a step_order but normalization failed (self-dependency or invalid)
+                        errors.append(
+                            f"Step {step_order} ({step_name}): "
+                            f"depends_on step_order {dep_value} is invalid "
+                            f"(could be self-dependency or step doesn't exist)"
+                        )
+                    elif dep_value >= 0 and dep_value < len(steps):
+                        # It's a valid array index but normalization failed
+                        errors.append(
+                            f"Step {step_order} ({step_name}): "
+                            f"depends_on array index {dep_value} is invalid "
+                            f"(could be self-dependency)"
+                        )
+                    else:
+                        # Completely out of range
+                        errors.append(
+                            f"Step {step_order} ({step_name}): "
+                            f"depends_on value {dep_value} is out of range "
+                            f"(valid step_orders: {sorted(order_to_index.keys())}, "
+                            f"valid array indices: 0-{len(steps)-1})"
+                        )
                     continue
                 
                 # Additional validation for error messages
-                step_order = step.get('step_order', index)
                 if dep_index == index:
                     errors.append(
-                        f"Step {index} (order {step_order}, {step.get('step_name', 'Unknown')}): "
+                        f"Step {step_order} ({step_name}): "
                         "cannot depend on itself"
                     )
     
