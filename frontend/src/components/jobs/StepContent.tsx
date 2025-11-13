@@ -13,6 +13,7 @@ const MAX_PREVIEW_LENGTH = 1000
 
 interface StepContentProps {
   formatted: { content: any, type: 'json' | 'markdown' | 'text' | 'html', structure?: 'ai_input' }
+  imageUrls?: string[] // Optional array of image URLs to render inline
 }
 
 /**
@@ -110,7 +111,7 @@ function ExpandableContent({
   )
 }
 
-export function StepContent({ formatted }: StepContentProps) {
+export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
   const [showRendered, setShowRendered] = useState(true)
   
   const getContentString = (): string => {
@@ -121,6 +122,21 @@ export function StepContent({ formatted }: StepContentProps) {
   }
   
   const contentString = getContentString()
+  
+  // Render inline images from imageUrls prop
+  const renderInlineImages = () => {
+    if (!imageUrls || imageUrls.length === 0) {
+      return null
+    }
+    
+    return (
+      <div className="mt-4 space-y-2">
+        {imageUrls.map((url, idx) => (
+          <InlineImage key={`inline-image-${idx}`} url={url} alt={`Image ${idx + 1}`} />
+        ))}
+      </div>
+    )
+  }
   
   // Render metadata section for AI input structure
   const renderMetadata = () => {
@@ -159,7 +175,7 @@ export function StepContent({ formatted }: StepContentProps) {
     const hasMetadata = formatted.structure === 'ai_input' && typeof formatted.content === 'object'
     
     // Extract image URLs from the JSON object
-    const imageUrls = extractImageUrlsFromObject(formatted.content)
+    const extractedImageUrls = extractImageUrlsFromObject(formatted.content)
     
     return (
       <div className="space-y-4">
@@ -191,13 +207,15 @@ export function StepContent({ formatted }: StepContentProps) {
                   </SyntaxHighlighter>
                 </div>
                 {/* Render images found in JSON */}
-                {imageUrls.length > 0 && (
+                {extractedImageUrls.length > 0 && (
                   <div className="mt-4 space-y-2">
-                    {imageUrls.map((url, idx) => (
+                    {extractedImageUrls.map((url, idx) => (
                       <InlineImage key={`json-image-${idx}`} url={url} alt={`Image from JSON ${idx + 1}`} />
                     ))}
                   </div>
                 )}
+                {/* Render images from imageUrls prop */}
+                {renderInlineImages()}
               </>
             )}
           />
@@ -275,11 +293,14 @@ export function StepContent({ formatted }: StepContentProps) {
             />
             {/* Extract and render images from HTML source */}
             {(() => {
-              const imageUrls = extractImageUrls(htmlContent)
-              return imageUrls.length > 0 ? (
+              const extractedUrls = extractImageUrls(htmlContent)
+              return extractedUrls.length > 0 || imageUrls.length > 0 ? (
                 <div className="mt-4 space-y-2">
-                  {imageUrls.map((url, idx) => (
+                  {extractedUrls.map((url, idx) => (
                     <InlineImage key={`html-image-${idx}`} url={url} alt={`Image from HTML ${idx + 1}`} />
+                  ))}
+                  {imageUrls.map((url, idx) => (
+                    <InlineImage key={`html-prop-image-${idx}`} url={url} alt={`Image ${idx + 1}`} />
                   ))}
                 </div>
               ) : null
@@ -300,7 +321,7 @@ export function StepContent({ formatted }: StepContentProps) {
         : formatted.content.input || JSON.stringify(formatted.content, null, 2)
     
     // Extract image URLs from markdown (ReactMarkdown handles markdown image syntax, but we also want plain URLs)
-    const imageUrls = extractImageUrls(markdownText)
+    const extractedImageUrls = extractImageUrls(markdownText)
     
     return (
       <div className="space-y-4">
@@ -321,13 +342,15 @@ export function StepContent({ formatted }: StepContentProps) {
                   </ReactMarkdown>
                 </div>
                 {/* Render plain image URLs that aren't in markdown format */}
-                {imageUrls.length > 0 && (
+                {extractedImageUrls.length > 0 && (
                   <div className="mt-4 space-y-2">
-                    {imageUrls.map((url, idx) => (
+                    {extractedImageUrls.map((url, idx) => (
                       <InlineImage key={`md-image-${idx}`} url={url} alt={`Image from markdown ${idx + 1}`} />
                     ))}
                   </div>
                 )}
+                {/* Render images from imageUrls prop */}
+                {renderInlineImages()}
               </>
             )}
           />
@@ -360,6 +383,8 @@ export function StepContent({ formatted }: StepContentProps) {
               <pre className="text-sm whitespace-pre-wrap font-mono">
                 {renderTextWithImages(displayContent)}
               </pre>
+              {/* Render images from imageUrls prop */}
+              {renderInlineImages()}
             </div>
           )
         }}

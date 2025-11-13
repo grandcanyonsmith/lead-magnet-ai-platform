@@ -420,9 +420,12 @@ export function StepInputOutput({
                   </div>
                 </div>
                 <div className="p-4 bg-white max-h-96 overflow-y-auto">
-                  <StepContent formatted={formatStepOutput(step)} />
+                  <StepContent 
+                    formatted={formatStepOutput(step)} 
+                    imageUrls={step.image_urls && Array.isArray(step.image_urls) ? step.image_urls : []}
+                  />
                   
-                  {/* Display images */}
+                  {/* Display images in separate section (for backwards compatibility) */}
                   {renderImageSection()}
                 </div>
               </div>
