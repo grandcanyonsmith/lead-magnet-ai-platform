@@ -100,7 +100,8 @@ NEXT_PUBLIC_COGNITO_USER_POOL_ID=$USER_POOL_ID \
 NEXT_PUBLIC_COGNITO_CLIENT_ID=$CLIENT_ID \
 NEXT_PUBLIC_AWS_REGION=$AWS_REGION \
 npm run build
-aws s3 sync out s3://$ARTIFACTS_BUCKET --delete --cache-control max-age=31536000,public
+# Sync frontend to root, but exclude artifact paths to prevent deletion
+aws s3 sync out s3://$ARTIFACTS_BUCKET/ --delete --exclude "*/jobs/*" --exclude "*/images/*" --cache-control max-age=31536000,public
 aws cloudfront create-invalidation --distribution-id $DISTRIBUTION_ID --paths '/*'
 cd ..
 echo -e "${GREEN}✓ Frontend deployed${NC}"

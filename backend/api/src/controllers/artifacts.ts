@@ -3,7 +3,7 @@ import { ApiError } from '../utils/errors';
 import { RouteResponse } from '../routes';
 import { ArtifactUrlService } from '../services/artifactUrlService';
 import { logger } from '../utils/logger';
-import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { GetObjectCommand, HeadObjectCommand, S3Client } from '@aws-sdk/client-s3';
 
 const ARTIFACTS_TABLE = process.env.ARTIFACTS_TABLE;
 const JOBS_TABLE = process.env.JOBS_TABLE;
@@ -220,6 +220,13 @@ class ArtifactsController {
     }
 
     try {
+      // Log the S3 key being requested for debugging
+      logger.info(`Fetching artifact content from S3`, {
+        artifactId,
+        s3Key: artifact.s3_key,
+        bucket: ARTIFACTS_BUCKET,
+      });
+
       const command = new GetObjectCommand({
         Bucket: ARTIFACTS_BUCKET,
         Key: artifact.s3_key,
@@ -253,11 +260,38 @@ class ArtifactsController {
       };
     } catch (error: any) {
       if (error.name === 'NoSuchKey' || error.$metadata?.httpStatusCode === 404) {
-        throw new ApiError('Artifact file not found in S3', 404);
+        logger.error(`Artifact file not found in S3`, {
+          artifactId,
+          s3Key: artifact.s3_key,
+          bucket: ARTIFACTS_BUCKET,
+          errorName: error.name,
+          httpStatusCode: error.$metadata?.httpStatusCode,
+        });
+        
+        // Try to check if file exists with HeadObject for better error message
+        try {
+          const headCommand = new HeadObjectCommand({
+            Bucket: ARTIFACTS_BUCKET,
+            Key: artifact.s3_key,
+          });
+          await s3Client.send(headCommand);
+        } catch (headError: any) {
+          logger.error(`Confirmed file does not exist in S3`, {
+            artifactId,
+            s3Key: artifact.s3_key,
+            bucket: ARTIFACTS_BUCKET,
+            headError: headError.message,
+          });
+        }
+        
+        throw new ApiError(`Artifact file not found in S3. Key: ${artifact.s3_key}`, 404);
       }
       logger.error(`Error fetching artifact content for ${artifactId}`, {
         s3Key: artifact.s3_key,
+        bucket: ARTIFACTS_BUCKET,
         error: error.message,
+        errorName: error.name,
+        httpStatusCode: error.$metadata?.httpStatusCode,
       });
       throw new ApiError(`Failed to fetch artifact content: ${error.message}`, 500);
     }
