@@ -1,0 +1,33 @@
+{
+  "total": 51,
+  "legacy": 0,
+  "steps": 51,
+  "legacy_workflows": [],
+  "tenant_stats": {
+    "84c8e438-0061-70f2-2ce0-7cb44989a329": {
+      "total": 44,
+      "legacy": 0,
+      "steps": 44
+    },
+    "94b834b8-f091-70b6-7a0d-0294df45b956": {
+      "total": 1,
+      "legacy": 0,
+      "steps": 1
+    },
+    "canyon_coursecreator360_com": {
+      "total": 1,
+      "legacy": 0,
+      "steps": 1
+    },
+    "24c82488-0071-7090-d8ce-b39075af0987": {
+      "total": 4,
+      "legacy": 0,
+      "steps": 4
+    },
+    "tenant_test_001": {
+      "total": 1,
+      "legacy": 0,
+      "steps": 1
+    }
+  }
+}

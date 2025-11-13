@@ -29,13 +29,12 @@ const baseWorkflowSchema = z.object({
   workflow_description: z.string().max(1000).optional(),
   // New multi-step workflow support
   steps: z.array(workflowStepSchema).optional(),
-  // Legacy fields (kept for backward compatibility)
-  ai_model: z.string().default('gpt-5'),
-  ai_instructions: z.string().min(1).optional(),
-  rewrite_model: z.string().default('gpt-5'),
-  rewrite_enabled: z.boolean().default(true),
-  research_enabled: z.boolean().default(true),
-  html_enabled: z.boolean().default(true),
+  // Legacy fields (kept for backward compatibility in database, but not used for new workflows)
+  ai_model: z.string().optional(),
+  ai_instructions: z.string().optional(),
+  rewrite_model: z.string().optional(),
+  research_enabled: z.boolean().optional(),
+  html_enabled: z.boolean().optional(),
   template_id: z.string().optional(),
   template_version: z.number().default(0),
   // Delivery configuration
@@ -113,13 +112,9 @@ function validateDependencies(steps: any[]): { valid: boolean; errors: string[] 
 
 // Workflow schemas with refinement
 export const createWorkflowSchema = baseWorkflowSchema.refine((data) => {
-  // If steps array is provided, it must have at least one step
-  if (data.steps !== undefined && data.steps.length === 0) {
-    return false;
-  }
-  // If no steps array, legacy fields must be present
+  // Steps array is required and must have at least one step
   if (!data.steps || data.steps.length === 0) {
-    return !!(data.ai_instructions || data.research_enabled || data.html_enabled);
+    return false;
   }
   
   // Validate dependencies
@@ -130,7 +125,7 @@ export const createWorkflowSchema = baseWorkflowSchema.refine((data) => {
   
   return true;
 }, {
-  message: 'Either provide steps array with at least one step, or use legacy fields (ai_instructions, research_enabled, html_enabled). Also ensure dependencies are valid and non-circular.',
+  message: 'Workflow must have at least one step. Legacy format is no longer supported. Also ensure dependencies are valid and non-circular.',
 });
 
 export const updateWorkflowSchema = baseWorkflowSchema.partial().refine((data) => {

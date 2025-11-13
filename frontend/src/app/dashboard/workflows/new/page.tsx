@@ -245,7 +245,7 @@ export default function NewWorkflowPage() {
           </div>
 
         {/* Template Editor */}
-        {workflowForm.formData.html_enabled && (
+        {(workflowForm.formData.template_id || workflowForm.templateData.html_content.trim()) && (
           <TemplateEditor
             templateData={workflowForm.templateData}
             onChange={workflowForm.updateTemplateData}

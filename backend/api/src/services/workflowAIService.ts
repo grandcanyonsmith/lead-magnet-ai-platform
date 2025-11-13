@@ -9,7 +9,7 @@ export interface WorkflowAIEditRequest {
     workflow_id: string;
     workflow_name: string;
     workflow_description: string;
-    html_enabled: boolean;
+    template_id?: string;
     current_steps: WorkflowStep[];
   };
 }
@@ -17,7 +17,6 @@ export interface WorkflowAIEditRequest {
 export interface WorkflowAIEditResponse {
   workflow_name?: string;
   workflow_description?: string;
-  html_enabled?: boolean;
   steps: WorkflowStep[];
   changes_summary: string;
 }
@@ -55,7 +54,6 @@ You must respond with a JSON object that follows this schema:
 {
   "workflow_name": string (optional - only if user wants to rename),
   "workflow_description": string (optional - only if user wants to change description),
-  "html_enabled": boolean (optional - only if user wants to enable/disable HTML generation),
   "steps": [
     {
       "step_name": string,
@@ -98,7 +96,7 @@ export class WorkflowAIService {
     const contextParts: string[] = [
       `Current Workflow: ${workflowContext.workflow_name}`,
       `Description: ${workflowContext.workflow_description || '(none)'}`,
-      `HTML Generation: ${workflowContext.html_enabled ? 'Enabled' : 'Disabled'}`,
+      workflowContext.template_id ? `Template: Configured (ID: ${workflowContext.template_id})` : 'Template: Not configured',
       '',
       'Current Steps:',
     ];

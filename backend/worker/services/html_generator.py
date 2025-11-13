@@ -30,7 +30,6 @@ class HTMLGenerator:
         submission_data: dict,
         template_html: str,
         template_style: str = '',
-        ai_instructions: str = '',
         model: str = 'gpt-5'
     ) -> Tuple[str, Dict, Dict, Dict]:
         """Generate HTML from submission data."""

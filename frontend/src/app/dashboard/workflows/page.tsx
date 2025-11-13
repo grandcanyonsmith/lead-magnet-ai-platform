@@ -390,26 +390,14 @@ export default function WorkflowsPage() {
                     )}
                     
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-500">Model:</span>
-                      <span className="text-gray-900 font-medium">{workflow.ai_model}</span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-500">Features:</span>
+                      <span className="text-gray-500">Steps:</span>
                       <div className="flex gap-1 flex-wrap justify-end">
-                        {workflow.research_enabled && (
-                          <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-                            Research
-                          </span>
-                        )}
-                        {workflow.html_enabled && (
+                        <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                          {workflow.steps?.length || 0} step{workflow.steps?.length !== 1 ? 's' : ''}
+                        </span>
+                        {workflow.template_id && (
                           <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-800">
-                            HTML
-                          </span>
-                        )}
-                        {!workflow.research_enabled && !workflow.html_enabled && (
-                          <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
-                            Text
+                            Template
                           </span>
                         )}
                       </div>
@@ -575,23 +563,13 @@ export default function WorkflowsPage() {
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm text-gray-700 font-medium">{workflow.ai_model}</span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex gap-2">
-                          {workflow.research_enabled && (
-                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-                              Research
-                            </span>
-                          )}
-                          {workflow.html_enabled && (
+                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                            {workflow.steps?.length || 0} step{workflow.steps?.length !== 1 ? 's' : ''}
+                          </span>
+                          {workflow.template_id && (
                             <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
-                              HTML
-                            </span>
-                          )}
-                          {!workflow.research_enabled && !workflow.html_enabled && (
-                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
-                              Text
+                              Template
                             </span>
                           )}
                         </div>

@@ -36,10 +36,7 @@ export function useWorkflowValidation(
       }
     })
 
-    // Validate template if HTML is enabled
-    if (formData.html_enabled && !templateData.html_content.trim()) {
-      errors.push('Template HTML content is required when HTML generation is enabled')
-    }
+    // Template validation is optional - only validate if template content exists
 
     return {
       valid: errors.length === 0,
