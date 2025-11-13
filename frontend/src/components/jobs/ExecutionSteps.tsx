@@ -99,7 +99,7 @@ function ArtifactPreview({ artifactId }: ArtifactPreviewProps) {
         <div className="mt-2 border border-gray-200 rounded-lg overflow-hidden">
           <div className="aspect-video bg-gray-100">
             <PreviewRenderer
-              contentType={artifact.content_type}
+              contentType={artifact.content_type || artifact.mime_type}
               objectUrl={artifactUrl}
               fileName={fileName}
               className="w-full h-full"
@@ -134,6 +134,7 @@ interface ExecutionStepsProps {
   onEditStep?: (stepIndex: number) => void
   canEdit?: boolean
   onQuickEdit?: (stepOrder: number, stepName: string) => void
+  jobId?: string
 }
 
 export function ExecutionSteps({
@@ -149,9 +150,88 @@ export function ExecutionSteps({
   onEditStep,
   canEdit = false,
   onQuickEdit,
+  jobId,
 }: ExecutionStepsProps) {
   // State for managing expanded previous steps (separate from main step expansion)
   const [expandedPrevSteps, setExpandedPrevSteps] = useState<Set<number>>(new Set())
+  // State for image artifacts mapped by step order
+  const [imageArtifactsByStep, setImageArtifactsByStep] = useState<Map<number, any[]>>(new Map())
+  const [loadingImageArtifacts, setLoadingImageArtifacts] = useState(false)
+
+  // Fetch image artifacts for the job
+  useEffect(() => {
+    const fetchImageArtifacts = async () => {
+      if (!jobId) return
+
+      try {
+        setLoadingImageArtifacts(true)
+        const response = await api.getArtifacts({ 
+          job_id: jobId, 
+          artifact_type: 'image',
+          limit: 100 
+        })
+        
+        const imageArtifacts = response.artifacts || []
+        
+        // Group artifacts by step order based on filename pattern or created_at timestamp
+        // Artifacts are typically named like "step_{step_order}_{step_name}.png"
+        // or we can match by timestamp proximity to step execution
+        const artifactsByStep = new Map<number, any[]>()
+        
+        // Sort steps by step_order for matching
+        const sortedSteps = [...steps].sort((a: any, b: any) => {
+          const orderA = a.step_order ?? 0
+          const orderB = b.step_order ?? 0
+          return orderA - orderB
+        })
+        
+        imageArtifacts.forEach((artifact: any) => {
+          // Try to extract step order from filename
+          const fileName = artifact.file_name || artifact.artifact_name || ''
+          const stepMatch = fileName.match(/step[_\s](\d+)/i)
+          
+          if (stepMatch) {
+            const stepOrder = parseInt(stepMatch[1], 10)
+            if (!artifactsByStep.has(stepOrder)) {
+              artifactsByStep.set(stepOrder, [])
+            }
+            artifactsByStep.get(stepOrder)!.push(artifact)
+          } else {
+            // Fallback: try to match by timestamp proximity to step execution
+            if (artifact.created_at) {
+              const artifactTime = new Date(artifact.created_at).getTime()
+              
+              for (const step of sortedSteps) {
+                if (step.timestamp) {
+                  const stepTime = new Date(step.timestamp).getTime()
+                  const timeDiff = Math.abs(artifactTime - stepTime)
+                  
+                  // If artifact was created within 5 minutes of step execution, associate it
+                  if (timeDiff < 5 * 60 * 1000) {
+                    const stepOrder = step.step_order ?? 0
+                    if (!artifactsByStep.has(stepOrder)) {
+                      artifactsByStep.set(stepOrder, [])
+                    }
+                    artifactsByStep.get(stepOrder)!.push(artifact)
+                    break
+                  }
+                }
+              }
+            }
+          }
+        })
+        
+        setImageArtifactsByStep(artifactsByStep)
+      } catch (error) {
+        console.error('Failed to fetch image artifacts:', error)
+        // Don't show error to user, just silently fail - images will fall back to image_urls
+      } finally {
+        setLoadingImageArtifacts(false)
+      }
+    }
+
+    fetchImageArtifacts()
+  }, [jobId, steps])
 
   if (!steps || steps.length === 0) {
     return null
@@ -662,36 +742,101 @@ export function ExecutionSteps({
                               <div className="p-4 bg-white max-h-96 overflow-y-auto">
                                 <StepContent formatted={formatStepOutput(step)} />
                                 
-                                {/* Display image URLs if present */}
-                                {step.image_urls && Array.isArray(step.image_urls) && step.image_urls.length > 0 && (
-                                  <div className="mt-4 pt-4 border-t border-gray-200">
-                                    <span className="text-sm font-semibold text-gray-700 mb-3 block">Generated Images:</span>
-                                    <div className="grid grid-cols-1 gap-3">
-                                      {step.image_urls.map((imageUrl: string, imgIdx: number) => (
-                                        <div key={imgIdx} className="border border-gray-200 rounded-lg overflow-hidden">
-                                          <img 
-                                            src={imageUrl} 
-                                            alt={`Generated image ${imgIdx + 1}`}
-                                            className="w-full h-auto"
-                                            onError={(e) => {
-                                              (e.target as HTMLImageElement).style.display = 'none'
-                                            }}
-                                          />
-                                          <div className="p-2 bg-gray-100">
-                                            <a 
-                                              href={imageUrl} 
-                                              target="_blank" 
-                                              rel="noopener noreferrer"
-                                              className="text-xs text-blue-600 hover:text-blue-800 break-all"
-                                            >
-                                              {imageUrl}
-                                            </a>
-                                          </div>
+                                {/* Display images - try image_urls first, fallback to artifacts */}
+                                {(() => {
+                                  const stepOrder = step.step_order ?? 0
+                                  const hasImageUrls = step.image_urls && Array.isArray(step.image_urls) && step.image_urls.length > 0
+                                  const stepImageArtifacts = imageArtifactsByStep.get(stepOrder) || []
+                                  const hasImageArtifacts = stepImageArtifacts.length > 0
+                                  
+                                  // Show images section if we have either image_urls or artifacts
+                                  if (!hasImageUrls && !hasImageArtifacts) {
+                                    return null
+                                  }
+                                  
+                                  return (
+                                    <div className="mt-4 pt-4 border-t border-gray-200">
+                                      <span className="text-sm font-semibold text-gray-700 mb-3 block">Generated Images:</span>
+                                      
+                                      {/* Loading state - only show when waiting for artifacts and no image_urls */}
+                                      {loadingImageArtifacts && !hasImageUrls && (
+                                        <div className="flex items-center gap-2 text-sm text-gray-500 py-4">
+                                          <FiLoader className="w-4 h-4 animate-spin" />
+                                          <span>Loading images...</span>
                                         </div>
-                                      ))}
+                                      )}
+                                      
+                                      {/* Render from image_urls if available (primary source) */}
+                                      {hasImageUrls ? (
+                                        <div className="grid grid-cols-1 gap-3">
+                                          {step.image_urls.map((imageUrl: string, imgIdx: number) => (
+                                            <div key={`url-${imgIdx}`} className="border border-gray-200 rounded-lg overflow-hidden">
+                                              <div className="aspect-video bg-gray-100">
+                                                <PreviewRenderer
+                                                  contentType="image/png"
+                                                  objectUrl={imageUrl}
+                                                  fileName={`Generated image ${imgIdx + 1}`}
+                                                  className="w-full h-full"
+                                                />
+                                              </div>
+                                              <div className="p-2 bg-gray-100">
+                                                <a 
+                                                  href={imageUrl} 
+                                                  target="_blank" 
+                                                  rel="noopener noreferrer"
+                                                  className="text-xs text-blue-600 hover:text-blue-800 break-all"
+                                                >
+                                                  {imageUrl}
+                                                </a>
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      ) : (
+                                        /* Fallback: Render from artifacts if image_urls not available */
+                                        hasImageArtifacts && (
+                                          <div className="grid grid-cols-1 gap-3">
+                                            {stepImageArtifacts.map((artifact: any, imgIdx: number) => {
+                                              const artifactUrl = artifact.object_url || artifact.public_url
+                                              if (!artifactUrl) return null
+                                              
+                                              return (
+                                                <div key={`artifact-${artifact.artifact_id || imgIdx}`} className="border border-gray-200 rounded-lg overflow-hidden">
+                                                  <div className="aspect-video bg-gray-100">
+                                                    <PreviewRenderer
+                                                      contentType={artifact.content_type || 'image/png'}
+                                                      objectUrl={artifactUrl}
+                                                      fileName={artifact.file_name || artifact.artifact_name || `Image ${imgIdx + 1}`}
+                                                      className="w-full h-full"
+                                                      artifactId={artifact.artifact_id}
+                                                    />
+                                                  </div>
+                                                  <div className="p-2 bg-gray-100">
+                                                    <div className="flex items-center justify-between">
+                                                      <a 
+                                                        href={artifactUrl} 
+                                                        target="_blank" 
+                                                        rel="noopener noreferrer"
+                                                        className="text-xs text-blue-600 hover:text-blue-800 break-all flex-1"
+                                                      >
+                                                        {artifact.file_name || artifact.artifact_name || artifactUrl}
+                                                      </a>
+                                                      {artifact.artifact_id && (
+                                                        <span className="text-xs text-gray-500 font-mono ml-2">
+                                                          {artifact.artifact_id.substring(0, 12)}...
+                                                        </span>
+                                                      )}
+                                                    </div>
+                                                  </div>
+                                                </div>
+                                              )
+                                            })}
+                                          </div>
+                                        )
+                                      )}
                                     </div>
-                                  </div>
-                                )}
+                                  )
+                                })()}
                               </div>
                             </div>
                           </div>
