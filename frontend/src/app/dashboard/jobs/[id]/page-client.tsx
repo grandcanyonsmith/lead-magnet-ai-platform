@@ -438,6 +438,7 @@ export default function JobDetailClient() {
             onEditStep={handleEditStep}
             canEdit={!!workflow}
             onQuickEdit={handleQuickEdit}
+            jobId={job.job_id}
           />
         </>
       ) : executionStepsError ? (

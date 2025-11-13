@@ -12,13 +12,41 @@ interface PreviewRendererProps {
   artifactId?: string
 }
 
+/**
+ * Detect content type from file extension as fallback
+ */
+function detectContentTypeFromExtension(fileName?: string): string | null {
+  if (!fileName) return null
+  const ext = fileName.split('.').pop()?.toLowerCase()
+  const typeMap: Record<string, string> = {
+    'html': 'text/html',
+    'htm': 'text/html',
+    'md': 'text/markdown',
+    'markdown': 'text/markdown',
+    'txt': 'text/plain',
+    'json': 'application/json',
+    'pdf': 'application/pdf',
+    'png': 'image/png',
+    'jpg': 'image/jpeg',
+    'jpeg': 'image/jpeg',
+    'gif': 'image/gif',
+    'svg': 'image/svg+xml',
+  }
+  return typeMap[ext || ''] || null
+}
+
 export function PreviewRenderer({ contentType, objectUrl, fileName, className = '', artifactId }: PreviewRendererProps) {
   const [imageLoaded, setImageLoaded] = useState(false)
   const [imageError, setImageError] = useState(false)
   const [isInView, setIsInView] = useState(false)
   const [markdownContent, setMarkdownContent] = useState<string | null>(null)
   const [markdownError, setMarkdownError] = useState(false)
+  const [htmlContent, setHtmlContent] = useState<string | null>(null)
+  const [htmlError, setHtmlError] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
+
+  // Determine effective content type with fallback to file extension
+  const effectiveContentType = contentType || detectContentTypeFromExtension(fileName) || 'application/octet-stream'
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -42,12 +70,14 @@ export function PreviewRenderer({ contentType, objectUrl, fileName, className = 
     if (objectUrl) {
       setMarkdownError(false)
       setMarkdownContent(null)
+      setHtmlError(false)
+      setHtmlContent(null)
     }
   }, [objectUrl])
 
   // Fetch markdown content when in view
   useEffect(() => {
-    if (isInView && contentType === 'text/markdown' && !markdownContent && !markdownError) {
+    if (isInView && effectiveContentType === 'text/markdown' && !markdownContent && !markdownError) {
       // Use API endpoint if artifactId is available, otherwise fall back to direct URL
       const fetchMarkdown = async () => {
         try {
@@ -74,9 +104,40 @@ export function PreviewRenderer({ contentType, objectUrl, fileName, className = 
       }
       fetchMarkdown()
     }
-  }, [isInView, contentType, objectUrl, artifactId, markdownContent, markdownError])
+  }, [isInView, effectiveContentType, objectUrl, artifactId, markdownContent, markdownError])
 
-  if (!objectUrl || !contentType) {
+  // Fetch HTML content when in view
+  useEffect(() => {
+    if (isInView && (effectiveContentType === 'text/html' || effectiveContentType === 'application/xhtml+xml') && !htmlContent && !htmlError) {
+      // Use API endpoint if artifactId is available, otherwise fall back to direct URL
+      const fetchHtml = async () => {
+        try {
+          let text: string
+          if (artifactId) {
+            // Use API endpoint to proxy from S3 (avoids presigned URL expiration and CORS issues)
+            text = await api.artifacts.getArtifactContent(artifactId)
+          } else if (objectUrl) {
+            // Fallback to direct URL fetch
+            const res = await fetch(objectUrl)
+            if (!res.ok) {
+              throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+            }
+            text = await res.text()
+          } else {
+            throw new Error('No artifact ID or URL provided')
+          }
+          setHtmlContent(text)
+          setHtmlError(false) // Clear any previous error on success
+        } catch (err) {
+          console.error('Failed to fetch HTML:', err)
+          setHtmlError(true)
+        }
+      }
+      fetchHtml()
+    }
+  }, [isInView, effectiveContentType, objectUrl, artifactId, htmlContent, htmlError])
+
+  if (!objectUrl && !artifactId) {
     return (
       <div className={`flex items-center justify-center bg-gray-100 ${className}`}>
         <FiFile className="w-12 h-12 text-gray-400" />
@@ -85,7 +146,7 @@ export function PreviewRenderer({ contentType, objectUrl, fileName, className = 
   }
 
   const renderPreview = () => {
-    if (contentType.startsWith('image/')) {
+    if (effectiveContentType.startsWith('image/')) {
       return (
         <div className="relative w-full h-full">
           {!imageLoaded && !imageError && (
@@ -112,10 +173,10 @@ export function PreviewRenderer({ contentType, objectUrl, fileName, className = 
       )
     }
 
-    if (contentType === 'application/pdf') {
+    if (effectiveContentType === 'application/pdf') {
       return (
         <div className="relative w-full h-full bg-white">
-          {isInView ? (
+          {isInView && objectUrl ? (
             <iframe
               src={`${objectUrl}#toolbar=0&navpanes=0&scrollbar=0`}
               className="w-full h-full border-0"
@@ -130,16 +191,33 @@ export function PreviewRenderer({ contentType, objectUrl, fileName, className = 
       )
     }
 
-    if (contentType === 'text/html' || contentType === 'application/xhtml+xml') {
+    if (effectiveContentType === 'text/html' || effectiveContentType === 'application/xhtml+xml') {
       return (
         <div className="relative w-full h-full bg-white">
           {isInView ? (
-            <iframe
-              src={objectUrl}
-              className="w-full h-full border-0"
-              title={fileName || 'HTML Preview'}
-              sandbox="allow-same-origin"
-            />
+            htmlError ? (
+              <div className="flex items-center justify-center h-full bg-gray-50">
+                <div className="text-center">
+                  <FiCode className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                  <p className="text-xs text-gray-500">Failed to load HTML</p>
+                </div>
+              </div>
+            ) : htmlContent ? (
+              <iframe
+                srcDoc={htmlContent}
+                className="w-full h-full border-0"
+                title={fileName || 'HTML Preview'}
+                sandbox="allow-same-origin allow-scripts"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full bg-gray-50">
+                <div className="text-center">
+                  <FiCode className="w-12 h-12 text-blue-400 mx-auto mb-2 animate-pulse" />
+                  <p className="text-xs text-gray-500">Loading HTML...</p>
+                </div>
+              </div>
+            )
           ) : (
             <div className="flex items-center justify-center h-full bg-gray-100">
               <FiCode className="w-12 h-12 text-blue-400" />
@@ -149,7 +227,7 @@ export function PreviewRenderer({ contentType, objectUrl, fileName, className = 
       )
     }
 
-    if (contentType === 'text/markdown') {
+    if (effectiveContentType === 'text/markdown') {
       return (
         <div className="relative w-full h-full bg-white overflow-auto">
           {isInView ? (
@@ -186,7 +264,7 @@ export function PreviewRenderer({ contentType, objectUrl, fileName, className = 
       )
     }
 
-    if (contentType.startsWith('text/')) {
+    if (effectiveContentType.startsWith('text/')) {
       return (
         <div className="flex items-center justify-center bg-gray-50 h-full">
           <div className="text-center">
@@ -197,8 +275,8 @@ export function PreviewRenderer({ contentType, objectUrl, fileName, className = 
       )
     }
 
-    const icon = contentType.startsWith('video/') ? FiFile :
-                 contentType.startsWith('audio/') ? FiFile :
+    const icon = effectiveContentType.startsWith('video/') ? FiFile :
+                 effectiveContentType.startsWith('audio/') ? FiFile :
                  FiFile
 
     return (
