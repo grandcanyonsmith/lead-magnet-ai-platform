@@ -14,7 +14,7 @@ export class AuthStack extends cdk.Stack {
 
     // Create Lambda function to auto-confirm users and set tenant_id
     const autoConfirmLambda = new lambda.Function(this, 'AutoConfirmLambda', {
-      runtime: lambda.Runtime[LAMBDA_DEFAULTS.AUTO_CONFIRM.RUNTIME as keyof typeof lambda.Runtime],
+      runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'index.handler',
       code: lambda.Code.fromAsset('lib/lambdas'),
     });
