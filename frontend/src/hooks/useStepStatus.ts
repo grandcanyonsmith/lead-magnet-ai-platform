@@ -72,8 +72,49 @@ export function useAllStepStatuses(options: UseStepStatusOptions): Map<number, S
   return useMemo(() => {
     const statusMap = new Map<number, StepStatus>()
     
+    // Sort steps for status calculation
+    const sortedSteps = [...steps].sort((a, b) => {
+      const orderA = a.step_order ?? 0
+      const orderB = b.step_order ?? 0
+      return orderA - orderB
+    })
+    
     steps.forEach((step) => {
-      const status = useStepStatus(step, { steps, jobStatus })
+      // Inline the status calculation logic instead of calling useStepStatus hook
+      let status: StepStatus
+      
+      // Use explicit status if provided
+      if (step._status) {
+        status = step._status
+      } else if (step.output !== null && step.output !== undefined && step.output !== '') {
+        status = 'completed'
+      } else if (jobStatus === 'processing') {
+        // Find all completed steps (have output)
+        const completedSteps = sortedSteps.filter((s) => 
+          s.output !== null && s.output !== undefined && s.output !== ''
+        )
+        const stepIndex = sortedSteps.indexOf(step)
+        // If this step comes right after the last completed step, it's in progress
+        if (stepIndex === completedSteps.length && stepIndex < sortedSteps.length) {
+          status = 'in_progress'
+        } else {
+          status = 'pending'
+        }
+      } else if (jobStatus === 'failed') {
+        const completedSteps = sortedSteps.filter((s) => 
+          s.output !== null && s.output !== undefined && s.output !== ''
+        )
+        const stepIndex = sortedSteps.indexOf(step)
+        // If step was supposed to run but didn't complete, mark as failed
+        if (stepIndex <= completedSteps.length && step.output === null) {
+          status = 'failed'
+        } else {
+          status = 'pending'
+        }
+      } else {
+        status = 'pending'
+      }
+      
       statusMap.set(step.step_order ?? 0, status)
     })
     

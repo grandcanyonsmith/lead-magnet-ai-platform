@@ -45,20 +45,23 @@ export function ExecutionSteps({
     steps,
   })
 
-  if (!steps || steps.length === 0) {
-    return null
-  }
-
-  // Sort steps by step_order once
+  // Sort steps by step_order once (must be before early return)
   const sortedSteps = useMemo(() => {
+    if (!steps || steps.length === 0) {
+      return []
+    }
     return [...steps].sort((a, b) => (a.step_order ?? 0) - (b.step_order ?? 0))
   }, [steps])
 
-  // Compute form submission once
+  // Compute form submission once (must be before early return)
   const formSubmission = useMemo(
     () => getFormSubmission(sortedSteps),
     [sortedSteps]
   )
+
+  if (!steps || steps.length === 0) {
+    return null
+  }
 
   // Helper function for step status (not memoized - simple computation)
   const getStepStatusForStep = (step: MergedStep) => getStepStatus(step, sortedSteps, jobStatus)
