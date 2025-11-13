@@ -102,7 +102,7 @@ export function ArtifactPreview({ artifactId }: ArtifactPreviewProps) {
         <div className="mt-2 border border-gray-200 rounded-lg overflow-hidden">
           <div className="aspect-video bg-gray-100">
             <PreviewRenderer
-              contentType={artifact.content_type || artifact.mime_type}
+              contentType={artifact.content_type}
               objectUrl={artifactUrl}
               fileName={fileName}
               className="w-full h-full"
