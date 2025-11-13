@@ -97,9 +97,15 @@ export function PreviewRenderer({ contentType, objectUrl, fileName, className = 
           }
           setMarkdownContent(text)
           setMarkdownError(false) // Clear any previous error on success
-        } catch (err) {
+        } catch (err: any) {
           console.error('Failed to fetch markdown:', err)
-          setMarkdownError(true)
+          // If artifact not found, show a helpful message instead of error state
+          if (err?.message?.includes('404') || err?.message?.includes('not found')) {
+            setMarkdownContent('**Artifact file not available**\n\nThe artifact file was not found in storage. It may have been deleted or not yet generated.')
+            setMarkdownError(false)
+          } else {
+            setMarkdownError(true)
+          }
         }
       }
       fetchMarkdown()
@@ -128,9 +134,15 @@ export function PreviewRenderer({ contentType, objectUrl, fileName, className = 
           }
           setHtmlContent(text)
           setHtmlError(false) // Clear any previous error on success
-        } catch (err) {
+        } catch (err: any) {
           console.error('Failed to fetch HTML:', err)
-          setHtmlError(true)
+          // If artifact not found, show a helpful message instead of error state
+          if (err?.message?.includes('404') || err?.message?.includes('not found')) {
+            setHtmlContent('<html><body><h1>Artifact file not available</h1><p>The artifact file was not found in storage. It may have been deleted or not yet generated.</p></body></html>')
+            setHtmlError(false)
+          } else {
+            setHtmlError(true)
+          }
         }
       }
       fetchHtml()

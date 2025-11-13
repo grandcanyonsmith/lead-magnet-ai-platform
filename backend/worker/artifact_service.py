@@ -49,7 +49,7 @@ class ArtifactService:
             'tenant_id': tenant_id,
             'job_id': job_id,
             'artifact_type': artifact_type,
-            'filename': filename,
+            'artifact_filename': filename,
             'content_size_bytes': content_size,
             'public': public
         })
@@ -101,7 +101,7 @@ class ArtifactService:
             'tenant_id': tenant_id,
             'job_id': job_id,
             'artifact_type': artifact_type,
-            'filename': filename,
+            'artifact_filename': filename,
             's3_key': s3_key,
             'public_url_preview': public_url[:80] + '...' if len(public_url) > 80 else public_url,
             'content_size_bytes': content_size
@@ -153,7 +153,8 @@ class ArtifactService:
         import requests
         from urllib.parse import urlparse
         
-        # Check if URL is already in our S3/CloudFront
+        # Check if URL is already in our S3 bucket
+        # Direct S3 URL: https://bucket.s3.region.amazonaws.com/{s3_key}
         # CloudFront URL: https://domain/{s3_key}
         # Presigned URL: https://bucket.s3.amazonaws.com/{s3_key}?...
         s3_key = None
@@ -161,7 +162,14 @@ class ArtifactService:
         image_size = 0
         public_url = image_url  # Default to original URL
         
-        if self.s3.cloudfront_domain and self.s3.cloudfront_domain in image_url:
+        # Check for direct S3 URL (bucket.s3.region.amazonaws.com)
+        if f"{self.s3.bucket_name}.s3." in image_url and '.amazonaws.com/' in image_url:
+            # Extract key from direct S3 URL
+            parts = image_url.split('.amazonaws.com/')
+            if len(parts) > 1:
+                s3_key = parts[1].split('?')[0]  # Remove query params
+                is_external_url = False
+        elif self.s3.cloudfront_domain and self.s3.cloudfront_domain in image_url:
             # Already in our CloudFront - extract S3 key
             parts = image_url.split(f"{self.s3.cloudfront_domain}/")
             if len(parts) > 1:
@@ -174,7 +182,7 @@ class ArtifactService:
                 s3_key = f"images/{parts[1].split('?')[0]}"  # Remove query params
                 is_external_url = False
         elif '.s3.amazonaws.com/' in image_url:
-            # Extract key from presigned URL
+            # Extract key from presigned URL or old format
             parts = image_url.split('.s3.amazonaws.com/')
             if len(parts) > 1:
                 s3_key = parts[1].split('?')[0]  # Remove query params
@@ -235,8 +243,11 @@ class ArtifactService:
                     key=s3_key,
                     image_data=image_data,
                     content_type=content_type,
-                    public=True
+                    public=True  # Images are always public (direct S3 access)
                 )
+                
+                # public_url is now a direct S3 URL (permanent, non-expiring, publicly accessible)
+                # Format: https://{bucket}.s3.{region}.amazonaws.com/{key}
                 
                 logger.info(f"[ArtifactService] Image downloaded and uploaded to S3", extra={
                     's3_key': s3_key,
@@ -261,7 +272,7 @@ class ArtifactService:
                 # Extract filename from s3_key
                 filename = s3_key.split('/')[-1]
             
-            # Use the provided image_url as public_url (it's already our CloudFront/S3 URL)
+            # Use the provided image_url as public_url (it's already our direct S3 URL)
             public_url = image_url
         
         # Generate artifact ID
@@ -303,7 +314,7 @@ class ArtifactService:
         
         logger.info(f"[ArtifactService] Image artifact stored successfully", extra={
             'artifact_id': artifact_id,
-            'filename': filename,
+            'artifact_filename': filename,
             's3_key': s3_key
         })
         

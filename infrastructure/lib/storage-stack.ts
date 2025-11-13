@@ -2,6 +2,7 @@ import * as cdk from 'aws-cdk-lib';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
 
 export class StorageStack extends cdk.Stack {
@@ -17,11 +18,12 @@ export class StorageStack extends cdk.Stack {
       versioned: true,
       encryption: s3.BucketEncryption.S3_MANAGED,
       blockPublicAccess: new s3.BlockPublicAccess({
-        blockPublicAcls: true,
-        blockPublicPolicy: false, // Allow CloudFront access
-        ignorePublicAcls: true,
+        blockPublicAcls: false, // Allow public ACLs for images
+        blockPublicPolicy: false, // Allow public policy
+        ignorePublicAcls: false,
         restrictPublicBuckets: false,
       }),
+      publicReadAccess: false, // We'll use bucket policy for specific paths
       cors: [
         {
           allowedMethods: [s3.HttpMethods.GET, s3.HttpMethods.HEAD],
@@ -61,14 +63,54 @@ export class StorageStack extends cdk.Stack {
     // Grant read access to CloudFront
     this.artifactsBucket.grantRead(originAccessIdentity);
 
+    // Bucket policy to allow public read access for images
+    // Images are stored at paths like: {tenant_id}/jobs/{job_id}/*.png, *.jpg, etc.
+    // Allow public read for any file ending in image extensions (at any path depth)
+    this.artifactsBucket.addToResourcePolicy(
+      new iam.PolicyStatement({
+        sid: 'PublicReadGetObjectForImages',
+        effect: iam.Effect.ALLOW,
+        principals: [new iam.AnyPrincipal()],
+        actions: ['s3:GetObject'],
+        resources: [`${this.artifactsBucket.bucketArn}/*`],
+        conditions: {
+          StringLike: {
+            's3:objectkey': [
+              '*.png',
+              '*.jpg',
+              '*.jpeg',
+              '*.gif',
+              '*.webp',
+              '*.svg',
+              '*/*.png',
+              '*/*.jpg',
+              '*/*.jpeg',
+              '*/*.gif',
+              '*/*.webp',
+              '*/*.svg',
+              '*/*/*.png',
+              '*/*/*.jpg',
+              '*/*/*.jpeg',
+              '*/*/*.gif',
+              '*/*/*.webp',
+              '*/*/*.svg',
+            ],
+          },
+        },
+      })
+    );
+
     // CloudFront Distribution
+    // Default behavior: serve both frontend and artifacts from root
+    // Artifacts are stored at {tenant_id}/jobs/{job_id}/* paths
+    // Frontend files are at root level (index.html, _next/, etc.)
     this.distribution = new cloudfront.Distribution(this, 'Distribution', {
       defaultBehavior: {
         origin: new origins.S3Origin(this.artifactsBucket, {
           originAccessIdentity,
         }),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-        allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+        allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
         cachedMethods: cloudfront.CachedMethods.CACHE_GET_HEAD,
         compress: true,
         cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,

@@ -110,13 +110,23 @@ class ImageHandler:
                 except Exception as cleanup_error:
                     logger.warning(f"Error during browser cleanup: {cleanup_error}")
     
-    def upload_base64_image_to_s3(self, image_b64: str, content_type: str = 'image/png') -> Optional[str]:
+    def upload_base64_image_to_s3(
+        self, 
+        image_b64: str, 
+        content_type: str = 'image/png',
+        tenant_id: Optional[str] = None,
+        job_id: Optional[str] = None,
+        filename: Optional[str] = None
+    ) -> Optional[str]:
         """
         Upload base64 image to S3 and return public URL.
         
         Args:
             image_b64: Base64-encoded image data
             content_type: MIME type (e.g., 'image/png', 'image/jpeg')
+            tenant_id: Optional tenant ID for S3 path structure
+            job_id: Optional job ID for S3 path structure
+            filename: Optional filename (will be generated if not provided)
             
         Returns:
             Public URL string or None if upload fails
@@ -125,15 +135,22 @@ class ImageHandler:
             import uuid
             import time
             
-            # Generate unique filename
-            ext = 'png' if 'png' in content_type else ('jpg' if 'jpeg' in content_type or 'jpg' in content_type else 'png')
-            image_id = f"image-{int(time.time())}-{str(uuid.uuid4())[:8]}.{ext}"
+            # Generate filename if not provided
+            if not filename:
+                ext = 'png' if 'png' in content_type else ('jpg' if 'jpeg' in content_type or 'jpg' in content_type else 'png')
+                filename = f"image-{int(time.time())}-{str(uuid.uuid4())[:8]}.{ext}"
             
             # Decode base64 to bytes
             image_bytes = base64.b64decode(image_b64)
             
+            # Construct S3 key with tenant/job path if provided
+            if tenant_id and job_id:
+                s3_key = f"{tenant_id}/jobs/{job_id}/{filename}"
+            else:
+                # Fallback to images/ prefix for backwards compatibility
+                s3_key = f"images/{filename}"
+            
             # Upload using upload_image which accepts bytes
-            s3_key = f"images/{image_id}"
             s3_url, public_url = self.s3_service.upload_image(
                 key=s3_key,
                 image_data=image_bytes,
@@ -141,10 +158,20 @@ class ImageHandler:
                 public=True
             )
             
-            logger.info(f"Image uploaded to S3: {public_url[:80]}...")
+            logger.info(f"[ImageHandler] Image uploaded to S3", extra={
+                's3_key': s3_key,
+                'public_url_preview': public_url[:80] + '...' if len(public_url) > 80 else public_url,
+                'tenant_id': tenant_id,
+                'job_id': job_id,
+                'image_filename': filename
+            })
             return public_url
         except Exception as e:
-            logger.error(f"Failed to upload image to S3: {e}", exc_info=True)
+            logger.error(f"[ImageHandler] Failed to upload image to S3: {e}", exc_info=True, extra={
+                'tenant_id': tenant_id,
+                'job_id': job_id,
+                'image_filename': filename
+            })
             return None
     
     def _upload_screenshot_to_s3(self, screenshot_b64: str) -> Optional[str]:

@@ -36,6 +36,8 @@ class AIService:
         previous_context: str = "",
         tools: Optional[List[Dict]] = None,
         tool_choice: str = "auto",
+        tenant_id: Optional[str] = None,
+        job_id: Optional[str] = None,
     ) -> Tuple[str, Dict, Dict, Dict]:
         """
         Generate a report using OpenAI with configurable tools.
@@ -47,6 +49,8 @@ class AIService:
             previous_context: Optional context from previous steps (accumulated)
             tools: List of tool dictionaries (e.g., [{"type": "web_search_preview"}])
             tool_choice: How model should use tools - "auto", "required", or "none"
+            tenant_id: Optional tenant ID for image storage context
+            job_id: Optional job ID for image storage context
             
         Returns:
             Tuple of (generated report content, usage info dict, request details dict, response details dict)
@@ -242,7 +246,9 @@ class AIService:
                 tools=validated_tools,
                 tool_choice=normalized_tool_choice,
                 params=params,
-                image_handler=self.image_handler
+                image_handler=self.image_handler,
+                tenant_id=tenant_id,
+                job_id=job_id
             )
             
         except Exception as e:

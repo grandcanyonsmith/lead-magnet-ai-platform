@@ -269,7 +269,9 @@ class JobProcessor:
                             context=current_step_context,
                             previous_context=all_previous_context,
                             tools=step_tools,
-                            tool_choice=step_tool_choice
+                            tool_choice=step_tool_choice,
+                            tenant_id=job['tenant_id'],
+                            job_id=job_id
                         )
                         
                         step_duration = (datetime.utcnow() - step_start_time).total_seconds() * 1000
@@ -784,7 +786,9 @@ class JobProcessor:
                     context=current_step_context,
                     previous_context=all_previous_context,
                     tools=step_tools,
-                    tool_choice=step_tool_choice
+                    tool_choice=step_tool_choice,
+                    tenant_id=job['tenant_id'],
+                    job_id=job_id
                 )
             except Exception as step_error:
                 logger.error(f"[JobProcessor] Error generating report for step {step_index + 1}", extra={
