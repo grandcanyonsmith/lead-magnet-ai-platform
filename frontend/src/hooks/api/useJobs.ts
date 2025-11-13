@@ -110,9 +110,9 @@ export function useJobsPolling(
   )
 
   return {
-    jobs: data?.jobs || [],
+    jobs: extractListData(data, 'jobs'),
     loading: isLoading,
-    error: error instanceof Error ? error.message : error ? String(error) : null,
+    error: normalizeError(error),
     refetch: () => refetch(),
   }
 }
@@ -142,7 +142,7 @@ export function useResubmitJob(): UseResubmitJobResult {
       }
     },
     loading: isPending,
-    error: error instanceof Error ? error.message : error ? String(error) : null,
+    error: normalizeError(error),
   }
 }
 

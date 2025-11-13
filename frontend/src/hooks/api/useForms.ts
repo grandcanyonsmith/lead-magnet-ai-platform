@@ -9,6 +9,7 @@ import { useQuery } from '@/hooks/useQuery'
 import { useMutation } from '@/hooks/useMutation'
 import { api } from '@/lib/api'
 import { Form, FormCreateRequest, FormUpdateRequest, FormListResponse } from '@/types'
+import { normalizeError, extractListData } from './hookHelpers'
 
 // Query keys factory
 export const formKeys = {
@@ -38,9 +39,9 @@ export function useForms(params?: Record<string, unknown>): UseFormsResult {
   )
 
   return {
-    forms: data?.forms || [],
+    forms: extractListData(data, 'forms'),
     loading: isLoading,
-    error: error instanceof Error ? error.message : error ? String(error) : null,
+    error: normalizeError(error),
     refetch: () => refetch(),
   }
 }
@@ -69,7 +70,7 @@ export function useForm(id: string | null): UseFormResult {
   return {
     form: data || null,
     loading: isLoading,
-    error: error instanceof Error ? error.message : error ? String(error) : null,
+    error: normalizeError(error),
     refetch: () => refetch(),
   }
 }
@@ -99,7 +100,7 @@ export function useCreateForm(): UseCreateFormResult {
       }
     },
     loading: isPending,
-    error: error instanceof Error ? error.message : error ? String(error) : null,
+    error: normalizeError(error),
   }
 }
 
@@ -132,7 +133,7 @@ export function useUpdateForm(): UseUpdateFormResult {
       }
     },
     loading: isPending,
-    error: error instanceof Error ? error.message : error ? String(error) : null,
+    error: normalizeError(error),
   }
 }
 
