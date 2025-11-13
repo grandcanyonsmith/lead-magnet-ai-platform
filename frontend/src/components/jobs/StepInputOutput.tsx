@@ -283,18 +283,19 @@ export function StepInputOutput({
                         artifactId={artifact.artifact_id}
                       />
                     </div>
-                    <div className="p-2 bg-gray-100">
-                      <div className="flex items-center justify-between">
+                    <div className="p-3 md:p-2 bg-gray-100">
+                      <div className="flex items-center justify-between gap-2">
                         <a 
                           href={artifactUrl} 
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="text-xs text-blue-600 hover:text-blue-800 break-all flex-1"
+                          className="text-xs md:text-xs text-blue-600 hover:text-blue-800 active:text-blue-900 truncate flex-1 min-w-0"
+                          title={artifact.file_name || artifact.artifact_name || artifactUrl}
                         >
                           {artifact.file_name || artifact.artifact_name || artifactUrl}
                         </a>
                         {artifact.artifact_id && (
-                          <span className="text-xs text-gray-500 font-mono ml-2">
+                          <span className="text-xs text-gray-500 font-mono flex-shrink-0">
                             {artifact.artifact_id.substring(0, 12)}...
                           </span>
                         )}
