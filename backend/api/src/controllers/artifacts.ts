@@ -232,14 +232,24 @@ class ArtifactsController {
       }
       
       const content = await response.Body.transformToString();
-      const contentType = response.ContentType || 'text/plain';
+      const contentType = response.ContentType || artifact.mime_type || 'text/plain';
+      
+      // For HTML content, add CORS headers and proper content type
+      const headers: Record<string, string> = {
+        'Content-Type': contentType,
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET',
+      };
+      
+      // For HTML documents, ensure proper charset
+      if (contentType.includes('text/html')) {
+        headers['Content-Type'] = 'text/html; charset=utf-8';
+      }
       
       return {
         statusCode: 200,
         body: content,
-        headers: {
-          'Content-Type': contentType,
-        },
+        headers,
       };
     } catch (error: any) {
       if (error.name === 'NoSuchKey' || error.$metadata?.httpStatusCode === 404) {

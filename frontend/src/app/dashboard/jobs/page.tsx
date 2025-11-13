@@ -461,17 +461,19 @@ export default function JobsPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm" onClick={(e) => e.stopPropagation()}>
                         {job.output_url ? (
-                          <a
-                            href={job.output_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <button
                             data-tour="view-artifacts"
-                            onClick={(e) => {
+                            onClick={async (e) => {
                               e.stopPropagation()
                               e.preventDefault()
-                              // Use window.open for better mobile compatibility
-                              if (typeof window !== 'undefined') {
-                                window.open(job.output_url, '_blank', 'noopener,noreferrer')
+                              try {
+                                const blobUrl = await api.getJobDocumentBlobUrl(job.job_id)
+                                window.open(blobUrl, '_blank', 'noopener,noreferrer')
+                                // Clean up blob URL after a delay
+                                setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)
+                              } catch (error) {
+                                console.error('Failed to open document:', error)
+                                alert('Failed to open document. Please try again.')
                               }
                             }}
                             onMouseDown={(e) => e.stopPropagation()}
@@ -480,7 +482,7 @@ export default function JobsPage() {
                           >
                             View
                             <FiExternalLink className="w-4 h-4 ml-1" />
-                          </a>
+                          </button>
                         ) : (
                           <span className="text-gray-400">-</span>
                         )}

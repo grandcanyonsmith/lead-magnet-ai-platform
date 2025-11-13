@@ -134,6 +134,14 @@ class ApiClientImpl implements ApiClient {
     return this.jobs.getExecutionSteps(jobId)
   }
 
+  async getJobDocument(jobId: string): Promise<string> {
+    return this.jobs.getJobDocument(jobId)
+  }
+
+  async getJobDocumentBlobUrl(jobId: string): Promise<string> {
+    return this.jobs.getJobDocumentBlobUrl(jobId)
+  }
+
   // Artifacts - delegate to artifacts client
   async getArtifacts(params?: ArtifactListParams): Promise<ArtifactListResponse> {
     return this.artifacts.getArtifacts(params)
