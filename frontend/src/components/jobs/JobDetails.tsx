@@ -1,17 +1,21 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { FiExternalLink } from 'react-icons/fi'
+import { useState } from 'react'
+import { FiExternalLink, FiLoader } from 'react-icons/fi'
 import { formatRelativeTime, formatDurationSeconds } from '@/utils/jobFormatting'
 import { api } from '@/lib/api'
+import { toast } from 'react-hot-toast'
 
 interface JobDetailsProps {
   job: any
   workflow: any | null
+  hideContainer?: boolean
 }
 
-export function JobDetails({ job, workflow }: JobDetailsProps) {
+export function JobDetails({ job, workflow, hideContainer = false }: JobDetailsProps) {
   const router = useRouter()
+  const [loadingDocument, setLoadingDocument] = useState(false)
   
   const duration = job.completed_at && job.created_at
     ? Math.round((new Date(job.completed_at).getTime() - new Date(job.created_at).getTime()) / 1000)
@@ -25,9 +29,69 @@ export function JobDetails({ job, workflow }: JobDetailsProps) {
       }, 0)
     : null
 
-  return (
-    <div className="bg-white rounded-lg shadow p-6 space-y-6">
-      <h2 className="text-lg font-semibold text-gray-900">Details</h2>
+  const handleViewDocument = async () => {
+    if (loadingDocument) return
+    
+    setLoadingDocument(true)
+    let blobUrl: string | null = null
+    
+    try {
+      console.log('Fetching document for job:', job.job_id)
+      blobUrl = await api.getJobDocumentBlobUrl(job.job_id)
+      
+      if (!blobUrl) {
+        throw new Error('Failed to create blob URL')
+      }
+      
+      console.log('Opening document in new window')
+      const newWindow = window.open(blobUrl, '_blank', 'noopener,noreferrer')
+      
+      // Check if popup was blocked
+      if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+        // Popup was blocked, try alternative approach
+        toast.error('Popup blocked. Please allow popups for this site and try again.')
+        console.warn('Popup blocked, attempting alternative method')
+        // Clean up blob URL since we can't use it
+        if (blobUrl) {
+          URL.revokeObjectURL(blobUrl)
+        }
+        return
+      }
+      
+      // Clean up blob URL after a delay (give time for window to load)
+      setTimeout(() => {
+        if (blobUrl) {
+          URL.revokeObjectURL(blobUrl)
+        }
+      }, 5000) // Increased delay to ensure document loads
+      
+      toast.success('Document opened in new tab')
+    } catch (error: any) {
+      console.error('Failed to open document:', error)
+      
+      // Provide more specific error messages
+      let errorMessage = 'Failed to open document. Please try again.'
+      if (error?.message) {
+        if (error.message.includes('404') || error.message.includes('not found')) {
+          errorMessage = 'Document not found. It may not have been generated yet.'
+        } else if (error.message.includes('403') || error.message.includes('permission')) {
+          errorMessage = 'You do not have permission to view this document.'
+        } else if (error.message.includes('network') || error.message.includes('fetch')) {
+          errorMessage = 'Network error. Please check your connection and try again.'
+        } else {
+          errorMessage = `Failed to open document: ${error.message}`
+        }
+      }
+      
+      toast.error(errorMessage)
+    } finally {
+      setLoadingDocument(false)
+    }
+  }
+
+  const content = (
+    <>
+      {!hideContainer && <h2 className="text-lg font-semibold text-gray-900">Details</h2>}
       
       {workflow && (
         <div>
@@ -52,21 +116,21 @@ export function JobDetails({ job, workflow }: JobDetailsProps) {
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Document</label>
           <button
-            onClick={async () => {
-              try {
-                const blobUrl = await api.getJobDocumentBlobUrl(job.job_id)
-                window.open(blobUrl, '_blank', 'noopener,noreferrer')
-                // Clean up blob URL after a delay
-                setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)
-              } catch (error) {
-                console.error('Failed to open document:', error)
-                alert('Failed to open document. Please try again.')
-              }
-            }}
-            className="inline-flex items-center text-primary-600 hover:text-primary-900 font-medium"
+            onClick={handleViewDocument}
+            disabled={loadingDocument}
+            className="inline-flex items-center text-primary-600 hover:text-primary-900 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            View Document
-            <FiExternalLink className="w-4 h-4 ml-1" />
+            {loadingDocument ? (
+              <>
+                <FiLoader className="w-4 h-4 mr-1 animate-spin" />
+                Loading...
+              </>
+            ) : (
+              <>
+                View Document
+                <FiExternalLink className="w-4 h-4 ml-1" />
+              </>
+            )}
           </button>
         </div>
       )}
@@ -115,6 +179,16 @@ export function JobDetails({ job, workflow }: JobDetailsProps) {
           </div>
         </div>
       )}
+    </>
+  )
+
+  if (hideContainer) {
+    return <div className="space-y-6">{content}</div>
+  }
+
+  return (
+    <div className="bg-white rounded-lg shadow p-6 space-y-6">
+      {content}
     </div>
   )
 }

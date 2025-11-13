@@ -10,6 +10,7 @@ import { StepProgressBar } from './StepProgressBar'
 import { ArtifactPreview } from './ArtifactPreview'
 import { ImagePreview } from './ImagePreview'
 import { getStepStatus, getPreviousSteps, getFormSubmission } from './utils'
+import { Artifact } from '@/types/artifact'
 
 interface ExecutionStepsProps {
   steps: MergedStep[]
@@ -60,12 +61,14 @@ export function ExecutionSteps({
     [sortedSteps]
   )
 
+  // Helper function for step status (not memoized - simple computation)
+  const getStepStatusForStep = (step: MergedStep) => {
+    return getStepStatus(step, sortedSteps, jobStatus)
+  }
+
   if (!steps || steps.length === 0) {
     return null
   }
-
-  // Helper function for step status (not memoized - simple computation)
-  const getStepStatusForStep = (step: MergedStep) => getStepStatus(step, sortedSteps, jobStatus)
 
   return (
     <div className="mt-4 sm:mt-6 bg-white rounded-lg shadow p-4 sm:p-6">
@@ -131,37 +134,119 @@ export function ExecutionSteps({
                   loadingImageArtifacts={loadingImageArtifacts}
                 />
 
-                {/* Show generated images in preview */}
+                {/* Show generated files/images in preview with deduplication */}
                 {(() => {
-                  const stepImageUrls = step.image_urls && Array.isArray(step.image_urls) && step.image_urls.length > 0) ? step.image_urls : []
+                  const stepImageUrls = (step.image_urls && Array.isArray(step.image_urls) && step.image_urls.length > 0) ? step.image_urls : []
                   const stepImageArtifacts = imageArtifactsByStep.get(stepOrder) || []
+                  const mainArtifactId = step.artifact_id
                   
-                  // Show images from image_urls if available
-                  if (stepImageUrls.length > 0) {
-                    return (
-                      <div className="px-3 sm:px-4 pb-3 sm:pb-4">
-                        {stepImageUrls.map((imageUrl: string, idx: number) => (
-                          <ImagePreview
-                            key={`image-url-${idx}`}
-                            imageUrl={imageUrl}
-                            imageIndex={idx}
-                          />
-                        ))}
-                      </div>
-                    )
+                  // Helper to extract filename from URL
+                  const getFilenameFromUrl = (url: string): string => {
+                    try {
+                      const urlObj = new URL(url)
+                      const pathname = urlObj.pathname
+                      const filename = pathname.split('/').pop() || ''
+                      return filename
+                    } catch {
+                      // If URL parsing fails, try to extract from string
+                      const parts = url.split('/')
+                      return parts[parts.length - 1] || url
+                    }
                   }
                   
-                  // Otherwise show images from artifacts
-                  if (stepImageArtifacts.length > 0) {
+                  // Helper to normalize filename for comparison (remove query params, etc.)
+                  const normalizeFilename = (filename: string): string => {
+                    return filename.split('?')[0].toLowerCase()
+                  }
+                  
+                  // Get main artifact filename if it exists (we'll fetch it if needed)
+                  // For now, we'll use a simpler approach: collect all unique files
+                  const displayedFiles = new Set<string>()
+                  const filesToShow: Array<{ type: 'artifact' | 'imageArtifact' | 'imageUrl', data: any, key: string }> = []
+                  
+                  // Priority 1: Main artifact (step.artifact_id) - show as ArtifactPreview
+                  if (mainArtifactId) {
+                    // We'll show this separately below, but track it to avoid duplicates
+                    displayedFiles.add(`artifact:${mainArtifactId}`)
+                  }
+                  
+                  // Priority 2: Image artifacts (from imageArtifacts hook)
+                  stepImageArtifacts.forEach((artifact: Artifact) => {
+                    const artifactId = artifact.artifact_id
+                    const fileName = artifact.file_name || artifact.artifact_name || ''
+                    const normalizedName = normalizeFilename(fileName)
+                    
+                    // Skip if this is the main artifact
+                    if (artifactId === mainArtifactId) {
+                      return
+                    }
+                    
+                    // Skip if we've already seen this filename from another source
+                    if (normalizedName && displayedFiles.has(`filename:${normalizedName}`)) {
+                      return
+                    }
+                    
+                    displayedFiles.add(`filename:${normalizedName}`)
+                    displayedFiles.add(`artifact:${artifactId}`)
+                    filesToShow.push({
+                      type: 'imageArtifact',
+                      data: artifact,
+                      key: `image-artifact-${artifactId}`
+                    })
+                  })
+                  
+                  // Priority 3: Image URLs (from step.image_urls)
+                  stepImageUrls.forEach((imageUrl: string, idx: number) => {
+                    const filename = getFilenameFromUrl(imageUrl)
+                    const normalizedName = normalizeFilename(filename)
+                    
+                    // Skip if we've already seen this filename
+                    if (normalizedName && displayedFiles.has(`filename:${normalizedName}`)) {
+                      return
+                    }
+                    
+                    // Check if this URL matches any artifact we're already showing
+                    const matchesExistingArtifact = stepImageArtifacts.some((artifact: Artifact) => {
+                      const artifactUrl = artifact.object_url || artifact.public_url
+                      return artifactUrl === imageUrl || normalizeFilename(artifact.file_name || artifact.artifact_name || '') === normalizedName
+                    })
+                    
+                    if (matchesExistingArtifact) {
+                      return
+                    }
+                    
+                    displayedFiles.add(`filename:${normalizedName}`)
+                    filesToShow.push({
+                      type: 'imageUrl',
+                      data: imageUrl,
+                      key: `image-url-${idx}`
+                    })
+                  })
+                  
+                  // Render unique files
+                  if (filesToShow.length > 0) {
                     return (
                       <div className="px-3 sm:px-4 pb-3 sm:pb-4">
-                        {stepImageArtifacts.map((artifact, idx: number) => (
-                          <ImagePreview
-                            key={`image-artifact-${artifact.artifact_id || idx}`}
-                            artifact={artifact}
-                            imageIndex={idx}
-                          />
-                        ))}
+                        {filesToShow.map((file) => {
+                          if (file.type === 'imageArtifact') {
+                            return (
+                              <ImagePreview
+                                key={file.key}
+                                artifact={file.data}
+                                imageIndex={0}
+                              />
+                            )
+                          } else if (file.type === 'imageUrl') {
+                            return (
+                              <ImagePreview
+                                key={file.key}
+                                imageUrl={file.data}
+                                imageIndex={0}
+                              />
+                            )
+                          }
+                          return null
+                        })}
                       </div>
                     )
                   }
@@ -169,6 +254,7 @@ export function ExecutionSteps({
                   return null
                 })()}
 
+                {/* Show main artifact (step output) - highest priority */}
                 {step.artifact_id && (
                   <div className="px-3 sm:px-4 pb-3 sm:pb-4">
                     <ArtifactPreview artifactId={step.artifact_id} />

@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { FiChevronDown, FiChevronUp, FiExternalLink } from 'react-icons/fi'
 import { useJobDetail } from '@/hooks/useJobDetail'
 import { useJobExecutionSteps } from '@/hooks/useJobExecutionSteps'
 import { useMergedSteps } from '@/hooks/useMergedSteps'
@@ -19,6 +20,8 @@ export default function JobDetailClient() {
   const router = useRouter()
   const [showResubmitModal, setShowResubmitModal] = useState(false)
   const [editingStepIndex, setEditingStepIndex] = useState<number | null>(null)
+  const [showDetails, setShowDetails] = useState(false)
+  const [showFormSubmission, setShowFormSubmission] = useState(false)
   const {
     job,
     workflow,
@@ -139,34 +142,6 @@ export default function JobDetailClient() {
         isResubmitting={resubmitting}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <JobDetails job={job} workflow={workflow} />
-
-        {/* Form Submission Details */}
-        {submission && submission.submission_data ? (
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Form Submission Details</h2>
-            <div className="space-y-3">
-              {Object.entries(submission.submission_data).map(([key, value]: [string, any]) => (
-                <div key={key} className="border-b border-gray-100 pb-3 last:border-b-0">
-                  <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">
-                    {key.replace(/_/g, ' ')}
-                  </label>
-                  <p className="text-sm text-gray-900 break-words">
-                    {typeof value === 'string' ? value : JSON.stringify(value)}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : submission ? (
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Form Submission Details</h2>
-            <p className="text-sm text-gray-500">No submission data available</p>
-          </div>
-        ) : null}
-      </div>
-
       {/* Step Edit Modal */}
       <StepEditModal
         step={editingStepIndex !== null && workflow?.steps?.[editingStepIndex] ? workflow.steps[editingStepIndex] : null}
@@ -238,8 +213,72 @@ export default function JobDetailClient() {
         </div>
       ) : null}
 
-      {/* Technical Details */}
-      <TechnicalDetails job={job} form={form} />
+      {/* Details and Form Submission - Collapsible sections at bottom */}
+      <div className="mt-6 space-y-4">
+        {/* Job Details Section */}
+        <div className="bg-white rounded-lg shadow">
+          <button
+            onClick={() => setShowDetails(!showDetails)}
+            className="flex items-center justify-between w-full text-left p-6 touch-target"
+          >
+            <h2 className="text-lg font-semibold text-gray-900">Details</h2>
+            {showDetails ? (
+              <FiChevronUp className="w-5 h-5 text-gray-500 flex-shrink-0 ml-2" />
+            ) : (
+              <FiChevronDown className="w-5 h-5 text-gray-500 flex-shrink-0 ml-2" />
+            )}
+          </button>
+          {showDetails && (
+            <div className="px-6 pb-6 border-t border-gray-200">
+              <div className="pt-6">
+                <JobDetails job={job} workflow={workflow} hideContainer={true} />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Form Submission Details Section */}
+        {submission && (
+          <div className="bg-white rounded-lg shadow">
+            <button
+              onClick={() => setShowFormSubmission(!showFormSubmission)}
+              className="flex items-center justify-between w-full text-left p-6 touch-target"
+            >
+              <h2 className="text-lg font-semibold text-gray-900">Form Submission Details</h2>
+              {showFormSubmission ? (
+                <FiChevronUp className="w-5 h-5 text-gray-500 flex-shrink-0 ml-2" />
+              ) : (
+                <FiChevronDown className="w-5 h-5 text-gray-500 flex-shrink-0 ml-2" />
+              )}
+            </button>
+            {showFormSubmission && (
+              <div className="px-6 pb-6 border-t border-gray-200">
+                <div className="pt-6">
+                  {submission.submission_data ? (
+                    <div className="space-y-3">
+                      {Object.entries(submission.submission_data).map(([key, value]: [string, any]) => (
+                        <div key={key} className="border-b border-gray-100 pb-3 last:border-b-0">
+                          <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">
+                            {key.replace(/_/g, ' ')}
+                          </label>
+                          <p className="text-sm text-gray-900 break-words">
+                            {typeof value === 'string' ? value : JSON.stringify(value)}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">No submission data available</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Technical Details */}
+        <TechnicalDetails job={job} form={form} />
+      </div>
     </div>
   )
 }
