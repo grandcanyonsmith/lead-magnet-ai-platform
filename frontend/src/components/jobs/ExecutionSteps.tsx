@@ -8,6 +8,7 @@ import { StepHeader } from './StepHeader'
 import { StepInputOutput } from './StepInputOutput'
 import { StepProgressBar } from './StepProgressBar'
 import { ArtifactPreview } from './ArtifactPreview'
+import { ImagePreview } from './ImagePreview'
 import { getStepStatus, getPreviousSteps, getFormSubmission } from './utils'
 
 interface ExecutionStepsProps {
@@ -129,6 +130,44 @@ export function ExecutionSteps({
                   imageArtifacts={imageArtifactsByStep.get(stepOrder) || []}
                   loadingImageArtifacts={loadingImageArtifacts}
                 />
+
+                {/* Show generated images in preview */}
+                {(() => {
+                  const stepImageUrls = step.image_urls && Array.isArray(step.image_urls) && step.image_urls.length > 0) ? step.image_urls : []
+                  const stepImageArtifacts = imageArtifactsByStep.get(stepOrder) || []
+                  
+                  // Show images from image_urls if available
+                  if (stepImageUrls.length > 0) {
+                    return (
+                      <div className="px-3 sm:px-4 pb-3 sm:pb-4">
+                        {stepImageUrls.map((imageUrl: string, idx: number) => (
+                          <ImagePreview
+                            key={`image-url-${idx}`}
+                            imageUrl={imageUrl}
+                            imageIndex={idx}
+                          />
+                        ))}
+                      </div>
+                    )
+                  }
+                  
+                  // Otherwise show images from artifacts
+                  if (stepImageArtifacts.length > 0) {
+                    return (
+                      <div className="px-3 sm:px-4 pb-3 sm:pb-4">
+                        {stepImageArtifacts.map((artifact, idx: number) => (
+                          <ImagePreview
+                            key={`image-artifact-${artifact.artifact_id || idx}`}
+                            artifact={artifact}
+                            imageIndex={idx}
+                          />
+                        ))}
+                      </div>
+                    )
+                  }
+                  
+                  return null
+                })()}
 
                 {step.artifact_id && (
                   <div className="px-3 sm:px-4 pb-3 sm:pb-4">
