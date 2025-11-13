@@ -101,15 +101,18 @@ class CUALoopService:
                 logger.warning(f"[CUALoopService] Failed to navigate to initial page: {nav_error}")
                 # Continue anyway - browser might still work
             
-            # Build initial request params (use string format for initial request)
-            initial_params = {
-                'model': model,
-                'instructions': instructions,
-                'input': input_text,  # Use string format for initial request
-                'tools': tools,
-                'tool_choice': tool_choice,
-                'truncation': 'auto'
-            }
+            # Build initial request params using build_api_params to ensure proper tool cleaning
+            # This ensures container parameters are removed and Decimal values are converted
+            initial_params = openai_client.build_api_params(
+                model=model,
+                instructions=instructions,
+                input_text=input_text,
+                tools=tools,
+                tool_choice=tool_choice,
+                has_computer_use=True
+            )
+            # Add truncation parameter for computer use
+            initial_params['truncation'] = 'auto'
             
             # Make initial API call
             logger.info(f"[CUALoopService] Making initial CUA request")
@@ -221,12 +224,17 @@ class CUALoopService:
                     logger.error(f"[CUALoopService] Screenshot capture failed, cannot continue CUA loop")
                     break
                 
-                # Build next request params
-                next_params = {
-                    'model': model,
-                    'tools': tools,
-                    'truncation': 'auto'
-                }
+                # Build next request params using build_api_params to ensure proper tool cleaning
+                next_params = openai_client.build_api_params(
+                    model=model,
+                    instructions=instructions,  # Keep same instructions
+                    input_text='',  # Will be replaced with next_input
+                    tools=tools,
+                    tool_choice=tool_choice,
+                    has_computer_use=True
+                )
+                # Add truncation parameter for computer use
+                next_params['truncation'] = 'auto'
                 
                 # Use previous_response_id if available (recommended)
                 if previous_response_id:
