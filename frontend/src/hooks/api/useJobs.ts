@@ -110,7 +110,7 @@ export function useJobsPolling(
   )
 
   return {
-    jobs: extractListData(data, 'jobs'),
+    jobs: data?.jobs ?? [],
     loading: isLoading,
     error: normalizeError(error),
     refetch: () => refetch(),

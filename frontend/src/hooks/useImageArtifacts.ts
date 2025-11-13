@@ -61,8 +61,8 @@ export function useImageArtifacts(options: UseImageArtifactsOptions) {
               const artifactTime = new Date(artifact.created_at).getTime()
               
               for (const step of sortedSteps) {
-                if (step.timestamp) {
-                  const stepTime = new Date(step.timestamp).getTime()
+                if (step.started_at) {
+                  const stepTime = new Date(step.started_at).getTime()
                   const timeDiff = Math.abs(artifactTime - stepTime)
                   
                   // If artifact was created within 5 minutes of step execution, associate it
