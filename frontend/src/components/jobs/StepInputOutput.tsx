@@ -268,12 +268,6 @@ export function StepInputOutput({
                 <span className="text-sm font-semibold text-gray-700">Configuration</span>
               </div>
               <div className="p-4 bg-white space-y-3">
-                {step.step_description && (
-                  <div>
-                    <span className="text-xs font-semibold text-gray-600 uppercase">Description</span>
-                    <p className="text-sm text-gray-700 mt-1">{step.step_description}</p>
-                  </div>
-                )}
                 {step.model && (
                   <div>
                     <span className="text-xs font-semibold text-gray-600 uppercase">Model</span>
