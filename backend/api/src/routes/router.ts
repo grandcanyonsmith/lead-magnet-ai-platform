@@ -134,11 +134,20 @@ class SimpleRouter {
    * Supports :param syntax for path parameters.
    */
   private matchPath(pattern: string, path: string): { params: Record<string, string> } | null {
+    // Extract parameter names first (before modifying the pattern)
+    const paramNames: string[] = [];
+    const paramMatches = pattern.matchAll(/:([^/]+)/g);
+    for (const m of paramMatches) {
+      paramNames.push(m[1]);
+    }
+
     // Convert pattern to regex
-    const regexPattern = pattern
+    // Strategy: Escape special chars except : and *, then replace :param and *
+    // This ensures capture group parentheses aren't escaped
+    let regexPattern = pattern
+      .replace(/[.+?^${}|[\]\\]/g, '\\$&') // Escape special chars (excluding :, *, and () which we add)
       .replace(/:[^/]+/g, '([^/]+)') // Replace :param with capture group
-      .replace(/\*/g, '.*') // Replace * with .*
-      .replace(/[.+?^${}()|[\]\\]/g, '\\$&'); // Escape special chars
+      .replace(/\*/g, '.*'); // Replace * with .*
 
     const regex = new RegExp(`^${regexPattern}$`);
     const match = path.match(regex);
@@ -147,13 +156,7 @@ class SimpleRouter {
       return null;
     }
 
-    // Extract parameter names and values
-    const paramNames: string[] = [];
-    const paramMatches = pattern.matchAll(/:([^/]+)/g);
-    for (const m of paramMatches) {
-      paramNames.push(m[1]);
-    }
-
+    // Extract parameter values from match groups
     const params: Record<string, string> = {};
     paramNames.forEach((name, index) => {
       params[name] = match[index + 1];

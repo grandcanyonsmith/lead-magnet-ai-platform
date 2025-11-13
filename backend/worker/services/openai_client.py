@@ -556,10 +556,11 @@ class OpenAIClient:
                                 # Convert base64 to image URL using image_handler
                                 if image_handler:
                                     try:
-                                        # Create a data URL from base64
-                                        base64_data_url = f"data:image/png;base64,{result}"
-                                        converted_url = image_handler.convert_base64_to_url(
-                                            base64_data_url,
+                                        # Upload base64 image to S3
+                                        # result is already base64 string, no need for data URL prefix
+                                        converted_url = image_handler.upload_base64_image_to_s3(
+                                            image_b64=result,
+                                            content_type='image/png',
                                             tenant_id=tenant_id,
                                             job_id=job_id
                                         )
@@ -746,10 +747,11 @@ class OpenAIClient:
                                     # Convert base64 to image URL using image_handler
                                     if image_handler:
                                         try:
-                                            # Create a data URL from base64
-                                            base64_data_url = f"data:image/png;base64,{result}"
-                                            converted_url = image_handler.convert_base64_to_url(
-                                                base64_data_url,
+                                            # Upload base64 image to S3
+                                            # result is already base64 string, no need for data URL prefix
+                                            converted_url = image_handler.upload_base64_image_to_s3(
+                                                image_b64=result,
+                                                content_type='image/png',
                                                 tenant_id=tenant_id,
                                                 job_id=job_id
                                             )
