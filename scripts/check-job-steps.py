@@ -3,19 +3,27 @@
 Check job execution steps to see what happened.
 """
 
-import os
 import json
-import boto3
+import sys
+import argparse
+from pathlib import Path
 
-TENANT_ID = "84c8e438-0061-70f2-2ce0-7cb44989a329"
-JOBS_TABLE = "leadmagnet-jobs"
-REGION = os.environ.get("AWS_REGION", "us-east-1")
+# Add lib directory to path
+sys.path.insert(0, str(Path(__file__).parent))
+
+from lib.common import (
+    get_dynamodb_resource,
+    get_s3_client,
+    get_table_name,
+    get_artifacts_bucket,
+    print_section,
+)
 
 
 def get_job_execution_steps(job_id: str):
     """Retrieve job execution steps."""
-    dynamodb = boto3.resource("dynamodb", region_name=REGION)
-    table = dynamodb.Table(JOBS_TABLE)
+    dynamodb = get_dynamodb_resource()
+    table = dynamodb.Table(get_table_name("jobs"))
     
     try:
         response = table.get_item(Key={"job_id": job_id})
@@ -31,9 +39,8 @@ def get_job_execution_steps(job_id: str):
         
         if execution_steps_s3_key and not execution_steps:
             # Load from S3
-            s3_client = boto3.client("s3", region_name=REGION)
-            account_id = boto3.client("sts", region_name=REGION).get_caller_identity()["Account"]
-            bucket_name = f"leadmagnet-artifacts-{account_id}"
+            s3_client = get_s3_client()
+            bucket_name = get_artifacts_bucket()
             
             try:
                 s3_response = s3_client.get_object(Bucket=bucket_name, Key=execution_steps_s3_key)
@@ -57,20 +64,25 @@ def get_job_execution_steps(job_id: str):
 
 def main():
     """Main function."""
-    import argparse
-    
-    parser = argparse.ArgumentParser(description="Check job execution steps to see what happened")
+    parser = argparse.ArgumentParser(
+        description="Check job execution steps to see what happened"
+    )
     parser.add_argument("job_ids", nargs="+", help="Job ID(s) to check")
+    parser.add_argument(
+        "--region",
+        help="AWS region (default: from environment or us-east-1)",
+        default=None,
+    )
     args = parser.parse_args()
     
-    print("=" * 80)
-    print("Job Execution Steps Analysis")
-    print("=" * 80)
+    if args.region:
+        import os
+        os.environ["AWS_REGION"] = args.region
+    
+    print_section("Job Execution Steps Analysis")
     
     for job_id in args.job_ids:
-        print(f"\n{'=' * 80}")
-        print(f"Job: {job_id}")
-        print(f"{'=' * 80}")
+        print_section(f"Job: {job_id}")
         
         data = get_job_execution_steps(job_id)
         
@@ -118,9 +130,8 @@ def main():
             if data['execution_steps_s3_key']:
                 print(f"   (Execution steps stored in S3: {data['execution_steps_s3_key']})")
     
-    print("\n" + "=" * 80)
+    print_section("")
 
 
 if __name__ == "__main__":
     main()
-

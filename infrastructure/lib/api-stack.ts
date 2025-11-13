@@ -12,6 +12,7 @@ import { Construct } from 'constructs';
 import { TableMap } from './types';
 import { createLambdaRole, grantDynamoDBPermissions, grantS3Permissions, grantSecretsAccess } from './utils/lambda-helpers';
 import { createTableEnvironmentVars } from './utils/environment-helpers';
+import { FUNCTION_NAMES, SECRET_NAMES, LAMBDA_DEFAULTS, ENV_VAR_NAMES, DEFAULT_LOG_LEVEL, RESOURCE_PREFIXES } from './config/constants';
 
 export interface ApiStackProps extends cdk.StackProps {
   userPool: cognito.UserPool;
@@ -50,15 +51,10 @@ export class ApiStack extends cdk.Stack {
     );
 
     // Grant Secrets Manager permissions
-    lambdaRole.addToPolicy(
-      new iam.PolicyStatement({
-        effect: iam.Effect.ALLOW,
-        actions: ['secretsmanager:GetSecretValue'],
-        resources: [
-          `arn:aws:secretsmanager:${this.region}:${this.account}:secret:leadmagnet/*`,
-        ],
-      })
-    );
+    grantSecretsAccess(lambdaRole, this, [
+      SECRET_NAMES.OPENAI_API_KEY,
+      SECRET_NAMES.TWILIO_CREDENTIALS,
+    ]);
 
     // Grant Lambda invoke permissions for async workflow generation
     lambdaRole.addToPolicy(
@@ -75,7 +71,7 @@ export class ApiStack extends cdk.Stack {
     // Create API Lambda function
     // Note: Initially deploying with placeholder code, will update after building the app
     this.apiFunction = new lambda.Function(this, 'ApiFunction', {
-      functionName: 'leadmagnet-api-handler',
+      functionName: FUNCTION_NAMES.API_HANDLER,
       runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'index.handler',
       code: lambda.Code.fromInline(`
@@ -86,17 +82,17 @@ export class ApiStack extends cdk.Stack {
           };
         };
       `),
-      memorySize: 2048,
-      timeout: cdk.Duration.seconds(900),
+      memorySize: LAMBDA_DEFAULTS.API.MEMORY_SIZE,
+      timeout: cdk.Duration.seconds(LAMBDA_DEFAULTS.API.TIMEOUT_SECONDS),
       role: lambdaRole,
       environment: {
         ...tableEnvVars,
-        STEP_FUNCTIONS_ARN: props.stateMachineArn,
-        ARTIFACTS_BUCKET: props.artifactsBucket.bucketName,
-        CLOUDFRONT_DOMAIN: props.cloudfrontDomain || '',
-        LAMBDA_FUNCTION_NAME: 'leadmagnet-api-handler',
+        [ENV_VAR_NAMES.STEP_FUNCTIONS_ARN]: props.stateMachineArn,
+        [ENV_VAR_NAMES.ARTIFACTS_BUCKET]: props.artifactsBucket.bucketName,
+        [ENV_VAR_NAMES.CLOUDFRONT_DOMAIN]: props.cloudfrontDomain || '',
+        [ENV_VAR_NAMES.LAMBDA_FUNCTION_NAME]: FUNCTION_NAMES.API_HANDLER,
         // AWS_REGION is automatically set by Lambda runtime, don't set it manually
-        LOG_LEVEL: 'info',
+        [ENV_VAR_NAMES.LOG_LEVEL]: DEFAULT_LOG_LEVEL,
       },
       tracing: lambda.Tracing.ACTIVE,
       logRetention: logs.RetentionDays.ONE_WEEK,
@@ -104,7 +100,7 @@ export class ApiStack extends cdk.Stack {
 
     // Create HTTP API
     this.api = new apigateway.HttpApi(this, 'HttpApi', {
-      apiName: 'leadmagnet-api',
+      apiName: RESOURCE_PREFIXES.API_NAME,
       description: 'Lead Magnet Platform API',
       corsPreflight: {
         allowOrigins: ['*'],

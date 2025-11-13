@@ -1,49 +1,47 @@
 /**
- * Data fetching hooks for forms
+ * Data fetching hooks for forms using React Query
  */
 
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useMemo } from 'react'
+import { useQuery } from '@/hooks/useQuery'
+import { useMutation } from '@/hooks/useMutation'
 import { api } from '@/lib/api'
 import { Form, FormCreateRequest, FormUpdateRequest, FormListResponse } from '@/types'
+
+// Query keys factory
+export const formKeys = {
+  all: ['forms'] as const,
+  lists: () => [...formKeys.all, 'list'] as const,
+  list: (params?: Record<string, unknown>) => [...formKeys.lists(), params] as const,
+  details: () => [...formKeys.all, 'detail'] as const,
+  detail: (id: string) => [...formKeys.details(), id] as const,
+}
 
 interface UseFormsResult {
   forms: Form[]
   loading: boolean
   error: string | null
-  refetch: () => Promise<void>
+  refetch: () => void
 }
 
 export function useForms(params?: Record<string, unknown>): UseFormsResult {
-  const [forms, setForms] = useState<Form[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const fetchForms = useCallback(async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const response = await api.getForms(params)
-      setForms(response.forms || [])
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load forms'
-      setError(errorMessage)
-      console.error('Failed to load forms:', err)
-    } finally {
-      setLoading(false)
+  const queryKey = useMemo(() => formKeys.list(params), [params])
+  
+  const { data, isLoading, error, refetch } = useQuery<FormListResponse>(
+    queryKey,
+    () => api.getForms(params),
+    {
+      enabled: true,
     }
-  }, [params])
-
-  useEffect(() => {
-    fetchForms()
-  }, [fetchForms])
+  )
 
   return {
-    forms,
-    loading,
-    error,
-    refetch: fetchForms,
+    forms: data?.forms || [],
+    loading: isLoading,
+    error: error instanceof Error ? error.message : error ? String(error) : null,
+    refetch: () => refetch(),
   }
 }
 
@@ -51,43 +49,28 @@ interface UseFormResult {
   form: Form | null
   loading: boolean
   error: string | null
-  refetch: () => Promise<void>
+  refetch: () => void
 }
 
 export function useForm(id: string | null): UseFormResult {
-  const [form, setForm] = useState<Form | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const fetchForm = useCallback(async () => {
-    if (!id) {
-      setLoading(false)
-      return
+  const queryKey = useMemo(() => (id ? formKeys.detail(id) : ['forms', 'detail', null]), [id])
+  
+  const { data, isLoading, error, refetch } = useQuery<Form>(
+    queryKey,
+    () => {
+      if (!id) throw new Error('Form ID is required')
+      return api.getForm(id)
+    },
+    {
+      enabled: !!id,
     }
-
-    try {
-      setLoading(true)
-      setError(null)
-      const data = await api.getForm(id)
-      setForm(data)
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load form'
-      setError(errorMessage)
-      console.error('Failed to load form:', err)
-    } finally {
-      setLoading(false)
-    }
-  }, [id])
-
-  useEffect(() => {
-    fetchForm()
-  }, [fetchForm])
+  )
 
   return {
-    form,
-    loading,
-    error,
-    refetch: fetchForm,
+    form: data || null,
+    loading: isLoading,
+    error: error instanceof Error ? error.message : error ? String(error) : null,
+    refetch: () => refetch(),
   }
 }
 
@@ -98,28 +81,25 @@ interface UseCreateFormResult {
 }
 
 export function useCreateForm(): UseCreateFormResult {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const createForm = useCallback(async (data: FormCreateRequest): Promise<Form | null> => {
-    try {
-      setLoading(true)
-      setError(null)
-      return await api.createForm(data)
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to create form'
-      setError(errorMessage)
-      console.error('Failed to create form:', err)
-      return null
-    } finally {
-      setLoading(false)
+  const { mutateAsync, isPending, error } = useMutation<Form, Error, FormCreateRequest>(
+    (data: FormCreateRequest) => api.createForm(data),
+    {
+      showSuccessToast: 'Form created successfully',
+      showErrorToast: true,
+      invalidateQueries: [formKeys.all],
     }
-  }, [])
+  )
 
   return {
-    createForm,
-    loading,
-    error,
+    createForm: async (data: FormCreateRequest) => {
+      try {
+        return await mutateAsync(data)
+      } catch {
+        return null
+      }
+    },
+    loading: isPending,
+    error: error instanceof Error ? error.message : error ? String(error) : null,
   }
 }
 
@@ -130,28 +110,29 @@ interface UseUpdateFormResult {
 }
 
 export function useUpdateForm(): UseUpdateFormResult {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const updateForm = useCallback(async (id: string, data: FormUpdateRequest): Promise<Form | null> => {
-    try {
-      setLoading(true)
-      setError(null)
-      return await api.updateForm(id, data)
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to update form'
-      setError(errorMessage)
-      console.error('Failed to update form:', err)
-      return null
-    } finally {
-      setLoading(false)
+  const { mutateAsync, isPending, error } = useMutation<
+    Form,
+    Error,
+    { id: string; data: FormUpdateRequest }
+  >(
+    ({ id, data }) => api.updateForm(id, data),
+    {
+      showSuccessToast: 'Form updated successfully',
+      showErrorToast: true,
+      invalidateQueries: [formKeys.all],
     }
-  }, [])
+  )
 
   return {
-    updateForm,
-    loading,
-    error,
+    updateForm: async (id: string, data: FormUpdateRequest) => {
+      try {
+        return await mutateAsync({ id, data })
+      } catch {
+        return null
+      }
+    },
+    loading: isPending,
+    error: error instanceof Error ? error.message : error ? String(error) : null,
   }
 }
 
