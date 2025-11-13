@@ -6,74 +6,35 @@ Retrieves logs from:
 - Lambda function logs (job processor)
 """
 
-import json
-import os
 import sys
-import boto3
+import argparse
+from pathlib import Path
 from datetime import datetime, timedelta
 from botocore.exceptions import ClientError
 
-REGION = os.environ.get("AWS_REGION", "us-east-1")
-JOBS_TABLE = "leadmagnet-jobs"
+# Add lib directory to path
+sys.path.insert(0, str(Path(__file__).parent))
+
+from lib.common import (
+    get_dynamodb_resource,
+    get_logs_client,
+    get_stepfunctions_client,
+    get_table_name,
+    get_aws_region,
+    find_step_functions_execution,
+    print_section,
+    format_timestamp,
+)
 
 # Log groups
 STEP_FUNCTIONS_LOG_GROUP = "/aws/stepfunctions/leadmagnet-job-processor"
 LAMBDA_LOG_GROUP = "/aws/lambda/leadmagnet-job-processor"
 
-def find_step_functions_execution(job_id: str):
-    """Find Step Functions execution for a job."""
-    sfn = boto3.client("stepfunctions", region_name=REGION)
-    
-    try:
-        # List state machines
-        state_machines = sfn.list_state_machines()
-        
-        # Find the job processor state machine
-        job_processor_sm = None
-        for sm in state_machines.get("stateMachines", []):
-            if "job" in sm["name"].lower() or "processor" in sm["name"].lower():
-                job_processor_sm = sm
-                break
-        
-        if not job_processor_sm:
-            print("⚠ Could not find job processor state machine")
-            return None
-        
-        sm_arn = job_processor_sm["stateMachineArn"]
-        print(f"Found state machine: {sm_arn}")
-        
-        # List recent executions
-        executions = []
-        for status in ["RUNNING", "FAILED", "SUCCEEDED", "TIMED_OUT", "ABORTED"]:
-            result = sfn.list_executions(
-                stateMachineArn=sm_arn,
-                maxResults=100,
-                statusFilter=status
-            )
-            executions.extend(result.get("executions", []))
-        
-        # Find execution with matching input
-        for execution in executions:
-            try:
-                exec_details = sfn.describe_execution(executionArn=execution["executionArn"])
-                input_data = json.loads(exec_details.get("input", "{}"))
-                
-                if input_data.get("job_id") == job_id:
-                    return exec_details
-            except Exception as e:
-                continue
-        
-        print("⚠ Could not find Step Functions execution for this job")
-        return None
-        
-    except ClientError as e:
-        print(f"✗ Error accessing Step Functions: {e}")
-        return None
 
 def get_job_timestamps(job_id: str):
     """Get job timestamps from DynamoDB to narrow log search window."""
-    dynamodb = boto3.resource("dynamodb", region_name=REGION)
-    table = dynamodb.Table(JOBS_TABLE)
+    dynamodb = get_dynamodb_resource()
+    table = dynamodb.Table(get_table_name("jobs"))
     
     try:
         response = table.get_item(Key={"job_id": job_id})
@@ -91,13 +52,13 @@ def get_job_timestamps(job_id: str):
         if created_at:
             try:
                 start_time = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
-            except:
+            except Exception:
                 pass
         
         if updated_at:
             try:
                 end_time = datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
-            except:
+            except Exception:
                 pass
         
         # Add buffer: 5 minutes before start, 10 minutes after end
@@ -116,9 +77,10 @@ def get_job_timestamps(job_id: str):
         print(f"⚠ Could not get job timestamps: {e}")
         return None
 
+
 def get_cloudwatch_logs(log_group: str, job_id: str, start_time_ms: int = None, end_time_ms: int = None):
     """Get CloudWatch logs for a log group, filtered by job_id."""
-    logs_client = boto3.client("logs", region_name=REGION)
+    logs_client = get_logs_client()
     
     try:
         # Check if log group exists
@@ -213,19 +175,15 @@ def get_cloudwatch_logs(log_group: str, job_id: str, start_time_ms: int = None, 
         print(f"✗ Error accessing CloudWatch logs: {e}")
         return []
 
+
 def get_step_functions_execution_logs(execution_arn: str):
     """Get logs for a specific Step Functions execution."""
-    logs_client = boto3.client("logs", region_name=REGION)
-    
     # Extract execution name from ARN
     # ARN format: arn:aws:states:region:account:execution:stateMachineName:executionName
     execution_name = execution_arn.split(":")[-1]
     
-    # Step Functions logs include execution name in the log stream
-    filter_pattern = f'"{execution_name}"'
-    
     # Get execution details to get timestamps
-    sfn = boto3.client("stepfunctions", region_name=REGION)
+    sfn = get_stepfunctions_client()
     try:
         exec_details = sfn.describe_execution(executionArn=execution_arn)
         start_date = exec_details.get("startDate")
@@ -247,6 +205,7 @@ def get_step_functions_execution_logs(execution_arn: str):
     
     return get_cloudwatch_logs(STEP_FUNCTIONS_LOG_GROUP, execution_name, start_time_ms, end_time_ms)
 
+
 def print_logs(logs: list, title: str):
     """Print logs in a formatted way."""
     if not logs:
@@ -261,23 +220,33 @@ def print_logs(logs: list, title: str):
         message = log["message"].strip()
         stream = log.get("logStream", "unknown")
         
-        print(f"  [{timestamp.strftime('%Y-%m-%d %H:%M:%S')}] {stream}")
+        print(f"  [{format_timestamp(timestamp)}] {stream}")
         print(f"      {message}")
         print()
 
+
 def main():
-    if len(sys.argv) < 2:
-        print("Usage: python3 get-job-logs.py <job_id>")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(
+        description="Fetch CloudWatch logs for a specific job"
+    )
+    parser.add_argument("job_id", help="Job ID to fetch logs for")
+    parser.add_argument(
+        "--region",
+        help="AWS region (default: from environment or us-east-1)",
+        default=None,
+    )
+    args = parser.parse_args()
     
-    job_id = sys.argv[1]
+    if args.region:
+        import os
+        os.environ["AWS_REGION"] = args.region
     
-    print("=" * 80)
-    print("Job Logs Fetcher")
-    print("=" * 80)
+    job_id = args.job_id
+    
+    print_section("Job Logs Fetcher")
     print(f"Job ID: {job_id}")
-    print(f"Region: {REGION}")
-    print("=" * 80)
+    print(f"Region: {get_aws_region()}")
+    print_section("")
     
     # Get job timestamps
     timestamps = get_job_timestamps(job_id)
@@ -285,9 +254,7 @@ def main():
     end_time_ms = timestamps["end_time"] if timestamps else None
     
     # Find Step Functions execution
-    print("\n" + "=" * 80)
-    print("Step Functions Execution")
-    print("=" * 80)
+    print_section("Step Functions Execution")
     
     execution = find_step_functions_execution(job_id)
     execution_arn = None
@@ -295,16 +262,14 @@ def main():
         execution_arn = execution["executionArn"]
         print(f"Execution ARN: {execution_arn}")
         print(f"Status: {execution.get('status', 'unknown')}")
-        print(f"Start Date: {execution.get('startDate', 'unknown')}")
+        print(f"Start Date: {format_timestamp(execution.get('startDate', 'unknown'))}")
         if execution.get('stopDate'):
-            print(f"Stop Date: {execution.get('stopDate')}")
+            print(f"Stop Date: {format_timestamp(execution.get('stopDate'))}")
     else:
         print("⚠ No Step Functions execution found")
     
     # Get Step Functions logs
-    print("\n" + "=" * 80)
-    print("Step Functions Logs")
-    print("=" * 80)
+    print_section("Step Functions Logs")
     if execution_arn:
         sf_logs = get_step_functions_execution_logs(execution_arn)
     else:
@@ -312,16 +277,12 @@ def main():
     print_logs(sf_logs, "Step Functions")
     
     # Get Lambda logs
-    print("\n" + "=" * 80)
-    print("Lambda Function Logs")
-    print("=" * 80)
+    print_section("Lambda Function Logs")
     lambda_logs = get_cloudwatch_logs(LAMBDA_LOG_GROUP, job_id, start_time_ms, end_time_ms)
     print_logs(lambda_logs, "Lambda Function")
     
-    print("=" * 80)
-    print("Done!")
-    print("=" * 80)
+    print_section("Done!")
+
 
 if __name__ == "__main__":
     main()
-

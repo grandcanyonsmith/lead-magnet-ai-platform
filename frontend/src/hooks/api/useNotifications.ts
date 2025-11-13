@@ -1,75 +1,74 @@
 /**
- * Data fetching hooks for notifications
+ * Data fetching hooks for notifications using React Query
  */
 
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useMemo } from 'react'
+import { useQuery } from '@/hooks/useQuery'
+import { useMutation } from '@/hooks/useMutation'
 import { api } from '@/lib/api'
 import { Notification, NotificationListResponse } from '@/types'
+import { normalizeError, extractListData } from './hookHelpers'
+
+// Query keys factory
+export const notificationKeys = {
+  all: ['notifications'] as const,
+  lists: () => [...notificationKeys.all, 'list'] as const,
+  list: (unreadOnly?: boolean) => [...notificationKeys.lists(), { unreadOnly }] as const,
+}
 
 interface UseNotificationsResult {
   notifications: Notification[]
   unreadCount: number
   loading: boolean
   error: string | null
-  refetch: () => Promise<void>
+  refetch: () => void
   markAsRead: (notificationId: string) => Promise<void>
   markAllAsRead: () => Promise<void>
 }
 
 export function useNotifications(unreadOnly?: boolean): UseNotificationsResult {
-  const [notifications, setNotifications] = useState<Notification[]>([])
-  const [unreadCount, setUnreadCount] = useState(0)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const fetchNotifications = useCallback(async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const response = await api.getNotifications(unreadOnly)
-      setNotifications(response.notifications || [])
-      setUnreadCount(response.unread_count || 0)
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load notifications'
-      setError(errorMessage)
-      console.error('Failed to load notifications:', err)
-    } finally {
-      setLoading(false)
+  const queryKey = useMemo(() => notificationKeys.list(unreadOnly), [unreadOnly])
+  
+  const { data, isLoading, error, refetch } = useQuery<NotificationListResponse>(
+    queryKey,
+    () => api.getNotifications(unreadOnly),
+    {
+      enabled: true,
     }
-  }, [unreadOnly])
+  )
 
-  useEffect(() => {
-    fetchNotifications()
-  }, [fetchNotifications])
-
-  const markAsRead = useCallback(async (notificationId: string) => {
-    try {
-      await api.markNotificationRead(notificationId)
-      await fetchNotifications()
-    } catch (err) {
-      console.error('Failed to mark notification as read:', err)
+  const markAsReadMutation = useMutation<void, Error, string>(
+    (notificationId: string) => api.markNotificationRead(notificationId),
+    {
+      showSuccessToast: false,
+      showErrorToast: false,
+      invalidateQueries: [notificationKeys.all],
     }
-  }, [fetchNotifications])
+  )
 
-  const markAllAsRead = useCallback(async () => {
-    try {
-      await api.markAllNotificationsRead()
-      await fetchNotifications()
-    } catch (err) {
-      console.error('Failed to mark all notifications as read:', err)
+  const markAllAsReadMutation = useMutation<void, Error, void>(
+    () => api.markAllNotificationsRead(),
+    {
+      showSuccessToast: 'All notifications marked as read',
+      showErrorToast: true,
+      invalidateQueries: [notificationKeys.all],
     }
-  }, [fetchNotifications])
+  )
 
   return {
-    notifications,
-    unreadCount,
-    loading,
-    error,
-    refetch: fetchNotifications,
-    markAsRead,
-    markAllAsRead,
+    notifications: extractListData(data, 'notifications'),
+    unreadCount: data?.unread_count || 0,
+    loading: isLoading,
+    error: normalizeError(error),
+    refetch: () => refetch(),
+    markAsRead: async (notificationId: string) => {
+      await markAsReadMutation.mutateAsync(notificationId)
+    },
+    markAllAsRead: async () => {
+      await markAllAsReadMutation.mutateAsync(undefined)
+    },
   }
 }
 
@@ -83,18 +82,47 @@ export function useNotificationsPolling(
   options: UseNotificationsPollingOptions = {}
 ): UseNotificationsResult {
   const { enabled = true, interval = 30000 } = options
-  const result = useNotifications(unreadOnly)
+  const queryKey = useMemo(() => notificationKeys.list(unreadOnly), [unreadOnly])
+  
+  const { data, isLoading, error, refetch } = useQuery<NotificationListResponse>(
+    queryKey,
+    () => api.getNotifications(unreadOnly),
+    {
+      enabled,
+      refetchInterval: interval,
+    }
+  )
 
-  useEffect(() => {
-    if (!enabled) return
+  const markAsReadMutation = useMutation<void, Error, string>(
+    (notificationId: string) => api.markNotificationRead(notificationId),
+    {
+      showSuccessToast: false,
+      showErrorToast: false,
+      invalidateQueries: [notificationKeys.all],
+    }
+  )
 
-    const pollInterval = setInterval(() => {
-      result.refetch()
-    }, interval)
+  const markAllAsReadMutation = useMutation<void, Error, void>(
+    () => api.markAllNotificationsRead(),
+    {
+      showSuccessToast: 'All notifications marked as read',
+      showErrorToast: true,
+      invalidateQueries: [notificationKeys.all],
+    }
+  )
 
-    return () => clearInterval(pollInterval)
-  }, [enabled, interval, result.refetch])
-
-  return result
+  return {
+    notifications: extractListData(data, 'notifications'),
+    unreadCount: data?.unread_count || 0,
+    loading: isLoading,
+    error: normalizeError(error),
+    refetch: () => refetch(),
+    markAsRead: async (notificationId: string) => {
+      await markAsReadMutation.mutateAsync(notificationId)
+    },
+    markAllAsRead: async () => {
+      await markAllAsReadMutation.mutateAsync(undefined)
+    },
+  }
 }
 

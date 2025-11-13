@@ -6,14 +6,13 @@ Processes jobs by generating AI reports and rendering HTML templates.
 
 import os
 import sys
-import json
 import logging
-from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 from processor import JobProcessor
 from db_service import DynamoDBService
 from s3_service import S3Service
+from services.error_handler_service import ErrorHandlerService
 
 # Setup logging
 logging.basicConfig(
@@ -59,32 +58,18 @@ def main():
             sys.exit(1)
             
     except Exception as e:
-        logger.exception(f"Fatal error processing job {job_id}")
+        # Use error handler service for consistent error handling
+        error_handler = ErrorHandlerService(db_service)
+        error_result = error_handler.handle_job_error(
+            job_id=job_id,
+            error=e,
+            step_index=None,
+            step_type='workflow_step'
+        )
         
-        # Create descriptive error message
-        error_type = type(e).__name__
-        error_message = str(e)
-        
-        if not error_message or error_message == error_type:
-            error_message = f"{error_type}: {error_message}" if error_message else error_type
-        
-        descriptive_error = f"Fatal error during job processing: {error_message}"
-        
-        # Try to update job status to failed
-        try:
-            db_service = DynamoDBService()
-            db_service.update_job(job_id, {
-                'status': 'failed',
-                'error_message': descriptive_error,
-                'error_type': error_type,
-                'updated_at': datetime.utcnow().isoformat()
-            })
-        except Exception as update_error:
-            logger.error(f"Failed to update job status: {update_error}")
-        
+        logger.error(f"Job {job_id} failed: {error_result.get('error')}")
         sys.exit(1)
 
 
 if __name__ == '__main__':
     main()
-

@@ -1,49 +1,48 @@
 /**
- * Data fetching hooks for workflows
+ * Data fetching hooks for workflows using React Query
  */
 
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useMemo } from 'react'
+import { useQuery } from '@/hooks/useQuery'
+import { useMutation } from '@/hooks/useMutation'
 import { api } from '@/lib/api'
 import { Workflow, WorkflowCreateRequest, WorkflowUpdateRequest, WorkflowListResponse } from '@/types'
+import { normalizeError, extractListData } from './hookHelpers'
+
+// Query keys factory
+export const workflowKeys = {
+  all: ['workflows'] as const,
+  lists: () => [...workflowKeys.all, 'list'] as const,
+  list: (params?: Record<string, unknown>) => [...workflowKeys.lists(), params] as const,
+  details: () => [...workflowKeys.all, 'detail'] as const,
+  detail: (id: string) => [...workflowKeys.details(), id] as const,
+}
 
 interface UseWorkflowsResult {
   workflows: Workflow[]
   loading: boolean
   error: string | null
-  refetch: () => Promise<void>
+  refetch: () => void
 }
 
 export function useWorkflows(params?: Record<string, unknown>): UseWorkflowsResult {
-  const [workflows, setWorkflows] = useState<Workflow[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const fetchWorkflows = useCallback(async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const response = await api.getWorkflows(params)
-      setWorkflows(response.workflows || [])
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load workflows'
-      setError(errorMessage)
-      console.error('Failed to load workflows:', err)
-    } finally {
-      setLoading(false)
+  const queryKey = useMemo(() => workflowKeys.list(params), [params])
+  
+  const { data, isLoading, error, refetch } = useQuery<WorkflowListResponse>(
+    queryKey,
+    () => api.getWorkflows(params),
+    {
+      enabled: true,
     }
-  }, [params])
-
-  useEffect(() => {
-    fetchWorkflows()
-  }, [fetchWorkflows])
+  )
 
   return {
-    workflows,
-    loading,
-    error,
-    refetch: fetchWorkflows,
+    workflows: extractListData(data, 'workflows'),
+    loading: isLoading,
+    error: normalizeError(error),
+    refetch: () => refetch(),
   }
 }
 
@@ -51,43 +50,28 @@ interface UseWorkflowResult {
   workflow: Workflow | null
   loading: boolean
   error: string | null
-  refetch: () => Promise<void>
+  refetch: () => void
 }
 
 export function useWorkflow(id: string | null): UseWorkflowResult {
-  const [workflow, setWorkflow] = useState<Workflow | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const fetchWorkflow = useCallback(async () => {
-    if (!id) {
-      setLoading(false)
-      return
+  const queryKey = useMemo(() => (id ? workflowKeys.detail(id) : ['workflows', 'detail', null]), [id])
+  
+  const { data, isLoading, error, refetch } = useQuery<Workflow>(
+    queryKey,
+    () => {
+      if (!id) throw new Error('Workflow ID is required')
+      return api.getWorkflow(id)
+    },
+    {
+      enabled: !!id,
     }
-
-    try {
-      setLoading(true)
-      setError(null)
-      const data = await api.getWorkflow(id)
-      setWorkflow(data)
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load workflow'
-      setError(errorMessage)
-      console.error('Failed to load workflow:', err)
-    } finally {
-      setLoading(false)
-    }
-  }, [id])
-
-  useEffect(() => {
-    fetchWorkflow()
-  }, [fetchWorkflow])
+  )
 
   return {
-    workflow,
-    loading,
-    error,
-    refetch: fetchWorkflow,
+    workflow: data || null,
+    loading: isLoading,
+    error: normalizeError(error),
+    refetch: () => refetch(),
   }
 }
 
@@ -98,28 +82,25 @@ interface UseCreateWorkflowResult {
 }
 
 export function useCreateWorkflow(): UseCreateWorkflowResult {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const createWorkflow = useCallback(async (data: WorkflowCreateRequest): Promise<Workflow | null> => {
-    try {
-      setLoading(true)
-      setError(null)
-      return await api.createWorkflow(data)
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to create workflow'
-      setError(errorMessage)
-      console.error('Failed to create workflow:', err)
-      return null
-    } finally {
-      setLoading(false)
+  const { mutateAsync, isPending, error } = useMutation<Workflow, Error, WorkflowCreateRequest>(
+    (data: WorkflowCreateRequest) => api.createWorkflow(data),
+    {
+      showSuccessToast: 'Workflow created successfully',
+      showErrorToast: true,
+      invalidateQueries: [workflowKeys.all],
     }
-  }, [])
+  )
 
   return {
-    createWorkflow,
-    loading,
-    error,
+    createWorkflow: async (data: WorkflowCreateRequest) => {
+      try {
+        return await mutateAsync(data)
+      } catch {
+        return null
+      }
+    },
+    loading: isPending,
+    error: normalizeError(error),
   }
 }
 
@@ -130,28 +111,29 @@ interface UseUpdateWorkflowResult {
 }
 
 export function useUpdateWorkflow(): UseUpdateWorkflowResult {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const updateWorkflow = useCallback(async (id: string, data: WorkflowUpdateRequest): Promise<Workflow | null> => {
-    try {
-      setLoading(true)
-      setError(null)
-      return await api.updateWorkflow(id, data)
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to update workflow'
-      setError(errorMessage)
-      console.error('Failed to update workflow:', err)
-      return null
-    } finally {
-      setLoading(false)
+  const { mutateAsync, isPending, error } = useMutation<
+    Workflow,
+    Error,
+    { id: string; data: WorkflowUpdateRequest }
+  >(
+    ({ id, data }) => api.updateWorkflow(id, data),
+    {
+      showSuccessToast: 'Workflow updated successfully',
+      showErrorToast: true,
+      invalidateQueries: [workflowKeys.all],
     }
-  }, [])
+  )
 
   return {
-    updateWorkflow,
-    loading,
-    error,
+    updateWorkflow: async (id: string, data: WorkflowUpdateRequest) => {
+      try {
+        return await mutateAsync({ id, data })
+      } catch {
+        return null
+      }
+    },
+    loading: isPending,
+    error: normalizeError(error),
   }
 }
 
@@ -162,29 +144,26 @@ interface UseDeleteWorkflowResult {
 }
 
 export function useDeleteWorkflow(): UseDeleteWorkflowResult {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const deleteWorkflow = useCallback(async (id: string): Promise<boolean> => {
-    try {
-      setLoading(true)
-      setError(null)
-      await api.deleteWorkflow(id)
-      return true
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to delete workflow'
-      setError(errorMessage)
-      console.error('Failed to delete workflow:', err)
-      return false
-    } finally {
-      setLoading(false)
+  const { mutateAsync, isPending, error } = useMutation<void, Error, string>(
+    (id: string) => api.deleteWorkflow(id),
+    {
+      showSuccessToast: 'Workflow deleted successfully',
+      showErrorToast: true,
+      invalidateQueries: [workflowKeys.all],
     }
-  }, [])
+  )
 
   return {
-    deleteWorkflow,
-    loading,
-    error,
+    deleteWorkflow: async (id: string) => {
+      try {
+        await mutateAsync(id)
+        return true
+      } catch {
+        return false
+      }
+    },
+    loading: isPending,
+    error: normalizeError(error),
   }
 }
 

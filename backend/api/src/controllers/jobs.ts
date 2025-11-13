@@ -7,8 +7,7 @@ import { SFNClient, StartExecutionCommand } from '@aws-sdk/client-sfn';
 import { logger } from '../utils/logger';
 import { ArtifactUrlService } from '../services/artifactUrlService';
 import { GetObjectCommand, PutObjectCommand, HeadObjectCommand, S3Client } from '@aws-sdk/client-s3';
-import OpenAI from 'openai';
-import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
+import { getOpenAIClient } from '../services/openaiService';
 
 const JOBS_TABLE = process.env.JOBS_TABLE!;
 const SUBMISSIONS_TABLE = process.env.SUBMISSIONS_TABLE!;
@@ -24,7 +23,6 @@ const ARTIFACTS_BUCKET: string = ARTIFACTS_BUCKET_ENV;
 
 const sfnClient = STEP_FUNCTIONS_ARN ? new SFNClient({ region: process.env.AWS_REGION || 'us-east-1' }) : null;
 const s3Client = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
-const secretsClient = new SecretsManagerClient({ region: process.env.AWS_REGION || 'us-east-1' });
 
 /**
  * Generate a public URL for execution_steps stored in S3.
@@ -49,30 +47,6 @@ async function generateExecutionStepsUrl(s3Key: string): Promise<string | null> 
   }
 }
 
-async function getOpenAIClient(): Promise<OpenAI> {
-  const OPENAI_SECRET_NAME = process.env.OPENAI_SECRET_NAME || 'openai-api-key';
-  
-  try {
-    const command = new GetSecretValueCommand({ SecretId: OPENAI_SECRET_NAME });
-    const response = await secretsClient.send(command);
-    
-    if (!response.SecretString) {
-      throw new ApiError('OpenAI API key not found in secret', 500);
-    }
-    
-    const secret = JSON.parse(response.SecretString);
-    const apiKey = secret.api_key || secret.OPENAI_API_KEY || secret.openai_api_key;
-    
-    if (!apiKey || typeof apiKey !== 'string' || apiKey.trim() === '') {
-      throw new ApiError('OpenAI API key is empty', 500);
-    }
-    
-    return new OpenAI({ apiKey });
-  } catch (error: any) {
-    logger.error('[Quick Edit Step] Error getting OpenAI client', { error: error.message });
-    throw new ApiError(`Failed to initialize OpenAI client: ${error.message}`, 500);
-  }
-}
 
 async function fetchExecutionStepsFromS3(s3Key: string): Promise<any[]> {
   try {

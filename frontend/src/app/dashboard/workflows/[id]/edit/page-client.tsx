@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { FiArrowLeft, FiSettings, FiFileText, FiLayout } from 'react-icons/fi'
+import { FiSettings, FiFileText, FiLayout } from 'react-icons/fi'
 import { api } from '@/lib/api'
 import { AIModel, Tool } from '@/types'
 import { useWorkflowEdit } from '@/hooks/useWorkflowEdit'
@@ -10,14 +10,12 @@ import { useTemplateEdit } from '@/hooks/useTemplateEdit'
 import { WorkflowTab } from '@/components/workflows/edit/WorkflowTab'
 import { FormTab } from '@/components/workflows/edit/FormTab'
 import { TemplateTab } from '@/components/workflows/edit/TemplateTab'
-import FlowchartSidePanel from '../../components/FlowchartSidePanel'
 import { extractPlaceholders } from '@/utils/templateUtils'
 import { formatHTML } from '@/utils/templateUtils'
 
 export default function EditWorkflowPage() {
   const [activeTab, setActiveTab] = useState<'workflow' | 'form' | 'template'>('workflow')
   const [selectedStepIndex, setSelectedStepIndex] = useState<number | null>(null)
-  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false)
   const [templateId, setTemplateId] = useState<string | null>(null)
 
   // Main workflow hook
@@ -48,18 +46,12 @@ export default function EditWorkflowPage() {
   const formEdit = useFormEdit(formData.workflow_name, formId, workflowForm)
   const {
     formFormData,
-    showFormPreview,
-    collapsedSections,
-    draggedFieldIndex,
     handleFormChange,
     handleFieldChange,
     addField,
     removeField,
-    handleDragStart,
-    handleDragOver,
-    handleDrop,
-    toggleSection,
-    setShowFormPreview,
+    moveFieldUp,
+    moveFieldDown,
   } = formEdit
 
   // Template edit hook
@@ -244,13 +236,6 @@ export default function EditWorkflowPage() {
   return (
     <div>
       <div className="mb-6">
-        <button
-          onClick={() => router.back()}
-          className="flex items-center text-gray-600 hover:text-gray-900 mb-4 py-2 touch-target"
-        >
-          <FiArrowLeft className="w-4 h-4 mr-2" />
-          Back
-        </button>
         <h1 className="text-2xl font-bold text-gray-900">Edit Lead Magnet</h1>
         <p className="text-gray-600">Update your AI lead magnet and form configuration</p>
       </div>
@@ -309,13 +294,13 @@ export default function EditWorkflowPage() {
           steps={steps}
           submitting={submitting}
           selectedStepIndex={selectedStepIndex}
-          isSidePanelOpen={isSidePanelOpen}
+          isSidePanelOpen={false}
           onFormDataChange={handleChange}
           onStepsChange={setSteps}
           onAddStep={handleAddStep}
           onStepClick={(index) => {
             setSelectedStepIndex(index)
-            setIsSidePanelOpen(true)
+            // Step editing can be done inline in the flowchart
           }}
           onStepsReorder={setSteps}
           onSubmit={handleSubmit}
@@ -328,18 +313,12 @@ export default function EditWorkflowPage() {
           formFormData={formFormData}
           workflowName={formData.workflow_name}
           submitting={submitting}
-          showFormPreview={showFormPreview}
-          collapsedSections={collapsedSections}
-          draggedFieldIndex={draggedFieldIndex}
           onFormChange={handleFormChange}
           onFieldChange={handleFieldChange}
           onAddField={addField}
           onRemoveField={removeField}
-          onDragStart={handleDragStart}
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-          onToggleSection={toggleSection}
-          onTogglePreview={() => setShowFormPreview(!showFormPreview)}
+          onMoveFieldUp={moveFieldUp}
+          onMoveFieldDown={moveFieldDown}
           onSubmit={handleSubmit}
           onCancel={() => router.back()}
         />
@@ -378,33 +357,6 @@ export default function EditWorkflowPage() {
         />
       )}
 
-      {/* Flowchart Side Panel */}
-      <FlowchartSidePanel
-        step={selectedStepIndex !== null ? steps[selectedStepIndex] : null}
-        index={selectedStepIndex}
-        totalSteps={steps.length}
-        allSteps={steps}
-        isOpen={isSidePanelOpen}
-        onClose={() => {
-          setIsSidePanelOpen(false)
-          setSelectedStepIndex(null)
-        }}
-        onChange={handleStepChange}
-        onDelete={handleDeleteStep}
-        onMoveUp={(index) => {
-          handleMoveStepUp(index)
-          if (selectedStepIndex === index && index > 0) {
-            setSelectedStepIndex(index - 1)
-          }
-        }}
-        onMoveDown={(index) => {
-          handleMoveStepDown(index)
-          if (selectedStepIndex === index && index < steps.length - 1) {
-            setSelectedStepIndex(index + 1)
-          }
-        }}
-        workflowId={workflowId}
-      />
     </div>
   )
 }

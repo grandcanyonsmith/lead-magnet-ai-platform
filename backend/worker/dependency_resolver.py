@@ -3,8 +3,11 @@ Dependency Resolution Engine for Python
 Handles building dependency graphs, detecting parallel opportunities, and resolving execution groups
 """
 
+import logging
 from typing import Dict, List, Set, Tuple, Optional
 from enum import Enum
+
+logger = logging.getLogger(__name__)
 
 
 class StepStatus(Enum):
@@ -12,6 +15,92 @@ class StepStatus(Enum):
     RUNNING = "running"
     WAITING = "waiting"
     READY = "ready"
+
+
+# Helper functions
+
+def _build_order_to_index(steps: List[Dict]) -> Dict[int, int]:
+    """
+    Build a mapping from step_order to array index for normalization.
+    
+    Args:
+        steps: List of step dictionaries
+        
+    Returns:
+        Dictionary mapping step_order to array index
+    """
+    order_to_index: Dict[int, int] = {}
+    for index, step in enumerate(steps):
+        step_order = step.get('step_order', index)
+        order_to_index[step_order] = index
+    return order_to_index
+
+
+def _normalize_dependency_index(
+    dep_value: int,
+    order_to_index: Dict[int, int],
+    steps_length: int,
+    current_index: int
+) -> Optional[int]:
+    """
+    Normalize a dependency value (step_order or array index) to an array index.
+    
+    Args:
+        dep_value: Dependency value (could be step_order or array index)
+        order_to_index: Mapping from step_order to array index
+        steps_length: Total number of steps
+        current_index: Index of the current step (to prevent self-dependencies)
+        
+    Returns:
+        Normalized array index, or None if invalid
+    """
+    if not isinstance(dep_value, int):
+        return None
+    
+    # Try to normalize: if dep_value matches a step_order, convert to array index
+    dep_index = dep_value
+    if dep_value in order_to_index:
+        dep_index = order_to_index[dep_value]
+    elif dep_value >= 0 and dep_value < steps_length:
+        # Already an array index, use as-is
+        dep_index = dep_value
+    else:
+        # Invalid - doesn't match any step_order or array index
+        return None
+    
+    # Validate normalized index
+    if dep_index < 0 or dep_index >= steps_length or dep_index == current_index:
+        return None
+    
+    return dep_index
+
+
+def _get_step_dependencies(step: Dict, step_index: int, steps: List[Dict]) -> List[int]:
+    """
+    Extract dependencies for a step, handling both explicit and auto-detected dependencies.
+    
+    Args:
+        step: Step dictionary
+        step_index: Index of the step in the steps list
+        steps: List of all step dictionaries
+        
+    Returns:
+        List of dependency indices
+    """
+    deps: List[int] = []
+    
+    if step.get('depends_on') and isinstance(step.get('depends_on'), list):
+        # Explicit dependencies provided
+        deps = step['depends_on']
+    else:
+        # Auto-detect from step_order
+        step_order = step.get('step_order', step_index)
+        for i, s in enumerate(steps):
+            other_order = s.get('step_order', i)
+            if other_order < step_order:
+                deps.append(i)
+    
+    return deps
 
 
 def build_dependency_graph(steps: List[Dict]) -> Dict[int, List[int]]:
@@ -25,21 +114,22 @@ def build_dependency_graph(steps: List[Dict]) -> Dict[int, List[int]]:
         Dictionary mapping step index to list of dependency indices
     """
     dependencies: Dict[int, List[int]] = {}
+    order_to_index = _build_order_to_index(steps)
     
     for index, step in enumerate(steps):
         deps: List[int] = []
         
         if step.get('depends_on') and isinstance(step.get('depends_on'), list):
-            # Explicit dependencies provided
-            deps = [
-                dep_index for dep_index in step['depends_on']
-                if isinstance(dep_index, int) and 0 <= dep_index < len(steps) and dep_index != index
-            ]
+            # Explicit dependencies provided - normalize step_order values to array indices
+            for dep_value in step['depends_on']:
+                dep_index = _normalize_dependency_index(
+                    dep_value, order_to_index, len(steps), index
+                )
+                if dep_index is not None:
+                    deps.append(dep_index)
         else:
             # Auto-detect from step_order
             step_order = step.get('step_order', index)
-            
-            # Find all steps with lower step_order
             for i, s in enumerate(steps):
                 other_order = s.get('step_order', i)
                 if other_order < step_order:
@@ -110,7 +200,10 @@ def resolve_execution_groups(steps: List[Dict]) -> Dict:
         
         if len(ready_steps) == 0:
             # This shouldn't happen if dependencies are valid, but handle gracefully
-            print(f"WARNING: No ready steps found, but {len(completed)}/{len(steps)} steps completed. Possible circular dependency.")
+            logger.warning(
+                f"No ready steps found, but {len(completed)}/{len(steps)} steps completed. "
+                "Possible circular dependency."
+            )
             break
         
         # Check if steps in this group can run in parallel
@@ -158,18 +251,42 @@ def validate_dependencies(steps: List[Dict]) -> Tuple[bool, List[str]]:
     if not steps:
         return True, []
     
+    order_to_index = _build_order_to_index(steps)
+    
     # Check for invalid dependency indices
     for index, step in enumerate(steps):
         if step.get('depends_on') and isinstance(step.get('depends_on'), list):
-            for dep_index in step['depends_on']:
-                if not isinstance(dep_index, int) or dep_index < 0 or dep_index >= len(steps):
-                    errors.append(f"Step {index} ({step.get('step_name', 'Unknown')}): depends_on index {dep_index} is out of range")
+            for dep_value in step['depends_on']:
+                if not isinstance(dep_value, int):
+                    errors.append(
+                        f"Step {index} ({step.get('step_name', 'Unknown')}): "
+                        f"depends_on contains non-integer value {dep_value}"
+                    )
+                    continue
+                
+                dep_index = _normalize_dependency_index(
+                    dep_value, order_to_index, len(steps), index
+                )
+                
+                if dep_index is None:
+                    errors.append(
+                        f"Step {index} ({step.get('step_name', 'Unknown')}): "
+                        f"depends_on index {dep_value} is out of range"
+                    )
+                    continue
+                
+                # Additional validation for error messages
+                step_order = step.get('step_order', index)
                 if dep_index == index:
-                    errors.append(f"Step {index} ({step.get('step_name', 'Unknown')}): cannot depend on itself")
+                    errors.append(
+                        f"Step {index} (order {step_order}, {step.get('step_name', 'Unknown')}): "
+                        "cannot depend on itself"
+                    )
     
     # Check for circular dependencies using DFS
     visited: Set[int] = set()
     rec_stack: Set[int] = set()
+    order_to_index_for_cycle = _build_order_to_index(steps)
     
     def has_cycle(node_index: int) -> bool:
         if node_index < 0 or node_index >= len(steps):
@@ -183,22 +300,14 @@ def validate_dependencies(steps: List[Dict]) -> Tuple[bool, List[str]]:
         rec_stack.add(node_index)
         
         step = steps[node_index]
-        deps: List[int] = []
+        dep_values = _get_step_dependencies(step, node_index, steps)
         
-        if step.get('depends_on') and isinstance(step.get('depends_on'), list):
-            deps = step['depends_on']
-        elif step.get('step_order') is not None:
-            # Auto-detect from step_order
-            step_order = step.get('step_order', node_index)
-            for i, s in enumerate(steps):
-                other_order = s.get('step_order', i)
-                if other_order < step_order:
-                    deps.append(i)
-        
-        for dep_index in deps:
-            if dep_index < 0 or dep_index >= len(steps):
-                continue  # Skip invalid indices
-            if has_cycle(dep_index):
+        # Normalize dependency values to indices
+        for dep_value in dep_values:
+            dep_index = _normalize_dependency_index(
+                dep_value, order_to_index_for_cycle, len(steps), node_index
+            )
+            if dep_index is not None and has_cycle(dep_index):
                 return True
         
         rec_stack.remove(node_index)

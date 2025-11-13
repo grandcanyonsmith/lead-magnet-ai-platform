@@ -1,7 +1,5 @@
 import { ulid } from 'ulid';
 import { SFNClient, StartExecutionCommand } from '@aws-sdk/client-sfn';
-import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
-import OpenAI from 'openai';
 import { db, normalizeQueryResult } from '../utils/db';
 import { validate, createFormSchema, updateFormSchema, submitFormSchema } from '../utils/validation';
 import { ApiError } from '../utils/errors';
@@ -9,86 +7,16 @@ import { RouteResponse } from '../routes';
 import { logger } from '../utils/logger';
 import { calculateOpenAICost } from '../services/costService';
 import { callResponsesWithTimeout } from '../utils/openaiHelpers';
+import { getOpenAIClient } from '../services/openaiService';
+import { usageTrackingService } from '../services/usageTrackingService';
 
 const FORMS_TABLE = process.env.FORMS_TABLE!;
 const SUBMISSIONS_TABLE = process.env.SUBMISSIONS_TABLE!;
 const JOBS_TABLE = process.env.JOBS_TABLE!;
 const STEP_FUNCTIONS_ARN = process.env.STEP_FUNCTIONS_ARN!;
 const USER_SETTINGS_TABLE = process.env.USER_SETTINGS_TABLE!;
-const USAGE_RECORDS_TABLE = process.env.USAGE_RECORDS_TABLE || 'leadmagnet-usage-records';
-const OPENAI_SECRET_NAME = process.env.OPENAI_SECRET_NAME || 'leadmagnet/openai-api-key';
 
 const sfnClient = new SFNClient({ region: process.env.AWS_REGION || 'us-east-1' });
-const secretsClient = new SecretsManagerClient({ region: process.env.AWS_REGION || 'us-east-1' });
-
-async function getOpenAIClient(): Promise<OpenAI> {
-  const command = new GetSecretValueCommand({ SecretId: OPENAI_SECRET_NAME });
-  const response = await secretsClient.send(command);
-  
-  if (!response.SecretString) {
-    throw new ApiError('OpenAI API key not found in secret', 500);
-  }
-
-  let apiKey: string;
-  
-  try {
-    const parsed = JSON.parse(response.SecretString);
-    apiKey = parsed.OPENAI_API_KEY || parsed.apiKey || response.SecretString;
-  } catch {
-    apiKey = response.SecretString;
-  }
-  
-  if (!apiKey || apiKey.trim().length === 0) {
-    throw new ApiError('OpenAI API key is empty', 500);
-  }
-
-  return new OpenAI({ apiKey });
-}
-
-/**
- * Helper function to store usage record in DynamoDB.
- */
-async function storeUsageRecord(
-  tenantId: string,
-  serviceType: string,
-  model: string,
-  inputTokens: number,
-  outputTokens: number,
-  costUsd: number,
-  jobId?: string
-): Promise<void> {
-  try {
-    const usageId = `usage_${ulid()}`;
-    const usageRecord = {
-      usage_id: usageId,
-      tenant_id: tenantId,
-      job_id: jobId || null,
-      service_type: serviceType,
-      model,
-      input_tokens: inputTokens,
-      output_tokens: outputTokens,
-      cost_usd: costUsd,
-      created_at: new Date().toISOString(),
-    };
-
-    await db.put(USAGE_RECORDS_TABLE, usageRecord);
-    logger.info('[Usage Tracking] Usage record stored', {
-      usageId,
-      tenantId,
-      serviceType,
-      model,
-      inputTokens,
-      outputTokens,
-      costUsd,
-    });
-  } catch (error: any) {
-    logger.error('[Usage Tracking] Failed to store usage record', {
-      error: error.message,
-      tenantId,
-      serviceType,
-    });
-  }
-}
 
 class FormsController {
   async list(tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {
@@ -560,14 +488,14 @@ Return ONLY the CSS code, no markdown formatting, no explanations.`;
         const outputTokens = usage.output_tokens || 0;
         const costData = calculateOpenAICost(cssModelUsed, inputTokens, outputTokens);
         
-        await storeUsageRecord(
+        await usageTrackingService.storeUsageRecord({
           tenantId,
-          'openai_form_css',
-          cssModelUsed,
+          serviceType: 'openai_form_css',
+          model: cssModelUsed,
           inputTokens,
           outputTokens,
-          costData.cost_usd
-        );
+          costUsd: costData.cost_usd,
+        });
       }
 
       // Validate response has output_text
@@ -691,14 +619,14 @@ Return ONLY the modified CSS code, no markdown formatting, no explanations.`;
         const outputTokens = usage.output_tokens || 0;
         const costData = calculateOpenAICost(refineCssModel, inputTokens, outputTokens);
         
-        await storeUsageRecord(
+        await usageTrackingService.storeUsageRecord({
           tenantId,
-          'openai_form_css_refine',
-          refineCssModel,
+          serviceType: 'openai_form_css_refine',
+          model: refineCssModel,
           inputTokens,
           outputTokens,
-          costData.cost_usd
-        );
+          costUsd: costData.cost_usd,
+        });
       }
 
       // Validate response has output_text

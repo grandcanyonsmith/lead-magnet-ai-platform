@@ -21,6 +21,24 @@ class S3Service:
         bucket_name = os.environ['ARTIFACTS_BUCKET']
         cloudfront_domain = os.environ.get('CLOUDFRONT_DOMAIN', '').strip()
         
+        # If CloudFront domain not set, try to retrieve from CloudFormation
+        if not cloudfront_domain:
+            try:
+                cf_client = boto3.client('cloudformation', region_name=region)
+                # Try to find the storage stack and get CloudFront domain
+                stacks = cf_client.describe_stacks()
+                for stack in stacks.get('Stacks', []):
+                    if 'storage' in stack['StackName'].lower() or 'leadmagnet-storage' in stack['StackName'].lower():
+                        for output in stack.get('Outputs', []):
+                            if output.get('OutputKey') == 'DistributionDomainName':
+                                cloudfront_domain = output.get('OutputValue', '').strip()
+                                logger.info(f"[S3] Retrieved CloudFront domain from CloudFormation: {cloudfront_domain}")
+                                break
+                        if cloudfront_domain:
+                            break
+            except Exception as e:
+                logger.debug(f"[S3] Could not retrieve CloudFront domain from CloudFormation: {e}")
+        
         logger.info(f"[S3] Initializing S3 service", extra={
             'region': region,
             'bucket': bucket_name,
@@ -29,7 +47,7 @@ class S3Service:
         
         self.s3_client = boto3.client('s3', region_name=region)
         self.bucket_name = bucket_name
-        # CloudFront distribution domain (optional, falls back to presigned URLs)
+        # CloudFront distribution domain (preferred for permanent, non-expiring URLs)
         self.cloudfront_domain = cloudfront_domain if cloudfront_domain else None
         
         logger.info(f"[S3] S3 service initialized successfully", extra={
@@ -137,22 +155,29 @@ class S3Service:
         """
         Upload image (binary data) to S3.
         
+        Images are always uploaded as publicly accessible via CloudFront.
+        CloudFront URLs are preferred as they never expire.
+        
         Args:
             key: S3 object key
             image_data: Binary image data
             content_type: MIME type (e.g., 'image/png', 'image/jpeg')
-            public: Whether to make object publicly accessible
+            public: Whether to make object publicly accessible (always True for images)
             
         Returns:
             Tuple of (s3_url, public_url)
         """
         try:
-            # Prepare upload parameters
+            # Images are always public - set ACL to public-read
+            # Bucket policy allows public read access for image files
             put_params = {
                 'Bucket': self.bucket_name,
                 'Key': key,
                 'Body': image_data,
                 'ContentType': content_type,
+                'ACL': 'public-read',  # Make image publicly accessible
+                # Ensure Cache-Control for images
+                'CacheControl': 'public, max-age=31536000, immutable',
             }
             
             # Upload to S3
@@ -161,25 +186,22 @@ class S3Service:
             # Generate URLs
             s3_url = f"s3://{self.bucket_name}/{key}"
             
-            if public and self.cloudfront_domain:
-                # Use CloudFront URL for public access (recommended)
-                public_url = f"https://{self.cloudfront_domain}/{key}"
-                logger.info(f"Using CloudFront URL for public image: {public_url}")
-            else:
-                # Generate presigned URL as fallback (max 7 days per AWS limits)
-                # Note: CloudFront URLs should be preferred as they don't expire
-                public_url = self.s3_client.generate_presigned_url(
-                    'get_object',
-                    Params={'Bucket': self.bucket_name, 'Key': key},
-                    ExpiresIn=604800  # Maximum allowed: 7 days (604800 seconds)
-                )
-                if public:
-                    logger.warning(f"CloudFront domain not configured, using presigned URL for image")
+            # Use direct S3 public URL (images are now publicly accessible)
+            # Format: https://{bucket}.s3.{region}.amazonaws.com/{key}
+            region = os.environ.get('AWS_REGION', 'us-east-1')
+            public_url = f"https://{self.bucket_name}.s3.{region}.amazonaws.com/{key}"
             
-            logger.info(f"Uploaded image to S3: {s3_url}, public_url: {public_url[:80]}...")
+            logger.info(f"[S3] Uploaded image to S3 with public access", extra={
+                'key': key,
+                's3_url': s3_url,
+                'public_url': public_url,
+                'bucket': self.bucket_name,
+                'region': region,
+                'content_type': content_type
+            })
             return s3_url, public_url
         except ClientError as e:
-            logger.error(f"Error uploading image to S3: {e}")
+            logger.error(f"[S3] Error uploading image to S3: {e}", exc_info=True)
             raise
     
     def download_artifact(self, key: str) -> str:

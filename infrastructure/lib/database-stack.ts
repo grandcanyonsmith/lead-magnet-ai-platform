@@ -2,8 +2,15 @@ import * as cdk from 'aws-cdk-lib';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import { Construct } from 'constructs';
 import { createTable, createTableWithGSI } from './utils/dynamodb-helpers';
-import { TableMap } from './types';
+import { TableMap, TableKey } from './types';
+import { TABLE_NAMES } from './config/constants';
 
+/**
+ * Database Stack
+ * 
+ * Creates all DynamoDB tables required for the Lead Magnet platform.
+ * Tables are configured with appropriate indexes, TTL, and encryption.
+ */
 export class DatabaseStack extends cdk.Stack {
   public readonly tablesMap: TableMap;
 
@@ -15,7 +22,7 @@ export class DatabaseStack extends cdk.Stack {
       this,
       'WorkflowsTable',
       {
-        tableName: 'leadmagnet-workflows',
+        tableName: TABLE_NAMES.WORKFLOWS,
         partitionKey: { name: 'workflow_id', type: dynamodb.AttributeType.STRING },
       },
       [
@@ -36,7 +43,7 @@ export class DatabaseStack extends cdk.Stack {
       this,
       'FormsTable',
       {
-        tableName: 'leadmagnet-forms',
+        tableName: TABLE_NAMES.FORMS,
         partitionKey: { name: 'form_id', type: dynamodb.AttributeType.STRING },
       },
       [
@@ -60,7 +67,7 @@ export class DatabaseStack extends cdk.Stack {
       this,
       'SubmissionsTable',
       {
-        tableName: 'leadmagnet-submissions',
+        tableName: TABLE_NAMES.SUBMISSIONS,
         partitionKey: { name: 'submission_id', type: dynamodb.AttributeType.STRING },
         timeToLiveAttribute: 'ttl',
       },
@@ -83,7 +90,7 @@ export class DatabaseStack extends cdk.Stack {
       this,
       'JobsTable',
       {
-        tableName: 'leadmagnet-jobs',
+        tableName: TABLE_NAMES.JOBS,
         partitionKey: { name: 'job_id', type: dynamodb.AttributeType.STRING },
       },
       [
@@ -105,7 +112,7 @@ export class DatabaseStack extends cdk.Stack {
       this,
       'ArtifactsTable',
       {
-        tableName: 'leadmagnet-artifacts',
+        tableName: TABLE_NAMES.ARTIFACTS,
         partitionKey: { name: 'artifact_id', type: dynamodb.AttributeType.STRING },
       },
       [
@@ -126,7 +133,7 @@ export class DatabaseStack extends cdk.Stack {
       this,
       'TemplatesTable',
       {
-        tableName: 'leadmagnet-templates',
+        tableName: TABLE_NAMES.TEMPLATES,
         partitionKey: { name: 'template_id', type: dynamodb.AttributeType.STRING },
         sortKey: { name: 'version', type: dynamodb.AttributeType.NUMBER },
       },
@@ -143,7 +150,7 @@ export class DatabaseStack extends cdk.Stack {
       this,
       'UserSettingsTable',
       {
-        tableName: 'leadmagnet-user-settings',
+        tableName: TABLE_NAMES.USER_SETTINGS,
         partitionKey: { name: 'tenant_id', type: dynamodb.AttributeType.STRING },
       }
     );
@@ -153,7 +160,7 @@ export class DatabaseStack extends cdk.Stack {
     const usageRecordsTable = dynamodb.Table.fromTableName(
       this,
       'UsageRecordsTable',
-      'leadmagnet-usage-records'
+      TABLE_NAMES.USAGE_RECORDS
     );
 
     // Table 9: Notifications
@@ -161,7 +168,7 @@ export class DatabaseStack extends cdk.Stack {
       this,
       'NotificationsTable',
       {
-        tableName: 'leadmagnet-notifications',
+        tableName: TABLE_NAMES.NOTIFICATIONS,
         partitionKey: { name: 'notification_id', type: dynamodb.AttributeType.STRING },
         timeToLiveAttribute: 'ttl',
       },
@@ -179,17 +186,17 @@ export class DatabaseStack extends cdk.Stack {
       ]
     );
 
-    // Export table names and references
+    // Export table names and references using TableKey enum for type safety
     this.tablesMap = {
-      workflows: workflowsTable,
-      forms: formsTable,
-      submissions: submissionsTable,
-      jobs: jobsTable,
-      artifacts: artifactsTable,
-      templates: templatesTable,
-      userSettings: userSettingsTable,
-      usageRecords: usageRecordsTable,
-      notifications: notificationsTable,
+      [TableKey.WORKFLOWS]: workflowsTable,
+      [TableKey.FORMS]: formsTable,
+      [TableKey.SUBMISSIONS]: submissionsTable,
+      [TableKey.JOBS]: jobsTable,
+      [TableKey.ARTIFACTS]: artifactsTable,
+      [TableKey.TEMPLATES]: templatesTable,
+      [TableKey.USER_SETTINGS]: userSettingsTable,
+      [TableKey.USAGE_RECORDS]: usageRecordsTable,
+      [TableKey.NOTIFICATIONS]: notificationsTable,
     };
 
     // CloudFormation outputs
