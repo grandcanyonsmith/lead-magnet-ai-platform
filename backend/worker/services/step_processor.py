@@ -136,6 +136,16 @@ class StepProcessor:
             job_id=job_id
         )
         
+        logger.info("[StepProcessor] Received response_details from AI service", extra={
+            'job_id': job_id,
+            'step_index': step_index,
+            'step_name': step_name,
+            'response_details_keys': list(response_details.keys()) if isinstance(response_details, dict) else None,
+            'has_image_urls_key': 'image_urls' in response_details if isinstance(response_details, dict) else False,
+            'image_urls_count': len(response_details.get('image_urls', [])) if isinstance(response_details, dict) else 0,
+            'image_urls': response_details.get('image_urls', []) if isinstance(response_details, dict) else []
+        })
+        
         step_duration = (datetime.utcnow() - step_start_time).total_seconds() * 1000
         
         logger.info(f"[StepProcessor] Step completed successfully", extra={
@@ -169,6 +179,15 @@ class StepProcessor:
         
         # Extract and store image URLs
         image_urls = response_details.get('image_urls', [])
+        logger.info("[StepProcessor] Extracting image URLs from response_details", extra={
+            'job_id': job_id,
+            'step_index': step_index,
+            'step_name': step_name,
+            'image_urls_count_before': len(image_urls),
+            'image_urls': image_urls,
+            'image_urls_type': type(image_urls).__name__
+        })
+        
         image_artifact_ids = self.image_artifact_service.store_image_artifacts(
             image_urls=image_urls,
             tenant_id=tenant_id,
@@ -176,6 +195,16 @@ class StepProcessor:
             step_index=step_index,
             step_name=step_name
         )
+        
+        logger.info("[StepProcessor] Image artifacts stored", extra={
+            'job_id': job_id,
+            'step_index': step_index,
+            'step_name': step_name,
+            'image_urls_count': len(image_urls),
+            'image_artifact_ids_count': len(image_artifact_ids),
+            'image_artifact_ids': image_artifact_ids
+        })
+        
         all_image_artifact_ids.extend(image_artifact_ids)
         
         # Create step output dict
@@ -344,6 +373,16 @@ class StepProcessor:
                 tenant_id=job['tenant_id'],
                 job_id=job_id
             )
+            
+            logger.info("[StepProcessor] Received response_details from AI service", extra={
+                'job_id': job_id,
+                'step_index': step_index,
+                'step_name': step_name,
+                'response_details_keys': list(response_details.keys()) if isinstance(response_details, dict) else None,
+                'has_image_urls_key': 'image_urls' in response_details if isinstance(response_details, dict) else False,
+                'image_urls_count': len(response_details.get('image_urls', [])) if isinstance(response_details, dict) else 0,
+                'image_urls': response_details.get('image_urls', []) if isinstance(response_details, dict) else []
+            })
         except Exception as step_error:
             logger.error(f"[StepProcessor] Error generating report for step {step_index + 1}", extra={
                 'job_id': job_id,
@@ -377,6 +416,15 @@ class StepProcessor:
         
         # Extract and store image URLs
         image_urls = response_details.get('image_urls', [])
+        logger.info("[StepProcessor] Extracting image URLs from response_details", extra={
+            'job_id': job_id,
+            'step_index': step_index,
+            'step_name': step_name,
+            'image_urls_count_before': len(image_urls),
+            'image_urls': image_urls,
+            'image_urls_type': type(image_urls).__name__
+        })
+        
         image_artifact_ids = self.image_artifact_service.store_image_artifacts(
             image_urls=image_urls,
             tenant_id=job['tenant_id'],
@@ -384,6 +432,15 @@ class StepProcessor:
             step_index=step_index,
             step_name=step_name
         )
+        
+        logger.info("[StepProcessor] Image artifacts stored", extra={
+            'job_id': job_id,
+            'step_index': step_index,
+            'step_name': step_name,
+            'image_urls_count': len(image_urls),
+            'image_artifact_ids_count': len(image_artifact_ids),
+            'image_artifact_ids': image_artifact_ids
+        })
         
         # Add execution step
         step_data = ExecutionStepManager.create_ai_generation_step(

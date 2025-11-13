@@ -13,7 +13,6 @@ from db_service import DynamoDBService
 from s3_service import S3Service
 from artifact_service import ArtifactService
 from delivery_service import DeliveryService
-from legacy_processor import LegacyWorkflowProcessor
 from utils.error_utils import create_descriptive_error, normalize_error_message
 from services.context_builder import ContextBuilder
 from services.execution_step_manager import ExecutionStepManager
@@ -77,14 +76,6 @@ class JobProcessor:
             s3_service=self.s3,
             delivery_service=self.delivery_service,
             usage_service=self.usage_service
-        )
-        
-        # Initialize legacy processor
-        self.legacy_processor = LegacyWorkflowProcessor(
-            db_service,
-            s3_service,
-            self.ai_service,
-            self.artifact_service
         )
     
     def resolve_step_dependencies(self, steps: list) -> Dict[str, Any]:
@@ -216,44 +207,25 @@ class JobProcessor:
             )
             self.db.update_job(job_id, {'execution_steps': execution_steps}, s3_service=self.s3)
             
-            # Workflow Format Detection:
-            # The system supports two workflow formats:
-            # 1. Legacy Format: Uses boolean flags (research_enabled, html_enabled) with ai_instructions
-            #    - Limited to 2 steps (research + HTML)
-            #    - Processed by LegacyWorkflowProcessor
-            # 2. Steps Format: Uses steps array with dependencies and parallel execution support
-            #    - Supports unlimited steps with dependencies
-            #    - Processed by WorkflowOrchestrator
-            # 
-            # Detection: If workflow has a non-empty 'steps' array, use steps format.
-            # Otherwise, fall back to legacy format processing.
+            # Workflow processing - all workflows must use steps format
             steps = workflow.get('steps', [])
-            use_steps_format = steps and len(steps) > 0
+            if not steps or len(steps) == 0:
+                raise ValueError(
+                    f"Workflow {workflow_id} has no steps configured. "
+                    "All workflows must use the steps format. "
+                    "Legacy format is no longer supported."
+                )
             
-            if use_steps_format:
-                # New multi-step workflow processing
-                final_content, final_artifact_type, final_filename, report_artifact_id, all_image_artifact_ids = \
-                    self.workflow_orchestrator.execute_workflow(
-                        job_id=job_id,
-                        job=job,
-                        workflow=workflow,
-                        submission=submission,
-                        form=form,
-                        execution_steps=execution_steps
-                    )
-            else:
-                # Legacy workflow processing
-                field_label_map = FieldLabelService.build_field_label_map(form)
-                final_content, final_artifact_type, final_filename, report_artifact_id = \
-                    self.legacy_processor.process_legacy_workflow(
-                        job_id=job_id,
-                        workflow=workflow,
-                        submission=submission,
-                        field_label_map=field_label_map,
-                        execution_steps=execution_steps,
-                        job=job
-                    )
-                all_image_artifact_ids = []
+            # Process workflow using steps format
+            final_content, final_artifact_type, final_filename, report_artifact_id, all_image_artifact_ids = \
+                self.workflow_orchestrator.execute_workflow(
+                    job_id=job_id,
+                    job=job,
+                    workflow=workflow,
+                    submission=submission,
+                    form=form,
+                    execution_steps=execution_steps
+                )
             
             # Finalize job (store final artifact, update status, deliver, notify)
             public_url = self.job_completion_service.finalize_job(

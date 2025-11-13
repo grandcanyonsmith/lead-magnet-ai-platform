@@ -10,11 +10,6 @@ import { useWorkflowId } from './useWorkflowId'
 export interface WorkflowFormData {
   workflow_name: string
   workflow_description: string
-  ai_model: string
-  ai_instructions: string
-  rewrite_model: string
-  research_enabled: boolean
-  html_enabled: boolean
   template_id: string
   template_version: number
 }
@@ -30,11 +25,6 @@ export function useWorkflowEdit() {
   const [formData, setFormData] = useState<WorkflowFormData>({
     workflow_name: '',
     workflow_description: '',
-    ai_model: 'gpt-5',
-    ai_instructions: '',
-    rewrite_model: 'gpt-5',
-    research_enabled: true,
-    html_enabled: true,
     template_id: '',
     template_version: 0,
   })
@@ -56,87 +46,36 @@ export function useWorkflowEdit() {
       setFormData({
         workflow_name: workflow.workflow_name || '',
         workflow_description: workflow.workflow_description || '',
-        ai_model: workflow.ai_model || 'gpt-5',
-        ai_instructions: workflow.ai_instructions || '',
-        rewrite_model: workflow.rewrite_model || 'gpt-5',
-        research_enabled: workflow.research_enabled !== undefined ? workflow.research_enabled : true,
-        html_enabled: workflow.html_enabled !== undefined ? workflow.html_enabled : true,
         template_id: workflow.template_id || '',
         template_version: workflow.template_version || 0,
       })
 
-      // Load steps if present, otherwise migrate from legacy format
-      if (workflow.steps && workflow.steps.length > 0) {
-        const loadedSteps = workflow.steps.map((step: any, index: number) => {
-          let defaultInstructions = ''
-          if (step.step_name && step.step_name.toLowerCase().includes('html')) {
-            defaultInstructions = 'Rewrite the content into styled HTML matching the provided template. Ensure the output is complete, valid HTML that matches the template\'s design and structure.'
-          } else if (step.step_name && step.step_name.toLowerCase().includes('research')) {
-            defaultInstructions = 'Generate a comprehensive research report based on the form submission data.'
-          } else {
-            defaultInstructions = 'Process the input data according to the workflow requirements.'
-          }
-          
-          return {
-            step_name: step.step_name || `Step ${index + 1}`,
-            step_description: step.step_description || '',
-            model: step.model || 'gpt-5',
-            instructions: step.instructions?.trim() || defaultInstructions,
-            step_order: step.step_order !== undefined ? step.step_order : index,
-            tools: step.tools || ['web_search_preview'],
-            tool_choice: step.tool_choice || 'auto',
-          }
-        })
-        setSteps(loadedSteps)
-      } else {
-        // Migrate legacy format to steps
-        const migratedSteps: WorkflowStep[] = []
-        if (workflow.research_enabled && workflow.ai_instructions) {
-          migratedSteps.push({
-            step_name: 'Deep Research',
-            step_description: 'Generate comprehensive research report',
-            model: workflow.ai_model || 'gpt-5',
-            instructions: workflow.ai_instructions,
-            step_order: 0,
-            tools: ['web_search_preview'],
-            tool_choice: 'auto',
-          })
-        }
-        if (workflow.html_enabled) {
-          migratedSteps.push({
-            step_name: 'HTML Rewrite',
-            step_description: 'Rewrite content into styled HTML matching template',
-            model: workflow.rewrite_model || 'gpt-5',
-            instructions: 'Rewrite the research content into styled HTML matching the provided template. Ensure the output is complete, valid HTML that matches the template\'s design and structure.',
-            step_order: migratedSteps.length,
-            tools: [],
-            tool_choice: 'none',
-          })
-        }
-        if (migratedSteps.length === 0) {
-          migratedSteps.push({
-            step_name: 'Deep Research',
-            step_description: 'Generate comprehensive research report',
-            model: 'gpt-5',
-            instructions: workflow.ai_instructions || 'Generate a comprehensive research report based on the form submission data.',
-            step_order: 0,
-            tools: ['web_search_preview'],
-            tool_choice: 'auto',
-          })
-          if (workflow.html_enabled !== false) {
-            migratedSteps.push({
-              step_name: 'HTML Rewrite',
-              step_description: 'Rewrite content into styled HTML matching template',
-              model: 'gpt-5',
-              instructions: 'Rewrite the research content into styled HTML matching the provided template. Ensure the output is complete, valid HTML that matches the template\'s design and structure.',
-              step_order: 1,
-              tools: [],
-              tool_choice: 'none',
-            })
-          }
-        }
-        setSteps(migratedSteps)
+      // Load steps - all workflows must have steps
+      if (!workflow.steps || workflow.steps.length === 0) {
+        throw new Error('Workflow has no steps. Legacy format is no longer supported.')
       }
+      
+      const loadedSteps = workflow.steps.map((step: any, index: number) => {
+        let defaultInstructions = ''
+        if (step.step_name && step.step_name.toLowerCase().includes('html')) {
+          defaultInstructions = 'Rewrite the content into styled HTML matching the provided template. Ensure the output is complete, valid HTML that matches the template\'s design and structure.'
+        } else if (step.step_name && step.step_name.toLowerCase().includes('research')) {
+          defaultInstructions = 'Generate a comprehensive research report based on the form submission data.'
+        } else {
+          defaultInstructions = 'Process the input data according to the workflow requirements.'
+        }
+        
+        return {
+          step_name: step.step_name || `Step ${index + 1}`,
+          step_description: step.step_description || '',
+          model: step.model || 'gpt-5',
+          instructions: step.instructions?.trim() || defaultInstructions,
+          step_order: step.step_order !== undefined ? step.step_order : index,
+          tools: step.tools || ['web_search_preview'],
+          tool_choice: step.tool_choice || 'auto',
+        }
+      })
+      setSteps(loadedSteps)
 
       if (workflow.form) {
         setFormId(workflow.form.form_id)

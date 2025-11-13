@@ -5,7 +5,6 @@ interface WorkflowDiffPreviewProps {
   currentWorkflow: {
     workflow_name: string;
     workflow_description?: string;
-    html_enabled?: boolean;
     steps: any[];
   };
   proposal: WorkflowAIEditResponse;
@@ -24,8 +23,6 @@ export function WorkflowDiffPreview({
   const hasNameChange = proposal.workflow_name && proposal.workflow_name !== currentWorkflow.workflow_name;
   const hasDescriptionChange = proposal.workflow_description !== undefined && 
     proposal.workflow_description !== currentWorkflow.workflow_description;
-  const hasHtmlEnabledChange = proposal.html_enabled !== undefined && 
-    proposal.html_enabled !== currentWorkflow.html_enabled;
 
   return (
     <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 space-y-4">
@@ -42,7 +39,7 @@ export function WorkflowDiffPreview({
 
       <div className="space-y-4">
         {/* Workflow metadata changes */}
-        {(hasNameChange || hasDescriptionChange || hasHtmlEnabledChange) && (
+        {(hasNameChange || hasDescriptionChange) && (
           <div className="bg-white rounded-lg p-4 space-y-3">
             <h4 className="font-medium text-gray-900">Workflow Settings</h4>
             
@@ -71,21 +68,6 @@ export function WorkflowDiffPreview({
                   <span className="text-gray-400">→</span>
                   <div className="flex-1 px-3 py-2 bg-green-50 border border-green-200 rounded text-sm text-green-700 font-medium">
                     {proposal.workflow_description || '(empty)'}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {hasHtmlEnabledChange && (
-              <div className="space-y-1">
-                <div className="text-sm font-medium text-gray-700">HTML Generation</div>
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 px-3 py-2 bg-red-50 border border-red-200 rounded text-sm text-red-700 line-through">
-                    {currentWorkflow.html_enabled ? 'Enabled' : 'Disabled'}
-                  </div>
-                  <span className="text-gray-400">→</span>
-                  <div className="flex-1 px-3 py-2 bg-green-50 border border-green-200 rounded text-sm text-green-700 font-medium">
-                    {proposal.html_enabled ? 'Enabled' : 'Disabled'}
                   </div>
                 </div>
               </div>

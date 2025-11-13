@@ -6,11 +6,6 @@ import { WorkflowStep } from '@/app/dashboard/workflows/components/WorkflowStepE
 export interface WorkflowFormData {
   workflow_name: string
   workflow_description: string
-  ai_model: string
-  ai_instructions: string
-  rewrite_model: string
-  research_enabled: boolean
-  html_enabled: boolean
   template_id: string
   template_version: number
   delivery_method: 'webhook' | 'sms' | 'none'
@@ -40,11 +35,6 @@ export interface FormFieldsData {
 const defaultFormData: WorkflowFormData = {
   workflow_name: '',
   workflow_description: '',
-  ai_model: 'gpt-5',
-  ai_instructions: '',
-  rewrite_model: 'gpt-5',
-  research_enabled: true,
-  html_enabled: true,
   template_id: '',
   template_version: 0,
   delivery_method: 'none',
@@ -127,7 +117,6 @@ export function useWorkflowForm() {
         ...prev,
         workflow_name: result.workflow?.workflow_name || prev.workflow_name,
         workflow_description: result.workflow?.workflow_description || prev.workflow_description,
-        ai_instructions: result.workflow?.research_instructions || prev.ai_instructions,
       }))
     }
 

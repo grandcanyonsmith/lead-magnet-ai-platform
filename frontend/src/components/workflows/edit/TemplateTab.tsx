@@ -7,7 +7,6 @@ import { extractPlaceholders, formatHTML, getPreviewHtml, getDevicePreviewWidth 
 interface TemplateTabProps {
   templateData: TemplateData
   templateLoading: boolean
-  htmlEnabled: boolean
   detectedPlaceholders: string[]
   templateViewMode: 'split' | 'editor' | 'preview'
   devicePreviewSize: 'mobile' | 'tablet' | 'desktop'
@@ -31,7 +30,6 @@ interface TemplateTabProps {
 export function TemplateTab({
   templateData,
   templateLoading,
-  htmlEnabled,
   detectedPlaceholders,
   templateViewMode,
   devicePreviewSize,
@@ -61,13 +59,6 @@ export function TemplateTab({
 
   return (
     <form onSubmit={onSubmit} className="space-y-6">
-      {!htmlEnabled && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <p className="text-sm text-yellow-800">
-            <strong>Note:</strong> Enable &quot;Generate Styled HTML&quot; in the Lead Magnet Settings tab to use templates.
-          </p>
-        </div>
-      )}
 
       {templateLoading && (
         <div className="bg-white rounded-lg shadow p-12 text-center">
