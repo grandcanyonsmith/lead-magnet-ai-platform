@@ -1,17 +1,19 @@
 # Workflow Formats
 
-This document explains the two workflow formats supported by the Lead Magnet AI platform and how to migrate between them.
+This document explains the workflow format used by the Lead Magnet AI platform.
 
 ## Overview
 
-The platform supports two workflow formats:
+The platform uses a **Steps Format** for all workflows. The legacy format has been removed and is no longer supported.
 
-1. **Legacy Format** - Simple boolean flags (`research_enabled`, `html_enabled`) with single instruction field
-2. **New Steps Format** - Flexible multi-step workflow with dependencies and parallel execution support
+**All workflows must use the Steps Format.**
 
-## Legacy Format
+## Legacy Format (Historical)
 
-The legacy format uses boolean flags to control workflow behavior:
+> **Status**: Removed - No longer supported  
+> **Note**: This section is kept for historical reference only. All workflows have been migrated to Steps Format.
+
+The legacy format (removed) used boolean flags to control workflow behavior:
 
 ```typescript
 {
@@ -132,30 +134,13 @@ Each step can have:
 4. **Context Building**: Each step receives accumulated context from previous steps
 5. **HTML Generation** (if template is configured): Final step converts output to HTML
 
-## Format Detection
+## Historical: Legacy Format Migration
 
-The system automatically detects which format to use:
+> **Note**: All workflows have been migrated to Steps Format. This section is kept for historical reference.
 
-```python
-# Detection logic (backend/worker/processor.py)
-steps = workflow.get('steps', [])
-use_steps_format = steps and len(steps) > 0
+### Migration (Completed)
 
-if use_steps_format:
-    # Process using new steps format
-else:
-    # Process using legacy format
-```
-
-## Migration from Legacy to Steps Format
-
-### Automatic Migration
-
-The system automatically migrates legacy workflows to steps format when:
-- A workflow is updated with legacy fields (`research_enabled`, `html_enabled`, `ai_instructions`)
-- The workflow doesn't already have steps defined
-
-### Manual Migration
+All legacy workflows were automatically migrated to steps format. The migration process converted:
 
 You can manually migrate a legacy workflow:
 
@@ -194,40 +179,28 @@ You can manually migrate a legacy workflow:
 }
 ```
 
-### Migration Utility
+### Migration Utility (Historical)
 
-Use the migration utility function:
+> **Note**: Migration functions are deprecated and kept for reference only.
 
-```typescript
-import { migrateLegacyWorkflowToSteps } from '@/utils/workflowMigration';
+The migration utility functions (`migrateLegacyWorkflowToSteps`, `migrateLegacyWorkflowOnUpdate`) are deprecated and should not be used in new code.
 
-const legacyWorkflow = {
-  research_enabled: true,
-  html_enabled: true,
-  ai_instructions: "..."
-};
+## Current Status
 
-const steps = migrateLegacyWorkflowToSteps(legacyWorkflow);
-```
+- ✅ **All workflows use Steps Format**
+- ✅ **Legacy format has been removed**
+- ✅ **LegacyWorkflowProcessor has been removed**
+- ✅ **All workflows have been migrated**
 
 ## Recommendations
 
-### When to Use Legacy Format
-
+**Steps Format is required for ALL workflows:**
+- All new workflows must use Steps Format
 - Simple workflows with just research + HTML
-- Quick prototyping
-- Backward compatibility with existing workflows
-
-### When to Use Steps Format
-
 - Complex workflows with multiple research steps
 - Workflows requiring parallel execution
 - Workflows with custom dependencies
-- New workflows (recommended)
-
-## Deprecation Notice
-
-The legacy format is maintained for backward compatibility but is not recommended for new workflows. Consider migrating existing legacy workflows to the steps format for better flexibility and features.
+- Any workflow that needs flexibility or future extensibility
 
 ## Examples
 

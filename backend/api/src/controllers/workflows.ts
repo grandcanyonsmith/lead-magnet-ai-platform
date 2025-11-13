@@ -10,7 +10,7 @@ import { formService } from '../services/formService';
 import { WorkflowGenerationService } from '../services/workflowGenerationService';
 import { WorkflowStepAIService, AIStepGenerationRequest } from '../services/workflowStepAIService';
 import { WorkflowAIService, WorkflowAIEditRequest } from '../services/workflowAIService';
-import { migrateLegacyWorkflowToSteps, migrateLegacyWorkflowOnUpdate, ensureStepDefaults, WorkflowStep } from '../utils/workflowMigration';
+import { ensureStepDefaults, WorkflowStep } from '../utils/workflowMigration';
 import { resolveExecutionGroups, validateDependencies } from '../utils/dependencyResolver';
 import { logger } from '../utils/logger';
 import { getOpenAIClient } from '../services/openaiService';
@@ -219,18 +219,19 @@ class WorkflowsController {
 
     const data = validate(createWorkflowSchema, body);
 
-    // Auto-migrate legacy workflows to steps format if needed
-    let workflowData = { ...data };
-    if (!workflowData.steps || workflowData.steps.length === 0) {
-      // Migrate legacy format to steps
-      const steps = migrateLegacyWorkflowToSteps(workflowData);
-      if (steps.length > 0) {
-        workflowData.steps = steps;
-      }
-    } else {
-      // Ensure step_order is set for each step and add defaults for tools/tool_choice/step_description
-      workflowData.steps = ensureStepDefaults(workflowData.steps as any[]) as WorkflowStep[];
+    // All workflows must use steps format
+    if (!data.steps || data.steps.length === 0) {
+      throw new ApiError(
+        'Workflow must have at least one step. Legacy format is no longer supported.',
+        400
+      );
     }
+
+    // Ensure step_order is set for each step and add defaults for tools/tool_choice/step_description
+    const workflowData = {
+      ...data,
+      steps: ensureStepDefaults(data.steps as any[]) as WorkflowStep[]
+    };
 
     const workflowId = `wf_${ulid()}`;
     const workflow = {
@@ -340,27 +341,21 @@ class WorkflowsController {
     
     const data = validate(updateWorkflowSchema, normalizedBody) as any;
 
-    // Auto-migrate legacy workflows to steps format if updating legacy fields
+    // Ensure workflow has steps (either existing or in update)
+    const hasStepsInUpdate = data.steps !== undefined && data.steps.length > 0;
+    const hasExistingSteps = existing.steps && existing.steps.length > 0;
+    
+    if (!hasStepsInUpdate && !hasExistingSteps) {
+      throw new ApiError(
+        'Workflow must have at least one step. Legacy format is no longer supported.',
+        400
+      );
+    }
+    
     let updateData: any = { ...data };
-    const hasLegacyFields = data.ai_instructions !== undefined || data.research_enabled !== undefined || data.html_enabled !== undefined;
-    const hasSteps = data.steps !== undefined && data.steps.length > 0;
     
-    console.log('[Workflows Update] Step update debug', {
-      workflowId,
-      hasSteps,
-      stepsInRequest: data.steps?.length || 0,
-      existingStepsCount: existing.steps?.length || 0,
-      requestStepNames: data.steps?.map((s: any) => s.step_name) || [],
-    });
-    
-    // If updating legacy fields and workflow doesn't have steps yet, migrate
-    if (hasLegacyFields && (!existing.steps || existing.steps.length === 0) && !hasSteps) {
-      const steps = migrateLegacyWorkflowOnUpdate(data, existing);
-      if (steps.length > 0) {
-        updateData.steps = steps;
-      }
-    } else if (hasSteps) {
-      // Ensure step_order is set for each step and apply full defaults
+    // If steps are being updated, ensure they have proper defaults
+    if (hasStepsInUpdate) {
       updateData.steps = ensureStepDefaults(data.steps);
       console.log('[Workflows Update] After ensureStepDefaults', {
         workflowId,
@@ -1162,7 +1157,7 @@ Return ONLY the modified instructions:
           workflow_id: workflowId,
           workflow_name: workflow.workflow_name || 'Untitled Workflow',
           workflow_description: workflow.workflow_description || '',
-          html_enabled: workflow.html_enabled || false,
+          template_id: workflow.template_id,
           current_steps: workflow.steps || [],
         },
       };

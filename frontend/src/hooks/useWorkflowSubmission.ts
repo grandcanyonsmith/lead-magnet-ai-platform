@@ -26,9 +26,9 @@ export function useWorkflowSubmission() {
     }
 
     try {
-      // First, create the template if HTML is enabled
+      // Create template if template content exists
       let templateId = formData.template_id
-      if (formData.html_enabled && templateData.html_content.trim()) {
+      if (templateData.html_content.trim()) {
         if (!generatedTemplateId) {
           // Create new template
           const template = await api.createTemplate({
@@ -71,12 +71,7 @@ export function useWorkflowSubmission() {
         }
       })
 
-      // Get ai_instructions - use first step's instructions if available, otherwise use formData
-      // Only include ai_instructions if we have steps (for backward compatibility)
-      // If no steps, the validation will require ai_instructions, research_enabled, or html_enabled
-      const aiInstructions = steps.length > 0 
-        ? (steps[0]?.instructions?.trim() || formData.ai_instructions.trim() || undefined)
-        : (formData.ai_instructions.trim() || undefined)
+      // All workflows must use steps format - no legacy fields needed
 
       // Then create the workflow with steps
       const workflow = await api.createWorkflow({
@@ -89,12 +84,7 @@ export function useWorkflowSubmission() {
           tools: step.tools as any,
           instructions: step.instructions.trim(), // Ensure instructions are trimmed
         })),
-        // Keep legacy fields for backward compatibility (will be auto-migrated)
-        ai_model: formData.ai_model as AIModel,
-        ai_instructions: aiInstructions, // Include if not empty, undefined otherwise
-        rewrite_model: formData.rewrite_model as AIModel,
-        research_enabled: formData.research_enabled,
-        html_enabled: formData.html_enabled,
+        // Legacy fields removed - all workflows must use steps format
         template_id: templateId || undefined,
         template_version: formData.template_version,
         // Delivery configuration

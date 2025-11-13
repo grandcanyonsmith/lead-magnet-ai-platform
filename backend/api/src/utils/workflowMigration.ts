@@ -24,6 +24,9 @@ export interface WorkflowStep {
 
 /**
  * Migrate legacy workflow format to steps format
+ * 
+ * @deprecated Legacy format is no longer supported. All workflows must use steps format.
+ * This function is kept for reference only and should not be used in new code.
  */
 export function migrateLegacyWorkflowToSteps(workflowData: LegacyWorkflowData): WorkflowStep[] {
   const steps: WorkflowStep[] = [];
@@ -59,6 +62,9 @@ export function migrateLegacyWorkflowToSteps(workflowData: LegacyWorkflowData): 
 
 /**
  * Migrate legacy workflow during update (considers existing workflow state)
+ * 
+ * @deprecated Legacy format is no longer supported. All workflows must use steps format.
+ * This function is kept for reference only and should not be used in new code.
  */
 export function migrateLegacyWorkflowOnUpdate(
   updateData: LegacyWorkflowData,

@@ -20,10 +20,11 @@ export interface JobProcessorStateMachineProps {
  * Creates the Step Functions state machine definition for job processing
  * 
  * This state machine orchestrates the execution of workflow jobs, handling:
- * - Legacy workflows (without steps)
  * - Multi-step workflows with dependency resolution
  * - HTML generation for templates
  * - Error handling and job status updates
+ * 
+ * Note: Legacy format is no longer supported. All workflows must use steps format.
  */
 export function createJobProcessorStateMachine(
   scope: Construct,
@@ -177,40 +178,9 @@ export function createJobProcessorStateMachine(
     resultPath: '$',
   }).next(processStep).next(checkStepResult);
 
-  // Legacy workflow processing
-  const processLegacyJob = new tasks.LambdaInvoke(scope, 'ProcessLegacyJob', {
-    lambdaFunction: jobProcessorLambda,
-    payload: sfn.TaskInput.fromObject({
-      'job_id': sfn.JsonPath.stringAt('$.job_id'),
-    }),
-    resultPath: '$.processResult',
-    retryOnServiceExceptions: false,
-  })
-    .addCatch(parseErrorLegacy, {
-      resultPath: '$.error',
-      errors: ['States.ALL'],
-    })
-    .next(
-      new sfn.Choice(scope, 'CheckLegacyResult')
-        .when(
-          sfn.Condition.booleanEquals('$.processResult.Payload.success', false),
-          handleStepFailure
-        )
-        .otherwise(
-          createJobFinalizer(scope, 'FinalizeLegacyJob', jobsTable)
-        )
-    );
-
-  // Check workflow type and route accordingly (defined after processLegacyJob and setupStepLoop)
-  const checkWorkflowType = new sfn.Choice(scope, 'CheckWorkflowType')
-    .when(
-      sfn.Condition.or(
-        sfn.Condition.isNotPresent('$.workflowData.Item.steps'),
-        sfn.Condition.numberEquals('$.steps_length', 0)
-      ),
-      processLegacyJob
-    )
-    .otherwise(resolveDependencies.next(setupStepLoop));
+  // All workflows must use steps format - route directly to dependency resolution
+  // If workflow has no steps, the Lambda will throw an error
+  const checkWorkflowType = resolveDependencies.next(setupStepLoop);
 
   // Set has_template to true when template exists
   const setHasTemplateTrue = new sfn.Pass(scope, 'SetHasTemplateTrue', {
@@ -251,7 +221,8 @@ export function createJobProcessorStateMachine(
     .otherwise(setHasTemplateFalse);
 
   // Compute steps length - handle both new (with steps) and legacy (without steps) workflows
-  const computeStepsLengthWithSteps = new sfn.Pass(scope, 'ComputeStepsLengthWithSteps', {
+  // All workflows must have steps - compute steps length directly
+  const computeStepsLength = new sfn.Pass(scope, 'ComputeStepsLength', {
     parameters: {
       'job_id.$': '$.job_id',
       'workflow_id.$': '$.workflow_id',
@@ -259,33 +230,12 @@ export function createJobProcessorStateMachine(
       'tenant_id.$': '$.tenant_id',
       'workflowData.$': '$.workflowData',
       'steps_length.$': 'States.ArrayLength($.workflowData.Item.steps.L)',
-      // Don't extract template_id here - let checkTemplateExists handle it safely
     },
     resultPath: '$',
   }).next(checkTemplateExists);
 
-  const computeStepsLengthLegacy = new sfn.Pass(scope, 'ComputeStepsLengthLegacy', {
-    parameters: {
-      'job_id.$': '$.job_id',
-      'workflow_id.$': '$.workflow_id',
-      'submission_id.$': '$.submission_id',
-      'tenant_id.$': '$.tenant_id',
-      'workflowData.$': '$.workflowData',
-      'steps_length': 0,
-      // Don't extract template_id here - let checkTemplateExists handle it safely
-    },
-    resultPath: '$',
-  }).next(checkTemplateExists);
-
-  const computeStepsLength = new sfn.Choice(scope, 'ComputeStepsLength')
-    .when(
-      sfn.Condition.isPresent('$.workflowData.Item.steps'),
-      computeStepsLengthWithSteps
-    )
-    .otherwise(computeStepsLengthLegacy);
-
-  // Define workflow: Update status -> Initialize steps -> Compute steps length -> Check template -> Check workflow type -> Process accordingly
-  // Note: computeStepsLength internally connects to checkTemplateExists
+  // Define workflow: Update status -> Initialize steps -> Compute steps length -> Check template -> Process steps
+  // All workflows must use steps format - legacy format is no longer supported
   return updateJobStatus
     .next(initializeSteps)
     .next(computeStepsLength);

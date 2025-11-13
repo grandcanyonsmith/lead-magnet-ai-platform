@@ -38,24 +38,18 @@ flowchart TD
     Step4Worker --> RenderTemplate[Replace {{REPORT_CONTENT}}<br/>with HTML report]
     RenderTemplate --> InitialHTML[Initial HTML Created]
     
-    InitialHTML --> CheckRewrite{AI Rewrite<br/>Enabled?}
+    InitialHTML --> FinalHTML[Final HTML]
     
-    CheckRewrite -->|Yes| StoreInitial[Store initial.html<br/>S3 + DynamoDB artifact]
-    StoreInitial --> AIRewrite[Call OpenAI API<br/>Rewrite HTML]
-    AIRewrite --> FinalHTML[Final HTML]
+    FinalHTML --> Step5Worker[Worker Step 5:<br/>Store Final HTML]
+    Step5Worker --> StoreFinal[Store final.html<br/>S3 + DynamoDB artifact<br/>Set public=True]
     
-    CheckRewrite -->|No| FinalHTML
-    
-    FinalHTML --> Step6Worker[Worker Step 6:<br/>Store Final HTML]
-    Step6Worker --> StoreFinal[Store final.html<br/>S3 + DynamoDB artifact<br/>Set public=True]
-    
-    StoreFinal --> Step7Worker[Worker Step 7:<br/>Update Job]
-    Step7Worker --> UpdateJob[Update Job Record<br/>Status: completed<br/>output_url: final.html URL<br/>artifacts: [report, final]]
+    StoreFinal --> Step6Worker[Worker Step 6:<br/>Update Job]
+    Step6Worker --> UpdateJob[Update Job Record<br/>Status: completed<br/>output_url: final.html URL<br/>artifacts: [report, final]]
     
     UpdateJob --> CheckWebhook{Webhook<br/>Configured?}
     
-    CheckWebhook -->|Yes| Step8Worker[Worker Step 8:<br/>Send Webhook]
-    Step8Worker --> Webhook[POST to webhook_url<br/>with job_id, output_url]
+    CheckWebhook -->|Yes| Step7Worker[Worker Step 7:<br/>Send Webhook]
+    Step7Worker --> Webhook[POST to webhook_url<br/>with job_id, output_url]
     
     CheckWebhook -->|No| StepFunctionsSuccess
     Webhook --> StepFunctionsSuccess[Step Functions: Update Job Status<br/>Status: completed]
@@ -67,9 +61,9 @@ flowchart TD
     Step2Worker -.->|Error| ErrorHandler
     Step3Worker -.->|Error| ErrorHandler
     Step4Worker -.->|Error| ErrorHandler
-    AIRewrite -.->|Error| LogWarning[Log warning<br/>Use original HTML]
-    LogWarning --> FinalHTML
+    Step5Worker -.->|Error| ErrorHandler
     Step6Worker -.->|Error| ErrorHandler
+    Step7Worker -.->|Error| ErrorHandler
     ErrorHandler --> StepFunctionsFailure[Step Functions: Update Job Status<br/>Status: failed]
     StepFunctionsFailure --> ErrorEnd([Job Failed])
     
@@ -80,9 +74,10 @@ flowchart TD
     style Step2Worker fill:#fff3cd
     style Step3Worker fill:#fff3cd
     style Step4Worker fill:#fff3cd
+    style Step5Worker fill:#fff3cd
     style Step6Worker fill:#fff3cd
+    style Step7Worker fill:#fff3cd
     style OpenAI fill:#cfe2ff
-    style AIRewrite fill:#cfe2ff
 ```
 
 ## ASCII Flow Diagram
@@ -142,29 +137,19 @@ User submits form
     │           │       ├─► Replace {{DATE}} with current date
     │           │       └─► Inject submission_data fields
     │           │
-    │           ├─► WORKER STEP 5: AI Rewrite (if enabled)
-    │           │       │
-    │           │       ├─► IF rewrite_enabled:
-    │           │       │   ├─► Store initial.html artifact
-    │           │       │   ├─► Call OpenAI API to rewrite HTML
-    │           │       │   └─► Get enhanced HTML
-    │           │       │
-    │           │       └─► ELSE: Use initial HTML as final
-    │           │
-    │           ├─► WORKER STEP 6: Store Final HTML
+    │           ├─► WORKER STEP 5: Store Final HTML
     │           │       │
     │           │       ├─► Store final.html (S3 + DynamoDB artifact)
     │           │       ├─► Set public=True (CloudFront or presigned URL)
     │           │       └─► Get public_url
     │           │
-    │           ├─► WORKER STEP 7: Update Job
+    │           ├─► WORKER STEP 6: Update Job
     │           │       │
     │           │       ├─► Status: completed
     │           │       ├─► output_url: final.html URL
     │           │       └─► artifacts: [report_artifact_id, final_artifact_id]
-    │           │              (+ initial_artifact_id if rewrite enabled)
     │           │
-    │           └─► WORKER STEP 8: Send Webhook (if configured)
+    │           └─► WORKER STEP 7: Send Webhook (if configured)
     │                   │
     │                   └─► POST to webhook_url with job details
     │
@@ -176,7 +161,6 @@ User submits form
 └─────────────────────────────────────────────────────────────────┘
     │
     ├─► report.md (markdown)
-    ├─► initial.html (only if rewrite_enabled)
     └─► final.html (public URL)
             │
             ▼
@@ -187,8 +171,7 @@ User submits form
 
 ### Artifacts Created:
 1. **report.md** - Raw markdown report from AI
-2. **initial.html** - Template-rendered HTML (only if `rewrite_enabled=true`)
-3. **final.html** - Final HTML document (public URL)
+2. **final.html** - Final HTML document (public URL)
 
 ### Storage:
 - **S3**: All artifacts stored in `leadmagnet-artifacts-{account}/tenant_id/jobs/job_id/`

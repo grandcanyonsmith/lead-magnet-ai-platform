@@ -82,12 +82,13 @@ export default function EditWorkflowPage() {
     }
   }, [formData.template_id])
 
-  // Switch away from template tab if HTML is disabled
+  // Switch away from template tab if no template
   useEffect(() => {
-    if (!formData.html_enabled && activeTab === 'template') {
+    const hasTemplate = templateId || templateData.html_content.trim()
+    if (!hasTemplate && activeTab === 'template') {
       setActiveTab('workflow')
     }
-  }, [formData.html_enabled, activeTab])
+  }, [templateId, templateData.html_content, activeTab])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -117,22 +118,19 @@ export default function EditWorkflowPage() {
       }
     }
 
-    if (formData.html_enabled && !templateId && !templateData.html_content.trim()) {
-      setError('Template HTML content is required when HTML generation is enabled')
+    // Template validation - if template tab is accessible, ensure template exists
+    const hasTemplate = templateId || templateData.html_content.trim()
+    if (activeTab === 'template' && !hasTemplate) {
+      setError('Template HTML content is required')
       return
     }
 
     setSubmitting(true)
 
     try {
-      // Create or update template if HTML is enabled
+      // Create or update template if template content exists
       let finalTemplateId = templateId
-      if (formData.html_enabled) {
-        if (!templateData.html_content.trim()) {
-          setError('Template HTML content is required when HTML generation is enabled')
-          setSubmitting(false)
-          return
-        }
+      if (templateData.html_content.trim()) {
 
         const placeholders = extractPlaceholders(templateData.html_content)
         
@@ -177,13 +175,8 @@ export default function EditWorkflowPage() {
             depends_on: step.depends_on && step.depends_on.length > 0 ? step.depends_on : undefined,
           }
         }),
-        // Keep legacy fields for backward compatibility
-        ai_model: formData.ai_model as AIModel,
-        ai_instructions: steps[0]?.instructions || formData.ai_instructions.trim() || '',
-        rewrite_model: formData.rewrite_model as AIModel,
-        research_enabled: formData.research_enabled,
-        html_enabled: formData.html_enabled,
-        template_id: formData.html_enabled ? finalTemplateId || undefined : undefined,
+        // Legacy fields removed - all workflows must use steps format
+        template_id: finalTemplateId || undefined,
         template_version: 0,
       })
 
@@ -271,7 +264,7 @@ export default function EditWorkflowPage() {
             <FiFileText className="inline w-4 h-4 mr-2" />
             Form Settings
           </button>
-          {formData.html_enabled && (
+          {(templateId || templateData.html_content.trim()) && (
             <button
               onClick={() => setActiveTab('template')}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
@@ -335,7 +328,6 @@ export default function EditWorkflowPage() {
         <TemplateTab
           templateData={templateData}
           templateLoading={templateLoading}
-          htmlEnabled={formData.html_enabled}
           detectedPlaceholders={detectedPlaceholders}
           templateViewMode={templateViewMode}
           devicePreviewSize={devicePreviewSize}
