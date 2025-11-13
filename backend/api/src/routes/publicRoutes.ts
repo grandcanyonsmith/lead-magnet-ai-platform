@@ -1,9 +1,9 @@
 import { APIGatewayProxyEventV2 } from 'aws-lambda';
-import { RouteResponse } from '../routes';
 import { formsController } from '../controllers/forms';
 import { jobsController } from '../controllers/jobs';
 import { webhooksController } from '../controllers/webhooks';
-import { route, get, post } from './routeBuilder';
+import { get, post } from './routeBuilder';
+import { routeRegistry } from './routeRegistry';
 import { logger } from '../utils/logger';
 
 /**
@@ -12,7 +12,8 @@ import { logger } from '../utils/logger';
  */
 export function registerPublicRoutes(): void {
   // Public form rendering
-  get('/v1/forms/:slug')
+  routeRegistry.register(
+    get('/v1/forms/:slug')
     .handler(async (event: APIGatewayProxyEventV2) => {
       const slug = event.pathParameters?.slug || event.rawPath.split('/').pop() || '';
       logger.info('[Public Routes] GET /v1/forms/:slug', { slug });
@@ -20,10 +21,12 @@ export function registerPublicRoutes(): void {
     })
     .requiresAuth(false)
     .priority(100)
-    .build();
+    .build()
+  );
 
   // Public form submission
-  post('/v1/forms/:slug/submit')
+  routeRegistry.register(
+    post('/v1/forms/:slug/submit')
     .handler(async (event: APIGatewayProxyEventV2) => {
       const slug = event.pathParameters?.slug || event.rawPath.split('/')[2] || '';
       const body = event.body ? JSON.parse(event.body) : undefined;
@@ -33,10 +36,12 @@ export function registerPublicRoutes(): void {
     })
     .requiresAuth(false)
     .priority(100)
-    .build();
+    .build()
+  );
 
   // Public job status endpoint (for form submissions)
-  get('/v1/jobs/:jobId/status')
+  routeRegistry.register(
+    get('/v1/jobs/:jobId/status')
     .handler(async (event: APIGatewayProxyEventV2) => {
       const jobId = event.pathParameters?.jobId || event.rawPath.split('/')[3] || '';
       logger.info('[Public Routes] GET /v1/jobs/:jobId/status', { jobId });
@@ -44,10 +49,12 @@ export function registerPublicRoutes(): void {
     })
     .requiresAuth(false)
     .priority(100)
-    .build();
+    .build()
+  );
 
   // Public webhook endpoint
-  post('/v1/webhooks/:token')
+  routeRegistry.register(
+    post('/v1/webhooks/:token')
     .handler(async (event: APIGatewayProxyEventV2) => {
       const token = event.pathParameters?.token || event.rawPath.split('/')[2] || '';
       const body = event.body ? JSON.parse(event.body) : undefined;
@@ -57,6 +64,7 @@ export function registerPublicRoutes(): void {
     })
     .requiresAuth(false)
     .priority(100)
-    .build();
+    .build()
+  );
 }
 

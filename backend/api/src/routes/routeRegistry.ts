@@ -1,6 +1,5 @@
 import { APIGatewayProxyEventV2 } from 'aws-lambda';
 import { RouteDefinition, RouteMatch, PathParams } from '../types/api';
-import { ApiError } from '../utils/errors';
 import { logger } from '../utils/logger';
 
 /**

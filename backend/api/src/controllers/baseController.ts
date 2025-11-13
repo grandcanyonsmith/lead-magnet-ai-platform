@@ -19,7 +19,7 @@ export abstract class BaseController {
     tenantId: string,
     resourceName: string = 'resource'
   ): Promise<T> {
-    const resource = await db.get<T>(tableName, key);
+    const resource = await db.get(tableName, key) as T | undefined;
 
     if (!resource || resource.deleted_at) {
       throw new ApiError(`This ${resourceName} doesn't exist or has been removed`, 404);
@@ -187,7 +187,7 @@ export abstract class BaseController {
     const activeItems = this.filterDeleted(items);
 
     // Sort by created_at DESC
-    const sortedItems = this.sortByCreatedAtDesc(activeItems);
+    const sortedItems = this.sortByCreatedAtDesc(activeItems as Array<T & { created_at?: string }>);
 
     return this.listResponse(sortedItems, resourceName);
   }
@@ -202,19 +202,17 @@ export abstract class BaseController {
     generateId: () => string
   ): Promise<RouteResponse> {
     const id = generateId();
-    const resource = {
+    const idField = this.getIdFieldName(tableName);
+    const resource: Record<string, any> = {
       ...data,
       tenant_id: tenantId,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-    } as T & { [key: string]: any };
-
-    // Set the ID field based on table name convention
-    const idField = this.getIdFieldName(tableName);
-    resource[idField] = id;
+      [idField]: id,
+    };
 
     await db.put(tableName, resource);
-    return this.created(resource);
+    return this.created(resource as T);
   }
 
   /**
