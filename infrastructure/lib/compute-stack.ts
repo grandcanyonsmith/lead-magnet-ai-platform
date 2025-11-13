@@ -48,7 +48,8 @@ export class ComputeStack extends cdk.Stack {
         
         if (props.ecrRepository) {
           // Use container image (required for Playwright with proper GLIBC)
-          const dockerCode = lambda.DockerImageCode.fromEcr(props.ecrRepository, {
+          // Explicitly type as DockerImageCode to ensure type is preserved
+          const dockerCode: lambda.DockerImageCode = lambda.DockerImageCode.fromEcr(props.ecrRepository, {
             tagOrDigest: 'latest',
           });
           
