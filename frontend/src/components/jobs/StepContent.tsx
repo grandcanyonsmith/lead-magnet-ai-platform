@@ -125,12 +125,16 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
   
   // Render inline images from imageUrls prop
   const renderInlineImages = () => {
-    if (!imageUrls || imageUrls.length === 0) {
+    if (!imageUrls || !Array.isArray(imageUrls) || imageUrls.length === 0) {
       return null
     }
     
+    // Debug: log when rendering images
+    console.log(`[StepContent] Rendering ${imageUrls.length} inline images:`, imageUrls)
+    
     return (
-      <div className="mt-4 space-y-2">
+      <div className="mt-4 md:mt-4 space-y-3 md:space-y-2">
+        <div className="text-xs font-medium text-gray-600 mb-2.5 md:mb-2">Generated Images:</div>
         {imageUrls.map((url, idx) => (
           <InlineImage key={`inline-image-${idx}`} url={url} alt={`Image ${idx + 1}`} />
         ))}
@@ -258,16 +262,20 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
         </div>
 
         {showRendered ? (
-          <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
-            <iframe
-              srcDoc={htmlContent}
-              className="w-full border-0"
-              style={{ height: '600px', minHeight: '600px' }}
-              sandbox="allow-same-origin"
-              referrerPolicy="no-referrer"
-              title="HTML Preview"
-            />
-          </div>
+          <>
+            <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+              <iframe
+                srcDoc={htmlContent}
+                className="w-full border-0"
+                style={{ height: '600px', minHeight: '600px' }}
+                sandbox="allow-same-origin"
+                referrerPolicy="no-referrer"
+                title="HTML Preview"
+              />
+            </div>
+            {/* Render images from imageUrls prop even when showing rendered HTML */}
+            {renderInlineImages()}
+          </>
         ) : (
           <>
             <ExpandableContent
@@ -366,21 +374,25 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
         content={contentString}
         renderContent={(displayContent) => {
           // Check if there are image URLs in the text
-          const imageUrls = extractImageUrls(displayContent)
+          const extractedUrls = extractImageUrls(displayContent)
           
-          if (imageUrls.length === 0) {
-            // No images, render as plain text
+          if (extractedUrls.length === 0 && (!imageUrls || imageUrls.length === 0)) {
+            // No images in text or prop, render as plain text
             return (
-              <pre className="text-sm whitespace-pre-wrap font-mono bg-gray-50 p-4 rounded-lg border border-gray-200 max-h-[600px] overflow-y-auto">
-                {displayContent}
-              </pre>
+              <>
+                <pre className="text-xs md:text-sm whitespace-pre-wrap font-mono bg-gray-50 p-3 md:p-4 rounded-lg border border-gray-200 max-h-[500px] md:max-h-[600px] overflow-y-auto leading-relaxed">
+                  {displayContent}
+                </pre>
+                {/* Always check for images from prop */}
+                {renderInlineImages()}
+              </>
             )
           }
           
-          // Has images, render with inline images
+          // Has images in text, render with inline images
           return (
-            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 max-h-[600px] overflow-y-auto">
-              <pre className="text-sm whitespace-pre-wrap font-mono">
+            <div className="bg-gray-50 p-3 md:p-4 rounded-lg border border-gray-200 max-h-[500px] md:max-h-[600px] overflow-y-auto">
+              <pre className="text-xs md:text-sm whitespace-pre-wrap font-mono leading-relaxed">
                 {renderTextWithImages(displayContent)}
               </pre>
               {/* Render images from imageUrls prop */}

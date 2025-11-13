@@ -77,7 +77,9 @@ export function useMergedSteps({ job, workflow }: UseMergedStepsParams): MergedS
         
         mergedStepsMap.set(order, {
           ...execStep,
-          _status: stepStatus
+          _status: stepStatus,
+          // Preserve image_urls from execution step
+          image_urls: execStep.image_urls
         })
       }
     })
@@ -97,6 +99,8 @@ export function useMergedSteps({ job, workflow }: UseMergedStepsParams): MergedS
           model: workflowStep.model || existingStep.model,
           tools: workflowStep.tools || existingStep.input?.tools || existingStep.tools,
           tool_choice: workflowStep.tool_choice || existingStep.input?.tool_choice || existingStep.tool_choice,
+          // Preserve image_urls from execution step
+          image_urls: existingStep.image_urls
         })
       } else {
         // Step hasn't been executed yet - check if it's currently executing

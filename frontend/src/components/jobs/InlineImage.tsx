@@ -46,11 +46,11 @@ export function InlineImage({ url, alt, className = '' }: InlineImageProps) {
   }
 
   return (
-    <div className={`my-2 inline-block ${className}`}>
+    <div className={`my-3 md:my-2 w-full ${className}`}>
       {loading && (
-        <div className="flex items-center justify-center p-4 bg-gray-50 border border-gray-200 rounded-lg">
+        <div className="flex items-center justify-center p-6 md:p-4 bg-gray-50 border border-gray-200 rounded-lg">
           <div className="flex items-center gap-2 text-sm text-gray-500">
-            <FiImage className="w-4 h-4 animate-pulse" />
+            <FiImage className="w-5 h-5 md:w-4 md:h-4 animate-pulse" />
             <span>Loading image...</span>
           </div>
         </div>
@@ -60,22 +60,22 @@ export function InlineImage({ url, alt, className = '' }: InlineImageProps) {
         alt={alt || 'Inline image'}
         onLoad={handleLoad}
         onError={handleError}
-        className={`max-w-full h-auto rounded-lg border border-gray-200 ${
+        className={`w-full h-auto rounded-lg border border-gray-200 ${
           loading ? 'hidden' : 'block'
         }`}
         style={{
-          maxHeight: '400px',
+          maxHeight: '500px',
           objectFit: 'contain',
         }}
         loading="lazy"
       />
       {!loading && !error && (
-        <div className="mt-1">
+        <div className="mt-2 md:mt-1 px-1">
           <a
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-blue-600 hover:text-blue-800 hover:underline break-all"
+            className="text-xs text-blue-600 hover:text-blue-800 active:text-blue-900 hover:underline break-all block touch-target py-1"
           >
             {url}
           </a>
