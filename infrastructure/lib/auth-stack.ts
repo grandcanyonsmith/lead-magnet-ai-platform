@@ -3,6 +3,7 @@ import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
+import { RESOURCE_PREFIXES, LAMBDA_DEFAULTS, COGNITO_CONFIG } from './config/constants';
 
 export class AuthStack extends cdk.Stack {
   public readonly userPool: cognito.UserPool;
@@ -13,14 +14,14 @@ export class AuthStack extends cdk.Stack {
 
     // Create Lambda function to auto-confirm users and set tenant_id
     const autoConfirmLambda = new lambda.Function(this, 'AutoConfirmLambda', {
-      runtime: lambda.Runtime.NODEJS_20_X,
+      runtime: lambda.Runtime[LAMBDA_DEFAULTS.AUTO_CONFIRM.RUNTIME as keyof typeof lambda.Runtime],
       handler: 'index.handler',
       code: lambda.Code.fromAsset('lib/lambdas'),
     });
 
     // Create User Pool
     this.userPool = new cognito.UserPool(this, 'UserPool', {
-      userPoolName: 'leadmagnet-users',
+      userPoolName: RESOURCE_PREFIXES.USER_POOL,
       selfSignUpEnabled: true,
       signInAliases: {
         email: true,
@@ -44,7 +45,7 @@ export class AuthStack extends cdk.Stack {
         role: new cognito.StringAttribute({ mutable: true }),
       },
       passwordPolicy: {
-        minLength: 8,
+        minLength: COGNITO_CONFIG.PASSWORD_MIN_LENGTH,
         requireLowercase: true,
         requireUppercase: true,
         requireDigits: true,
@@ -66,14 +67,14 @@ export class AuthStack extends cdk.Stack {
     // Add domain for hosted UI
     this.userPool.addDomain('UserPoolDomain', {
       cognitoDomain: {
-        domainPrefix: `leadmagnet-${this.account}`,
+        domainPrefix: `${RESOURCE_PREFIXES.COGNITO_DOMAIN}-${this.account}`,
       },
     });
 
     // Create User Pool Client
     this.userPoolClient = new cognito.UserPoolClient(this, 'UserPoolClient', {
       userPool: this.userPool,
-      userPoolClientName: 'web-app',
+      userPoolClientName: RESOURCE_PREFIXES.USER_POOL_CLIENT,
       authFlows: {
         userPassword: true,
         userSrp: true,
@@ -98,9 +99,9 @@ export class AuthStack extends cdk.Stack {
       },
       generateSecret: false,
       preventUserExistenceErrors: true,
-      accessTokenValidity: cdk.Duration.hours(1),
-      idTokenValidity: cdk.Duration.hours(1),
-      refreshTokenValidity: cdk.Duration.days(30),
+      accessTokenValidity: cdk.Duration.hours(COGNITO_CONFIG.ACCESS_TOKEN_VALIDITY_HOURS),
+      idTokenValidity: cdk.Duration.hours(COGNITO_CONFIG.ID_TOKEN_VALIDITY_HOURS),
+      refreshTokenValidity: cdk.Duration.days(COGNITO_CONFIG.REFRESH_TOKEN_VALIDITY_DAYS),
     });
 
     // CloudFormation outputs
@@ -120,7 +121,7 @@ export class AuthStack extends cdk.Stack {
     });
 
     new cdk.CfnOutput(this, 'CognitoDomain', {
-      value: `leadmagnet-${this.account}.auth.${this.region}.amazoncognito.com`,
+      value: `${RESOURCE_PREFIXES.COGNITO_DOMAIN}-${this.account}.auth.${this.region}.amazoncognito.com`,
       exportName: 'CognitoDomain',
     });
   }

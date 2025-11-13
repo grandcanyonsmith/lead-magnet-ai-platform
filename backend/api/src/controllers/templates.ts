@@ -1,6 +1,4 @@
 import { ulid } from 'ulid';
-import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
-import OpenAI from 'openai';
 import { db } from '../utils/db';
 import { validate, createTemplateSchema, updateTemplateSchema } from '../utils/validation';
 import { ApiError } from '../utils/errors';
@@ -8,37 +6,10 @@ import { RouteResponse } from '../routes';
 import { calculateOpenAICost } from '../services/costService';
 import { callResponsesWithTimeout } from '../utils/openaiHelpers';
 import { logger } from '../utils/logger';
+import { getOpenAIClient } from '../services/openaiService';
 
 const TEMPLATES_TABLE = process.env.TEMPLATES_TABLE!;
 const USAGE_RECORDS_TABLE = process.env.USAGE_RECORDS_TABLE || 'leadmagnet-usage-records';
-const OPENAI_SECRET_NAME = process.env.OPENAI_SECRET_NAME || 'leadmagnet/openai-api-key';
-const secretsClient = new SecretsManagerClient({ region: process.env.AWS_REGION || 'us-east-1' });
-
-async function getOpenAIClient(): Promise<OpenAI> {
-  const command = new GetSecretValueCommand({ SecretId: OPENAI_SECRET_NAME });
-  const response = await secretsClient.send(command);
-  
-  if (!response.SecretString) {
-    throw new ApiError('OpenAI API key not found in secret', 500);
-  }
-
-  let apiKey: string;
-  
-  // Try to parse as JSON first (if secret is stored as {"OPENAI_API_KEY": "..."})
-  try {
-    const parsed = JSON.parse(response.SecretString);
-    apiKey = parsed.OPENAI_API_KEY || parsed.apiKey || response.SecretString;
-  } catch {
-    // If not JSON, use the secret string directly
-    apiKey = response.SecretString;
-  }
-  
-  if (!apiKey || apiKey.trim().length === 0) {
-    throw new ApiError('OpenAI API key is empty', 500);
-  }
-
-  return new OpenAI({ apiKey });
-}
 
 /**
  * Helper function to store usage record in DynamoDB.

@@ -4,7 +4,46 @@ import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
+import { RESOURCE_PREFIXES, S3_CONFIG, CLOUDFRONT_CONFIG } from './config/constants';
 
+/**
+ * Creates bucket policy statements for public read access to image files
+ * 
+ * Images are stored at paths like: {tenant_id}/jobs/{job_id}/*.png, *.jpg, etc.
+ * This function creates policy statements for different path depths to allow
+ * public read access to image files at various nesting levels.
+ * 
+ * @param bucketArn - ARN of the S3 bucket
+ * @returns Array of IAM policy statements for public image access
+ */
+function createImagePublicReadPolicyStatements(bucketArn: string): iam.PolicyStatement[] {
+  const statements: iam.PolicyStatement[] = [];
+
+  // Create policy statements for each image extension and path depth combination
+  S3_CONFIG.IMAGE_EXTENSIONS.forEach(ext => {
+    S3_CONFIG.PATH_DEPTHS.forEach((depth, level) => {
+      statements.push(
+        new iam.PolicyStatement({
+          sid: `PublicReadGetObjectForImages_${ext}_level${level}`,
+          effect: iam.Effect.ALLOW,
+          principals: [new iam.AnyPrincipal()],
+          actions: ['s3:GetObject'],
+          resources: [`${bucketArn}${depth}/*.${ext}`],
+        })
+      );
+    });
+  });
+
+  return statements;
+}
+
+/**
+ * Storage Stack
+ * 
+ * Creates S3 bucket for artifacts and CloudFront distribution for CDN.
+ * The bucket allows public read access to image files while keeping other
+ * files private. CloudFront provides fast global content delivery.
+ */
 export class StorageStack extends cdk.Stack {
   public readonly artifactsBucket: s3.Bucket;
   public readonly distribution: cloudfront.Distribution;
@@ -14,7 +53,7 @@ export class StorageStack extends cdk.Stack {
 
     // S3 Bucket for artifacts
     this.artifactsBucket = new s3.Bucket(this, 'ArtifactsBucket', {
-      bucketName: `leadmagnet-artifacts-${this.account}`,
+      bucketName: `${RESOURCE_PREFIXES.BUCKET}-${this.account}`,
       versioned: true,
       encryption: s3.BucketEncryption.S3_MANAGED,
       blockPublicAccess: new s3.BlockPublicAccess({
@@ -32,18 +71,14 @@ export class StorageStack extends cdk.Stack {
           maxAge: 3600,
         },
       ],
-      // No lifecycle rules - artifacts should never expire
-      // Removed expiration rule to ensure artifacts remain accessible indefinitely
       lifecycleRules: [
-        // Optional: Transition to Infrequent Access after 30 days to reduce costs
-        // while keeping artifacts accessible
         {
           id: 'transition-to-ia',
           enabled: true,
           transitions: [
             {
               storageClass: s3.StorageClass.INFREQUENT_ACCESS,
-              transitionAfter: cdk.Duration.days(30),
+              transitionAfter: cdk.Duration.days(S3_CONFIG.TRANSITION_TO_IA_DAYS),
             },
           ],
         },
@@ -63,42 +98,14 @@ export class StorageStack extends cdk.Stack {
     // Grant read access to CloudFront
     this.artifactsBucket.grantRead(originAccessIdentity);
 
-    // Bucket policy to allow public read access for images
-    // Images are stored at paths like: {tenant_id}/jobs/{job_id}/*.png, *.jpg, etc.
-    // Allow public read for any file ending in image extensions (at any path depth)
-    this.artifactsBucket.addToResourcePolicy(
-      new iam.PolicyStatement({
-        sid: 'PublicReadGetObjectForImages',
-        effect: iam.Effect.ALLOW,
-        principals: [new iam.AnyPrincipal()],
-        actions: ['s3:GetObject'],
-        resources: [`${this.artifactsBucket.bucketArn}/*`],
-        conditions: {
-          StringLike: {
-            's3:objectkey': [
-              '*.png',
-              '*.jpg',
-              '*.jpeg',
-              '*.gif',
-              '*.webp',
-              '*.svg',
-              '*/*.png',
-              '*/*.jpg',
-              '*/*.jpeg',
-              '*/*.gif',
-              '*/*.webp',
-              '*/*.svg',
-              '*/*/*.png',
-              '*/*/*.jpg',
-              '*/*/*.jpeg',
-              '*/*/*.gif',
-              '*/*/*.webp',
-              '*/*/*.svg',
-            ],
-          },
-        },
-      })
+    // Add bucket policy for public read access to image files
+    // This allows images to be accessed directly via S3 URLs or CloudFront
+    const imagePolicyStatements = createImagePublicReadPolicyStatements(
+      this.artifactsBucket.bucketArn
     );
+    imagePolicyStatements.forEach(statement => {
+      this.artifactsBucket.addToResourcePolicy(statement);
+    });
 
     // CloudFront Distribution
     // Default behavior: serve both frontend and artifacts from root
@@ -120,16 +127,16 @@ export class StorageStack extends cdk.Stack {
           httpStatus: 403,
           responseHttpStatus: 200,
           responsePagePath: '/index.html',
-          ttl: cdk.Duration.minutes(10),
+          ttl: cdk.Duration.minutes(CLOUDFRONT_CONFIG.ERROR_RESPONSE_TTL_MINUTES),
         },
         {
           httpStatus: 404,
           responseHttpStatus: 200,
           responsePagePath: '/index.html',
-          ttl: cdk.Duration.minutes(10),
+          ttl: cdk.Duration.minutes(CLOUDFRONT_CONFIG.ERROR_RESPONSE_TTL_MINUTES),
         },
       ],
-      priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
+      priceClass: cloudfront.PriceClass[CLOUDFRONT_CONFIG.PRICE_CLASS as keyof typeof cloudfront.PriceClass],
       enabled: true,
       comment: 'Lead Magnet Artifacts CDN',
       httpVersion: cloudfront.HttpVersion.HTTP2_AND_3,
@@ -139,16 +146,19 @@ export class StorageStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'ArtifactsBucketName', {
       value: this.artifactsBucket.bucketName,
       exportName: 'ArtifactsBucketName',
+      description: 'S3 bucket name for storing artifacts',
     });
 
     new cdk.CfnOutput(this, 'DistributionDomainName', {
       value: this.distribution.distributionDomainName,
       exportName: 'DistributionDomainName',
+      description: 'CloudFront distribution domain name',
     });
 
     new cdk.CfnOutput(this, 'DistributionId', {
       value: this.distribution.distributionId,
       exportName: 'DistributionId',
+      description: 'CloudFront distribution ID',
     });
   }
 }

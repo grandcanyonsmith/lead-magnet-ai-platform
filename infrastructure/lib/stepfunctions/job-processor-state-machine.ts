@@ -3,6 +3,12 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as tasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
 import { Construct } from 'constructs';
+import {
+  createStepFailureHandler,
+  createHtmlGenerationFailureHandler,
+  createExceptionHandlerChain,
+  createJobFinalizer,
+} from './error-handlers';
 
 export interface JobProcessorStateMachineProps {
   jobsTable: dynamodb.ITable;
@@ -12,6 +18,12 @@ export interface JobProcessorStateMachineProps {
 
 /**
  * Creates the Step Functions state machine definition for job processing
+ * 
+ * This state machine orchestrates the execution of workflow jobs, handling:
+ * - Legacy workflows (without steps)
+ * - Multi-step workflows with dependency resolution
+ * - HTML generation for templates
+ * - Error handling and job status updates
  */
 export function createJobProcessorStateMachine(
   scope: Construct,
@@ -36,84 +48,11 @@ export function createJobProcessorStateMachine(
     resultPath: '$.updateResult',
   });
 
-  // Handle Lambda returning success: false (business logic failure) for workflow steps
-  const handleStepFailure = new tasks.DynamoUpdateItem(scope, 'HandleStepFailure', {
-    table: jobsTable,
-    key: {
-      job_id: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.job_id')),
-    },
-    updateExpression: 'SET #status = :status, error_message = :error, error_type = :error_type, updated_at = :updated_at',
-    expressionAttributeNames: {
-      '#status': 'status',
-    },
-    expressionAttributeValues: {
-      ':status': tasks.DynamoAttributeValue.fromString('failed'),
-      ':error': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.processResult.Payload.error')),
-      ':error_type': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.processResult.Payload.error_type')),
-      ':updated_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
-    },
-  });
-
-  // Handle HTML generation failures - reads from htmlResult instead of processResult
-  const handleHtmlGenerationFailure = new tasks.DynamoUpdateItem(scope, 'HandleHtmlGenerationFailure', {
-    table: jobsTable,
-    key: {
-      job_id: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.job_id')),
-    },
-    updateExpression: 'SET #status = :status, error_message = :error, error_type = :error_type, updated_at = :updated_at',
-    expressionAttributeNames: {
-      '#status': 'status',
-    },
-    expressionAttributeValues: {
-      ':status': tasks.DynamoAttributeValue.fromString('failed'),
-      ':error': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.htmlResult.Payload.error')),
-      ':error_type': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.htmlResult.Payload.error_type')),
-      ':updated_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
-    },
-  });
-
-  // Handle Lambda exception (timeout, etc.)
-  const handleStepException = new tasks.DynamoUpdateItem(scope, 'HandleStepException', {
-    table: jobsTable,
-    key: {
-      job_id: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.parsedError.job_id')),
-    },
-    updateExpression: 'SET #status = :status, error_message = :error, updated_at = :updated_at',
-    expressionAttributeNames: {
-      '#status': 'status',
-    },
-    expressionAttributeValues: {
-      ':status': tasks.DynamoAttributeValue.fromString('failed'),
-      ':error': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.parsedError.error_message')),
-      ':updated_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
-    },
-  });
-
-  // Parse error message from Lambda response (create separate instances for each catch handler)
-  const parseErrorLegacy = new sfn.Pass(scope, 'ParseErrorLegacy', {
-    parameters: {
-      'job_id.$': '$.job_id',
-      'error_message': sfn.JsonPath.format(
-        'Lambda execution failed: {} - {}',
-        sfn.JsonPath.stringAt('$.error.Error'),
-        sfn.JsonPath.stringAt('$.error.Cause')
-      ),
-    },
-    resultPath: '$.parsedError',
-  }).next(handleStepException);
-
-  const parseErrorStep = new sfn.Pass(scope, 'ParseErrorStep', {
-    parameters: {
-      'job_id.$': '$.job_id',
-      'step_index.$': '$.step_index',
-      'error_message': sfn.JsonPath.format(
-        'Lambda execution failed: {} - {}',
-        sfn.JsonPath.stringAt('$.error.Error'),
-        sfn.JsonPath.stringAt('$.error.Cause')
-      ),
-    },
-    resultPath: '$.parsedError',
-  }).next(handleStepException);
+  // Create error handlers using helper functions
+  const handleStepFailure = createStepFailureHandler(scope, jobsTable);
+  const handleHtmlGenerationFailure = createHtmlGenerationFailureHandler(scope, jobsTable);
+  const parseErrorLegacy = createExceptionHandlerChain(scope, 'ParseErrorLegacy', jobsTable, false);
+  const parseErrorStep = createExceptionHandlerChain(scope, 'ParseErrorStep', jobsTable, true);
 
   // Initialize steps: Load workflow and get step count
   const initializeSteps = new tasks.DynamoGetItem(scope, 'InitializeSteps', {
@@ -154,27 +93,15 @@ export function createJobProcessorStateMachine(
   });
 
   // Add error handling for HTML generation failures
-  processHtmlGeneration.addCatch(parseErrorStep, {
+  // Note: Use parseErrorLegacy (not parseErrorStep) because HTML generation
+  // runs after all workflow steps are complete, so step_index is not in context
+  processHtmlGeneration.addCatch(parseErrorLegacy, {
     resultPath: '$.error',
     errors: ['States.ALL'],
   });
 
-  // Create reusable finalize job task
-  const finalizeJob = new tasks.DynamoUpdateItem(scope, 'FinalizeJob', {
-    table: jobsTable,
-    key: {
-      job_id: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.job_id')),
-    },
-    updateExpression: 'SET #status = :status, completed_at = :completed_at, updated_at = :updated_at',
-    expressionAttributeNames: {
-      '#status': 'status',
-    },
-    expressionAttributeValues: {
-      ':status': tasks.DynamoAttributeValue.fromString('completed'),
-      ':completed_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
-      ':updated_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
-    },
-  });
+  // Create reusable finalize job task using helper
+  const finalizeJob = createJobFinalizer(scope, 'FinalizeJob', jobsTable);
 
   // Check HTML generation result
   const checkHtmlResult = new sfn.Choice(scope, 'CheckHtmlResult')
@@ -270,21 +197,7 @@ export function createJobProcessorStateMachine(
           handleStepFailure
         )
         .otherwise(
-          new tasks.DynamoUpdateItem(scope, 'FinalizeLegacyJob', {
-            table: jobsTable,
-            key: {
-              job_id: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.job_id')),
-            },
-            updateExpression: 'SET #status = :status, completed_at = :completed_at, updated_at = :updated_at',
-            expressionAttributeNames: {
-              '#status': 'status',
-            },
-            expressionAttributeValues: {
-              ':status': tasks.DynamoAttributeValue.fromString('completed'),
-              ':completed_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
-              ':updated_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
-            },
-          })
+          createJobFinalizer(scope, 'FinalizeLegacyJob', jobsTable)
         )
     );
 

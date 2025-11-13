@@ -4,59 +4,32 @@ Resubmit a failed job by creating a new job with the same submission data.
 """
 
 import json
-import os
 import sys
-import boto3
+import argparse
+from pathlib import Path
 from datetime import datetime
-from decimal import Decimal
 from botocore.exceptions import ClientError
 import ulid
 
-REGION = os.environ.get("AWS_REGION", "us-east-1")
-JOBS_TABLE = "leadmagnet-jobs"
-SUBMISSIONS_TABLE = "leadmagnet-submissions"
+# Add lib directory to path
+sys.path.insert(0, str(Path(__file__).parent))
 
-def get_step_functions_arn():
-    """Get Step Functions ARN from CloudFormation stack."""
-    try:
-        cf = boto3.client("cloudformation", region_name=REGION)
-        stacks = cf.describe_stacks()
-        
-        for stack in stacks.get("Stacks", []):
-            if "compute" in stack["StackName"].lower():
-                outputs = {o["OutputKey"]: o["OutputValue"] for o in stack.get("Outputs", [])}
-                if "StateMachineArn" in outputs:
-                    return outputs["StateMachineArn"]
-        
-        # Try to find it by listing state machines
-        sfn = boto3.client("stepfunctions", region_name=REGION)
-        machines = sfn.list_state_machines()
-        for machine in machines.get("stateMachines", []):
-            if "job" in machine["name"].lower() or "processor" in machine["name"].lower():
-                return machine["stateMachineArn"]
-        
-        return None
-    except Exception as e:
-        print(f"Warning: Could not get Step Functions ARN: {e}")
-        return None
+from lib.common import (
+    convert_decimals,
+    get_dynamodb_resource,
+    get_stepfunctions_client,
+    get_table_name,
+    get_aws_region,
+    get_step_functions_arn,
+    print_section,
+)
 
-def convert_decimals(obj):
-    """Convert Decimal types to float/int for JSON serialization."""
-    if isinstance(obj, Decimal):
-        if obj % 1 == 0:
-            return int(obj)
-        return float(obj)
-    elif isinstance(obj, dict):
-        return {k: convert_decimals(v) for k, v in obj.items()}
-    elif isinstance(obj, list):
-        return [convert_decimals(item) for item in obj]
-    return obj
 
 def resubmit_job(job_id: str, tenant_id: str):
     """Resubmit a job by creating a new job with the same submission data."""
-    dynamodb = boto3.resource("dynamodb", region_name=REGION)
-    jobs_table = dynamodb.Table(JOBS_TABLE)
-    submissions_table = dynamodb.Table(SUBMISSIONS_TABLE)
+    dynamodb = get_dynamodb_resource()
+    jobs_table = dynamodb.Table(get_table_name("jobs"))
+    submissions_table = dynamodb.Table(get_table_name("submissions"))
     
     # Get the original job
     print(f"Fetching original job {job_id}...")
@@ -158,7 +131,7 @@ def resubmit_job(job_id: str, tenant_id: str):
         return new_job_id
     
     print(f"Starting Step Functions execution...")
-    sfn = boto3.client("stepfunctions", region_name=REGION)
+    sfn = get_stepfunctions_client()
     
     try:
         sfn.start_execution(
@@ -177,35 +150,40 @@ def resubmit_job(job_id: str, tenant_id: str):
     
     return new_job_id
 
+
 def main():
-    if len(sys.argv) < 3:
-        print("Usage: python3 resubmit-job.py <job_id> <tenant_id>")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(
+        description="Resubmit a failed job by creating a new job with the same submission data"
+    )
+    parser.add_argument("job_id", help="Original job ID to resubmit")
+    parser.add_argument("tenant_id", help="Tenant ID")
+    parser.add_argument(
+        "--region",
+        help="AWS region (default: from environment or us-east-1)",
+        default=None,
+    )
+    args = parser.parse_args()
     
-    job_id = sys.argv[1]
-    tenant_id = sys.argv[2]
+    if args.region:
+        import os
+        os.environ["AWS_REGION"] = args.region
     
-    print("=" * 80)
-    print("Job Resubmission Tool")
-    print("=" * 80)
-    print(f"Original Job ID: {job_id}")
-    print(f"Tenant ID: {tenant_id}")
-    print(f"Region: {REGION}")
-    print("=" * 80)
+    print_section("Job Resubmission Tool")
+    print(f"Original Job ID: {args.job_id}")
+    print(f"Tenant ID: {args.tenant_id}")
+    print(f"Region: {get_aws_region()}")
+    print_section("")
     
-    new_job_id = resubmit_job(job_id, tenant_id)
+    new_job_id = resubmit_job(args.job_id, args.tenant_id)
     
     if new_job_id:
-        print("\n" + "=" * 80)
-        print("✓ Job resubmitted successfully!")
+        print_section("✓ Job resubmitted successfully!")
         print(f"New Job ID: {new_job_id}")
-        print("=" * 80)
+        print_section("")
     else:
-        print("\n" + "=" * 80)
-        print("✗ Failed to resubmit job")
-        print("=" * 80)
+        print_section("✗ Failed to resubmit job")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
-

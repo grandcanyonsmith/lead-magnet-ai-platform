@@ -7,15 +7,16 @@ import { StepContent } from './StepContent'
 import { PreviousStepsContext } from './PreviousStepsContext'
 import { api } from '@/lib/api'
 import { PreviewRenderer } from '@/components/artifacts/PreviewRenderer'
-
-type StepStatus = 'pending' | 'in_progress' | 'completed' | 'failed'
+import { Artifact } from '@/types/artifact'
+import { MergedStep, StepStatus } from '@/types/job'
+import { ApiError } from '@/lib/api/errors'
 
 interface ArtifactPreviewProps {
   artifactId: string
 }
 
 function ArtifactPreview({ artifactId }: ArtifactPreviewProps) {
-  const [artifact, setArtifact] = useState<any>(null)
+  const [artifact, setArtifact] = useState<Artifact | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showPreview, setShowPreview] = useState(false)
@@ -27,9 +28,14 @@ function ArtifactPreview({ artifactId }: ArtifactPreviewProps) {
         setError(null)
         const data = await api.getArtifact(artifactId)
         setArtifact(data)
-      } catch (err: any) {
+      } catch (err) {
         console.error('Failed to fetch artifact:', err)
-        setError(err.response?.data?.message || err.message || 'Failed to load artifact')
+        const errorMessage = err instanceof ApiError 
+          ? err.message 
+          : err instanceof Error 
+            ? err.message 
+            : 'Failed to load artifact'
+        setError(errorMessage)
       } finally {
         setLoading(false)
       }
@@ -99,7 +105,7 @@ function ArtifactPreview({ artifactId }: ArtifactPreviewProps) {
         <div className="mt-2 border border-gray-200 rounded-lg overflow-hidden">
           <div className="aspect-video bg-gray-100">
             <PreviewRenderer
-              contentType={artifact.content_type || artifact.mime_type}
+              contentType={artifact.content_type}
               objectUrl={artifactUrl}
               fileName={fileName}
               className="w-full h-full"
@@ -122,7 +128,7 @@ function ArtifactPreview({ artifactId }: ArtifactPreviewProps) {
 }
 
 interface ExecutionStepsProps {
-  steps: any[]
+  steps: MergedStep[]
   expandedSteps: Set<number>
   showExecutionSteps: boolean
   onToggleShow: () => void
@@ -155,7 +161,7 @@ export function ExecutionSteps({
   // State for managing expanded previous steps (separate from main step expansion)
   const [expandedPrevSteps, setExpandedPrevSteps] = useState<Set<number>>(new Set())
   // State for image artifacts mapped by step order
-  const [imageArtifactsByStep, setImageArtifactsByStep] = useState<Map<number, any[]>>(new Map())
+  const [imageArtifactsByStep, setImageArtifactsByStep] = useState<Map<number, Artifact[]>>(new Map())
   const [loadingImageArtifacts, setLoadingImageArtifacts] = useState(false)
 
   // Fetch image artifacts for the job
@@ -202,8 +208,13 @@ export function ExecutionSteps({
               const artifactTime = new Date(artifact.created_at).getTime()
               
               for (const step of sortedSteps) {
-                if (step.timestamp) {
-                  const stepTime = new Date(step.timestamp).getTime()
+                const stepTime = step.completed_at 
+                  ? new Date(step.completed_at).getTime()
+                  : step.started_at 
+                    ? new Date(step.started_at).getTime()
+                    : null
+                
+                if (stepTime) {
                   const timeDiff = Math.abs(artifactTime - stepTime)
                   
                   // If artifact was created within 5 minutes of step execution, associate it
@@ -295,11 +306,11 @@ export function ExecutionSteps({
   }
 
   // Get previous steps for context
-  const getPreviousSteps = (currentStep: any) => {
+  const getPreviousSteps = (currentStep: MergedStep) => {
     const currentOrder = currentStep.step_order || 0
     
     const previousSteps = sortedSteps
-      .filter((step: any) => {
+      .filter((step: MergedStep) => {
         const stepOrder = step.step_order || 0
         return (
           stepOrder < currentOrder &&
@@ -309,14 +320,20 @@ export function ExecutionSteps({
           step.output !== ''
         )
       })
-      .sort((a: any, b: any) => (a.step_order || 0) - (b.step_order || 0))
+      .sort((a: MergedStep, b: MergedStep) => (a.step_order || 0) - (b.step_order || 0))
+      .map((step: MergedStep) => ({
+        step_order: step.step_order,
+        step_name: step.step_name || `Step ${step.step_order}`,
+        output: step.output,
+        image_urls: undefined, // Can be enhanced later if needed
+      }))
     
     return previousSteps
   }
 
   // Get form submission data
-  const getFormSubmission = (currentStep: any) => {
-    const formSubmissionStep = sortedSteps.find((s: any) => s.step_order === 0)
+  const getFormSubmission = (currentStep: MergedStep) => {
+    const formSubmissionStep = sortedSteps.find((s: MergedStep) => s.step_order === 0)
     if (formSubmissionStep && formSubmissionStep.output) {
       return formSubmissionStep.output
     }

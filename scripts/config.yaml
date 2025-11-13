@@ -1,0 +1,21 @@
+# Lead Magnet AI Scripts Configuration
+# This file can be overridden by environment variables
+
+defaults:
+  region: us-east-1
+  api_url: https://czp5b77azd.execute-api.us-east-1.amazonaws.com
+
+tables:
+  jobs: leadmagnet-jobs
+  workflows: leadmagnet-workflows
+  forms: leadmagnet-forms
+  submissions: leadmagnet-submissions
+  artifacts: leadmagnet-artifacts
+  templates: leadmagnet-templates
+
+environments:
+  dev:
+    region: us-east-1
+  prod:
+    region: us-east-1
+

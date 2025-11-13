@@ -1,49 +1,48 @@
 /**
- * Data fetching hooks for jobs
+ * Data fetching hooks for jobs using React Query
  */
 
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useMemo } from 'react'
+import { useQuery } from '@/hooks/useQuery'
+import { useMutation } from '@/hooks/useMutation'
 import { api } from '@/lib/api'
 import { Job, JobListParams, JobListResponse, JobResubmitResponse } from '@/types'
+
+// Query keys factory
+export const jobKeys = {
+  all: ['jobs'] as const,
+  lists: () => [...jobKeys.all, 'list'] as const,
+  list: (params?: JobListParams) => [...jobKeys.lists(), params] as const,
+  details: () => [...jobKeys.all, 'detail'] as const,
+  detail: (id: string) => [...jobKeys.details(), id] as const,
+  executionSteps: (id: string) => [...jobKeys.detail(id), 'execution-steps'] as const,
+}
 
 interface UseJobsResult {
   jobs: Job[]
   loading: boolean
   error: string | null
-  refetch: () => Promise<void>
+  refetch: () => void
 }
 
 export function useJobs(params?: JobListParams): UseJobsResult {
-  const [jobs, setJobs] = useState<Job[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const fetchJobs = useCallback(async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const response = await api.getJobs(params)
-      setJobs(response.jobs || [])
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load jobs'
-      setError(errorMessage)
-      console.error('Failed to load jobs:', err)
-    } finally {
-      setLoading(false)
+  const queryKey = useMemo(() => jobKeys.list(params), [params])
+  
+  const { data, isLoading, error, refetch } = useQuery<JobListResponse>(
+    queryKey,
+    () => api.getJobs(params),
+    {
+      enabled: true,
     }
-  }, [params])
-
-  useEffect(() => {
-    fetchJobs()
-  }, [fetchJobs])
+  )
 
   return {
-    jobs,
-    loading,
-    error,
-    refetch: fetchJobs,
+    jobs: data?.jobs || [],
+    loading: isLoading,
+    error: error instanceof Error ? error.message : error ? String(error) : null,
+    refetch: () => refetch(),
   }
 }
 
@@ -51,43 +50,28 @@ interface UseJobResult {
   job: Job | null
   loading: boolean
   error: string | null
-  refetch: () => Promise<void>
+  refetch: () => void
 }
 
 export function useJob(id: string | null): UseJobResult {
-  const [job, setJob] = useState<Job | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const fetchJob = useCallback(async () => {
-    if (!id) {
-      setLoading(false)
-      return
+  const queryKey = useMemo(() => (id ? jobKeys.detail(id) : ['jobs', 'detail', null]), [id])
+  
+  const { data, isLoading, error, refetch } = useQuery<Job>(
+    queryKey,
+    () => {
+      if (!id) throw new Error('Job ID is required')
+      return api.getJob(id)
+    },
+    {
+      enabled: !!id,
     }
-
-    try {
-      setLoading(true)
-      setError(null)
-      const data = await api.getJob(id)
-      setJob(data)
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load job'
-      setError(errorMessage)
-      console.error('Failed to load job:', err)
-    } finally {
-      setLoading(false)
-    }
-  }, [id])
-
-  useEffect(() => {
-    fetchJob()
-  }, [fetchJob])
+  )
 
   return {
-    job,
-    loading,
-    error,
-    refetch: fetchJob,
+    job: data || null,
+    loading: isLoading,
+    error: error instanceof Error ? error.message : error ? String(error) : null,
+    refetch: () => refetch(),
   }
 }
 
@@ -102,25 +86,34 @@ export function useJobsPolling(
   options: UseJobsPollingOptions = {}
 ): UseJobsResult {
   const { enabled = true, interval = 5000, filter } = options
-  const result = useJobs(params)
+  const queryKey = useMemo(() => jobKeys.list(params), [params])
+  
+  const { data, isLoading, error, refetch } = useQuery<JobListResponse>(
+    queryKey,
+    () => api.getJobs(params),
+    {
+      enabled,
+      refetchInterval: (query) => {
+        if (!enabled) return false
+        
+        const jobs = query.state.data?.jobs || []
+        if (!jobs.length) return false
+        
+        const hasProcessingJobs = filter
+          ? jobs.some(filter)
+          : jobs.some(job => job.status === 'processing' || job.status === 'pending')
+        
+        return hasProcessingJobs ? interval : false
+      },
+    }
+  )
 
-  useEffect(() => {
-    if (!enabled || !result.jobs.length) return
-
-    const hasProcessingJobs = filter
-      ? result.jobs.some(filter)
-      : result.jobs.some(job => job.status === 'processing' || job.status === 'pending')
-
-    if (!hasProcessingJobs) return
-
-    const pollInterval = setInterval(() => {
-      result.refetch()
-    }, interval)
-
-    return () => clearInterval(pollInterval)
-  }, [enabled, interval, result.jobs, result.refetch, filter])
-
-  return result
+  return {
+    jobs: data?.jobs || [],
+    loading: isLoading,
+    error: error instanceof Error ? error.message : error ? String(error) : null,
+    refetch: () => refetch(),
+  }
 }
 
 interface UseResubmitJobResult {
@@ -130,28 +123,25 @@ interface UseResubmitJobResult {
 }
 
 export function useResubmitJob(): UseResubmitJobResult {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const resubmitJob = useCallback(async (jobId: string): Promise<JobResubmitResponse | null> => {
-    try {
-      setLoading(true)
-      setError(null)
-      return await api.resubmitJob(jobId)
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to resubmit job'
-      setError(errorMessage)
-      console.error('Failed to resubmit job:', err)
-      return null
-    } finally {
-      setLoading(false)
+  const { mutateAsync, isPending, error } = useMutation<JobResubmitResponse, Error, string>(
+    (jobId: string) => api.resubmitJob(jobId),
+    {
+      showSuccessToast: 'Job resubmitted successfully',
+      showErrorToast: true,
+      invalidateQueries: [jobKeys.all],
     }
-  }, [])
+  )
 
   return {
-    resubmitJob,
-    loading,
-    error,
+    resubmitJob: async (jobId: string) => {
+      try {
+        return await mutateAsync(jobId)
+      } catch {
+        return null
+      }
+    },
+    loading: isPending,
+    error: error instanceof Error ? error.message : error ? String(error) : null,
   }
 }
 
