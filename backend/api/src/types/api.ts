@@ -16,7 +16,7 @@ export type Middleware = (
   event: APIGatewayProxyEventV2,
   tenantId?: string,
   next?: () => Promise<RouteResponse>
-) => Promise<RouteResponse> | RouteResponse | void;
+) => Promise<RouteResponse | void> | RouteResponse | void;
 
 /**
  * Route definition interface.

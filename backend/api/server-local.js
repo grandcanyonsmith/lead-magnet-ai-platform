@@ -15,6 +15,7 @@ process.env.ARTIFACTS_TABLE = process.env.ARTIFACTS_TABLE || 'leadmagnet-artifac
 process.env.TEMPLATES_TABLE = process.env.TEMPLATES_TABLE || 'leadmagnet-templates';
 process.env.USER_SETTINGS_TABLE = process.env.USER_SETTINGS_TABLE || 'leadmagnet-user-settings';
 process.env.USAGE_RECORDS_TABLE = process.env.USAGE_RECORDS_TABLE || 'leadmagnet-usage-records';
+process.env.NOTIFICATIONS_TABLE = process.env.NOTIFICATIONS_TABLE || 'leadmagnet-notifications';
 process.env.AWS_REGION = process.env.AWS_REGION || 'us-east-1';
 process.env.LOG_LEVEL = process.env.LOG_LEVEL || 'info';
 process.env.OPENAI_SECRET_NAME = process.env.OPENAI_SECRET_NAME || 'leadmagnet/openai-api-key';

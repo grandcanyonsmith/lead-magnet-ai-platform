@@ -1,5 +1,5 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2, Context } from 'aws-lambda';
-import { router } from './routes';
+import { router } from './routes/index';
 import { handleError } from './utils/errors';
 import { logger } from './utils/logger';
 

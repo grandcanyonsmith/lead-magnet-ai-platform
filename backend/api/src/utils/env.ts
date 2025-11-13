@@ -12,7 +12,7 @@ export class EnvConfig {
   readonly templatesTable: string;
   readonly jobsTable: string;
   readonly submissionsTable: string;
-  readonly artifactsTable: string;
+  readonly artifactsTable: string | undefined;
   readonly notificationsTable: string;
   readonly userSettingsTable: string;
   readonly usageRecordsTable: string;
@@ -38,7 +38,7 @@ export class EnvConfig {
     this.templatesTable = this.getRequired('TEMPLATES_TABLE');
     this.jobsTable = this.getWithDefault('JOBS_TABLE', 'leadmagnet-jobs');
     this.submissionsTable = this.getRequired('SUBMISSIONS_TABLE');
-    this.artifactsTable = this.getOptional('ARTIFACTS_TABLE');
+    this.artifactsTable = this.getOptional('ARTIFACTS_TABLE') || undefined;
     this.notificationsTable = this.getRequired('NOTIFICATIONS_TABLE');
     this.userSettingsTable = this.getRequired('USER_SETTINGS_TABLE');
     this.usageRecordsTable = this.getWithDefault('USAGE_RECORDS_TABLE', 'leadmagnet-usage-records');
