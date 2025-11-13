@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { FiSave, FiZap } from 'react-icons/fi'
 import WorkflowFlowchart from '@/app/dashboard/workflows/components/WorkflowFlowchart'
+import FlowchartSidePanel from '@/app/dashboard/workflows/components/FlowchartSidePanel'
 import { WorkflowFormData } from '@/hooks/useWorkflowEdit'
 import { WorkflowStep } from '@/app/dashboard/workflows/components/WorkflowStepEditor'
 import { useWorkflowAI } from '@/hooks/useWorkflowAI'
@@ -24,6 +25,9 @@ interface WorkflowTabProps {
   onStepsReorder: (newSteps: WorkflowStep[]) => void
   onSubmit: (e: React.FormEvent) => void
   onCancel: () => void
+  onDeleteStep?: (index: number) => void
+  onMoveStepUp?: (index: number) => void
+  onMoveStepDown?: (index: number) => void
 }
 
 export function WorkflowTab({
@@ -40,6 +44,9 @@ export function WorkflowTab({
   onStepsReorder,
   onSubmit,
   onCancel,
+  onDeleteStep,
+  onMoveStepUp,
+  onMoveStepDown,
 }: WorkflowTabProps) {
   const [showAIAssist, setShowAIAssist] = useState(false)
   const [aiPrompt, setAiPrompt] = useState('')
@@ -109,7 +116,52 @@ export function WorkflowTab({
     clearProposal()
     toast('Proposal rejected', { icon: '❌' })
   }
+
+  const handleStepChange = (index: number, updatedStep: WorkflowStep) => {
+    const newSteps = [...steps]
+    newSteps[index] = updatedStep
+    onStepsChange(newSteps)
+  }
+
+  const handleDeleteStep = (index: number) => {
+    if (onDeleteStep) {
+      onDeleteStep(index)
+    } else {
+      const newSteps = steps.filter((_, i) => i !== index)
+      onStepsChange(newSteps)
+    }
+  }
+
+  const handleMoveStepUp = (index: number) => {
+    if (index === 0) return
+    if (onMoveStepUp) {
+      onMoveStepUp(index)
+    } else {
+      const newSteps = [...steps]
+      ;[newSteps[index - 1], newSteps[index]] = [newSteps[index], newSteps[index - 1]]
+      onStepsChange(newSteps)
+    }
+  }
+
+  const handleMoveStepDown = (index: number) => {
+    if (index === steps.length - 1) return
+    if (onMoveStepDown) {
+      onMoveStepDown(index)
+    } else {
+      const newSteps = [...steps]
+      ;[newSteps[index], newSteps[index + 1]] = [newSteps[index + 1], newSteps[index]]
+      onStepsChange(newSteps)
+    }
+  }
+
+  const handleCloseSidePanel = () => {
+    onStepClick(-1) // Pass -1 to close the panel
+  }
+
+  const selectedStep = selectedStepIndex !== null && selectedStepIndex >= 0 ? steps[selectedStepIndex] : null
+
   return (
+    <>
     <form onSubmit={onSubmit} className="bg-white rounded-lg shadow p-6 space-y-6">
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -280,6 +332,22 @@ export function WorkflowTab({
         </button>
       </div>
     </form>
+
+    {/* Step Editor Side Panel */}
+    <FlowchartSidePanel
+      step={selectedStep}
+      index={selectedStepIndex}
+      totalSteps={steps.length}
+      allSteps={steps}
+      isOpen={isSidePanelOpen && selectedStepIndex !== null && selectedStepIndex >= 0}
+      onClose={handleCloseSidePanel}
+      onChange={handleStepChange}
+      onDelete={handleDeleteStep}
+      onMoveUp={handleMoveStepUp}
+      onMoveDown={handleMoveStepDown}
+      workflowId={workflowId}
+    />
+  </>
   )
 }
 

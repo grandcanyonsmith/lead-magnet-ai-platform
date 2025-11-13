@@ -16,6 +16,7 @@ import { formatHTML } from '@/utils/templateUtils'
 export default function EditWorkflowPage() {
   const [activeTab, setActiveTab] = useState<'workflow' | 'form' | 'template'>('workflow')
   const [selectedStepIndex, setSelectedStepIndex] = useState<number | null>(null)
+  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false)
   const [templateId, setTemplateId] = useState<string | null>(null)
 
   // Main workflow hook
@@ -112,8 +113,14 @@ export default function EditWorkflowPage() {
         setError(`Step ${i + 1} name is required`)
         return
       }
-      if (!step.instructions.trim()) {
-        setError(`Step ${i + 1} instructions are required`)
+      // Only validate instructions for AI generation steps
+      if (step.step_type !== 'webhook' && (!step.instructions || !step.instructions.trim())) {
+        setError(`Step ${i + 1} instructions are required for AI generation steps`)
+        return
+      }
+      // Validate webhook URL for webhook steps
+      if (step.step_type === 'webhook' && (!step.webhook_url || !step.webhook_url.trim())) {
+        setError(`Step ${i + 1} webhook URL is required for webhook steps`)
         return
       }
     }
@@ -287,17 +294,27 @@ export default function EditWorkflowPage() {
           steps={steps}
           submitting={submitting}
           selectedStepIndex={selectedStepIndex}
-          isSidePanelOpen={false}
+          isSidePanelOpen={isSidePanelOpen}
           onFormDataChange={handleChange}
           onStepsChange={setSteps}
           onAddStep={handleAddStep}
           onStepClick={(index) => {
-            setSelectedStepIndex(index)
-            // Step editing can be done inline in the flowchart
+            if (index === -1 || index === null) {
+              // Close panel
+              setSelectedStepIndex(null)
+              setIsSidePanelOpen(false)
+            } else {
+              // Open panel with selected step
+              setSelectedStepIndex(index)
+              setIsSidePanelOpen(true)
+            }
           }}
           onStepsReorder={setSteps}
           onSubmit={handleSubmit}
           onCancel={() => router.back()}
+          onDeleteStep={handleDeleteStep}
+          onMoveStepUp={handleMoveStepUp}
+          onMoveStepDown={handleMoveStepDown}
         />
       )}
 
