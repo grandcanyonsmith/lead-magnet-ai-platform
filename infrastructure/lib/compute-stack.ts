@@ -41,8 +41,8 @@ export class ComputeStack extends cdk.Stack {
           LOG_LEVEL: 'info',
           // AWS_REGION is automatically set by Lambda runtime
           // Playwright environment variables
-          PLAYWRIGHT_BROWSERS_PATH: '/opt/playwright',
-          PLAYWRIGHT_NODEJS_PATH: '/opt/nodejs/node-playwright',
+          // Set browsers path to match Dockerfile installation location
+          PLAYWRIGHT_BROWSERS_PATH: '/ms-playwright',
         };
         
         if (props.ecrRepository) {
