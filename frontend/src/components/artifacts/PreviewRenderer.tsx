@@ -35,6 +35,33 @@ function detectContentTypeFromExtension(fileName?: string): string | null {
   return typeMap[ext || ''] || null
 }
 
+/**
+ * Extract HTML content from markdown code blocks
+ * Handles both ```html and ``` markers
+ */
+function extractHtmlFromCodeBlocks(text: string): string {
+  const trimmed = text.trim()
+  
+  // Check for ```html code block
+  if (trimmed.startsWith('```html')) {
+    const match = trimmed.match(/^```html\s*([\s\S]*?)\s*```$/i)
+    if (match && match[1]) {
+      return match[1].trim()
+    }
+  }
+  
+  // Check for generic ``` code block
+  if (trimmed.startsWith('```')) {
+    const match = trimmed.match(/^```\s*([\s\S]*?)\s*```$/)
+    if (match && match[1]) {
+      return match[1].trim()
+    }
+  }
+  
+  // Return original text if no code blocks found
+  return text
+}
+
 export function PreviewRenderer({ contentType, objectUrl, fileName, className = '', artifactId }: PreviewRendererProps) {
   const [imageLoaded, setImageLoaded] = useState(false)
   const [imageError, setImageError] = useState(false)
@@ -132,7 +159,9 @@ export function PreviewRenderer({ contentType, objectUrl, fileName, className = 
           } else {
             throw new Error('No artifact ID or URL provided')
           }
-          setHtmlContent(text)
+          // Extract HTML from markdown code blocks if present
+          const extractedHtml = extractHtmlFromCodeBlocks(text)
+          setHtmlContent(extractedHtml)
           setHtmlError(false) // Clear any previous error on success
         } catch (err: any) {
           console.error('Failed to fetch HTML:', err)

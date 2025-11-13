@@ -30,6 +30,14 @@ function getToolName(tool: any): string {
   return typeof tool === 'string' ? tool : tool.type || 'unknown'
 }
 
+// Helper to truncate long URLs for display
+function truncateUrl(url: string, maxLength: number = 50): string {
+  if (url.length <= maxLength) {
+    return url
+  }
+  return url.substring(0, maxLength) + '...'
+}
+
 // Render tool badges inline
 function renderToolBadges(tools?: string[] | unknown[], toolChoice?: string, showLabel: boolean = true) {
   if (!tools || !Array.isArray(tools) || tools.length === 0) {
@@ -257,8 +265,9 @@ export function StepInputOutput({
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-sm md:text-xs text-blue-600 hover:text-blue-800 active:text-blue-900 break-all block touch-target py-2 md:py-1 min-h-[44px] md:min-h-0"
+                    title={imageUrl}
                   >
-                    {imageUrl}
+                    {truncateUrl(imageUrl)}
                   </a>
                 </div>
               </div>
@@ -292,7 +301,7 @@ export function StepInputOutput({
                           className="text-xs md:text-xs text-blue-600 hover:text-blue-800 active:text-blue-900 truncate flex-1 min-w-0"
                           title={artifact.file_name || artifact.artifact_name || artifactUrl}
                         >
-                          {artifact.file_name || artifact.artifact_name || artifactUrl}
+                          {artifact.file_name || artifact.artifact_name || truncateUrl(artifactUrl)}
                         </a>
                         {artifact.artifact_id && (
                           <span className="text-xs text-gray-500 font-mono flex-shrink-0">
