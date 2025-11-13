@@ -45,9 +45,9 @@ export function ArtifactPreview({ artifactId }: ArtifactPreviewProps) {
 
   if (loading) {
     return (
-      <div className="mt-4 pt-4 border-t border-gray-200">
-        <div className="flex items-center gap-2 text-xs text-gray-500">
-          <FiLoader className="w-3 h-3 animate-spin" />
+      <div className="mt-4 pt-4 border-t border-gray-200 px-4 md:px-0">
+        <div className="flex items-center gap-2 text-sm md:text-xs text-gray-500">
+          <FiLoader className="w-4 h-4 md:w-3 md:h-3 animate-spin" />
           <span>Loading artifact...</span>
         </div>
       </div>
@@ -56,10 +56,10 @@ export function ArtifactPreview({ artifactId }: ArtifactPreviewProps) {
 
   if (error || !artifact) {
     return (
-      <div className="mt-4 pt-4 border-t border-gray-200">
-        <div className="text-xs text-gray-500">
+      <div className="mt-4 pt-4 border-t border-gray-200 px-4 md:px-0">
+        <div className="text-sm md:text-xs text-gray-500">
           <span className="font-mono break-all">Artifact ID: {artifactId}</span>
-          {error && <span className="block text-red-600 mt-1">{error}</span>}
+          {error && <span className="block text-red-600 mt-2 md:mt-1">{error}</span>}
         </div>
       </div>
     )
@@ -69,18 +69,20 @@ export function ArtifactPreview({ artifactId }: ArtifactPreviewProps) {
   const fileName = artifact.file_name || artifact.artifact_name || artifactId
 
   return (
-    <div className="mt-4 pt-4 border-t border-gray-200">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-gray-700">Artifact:</span>
-          <span className="text-xs text-gray-600 font-mono">{fileName}</span>
+    <div className="mt-4 pt-4 border-t border-gray-200 px-4 md:px-0">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <span className="text-sm font-semibold text-gray-700 flex-shrink-0">Artifact:</span>
+          <span className="text-xs text-gray-600 font-mono truncate" title={fileName}>
+            {fileName}
+          </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           {artifactUrl && (
             <>
               <button
                 onClick={() => setShowPreview(!showPreview)}
-                className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 px-2 py-1 rounded hover:bg-blue-50 transition-colors"
+                className="text-xs md:text-xs text-blue-600 hover:text-blue-800 active:text-blue-900 flex items-center gap-1 px-3 py-2 md:px-2 md:py-1 rounded-lg hover:bg-blue-50 active:bg-blue-100 transition-colors touch-target min-h-[44px] md:min-h-0 whitespace-nowrap"
               >
                 {showPreview ? 'Hide Preview' : 'Show Preview'}
               </button>
@@ -88,9 +90,9 @@ export function ArtifactPreview({ artifactId }: ArtifactPreviewProps) {
                 href={artifactUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 px-2 py-1 rounded hover:bg-blue-50 transition-colors"
+                className="text-xs md:text-xs text-blue-600 hover:text-blue-800 active:text-blue-900 flex items-center gap-1 px-3 py-2 md:px-2 md:py-1 rounded-lg hover:bg-blue-50 active:bg-blue-100 transition-colors touch-target min-h-[44px] md:min-h-0 whitespace-nowrap"
               >
-                <FiExternalLink className="w-3 h-3" />
+                <FiExternalLink className="w-4 h-4 md:w-3 md:h-3" />
                 View
               </a>
             </>
@@ -99,7 +101,7 @@ export function ArtifactPreview({ artifactId }: ArtifactPreviewProps) {
       </div>
       
       {showPreview && artifactUrl && (
-        <div className="mt-2 border border-gray-200 rounded-lg overflow-hidden">
+        <div className="mt-3 md:mt-2 border-2 border-gray-200 rounded-xl overflow-hidden">
           <div className="aspect-video bg-gray-100">
             <PreviewRenderer
               contentType={artifact.content_type}
@@ -112,7 +114,7 @@ export function ArtifactPreview({ artifactId }: ArtifactPreviewProps) {
         </div>
       )}
       
-      <div className="mt-1 text-xs text-gray-500">
+      <div className="mt-2 md:mt-1 text-xs text-gray-500">
         <span className="font-mono break-all">ID: {artifactId}</span>
         {artifact.size_bytes && (
           <span className="ml-2">
