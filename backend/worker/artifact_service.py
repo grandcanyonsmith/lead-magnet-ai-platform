@@ -139,44 +139,130 @@ class ArtifactService:
         filename: Optional[str] = None
     ) -> str:
         """
-        Store an image artifact that's already uploaded to S3.
+        Store an image artifact. Downloads from external URL if needed and uploads to S3.
         
         Args:
             tenant_id: Tenant ID
             job_id: Job ID
-            image_url: Public URL of the image (CloudFront or presigned URL)
+            image_url: URL of the image (can be external URL like OpenAI, or our CloudFront/S3 URL)
             filename: Optional filename (extracted from URL if not provided)
             
         Returns:
             Artifact ID
         """
-        # Extract S3 key from URL
+        import requests
+        from urllib.parse import urlparse
+        
+        # Check if URL is already in our S3/CloudFront
         # CloudFront URL: https://domain/{s3_key}
         # Presigned URL: https://bucket.s3.amazonaws.com/{s3_key}?...
         s3_key = None
-        if '/images/' in image_url:
+        is_external_url = True
+        image_size = 0
+        public_url = image_url  # Default to original URL
+        
+        if self.s3.cloudfront_domain and self.s3.cloudfront_domain in image_url:
+            # Already in our CloudFront - extract S3 key
+            parts = image_url.split(f"{self.s3.cloudfront_domain}/")
+            if len(parts) > 1:
+                s3_key = parts[1].split('?')[0]  # Remove query params
+                is_external_url = False
+        elif '/images/' in image_url and (self.s3.cloudfront_domain in image_url or '.s3.amazonaws.com/' in image_url):
             # Extract key after /images/
             parts = image_url.split('/images/')
             if len(parts) > 1:
                 s3_key = f"images/{parts[1].split('?')[0]}"  # Remove query params
+                is_external_url = False
         elif '.s3.amazonaws.com/' in image_url:
             # Extract key from presigned URL
             parts = image_url.split('.s3.amazonaws.com/')
             if len(parts) > 1:
                 s3_key = parts[1].split('?')[0]  # Remove query params
+                is_external_url = False
         
-        if not s3_key:
-            # Fallback: use filename or generate one
-            if filename:
+        # If it's an external URL (like OpenAI), download and upload to S3
+        if is_external_url:
+            logger.info(f"[ArtifactService] Downloading image from external URL", extra={
+                'image_url_preview': image_url[:80] + '...' if len(image_url) > 80 else image_url,
+                'tenant_id': tenant_id,
+                'job_id': job_id
+            })
+            
+            try:
+                # Download image from external URL
+                response = requests.get(image_url, timeout=30)
+                response.raise_for_status()
+                image_data = response.content
+                image_size = len(image_data)
+                
+                # Determine content type from response headers or filename
+                content_type = response.headers.get('Content-Type', 'image/png')
+                if not content_type.startswith('image/'):
+                    # Fallback to content type from filename or default to PNG
+                    if filename:
+                        content_type = self.get_content_type(filename)
+                    else:
+                        content_type = 'image/png'
+                
+                # Generate filename if not provided
+                if not filename:
+                    # Try to extract from URL
+                    parsed_url = urlparse(image_url)
+                    url_filename = parsed_url.path.split('/')[-1]
+                    if url_filename and '.' in url_filename:
+                        filename = url_filename
+                    else:
+                        import time
+                        # Determine extension from content type
+                        ext = 'png'
+                        if 'jpeg' in content_type or 'jpg' in content_type:
+                            ext = 'jpg'
+                        elif 'png' in content_type:
+                            ext = 'png'
+                        filename = f"image_{int(time.time())}_{str(ulid())[:8]}.{ext}"
+                
+                # Generate S3 key
                 s3_key = f"{tenant_id}/jobs/{job_id}/{filename}"
-            else:
-                import time
-                from ulid import new as ulid
-                filename = f"image-{int(time.time())}-{str(ulid())[:8]}.png"
-                s3_key = f"{tenant_id}/jobs/{job_id}/{filename}"
-        elif not filename:
-            # Extract filename from s3_key
-            filename = s3_key.split('/')[-1]
+                
+                # Upload to S3
+                logger.info(f"[ArtifactService] Uploading image to S3", extra={
+                    's3_key': s3_key,
+                    'image_size_bytes': image_size,
+                    'content_type': content_type
+                })
+                
+                s3_url, public_url = self.s3.upload_image(
+                    key=s3_key,
+                    image_data=image_data,
+                    content_type=content_type,
+                    public=True
+                )
+                
+                logger.info(f"[ArtifactService] Image downloaded and uploaded to S3", extra={
+                    's3_key': s3_key,
+                    'public_url_preview': public_url[:80] + '...' if len(public_url) > 80 else public_url,
+                    'image_size_bytes': image_size
+                })
+                
+            except Exception as e:
+                logger.error(f"[ArtifactService] Failed to download/upload image from external URL: {e}", exc_info=True)
+                raise Exception(f"Failed to download and store image from URL: {e}")
+        else:
+            # Image is already in our S3, just create artifact record
+            if not s3_key:
+                # Fallback: use filename or generate one
+                if filename:
+                    s3_key = f"{tenant_id}/jobs/{job_id}/{filename}"
+                else:
+                    import time
+                    filename = f"image-{int(time.time())}-{str(ulid())[:8]}.png"
+                    s3_key = f"{tenant_id}/jobs/{job_id}/{filename}"
+            elif not filename:
+                # Extract filename from s3_key
+                filename = s3_key.split('/')[-1]
+            
+            # Use the provided image_url as public_url (it's already our CloudFront/S3 URL)
+            public_url = image_url
         
         # Generate artifact ID
         artifact_id = f"art_{ulid()}"
@@ -184,7 +270,10 @@ class ArtifactService:
         # Determine content type from filename
         content_type = self.get_content_type(filename)
         
-        # Create artifact record (image already in S3, just create DB record)
+        # Get file size (set during download if external URL)
+        file_size = image_size
+        
+        # Create artifact record
         artifact = {
             'artifact_id': artifact_id,
             'tenant_id': tenant_id,
@@ -193,9 +282,9 @@ class ArtifactService:
             'artifact_name': filename,
             's3_key': s3_key,
             's3_url': f"s3://{self.s3.bucket_name}/{s3_key}",
-            'public_url': image_url,
+            'public_url': public_url,
             'is_public': True,
-            'file_size_bytes': 0,  # Size unknown without downloading
+            'file_size_bytes': file_size,
             'mime_type': content_type,
             'created_at': datetime.utcnow().isoformat()
         }
@@ -205,14 +294,17 @@ class ArtifactService:
             'tenant_id': tenant_id,
             'job_id': job_id,
             's3_key': s3_key,
-            'public_url_preview': image_url[:80] + '...' if len(image_url) > 80 else image_url
+            'public_url_preview': public_url[:80] + '...' if len(public_url) > 80 else public_url,
+            'file_size_bytes': file_size,
+            'is_external_url': is_external_url
         })
         
         self.db.put_artifact(artifact)
         
         logger.info(f"[ArtifactService] Image artifact stored successfully", extra={
             'artifact_id': artifact_id,
-            'filename': filename
+            'filename': filename,
+            's3_key': s3_key
         })
         
         return artifact_id

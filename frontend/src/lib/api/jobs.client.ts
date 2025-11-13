@@ -65,5 +65,20 @@ export class JobsClient extends BaseApiClient {
   async getExecutionSteps(jobId: string): Promise<any[]> {
     return this.get<any[]>(`/admin/jobs/${jobId}/execution-steps`)
   }
+
+  async getJobDocument(jobId: string): Promise<string> {
+    // Use text() instead of json() since this returns HTML/markdown content
+    const response = await this.client.get(`/admin/jobs/${jobId}/document`, {
+      responseType: 'text',
+    })
+    return response.data
+  }
+
+  async getJobDocumentBlobUrl(jobId: string): Promise<string> {
+    // Fetch document content and create a blob URL for viewing in new tab
+    const content = await this.getJobDocument(jobId)
+    const blob = new Blob([content], { type: 'text/html' })
+    return URL.createObjectURL(blob)
+  }
 }
 
