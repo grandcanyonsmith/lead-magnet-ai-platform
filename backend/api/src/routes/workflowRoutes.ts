@@ -1,9 +1,7 @@
-import { APIGatewayProxyEventV2 } from 'aws-lambda';
 import { workflowsController } from '../controllers/workflows';
 import { workflowAIController } from '../controllers/workflowAIController';
 import { workflowValidationController } from '../controllers/workflowValidationController';
-import { get, post, put, del } from './routeBuilder';
-import { routeRegistry } from './routeRegistry';
+import { router } from './router';
 import { logger } from '../utils/logger';
 
 /**
@@ -11,171 +9,89 @@ import { logger } from '../utils/logger';
  */
 export function registerWorkflowRoutes(): void {
   // List workflows
-  routeRegistry.register(
-    get('/admin/workflows')
-      .handler(async (event: APIGatewayProxyEventV2, tenantId?: string) => {
-        const queryParams = event.queryStringParameters || {};
-        logger.info('[Router] Matched /admin/workflows GET route');
-        const result = await workflowsController.list(tenantId!, queryParams);
-        logger.info('[Router] Workflows list result', {
-          statusCode: result.statusCode,
-          hasBody: !!result.body,
-          bodyKeys: result.body ? Object.keys(result.body) : null,
-        });
-        return result;
-      })
-      .priority(100)
-      .build()
-  );
+  router.register('GET', '/admin/workflows', async (_params, _body, query, tenantId) => {
+    logger.info('[Router] Matched /admin/workflows GET route');
+    const result = await workflowsController.list(tenantId!, query);
+    logger.info('[Router] Workflows list result', {
+      statusCode: result.statusCode,
+      hasBody: !!result.body,
+      bodyKeys: result.body ? Object.keys(result.body) : null,
+    });
+    return result;
+  });
 
   // Create workflow
-  routeRegistry.register(
-    post('/admin/workflows')
-      .handler(async (event: APIGatewayProxyEventV2, tenantId?: string) => {
-        const body = event.body ? JSON.parse(event.body) : undefined;
-        return await workflowsController.create(tenantId!, body);
-      })
-      .priority(100)
-      .build()
-  );
+  router.register('POST', '/admin/workflows', async (_params, body, _query, tenantId) => {
+    return await workflowsController.create(tenantId!, body);
+  });
 
   // Generate workflow with AI
-  routeRegistry.register(
-    post('/admin/workflows/generate-with-ai')
-      .handler(async (event: APIGatewayProxyEventV2, tenantId?: string) => {
-        const body = event.body ? JSON.parse(event.body) : undefined;
-        logger.info('[Router] Matched /admin/workflows/generate-with-ai route');
-        return await workflowAIController.generateWithAI(tenantId!, body);
-      })
-      .priority(50)
-      .build()
-  );
+  router.register('POST', '/admin/workflows/generate-with-ai', async (_params, body, _query, tenantId) => {
+    logger.info('[Router] Matched /admin/workflows/generate-with-ai route');
+    return await workflowAIController.generateWithAI(tenantId!, body);
+  });
 
   // Get generation status
-  routeRegistry.register(
-    get('/admin/workflows/generation-status/:jobId')
-      .handler(async (event: APIGatewayProxyEventV2, tenantId?: string) => {
-        const jobId = event.pathParameters?.jobId || event.rawPath.split('/')[4] || '';
-        logger.info('[Router] Matched /admin/workflows/generation-status/:jobId route', { jobId });
-        return await workflowAIController.getGenerationStatus(tenantId!, jobId);
-      })
-      .priority(50)
-      .build()
-  );
+  router.register('GET', '/admin/workflows/generation-status/:jobId', async (params, _body, _query, tenantId) => {
+    logger.info('[Router] Matched /admin/workflows/generation-status/:jobId route', { jobId: params.jobId });
+    return await workflowAIController.getGenerationStatus(tenantId!, params.jobId);
+  });
 
   // Manual job processing (local dev)
-  routeRegistry.register(
-    post('/admin/workflows/process-job/:jobId')
-      .handler(async (event: APIGatewayProxyEventV2, tenantId?: string) => {
-        const jobId = event.pathParameters?.jobId || event.rawPath.split('/')[4] || '';
-        logger.info('[Router] Matched /admin/workflows/process-job/:jobId route', { jobId });
-        await workflowAIController.processWorkflowGenerationJob(
-          jobId,
-          tenantId!,
-          '', // Will be loaded from job
-          'gpt-5'
-        );
-        return {
-          statusCode: 200,
-          body: { message: 'Job processing started', job_id: jobId },
-        };
-      })
-      .priority(50)
-      .build()
-  );
+  router.register('POST', '/admin/workflows/process-job/:jobId', async (params, _body, _query, tenantId) => {
+    logger.info('[Router] Matched /admin/workflows/process-job/:jobId route', { jobId: params.jobId });
+    await workflowAIController.processWorkflowGenerationJob(
+      params.jobId,
+      tenantId!,
+      '', // Will be loaded from job
+      'gpt-5'
+    );
+    return {
+      statusCode: 200,
+      body: { message: 'Job processing started', job_id: params.jobId },
+    };
+  });
 
   // Refine instructions
-  routeRegistry.register(
-    post('/admin/workflows/refine-instructions')
-      .handler(async (event: APIGatewayProxyEventV2, tenantId?: string) => {
-        const body = event.body ? JSON.parse(event.body) : undefined;
-        logger.info('[Router] Matched /admin/workflows/refine-instructions route');
-        return await workflowAIController.refineInstructions(tenantId!, body);
-      })
-      .priority(50)
-      .build()
-  );
+  router.register('POST', '/admin/workflows/refine-instructions', async (_params, body, _query, tenantId) => {
+    logger.info('[Router] Matched /admin/workflows/refine-instructions route');
+    return await workflowAIController.refineInstructions(tenantId!, body);
+  });
 
   // Get execution plan
-  routeRegistry.register(
-    get('/admin/workflows/:id/execution-plan')
-      .handler(async (event: APIGatewayProxyEventV2, tenantId?: string) => {
-        const id = event.pathParameters?.id || event.rawPath.split('/')[3] || '';
-        return await workflowValidationController.getExecutionPlan(tenantId!, id);
-      })
-      .priority(50)
-      .build()
-  );
+  router.register('GET', '/admin/workflows/:id/execution-plan', async (params, _body, _query, tenantId) => {
+    return await workflowValidationController.getExecutionPlan(tenantId!, params.id);
+  });
 
   // Validate dependencies
-  routeRegistry.register(
-    post('/admin/workflows/:id/validate-dependencies')
-      .handler(async (event: APIGatewayProxyEventV2, tenantId?: string) => {
-        const id = event.pathParameters?.id || event.rawPath.split('/')[3] || '';
-        const body = event.body ? JSON.parse(event.body) : undefined;
-        return await workflowValidationController.validateDependencies(tenantId!, id, body);
-      })
-      .priority(50)
-      .build()
-  );
+  router.register('POST', '/admin/workflows/:id/validate-dependencies', async (params, body, _query, tenantId) => {
+    return await workflowValidationController.validateDependencies(tenantId!, params.id, body);
+  });
 
   // AI generate step
-  routeRegistry.register(
-    post('/admin/workflows/:id/ai-step')
-      .handler(async (event: APIGatewayProxyEventV2, tenantId?: string) => {
-        const id = event.pathParameters?.id || event.rawPath.split('/')[3] || '';
-        const body = event.body ? JSON.parse(event.body) : undefined;
-        logger.info('[Router] Matched /admin/workflows/:id/ai-step route', { id });
-        return await workflowAIController.aiGenerateStep(tenantId!, id, body);
-      })
-      .priority(50)
-      .build()
-  );
+  router.register('POST', '/admin/workflows/:id/ai-step', async (params, body, _query, tenantId) => {
+    logger.info('[Router] Matched /admin/workflows/:id/ai-step route', { id: params.id });
+    return await workflowAIController.aiGenerateStep(tenantId!, params.id, body);
+  });
 
   // AI edit workflow
-  routeRegistry.register(
-    post('/admin/workflows/:id/ai-edit')
-      .handler(async (event: APIGatewayProxyEventV2, tenantId?: string) => {
-        const id = event.pathParameters?.id || event.rawPath.split('/')[3] || '';
-        const body = event.body ? JSON.parse(event.body) : undefined;
-        logger.info('[Router] Matched /admin/workflows/:id/ai-edit route', { id });
-        return await workflowAIController.aiEditWorkflow(tenantId!, id, body);
-      })
-      .priority(50)
-      .build()
-  );
+  router.register('POST', '/admin/workflows/:id/ai-edit', async (params, body, _query, tenantId) => {
+    logger.info('[Router] Matched /admin/workflows/:id/ai-edit route', { id: params.id });
+    return await workflowAIController.aiEditWorkflow(tenantId!, params.id, body);
+  });
 
   // Get workflow
-  routeRegistry.register(
-    get('/admin/workflows/:id')
-      .handler(async (event: APIGatewayProxyEventV2, tenantId?: string) => {
-        const id = event.pathParameters?.id || event.rawPath.split('/')[3] || '';
-        return await workflowsController.get(tenantId!, id);
-      })
-      .priority(200)
-      .build()
-  );
+  router.register('GET', '/admin/workflows/:id', async (params, _body, _query, tenantId) => {
+    return await workflowsController.get(tenantId!, params.id);
+  });
 
   // Update workflow
-  routeRegistry.register(
-    put('/admin/workflows/:id')
-      .handler(async (event: APIGatewayProxyEventV2, tenantId?: string) => {
-        const id = event.pathParameters?.id || event.rawPath.split('/')[3] || '';
-        const body = event.body ? JSON.parse(event.body) : undefined;
-        return await workflowsController.update(tenantId!, id, body);
-      })
-      .priority(200)
-      .build()
-  );
+  router.register('PUT', '/admin/workflows/:id', async (params, body, _query, tenantId) => {
+    return await workflowsController.update(tenantId!, params.id, body);
+  });
 
   // Delete workflow
-  routeRegistry.register(
-    del('/admin/workflows/:id')
-      .handler(async (event: APIGatewayProxyEventV2, tenantId?: string) => {
-        const id = event.pathParameters?.id || event.rawPath.split('/')[3] || '';
-        return await workflowsController.delete(tenantId!, id);
-      })
-      .priority(200)
-      .build()
-  );
+  router.register('DELETE', '/admin/workflows/:id', async (params, _body, _query, tenantId) => {
+    return await workflowsController.delete(tenantId!, params.id);
+  });
 }

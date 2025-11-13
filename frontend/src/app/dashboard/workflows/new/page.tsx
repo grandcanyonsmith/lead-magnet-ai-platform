@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { FiArrowLeft, FiSave, FiZap, FiPlus } from 'react-icons/fi'
+import { FiSave, FiZap, FiPlus } from 'react-icons/fi'
 import WorkflowStepEditor from '../components/WorkflowStepEditor'
 import { WorkflowBasicFields } from '@/components/workflows/WorkflowBasicFields'
 import { TemplateEditor } from '@/components/workflows/TemplateEditor'
@@ -45,24 +45,6 @@ export default function NewWorkflowPage() {
       
       // Move to form step
       setStep('form')
-      
-      // Auto-save the workflow immediately after generation
-      const autoSave = async () => {
-        try {
-          await submission.submitWorkflow(
-            workflowForm.formData,
-            workflowSteps.steps,
-            workflowForm.templateData,
-            workflowForm.formFieldsData,
-            generatedTemplateId,
-            setGeneratedTemplateId,
-            true
-          )
-        } catch (saveError) {
-          console.error('Auto-save failed:', saveError)
-        }
-      }
-      autoSave()
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }
   }, [aiGeneration.result])
@@ -125,13 +107,6 @@ export default function NewWorkflowPage() {
     return (
       <div>
         <div className="mb-6">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center text-gray-600 hover:text-gray-900 mb-4 py-2 touch-target"
-          >
-            <FiArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </button>
           <h1 className="text-2xl font-bold text-gray-900">Create Lead Magnet</h1>
           <p className="text-gray-600">Describe what you want to build, and AI will generate everything for you</p>
         </div>
@@ -198,13 +173,6 @@ export default function NewWorkflowPage() {
   return (
     <div>
       <div className="mb-6">
-        <button
-          onClick={() => setStep('prompt')}
-          className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
-        >
-          <FiArrowLeft className="w-4 h-4 mr-2" />
-          Back
-        </button>
         <h1 className="text-2xl font-bold text-gray-900">Create Lead Magnet</h1>
         <p className="text-gray-600">Review and edit the generated configuration</p>
       </div>
@@ -300,13 +268,6 @@ export default function NewWorkflowPage() {
         />
 
         <div className="flex justify-end space-x-4 pt-4 border-t">
-          <button
-            type="button"
-            onClick={() => setStep('prompt')}
-            className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            Back
-          </button>
           <button
             type="submit"
             disabled={submission.isSubmitting}

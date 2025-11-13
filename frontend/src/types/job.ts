@@ -37,6 +37,8 @@ export interface ExecutionStep {
   duration_ms?: number
   usage_info?: ExecutionStepUsageInfo
   _status?: StepStatus
+  artifact_id?: string
+  image_urls?: string[]
 }
 
 export interface MergedStep extends ExecutionStep {

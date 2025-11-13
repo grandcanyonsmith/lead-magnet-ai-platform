@@ -40,14 +40,6 @@ export function useFormEdit(workflowName: string, formId: string | null, workflo
     redirect_url: '',
   })
 
-  const [showFormPreview, setShowFormPreview] = useState(true)
-  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
-    basic: false,
-    fields: false,
-    security: false,
-    customization: false,
-  })
-  const [draggedFieldIndex, setDraggedFieldIndex] = useState<number | null>(null)
 
   // Load form data if provided
   useEffect(() => {
@@ -128,25 +120,13 @@ export function useFormEdit(workflowName: string, formId: string | null, workflo
     })
   }
 
-  const handleDragStart = (index: number) => {
-    setDraggedFieldIndex(index)
-  }
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-  }
-
-  const handleDrop = (dropIndex: number) => {
-    if (draggedFieldIndex === null || draggedFieldIndex === dropIndex) {
-      setDraggedFieldIndex(null)
-      return
-    }
-
+  const moveFieldUp = (index: number) => {
+    if (index === 0) return
     setFormFormData(prev => {
       const newFields = [...prev.form_fields_schema.fields]
-      const draggedField = newFields[draggedFieldIndex]
-      newFields.splice(draggedFieldIndex, 1)
-      newFields.splice(dropIndex, 0, draggedField)
+      const temp = newFields[index]
+      newFields[index] = newFields[index - 1]
+      newFields[index - 1] = temp
       return {
         ...prev,
         form_fields_schema: {
@@ -155,31 +135,34 @@ export function useFormEdit(workflowName: string, formId: string | null, workflo
         },
       }
     })
-    setDraggedFieldIndex(null)
   }
 
-  const toggleSection = (section: string) => {
-    setCollapsedSections(prev => ({
-      ...prev,
-      [section]: !prev[section],
-    }))
+  const moveFieldDown = (index: number) => {
+    setFormFormData(prev => {
+      const newFields = [...prev.form_fields_schema.fields]
+      if (index >= newFields.length - 1) return prev
+      const temp = newFields[index]
+      newFields[index] = newFields[index + 1]
+      newFields[index + 1] = temp
+      return {
+        ...prev,
+        form_fields_schema: {
+          ...prev.form_fields_schema,
+          fields: newFields,
+        },
+      }
+    })
   }
 
   return {
     formFormData,
     setFormFormData,
-    showFormPreview,
-    setShowFormPreview,
-    collapsedSections,
-    draggedFieldIndex,
     handleFormChange,
     handleFieldChange,
     addField,
     removeField,
-    handleDragStart,
-    handleDragOver,
-    handleDrop,
-    toggleSection,
+    moveFieldUp,
+    moveFieldDown,
   }
 }
 
