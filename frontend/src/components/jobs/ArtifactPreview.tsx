@@ -21,7 +21,7 @@ export function ArtifactPreview({ artifactId }: ArtifactPreviewProps) {
   const [artifact, setArtifact] = useState<Artifact | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [showPreview, setShowPreview] = useState(false)
+  const [showPreview, setShowPreview] = useState(true)
 
   useEffect(() => {
     const fetchArtifact = async () => {
