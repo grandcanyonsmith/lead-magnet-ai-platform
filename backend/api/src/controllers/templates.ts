@@ -7,56 +7,9 @@ import { calculateOpenAICost } from '../services/costService';
 import { callResponsesWithTimeout } from '../utils/openaiHelpers';
 import { logger } from '../utils/logger';
 import { getOpenAIClient } from '../services/openaiService';
+import { usageTrackingService } from '../services/usageTrackingService';
 
 const TEMPLATES_TABLE = process.env.TEMPLATES_TABLE!;
-const USAGE_RECORDS_TABLE = process.env.USAGE_RECORDS_TABLE || 'leadmagnet-usage-records';
-
-/**
- * Helper function to store usage record in DynamoDB.
- * This is called after each OpenAI API call to track costs.
- */
-async function storeUsageRecord(
-  tenantId: string,
-  serviceType: string,
-  model: string,
-  inputTokens: number,
-  outputTokens: number,
-  costUsd: number,
-  jobId?: string
-): Promise<void> {
-  try {
-    const usageId = `usage_${ulid()}`;
-    const usageRecord = {
-      usage_id: usageId,
-      tenant_id: tenantId,
-      job_id: jobId || null,
-      service_type: serviceType,
-      model,
-      input_tokens: inputTokens,
-      output_tokens: outputTokens,
-      cost_usd: costUsd,
-      created_at: new Date().toISOString(),
-    };
-
-    await db.put(USAGE_RECORDS_TABLE, usageRecord);
-    logger.info('[Usage Tracking] Usage record stored', {
-      usageId,
-      tenantId,
-      serviceType,
-      model,
-      inputTokens,
-      outputTokens,
-      costUsd,
-    });
-  } catch (error: any) {
-    // Don't fail the request if usage tracking fails
-    logger.error('[Usage Tracking] Failed to store usage record', {
-      error: error.message,
-      tenantId,
-      serviceType,
-    });
-  }
-}
 
 class TemplatesController {
   async list(tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {
@@ -312,14 +265,14 @@ Return ONLY the modified HTML code, no markdown formatting, no explanations.`;
         const outputTokens = usage.output_tokens || 0;
         const costData = calculateOpenAICost(refinementModelUsed, inputTokens, outputTokens);
         
-        await storeUsageRecord(
+        await usageTrackingService.storeUsageRecord({
           tenantId,
-          'openai_template_refine',
-          refinementModelUsed,
+          serviceType: 'openai_template_refine',
+          model: refinementModelUsed,
           inputTokens,
           outputTokens,
-          costData.cost_usd
-        );
+          costUsd: costData.cost_usd,
+        });
       }
 
       // Validate response has output_text
@@ -447,14 +400,14 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
         const outputTokens = usage.output_tokens || 0;
         const costData = calculateOpenAICost(htmlModelUsed, inputTokens, outputTokens);
         
-        await storeUsageRecord(
+        await usageTrackingService.storeUsageRecord({
           tenantId,
-          'openai_template_generate',
-          htmlModelUsed,
+          serviceType: 'openai_template_generate',
+          model: htmlModelUsed,
           inputTokens,
           outputTokens,
-          costData.cost_usd
-        );
+          costUsd: costData.cost_usd,
+        });
       }
 
       // Validate response has output_text
@@ -522,14 +475,14 @@ Return JSON format: {"name": "...", "description": "..."}`;
         const outputTokens = nameUsage.output_tokens || 0;
         const costData = calculateOpenAICost(namingModelUsed, inputTokens, outputTokens);
         
-        await storeUsageRecord(
+        await usageTrackingService.storeUsageRecord({
           tenantId,
-          'openai_template_generate',
-          namingModelUsed,
+          serviceType: 'openai_template_generate',
+          model: namingModelUsed,
           inputTokens,
           outputTokens,
-          costData.cost_usd
-        );
+          costUsd: costData.cost_usd,
+        });
       }
 
       // Validate response has output_text

@@ -9,6 +9,7 @@ import { useQuery } from '@/hooks/useQuery'
 import { useMutation } from '@/hooks/useMutation'
 import { api } from '@/lib/api'
 import { Notification, NotificationListResponse } from '@/types'
+import { normalizeError, extractListData } from './hookHelpers'
 
 // Query keys factory
 export const notificationKeys = {
@@ -57,10 +58,10 @@ export function useNotifications(unreadOnly?: boolean): UseNotificationsResult {
   )
 
   return {
-    notifications: data?.notifications || [],
+    notifications: extractListData(data, 'notifications'),
     unreadCount: data?.unread_count || 0,
     loading: isLoading,
-    error: error instanceof Error ? error.message : error ? String(error) : null,
+    error: normalizeError(error),
     refetch: () => refetch(),
     markAsRead: async (notificationId: string) => {
       await markAsReadMutation.mutateAsync(notificationId)
@@ -111,10 +112,10 @@ export function useNotificationsPolling(
   )
 
   return {
-    notifications: data?.notifications || [],
+    notifications: extractListData(data, 'notifications'),
     unreadCount: data?.unread_count || 0,
     loading: isLoading,
-    error: error instanceof Error ? error.message : error ? String(error) : null,
+    error: normalizeError(error),
     refetch: () => refetch(),
     markAsRead: async (notificationId: string) => {
       await markAsReadMutation.mutateAsync(notificationId)

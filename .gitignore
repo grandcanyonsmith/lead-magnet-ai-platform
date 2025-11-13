@@ -94,3 +94,6 @@ frontend/.next/
 
 # Temporary job outputs
 job_outputs/
+
+# Temporary attached assets
+attached_assets/

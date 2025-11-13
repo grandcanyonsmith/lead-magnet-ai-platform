@@ -9,6 +9,7 @@ import { useQuery } from '@/hooks/useQuery'
 import { useMutation } from '@/hooks/useMutation'
 import { api } from '@/lib/api'
 import { Workflow, WorkflowCreateRequest, WorkflowUpdateRequest, WorkflowListResponse } from '@/types'
+import { normalizeError, extractListData } from './hookHelpers'
 
 // Query keys factory
 export const workflowKeys = {
@@ -38,9 +39,9 @@ export function useWorkflows(params?: Record<string, unknown>): UseWorkflowsResu
   )
 
   return {
-    workflows: data?.workflows || [],
+    workflows: extractListData(data, 'workflows'),
     loading: isLoading,
-    error: error instanceof Error ? error.message : error ? String(error) : null,
+    error: normalizeError(error),
     refetch: () => refetch(),
   }
 }
@@ -69,7 +70,7 @@ export function useWorkflow(id: string | null): UseWorkflowResult {
   return {
     workflow: data || null,
     loading: isLoading,
-    error: error instanceof Error ? error.message : error ? String(error) : null,
+    error: normalizeError(error),
     refetch: () => refetch(),
   }
 }
@@ -99,7 +100,7 @@ export function useCreateWorkflow(): UseCreateWorkflowResult {
       }
     },
     loading: isPending,
-    error: error instanceof Error ? error.message : error ? String(error) : null,
+    error: normalizeError(error),
   }
 }
 
@@ -132,7 +133,7 @@ export function useUpdateWorkflow(): UseUpdateWorkflowResult {
       }
     },
     loading: isPending,
-    error: error instanceof Error ? error.message : error ? String(error) : null,
+    error: normalizeError(error),
   }
 }
 
@@ -162,7 +163,7 @@ export function useDeleteWorkflow(): UseDeleteWorkflowResult {
       }
     },
     loading: isPending,
-    error: error instanceof Error ? error.message : error ? String(error) : null,
+    error: normalizeError(error),
   }
 }
 
