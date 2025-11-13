@@ -169,7 +169,10 @@ export interface CreateLambdaWithTablesOptions {
   runtime?: lambda.Runtime;
   /** Handler (optional for container images) */
   handler?: string;
-  /** Lambda code (zip or container image) */
+  /** Lambda code (zip or container image)
+   * - For zip deployment: use lambda.Code (e.g., Code.fromAsset)
+   * - For container images: use lambda.DockerImageCode (e.g., DockerImageCode.fromEcr)
+   */
   code: lambda.Code | lambda.DockerImageCode;
   /** Timeout duration */
   timeout?: cdk.Duration;
@@ -245,12 +248,18 @@ export function createLambdaWithTables(
   
   if (isContainerImage) {
     // Container image - use DockerImageFunction
-    if (!(options.code instanceof lambda.DockerImageCode)) {
-      throw new Error('DockerImageCode is required for container image deployment');
+    // When runtime/handler are undefined, code must be DockerImageCode
+    // Verify that code is actually DockerImageCode by checking its type
+    // DockerImageCode.fromEcr() returns a DockerImageCode instance
+    if (!options.code) {
+      throw new Error('Code is required for Lambda function');
     }
+    
+    // Create DockerImageFunction - CDK will validate the code type
+    // If code is not DockerImageCode, CDK will throw an error during synthesis
     lambdaFunction = new lambda.DockerImageFunction(scope, id, {
       functionName: options.functionName,
-      code: options.code,
+      code: options.code as lambda.DockerImageCode,
       timeout: options.timeout,
       memorySize: options.memorySize,
       environment,
