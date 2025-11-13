@@ -190,9 +190,117 @@ class OpenAIClient:
             "tool_choice": tool_choice
         }
         
+        # Extract image URLs from response when image_generation tool is used
+        image_urls = []
+        try:
+            # Check if response has output items (Responses API structure)
+            if hasattr(response, 'output') and response.output:
+                for item in response.output:
+                    # Check for image items from image_generation tool
+                    # Image items typically have type='image' and contain image_url or url
+                    if hasattr(item, 'type'):
+                        item_type = item.type
+                        if item_type == 'image':
+                            # Extract image URL from image item
+                            image_url = None
+                            if hasattr(item, 'image_url'):
+                                image_url = item.image_url
+                            elif hasattr(item, 'url'):
+                                image_url = item.url
+                            elif hasattr(item, 'image'):
+                                # If image is an object, try to get URL from it
+                                image_obj = item.image
+                                if isinstance(image_obj, dict):
+                                    image_url = image_obj.get('url') or image_obj.get('image_url')
+                                elif hasattr(image_obj, 'url'):
+                                    image_url = image_obj.url
+                                elif hasattr(image_obj, 'image_url'):
+                                    image_url = image_obj.image_url
+                            
+                            if image_url:
+                                image_urls.append(image_url)
+                                logger.debug(f"[OpenAI Client] Extracted image URL from response: {image_url[:80]}...")
+                        
+                        # Also check for tool_call items that might contain image results
+                        elif item_type == 'tool_call' or item_type == 'tool_calls':
+                            # Check if this is an image_generation tool call
+                            tool_name = None
+                            if hasattr(item, 'name'):
+                                tool_name = item.name
+                            elif hasattr(item, 'tool_name'):
+                                tool_name = item.tool_name
+                            
+                            if tool_name == 'image_generation':
+                                # Extract image URLs from tool call result
+                                result = None
+                                if hasattr(item, 'result'):
+                                    result = item.result
+                                elif hasattr(item, 'output'):
+                                    result = item.output
+                                
+                                if result:
+                                    # Result might be a list of images or a single image
+                                    if isinstance(result, list):
+                                        for img in result:
+                                            img_url = None
+                                            if isinstance(img, dict):
+                                                img_url = img.get('url') or img.get('image_url')
+                                            elif hasattr(img, 'url'):
+                                                img_url = img.url
+                                            elif hasattr(img, 'image_url'):
+                                                img_url = img.image_url
+                                            
+                                            if img_url:
+                                                image_urls.append(img_url)
+                                                logger.debug(f"[OpenAI Client] Extracted image URL from tool_call result: {img_url[:80]}...")
+                                    else:
+                                        # Single image result
+                                        img_url = None
+                                        if isinstance(result, dict):
+                                            img_url = result.get('url') or result.get('image_url')
+                                        elif hasattr(result, 'url'):
+                                            img_url = result.url
+                                        elif hasattr(result, 'image_url'):
+                                            img_url = result.image_url
+                                        
+                                        if img_url:
+                                            image_urls.append(img_url)
+                                            logger.debug(f"[OpenAI Client] Extracted image URL from tool_call result: {img_url[:80]}...")
+            
+            # Also check response.tool_calls if it exists (alternative response structure)
+            if hasattr(response, 'tool_calls') and response.tool_calls:
+                for tool_call in response.tool_calls:
+                    if hasattr(tool_call, 'type') and tool_call.type == 'image_generation':
+                        # Extract image URLs from tool call
+                        if hasattr(tool_call, 'output'):
+                            output = tool_call.output
+                            if isinstance(output, list):
+                                for img in output:
+                                    img_url = None
+                                    if isinstance(img, dict):
+                                        img_url = img.get('url') or img.get('image_url')
+                                    elif hasattr(img, 'url'):
+                                        img_url = img.url
+                                    
+                                    if img_url:
+                                        image_urls.append(img_url)
+                                        logger.debug(f"[OpenAI Client] Extracted image URL from tool_calls: {img_url[:80]}...")
+            
+            if image_urls:
+                logger.info(f"[OpenAI Client] Extracted {len(image_urls)} image URL(s) from response", extra={
+                    'image_count': len(image_urls),
+                    'has_image_generation_tool': any(
+                        isinstance(t, dict) and t.get('type') == 'image_generation' 
+                        for t in tools
+                    ) if tools else False
+                })
+        except Exception as e:
+            logger.warning(f"[OpenAI Client] Error extracting image URLs from response: {e}", exc_info=True)
+            # Don't fail the request if image extraction fails, just log it
+        
         response_details = {
             "output_text": content,
-            "image_urls": [],
+            "image_urls": image_urls,
             "usage": {
                 "input_tokens": input_tokens,
                 "output_tokens": output_tokens,
