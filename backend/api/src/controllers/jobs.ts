@@ -379,6 +379,61 @@ class JobsController {
   }
 
   /**
+   * Get the final document for a job by serving the final artifact content.
+   * This endpoint proxies the artifact content to avoid CloudFront redirect issues.
+   */
+  async getDocument(tenantId: string, jobId: string): Promise<RouteResponse> {
+    const job = await db.get(JOBS_TABLE, { job_id: jobId });
+
+    if (!job) {
+      throw new ApiError('Job not found', 404);
+    }
+
+    if (job.tenant_id !== tenantId) {
+      throw new ApiError('You don\'t have permission to access this job', 403);
+    }
+
+    // Find the final artifact (typically the last one, or one with type 'html_final' or 'markdown_final')
+    if (!job.artifacts || !Array.isArray(job.artifacts) || job.artifacts.length === 0) {
+      throw new ApiError('No artifacts found for this job', 404);
+    }
+
+    // Try to find html_final or markdown_final artifact first
+    const ARTIFACTS_TABLE = process.env.ARTIFACTS_TABLE;
+    if (!ARTIFACTS_TABLE) {
+      throw new ApiError('ARTIFACTS_TABLE environment variable is not configured', 500);
+    }
+
+    let finalArtifactId: string | null = null;
+    
+    // Look for html_final or markdown_final artifact (check in reverse order)
+    const artifactsReversed = [...job.artifacts].reverse();
+    for (const artifactId of artifactsReversed) {
+      try {
+        const artifact = await db.get(ARTIFACTS_TABLE, { artifact_id: artifactId });
+        if (artifact && (artifact.artifact_type === 'html_final' || artifact.artifact_type === 'markdown_final')) {
+          finalArtifactId = artifactId;
+          break;
+        }
+      } catch (error) {
+        logger.warn(`Failed to fetch artifact ${artifactId}`, { error });
+      }
+    }
+
+    // Fallback to last artifact if no final artifact found
+    if (!finalArtifactId) {
+      finalArtifactId = job.artifacts[job.artifacts.length - 1];
+    }
+
+    if (!finalArtifactId) {
+      throw new ApiError('Final artifact not found', 404);
+    }
+
+    // Use artifacts controller to get content
+    return await artifactsController.getContent(tenantId, finalArtifactId);
+  }
+
+  /**
    * Get execution steps for a job by fetching directly from S3.
    * This endpoint proxies the execution steps to avoid presigned URL expiration issues.
    */

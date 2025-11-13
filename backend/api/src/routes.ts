@@ -282,6 +282,11 @@ export const router = async (
     return await jobsController.quickEditStep(tenantId, id, body);
   }
 
+  if (path.match(/^\/admin\/jobs\/[^/]+\/document$/) && method === 'GET') {
+    const id = pathSegments[2];
+    return await jobsController.getDocument(tenantId, id);
+  }
+
   if (path.match(/^\/admin\/jobs\/[^/]+\/execution-steps$/) && method === 'GET') {
     const id = pathSegments[2];
     return await jobsController.getExecutionSteps(tenantId, id);
