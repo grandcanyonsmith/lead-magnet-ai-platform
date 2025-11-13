@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 class ToolValidator:
     """Validates and filters tools for OpenAI API compatibility."""
     
-    TOOLS_REQUIRING_CONTAINER = {"code_interpreter", "computer_use_preview"}
+    TOOLS_REQUIRING_CONTAINER = {"code_interpreter", "computer_use_preview"}  # Both require container parameter for OpenAI API
     
     @staticmethod
     def requires_container(tool_type: str) -> bool:
@@ -34,14 +34,30 @@ class ToolValidator:
         Returns:
             Tool dictionary with container parameter added if needed
         """
+        # Validate that tool has a "type" key
+        if not isinstance(tool, dict):
+            logger.warning(f"Tool is not a dictionary: {tool}")
+            return tool
+        
         tool_type = tool.get("type")
         
+        # Warn if tool type is missing
+        if not tool_type:
+            logger.warning(f"Tool missing 'type' key: {tool}")
+            return tool
+        
+        # Check if this tool type requires container parameter
         if not ToolValidator.requires_container(tool_type):
             return tool
         
+        # Ensure container parameter is present
         if "container" not in tool:
             tool["container"] = {"type": "auto"}
             logger.debug(f"Added container parameter to {tool_type} tool")
+        elif not isinstance(tool.get("container"), dict) or "type" not in tool.get("container", {}):
+            # Validate container structure if present
+            logger.warning(f"Tool {tool_type} has invalid container structure, fixing it")
+            tool["container"] = {"type": "auto"}
         
         return tool
     
@@ -67,16 +83,37 @@ class ToolValidator:
         
         validated_tools = []
         
-        for tool in tools:
+        for idx, tool in enumerate(tools):
             if isinstance(tool, str):
                 tool_dict = {"type": tool}
             elif isinstance(tool, dict):
                 tool_dict = tool.copy()
             else:
-                logger.warning(f"Skipping invalid tool: {tool}")
+                logger.warning(f"Skipping invalid tool at index {idx}: {tool}")
                 continue
             
+            # Track if container was added during validation
+            tool_type_before = tool_dict.get("type")
+            had_container_before = "container" in tool_dict
+            
             tool_dict = ToolValidator.ensure_container_parameter(tool_dict)
+            
+            # Log if container was added
+            tool_type_after = tool_dict.get("type")
+            has_container_after = "container" in tool_dict
+            
+            if tool_type_after and ToolValidator.requires_container(tool_type_after):
+                if not had_container_before and has_container_after:
+                    logger.info(
+                        f"Added container parameter to tool[{idx}] ({tool_type_after}) "
+                        "during validation"
+                    )
+                elif had_container_before and not has_container_after:
+                    logger.warning(
+                        f"Container parameter was removed from tool[{idx}] ({tool_type_after}) "
+                        "during validation - this should not happen"
+                    )
+            
             validated_tools.append(tool_dict)
         
         if not validated_tools:

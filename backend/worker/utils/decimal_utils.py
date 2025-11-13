@@ -25,17 +25,23 @@ def convert_decimals_to_float(obj: Any) -> Any:
 
 def convert_decimals_to_int(obj: Any) -> Any:
     """
-    Recursively convert Decimal types to int for JSON serialization.
-    Use this for timestamps and counts.
+    Recursively convert Decimal and float types to int for JSON serialization.
+    Use this for timestamps, counts, and integer fields like display_width.
     
     Args:
-        obj: Object that may contain Decimal values
+        obj: Object that may contain Decimal or float values
         
     Returns:
-        Object with Decimals converted to int
+        Object with Decimals and whole-number floats converted to int
     """
     if isinstance(obj, Decimal):
         return int(obj)
+    elif isinstance(obj, float):
+        # Convert float to int if it represents a whole number
+        # This handles cases where Decimal was converted to float (e.g., 1024.0 -> 1024)
+        if obj.is_integer():
+            return int(obj)
+        return obj  # Keep non-integer floats as-is
     elif isinstance(obj, dict):
         return {k: convert_decimals_to_int(v) for k, v in obj.items()}
     elif isinstance(obj, list):
