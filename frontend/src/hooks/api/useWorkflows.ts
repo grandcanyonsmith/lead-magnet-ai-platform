@@ -39,7 +39,7 @@ export function useWorkflows(params?: Record<string, unknown>): UseWorkflowsResu
   )
 
   return {
-    workflows: extractListData(data, 'workflows'),
+    workflows: data?.workflows ?? [],
     loading: isLoading,
     error: normalizeError(error),
     refetch: () => refetch(),

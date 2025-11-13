@@ -58,7 +58,7 @@ export function useNotifications(unreadOnly?: boolean): UseNotificationsResult {
   )
 
   return {
-    notifications: extractListData(data, 'notifications'),
+    notifications: data?.notifications ?? [],
     unreadCount: data?.unread_count || 0,
     loading: isLoading,
     error: normalizeError(error),
@@ -112,7 +112,7 @@ export function useNotificationsPolling(
   )
 
   return {
-    notifications: extractListData(data, 'notifications'),
+    notifications: data?.notifications ?? [],
     unreadCount: data?.unread_count || 0,
     loading: isLoading,
     error: normalizeError(error),
