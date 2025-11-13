@@ -9,12 +9,21 @@ import toast from 'react-hot-toast'
 export interface WorkflowStep {
   step_name: string
   step_description?: string
+  step_type?: 'ai_generation' | 'webhook' // Default: 'ai_generation'
   model: string
   instructions: string
   step_order?: number
   depends_on?: number[] // Array of step indices this step depends on
   tools?: (string | { type: string; [key: string]: any })[]
   tool_choice?: 'auto' | 'required' | 'none'
+  // Webhook step fields
+  webhook_url?: string
+  webhook_headers?: Record<string, string>
+  webhook_data_selection?: {
+    include_submission: boolean
+    exclude_step_indices?: number[] // Steps to exclude (all included by default)
+    include_job_info: boolean
+  }
 }
 
 interface WorkflowStepEditorProps {
@@ -72,6 +81,9 @@ export default function WorkflowStepEditor({
   })
   const [aiPrompt, setAiPrompt] = useState('')
   const [showAIAssist, setShowAIAssist] = useState(false)
+  const [webhookHeaders, setWebhookHeaders] = useState<Record<string, string>>(
+    step.webhook_headers || {}
+  )
 
   // Always call hook unconditionally to comply with Rules of Hooks
   const { isGenerating, error: aiError, proposal, generateStep, acceptProposal, rejectProposal } = useWorkflowStepAI(workflowId)
@@ -90,9 +102,15 @@ export default function WorkflowStepEditor({
         environment: computerUseTool.environment || 'browser',
       })
     }
+    // Sync webhook headers
+    if (step.webhook_headers) {
+      setWebhookHeaders(step.webhook_headers)
+    } else {
+      setWebhookHeaders({})
+    }
   }, [step])
 
-  const handleChange = (field: keyof WorkflowStep, value: string | string[] | number[] | (string | { type: string; [key: string]: any })[]) => {
+  const handleChange = (field: keyof WorkflowStep, value: any) => {
     const updated = { ...localStep, [field]: value }
     setLocalStep(updated)
     onChange(index, updated)
@@ -358,129 +376,344 @@ export default function WorkflowStepEditor({
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            AI Model *
+            Step Type *
           </label>
           <select
-            value={localStep.model}
-            onChange={(e) => handleChange('model', e.target.value)}
+            value={localStep.step_type || 'ai_generation'}
+            onChange={(e) => {
+              const newStepType = e.target.value as 'ai_generation' | 'webhook'
+              if (newStepType === 'webhook') {
+                // Initialize webhook step with defaults
+                const updated = {
+                  ...localStep,
+                  step_type: newStepType,
+                  webhook_data_selection: {
+                    include_submission: true,
+                    exclude_step_indices: [],
+                    include_job_info: true
+                  }
+                }
+                setLocalStep(updated)
+                onChange(index, updated)
+              } else {
+                handleChange('step_type', newStepType)
+              }
+            }}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-            required
           >
-            {MODEL_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
+            <option value="ai_generation">AI Generation</option>
+            <option value="webhook">Webhook</option>
           </select>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Instructions *
-          </label>
-          <textarea
-            value={localStep.instructions}
-            onChange={(e) => handleChange('instructions', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-            placeholder="Detailed instructions for what this step should do..."
-            rows={6}
-            required
-          />
-          <p className="mt-1 text-sm text-gray-500">
-            These instructions will be passed to the AI model along with context from previous steps.
-          </p>
-        </div>
+        {/* AI Generation Step Fields */}
+        {(localStep.step_type === 'ai_generation' || !localStep.step_type) && (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                AI Model *
+              </label>
+              <select
+                value={localStep.model}
+                onChange={(e) => handleChange('model', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                required
+              >
+                {MODEL_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            OpenAI Tools
-          </label>
-          <div className="space-y-2 mb-3">
-            {AVAILABLE_TOOLS.map((tool) => (
-              <label key={tool.value} className="flex items-start space-x-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={isToolSelected(tool.value)}
-                  onChange={() => handleToolToggle(tool.value)}
-                  className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                />
-                <div>
-                  <span className="text-sm font-medium text-gray-900">{tool.label}</span>
-                  <p className="text-xs text-gray-500">{tool.description}</p>
-                </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Instructions *
               </label>
-            ))}
-          </div>
-          
-          {/* Computer Use Preview Configuration */}
-          {isToolSelected('computer_use_preview') && (
-            <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                Computer Use Preview Configuration
+              <textarea
+                value={localStep.instructions}
+                onChange={(e) => handleChange('instructions', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                placeholder="Detailed instructions for what this step should do..."
+                rows={6}
+                required
+              />
+              <p className="mt-1 text-sm text-gray-500">
+                These instructions will be passed to the AI model along with context from previous steps.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                OpenAI Tools
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Display Width
+              <div className="space-y-2 mb-3">
+                {AVAILABLE_TOOLS.map((tool) => (
+                  <label key={tool.value} className="flex items-start space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isToolSelected(tool.value)}
+                      onChange={() => handleToolToggle(tool.value)}
+                      className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                    />
+                    <div>
+                      <span className="text-sm font-medium text-gray-900">{tool.label}</span>
+                      <p className="text-xs text-gray-500">{tool.description}</p>
+                    </div>
                   </label>
-                  <input
-                    type="number"
-                    value={computerUseConfig.display_width}
-                    onChange={(e) => handleComputerUseConfigChange('display_width', parseInt(e.target.value) || 1024)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-                    min="100"
-                    max="4096"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Display Height
-                  </label>
-                  <input
-                    type="number"
-                    value={computerUseConfig.display_height}
-                    onChange={(e) => handleComputerUseConfigChange('display_height', parseInt(e.target.value) || 768)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-                    min="100"
-                    max="4096"
-                  />
-                </div>
+                ))}
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  Environment
-                </label>
-                <select
-                  value={computerUseConfig.environment}
-                  onChange={(e) => handleComputerUseConfigChange('environment', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+              
+              {/* Computer Use Preview Configuration */}
+              {isToolSelected('computer_use_preview') && (
+                <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Computer Use Preview Configuration
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Display Width
+                      </label>
+                      <input
+                        type="number"
+                        value={computerUseConfig.display_width}
+                        onChange={(e) => handleComputerUseConfigChange('display_width', parseInt(e.target.value) || 1024)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                        min="100"
+                        max="4096"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Display Height
+                      </label>
+                      <input
+                        type="number"
+                        value={computerUseConfig.display_height}
+                        onChange={(e) => handleComputerUseConfigChange('display_height', parseInt(e.target.value) || 768)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                        min="100"
+                        max="4096"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Environment
+                    </label>
+                    <select
+                      value={computerUseConfig.environment}
+                      onChange={(e) => handleComputerUseConfigChange('environment', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                    >
+                      <option value="browser">Browser</option>
+                      <option value="mac">macOS</option>
+                      <option value="windows">Windows</option>
+                      <option value="ubuntu">Ubuntu</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tool Choice
+              </label>
+              <select
+                value={localStep.tool_choice || 'auto'}
+                onChange={(e) => handleChange('tool_choice', e.target.value as 'auto' | 'required' | 'none')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              >
+                {TOOL_CHOICE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label} - {option.description}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </>
+        )}
+
+        {/* Webhook Step Fields */}
+        {localStep.step_type === 'webhook' && (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Webhook URL *
+              </label>
+              <input
+                type="url"
+                value={localStep.webhook_url || ''}
+                onChange={(e) => handleChange('webhook_url', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                placeholder="https://example.com/webhook"
+                required
+              />
+              <p className="mt-1 text-sm text-gray-500">
+                The URL where the POST request will be sent with selected data.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Webhook Headers (optional)
+              </label>
+              <p className="text-xs text-gray-500 mb-2">
+                Add custom headers to include in the webhook request (e.g., Authorization).
+              </p>
+              <div className="space-y-2">
+                {Object.entries(webhookHeaders).map(([key, value], idx) => (
+                  <div key={idx} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={key}
+                      onChange={(e) => {
+                        const newHeaders = { ...webhookHeaders }
+                        delete newHeaders[key]
+                        newHeaders[e.target.value] = value
+                        setWebhookHeaders(newHeaders)
+                        handleChange('webhook_headers', newHeaders)
+                      }}
+                      placeholder="Header name"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                    />
+                    <input
+                      type="text"
+                      value={value}
+                      onChange={(e) => {
+                        const newHeaders = { ...webhookHeaders, [key]: e.target.value }
+                        setWebhookHeaders(newHeaders)
+                        handleChange('webhook_headers', newHeaders)
+                      }}
+                      placeholder="Header value"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newHeaders = { ...webhookHeaders }
+                        delete newHeaders[key]
+                        setWebhookHeaders(newHeaders)
+                        handleChange('webhook_headers', newHeaders)
+                      }}
+                      className="px-3 py-2 text-red-600 hover:text-red-700 text-sm"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newHeaders = { ...webhookHeaders, '': '' }
+                    setWebhookHeaders(newHeaders)
+                  }}
+                  className="text-sm text-primary-600 hover:text-primary-700 font-medium"
                 >
-                  <option value="browser">Browser</option>
-                  <option value="mac">macOS</option>
-                  <option value="windows">Windows</option>
-                  <option value="ubuntu">Ubuntu</option>
-                </select>
+                  + Add Header
+                </button>
               </div>
             </div>
-          )}
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tool Choice
-            </label>
-            <select
-              value={localStep.tool_choice || 'auto'}
-              onChange={(e) => handleChange('tool_choice', e.target.value as 'auto' | 'required' | 'none')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-            >
-              {TOOL_CHOICE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label} - {option.description}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Data Selection
+              </label>
+              <p className="text-xs text-gray-500 mb-3">
+                Choose which data to include in the webhook payload. All step outputs are included by default.
+              </p>
+              
+              <div className="space-y-3">
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={localStep.webhook_data_selection?.include_submission !== false}
+                    onChange={(e) => {
+                      const dataSelection = localStep.webhook_data_selection || {
+                        include_submission: true,
+                        exclude_step_indices: [],
+                        include_job_info: true
+                      }
+                      handleChange('webhook_data_selection', {
+                        ...dataSelection,
+                        include_submission: e.target.checked
+                      })
+                    }}
+                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                  />
+                  <span className="text-sm text-gray-900">Include submission data</span>
+                </label>
+
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={localStep.webhook_data_selection?.include_job_info !== false}
+                    onChange={(e) => {
+                      const dataSelection = localStep.webhook_data_selection || {
+                        include_submission: true,
+                        exclude_step_indices: [],
+                        include_job_info: true
+                      }
+                      handleChange('webhook_data_selection', {
+                        ...dataSelection,
+                        include_job_info: e.target.checked
+                      })
+                    }}
+                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                  />
+                  <span className="text-sm text-gray-900">Include job information</span>
+                </label>
+
+                {allSteps.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Exclude Step Outputs (optional)
+                    </label>
+                    <p className="text-xs text-gray-500 mb-2">
+                      All step outputs are included by default. Check steps to exclude from the payload.
+                    </p>
+                    <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-3">
+                      {allSteps.map((otherStep, otherIndex) => {
+                        if (otherIndex >= index) return null // Can't exclude future steps
+                        const isExcluded = (localStep.webhook_data_selection?.exclude_step_indices || []).includes(otherIndex)
+                        return (
+                          <label key={otherIndex} className="flex items-center space-x-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={isExcluded}
+                              onChange={(e) => {
+                                const dataSelection = localStep.webhook_data_selection || {
+                                  include_submission: true,
+                                  exclude_step_indices: [],
+                                  include_job_info: true
+                                }
+                                const currentExcluded = dataSelection.exclude_step_indices || []
+                                const newExcluded = e.target.checked
+                                  ? [...currentExcluded, otherIndex]
+                                  : currentExcluded.filter((idx: number) => idx !== otherIndex)
+                                handleChange('webhook_data_selection', {
+                                  ...dataSelection,
+                                  exclude_step_indices: newExcluded
+                                })
+                              }}
+                              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                            />
+                            <span className="text-sm text-gray-900">
+                              Exclude: {otherStep.step_name || `Step ${otherIndex + 1}`}
+                            </span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -528,4 +761,5 @@ export default function WorkflowStepEditor({
     </div>
   )
 }
+
 

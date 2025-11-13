@@ -41,6 +41,7 @@ export function useWorkflowSteps(initialSteps?: WorkflowStep[]) {
       {
         step_name: `Step ${prev.length + 1}`,
         step_description: '',
+        step_type: 'ai_generation',
         model: 'gpt-5',
         instructions: '',
         step_order: prev.length,
