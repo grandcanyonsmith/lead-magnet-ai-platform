@@ -143,7 +143,11 @@ export function StepHeader({
             {step.usage_info && (
               <div className="flex flex-col items-end gap-0.5">
                 <span className="text-gray-600">
-                  {(step.usage_info.input_tokens || 0) + (step.usage_info.output_tokens || 0)} tokens
+                  {step.usage_info.total_tokens 
+                    ? `${step.usage_info.total_tokens} tokens`
+                    : step.usage_info.prompt_tokens || step.usage_info.completion_tokens
+                    ? `${(step.usage_info.prompt_tokens || 0) + (step.usage_info.completion_tokens || 0)} tokens`
+                    : null}
                 </span>
                 {step.usage_info?.cost_usd && (
                   <span className="text-gray-600 font-medium">
