@@ -35,16 +35,26 @@ export class TemplateGenerationService {
     description: string,
     model: string,
     tenantId: string,
-    jobId?: string
+    jobId?: string,
+    brandContext?: string,
+    icpContext?: string
   ): Promise<{ htmlContent: string; usageInfo: UsageInfo }> {
-    const templatePrompt = `You are an expert HTML template designer for lead magnets. Create a professional HTML template for: "${description}"
+    let contextSection = '';
+    if (brandContext) {
+      contextSection += `\n\n## Brand Context\n${brandContext}`;
+    }
+    if (icpContext) {
+      contextSection += `\n\n## Ideal Customer Profile (ICP) Document\n${icpContext}`;
+    }
+    
+    const templatePrompt = `You are an expert HTML template designer for lead magnets. Create a professional HTML template for: "${description}"${contextSection}
 
 Requirements:
 1. Generate a complete, valid HTML5 document
 2. Include modern, clean CSS styling (inline or in <style> tag)
 3. DO NOT use placeholder syntax - use actual sample content and descriptive text
 4. Make it responsive and mobile-friendly
-5. Use professional color scheme and typography
+5. Use professional color scheme and typography that aligns with the brand context if provided
 6. Design it to beautifully display lead magnet content
 7. Include actual text content that demonstrates the design - use sample headings, paragraphs, and sections
 8. The HTML should be ready to use with real content filled in manually or via code
@@ -133,9 +143,19 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
     description: string,
     model: string,
     tenantId: string,
-    jobId?: string
+    jobId?: string,
+    brandContext?: string,
+    icpContext?: string
   ): Promise<{ templateName: string; templateDescription: string; usageInfo: UsageInfo }> {
-    const templateNamePrompt = `Based on this lead magnet: "${description}", generate:
+    let contextSection = '';
+    if (brandContext) {
+      contextSection += `\n\n## Brand Context\n${brandContext}`;
+    }
+    if (icpContext) {
+      contextSection += `\n\n## Ideal Customer Profile (ICP) Document\n${icpContext}`;
+    }
+    
+    const templateNamePrompt = `Based on this lead magnet: "${description}"${contextSection}, generate:
 1. A short, descriptive template name (2-4 words max)
 2. A brief template description (1-2 sentences)
 

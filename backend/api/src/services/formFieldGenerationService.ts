@@ -36,14 +36,25 @@ export class FormFieldGenerationService {
     workflowName: string,
     model: string,
     tenantId: string,
-    jobId?: string
+    jobId?: string,
+    brandContext?: string,
+    icpContext?: string
   ): Promise<{ formData: any; usageInfo: UsageInfo }> {
-    const formPrompt = `You are an expert at creating lead capture forms. Based on this lead magnet: "${description}", generate appropriate form fields.
+    let contextSection = '';
+    if (brandContext) {
+      contextSection += `\n\n## Brand Context\n${brandContext}`;
+    }
+    if (icpContext) {
+      contextSection += `\n\n## Ideal Customer Profile (ICP) Document\n${icpContext}`;
+    }
+    
+    const formPrompt = `You are an expert at creating lead capture forms. Based on this lead magnet: "${description}"${contextSection}, generate appropriate form fields.
 
 The form should collect all necessary information needed to personalize the lead magnet. Think about what data would be useful for:
 - Personalizing the AI-generated content
 - Contacting the lead
 - Understanding their needs
+- Aligning with the target audience and brand context if provided
 
 Generate 3-6 form fields. Common field types: text, email, tel, textarea, select, number.
 
