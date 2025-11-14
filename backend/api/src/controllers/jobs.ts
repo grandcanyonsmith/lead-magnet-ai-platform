@@ -3,42 +3,18 @@ import { ApiError } from '../utils/errors';
 import { RouteResponse } from '../routes';
 import { artifactsController } from './artifacts';
 import { ulid } from 'ulid';
-import { SFNClient, StartExecutionCommand } from '@aws-sdk/client-sfn';
 import { logger } from '../utils/logger';
 import { ArtifactUrlService } from '../services/artifactUrlService';
 import { HeadObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { env } from '../utils/env';
+import { jobExecutionService } from '../services/jobExecutionService';
+import { generateExecutionStepsUrl } from '../utils/executionStepsUtils';
 
 const JOBS_TABLE = env.jobsTable;
 const SUBMISSIONS_TABLE = env.submissionsTable;
-const STEP_FUNCTIONS_ARN = env.stepFunctionsArn;
 const ARTIFACTS_BUCKET = env.artifactsBucket;
 
-const sfnClient = STEP_FUNCTIONS_ARN ? new SFNClient({ region: env.awsRegion }) : null;
 const s3Client = new S3Client({ region: env.awsRegion });
-
-/**
- * Generate a public URL for execution_steps stored in S3.
- * 
- * Execution steps are always stored in S3 (never in DynamoDB) to ensure
- * complete data storage without size limitations.
- * 
- * Uses CloudFront URL (non-expiring) if available, otherwise falls back to
- * a long-lived presigned URL. This ensures execution steps are always accessible.
- * 
- * @param s3Key - S3 key for the execution_steps JSON file
- * @returns Public URL string or null if generation fails
- */
-async function generateExecutionStepsUrl(s3Key: string): Promise<string | null> {
-  try {
-    // Use ArtifactUrlService to get CloudFront URL (non-expiring) or long-lived presigned URL
-    const { url } = await ArtifactUrlService.generateUrl(s3Key);
-    return url;
-  } catch (error) {
-    logger.error(`Error generating URL for execution_steps: ${s3Key}`, error);
-    return null;
-  }
-}
 
 class JobsController {
   async list(tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {
@@ -359,58 +335,13 @@ class JobsController {
     // Update submission with job_id
     await db.update(SUBMISSIONS_TABLE, { submission_id: newSubmissionId }, { job_id: newJobId });
 
-    // Start Step Functions execution
-    try {
-      // Check if we're in local development - process job directly
-      if (process.env.IS_LOCAL === 'true' || process.env.NODE_ENV === 'development' || !STEP_FUNCTIONS_ARN) {
-        logger.info('Local mode detected, processing resubmitted job directly', { jobId: newJobId });
-        
-        // Import worker processor for local processing
-        setImmediate(async () => {
-          try {
-            const { processJobLocally } = await import('../services/jobProcessor');
-            await processJobLocally(newJobId, originalJob.tenant_id, originalJob.workflow_id, newSubmissionId);
-          } catch (error: any) {
-            logger.error('Error processing resubmitted job in local mode', {
-              jobId: newJobId,
-              error: error.message,
-              errorStack: error.stack,
-            });
-            // Update job status to failed
-            await db.update(JOBS_TABLE, { job_id: newJobId }, {
-              status: 'failed',
-              error_message: `Processing failed: ${error.message}`,
-              updated_at: new Date().toISOString(),
-            });
-          }
-        });
-      } else {
-        const command = new StartExecutionCommand({
-          stateMachineArn: STEP_FUNCTIONS_ARN,
-          input: JSON.stringify({
-            job_id: newJobId,
-            tenant_id: originalJob.tenant_id,
-            workflow_id: originalJob.workflow_id,
-            submission_id: newSubmissionId,
-          }),
-        });
-
-        await sfnClient!.send(command);
-        logger.info('Started Step Functions execution for resubmitted job', { jobId: newJobId });
-      }
-    } catch (error: any) {
-      logger.error('Error starting Step Functions execution for resubmitted job', {
-        jobId: newJobId,
-        error: error.message,
-      });
-      // Update job status to failed
-      await db.update(JOBS_TABLE, { job_id: newJobId }, {
-        status: 'failed',
-        error_message: `Failed to start processing: ${error.message}`,
-        updated_at: new Date().toISOString(),
-      });
-      throw new ApiError(`Failed to resubmit job: ${error.message}`, 500);
-    }
+    // Start job processing
+    await jobExecutionService.startJobProcessing({
+      jobId: newJobId,
+      tenantId: originalJob.tenant_id,
+      workflowId: originalJob.workflow_id,
+      submissionId: newSubmissionId,
+    });
 
     return {
       statusCode: 200,
