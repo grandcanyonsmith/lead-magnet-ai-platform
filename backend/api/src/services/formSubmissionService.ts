@@ -11,11 +11,10 @@ const STEP_FUNCTIONS_ARN = process.env.STEP_FUNCTIONS_ARN!;
 
 const sfnClient = STEP_FUNCTIONS_ARN ? new SFNClient({ region: process.env.AWS_REGION || 'us-east-1' }) : null;
 
-export interface FormSubmissionData {
+export interface FormSubmissionData extends Record<string, any> {
   name: string;
   email: string;
   phone: string;
-  [key: string]: any;
 }
 
 export interface SubmissionResult {
