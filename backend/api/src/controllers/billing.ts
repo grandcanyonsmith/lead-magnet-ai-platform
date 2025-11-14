@@ -2,8 +2,9 @@ import { db, normalizeQueryResult } from '../utils/db';
 import { RouteResponse } from '../routes';
 import { ApiError } from '../utils/errors';
 import { logger } from '../utils/logger';
+import { env } from '../utils/env';
 
-const USAGE_RECORDS_TABLE = process.env.USAGE_RECORDS_TABLE || 'leadmagnet-usage-records';
+const USAGE_RECORDS_TABLE = env.usageRecordsTable;
 
 interface UsageRecord {
   usage_id: string;

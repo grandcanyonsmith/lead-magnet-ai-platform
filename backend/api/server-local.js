@@ -42,7 +42,9 @@ app.use(express.urlencoded({ extended: true }));
 const mockClaims = {
   sub: '84c8e438-0061-70f2-2ce0-7cb44989a329',
   'custom:tenant_id': '84c8e438-0061-70f2-2ce0-7cb44989a329',
-  email: 'test@example.com',
+  'custom:customer_id': 'cust_84c8e438',
+  'custom:role': 'SUPER_ADMIN',
+  email: 'canyon@coursecreator360.com',
 };
 
 // Create mock Lambda context (will be created per request)

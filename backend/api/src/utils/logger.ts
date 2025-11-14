@@ -1,7 +1,9 @@
+import { env } from './env';
+
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 class Logger {
-  private logLevel: LogLevel = (process.env.LOG_LEVEL as LogLevel) || 'info';
+  private logLevel: LogLevel = (env.logLevel as LogLevel) || 'info';
 
   private shouldLog(level: LogLevel): boolean {
     const levels: LogLevel[] = ['debug', 'info', 'warn', 'error'];

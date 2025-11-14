@@ -6,17 +6,10 @@ import { getCustomerId } from '../utils/rbac';
 import { generateWebhookToken } from '../utils/webhookToken';
 import { logger } from '../utils/logger';
 import { ApiError, InternalServerError, ValidationError } from '../utils/errors';
+import { env } from '../utils/env';
 
-const userSettingsTable = process.env.USER_SETTINGS_TABLE;
-const API_URL = process.env.API_URL || process.env.API_GATEWAY_URL || '';
-
-// Validate environment variables on module load
-if (!userSettingsTable) {
-  logger.error('[SettingsController] USER_SETTINGS_TABLE environment variable is not set');
-  throw new Error('USER_SETTINGS_TABLE environment variable is required');
-}
-
-const USER_SETTINGS_TABLE = userSettingsTable;
+const USER_SETTINGS_TABLE = env.userSettingsTable;
+const API_URL = env.apiUrl || env.apiGatewayUrl;
 
 class SettingsController {
   async get(_params: Record<string, string>, _body: any, _query: Record<string, string | undefined>, _tenantId: string | undefined, context?: RequestContext): Promise<RouteResponse> {

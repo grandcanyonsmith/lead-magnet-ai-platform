@@ -2,9 +2,9 @@ import { APIGatewayProxyEventV2, APIGatewayProxyResultV2, Context } from 'aws-la
 import { routerHandler } from './routes/index';
 import { handleError } from './utils/errors';
 import { logger } from './utils/logger';
-import { extractTenantId } from './utils/tenantId';
 import { handleWorkflowGenerationJob } from './handlers/workflowGenerationHandler';
 import { handleCORS } from './cors-handler';
+import { addSecurityHeaders } from './middleware/securityHeaders';
 
 export const handler = async (
   event: APIGatewayProxyEventV2 | any,
@@ -34,28 +34,24 @@ export const handler = async (
 
   // Handle CORS preflight requests
   if (apiEvent.requestContext?.http?.method === 'OPTIONS') {
-    const corsHeaders = handleCORS(
-      apiEvent.headers?.origin || apiEvent.headers?.Origin,
-      {
-        allowedOrigins: ['*'],
-        allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-        allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Session-Id', 'x-view-mode', 'x-selected-customer-id'],
-        allowCredentials: false,
-      }
-    );
-    return {
+    const origin = apiEvent.headers?.origin || apiEvent.headers?.Origin;
+    const corsHeaders = handleCORS(origin);
+    const securityHeaders = addSecurityHeaders({
       statusCode: 204,
       headers: corsHeaders,
+      body: {},
+    });
+    return {
+      statusCode: 204,
+      headers: securityHeaders.headers,
       body: '',
     };
   }
 
   try {
-    // Extract tenant ID (may be undefined for public routes)
-    const tenantId = extractTenantId(apiEvent);
-
     // Route the request
-    const result = await routerHandler(apiEvent, tenantId);
+    // Router will extract auth context internally and use customerId as tenantId
+    const result = await routerHandler(apiEvent, undefined);
 
     // Format response
     const contentType = result.headers?.['Content-Type'] || 'application/json';
@@ -64,20 +60,22 @@ export const handler = async (
 
     // Add CORS headers to all responses
     const origin = apiEvent.headers?.origin || apiEvent.headers?.Origin;
-    const corsHeaders = handleCORS(origin, {
-      allowedOrigins: ['*'],
-      allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Session-Id', 'x-view-mode', 'x-selected-customer-id'],
-      allowCredentials: false,
-    });
+    const corsHeaders = handleCORS(origin);
 
-    return {
+    // Add security headers
+    const responseWithSecurity = addSecurityHeaders({
       statusCode: result.statusCode || 200,
       headers: {
         'Content-Type': contentType,
         ...corsHeaders,
         ...result.headers,
       },
+      body: result.body,
+    });
+
+    return {
+      statusCode: responseWithSecurity.statusCode,
+      headers: responseWithSecurity.headers,
       body,
     };
   } catch (error) {
@@ -85,26 +83,33 @@ export const handler = async (
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
       path: apiEvent.rawPath,
+      requestId: context.awsRequestId,
     });
 
-    const errorResponse = handleError(error);
+    const errorResponse = handleError(error, {
+      requestId: context.awsRequestId,
+      path: apiEvent.rawPath,
+      method: apiEvent.requestContext?.http?.method,
+    });
 
     // Add CORS headers to error responses
     const origin = apiEvent.headers?.origin || apiEvent.headers?.Origin;
-    const corsHeaders = handleCORS(origin, {
-      allowedOrigins: ['*'],
-      allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Session-Id', 'x-view-mode', 'x-selected-customer-id'],
-      allowCredentials: false,
-    });
-
-    return {
+    const corsHeaders = handleCORS(origin);
+    
+    // Add security headers
+    const responseWithSecurity = addSecurityHeaders({
       statusCode: errorResponse.statusCode,
       headers: {
         'Content-Type': 'application/json',
         ...corsHeaders,
       },
-      body: JSON.stringify(errorResponse.body),
+      body: errorResponse.body,
+    });
+
+    return {
+      statusCode: responseWithSecurity.statusCode,
+      headers: responseWithSecurity.headers,
+      body: JSON.stringify(responseWithSecurity.body),
     };
   }
 };

@@ -44,16 +44,60 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="h-8 bg-gray-200 rounded w-48 animate-pulse"></div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div>
+        {/* Header skeleton */}
+        <div className="mb-4 sm:mb-6">
+          <div className="h-7 sm:h-8 lg:h-9 bg-gray-200 rounded w-48 mb-2 sm:mb-2 animate-pulse"></div>
+          <div className="h-4 sm:h-5 bg-gray-200 rounded w-96 max-w-full animate-pulse"></div>
+        </div>
+
+        {/* Stats Grid skeleton */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6 mb-6 sm:mb-8">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="bg-white rounded-lg shadow p-6">
-              <div className="h-12 bg-gray-200 rounded w-12 mb-4 animate-pulse"></div>
-              <div className="h-8 bg-gray-200 rounded w-24 mb-2 animate-pulse"></div>
-              <div className="h-4 bg-gray-200 rounded w-32 animate-pulse"></div>
+            <div key={i} className="bg-white rounded-lg sm:rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100">
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <div className="h-10 w-10 sm:h-12 sm:w-12 bg-gray-200 rounded-lg sm:rounded-xl animate-pulse"></div>
+              </div>
+              <div className="h-8 sm:h-9 bg-gray-200 rounded w-20 mb-1 animate-pulse"></div>
+              <div className="h-4 sm:h-5 bg-gray-200 rounded w-32 animate-pulse"></div>
             </div>
           ))}
+        </div>
+
+        {/* Quick Actions skeleton */}
+        <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-6 sm:mb-8">
+          <div className="h-5 sm:h-6 bg-gray-200 rounded w-32 mb-3 sm:mb-4 animate-pulse"></div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <div className="h-11 sm:h-12 bg-gray-200 rounded-lg animate-pulse"></div>
+          </div>
+        </div>
+
+        {/* Additional Information skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg sm:rounded-xl shadow-sm border border-blue-100 p-4 sm:p-6">
+            <div className="h-5 sm:h-6 bg-gray-300 rounded w-48 mb-2 sm:mb-3 animate-pulse"></div>
+            <div className="space-y-2 sm:space-y-3">
+              <div className="h-4 sm:h-5 bg-gray-200 rounded w-full animate-pulse"></div>
+              <div className="h-4 sm:h-5 bg-gray-200 rounded w-5/6 animate-pulse"></div>
+              <div className="h-4 sm:h-5 bg-gray-200 rounded w-4/6 animate-pulse"></div>
+            </div>
+          </div>
+          <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
+            <div className="h-5 sm:h-6 bg-gray-200 rounded w-40 mb-3 sm:mb-4 animate-pulse"></div>
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
+                  <div className="h-4 bg-gray-200 rounded w-32 animate-pulse"></div>
+                  <div className="h-4 bg-gray-200 rounded w-12 animate-pulse"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
+            <div className="h-5 sm:h-6 bg-gray-200 rounded w-36 mb-3 sm:mb-4 animate-pulse"></div>
+            <div className="h-4 sm:h-5 bg-gray-200 rounded w-full animate-pulse"></div>
+            <div className="h-4 sm:h-5 bg-gray-200 rounded w-3/4 mt-2 animate-pulse"></div>
+          </div>
         </div>
       </div>
     )

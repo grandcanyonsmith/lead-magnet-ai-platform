@@ -7,9 +7,10 @@ import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-sec
 import OpenAI from 'openai';
 import { ApiError } from '../utils/errors';
 import { logger } from '../utils/logger';
+import { env } from '../utils/env';
 
-const OPENAI_SECRET_NAME = process.env.OPENAI_SECRET_NAME || 'leadmagnet/openai-api-key';
-const secretsClient = new SecretsManagerClient({ region: process.env.AWS_REGION || 'us-east-1' });
+const OPENAI_SECRET_NAME = env.openaiSecretName;
+const secretsClient = new SecretsManagerClient({ region: env.awsRegion });
 
 // Cache the OpenAI client instance
 let cachedClient: OpenAI | null = null;

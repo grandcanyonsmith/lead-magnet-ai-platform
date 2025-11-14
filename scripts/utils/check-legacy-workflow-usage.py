@@ -9,41 +9,34 @@ This script scans the workflows table to identify:
 4. Breakdown by tenant
 """
 
-import boto3
+import sys
 import json
-from decimal import Decimal
+import argparse
+from pathlib import Path
 from collections import defaultdict
 from botocore.exceptions import ClientError
 
-# Configuration
-REGION = "us-east-1"
-WORKFLOWS_TABLE = "leadmagnet-workflows"
+# Add lib directory to path
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
-
-def convert_decimals(obj):
-    """Convert Decimal types to float/int for JSON serialization."""
-    if isinstance(obj, Decimal):
-        if obj % 1 == 0:
-            return int(obj)
-        return float(obj)
-    elif isinstance(obj, dict):
-        return {k: convert_decimals(v) for k, v in obj.items()}
-    elif isinstance(obj, list):
-        return [convert_decimals(item) for item in obj]
-    return obj
+from lib.common import (
+    convert_decimals,
+    get_dynamodb_resource,
+    get_table_name,
+    get_aws_region,
+    print_section,
+)
 
 
 def check_legacy_workflow_usage():
     """Check how many workflows are using legacy format."""
-    dynamodb = boto3.resource("dynamodb", region_name=REGION)
-    workflows_table = dynamodb.Table(WORKFLOWS_TABLE)
+    dynamodb = get_dynamodb_resource()
+    workflows_table = dynamodb.Table(get_table_name("workflows"))
     
     try:
-        print("=" * 80)
-        print("Legacy Workflow Usage Check")
-        print("=" * 80)
-        print(f"Table: {WORKFLOWS_TABLE}")
-        print(f"Region: {REGION}")
+        print_section("Legacy Workflow Usage Check")
+        print(f"Table: {get_table_name('workflows')}")
+        print(f"Region: {get_aws_region()}")
         print()
         
         # Scan all workflows (or use pagination for large tables)
@@ -115,9 +108,7 @@ def check_legacy_workflow_usage():
                 tenant_stats[tenant_id]['legacy'] += 1
         
         # Print summary
-        print("=" * 80)
-        print("SUMMARY")
-        print("=" * 80)
+        print_section("SUMMARY")
         print(f"Total active workflows: {len(active_workflows)}")
         print(f"  - Using Steps Format: {len(steps_workflows)} ({len(steps_workflows)/len(active_workflows)*100:.1f}%)")
         print(f"  - Using Legacy Format: {len(legacy_workflows)} ({len(legacy_workflows)/len(active_workflows)*100:.1f}%)")
@@ -125,9 +116,7 @@ def check_legacy_workflow_usage():
         
         # Print tenant breakdown
         if len(tenant_stats) > 0:
-            print("=" * 80)
-            print("BREAKDOWN BY TENANT")
-            print("=" * 80)
+            print_section("BREAKDOWN BY TENANT")
             for tenant_id, stats in sorted(tenant_stats.items(), key=lambda x: x[1]['total'], reverse=True):
                 legacy_pct = (stats['legacy'] / stats['total'] * 100) if stats['total'] > 0 else 0
                 print(f"Tenant: {tenant_id[:8]}...")
@@ -138,9 +127,7 @@ def check_legacy_workflow_usage():
         
         # Print legacy workflow details
         if legacy_workflows:
-            print("=" * 80)
-            print(f"LEGACY WORKFLOWS ({len(legacy_workflows)})")
-            print("=" * 80)
+            print_section(f"LEGACY WORKFLOWS ({len(legacy_workflows)})")
             for wf in legacy_workflows[:20]:  # Show first 20
                 print(f"  - {wf['workflow_name']} ({wf['workflow_id']})")
                 print(f"    Tenant: {wf['tenant_id'][:8]}...")
@@ -153,16 +140,12 @@ def check_legacy_workflow_usage():
                 print(f"  ... and {len(legacy_workflows) - 20} more legacy workflows")
                 print()
         else:
-            print("=" * 80)
-            print("LEGACY WORKFLOWS")
-            print("=" * 80)
+            print_section("LEGACY WORKFLOWS")
             print("✅ No legacy workflows found! All workflows are using the Steps Format.")
             print()
         
         # Recommendations
-        print("=" * 80)
-        print("RECOMMENDATIONS")
-        print("=" * 80)
+        print_section("RECOMMENDATIONS")
         if len(legacy_workflows) > 0:
             print(f"⚠️  Found {len(legacy_workflows)} legacy workflow(s) that should be migrated.")
             print("   These workflows will trigger deprecation warnings when:")
@@ -197,12 +180,34 @@ def check_legacy_workflow_usage():
         return None
 
 
-if __name__ == "__main__":
+def main():
+    parser = argparse.ArgumentParser(
+        description="Check how many workflows are using the legacy format (no steps array)"
+    )
+    parser.add_argument(
+        "--region",
+        help="AWS region (default: from environment or us-east-1)",
+        default=None,
+    )
+    parser.add_argument(
+        "--output",
+        help="Output file for JSON report (default: legacy-workflow-usage-report.json)",
+        default="legacy-workflow-usage-report.json",
+    )
+    args = parser.parse_args()
+    
+    if args.region:
+        import os
+        os.environ["AWS_REGION"] = args.region
+    
     result = check_legacy_workflow_usage()
     if result:
         # Save results to JSON file
-        output_file = "legacy-workflow-usage-report.json"
-        with open(output_file, 'w') as f:
+        with open(args.output, 'w') as f:
             json.dump(result, f, indent=2, default=str)
-        print(f"📄 Detailed report saved to: {output_file}")
+        print(f"📄 Detailed report saved to: {args.output}")
+
+
+if __name__ == "__main__":
+    main()
 

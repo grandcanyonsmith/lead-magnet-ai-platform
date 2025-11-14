@@ -47,29 +47,30 @@ export function InlineImage({ url, alt, className = '' }: InlineImageProps) {
 
   return (
     <div className={`my-4 md:my-2 w-full ${className}`}>
-      {loading && (
-        <div className="flex items-center justify-center p-8 md:p-4 bg-gray-50 border border-gray-200 rounded-xl">
-          <div className="flex items-center gap-3 md:gap-2 text-base md:text-sm text-gray-500">
-            <FiImage className="w-6 h-6 md:w-5 md:h-5 animate-pulse" />
-            <span>Loading image...</span>
-          </div>
-        </div>
-      )}
       <div className="rounded-xl overflow-hidden border-2 border-gray-200 bg-white p-2 md:p-1">
-        <img
-          src={url}
-          alt={alt || 'Inline image'}
-          onLoad={handleLoad}
-          onError={handleError}
-          className={`w-full h-auto rounded-lg ${
-            loading ? 'hidden' : 'block'
-          }`}
-          style={{
-            maxHeight: '600px',
-            objectFit: 'contain',
-          }}
-          loading="lazy"
-        />
+        <div className="relative w-full aspect-video bg-gray-50 rounded-lg overflow-hidden">
+          {loading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
+              <div className="flex items-center gap-3 md:gap-2 text-base md:text-sm text-gray-500">
+                <FiImage className="w-6 h-6 md:w-5 md:h-5 animate-pulse" />
+                <span>Loading image...</span>
+              </div>
+            </div>
+          )}
+          <img
+            src={url}
+            alt={alt || 'Inline image'}
+            onLoad={handleLoad}
+            onError={handleError}
+            className={`w-full h-full object-contain rounded-lg transition-opacity duration-200 ${
+              loading ? 'opacity-0 absolute' : 'opacity-100'
+            }`}
+            style={{
+              maxHeight: '600px',
+            }}
+            loading="lazy"
+          />
+        </div>
       </div>
       {!loading && !error && (
         <div className="mt-3 md:mt-1 px-2">

@@ -211,8 +211,35 @@ See [FLOW_DIAGRAM.md](../FLOW_DIAGRAM.md) for detailed process flow.
 
 ## 🔒 Security
 
+### Authentication and Authorization
+
+**Authentication:**
+- AWS Cognito User Pool for user authentication
+- JWT tokens (ID token, access token, refresh token)
+- API Gateway JWT authorizer validates tokens
+- Token-based session management
+
+**Authorization:**
+- Role-based access control (USER, SUPER_ADMIN)
+- Email-based SUPER_ADMIN elevation via allowlist
+- Multi-tenant data isolation via customer IDs
+- All database queries scoped by customer_id
+
+**Agency View:**
+- SUPER_ADMIN users can manage multiple customers
+- View switching via HTTP headers (`x-view-mode`, `x-selected-customer-id`)
+- Effective customer ID determines data access scope
+
+**Impersonation:**
+- Session-based impersonation for support/admin use cases
+- Secure session management with expiration
+- Only SUPER_ADMIN can create impersonation sessions
+
+See [Authentication Documentation](./AUTHENTICATION.md) for complete details.
+
+### Security Measures
+
 - Multi-tenant isolation at data layer
-- JWT authentication with Cognito
 - Secrets stored in AWS Secrets Manager
 - Encrypted data at rest (S3, DynamoDB)
 - TLS/HTTPS everywhere
