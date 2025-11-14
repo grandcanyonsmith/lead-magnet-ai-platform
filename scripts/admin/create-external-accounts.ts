@@ -2,19 +2,26 @@
  * Create external accounts in the database
  * Handles accounts from external systems (webhooks, integrations, etc.)
  */
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
-import { S3Client, PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
+import {
+  getDynamoDbDocumentClient,
+  getS3Client,
+  getTableName,
+  getAwsRegion,
+  getArtifactsBucket,
+  printSuccess,
+  printError,
+  printWarning,
+  printInfo,
+  printSection,
+} from '../lib/common';
+import { PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 
-const AWS_REGION = process.env.AWS_REGION || 'us-east-1';
-const ARTIFACTS_BUCKET = process.env.ARTIFACTS_BUCKET || 'leadmagnet-artifacts-471112574622';
+const docClient = getDynamoDbDocumentClient();
+const s3Client = getS3Client();
 
-const client = new DynamoDBClient({ region: AWS_REGION });
-const docClient = DynamoDBDocumentClient.from(client);
-const s3Client = new S3Client({ region: AWS_REGION });
-
-const USERS_TABLE = 'leadmagnet-users';
-const CUSTOMERS_TABLE = 'leadmagnet-customers';
+const USERS_TABLE = getTableName('users');
+const CUSTOMERS_TABLE = getTableName('customers');
 
 interface AccountData {
   userId?: string;
@@ -38,7 +45,7 @@ async function createCustomer(customerId: string, data: AccountData): Promise<vo
   }));
 
   if (existing.Items && existing.Items.length > 0) {
-    console.log(`  - Customer already exists: ${customerId}`);
+    printInfo(`Customer already exists: ${customerId}`);
     return;
   }
 
@@ -58,28 +65,33 @@ async function createCustomer(customerId: string, data: AccountData): Promise<vo
     },
   }));
 
-  console.log(`  ✓ Created customer: ${customerId} (${data.companyName || data.locationName || data.name || 'Unknown'})`);
+  printSuccess(`Created customer: ${customerId} (${data.companyName || data.locationName || data.name || 'Unknown'})`);
 
   // Create S3 folder
   const folderKey = `customers/${customerId}/.folder`;
   try {
-    await s3Client.send(new HeadObjectCommand({
-      Bucket: ARTIFACTS_BUCKET,
-      Key: folderKey,
-    }));
-    console.log(`  - S3 folder already exists: customers/${customerId}/`);
-  } catch (error: any) {
-    if (error.name === 'NotFound' || error.$metadata?.httpStatusCode === 404) {
-      await s3Client.send(new PutObjectCommand({
-        Bucket: ARTIFACTS_BUCKET,
+    const bucket = await getArtifactsBucket();
+    try {
+      await s3Client.send(new HeadObjectCommand({
+        Bucket: bucket,
         Key: folderKey,
-        Body: Buffer.from(''),
-        ContentType: 'application/x-directory',
       }));
-      console.log(`  ✓ Created S3 folder: customers/${customerId}/`);
-    } else {
-      console.error(`  ✗ Error creating S3 folder for ${customerId}:`, error);
+      printInfo(`S3 folder already exists: customers/${customerId}/`);
+    } catch (error: any) {
+      if (error.name === 'NotFound' || error.$metadata?.httpStatusCode === 404) {
+        await s3Client.send(new PutObjectCommand({
+          Bucket: bucket,
+          Key: folderKey,
+          Body: Buffer.from(''),
+          ContentType: 'application/x-directory',
+        }));
+        printSuccess(`Created S3 folder: customers/${customerId}/`);
+      } else {
+        printError(`Error creating S3 folder for ${customerId}: ${error}`);
+      }
     }
+  } catch (error: any) {
+    printError(`Error creating S3 folder for ${customerId}: ${error}`);
   }
 }
 
@@ -93,7 +105,7 @@ async function createUser(userId: string, customerId: string, data: AccountData)
   }));
 
   if (existing.Items && existing.Items.length > 0) {
-    console.log(`  - User already exists: ${userId}`);
+    printInfo(`User already exists: ${userId}`);
     return;
   }
 
@@ -113,14 +125,15 @@ async function createUser(userId: string, customerId: string, data: AccountData)
     },
   }));
 
-  console.log(`  ✓ Created user: ${userId} (${data.email || 'no email'}) -> customer: ${customerId}`);
+  printSuccess(`Created user: ${userId} (${data.email || 'no email'}) -> customer: ${customerId}`);
 }
 
 async function createAccounts() {
-  console.log('Creating external accounts in the database...\n');
+  printSection('Creating External Accounts');
+  printInfo('Creating external accounts in the database...\n');
 
   // Account 1: CC360 Test Account
-  console.log('Account 1: CC360 Test Account');
+  printSection('Account 1: CC360 Test Account', 60);
   const account1CustomerId = '6kMPRAENXZaGJWeW5zxa'; // Using companyId as customer_id
   await createCustomer(account1CustomerId, {
     customerId: account1CustomerId,
@@ -139,7 +152,7 @@ async function createAccounts() {
   });
 
   // Account 2: Abdallah Usama's Account
-  console.log('\nAccount 2: Abdallah Usama\'s Account');
+  printSection('Account 2: Abdallah Usama\'s Account', 60);
   const account2CustomerId = 'Cbjwl9dRdmiskYlzh8Oo'; // Using companyId/accountId as customer_id
   await createCustomer(account2CustomerId, {
     customerId: account2CustomerId,
@@ -171,7 +184,8 @@ async function createAccounts() {
     locationName: 'Abdallah Usama\'s Account',
   });
 
-  console.log('\n✅ Account creation complete!');
+  printSection('Account Creation Complete');
+  printSuccess('All accounts created successfully!');
 }
 
 createAccounts().catch(console.error);

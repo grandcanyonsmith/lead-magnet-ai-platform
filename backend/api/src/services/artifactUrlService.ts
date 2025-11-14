@@ -1,20 +1,22 @@
 import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { db } from '../utils/db';
+import { env } from '../utils/env';
+import { logger } from '../utils/logger';
 
-const ARTIFACTS_TABLE = process.env.ARTIFACTS_TABLE;
-const ARTIFACTS_BUCKET = process.env.ARTIFACTS_BUCKET;
-const CLOUDFRONT_DOMAIN = process.env.CLOUDFRONT_DOMAIN?.trim() || '';
+const ARTIFACTS_TABLE = env.artifactsTable;
+const ARTIFACTS_BUCKET = env.artifactsBucket;
+const CLOUDFRONT_DOMAIN = env.cloudfrontDomain;
 
 if (!ARTIFACTS_TABLE) {
-  console.error('[ArtifactUrlService] ARTIFACTS_TABLE environment variable is not set');
+  logger.error('[ArtifactUrlService] ARTIFACTS_TABLE environment variable is not set');
 }
 if (!ARTIFACTS_BUCKET) {
-  console.error('[ArtifactUrlService] ARTIFACTS_BUCKET environment variable is not set');
+  logger.error('[ArtifactUrlService] ARTIFACTS_BUCKET environment variable is not set');
 }
 
-const s3Client = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
-const AWS_REGION = process.env.AWS_REGION || 'us-east-1';
+const s3Client = new S3Client({ region: env.awsRegion });
+const AWS_REGION = env.awsRegion;
 
 export class ArtifactUrlService {
   /**

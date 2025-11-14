@@ -4,8 +4,9 @@ import { RequestContext } from '../routes/router';
 import { requireUser } from '../utils/rbac';
 import { ApiError } from '../utils/errors';
 import { logger } from '../utils/logger';
+import { env } from '../utils/env';
 
-const USERS_TABLE = process.env.USERS_TABLE || 'leadmagnet-users';
+const USERS_TABLE = env.usersTable;
 
 /**
  * Auth Controller
@@ -41,12 +42,6 @@ class AuthController {
         }
       }
 
-      logger.debug('[Auth] Retrieved user info', {
-        realUserId: auth.realUserId,
-        actingUserId: auth.actingUserId,
-        isImpersonating: auth.isImpersonating,
-      });
-
       return {
         statusCode: 200,
         body: {
@@ -54,16 +49,19 @@ class AuthController {
             user_id: realUser.user_id,
             email: realUser.email,
             name: realUser.name,
-            role: realUser.role || 'USER',
             customer_id: realUser.customer_id,
           },
           actingUser: {
             user_id: actingUser.user_id,
             email: actingUser.email,
             name: actingUser.name,
-            role: actingUser.role || 'USER',
             customer_id: actingUser.customer_id,
           },
+          /**
+           * Effective role for the current request.
+           * This is the computed role that includes allowlist elevation.
+           * Use this field as the single source of truth for authorization.
+           */
           role: auth.role,
           customerId: auth.customerId,
           isImpersonating: auth.isImpersonating,

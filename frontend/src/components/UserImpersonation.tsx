@@ -4,6 +4,7 @@ import { useAuth } from '@/lib/auth/context'
 import { api } from '@/lib/api'
 import { useState, useEffect, useRef } from 'react'
 import { AuthUser } from '@/types/auth'
+import { FiUser } from 'react-icons/fi'
 
 interface UserSearchResult {
   users: AuthUser[]
@@ -92,54 +93,63 @@ export function UserImpersonation() {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md"
+        className="px-2 sm:px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md touch-target min-h-[44px] sm:min-h-0 flex items-center gap-1.5"
+        aria-label="View as user"
       >
-        View as user
+        <FiUser className="w-4 h-4 sm:hidden" />
+        <span className="hidden sm:inline">View as user</span>
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg z-50 border border-gray-200">
-          <div className="p-3 border-b border-gray-200">
-            <input
-              type="text"
-              placeholder="Search users by name or email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              autoFocus
-            />
-          </div>
+        <>
+          {/* Mobile backdrop */}
+          <div
+            className="fixed inset-0 bg-black bg-opacity-25 z-40 md:hidden"
+            onClick={() => setIsOpen(false)}
+          />
+          <div className="absolute left-0 md:right-0 mt-2 w-[calc(100vw-1rem)] max-w-[20rem] sm:w-80 bg-white rounded-md shadow-lg z-50 border border-gray-200 max-h-[calc(100vh-8rem)] flex flex-col">
+            <div className="p-3 border-b border-gray-200 flex-shrink-0">
+              <input
+                type="text"
+                placeholder="Search users by name or email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-3 py-2.5 sm:py-2 border border-gray-300 rounded-md text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                autoFocus
+              />
+            </div>
 
-          <div className="max-h-64 overflow-y-auto">
-            {isLoading ? (
-              <div className="p-4 text-center text-gray-500 text-sm">Searching...</div>
-            ) : users.length === 0 ? (
-              <div className="p-4 text-center text-gray-500 text-sm">
-                {searchTerm.length < 2
-                  ? 'Type at least 2 characters to search'
-                  : 'No users found'}
-              </div>
-            ) : (
-              <ul className="py-1">
-                {users.map((user) => (
-                  <li key={user.user_id}>
-                    <button
-                      onClick={() => handleImpersonate(user.user_id)}
-                      disabled={isImpersonating}
-                      className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <div className="font-medium">{user.name || user.email}</div>
-                      <div className="text-gray-500 text-xs">{user.email}</div>
-                      {user.role && (
-                        <div className="text-gray-400 text-xs">Role: {user.role}</div>
-                      )}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
+            <div className="max-h-64 overflow-y-auto flex-1">
+              {isLoading ? (
+                <div className="p-4 text-center text-gray-500 text-sm">Searching...</div>
+              ) : users.length === 0 ? (
+                <div className="p-4 text-center text-gray-500 text-sm">
+                  {searchTerm.length < 2
+                    ? 'Type at least 2 characters to search'
+                    : 'No users found'}
+                </div>
+              ) : (
+                <ul className="py-1">
+                  {users.map((user) => (
+                    <li key={user.user_id}>
+                      <button
+                        onClick={() => handleImpersonate(user.user_id)}
+                        disabled={isImpersonating}
+                        className="w-full text-left px-4 py-3 sm:py-2 hover:bg-gray-100 text-sm disabled:opacity-50 disabled:cursor-not-allowed touch-target transition-colors"
+                      >
+                        <div className="font-medium truncate">{user.name || user.email}</div>
+                        <div className="text-gray-500 text-xs truncate mt-0.5">{user.email}</div>
+                        {user.role && (
+                          <div className="text-gray-400 text-xs mt-0.5">Role: {user.role}</div>
+                        )}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   )

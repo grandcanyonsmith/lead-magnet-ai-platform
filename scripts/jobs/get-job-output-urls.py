@@ -3,24 +3,31 @@
 Fetch output URLs for specific job IDs from DynamoDB.
 """
 
-import os
-import boto3
+import sys
+import argparse
+from pathlib import Path
 from botocore.exceptions import ClientError
 
-TENANT_ID = "84c8e438-0061-70f2-2ce0-7cb44989a329"
-TABLE_NAME = "leadmagnet-jobs"
-REGION = os.environ.get("AWS_REGION", "us-east-1")
+# Add lib directory to path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from lib.common import (
+    convert_decimals,
+    get_dynamodb_resource,
+    get_table_name,
+    get_aws_region,
+    print_section,
+    format_timestamp,
+)
 
 
-def get_job_info(job_id: str):
+def get_job_info(job_id: str, tenant_id: str = None):
     """Retrieve job from DynamoDB and extract output URL."""
-    dynamodb = boto3.resource("dynamodb", region_name=REGION)
-    table = dynamodb.Table(TABLE_NAME)
+    dynamodb = get_dynamodb_resource()
+    table = dynamodb.Table(get_table_name("jobs"))
     
     try:
-        print(f"\n{'=' * 80}")
-        print(f"Fetching job: {job_id}")
-        print(f"{'=' * 80}")
+        print_section(f"Fetching job: {job_id}")
         
         response = table.get_item(Key={"job_id": job_id})
         
@@ -28,16 +35,16 @@ def get_job_info(job_id: str):
             print(f"❌ Error: Job {job_id} not found in DynamoDB")
             return None
         
-        job = response["Item"]
+        job = convert_decimals(response["Item"])
         
-        # Verify tenant_id matches
-        if job.get("tenant_id") != TENANT_ID:
-            print(f"⚠️  Warning: Tenant ID mismatch. Expected {TENANT_ID}, got {job.get('tenant_id')}")
+        # Verify tenant_id matches if provided
+        if tenant_id and job.get("tenant_id") != tenant_id:
+            print(f"⚠️  Warning: Tenant ID mismatch. Expected {tenant_id}, got {job.get('tenant_id')}")
         
         print(f"Job ID: {job.get('job_id')}")
         print(f"Status: {job.get('status', 'unknown')}")
-        print(f"Created: {job.get('created_at', 'unknown')}")
-        print(f"Updated: {job.get('updated_at', 'unknown')}")
+        print(f"Created: {format_timestamp(job.get('created_at', 'unknown'))}")
+        print(f"Updated: {format_timestamp(job.get('updated_at', 'unknown'))}")
         
         # Get output URL
         output_url = job.get('output_url')
@@ -78,31 +85,41 @@ def get_job_info(job_id: str):
 
 def main():
     """Main function."""
-    import argparse
-    
     parser = argparse.ArgumentParser(description="Fetch output URLs for specific job IDs from DynamoDB")
     parser.add_argument("job_ids", nargs="+", help="Job ID(s) to fetch")
+    parser.add_argument(
+        "--tenant-id",
+        help="Optional tenant ID to verify against",
+        default=None,
+    )
+    parser.add_argument(
+        "--region",
+        help="AWS region (default: from environment or us-east-1)",
+        default=None,
+    )
     args = parser.parse_args()
     
-    print("=" * 80)
-    print("Job Output URL Fetcher")
-    print("=" * 80)
-    print(f"Tenant ID: {TENANT_ID}")
-    print(f"Table: {TABLE_NAME}")
-    print(f"Region: {REGION}")
+    if args.region:
+        import os
+        os.environ["AWS_REGION"] = args.region
+    
+    print_section("Job Output URL Fetcher")
+    print(f"Table: {get_table_name('jobs')}")
+    print(f"Region: {get_aws_region()}")
+    if args.tenant_id:
+        print(f"Tenant ID: {args.tenant_id}")
     print(f"Jobs to fetch: {len(args.job_ids)}")
+    print()
     
     results = []
     
     for job_id in args.job_ids:
-        result = get_job_info(job_id)
+        result = get_job_info(job_id, args.tenant_id)
         if result:
             results.append(result)
     
     # Summary
-    print("\n" + "=" * 80)
-    print("SUMMARY")
-    print("=" * 80)
+    print_section("SUMMARY")
     
     for result in results:
         print(f"\nJob: {result['job_id']}")
@@ -114,7 +131,7 @@ def main():
             if result['error_message']:
                 print(f"  Error: {result['error_message']}")
     
-    print("\n" + "=" * 80)
+    print()
 
 
 if __name__ == "__main__":

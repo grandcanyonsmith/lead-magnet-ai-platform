@@ -1,9 +1,15 @@
 # Lead Magnet AI Scripts Configuration
 # This file can be overridden by environment variables
+# 
+# Configuration priority (highest to lowest):
+# 1. Environment variables (AWS_REGION, API_URL, {TABLE_TYPE}_TABLE)
+# 2. Environment-specific config (dev, staging, prod)
+# 3. Defaults in this file
 
 defaults:
   region: us-east-1
-  api_url: https://czp5b77azd.execute-api.us-east-1.amazonaws.com
+  # API URL will be resolved from CloudFormation if not set
+  # api_url: https://czp5b77azd.execute-api.us-east-1.amazonaws.com
 
 tables:
   jobs: leadmagnet-jobs
@@ -12,10 +18,19 @@ tables:
   submissions: leadmagnet-submissions
   artifacts: leadmagnet-artifacts
   templates: leadmagnet-templates
+  users: leadmagnet-users
+  customers: leadmagnet-customers
+  user-settings: leadmagnet-user-settings
+  notifications: leadmagnet-notifications
 
 environments:
   dev:
     region: us-east-1
+    # Add dev-specific overrides here
+  staging:
+    region: us-east-1
+    # Add staging-specific overrides here
   prod:
     region: us-east-1
+    # Add prod-specific overrides here
 

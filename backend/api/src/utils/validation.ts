@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ValidationError } from './errors';
 
 // Workflow step schema
 export const workflowStepSchema = z.object({
@@ -182,7 +183,7 @@ export const createFormSchema = z.object({
     fields: z.array(
       z.object({
         field_id: z.string(),
-        field_type: z.enum(['text', 'textarea', 'email', 'tel', 'number', 'select', 'checkbox']),
+        field_type: z.enum(['text', 'textarea', 'email', 'tel', 'number', 'select', 'checkbox', 'radio']),
         label: z.string(),
         placeholder: z.string().optional(),
         required: z.boolean(),
@@ -279,7 +280,57 @@ export const webhookRequestSchema = z.object({
   }
 );
 
+/**
+ * Validate data against a Zod schema.
+ * 
+ * Parses and validates data using a Zod schema, throwing a ValidationError
+ * if validation fails. This provides consistent error handling across the application.
+ * 
+ * @param schema - Zod schema to validate against
+ * @param data - Data to validate
+ * @returns Validated and typed data
+ * @throws {ValidationError} If validation fails
+ * 
+ * @example
+ * ```typescript
+ * try {
+ *   const workflow = validate(createWorkflowSchema, requestBody);
+ *   // workflow is now typed and validated
+ * } catch (error) {
+ *   if (error instanceof ValidationError) {
+ *     // Handle validation error
+ *   }
+ * }
+ * ```
+ */
 export const validate = <T>(schema: z.ZodSchema<T>, data: unknown): T => {
-  return schema.parse(data);
+  try {
+    return schema.parse(data);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      throw new ValidationError('Validation failed', {
+        errors: error.errors.map((e) => ({
+          path: e.path.join('.'),
+          message: e.message,
+          code: e.code,
+        })),
+      });
+    }
+    throw error;
+  }
+};
+
+/**
+ * Safe validation that returns errors instead of throwing
+ */
+export const safeValidate = <T>(
+  schema: z.ZodSchema<T>,
+  data: unknown
+): { success: true; data: T } | { success: false; errors: z.ZodError['errors'] } => {
+  const result = schema.safeParse(data);
+  if (result.success) {
+    return { success: true, data: result.data };
+  }
+  return { success: false, errors: result.error.errors };
 };
 

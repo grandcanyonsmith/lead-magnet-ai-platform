@@ -182,12 +182,51 @@ parse_args() {
                 export AWS_REGION="${1#*=}"
                 shift
                 ;;
+            --debug)
+                set -x
+                shift
+                ;;
+            --verbose|-v)
+                export VERBOSE=1
+                shift
+                ;;
             *)
                 # Unknown option, pass through
                 shift
                 ;;
         esac
     done
+}
+
+# Logging levels
+print_debug() {
+    if [ -n "$VERBOSE" ] || [ -n "$DEBUG" ]; then
+        echo -e "${CYAN}[DEBUG] $1${NC}"
+    fi
+}
+
+# Retry logic for AWS operations
+retry_aws_command() {
+    local max_attempts="${1:-3}"
+    local delay="${2:-2}"
+    local command="${@:3}"
+    local attempt=1
+    
+    while [ $attempt -le $max_attempts ]; do
+        if eval "$command"; then
+            return 0
+        fi
+        
+        if [ $attempt -lt $max_attempts ]; then
+            print_warning "Attempt $attempt failed. Retrying in ${delay}s..."
+            sleep "$delay"
+        fi
+        
+        attempt=$((attempt + 1))
+    done
+    
+    print_error "Command failed after $max_attempts attempts: $command"
+    return 1
 }
 
 # Show script header

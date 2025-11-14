@@ -18,10 +18,10 @@ export interface RequestContext {
  * Simplified route handler type.
  * Path parameters, parsed body, query params, tenantId, and context are automatically provided.
  */
-export type SimpleRouteHandler = (
-  params: Record<string, string>,
-  body: any,
-  query: Record<string, string | undefined>,
+export type SimpleRouteHandler<TBody = any, TQuery = Record<string, string | undefined>, TParams = Record<string, string>> = (
+  params: TParams,
+  body: TBody,
+  query: TQuery,
   tenantId?: string,
   context?: RequestContext
 ) => Promise<RouteResponse>;
@@ -127,26 +127,13 @@ class SimpleRouter {
       const effectiveTenantId = authContext?.customerId || tenantId;
 
       // Execute handler
-      logger.info('[Router] Matched route', {
-        method,
-        path,
-        routePath: route.path,
-        params,
-        hasAuth: !!authContext,
-        role: authContext?.role,
-        effectiveTenantId,
-        customerId: authContext?.customerId,
-        viewMode: authContext?.viewMode,
-        selectedCustomerId: authContext?.selectedCustomerId,
-      });
-
       return await route.handler(params, body, query, effectiveTenantId, context);
     }
 
     logger.warn('[Router] No route matched', {
       method,
       path,
-      registeredRoutes: this.routes.map(r => `${r.method} ${r.path}`),
+      routeCount: this.routes.length,
     });
 
     throw new ApiError("This page doesn't exist", 404);

@@ -5,22 +5,32 @@ Handles the complete workflow of generating AI reports and rendering HTML.
 
 import logging
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List, Tuple
 
 from ai_service import AIService
+try:
+    from model_types import Job, Workflow, Step, Submission, Form, ExecutionStep
+except ImportError:
+    # Fallback if model_types module not available
+    Job = Dict[str, Any]
+    Workflow = Dict[str, Any]
+    Step = Dict[str, Any]
+    Submission = Dict[str, Any]
+    Form = Dict[str, Any]
+    ExecutionStep = Dict[str, Any]
 from template_service import TemplateService
 from db_service import DynamoDBService
 from s3_service import S3Service
 from artifact_service import ArtifactService
 from delivery_service import DeliveryService
-from utils.error_utils import create_descriptive_error, normalize_error_message
-from services.context_builder import ContextBuilder
 from services.execution_step_manager import ExecutionStepManager
 from services.usage_service import UsageService
 from services.field_label_service import FieldLabelService
 from services.step_processor import StepProcessor
 from services.workflow_orchestrator import WorkflowOrchestrator
 from services.job_completion_service import JobCompletionService
+from services.error_handler_service import ErrorHandlerService
+from services.data_loader_service import DataLoaderService
 from dependency_resolver import resolve_execution_groups, validate_dependencies
 
 logger = logging.getLogger(__name__)
@@ -51,6 +61,15 @@ class JobProcessor:
         from services.image_artifact_service import ImageArtifactService
         self.image_artifact_service = ImageArtifactService(self.artifact_service)
         
+        # Initialize job completion service (needed by workflow orchestrator)
+        self.job_completion_service = JobCompletionService(
+            artifact_service=self.artifact_service,
+            db_service=self.db,
+            s3_service=self.s3,
+            delivery_service=self.delivery_service,
+            usage_service=self.usage_service
+        )
+        
         # Initialize step processor
         self.step_processor = StepProcessor(
             ai_service=self.ai_service,
@@ -66,19 +85,14 @@ class JobProcessor:
             step_processor=self.step_processor,
             ai_service=self.ai_service,
             db_service=self.db,
-            s3_service=self.s3
+            s3_service=self.s3,
+            job_completion_service=self.job_completion_service
         )
         
-        # Initialize job completion service
-        self.job_completion_service = JobCompletionService(
-            artifact_service=self.artifact_service,
-            db_service=self.db,
-            s3_service=self.s3,
-            delivery_service=self.delivery_service,
-            usage_service=self.usage_service
-        )
+        # Initialize data loader service for parallel data loading
+        self.data_loader = DataLoaderService(self.db)
     
-    def resolve_step_dependencies(self, steps: list) -> Dict[str, Any]:
+    def resolve_step_dependencies(self, steps: List[Step]) -> Dict[str, Any]:
         """
         Resolve step dependencies and build execution plan.
         
@@ -120,6 +134,100 @@ class JobProcessor:
                 'totalSteps': len(steps),
             }
     
+    def _load_job_data(self, job_id: str) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any], Optional[Dict[str, Any]]]:
+        """
+        Load all required data for job processing using parallel loading.
+        
+        Args:
+            job_id: The job ID to load data for
+            
+        Returns:
+            Tuple of (job, workflow, submission, form)
+            
+        Raises:
+            ValueError: If job, workflow, or submission is not found
+        """
+        logger.debug(f"[JobProcessor] Loading job data in parallel", extra={'job_id': job_id})
+        
+        # Use DataLoaderService for parallel loading
+        data = self.data_loader.load_job_data(job_id)
+        
+        job = data['job']
+        workflow = data['workflow']
+        submission = data['submission']
+        form = data['form']
+        
+        logger.info(f"[JobProcessor] Job data loaded successfully", extra={
+            'job_id': job_id,
+            'tenant_id': job.get('tenant_id'),
+            'workflow_id': workflow.get('workflow_id'),
+            'submission_id': submission.get('submission_id'),
+            'workflow_name': workflow.get('workflow_name'),
+            'has_steps': bool(workflow.get('steps')),
+            'steps_count': len(workflow.get('steps', [])),
+            'has_form': form is not None
+        })
+        
+        return job, workflow, submission, form
+    
+    def _initialize_job_execution(self, job_id: str, process_start_time: datetime) -> List[Dict[str, Any]]:
+        """
+        Initialize job execution by updating status and creating initial execution steps.
+        
+        Args:
+            job_id: The job ID
+            process_start_time: Start time of the process
+            
+        Returns:
+            Initialized execution steps list
+        """
+        execution_steps = []
+        
+        # Update job status to processing
+        logger.debug(f"[JobProcessor] Updating job status to processing", extra={'job_id': job_id})
+        self.db.update_job(job_id, {
+            'status': 'processing',
+            'started_at': process_start_time.isoformat(),
+            'updated_at': process_start_time.isoformat(),
+            'execution_steps': execution_steps
+        }, s3_service=self.s3)
+        
+        return execution_steps
+    
+    def _add_form_submission_step(self, job_id: str, submission: Dict[str, Any], execution_steps: List[Dict[str, Any]]) -> None:
+        """
+        Add form submission as the initial execution step.
+        
+        Args:
+            job_id: The job ID
+            submission: Submission dictionary
+            execution_steps: Execution steps list to update
+        """
+        submission_data = submission.get('submission_data', {})
+        execution_steps.append(
+            ExecutionStepManager.create_form_submission_step(submission_data)
+        )
+        self.db.update_job(job_id, {'execution_steps': execution_steps}, s3_service=self.s3)
+    
+    def _validate_workflow_steps(self, workflow: Dict[str, Any]) -> None:
+        """
+        Validate that workflow has steps configured.
+        
+        Args:
+            workflow: Workflow dictionary
+            
+        Raises:
+            ValueError: If workflow has no steps
+        """
+        steps = workflow.get('steps', [])
+        if not steps or len(steps) == 0:
+            workflow_id = workflow.get('workflow_id', 'unknown')
+            raise ValueError(
+                f"Workflow {workflow_id} has no steps configured. "
+                "All workflows must use the steps format. "
+                "Legacy format is no longer supported."
+            )
+    
     def process_job(self, job_id: str) -> Dict[str, Any]:
         """
         Process a job end-to-end.
@@ -137,84 +245,17 @@ class JobProcessor:
         })
         
         try:
-            # Initialize execution steps array
-            execution_steps = []
+            # Initialize execution
+            execution_steps = self._initialize_job_execution(job_id, process_start_time)
             
-            # Update job status to processing
-            logger.debug(f"[JobProcessor] Updating job status to processing", extra={'job_id': job_id})
-            self.db.update_job(job_id, {
-                'status': 'processing',
-                'started_at': process_start_time.isoformat(),
-                'updated_at': process_start_time.isoformat(),
-                'execution_steps': execution_steps
-            }, s3_service=self.s3)
-            
-            # Get job details
-            logger.debug(f"[JobProcessor] Retrieving job details", extra={'job_id': job_id})
-            job = self.db.get_job(job_id, s3_service=self.s3)
-            if not job:
-                logger.error(f"[JobProcessor] Job not found", extra={'job_id': job_id})
-                raise ValueError(f"Job {job_id} not found")
-            
-            tenant_id = job.get('tenant_id')
-            workflow_id = job.get('workflow_id')
-            submission_id = job.get('submission_id')
-            
-            logger.info(f"[JobProcessor] Job retrieved successfully", extra={
-                'job_id': job_id,
-                'tenant_id': tenant_id,
-                'workflow_id': workflow_id,
-                'submission_id': submission_id,
-                'job_status': job.get('status')
-            })
-            
-            # Get workflow configuration
-            logger.debug(f"[JobProcessor] Retrieving workflow configuration", extra={'workflow_id': workflow_id})
-            workflow = self.db.get_workflow(workflow_id)
-            if not workflow:
-                logger.error(f"[JobProcessor] Workflow not found", extra={
-                    'job_id': job_id,
-                    'workflow_id': workflow_id
-                })
-                raise ValueError(f"Workflow {workflow_id} not found")
-            
-            logger.info(f"[JobProcessor] Workflow retrieved successfully", extra={
-                'workflow_id': workflow_id,
-                'workflow_name': workflow.get('workflow_name'),
-                'has_steps': bool(workflow.get('steps')),
-                'steps_count': len(workflow.get('steps', []))
-            })
-            
-            # Get submission data
-            logger.debug(f"[JobProcessor] Retrieving submission data", extra={'submission_id': submission_id})
-            submission = self.db.get_submission(submission_id)
-            if not submission:
-                raise ValueError(f"Submission {submission_id} not found")
-            
-            # Get form to retrieve field labels
-            form = None
-            form_id = submission.get('form_id')
-            if form_id:
-                try:
-                    form = self.db.get_form(form_id)
-                except Exception as e:
-                    logger.warning(f"Could not retrieve form {form_id} for field labels: {e}")
+            # Load all required data
+            job, workflow, submission, form = self._load_job_data(job_id)
             
             # Add form submission as step 0
-            submission_data = submission.get('submission_data', {})
-            execution_steps.append(
-                ExecutionStepManager.create_form_submission_step(submission_data)
-            )
-            self.db.update_job(job_id, {'execution_steps': execution_steps}, s3_service=self.s3)
+            self._add_form_submission_step(job_id, submission, execution_steps)
             
-            # Workflow processing - all workflows must use steps format
-            steps = workflow.get('steps', [])
-            if not steps or len(steps) == 0:
-                raise ValueError(
-                    f"Workflow {workflow_id} has no steps configured. "
-                    "All workflows must use the steps format. "
-                    "Legacy format is no longer supported."
-                )
+            # Validate workflow has steps
+            self._validate_workflow_steps(workflow)
             
             # Process workflow using steps format
             final_content, final_artifact_type, final_filename, report_artifact_id, all_image_artifact_ids = \
@@ -251,26 +292,79 @@ class JobProcessor:
         except Exception as e:
             logger.exception(f"Error processing job {job_id}")
             
-            # Use utility function for error handling
-            error_type, error_message = normalize_error_message(e)
-            descriptive_error = create_descriptive_error(e)
+            # Use error handler service for consistent error handling
+            error_handler = ErrorHandlerService(self.db)
+            return error_handler.handle_job_error(
+                job_id=job_id,
+                error=e,
+                step_index=None,
+                step_type='workflow_step'
+            )
+    
+    def _load_single_step_data(self, job_id: str) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any], Optional[Dict[str, Any]]]:
+        """
+        Load data required for single step processing using parallel loading.
+        
+        Args:
+            job_id: The job ID
             
-            # Update job status to failed
-            try:
-                self.db.update_job(job_id, {
-                    'status': 'failed',
-                    'error_message': descriptive_error,
-                    'error_type': error_type,
-                    'updated_at': datetime.utcnow().isoformat()
-                })
-            except Exception as update_error:
-                logger.error(f"Failed to update job status: {update_error}")
+        Returns:
+            Tuple of (job, workflow, submission, form)
             
-            return {
-                'success': False,
-                'error': descriptive_error,
-                'error_type': error_type
-            }
+        Raises:
+            ValueError: If job, workflow, or submission is not found or missing required fields
+        """
+        # Use DataLoaderService for parallel loading
+        data = self.data_loader.load_job_data(job_id)
+        
+        job = data['job']
+        workflow = data['workflow']
+        submission = data['submission']
+        form = data['form']
+        
+        # Validate required job fields
+        if not job.get('workflow_id'):
+            raise ValueError(f"Job {job_id} is missing required field 'workflow_id'")
+        if not job.get('submission_id'):
+            raise ValueError(f"Job {job_id} is missing required field 'submission_id'")
+        
+        return job, workflow, submission, form
+    
+    def _build_initial_context(self, submission: Dict[str, Any], form: Optional[Dict[str, Any]]) -> str:
+        """
+        Build initial context from submission data with field labels.
+        
+        Args:
+            submission: Submission dictionary
+            form: Optional form dictionary
+            
+        Returns:
+            Formatted initial context string
+        """
+        submission_data = submission.get('submission_data', {})
+        field_label_map = FieldLabelService.build_field_label_map(form)
+        return FieldLabelService.format_submission_data_with_labels(
+            submission_data,
+            field_label_map
+        )
+    
+    def _validate_step_index(self, step_index: int, steps: List[Dict[str, Any]], workflow_id: str) -> None:
+        """
+        Validate that step index is within bounds.
+        
+        Args:
+            step_index: Step index to validate
+            steps: List of workflow steps
+            workflow_id: Workflow ID for error messages
+            
+        Raises:
+            ValueError: If step index is invalid or workflow has no steps
+        """
+        if not steps or len(steps) == 0:
+            raise ValueError(f"Workflow {workflow_id} has no steps configured")
+        
+        if step_index < 0 or step_index >= len(steps):
+            raise ValueError(f"Step index {step_index} is out of range. Workflow has {len(steps)} steps.")
     
     def process_single_step(self, job_id: str, step_index: int, step_type: str = 'workflow_step') -> Dict[str, Any]:
         """
@@ -288,53 +382,18 @@ class JobProcessor:
             Dictionary with success status, step output, and metadata
         """
         try:
-            # Get job details
-            job = self.db.get_job(job_id, s3_service=self.s3)
-            if not job:
-                raise ValueError(f"Job {job_id} not found")
+            # Load all required data
+            job, workflow, submission, form = self._load_single_step_data(job_id)
             
-            # Validate required job fields
-            workflow_id = job.get('workflow_id')
-            if not workflow_id:
-                raise ValueError(f"Job {job_id} is missing required field 'workflow_id'")
-            
-            submission_id = job.get('submission_id')
-            if not submission_id:
-                raise ValueError(f"Job {job_id} is missing required field 'submission_id'")
-            
-            # Get workflow configuration
-            workflow = self.db.get_workflow(workflow_id)
-            if not workflow:
-                raise ValueError(f"Workflow {workflow_id} not found")
-            
-            # Get submission data
-            submission = self.db.get_submission(submission_id)
-            if not submission:
-                raise ValueError(f"Submission {submission_id} not found")
-            
-            submission_data = submission.get('submission_data', {})
-            
-            # Get form to retrieve field labels
-            form = None
-            form_id = submission.get('form_id')
-            if form_id:
-                try:
-                    form = self.db.get_form(form_id)
-                except Exception as e:
-                    logger.warning(f"Could not retrieve form {form_id} for field labels: {e}")
-            
-            # Build field label map and format initial context
-            field_label_map = FieldLabelService.build_field_label_map(form)
-            initial_context = FieldLabelService.format_submission_data_with_labels(
-                submission_data,
-                field_label_map
-            )
+            # Build initial context
+            initial_context = self._build_initial_context(submission, form)
             
             # Load existing execution_steps
             execution_steps = job.get('execution_steps', [])
             
             # Handle HTML generation step (special case)
             if step_type == 'html_generation':
+                submission_data = submission.get('submission_data', {})
                 return self.job_completion_service.generate_html_from_steps(
                     job_id=job_id,
                     job=job,
@@ -346,11 +405,7 @@ class JobProcessor:
             
             # Handle workflow step
             steps = workflow.get('steps', [])
-            if not steps or len(steps) == 0:
-                raise ValueError(f"Workflow {job.get('workflow_id')} has no steps configured")
-            
-            if step_index < 0 or step_index >= len(steps):
-                raise ValueError(f"Step index {step_index} is out of range. Workflow has {len(steps)} steps.")
+            self._validate_step_index(step_index, steps, workflow.get('workflow_id', 'unknown'))
             
             # Get the step to process
             step = steps[step_index]
@@ -369,25 +424,11 @@ class JobProcessor:
         except Exception as e:
             logger.exception(f"Error processing step {step_index} for job {job_id}")
             
-            # Use utility function for error handling
-            error_type, error_message = normalize_error_message(e)
-            descriptive_error = create_descriptive_error(e, f"Failed to process step {step_index}")
-            
-            # Update job status to failed
-            try:
-                self.db.update_job(job_id, {
-                    'status': 'failed',
-                    'error_message': descriptive_error,
-                    'error_type': error_type,
-                    'updated_at': datetime.utcnow().isoformat()
-                })
-            except Exception as update_error:
-                logger.error(f"Failed to update job status: {update_error}")
-            
-            # Return error result
-            return {
-                'success': False,
-                'error': descriptive_error,
-                'error_type': error_type,
-                'step_index': step_index
-            }
+            # Use error handler service for consistent error handling
+            error_handler = ErrorHandlerService(self.db)
+            return error_handler.handle_job_error(
+                job_id=job_id,
+                error=e,
+                step_index=step_index,
+                step_type=step_type
+            )

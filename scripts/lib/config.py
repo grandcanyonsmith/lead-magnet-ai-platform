@@ -149,7 +149,57 @@ def get_table_name(table_type: str) -> str:
         
     Returns:
         Table name string
+        
+    Raises:
+        ValueError: If table_type is invalid and no default can be generated
     """
     config = get_config()
-    return config["tables"].get(table_type, f"leadmagnet-{table_type}")
+    
+    # Check if table type exists in config
+    if table_type in config.get("tables", {}):
+        return config["tables"][table_type]
+    
+    # Try to generate default name
+    default_name = f"leadmagnet-{table_type}"
+    
+    # Validate that we have a reasonable default
+    if not table_type or len(table_type) < 2:
+        raise ValueError(f"Invalid table_type: {table_type}")
+    
+    return default_name
+
+
+def validate_config() -> bool:
+    """
+    Validate configuration values.
+    
+    Returns:
+        True if config is valid, False otherwise
+    """
+    try:
+        config = get_config()
+        
+        # Validate region
+        region = config["defaults"]["region"]
+        if not region or len(region) < 3:
+            print("Warning: Invalid region in config")
+            return False
+        
+        # Validate tables
+        tables = config.get("tables", {})
+        if not tables:
+            print("Warning: No tables defined in config")
+            return False
+        
+        # Check for required table types
+        required_tables = ["jobs", "workflows", "forms", "submissions"]
+        for table_type in required_tables:
+            if table_type not in tables:
+                print(f"Warning: Required table type '{table_type}' not found in config")
+                return False
+        
+        return True
+    except Exception as e:
+        print(f"Error validating config: {e}")
+        return False
 

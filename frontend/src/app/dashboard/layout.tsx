@@ -235,19 +235,19 @@ export default function DashboardLayout({
           <ImpersonationBanner />
           
           {/* Top bar */}
-          <header className="bg-white/80 backdrop-blur-sm shadow-sm h-16 flex items-center px-4 sm:px-5 lg:px-6 border-b border-gray-200 sticky top-0 z-10">
+          <header className="bg-white/80 backdrop-blur-sm shadow-sm h-16 flex items-center px-3 sm:px-4 lg:px-6 border-b border-gray-200 sticky top-0 z-10">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden text-gray-600 hover:text-gray-900 mr-3 sm:mr-4 p-2 rounded-lg hover:bg-gray-100 transition-all duration-200 touch-target"
+              className="lg:hidden text-gray-600 hover:text-gray-900 mr-2 sm:mr-3 p-2 rounded-lg hover:bg-gray-100 transition-all duration-200 touch-target flex-shrink-0"
               aria-label="Open menu"
             >
               <FiMenu className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
-            <div className="flex-1" />
-            <div className="flex items-center gap-2">
+            <div className="flex-1 min-w-0" />
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
               <button
                 onClick={() => setSearchOpen(true)}
-                className="hidden sm:flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200 border border-gray-200 hover:border-gray-300"
+                className="hidden sm:flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200 border border-gray-200 hover:border-gray-300 touch-target"
                 aria-label="Search"
               >
                 <FiSearch className="w-4 h-4" />
@@ -258,17 +258,28 @@ export default function DashboardLayout({
               </button>
               <button
                 onClick={() => setSearchOpen(true)}
-                className="sm:hidden p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors touch-target"
+                className="sm:hidden p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors touch-target flex-shrink-0"
                 aria-label="Search"
               >
                 <FiSearch className="w-5 h-5" />
               </button>
-              <ViewSwitcher />
-              <UserImpersonation />
+              <div className="hidden sm:block">
+                <ViewSwitcher />
+              </div>
+              <div className="hidden sm:block">
+                <UserImpersonation />
+              </div>
               <NotificationBell />
               <UserMenu />
             </div>
           </header>
+          
+          {/* Mobile admin controls - shown below header on mobile */}
+          {/* Always render to prevent layout shift, but hide when no admin controls */}
+          <div className="sm:hidden bg-white border-b border-gray-200 px-3 py-2 min-h-[48px] flex items-center gap-2 overflow-x-auto">
+            <ViewSwitcher />
+            <UserImpersonation />
+          </div>
 
           {/* Page content */}
           <main className="p-4 sm:p-5 md:p-6 lg:p-8 bg-gray-50 min-h-screen">

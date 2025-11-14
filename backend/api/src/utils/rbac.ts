@@ -1,11 +1,17 @@
+/**
+ * RBAC (Role-Based Access Control) helpers.
+ * 
+ * Provides utilities for enforcing role-based access control in route handlers.
+ * Functions throw appropriate errors (AuthenticationError, AuthorizationError) when
+ * access is denied, providing clear error messages for debugging.
+ * 
+ * @module rbac
+ */
+
 import { RequestContext } from '../routes/router';
 import { ApiError, AuthenticationError, AuthorizationError } from './errors';
 import { AuthContext } from './authContext';
 import { logger } from './logger';
-
-/**
- * RBAC (Role-Based Access Control) helpers
- */
 
 /**
  * Ensure user is authenticated

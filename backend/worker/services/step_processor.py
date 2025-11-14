@@ -8,6 +8,14 @@ from datetime import datetime
 from typing import Dict, Any, List, Optional, Tuple
 
 from ai_service import AIService
+try:
+    from model_types import Step, StepOutput, ExecutionStep, WebhookResult
+except ImportError:
+    # Fallback if model_types module not available
+    Step = Dict[str, Any]
+    StepOutput = Dict[str, Any]
+    ExecutionStep = Dict[str, Any]
+    WebhookResult = Dict[str, Any]
 from artifact_service import ArtifactService
 from db_service import DynamoDBService
 from s3_service import S3Service
@@ -213,6 +221,82 @@ class StepProcessor:
         
         return step_output_dict, image_artifact_ids
     
+    def _execute_webhook_step_core(
+        self,
+        step: Dict[str, Any],
+        step_index: int,
+        job_id: str,
+        job: Dict[str, Any],
+        submission: Dict[str, Any],
+        step_outputs: List[Dict[str, Any]],
+        sorted_steps: List[Dict[str, Any]],
+        step_start_time: datetime
+    ) -> Tuple[Dict[str, Any], bool, Dict[str, Any]]:
+        """
+        Core webhook execution logic shared between batch and single modes.
+        
+        Args:
+            step: Step configuration dictionary
+            step_index: Step index (0-based)
+            job_id: Job ID
+            job: Job dictionary
+            submission: Submission dictionary
+            step_outputs: List of previous step outputs
+            sorted_steps: List of all steps sorted by order
+            step_start_time: Start time of the step
+            
+        Returns:
+            Tuple of (webhook_result, success, step_data)
+        """
+        # Execute webhook step
+        webhook_result, success = self.webhook_step_service.execute_webhook_step(
+            step=step,
+            step_index=step_index,
+            job_id=job_id,
+            job=job,
+            submission=submission,
+            step_outputs=step_outputs,
+            sorted_steps=sorted_steps
+        )
+        
+        # Create execution step record
+        step_name = step.get('step_name', f'Webhook Step {step_index + 1}')
+        step_data = ExecutionStepManager.create_webhook_step(
+            step_name=step_name,
+            step_order=step_index + 1,
+            webhook_url=webhook_result.get('webhook_url', ''),
+            payload=webhook_result.get('payload', {}),
+            response_status=webhook_result.get('response_status'),
+            response_body=webhook_result.get('response_body'),
+            success=success,
+            error=webhook_result.get('error'),
+            step_start_time=step_start_time,
+            duration_ms=webhook_result.get('duration_ms', 0)
+        )
+        
+        return webhook_result, success, step_data
+    
+    def _get_submission_for_webhook(
+        self,
+        job: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Get submission data for webhook processing.
+        
+        Args:
+            job: Job dictionary
+            
+        Returns:
+            Submission dictionary (minimal dict if not found)
+        """
+        submission_id = job.get('submission_id')
+        submission = None
+        if submission_id:
+            submission = self.db.get_submission(submission_id)
+        if not submission:
+            submission = {'submission_data': {}}
+        return submission
+    
     def _process_webhook_step_batch_mode(
         self,
         step: Dict[str, Any],
@@ -255,38 +339,20 @@ class StepProcessor:
         if not job:
             raise ValueError(f"Job {job_id} not found")
         
-        submission_id = job.get('submission_id')
-        submission = None
-        if submission_id:
-            submission = self.db.get_submission(submission_id)
-        if not submission:
-            # Create a minimal submission dict
-            submission = {'submission_data': {}}
+        submission = self._get_submission_for_webhook(job)
         
-        # Execute webhook step
-        webhook_result, success = self.webhook_step_service.execute_webhook_step(
+        # Execute webhook using shared core logic
+        webhook_result, success, step_data = self._execute_webhook_step_core(
             step=step,
             step_index=step_index,
             job_id=job_id,
             job=job,
             submission=submission,
             step_outputs=step_outputs,
-            sorted_steps=sorted_steps
+            sorted_steps=sorted_steps,
+            step_start_time=step_start_time
         )
         
-        # Create execution step record
-        step_data = ExecutionStepManager.create_webhook_step(
-            step_name=step_name,
-            step_order=step_index + 1,
-            webhook_url=webhook_result.get('webhook_url', ''),
-            payload=webhook_result.get('payload', {}),
-            response_status=webhook_result.get('response_status'),
-            response_body=webhook_result.get('response_body'),
-            success=success,
-            error=webhook_result.get('error'),
-            step_start_time=step_start_time,
-            duration_ms=webhook_result.get('duration_ms', 0)
-        )
         execution_steps.append(step_data)
         self.db.update_job(job_id, {'execution_steps': execution_steps}, s3_service=self.s3)
         
@@ -317,6 +383,61 @@ class StepProcessor:
             })
         
         return step_output_dict, []
+    
+    def _build_step_outputs_from_execution_steps(
+        self,
+        execution_steps: List[Dict[str, Any]],
+        steps: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """
+        Build step_outputs list from execution_steps for single mode processing.
+        
+        Args:
+            execution_steps: List of execution steps
+            steps: List of all workflow steps
+            
+        Returns:
+            List of step output dictionaries
+        """
+        step_outputs = []
+        sorted_steps = sorted(steps, key=lambda s: s.get('step_order', 0))
+        for i, exec_step in enumerate(execution_steps):
+            if exec_step.get('step_type') == 'ai_generation' and exec_step.get('step_order', 0) > 0:
+                step_outputs.append({
+                    'step_name': exec_step.get('step_name', f'Step {i}'),
+                    'output': exec_step.get('output', ''),
+                    'artifact_id': exec_step.get('artifact_id'),
+                    'image_urls': exec_step.get('image_urls', [])
+                })
+        return step_outputs
+    
+    def _update_execution_steps_with_rerun_support(
+        self,
+        execution_steps: List[Dict[str, Any]],
+        step_data: Dict[str, Any],
+        step_order: int,
+        step_type: str
+    ) -> None:
+        """
+        Update execution_steps list, replacing existing step if present (for reruns).
+        
+        Args:
+            execution_steps: List of execution steps (modified in place)
+            step_data: New step data to add or replace
+            step_order: Step order number
+            step_type: Type of step ('webhook' or 'ai_generation')
+        """
+        existing_step_index = None
+        for i, existing_step in enumerate(execution_steps):
+            if existing_step.get('step_order') == step_order and existing_step.get('step_type') == step_type:
+                existing_step_index = i
+                break
+        
+        if existing_step_index is not None:
+            logger.info(f"Replacing existing {step_type} execution step for step_order {step_order} (rerun)")
+            execution_steps[existing_step_index] = step_data
+        else:
+            execution_steps.append(step_data)
     
     def _process_webhook_step_single_mode(
         self,
@@ -352,63 +473,31 @@ class StepProcessor:
         })
         
         # Get submission data
-        submission_id = job.get('submission_id')
-        submission = None
-        if submission_id:
-            submission = self.db.get_submission(submission_id)
-        if not submission:
-            submission = {'submission_data': {}}
+        submission = self._get_submission_for_webhook(job)
         
         # Build step_outputs from execution_steps
-        step_outputs = []
         sorted_steps = sorted(steps, key=lambda s: s.get('step_order', 0))
-        for i, exec_step in enumerate(execution_steps):
-            if exec_step.get('step_type') == 'ai_generation' and exec_step.get('step_order', 0) > 0:
-                step_outputs.append({
-                    'step_name': exec_step.get('step_name', f'Step {i}'),
-                    'output': exec_step.get('output', ''),
-                    'artifact_id': exec_step.get('artifact_id'),
-                    'image_urls': exec_step.get('image_urls', [])
-                })
+        step_outputs = self._build_step_outputs_from_execution_steps(execution_steps, steps)
         
-        # Execute webhook step
-        webhook_result, success = self.webhook_step_service.execute_webhook_step(
+        # Execute webhook using shared core logic
+        webhook_result, success, step_data = self._execute_webhook_step_core(
             step=step,
             step_index=step_index,
             job_id=job_id,
             job=job,
             submission=submission,
             step_outputs=step_outputs,
-            sorted_steps=sorted_steps
+            sorted_steps=sorted_steps,
+            step_start_time=step_start_time
         )
         
-        # Create execution step record
-        step_data = ExecutionStepManager.create_webhook_step(
-            step_name=step_name,
+        # Update execution steps with rerun support
+        self._update_execution_steps_with_rerun_support(
+            execution_steps=execution_steps,
+            step_data=step_data,
             step_order=step_index + 1,
-            webhook_url=webhook_result.get('webhook_url', ''),
-            payload=webhook_result.get('payload', {}),
-            response_status=webhook_result.get('response_status'),
-            response_body=webhook_result.get('response_body'),
-            success=success,
-            error=webhook_result.get('error'),
-            step_start_time=step_start_time,
-            duration_ms=webhook_result.get('duration_ms', 0)
+            step_type='webhook'
         )
-        
-        # Check if this step already exists (for reruns) and replace it, otherwise append
-        step_order = step_index + 1
-        existing_step_index = None
-        for i, existing_step in enumerate(execution_steps):
-            if existing_step.get('step_order') == step_order and existing_step.get('step_type') == 'webhook':
-                existing_step_index = i
-                break
-        
-        if existing_step_index is not None:
-            logger.info(f"Replacing existing webhook execution step for step_order {step_order} (rerun)")
-            execution_steps[existing_step_index] = step_data
-        else:
-            execution_steps.append(step_data)
         
         # Update job with execution steps
         self.db.update_job(job_id, {
@@ -659,19 +748,13 @@ class StepProcessor:
             artifact_id=step_artifact_id
         )
         
-        # Check if this step already exists (for reruns) and replace it, otherwise append
-        step_order = step_index + 1
-        existing_step_index = None
-        for i, existing_step in enumerate(execution_steps):
-            if existing_step.get('step_order') == step_order and existing_step.get('step_type') == 'ai_generation':
-                existing_step_index = i
-                break
-        
-        if existing_step_index is not None:
-            logger.info(f"Replacing existing execution step for step_order {step_order} (rerun)")
-            execution_steps[existing_step_index] = step_data
-        else:
-            execution_steps.append(step_data)
+        # Update execution steps with rerun support
+        self._update_execution_steps_with_rerun_support(
+            execution_steps=execution_steps,
+            step_data=step_data,
+            step_order=step_index + 1,
+            step_type='ai_generation'
+        )
         
         # Update job with execution steps and add artifacts to job's artifacts list
         artifacts_list = job.get('artifacts', [])

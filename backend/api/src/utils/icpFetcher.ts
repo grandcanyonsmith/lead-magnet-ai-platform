@@ -1,39 +1,72 @@
 /**
- * Utility functions for fetching ICP (Ideal Customer Profile) document content
+ * Utility functions for fetching ICP (Ideal Customer Profile) document content.
+ * 
+ * Provides functions to fetch and process ICP documents from URLs with:
+ * - Timeout handling
+ * - Retry logic for transient failures
+ * - Content type detection and processing
+ * - Content length limits
+ * - Brand context building from settings
+ * 
+ * @module icpFetcher
  */
 
 import { logger } from './logger';
+import { retryWithBackoff } from './retry';
+import { withTimeout } from './timeout';
+import { validateUrl } from './validators';
+import { BrandSettings } from './types';
 
 const MAX_CONTENT_LENGTH = 50000; // Limit to ~50k characters to avoid token limits
 const FETCH_TIMEOUT = 10000; // 10 seconds timeout
+const MAX_RETRY_ATTEMPTS = 3;
 
 /**
- * Fetch content from an ICP document URL
+ * Fetch content from an ICP document URL with retry logic and timeout handling.
+ * 
+ * Automatically retries on transient failures (network errors, timeouts, 5xx errors)
+ * and handles various content types (JSON, text, HTML). PDFs are not supported.
+ * 
  * @param url - The URL to fetch the ICP document from
- * @returns The fetched content, or null if fetch fails
+ * @returns The fetched content, or null if fetch fails after retries
+ * @throws {Error} If URL is invalid
+ * 
+ * @example
+ * ```typescript
+ * const content = await fetchICPContent('https://example.com/icp.json');
+ * if (content) {
+ *   console.log('ICP content:', content);
+ * }
+ * ```
  */
 export async function fetchICPContent(url: string): Promise<string | null> {
-  if (!url || !url.trim()) {
+  if (!url || typeof url !== 'string' || url.trim().length === 0) {
+    logger.warn('[ICP Fetcher] Empty or invalid URL provided');
     return null;
   }
 
   try {
-    logger.info('[ICP Fetcher] Fetching ICP document', { url });
+    validateUrl(url, 'ICP document URL');
+  } catch (error) {
+    logger.warn('[ICP Fetcher] Invalid URL format', {
+      url,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
 
-    // Create AbortController for timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
+  return retryWithBackoff(
+    async () => {
+      logger.info('[ICP Fetcher] Fetching ICP document', { url });
 
-    try {
-      const response = await fetch(url, {
-        signal: controller.signal,
+      const fetchPromise = fetch(url, {
         headers: {
           'User-Agent': 'LeadMagnet-AI/1.0',
           'Accept': 'text/html,text/plain,application/json,application/pdf',
         },
       });
 
-      clearTimeout(timeoutId);
+      const response = await withTimeout(fetchPromise, FETCH_TIMEOUT, `ICP fetch timed out after ${FETCH_TIMEOUT}ms`);
 
       if (!response.ok) {
         logger.warn('[ICP Fetcher] Failed to fetch ICP document', {
@@ -45,23 +78,10 @@ export async function fetchICPContent(url: string): Promise<string | null> {
       }
 
       const contentType = response.headers.get('content-type') || '';
-      
-      // Handle different content types
-      let content: string;
-      
-      if (contentType.includes('application/json')) {
-        const json = await response.json();
-        content = JSON.stringify(json, null, 2);
-      } else if (contentType.includes('text/')) {
-        content = await response.text();
-      } else if (contentType.includes('application/pdf')) {
-        // For PDFs, we can't easily extract text without a library
-        // For now, return null and log a warning
-        logger.warn('[ICP Fetcher] PDF content type not supported', { url, contentType });
+      const content = await processContent(response, contentType, url);
+
+      if (content === null) {
         return null;
-      } else {
-        // Try to get as text for other types
-        content = await response.text();
       }
 
       // Truncate if too long
@@ -71,7 +91,7 @@ export async function fetchICPContent(url: string): Promise<string | null> {
           originalLength: content.length,
           truncatedLength: MAX_CONTENT_LENGTH,
         });
-        content = content.substring(0, MAX_CONTENT_LENGTH) + '\n\n[Content truncated...]';
+        return content.substring(0, MAX_CONTENT_LENGTH) + '\n\n[Content truncated...]';
       }
 
       logger.info('[ICP Fetcher] Successfully fetched ICP document', {
@@ -81,35 +101,94 @@ export async function fetchICPContent(url: string): Promise<string | null> {
       });
 
       return content;
-    } catch (fetchError: any) {
-      clearTimeout(timeoutId);
-      
-      if (fetchError.name === 'AbortError') {
-        logger.warn('[ICP Fetcher] Fetch timeout', { url });
-      } else {
-        logger.warn('[ICP Fetcher] Fetch error', {
+    },
+    {
+      maxAttempts: MAX_RETRY_ATTEMPTS,
+      initialDelayMs: 1000,
+      onRetry: (attempt, error) => {
+        logger.debug('[ICP Fetcher] Retrying fetch', {
+          attempt,
           url,
-          error: fetchError.message,
+          error: error instanceof Error ? error.message : String(error),
         });
-      }
+      },
+    }
+  ).catch((error) => {
+    logger.error('[ICP Fetcher] Failed to fetch ICP document after retries', {
+      url,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  });
+}
+
+/**
+ * Process response content based on content type.
+ * 
+ * @param response - Fetch response object
+ * @param contentType - Content type header value
+ * @param url - URL for logging
+ * @returns Processed content string or null if unsupported
+ */
+async function processContent(response: Response, contentType: string, url: string): Promise<string | null> {
+  if (contentType.includes('application/json')) {
+    try {
+      const json = await response.json();
+      return JSON.stringify(json, null, 2);
+    } catch (error) {
+      logger.warn('[ICP Fetcher] Failed to parse JSON content', {
+        url,
+        error: error instanceof Error ? error.message : String(error),
+      });
       return null;
     }
-  } catch (error: any) {
-    logger.error('[ICP Fetcher] Unexpected error fetching ICP document', {
+  }
+
+  if (contentType.includes('text/')) {
+    return await response.text();
+  }
+
+  if (contentType.includes('application/pdf')) {
+    logger.warn('[ICP Fetcher] PDF content type not supported', { url, contentType });
+    return null;
+  }
+
+  // Try to get as text for other types
+  try {
+    return await response.text();
+  } catch (error) {
+    logger.warn('[ICP Fetcher] Failed to extract text content', {
       url,
-      error: error.message,
-      stack: error.stack,
+      contentType,
+      error: error instanceof Error ? error.message : String(error),
     });
     return null;
   }
 }
 
 /**
- * Build brand context string from settings
- * @param settings - User settings object
- * @returns Formatted brand context string
+ * Build brand context string from settings.
+ * 
+ * Extracts brand-related fields from user settings and formats them into
+ * a readable context string for use in AI prompts.
+ * 
+ * @param settings - User settings object with brand information
+ * @returns Formatted brand context string, or empty string if no brand info
+ * 
+ * @example
+ * ```typescript
+ * const context = buildBrandContext({
+ *   organization_name: 'Acme Corp',
+ *   industry: 'Technology',
+ *   brand_description: 'Innovative solutions'
+ * });
+ * // Returns: "Organization: Acme Corp\nIndustry: Technology\nBrand Description: Innovative solutions"
+ * ```
  */
-export function buildBrandContext(settings: any): string {
+export function buildBrandContext(settings: BrandSettings | Record<string, unknown>): string {
+  if (!settings || typeof settings !== 'object') {
+    return '';
+  }
   const contextParts: string[] = [];
 
   if (settings.organization_name) {

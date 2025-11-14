@@ -90,17 +90,18 @@ function ExpandableContent({
         <div className="flex justify-end mb-2">
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+            className="text-xs text-blue-600 hover:text-blue-800 active:text-blue-900 flex items-center gap-1 px-2 py-1.5 rounded touch-target min-h-[44px] sm:min-h-0"
           >
             {isExpanded ? (
               <>
                 <FiChevronUp className="w-3 h-3" />
-                Show Less
+                <span className="sm:inline">Show Less</span>
               </>
             ) : (
               <>
                 <FiChevronDown className="w-3 h-3" />
-                Show More ({content.length.toLocaleString()} chars)
+                <span className="sm:inline">Show More</span>
+                <span className="hidden sm:inline"> ({content.length.toLocaleString()} chars)</span>
               </>
             )}
           </button>
@@ -165,7 +166,7 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
         {formatted.content.instructions && (
           <div>
             <span className="text-xs font-semibold text-gray-700 block mb-2">Instructions:</span>
-            <div className="text-sm text-gray-900 whitespace-pre-wrap bg-gray-50 p-3 rounded-lg border border-gray-200 max-h-64 overflow-y-auto">
+            <div className="text-sm text-gray-900 whitespace-pre-wrap bg-gray-50 p-3 rounded-lg border border-gray-200 max-h-64 overflow-y-auto scrollbar-hide-until-hover">
               {formatted.content.instructions}
             </div>
           </div>
@@ -194,7 +195,7 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
             content={contentString}
             renderContent={(displayContent, isExpanded) => (
               <>
-                <div className="rounded-xl overflow-hidden border border-gray-200">
+                <div className="rounded-xl overflow-hidden border border-gray-200 scrollbar-hide-until-hover">
                   <SyntaxHighlighter
                     language="json"
                     style={vscDarkPlus}
@@ -241,7 +242,7 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
           <div className="flex gap-2">
             <button
               onClick={() => setShowRendered(true)}
-              className={`px-3 py-1.5 text-xs font-medium rounded ${
+              className={`px-3 py-2 sm:py-1.5 text-xs font-medium rounded touch-target min-h-[44px] sm:min-h-0 ${
                 showRendered 
                   ? 'bg-blue-600 text-white' 
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -251,7 +252,7 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
             </button>
             <button
               onClick={() => setShowRendered(false)}
-              className={`px-3 py-1.5 text-xs font-medium rounded ${
+              className={`px-3 py-2 sm:py-1.5 text-xs font-medium rounded touch-target min-h-[44px] sm:min-h-0 ${
                 !showRendered 
                   ? 'bg-blue-600 text-white' 
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -346,7 +347,7 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
             content={markdownText}
             renderContent={(displayContent) => (
               <>
-                <div className="prose prose-sm max-w-none bg-white p-4 md:p-4 rounded-xl border border-gray-200 max-h-[600px] overflow-y-auto leading-relaxed">
+                <div className="prose prose-sm max-w-none bg-white p-4 md:p-4 rounded-xl border border-gray-200 max-h-[600px] overflow-y-auto scrollbar-hide-until-hover leading-relaxed">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {displayContent}
                   </ReactMarkdown>
@@ -382,7 +383,7 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
             // No images in text or prop, render as plain text
             return (
               <>
-                <pre className="text-sm md:text-xs whitespace-pre-wrap font-mono bg-gray-50 p-4 md:p-4 rounded-xl border border-gray-200 max-h-[500px] md:max-h-[600px] overflow-y-auto leading-relaxed">
+                <pre className="text-sm md:text-xs whitespace-pre-wrap font-mono bg-gray-50 p-4 md:p-4 rounded-xl border border-gray-200 max-h-[500px] md:max-h-[600px] overflow-y-auto scrollbar-hide-until-hover leading-relaxed">
                   {displayContent}
                 </pre>
                 {/* Always check for images from prop */}
@@ -393,7 +394,7 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
           
           // Has images in text, render with inline images
           return (
-            <div className="bg-gray-50 p-4 md:p-4 rounded-xl border border-gray-200 max-h-[500px] md:max-h-[600px] overflow-y-auto">
+            <div className="bg-gray-50 p-4 md:p-4 rounded-xl border border-gray-200 max-h-[500px] md:max-h-[600px] overflow-y-auto scrollbar-hide-until-hover">
               <pre className="text-sm md:text-xs whitespace-pre-wrap font-mono leading-relaxed">
                 {renderTextWithImages(displayContent)}
               </pre>

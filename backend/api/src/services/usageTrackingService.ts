@@ -32,7 +32,8 @@ export class UsageTrackingService {
   private readonly usageRecordsTable: string;
 
   constructor(usageRecordsTable?: string) {
-    this.usageRecordsTable = usageRecordsTable || process.env.USAGE_RECORDS_TABLE || 'leadmagnet-usage-records';
+    const { env } = require('../utils/env');
+    this.usageRecordsTable = usageRecordsTable || env.usageRecordsTable;
   }
 
   /**
