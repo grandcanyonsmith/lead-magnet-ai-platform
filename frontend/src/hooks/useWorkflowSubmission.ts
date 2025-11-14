@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react'
 import { api } from '@/lib/api'
 import { AIModel } from '@/types'
 import { WorkflowFormData, TemplateData, FormFieldsData } from './useWorkflowForm'
-import { WorkflowStep } from '@/app/dashboard/workflows/components/WorkflowStepEditor'
+import { WorkflowStep } from '@/types/workflow'
 
 export function useWorkflowSubmission() {
   const [isSubmitting, setIsSubmitting] = useState(false)

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { api } from '@/lib/api'
-import { WorkflowStep } from '@/app/dashboard/workflows/components/WorkflowStepEditor'
+import { WorkflowStep } from '@/types/workflow'
 
 export interface AIStepGenerationResult {
   action: 'update' | 'add'

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { AIModel, Tool } from '@/types'
-import { WorkflowStep } from '@/app/dashboard/workflows/components/WorkflowStepEditor'
+import { WorkflowStep } from '@/types/workflow'
 import { useWorkflowId } from './useWorkflowId'
 
 export interface WorkflowFormData {

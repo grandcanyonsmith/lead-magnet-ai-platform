@@ -1,6 +1,6 @@
 'use client'
 
-import { WorkflowStep } from '@/app/dashboard/workflows/components/WorkflowStepEditor'
+import { WorkflowStep } from '@/types/workflow'
 import { FiCheck, FiX, FiArrowRight } from 'react-icons/fi'
 
 interface StepDiffPreviewProps {
