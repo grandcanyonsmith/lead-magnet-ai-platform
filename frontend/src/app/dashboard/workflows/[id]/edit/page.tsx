@@ -1,9 +1,9 @@
 import EditWorkflowClient from './page-client'
 
 export async function generateStaticParams(): Promise<{ id: string }[]> {
-  // Return empty array for dynamic routes - Next.js will handle these at runtime
-  // For static export, we rely on fallback behavior
-  return []
+  // Return at least one placeholder route to satisfy Next.js static export requirements
+  // Actual routes will be handled client-side via CloudFront fallback
+  return [{ id: '_' }]
 }
 
 export const dynamicParams = true
