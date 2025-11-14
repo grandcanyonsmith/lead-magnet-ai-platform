@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { FiSave } from 'react-icons/fi'
 import { useSettings, useUpdateSettings } from '@/hooks/api/useSettings'
 import { Settings } from '@/types'
@@ -11,6 +11,7 @@ import { GeneralSettings } from '@/components/settings/GeneralSettings'
 import { BrandingSettings } from '@/components/settings/BrandingSettings'
 import { DeliverySettings } from '@/components/settings/DeliverySettings'
 import { BillingUsage } from '@/components/settings/BillingUsage'
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges'
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('general')
@@ -34,6 +35,27 @@ export default function SettingsPage() {
       })
     }
   }, [settings])
+
+  // Check if there are unsaved changes
+  const hasUnsavedChanges = useMemo(() => {
+    if (!settings) return false
+    
+    return (
+      formData.organization_name !== (settings.organization_name || '') ||
+      formData.contact_email !== (settings.contact_email || '') ||
+      formData.website_url !== (settings.website_url || '') ||
+      formData.default_ai_model !== (settings.default_ai_model || 'gpt-5') ||
+      formData.logo_url !== (settings.logo_url || '') ||
+      formData.ghl_webhook_url !== (settings.ghl_webhook_url || '') ||
+      formData.lead_phone_field !== (settings.lead_phone_field || '')
+    )
+  }, [settings, formData])
+
+  // Warn about unsaved changes
+  useUnsavedChanges({
+    hasUnsavedChanges: hasUnsavedChanges && activeTab !== 'billing',
+    message: 'You have unsaved changes. Are you sure you want to leave?',
+  })
 
   const handleFieldChange = useCallback((field: keyof Settings, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -123,8 +145,17 @@ export default function SettingsPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-600">Manage your account settings</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+            <p className="text-gray-600">Manage your account settings</p>
+          </div>
+          {hasUnsavedChanges && activeTab !== 'billing' && (
+            <span className="px-3 py-1 text-sm font-medium text-orange-700 bg-orange-100 rounded-full">
+              Unsaved changes
+            </span>
+          )}
+        </div>
       </div>
 
       <SettingsTabs activeTab={activeTab} onTabChange={setActiveTab}>
