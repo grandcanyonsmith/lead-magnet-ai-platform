@@ -18,6 +18,14 @@ const s3Client = new S3Client({ region: env.awsRegion });
 
 class JobsController {
   async list(tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {
+    logger.info('[Jobs] Listing jobs', {
+      tenantId,
+      workflowId: queryParams.workflow_id,
+      status: queryParams.status,
+      limit: queryParams.limit,
+      offset: queryParams.offset,
+    });
+
     const workflowId = queryParams.workflow_id;
     const status = queryParams.status;
     const pageSize = queryParams.limit ? parseInt(queryParams.limit) : 20;
