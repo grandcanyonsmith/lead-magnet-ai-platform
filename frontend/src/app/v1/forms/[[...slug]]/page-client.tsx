@@ -93,9 +93,14 @@ export default function PublicFormPage() {
         }
       })
       setFormData(initialData)
-    } catch (error: any) {
-      console.error('Failed to load form:', error)
-      setError(error.response?.data?.message || error.message || 'Form not found')
+    } catch (error) {
+      // Handle errors gracefully
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data && typeof error.response.data.message === 'string')
+          ? error.response.data.message
+          : 'Form not found'
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
