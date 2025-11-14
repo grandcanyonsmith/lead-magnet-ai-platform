@@ -14,6 +14,7 @@ import { SearchModal } from '@/components/SearchModal'
 import { ShortcutsHelpModal } from '@/components/ShortcutsHelpModal'
 import { ImpersonationBanner } from '@/components/ImpersonationBanner'
 import { UserImpersonation } from '@/components/UserImpersonation'
+import { ViewSwitcher } from '@/components/ViewSwitcher'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { 
   FiHome, 
@@ -100,6 +101,8 @@ export default function DashboardLayout({
       await loadSettings()
     } catch (error) {
       console.error('Failed to update checklist:', error)
+      // Error is already handled by the component's error handling
+      // This is just for logging
     }
   }
 
@@ -252,6 +255,7 @@ export default function DashboardLayout({
               >
                 <FiSearch className="w-5 h-5" />
               </button>
+              <ViewSwitcher />
               <UserImpersonation />
               <NotificationBell />
               <UserMenu />
