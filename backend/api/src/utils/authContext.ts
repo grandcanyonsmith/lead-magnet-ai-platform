@@ -11,6 +11,8 @@ export interface AuthContext {
   role: string;
   customerId: string;
   isImpersonating: boolean;
+  viewMode?: 'agency' | 'subaccount'; // Agency view for super admin
+  selectedCustomerId?: string; // Selected customer when in agency view
 }
 
 /**
@@ -105,12 +107,36 @@ export async function extractAuthContext(event: APIGatewayProxyEventV2): Promise
     return null;
   }
 
+  // Check for agency view mode (only for SUPER_ADMIN)
+  const viewMode = event.headers['x-view-mode'] || event.headers['X-View-Mode'];
+  const selectedCustomerId = event.headers['x-selected-customer-id'] || event.headers['X-Selected-Customer-Id'];
+  
+  let finalCustomerId = customerId;
+  let finalViewMode: 'agency' | 'subaccount' | undefined = undefined;
+
+  // Only SUPER_ADMIN can use agency view
+  if (role === 'SUPER_ADMIN') {
+    if (viewMode === 'agency') {
+      finalViewMode = 'agency';
+      // In agency view, use selected customer if provided, otherwise use real user's customer
+      if (selectedCustomerId) {
+        finalCustomerId = selectedCustomerId;
+      }
+      // If no selected customer, stay in agency view but use real user's customer as default
+    } else {
+      finalViewMode = 'subaccount';
+      // In subaccount view, use acting user's customer
+    }
+  }
+
   return {
     realUserId,
     actingUserId,
     role,
-    customerId,
+    customerId: finalCustomerId,
     isImpersonating: actingUserId !== realUserId,
+    viewMode: finalViewMode,
+    selectedCustomerId: selectedCustomerId || undefined,
   };
 }
 

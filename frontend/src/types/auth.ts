@@ -25,6 +25,8 @@ export interface AuthMeResponse {
   role: string
   customerId: string
   isImpersonating: boolean
+  viewMode?: 'agency' | 'subaccount'
+  selectedCustomerId?: string
 }
 
 export interface TokenStorage {

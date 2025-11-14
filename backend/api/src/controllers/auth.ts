@@ -67,6 +67,8 @@ class AuthController {
           role: auth.role,
           customerId: auth.customerId,
           isImpersonating: auth.isImpersonating,
+          viewMode: auth.viewMode,
+          selectedCustomerId: auth.selectedCustomerId,
         },
       };
     } catch (error) {

@@ -35,20 +35,20 @@ export function registerAdminRoutes(): void {
   });
 
   // Settings
-  router.register('GET', '/admin/settings', async (_params, _body, _query, tenantId) => {
-    return await settingsController.get(tenantId!);
+  router.register('GET', '/admin/settings', async (_params, _body, _query, tenantId, context) => {
+    return await settingsController.get(_params, _body, _query, tenantId, context);
   });
 
-  router.register('PUT', '/admin/settings', async (_params, body, _query, tenantId) => {
-    return await settingsController.update(tenantId!, body);
+  router.register('PUT', '/admin/settings', async (_params, body, _query, tenantId, context) => {
+    return await settingsController.update(_params, body, _query, tenantId, context);
   });
 
-  router.register('GET', '/admin/settings/webhook', async (_params, _body, _query, tenantId) => {
-    return await settingsController.getWebhookUrl(tenantId!);
+  router.register('GET', '/admin/settings/webhook', async (_params, _body, _query, tenantId, context) => {
+    return await settingsController.getWebhookUrl(_params, _body, _query, tenantId, context);
   });
 
-  router.register('POST', '/admin/settings/webhook/regenerate', async (_params, _body, _query, tenantId) => {
-    return await settingsController.regenerateWebhookToken(tenantId!);
+  router.register('POST', '/admin/settings/webhook/regenerate', async (_params, _body, _query, tenantId, context) => {
+    return await settingsController.regenerateWebhookToken(_params, _body, _query, tenantId, context);
   });
 
   // Billing
@@ -85,5 +85,21 @@ export function registerAdminRoutes(): void {
   router.register('GET', '/admin/users', async (_params, _body, query, tenantId, context) => {
     logger.info('[Admin Routes] GET /admin/users');
     return await adminController.listUsers(_params, _body, query, tenantId, context);
+  });
+
+  // Agency management routes (super admin only)
+  router.register('GET', '/admin/agency/users', async (_params, _body, query, tenantId, context) => {
+    logger.info('[Admin Routes] GET /admin/agency/users');
+    return await adminController.listAgencyUsers(_params, _body, query, tenantId, context);
+  });
+
+  router.register('PUT', '/admin/agency/users/:userId', async (params, body, _query, tenantId, context) => {
+    logger.info('[Admin Routes] PUT /admin/agency/users/:userId', { userId: params.userId });
+    return await adminController.updateUserRole(params, body, _query, tenantId, context);
+  });
+
+  router.register('GET', '/admin/agency/customers', async (_params, _body, query, tenantId, context) => {
+    logger.info('[Admin Routes] GET /admin/agency/customers');
+    return await adminController.listAgencyCustomers(_params, _body, query, tenantId, context);
   });
 }
