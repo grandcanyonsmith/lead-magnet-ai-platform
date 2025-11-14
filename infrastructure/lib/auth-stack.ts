@@ -77,7 +77,7 @@ export class AuthStack extends cdk.Stack {
     // No need to manually add permissions for Cognito to invoke the Lambdas
 
     // Grant PostConfirmation Lambda permission to update user attributes
-    // Use Lazy.string to defer ARN evaluation and avoid circular dependency
+    // Use wildcard pattern to avoid circular dependency - Lambda will only be invoked by this User Pool
     postConfirmationLambda.addToRolePolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
@@ -85,8 +85,10 @@ export class AuthStack extends cdk.Stack {
           'cognito-idp:AdminUpdateUserAttributes',
         ],
         resources: [
-          cdk.Lazy.string({
-            produce: () => this.userPool.userPoolArn,
+          cdk.Stack.of(this).formatArn({
+            service: 'cognito-idp',
+            resource: 'userpool',
+            resourceName: '*',
           }),
         ],
       })
