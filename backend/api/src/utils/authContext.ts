@@ -26,6 +26,41 @@ export interface ExtendedRequestContext {
 
 const SESSIONS_TABLE = process.env.SESSIONS_TABLE || 'leadmagnet-sessions';
 const USERS_TABLE = process.env.USERS_TABLE || 'leadmagnet-users';
+const isForcedSuperAdmin = (email?: string): boolean => {
+  if (!email) {
+    return false;
+  }
+  return superAdminEmailSet.has(email.toLowerCase());
+};
+
+async function ensureUserIsPersistedAsSuperAdmin(userId: string) {
+  try {
+    const user = await db.get(USERS_TABLE, { user_id: userId });
+    if (user && user.role !== 'SUPER_ADMIN') {
+      await db.update(USERS_TABLE, { user_id: userId }, {
+        role: 'SUPER_ADMIN',
+        updated_at: new Date().toISOString(),
+      });
+      logger.info('[AuthContext] Elevated user to SUPER_ADMIN based on email allowlist', {
+        userId,
+      });
+    }
+  } catch (error) {
+    logger.warn('[AuthContext] Failed to persist SUPER_ADMIN role for user', {
+      error: error instanceof Error ? error.message : String(error),
+      userId,
+    });
+  }
+}
+const defaultSuperAdminEmails = ['canyon@coursecreator360.com'];
+const configuredSuperAdminEmails = (process.env.SUPER_ADMIN_EMAILS || '')
+  .split(',')
+  .map((email) => email.trim().toLowerCase())
+  .filter(Boolean);
+const superAdminEmailSet = new Set([
+  ...defaultSuperAdminEmails.map((email) => email.toLowerCase()),
+  ...configuredSuperAdminEmails,
+]);
 
 /**
  * Extract auth context from JWT claims and session
@@ -40,7 +75,15 @@ export async function extractAuthContext(event: APIGatewayProxyEventV2): Promise
   }
 
   const realUserId = claims.sub as string;
-  const role = (claims['custom:role'] as string) || 'USER';
+  let role = (claims['custom:role'] as string) || 'USER';
+  const emailClaim =
+    (claims.email as string | undefined) ||
+    (claims['custom:email'] as string | undefined);
+
+  if (isForcedSuperAdmin(emailClaim) && role !== 'SUPER_ADMIN') {
+    role = 'SUPER_ADMIN';
+    await ensureUserIsPersistedAsSuperAdmin(realUserId);
+  }
   
   // Check for session-based impersonation
   // Frontend should send session_id in Authorization header or custom header
@@ -154,4 +197,3 @@ function extractSessionIdFromAuth(authHeader?: string): string | undefined {
   
   return undefined;
 }
-

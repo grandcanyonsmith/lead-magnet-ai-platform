@@ -169,24 +169,68 @@ class AdminController {
     _tenantId: string | undefined,
     context?: RequestContext
   ): Promise<RouteResponse> {
-    requireSuperAdmin(context);
+    // Validate context before RBAC check
+    if (!context) {
+      logger.error('[Admin] Missing request context in updateUserRole');
+      throw new ApiError('Request context is missing', 500);
+    }
+
+    if (!context.auth) {
+      logger.error('[Admin] Missing auth context in updateUserRole', {
+        hasContext: !!context,
+        hasEvent: !!context.event,
+      });
+      throw new ApiError('Authentication required', 401);
+    }
+
+    logger.info('[Admin] Starting user role update', {
+      userId: params.userId,
+      requestingUserId: context.auth.actingUserId,
+      requestingRole: context.auth.role,
+    });
+
+    try {
+      requireSuperAdmin(context);
+    } catch (error) {
+      logger.error('[Admin] Authorization failed in updateUserRole', {
+        error: error instanceof Error ? error.message : String(error),
+        userId: params.userId,
+        requestingUserId: context.auth.actingUserId,
+        requestingRole: context.auth.role,
+      });
+      throw error;
+    }
 
     const userId = params.userId;
     if (!userId) {
+      logger.warn('[Admin] Missing userId parameter in updateUserRole');
       throw new ApiError('User ID is required', 400);
     }
 
-    const { role, customer_id } = body;
+    const { role, customer_id } = body || {};
     if (!role || !['USER', 'ADMIN', 'SUPER_ADMIN'].includes(role)) {
+      logger.warn('[Admin] Invalid role provided in updateUserRole', {
+        userId,
+        providedRole: role,
+      });
       throw new ApiError('Valid role is required (USER, ADMIN, SUPER_ADMIN)', 400);
     }
 
     try {
+      logger.debug('[Admin] Fetching user for role update', { userId });
+      
       // Get existing user
       const user = await db.get(USERS_TABLE, { user_id: userId });
       if (!user) {
+        logger.warn('[Admin] User not found for role update', { userId });
         throw new ApiError('User not found', 404);
       }
+
+      logger.debug('[Admin] User found, checking for last SUPER_ADMIN', {
+        userId,
+        currentRole: user.role,
+        newRole: role,
+      });
 
       // Prevent demoting the last SUPER_ADMIN
       if (user.role === 'SUPER_ADMIN' && role !== 'SUPER_ADMIN') {
@@ -194,11 +238,12 @@ class AdminController {
         const allUsers = await db.scan(USERS_TABLE, 1000);
         const superAdmins = allUsers.filter((u: any) => u.role === 'SUPER_ADMIN' && u.user_id !== userId);
         if (superAdmins.length === 0) {
+          logger.warn('[Admin] Attempted to demote last SUPER_ADMIN', { userId });
           throw new ApiError('Cannot demote the last SUPER_ADMIN', 400);
         }
       }
 
-      // Update user
+      // Build update data
       const updateData: any = {
         role,
         updated_at: new Date().toISOString(),
@@ -208,20 +253,27 @@ class AdminController {
         updateData.customer_id = customer_id;
       }
 
+      logger.debug('[Admin] Updating user in database', {
+        userId,
+        updateData,
+      });
+
+      // Update user
       const updated = await db.update(USERS_TABLE, { user_id: userId }, updateData);
 
       if (!updated) {
-        throw new ApiError('Failed to update user', 500);
+        logger.error('[Admin] Database update returned null/undefined', {
+          userId,
+          updateData,
+        });
+        throw new ApiError('Failed to update user - database update returned no result', 500);
       }
 
-      // Update Cognito role if possible
-      // Note: This would require Cognito admin permissions
-      // For now, we'll just update DynamoDB
-
-      logger.info('[Admin] Updated user role', {
+      logger.info('[Admin] Successfully updated user role', {
         userId,
         oldRole: user.role,
         newRole: role,
+        updatedUserId: updated.user_id,
       });
 
       return {
@@ -238,14 +290,32 @@ class AdminController {
         },
       };
     } catch (error) {
+      // Re-throw ApiError as-is
       if (error instanceof ApiError) {
+        logger.error('[Admin] ApiError in updateUserRole', {
+          error: error.message,
+          statusCode: error.statusCode,
+          userId,
+        });
         throw error;
       }
-      logger.error('[Admin] Error updating user role', {
-        error: error instanceof Error ? error.message : String(error),
+
+      // Log detailed error information
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      
+      logger.error('[Admin] Unexpected error updating user role', {
+        error: errorMessage,
+        stack: errorStack,
         userId,
+        role,
+        customer_id,
       });
-      throw new ApiError('Failed to update user role', 500);
+
+      throw new ApiError(
+        `Failed to update user role: ${errorMessage}`,
+        500
+      );
     }
   }
 
