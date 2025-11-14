@@ -16,7 +16,7 @@ from services.execution_step_manager import ExecutionStepManager
 from services.usage_service import UsageService
 from services.image_artifact_service import ImageArtifactService
 from services.webhook_step_service import WebhookStepService
-from utils.content_detector import detect_content_type
+from services.ai_step_processor import AIStepProcessor
 from utils.step_utils import normalize_step_order
 from dependency_resolver import get_ready_steps, get_step_status
 
@@ -53,6 +53,12 @@ class StepProcessor:
         self.usage_service = usage_service
         self.image_artifact_service = image_artifact_service
         self.webhook_step_service = WebhookStepService()
+        self.ai_step_processor = AIStepProcessor(
+            ai_service=ai_service,
+            artifact_service=artifact_service,
+            usage_service=usage_service,
+            image_artifact_service=image_artifact_service
+        )
     
     def process_step_batch_mode(
         self,
@@ -104,7 +110,6 @@ class StepProcessor:
         
         # Regular AI generation step
         step_model = step.get('model', 'gpt-5')
-        step_instructions = step.get('instructions', '')
         
         # Extract tools and tool_choice from step config
         step_tools_raw = step.get('tools', ['web_search_preview'])
@@ -143,7 +148,7 @@ class StepProcessor:
         current_step_context = ContextBuilder.get_current_step_context(step_index, initial_context)
         
         # Collect previous image URLs for image generation steps
-        previous_image_urls = []
+        previous_image_urls = None
         # Check if this step uses image_generation tool
         has_image_generation = any(
             isinstance(t, dict) and t.get('type') == 'image_generation' 
@@ -163,89 +168,24 @@ class StepProcessor:
                 'previous_image_urls': previous_image_urls
             })
         
-        # Generate step output
-        step_output, usage_info, request_details, response_details = self.ai_service.generate_report(
-            model=step_model,
-            instructions=step_instructions,
-            context=current_step_context,
-            previous_context=all_previous_context,
-            tools=step_tools,
-            tool_choice=step_tool_choice,
-            tenant_id=tenant_id,
-            job_id=job_id,
-            previous_image_urls=previous_image_urls if has_image_generation else None
-        )
-        
-        logger.info("[StepProcessor] Received response_details from AI service", extra={
-            'job_id': job_id,
-            'step_index': step_index,
-            'step_name': step_name,
-            'response_details_keys': list(response_details.keys()) if isinstance(response_details, dict) else None,
-            'has_image_urls_key': 'image_urls' in response_details if isinstance(response_details, dict) else False,
-            'image_urls_count': len(response_details.get('image_urls', [])) if isinstance(response_details, dict) else 0,
-            'image_urls': response_details.get('image_urls', []) if isinstance(response_details, dict) else []
-        })
-        
-        step_duration = (datetime.utcnow() - step_start_time).total_seconds() * 1000
-        
-        logger.info(f"[StepProcessor] Step completed successfully", extra={
-            'job_id': job_id,
-            'step_index': step_index,
-            'step_name': step_name,
-            'step_model': step_model,
-            'duration_ms': step_duration,
-            'output_length': len(step_output),
-            'input_tokens': usage_info.get('input_tokens', 0),
-            'output_tokens': usage_info.get('output_tokens', 0),
-            'total_tokens': usage_info.get('total_tokens', 0),
-            'cost_usd': usage_info.get('cost_usd', 0),
-            'images_generated': len(response_details.get('image_urls', []))
-        })
-        
-        # Store usage record
-        self.usage_service.store_usage_record(tenant_id, job_id, usage_info)
-        
-        # Determine file extension based on content and step name
-        file_ext = detect_content_type(step_output, step_name)
-        
-        # Store step output as artifact
-        step_artifact_id = self.artifact_service.store_artifact(
-            tenant_id=tenant_id,
-            job_id=job_id,
-            artifact_type='step_output',
-            content=step_output,
-            filename=f'step_{step_index + 1}_{step_name.lower().replace(" ", "_")}{file_ext}'
-        )
-        
-        # Extract and store image URLs
-        image_urls = response_details.get('image_urls', [])
-        logger.info("[StepProcessor] Extracting image URLs from response_details", extra={
-            'job_id': job_id,
-            'step_index': step_index,
-            'step_name': step_name,
-            'image_urls_count_before': len(image_urls),
-            'image_urls': image_urls,
-            'image_urls_type': type(image_urls).__name__
-        })
-        
-        image_artifact_ids = self.image_artifact_service.store_image_artifacts(
-            image_urls=image_urls,
-            tenant_id=tenant_id,
-            job_id=job_id,
+        # Process AI step using AI step processor
+        step_output, usage_info, request_details, response_details, image_artifact_ids, step_artifact_id = self.ai_step_processor.process_ai_step(
+            step=step,
             step_index=step_index,
-            step_name=step_name
+            job_id=job_id,
+            tenant_id=tenant_id,
+            initial_context=initial_context,
+            previous_context=all_previous_context,
+            current_step_context=current_step_context,
+            step_tools=step_tools,
+            step_tool_choice=step_tool_choice,
+            previous_image_urls=previous_image_urls
         )
-        
-        logger.info("[StepProcessor] Image artifacts stored", extra={
-            'job_id': job_id,
-            'step_index': step_index,
-            'step_name': step_name,
-            'image_urls_count': len(image_urls),
-            'image_artifact_ids_count': len(image_artifact_ids),
-            'image_artifact_ids': image_artifact_ids
-        })
         
         all_image_artifact_ids.extend(image_artifact_ids)
+        
+        # Extract image URLs from response
+        image_urls = response_details.get('image_urls', [])
         
         # Create step output dict
         step_output_dict = {
@@ -265,8 +205,8 @@ class StepProcessor:
             response_details=response_details,
             usage_info=usage_info,
             step_start_time=step_start_time,
-            step_duration=step_duration,
-            artifact_id=step_artifact_id
+            step_duration=(datetime.utcnow() - step_start_time).total_seconds() * 1000,
+            artifact_id=step_output_dict['artifact_id']
         )
         execution_steps.append(step_data)
         self.db.update_job(job_id, {'execution_steps': execution_steps}, s3_service=self.s3)
@@ -663,17 +603,18 @@ class StepProcessor:
             'previous_image_urls_count': len(previous_image_urls)
         })
         
-        # Generate step output
+        # Process AI step using AI step processor
         try:
-            step_output, usage_info, request_details, response_details = self.ai_service.generate_report(
-                model=step_model,
-                instructions=step_instructions,
-                context=current_step_context,
-                previous_context=all_previous_context,
-                tools=step_tools,
-                tool_choice=step_tool_choice,
-                tenant_id=job['tenant_id'],
+            step_output, usage_info, request_details, response_details, image_artifact_ids, step_artifact_id = self.ai_step_processor.process_ai_step(
+                step=step,
+                step_index=step_index,
                 job_id=job_id,
+                tenant_id=job['tenant_id'],
+                initial_context=initial_context,
+                previous_context=all_previous_context,
+                current_step_context=current_step_context,
+                step_tools=step_tools,
+                step_tool_choice=step_tool_choice,
                 previous_image_urls=previous_image_urls if has_image_generation else None
             )
             
@@ -702,48 +643,8 @@ class StepProcessor:
         
         step_duration = (datetime.utcnow() - step_start_time).total_seconds() * 1000
         
-        # Store usage record
-        self.usage_service.store_usage_record(job['tenant_id'], job_id, usage_info)
-        
-        # Determine file extension
-        file_ext = detect_content_type(step_output, step_name)
-        
-        # Store step output as artifact
-        step_artifact_id = self.artifact_service.store_artifact(
-            tenant_id=job['tenant_id'],
-            job_id=job_id,
-            artifact_type='step_output',
-            content=step_output,
-            filename=f'step_{step_index + 1}_{step_name.lower().replace(" ", "_")}{file_ext}'
-        )
-        
-        # Extract and store image URLs
+        # Extract image URLs from response
         image_urls = response_details.get('image_urls', [])
-        logger.info("[StepProcessor] Extracting image URLs from response_details", extra={
-            'job_id': job_id,
-            'step_index': step_index,
-            'step_name': step_name,
-            'image_urls_count_before': len(image_urls),
-            'image_urls': image_urls,
-            'image_urls_type': type(image_urls).__name__
-        })
-        
-        image_artifact_ids = self.image_artifact_service.store_image_artifacts(
-            image_urls=image_urls,
-            tenant_id=job['tenant_id'],
-            job_id=job_id,
-            step_index=step_index,
-            step_name=step_name
-        )
-        
-        logger.info("[StepProcessor] Image artifacts stored", extra={
-            'job_id': job_id,
-            'step_index': step_index,
-            'step_name': step_name,
-            'image_urls_count': len(image_urls),
-            'image_artifact_ids_count': len(image_artifact_ids),
-            'image_artifact_ids': image_artifact_ids
-        })
         
         # Add execution step
         step_data = ExecutionStepManager.create_ai_generation_step(
