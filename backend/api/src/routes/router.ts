@@ -3,12 +3,15 @@ import { RouteResponse } from './routes';
 import { ApiError } from '../utils/errors';
 import { logger } from '../utils/logger';
 
+import { AuthContext } from '../utils/authContext';
+
 /**
  * Request context with commonly needed values.
  */
 export interface RequestContext {
   sourceIp: string;
   event: APIGatewayProxyEventV2;
+  auth?: AuthContext;
 }
 
 /**
@@ -76,6 +79,10 @@ class SimpleRouter {
       };
     }
 
+    // Extract auth context (for authenticated routes)
+    const { extractAuthContext } = await import('../utils/authContext');
+    const authContext = await extractAuthContext(event);
+
     // Try to match a route
     for (const route of this.routes) {
       if (route.method !== method && route.method !== '*') {
@@ -88,7 +95,7 @@ class SimpleRouter {
       }
 
       // Check authentication requirement
-      if (route.requiresAuth && !tenantId) {
+      if (route.requiresAuth && !authContext) {
         throw new ApiError('Please sign in to access this page', 401);
       }
 
@@ -109,11 +116,15 @@ class SimpleRouter {
       // Extract query parameters
       const query = event.queryStringParameters || {};
 
-      // Create request context
+      // Create request context with auth
       const context: RequestContext = {
         sourceIp: event.requestContext.http.sourceIp,
         event,
+        auth: authContext || undefined,
       };
+
+      // For backward compatibility, use customerId as tenantId if available
+      const effectiveTenantId = authContext?.customerId || tenantId;
 
       // Execute handler
       logger.debug('[Router] Matched route', {
@@ -121,9 +132,10 @@ class SimpleRouter {
         path,
         routePath: route.path,
         params,
+        hasAuth: !!authContext,
       });
 
-      return await route.handler(params, body, query, tenantId, context);
+      return await route.handler(params, body, query, effectiveTenantId, context);
     }
 
     throw new ApiError("This page doesn't exist", 404);

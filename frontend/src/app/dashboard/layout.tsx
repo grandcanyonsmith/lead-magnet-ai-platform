@@ -12,6 +12,8 @@ import { NotificationBell } from '@/components/NotificationBell'
 import { UserMenu } from '@/components/UserMenu'
 import { SearchModal } from '@/components/SearchModal'
 import { ShortcutsHelpModal } from '@/components/ShortcutsHelpModal'
+import { ImpersonationBanner } from '@/components/ImpersonationBanner'
+import { UserImpersonation } from '@/components/UserImpersonation'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { 
   FiHome, 
@@ -110,6 +112,7 @@ export default function DashboardLayout({
     { href: '/dashboard/workflows', label: 'Lead Magnets', icon: FiList },
     { href: '/dashboard/jobs', label: 'Generated Lead Magnets', icon: FiBarChart2 },
     { href: '/dashboard/artifacts', label: 'Downloads', icon: FiFileText },
+    { href: '/dashboard/files', label: 'Files', icon: FiFileText },
     { href: '/dashboard/settings', label: 'Settings', icon: FiSettings },
   ]
 
@@ -217,6 +220,9 @@ export default function DashboardLayout({
 
         {/* Main content */}
         <div className="lg:ml-64">
+          {/* Impersonation Banner */}
+          <ImpersonationBanner />
+          
           {/* Top bar */}
           <header className="bg-white/80 backdrop-blur-sm shadow-sm h-16 flex items-center px-4 sm:px-5 lg:px-6 border-b border-gray-200 sticky top-0 z-10">
             <button
@@ -246,6 +252,7 @@ export default function DashboardLayout({
               >
                 <FiSearch className="w-5 h-5" />
               </button>
+              <UserImpersonation />
               <NotificationBell />
               <UserMenu />
             </div>
@@ -259,6 +266,9 @@ export default function DashboardLayout({
 
         {/* Search Modal */}
         <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
+
+        {/* Shortcuts Help Modal */}
+        <ShortcutsHelpModal isOpen={shortcutsHelpOpen} onClose={() => setShortcutsHelpOpen(false)} />
 
         {/* Onboarding Checklist Widget */}
         {settings && (

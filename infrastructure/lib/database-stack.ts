@@ -186,6 +186,70 @@ export class DatabaseStack extends cdk.Stack {
       ]
     );
 
+    // Table 10: Users
+    const usersTable = createTableWithGSI(
+      this,
+      'UsersTable',
+      {
+        tableName: TABLE_NAMES.USERS,
+        partitionKey: { name: 'user_id', type: dynamodb.AttributeType.STRING },
+      },
+      [
+        {
+          indexName: 'gsi_customer_id',
+          partitionKey: { name: 'customer_id', type: dynamodb.AttributeType.STRING },
+        },
+      ]
+    );
+
+    // Table 11: Customers
+    const customersTable = createTable(
+      this,
+      'CustomersTable',
+      {
+        tableName: TABLE_NAMES.CUSTOMERS,
+        partitionKey: { name: 'customer_id', type: dynamodb.AttributeType.STRING },
+      }
+    );
+
+    // Table 12: Files
+    const filesTable = createTableWithGSI(
+      this,
+      'FilesTable',
+      {
+        tableName: TABLE_NAMES.FILES,
+        partitionKey: { name: 'file_id', type: dynamodb.AttributeType.STRING },
+      },
+      [
+        {
+          indexName: 'gsi_customer_id',
+          partitionKey: { name: 'customer_id', type: dynamodb.AttributeType.STRING },
+          sortKey: { name: 'created_at', type: dynamodb.AttributeType.STRING },
+        },
+      ]
+    );
+
+    // Table 13: Impersonation Logs
+    const impersonationLogsTable = createTable(
+      this,
+      'ImpersonationLogsTable',
+      {
+        tableName: TABLE_NAMES.IMPERSONATION_LOGS,
+        partitionKey: { name: 'log_id', type: dynamodb.AttributeType.STRING },
+      }
+    );
+
+    // Table 14: Sessions (for impersonation state)
+    const sessionsTable = createTable(
+      this,
+      'SessionsTable',
+      {
+        tableName: TABLE_NAMES.SESSIONS,
+        partitionKey: { name: 'session_id', type: dynamodb.AttributeType.STRING },
+        timeToLiveAttribute: 'expires_at', // Unix timestamp
+      }
+    );
+
     // Export table names and references using TableKey enum for type safety
     this.tablesMap = {
       [TableKey.WORKFLOWS]: workflowsTable,
@@ -197,6 +261,11 @@ export class DatabaseStack extends cdk.Stack {
       [TableKey.USER_SETTINGS]: userSettingsTable,
       [TableKey.USAGE_RECORDS]: usageRecordsTable,
       [TableKey.NOTIFICATIONS]: notificationsTable,
+      [TableKey.USERS]: usersTable,
+      [TableKey.CUSTOMERS]: customersTable,
+      [TableKey.FILES]: filesTable,
+      [TableKey.IMPERSONATION_LOGS]: impersonationLogsTable,
+      [TableKey.SESSIONS]: sessionsTable,
     };
 
     // CloudFormation outputs

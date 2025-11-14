@@ -2,8 +2,9 @@ import * as cdk from 'aws-cdk-lib';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import { Construct } from 'constructs';
-import { RESOURCE_PREFIXES, LAMBDA_DEFAULTS, COGNITO_CONFIG } from './config/constants';
+import { RESOURCE_PREFIXES, LAMBDA_DEFAULTS, COGNITO_CONFIG, TABLE_NAMES } from './config/constants';
 
 export class AuthStack extends cdk.Stack {
   public readonly userPool: cognito.UserPool;
@@ -17,6 +18,18 @@ export class AuthStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'index.handler',
       code: lambda.Code.fromAsset('lib/lambdas'),
+    });
+
+    // Create Lambda function for PostConfirmation to set customer_id
+    const postConfirmationLambda = new lambda.Function(this, 'PostConfirmationLambda', {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: 'postConfirmation.handler',
+      code: lambda.Code.fromAsset('lib/lambdas'),
+      environment: {
+        USERS_TABLE: TABLE_NAMES.USERS,
+        CUSTOMERS_TABLE: TABLE_NAMES.CUSTOMERS,
+        // Note: AWS_REGION is automatically provided by Lambda runtime, don't set it manually
+      },
     });
 
     // Create User Pool
@@ -43,6 +56,7 @@ export class AuthStack extends cdk.Stack {
       customAttributes: {
         tenant_id: new cognito.StringAttribute({ mutable: false }),
         role: new cognito.StringAttribute({ mutable: true }),
+        customer_id: new cognito.StringAttribute({ mutable: true }),
       },
       passwordPolicy: {
         minLength: COGNITO_CONFIG.PASSWORD_MIN_LENGTH,
@@ -55,14 +69,36 @@ export class AuthStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.RETAIN,
       lambdaTriggers: {
         preSignUp: autoConfirmLambda,
+        postConfirmation: postConfirmationLambda,
       },
     });
 
-    // Grant the Lambda permission to be invoked by Cognito
-    autoConfirmLambda.addPermission('CognitoInvoke', {
-      principal: new iam.ServicePrincipal('cognito-idp.amazonaws.com'),
-      sourceArn: this.userPool.userPoolArn,
-    });
+    // Note: CDK automatically grants Lambda invoke permissions when added to lambdaTriggers
+    // No need to manually add permissions for Cognito to invoke the Lambdas
+
+    // Grant PostConfirmation Lambda permission to update user attributes
+    // Use Lazy.string to defer ARN evaluation and avoid circular dependency
+    postConfirmationLambda.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          'cognito-idp:AdminUpdateUserAttributes',
+        ],
+        resources: [
+          cdk.Lazy.string({
+            produce: () => this.userPool.userPoolArn,
+          }),
+        ],
+      })
+    );
+
+    // Grant PostConfirmation Lambda permission to access DynamoDB tables
+    // Reference tables by name (they should exist from DatabaseStack)
+    const usersTable = dynamodb.Table.fromTableName(this, 'UsersTableRef', TABLE_NAMES.USERS);
+    const customersTable = dynamodb.Table.fromTableName(this, 'CustomersTableRef', TABLE_NAMES.CUSTOMERS);
+    
+    usersTable.grantReadWriteData(postConfirmationLambda);
+    customersTable.grantReadWriteData(postConfirmationLambda);
 
     // Add domain for hosted UI
     this.userPool.addDomain('UserPoolDomain', {
