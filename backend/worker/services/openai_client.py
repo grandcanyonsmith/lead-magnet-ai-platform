@@ -40,7 +40,8 @@ class OpenAIClient:
         tools: Optional[List[Dict]] = None,
         tool_choice: str = "auto",
         has_computer_use: bool = False,
-        reasoning_level: Optional[str] = None
+        reasoning_level: Optional[str] = None,
+        previous_image_urls: Optional[List[str]] = None
     ) -> Dict:
         """
         Build parameters for OpenAI Responses API call.
@@ -53,14 +54,58 @@ class OpenAIClient:
             tool_choice: Tool choice setting
             has_computer_use: Whether computer_use_preview is in tools
             reasoning_level: Reasoning level (deprecated, kept for compatibility)
+            previous_image_urls: Optional list of image URLs from previous steps to include in input
             
         Returns:
             API parameters dictionary for Responses API
         """
+        # Check if image_generation tool is present
+        has_image_generation = False
+        if tools:
+            for tool in tools:
+                if isinstance(tool, dict) and tool.get('type') == 'image_generation':
+                    has_image_generation = True
+                    break
+        
+        # Build input: if image_generation tool is present and we have previous image URLs,
+        # use list format with text and images; otherwise use string format (backward compatible)
+        if has_image_generation and previous_image_urls and len(previous_image_urls) > 0:
+            # Build input as list of content items
+            input_content = [
+                {"type": "input_text", "text": input_text}
+            ]
+            
+            # Add each previous image URL as input_image
+            for image_url in previous_image_urls:
+                if image_url:  # Only add non-empty URLs
+                    input_content.append({
+                        "type": "input_image",
+                        "image_url": image_url
+                    })
+            
+            # OpenAI Responses API expects input as a list with role and content
+            api_input = [
+                {
+                    "role": "user",
+                    "content": input_content
+                }
+            ]
+            
+            logger.info("[OpenAI Client] Building API params with previous image URLs", extra={
+                'previous_image_urls_count': len(previous_image_urls),
+                'input_content_items': len(input_content),
+                'has_image_generation': has_image_generation
+            })
+        else:
+            # Use string format (backward compatible)
+            api_input = input_text
+            if has_image_generation and previous_image_urls:
+                logger.debug("[OpenAI Client] Image generation tool present but no previous image URLs to include")
+        
         params = {
             "model": model,
             "instructions": instructions,
-            "input": input_text
+            "input": api_input
         }
         
         if tools and len(tools) > 0:
