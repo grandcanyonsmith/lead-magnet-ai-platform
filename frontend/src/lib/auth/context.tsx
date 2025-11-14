@@ -19,6 +19,8 @@ interface AuthContextValue {
   isImpersonating: boolean
   session: CognitoUserSession | null
   sessionId: string | null
+  viewMode: 'agency' | 'subaccount' | null
+  selectedCustomerId: string | null
   isAuthenticated: boolean
   isLoading: boolean
   signIn: (email: string, password: string) => Promise<AuthResponse>
@@ -26,6 +28,7 @@ interface AuthContextValue {
   signOut: () => void
   checkAuth: () => Promise<void>
   refreshAuth: () => Promise<void>
+  setViewMode: (mode: 'agency' | 'subaccount', customerId?: string) => void
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
@@ -44,6 +47,18 @@ export function AuthProvider({ children, authService: service = authService }: A
   const [isImpersonating, setIsImpersonating] = useState(false)
   const [session, setSession] = useState<CognitoUserSession | null>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
+  const [viewMode, setViewModeState] = useState<'agency' | 'subaccount' | null>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('agency_view_mode') as 'agency' | 'subaccount') || null
+    }
+    return null
+  })
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('agency_selected_customer_id')
+    }
+    return null
+  })
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -56,6 +71,20 @@ export function AuthProvider({ children, authService: service = authService }: A
       setRole(meResponse.role)
       setCustomerId(meResponse.customerId)
       setIsImpersonating(meResponse.isImpersonating)
+      
+      // Update view mode from response or localStorage
+      if (meResponse.viewMode) {
+        setViewModeState(meResponse.viewMode)
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('agency_view_mode', meResponse.viewMode)
+        }
+      }
+      if (meResponse.selectedCustomerId) {
+        setSelectedCustomerId(meResponse.selectedCustomerId)
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('agency_selected_customer_id', meResponse.selectedCustomerId)
+        }
+      }
       
       // Set user to acting user for backward compatibility
       setUser(meResponse.actingUser)
@@ -160,7 +189,33 @@ export function AuthProvider({ children, authService: service = authService }: A
     setUser(null)
     setSession(null)
     setIsAuthenticated(false)
+    setViewModeState(null)
+    setSelectedCustomerId(null)
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('agency_view_mode')
+      localStorage.removeItem('agency_selected_customer_id')
+    }
   }, [service])
+
+  const setViewMode = useCallback((mode: 'agency' | 'subaccount', customerId?: string) => {
+    setViewModeState(mode)
+    if (customerId) {
+      setSelectedCustomerId(customerId)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('agency_selected_customer_id', customerId)
+      }
+    } else {
+      setSelectedCustomerId(null)
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('agency_selected_customer_id')
+      }
+    }
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('agency_view_mode', mode)
+    }
+    // Refresh auth to update context
+    refreshAuth()
+  }, [refreshAuth])
 
   const value: AuthContextValue = {
     user,
@@ -168,6 +223,8 @@ export function AuthProvider({ children, authService: service = authService }: A
     actingUser,
     role,
     customerId,
+    viewMode,
+    selectedCustomerId,
     isImpersonating,
     session,
     sessionId,
@@ -178,6 +235,7 @@ export function AuthProvider({ children, authService: service = authService }: A
     signOut,
     checkAuth,
     refreshAuth,
+    setViewMode,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

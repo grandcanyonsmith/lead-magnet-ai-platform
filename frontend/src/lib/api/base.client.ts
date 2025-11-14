@@ -29,7 +29,7 @@ export class BaseApiClient {
   }
 
   private setupInterceptors(): void {
-    // Request interceptor - add auth token and session ID
+    // Request interceptor - add auth token, session ID, and view mode headers
     this.client.interceptors.request.use(
       (config) => {
         const token = this.tokenProvider.getToken()
@@ -41,6 +41,17 @@ export class BaseApiClient {
         const sessionId = localStorage.getItem('impersonation_session_id')
         if (sessionId) {
           config.headers['X-Session-Id'] = sessionId
+        }
+        
+        // Add view mode headers if present (for agency view)
+        const viewMode = localStorage.getItem('agency_view_mode')
+        if (viewMode) {
+          config.headers['X-View-Mode'] = viewMode
+        }
+        
+        const selectedCustomerId = localStorage.getItem('agency_selected_customer_id')
+        if (selectedCustomerId) {
+          config.headers['X-Selected-Customer-Id'] = selectedCustomerId
         }
         
         return config
