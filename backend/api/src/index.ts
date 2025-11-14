@@ -4,6 +4,7 @@ import { handleError } from './utils/errors';
 import { logger } from './utils/logger';
 import { extractTenantId } from './utils/tenantId';
 import { handleWorkflowGenerationJob } from './handlers/workflowGenerationHandler';
+import { handleCORS } from './cors-handler';
 
 export const handler = async (
   event: APIGatewayProxyEventV2 | any,
@@ -31,6 +32,24 @@ export const handler = async (
     requestId: context.awsRequestId,
   });
 
+  // Handle CORS preflight requests
+  if (apiEvent.requestContext?.http?.method === 'OPTIONS') {
+    const corsHeaders = handleCORS(
+      apiEvent.headers?.origin || apiEvent.headers?.Origin,
+      {
+        allowedOrigins: ['*'],
+        allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Session-Id'],
+        allowCredentials: false,
+      }
+    );
+    return {
+      statusCode: 204,
+      headers: corsHeaders,
+      body: '',
+    };
+  }
+
   try {
     // Extract tenant ID (may be undefined for public routes)
     const tenantId = extractTenantId(apiEvent);
@@ -43,10 +62,20 @@ export const handler = async (
     const isTextContent = contentType.startsWith('text/') || contentType.includes('markdown');
     const body = isTextContent ? result.body : JSON.stringify(result.body);
 
+    // Add CORS headers to all responses
+    const origin = apiEvent.headers?.origin || apiEvent.headers?.Origin;
+    const corsHeaders = handleCORS(origin, {
+      allowedOrigins: ['*'],
+      allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Session-Id'],
+      allowCredentials: false,
+    });
+
     return {
       statusCode: result.statusCode || 200,
       headers: {
         'Content-Type': contentType,
+        ...corsHeaders,
         ...result.headers,
       },
       body,
@@ -60,10 +89,20 @@ export const handler = async (
 
     const errorResponse = handleError(error);
 
+    // Add CORS headers to error responses
+    const origin = apiEvent.headers?.origin || apiEvent.headers?.Origin;
+    const corsHeaders = handleCORS(origin, {
+      allowedOrigins: ['*'],
+      allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Session-Id'],
+      allowCredentials: false,
+    });
+
     return {
       statusCode: errorResponse.statusCode,
       headers: {
         'Content-Type': 'application/json',
+        ...corsHeaders,
       },
       body: JSON.stringify(errorResponse.body),
     };

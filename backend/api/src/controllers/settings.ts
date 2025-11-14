@@ -1,13 +1,19 @@
 import { db } from '../utils/db';
 import { validate, updateSettingsSchema } from '../utils/validation';
 import { RouteResponse } from '../routes';
+import { RequestContext } from '../routes/router';
+import { getCustomerId } from '../utils/rbac';
 import { generateWebhookToken } from '../utils/webhookToken';
 
 const USER_SETTINGS_TABLE = process.env.USER_SETTINGS_TABLE!;
 const API_URL = process.env.API_URL || process.env.API_GATEWAY_URL || '';
 
 class SettingsController {
-  async get(tenantId: string): Promise<RouteResponse> {
+  async get(_params: Record<string, string>, _body: any, _query: Record<string, string | undefined>, _tenantId: string | undefined, context?: RequestContext): Promise<RouteResponse> {
+    const customerId = getCustomerId(context);
+    // Use customer_id as tenant_id for backward compatibility (settings table uses tenant_id as key)
+    const tenantId = customerId;
+    
     let settings = await db.get(USER_SETTINGS_TABLE, { tenant_id: tenantId });
 
     // If settings don't exist, create default settings
@@ -56,7 +62,11 @@ class SettingsController {
     };
   }
 
-  async update(tenantId: string, body: any): Promise<RouteResponse> {
+  async update(_params: Record<string, string>, body: any, _query: Record<string, string | undefined>, _tenantId: string | undefined, context?: RequestContext): Promise<RouteResponse> {
+    const customerId = getCustomerId(context);
+    // Use customer_id as tenant_id for backward compatibility (settings table uses tenant_id as key)
+    const tenantId = customerId;
+    
     const data = validate(updateSettingsSchema, body);
 
     let existing = await db.get(USER_SETTINGS_TABLE, { tenant_id: tenantId });
@@ -104,7 +114,11 @@ class SettingsController {
   /**
    * Regenerate webhook token for a user
    */
-  async regenerateWebhookToken(tenantId: string): Promise<RouteResponse> {
+  async regenerateWebhookToken(_params: Record<string, string>, _body: any, _query: Record<string, string | undefined>, _tenantId: string | undefined, context?: RequestContext): Promise<RouteResponse> {
+    const customerId = getCustomerId(context);
+    // Use customer_id as tenant_id for backward compatibility (settings table uses tenant_id as key)
+    const tenantId = customerId;
+    
     const webhookToken = generateWebhookToken();
     
     const updated = await db.update(USER_SETTINGS_TABLE, { tenant_id: tenantId }, {
@@ -127,7 +141,11 @@ class SettingsController {
   /**
    * Get webhook URL for a user
    */
-  async getWebhookUrl(tenantId: string): Promise<RouteResponse> {
+  async getWebhookUrl(_params: Record<string, string>, _body: any, _query: Record<string, string | undefined>, _tenantId: string | undefined, context?: RequestContext): Promise<RouteResponse> {
+    const customerId = getCustomerId(context);
+    // Use customer_id as tenant_id for backward compatibility (settings table uses tenant_id as key)
+    const tenantId = customerId;
+    
     const settings = await db.get(USER_SETTINGS_TABLE, { tenant_id: tenantId });
 
     if (!settings) {

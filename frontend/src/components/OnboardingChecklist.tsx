@@ -1,98 +1,144 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { FiCheckCircle, FiCircle, FiX, FiList } from 'react-icons/fi'
-import { api } from '@/lib/api'
-import { TourId } from '@/lib/tours'
+/**
+ * OnboardingChecklist Component
+ * 
+ * A widget that guides users through the initial onboarding process.
+ * Features:
+ * - Progress tracking
+ * - Navigation with tour integration
+ * - Error handling with retry
+ * - Accessibility support
+ * - Persistent state
+ */
 
-interface OnboardingChecklistProps {
-  settings: {
-    onboarding_checklist?: {
-      complete_profile?: boolean
-      create_first_lead_magnet?: boolean
-      view_generated_lead_magnets?: boolean
-    }
-    onboarding_survey_completed?: boolean
-  }
-  onStartTour: (tourId: TourId) => void
+import { useMemo, useCallback, useRef, memo } from 'react'
+import { FiCheckCircle, FiCircle, FiX, FiList, FiChevronUp, FiChevronDown, FiArrowRight, FiRotateCcw } from 'react-icons/fi'
+import toast from 'react-hot-toast'
+import { OnboardingChecklistProps } from './OnboardingChecklist/types'
+import { CHECKLIST_ITEMS, DEFAULT_CHECKLIST_STATE, COMPLETION_MESSAGES, WIDGET_CONFIG } from './OnboardingChecklist/constants'
+import { calculateProgress, areAllItemsCompleted, getDefaultChecklist } from './OnboardingChecklist/utils'
+import { useWidgetState, useChecklistItemHandler } from './OnboardingChecklist/hooks'
+
+/**
+ * Icon components for better maintainability
+ */
+const MinimizeIcon = ({ isMinimized }: { isMinimized: boolean }) => {
+  return isMinimized ? (
+    <FiChevronUp className="w-4 h-4" aria-hidden="true" />
+  ) : (
+    <FiChevronDown className="w-4 h-4" aria-hidden="true" />
+  )
 }
 
-interface ChecklistItem {
-  id: keyof NonNullable<OnboardingChecklistProps['settings']['onboarding_checklist']>
-  label: string
-  route: string
-  tourId: TourId
-}
+const LoadingSpinner = () => (
+  <svg
+    className="animate-spin h-4 w-4 text-primary-600"
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    aria-hidden="true"
+  >
+    <circle
+      className="opacity-25"
+      cx="12"
+      cy="12"
+      r="10"
+      stroke="currentColor"
+      strokeWidth="4"
+    />
+    <path
+      className="opacity-75"
+      fill="currentColor"
+      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+    />
+  </svg>
+)
 
-const checklistItems: ChecklistItem[] = [
-  {
-    id: 'complete_profile',
-    label: 'Complete your profile/settings',
-    route: '/dashboard/settings',
-    tourId: 'settings',
-  },
-  {
-    id: 'create_first_lead_magnet',
-    label: 'Create your first lead magnet',
-    route: '/dashboard/workflows/new',
-    tourId: 'create-workflow',
-  },
-  {
-    id: 'view_generated_lead_magnets',
-    label: 'View generated lead magnets',
-    route: '/dashboard/jobs',
-    tourId: 'view-jobs',
-  },
-]
+function OnboardingChecklistComponent({ settings, onStartTour, onDismiss, onItemClick }: OnboardingChecklistProps) {
+  const widgetRef = useRef<HTMLDivElement>(null)
+  const {
+    isOpen,
+    isMinimized,
+    setIsMinimized,
+    handleDismiss,
+    handleUndoDismiss,
+    handleToggleMinimize,
+  } = useWidgetState()
 
-export function OnboardingChecklist({ settings, onStartTour }: OnboardingChecklistProps) {
-  const router = useRouter()
-  const [isOpen, setIsOpen] = useState(() => {
-    // Check localStorage for dismissed state
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('onboarding-checklist-dismissed') !== 'true'
-    }
-    return true
-  })
-  const [isMinimized, setIsMinimized] = useState(true) // Start minimized
-  const [updating, setUpdating] = useState<string | null>(null)
+  // Memoize checklist state
+  const checklist = useMemo(
+    () => settings.onboarding_checklist || getDefaultChecklist(),
+    [settings.onboarding_checklist]
+  )
 
-  const checklist = settings.onboarding_checklist || {
-    complete_profile: false,
-    create_first_lead_magnet: false,
-    view_generated_lead_magnets: false,
-  }
+  // Memoize completion calculations
+  const allCompleted = useMemo(() => areAllItemsCompleted(checklist), [checklist])
+  const progress = useMemo(() => calculateProgress(checklist), [checklist])
 
-  const allCompleted = Object.values(checklist).every((completed) => completed === true)
+  // Error handler for toast notifications
+  const handleError = useCallback((error: string) => {
+    toast.error(error, {
+      duration: 5000,
+      id: 'onboarding-checklist-error',
+    })
+  }, [])
+
+  // Checklist item click handler
+  const { handleItemClick, itemState, clearError } = useChecklistItemHandler(onStartTour, handleError)
+
+  // Handle item click with callback
+  const onItemClickHandler = useCallback(
+    (item: typeof CHECKLIST_ITEMS[0]) => {
+      onItemClick?.(item.id)
+      handleItemClick(item)
+      setIsMinimized(true) // Minimize when navigating
+    },
+    [handleItemClick, onItemClick, setIsMinimized]
+  )
+
+  // Handle dismiss with callback
+  const onDismissHandler = useCallback(() => {
+    handleDismiss()
+    onDismiss?.()
+    toast.success(
+      (t) => (
+        <div className="flex items-center gap-2">
+          <span>Checklist dismissed.</span>
+          <button
+            onClick={() => {
+              handleUndoDismiss()
+              toast.dismiss(t.id)
+              toast.success('Checklist restored', { duration: 2000 })
+            }}
+            className="underline font-medium hover:no-underline"
+            type="button"
+          >
+            Undo
+          </button>
+        </div>
+      ),
+      {
+        duration: 5000,
+        id: 'onboarding-checklist-dismissed',
+      }
+    )
+  }, [handleDismiss, handleUndoDismiss, onDismiss])
+
+  // Keyboard navigation handler
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent, action: () => void) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault()
+        action()
+      }
+    },
+    []
+  )
 
   // Don't show if survey not completed or all items completed
   if (!settings.onboarding_survey_completed || allCompleted) {
     return null
-  }
-
-  const handleItemClick = async (item: ChecklistItem) => {
-    if (updating) return
-
-    setUpdating(item.id)
-    setIsMinimized(true)
-
-    // Navigate to the page
-    router.push(item.route)
-
-    // Start the tour after navigation
-    setTimeout(() => {
-      onStartTour(item.tourId)
-      setUpdating(null)
-    }, 300)
-  }
-
-  const handleDismiss = () => {
-    setIsOpen(false)
-    // Persist dismissal in localStorage
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('onboarding-checklist-dismissed', 'true')
-    }
   }
 
   if (!isOpen) {
@@ -101,114 +147,152 @@ export function OnboardingChecklist({ settings, onStartTour }: OnboardingCheckli
 
   return (
     <div
+      ref={widgetRef}
+      role="complementary"
+      aria-label="Onboarding checklist"
       className={`fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 z-50 bg-white rounded-lg shadow-xl border border-gray-200 transition-all duration-300 ${
         isMinimized ? 'w-auto sm:w-64' : 'w-full sm:w-80'
       }`}
     >
+      {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-primary-50 to-white">
         <div className="flex items-center">
-          <FiList className="w-5 h-5 text-primary-600 mr-2" />
+          <FiList className="w-5 h-5 text-primary-600 mr-2" aria-hidden="true" />
           <h3 className="font-semibold text-gray-900">Getting Started</h3>
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setIsMinimized(!isMinimized)}
-            className="text-gray-500 hover:text-gray-700 p-2 rounded hover:bg-gray-100 touch-target"
-            aria-label={isMinimized ? 'Expand' : 'Minimize'}
+            onClick={handleToggleMinimize}
+            onKeyDown={(e) => handleKeyDown(e, handleToggleMinimize)}
+            className="text-gray-500 hover:text-gray-700 p-2 rounded hover:bg-gray-100 touch-target transition-colors"
+            aria-label={isMinimized ? 'Expand checklist' : 'Minimize checklist'}
+            aria-expanded={!isMinimized}
+            type="button"
           >
-            {isMinimized ? (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-              </svg>
-            ) : (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            )}
+            <MinimizeIcon isMinimized={isMinimized} />
           </button>
           <button
-            onClick={handleDismiss}
-            className="text-gray-500 hover:text-gray-700 p-2 rounded hover:bg-gray-100 touch-target"
-            aria-label="Dismiss"
+            onClick={onDismissHandler}
+            onKeyDown={(e) => handleKeyDown(e, onDismissHandler)}
+            className="text-gray-500 hover:text-gray-700 p-2 rounded hover:bg-gray-100 touch-target transition-colors"
+            aria-label="Dismiss checklist"
             title="Dismiss checklist"
+            type="button"
           >
-            <FiX className="w-4 h-4" />
+            <FiX className="w-4 h-4" aria-hidden="true" />
           </button>
         </div>
       </div>
 
+      {/* Content */}
       {!isMinimized && (
         <div className="p-4">
+          {/* Progress indicator */}
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-600">Progress</span>
+              <span className="text-sm font-medium text-gray-600">{progress}%</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div
+                className="bg-primary-600 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${progress}%` }}
+                role="progressbar"
+                aria-valuenow={progress}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label={`${progress}% complete`}
+              />
+            </div>
+          </div>
+
+          {/* Description */}
           <p className="text-sm text-gray-600 mb-4">
             Complete these steps to get the most out of Lead Magnet AI:
           </p>
-          <ul className="space-y-3">
-            {checklistItems.map((item) => {
+
+          {/* Error message */}
+          {itemState.error && (
+            <div
+              className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg"
+              role="alert"
+              aria-live="polite"
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-red-700">{itemState.error}</p>
+                <button
+                  onClick={clearError}
+                  className="text-red-600 hover:text-red-800 p-1 rounded"
+                  aria-label="Dismiss error"
+                  type="button"
+                >
+                  <FiX className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Checklist items */}
+          <ul className="space-y-3" role="list">
+            {CHECKLIST_ITEMS.map((item) => {
               const completed = checklist[item.id] || false
-              const isUpdating = updating === item.id
+              const isUpdating = itemState.updating === item.id
 
               return (
-                <li key={item.id}>
+                <li key={item.id} role="listitem">
                   <button
-                    onClick={() => handleItemClick(item)}
+                    onClick={() => onItemClickHandler(item)}
+                    onKeyDown={(e) => handleKeyDown(e, () => onItemClickHandler(item))}
                     disabled={completed || isUpdating}
                     className={`w-full flex items-center justify-between p-3 rounded-lg transition-all ${
                       completed
                         ? 'bg-green-50 text-green-700 cursor-default'
                         : isUpdating
                         ? 'bg-gray-50 text-gray-500 cursor-wait'
-                        : 'bg-gray-50 hover:bg-primary-50 text-gray-700 hover:text-primary-700 cursor-pointer'
+                        : 'bg-gray-50 hover:bg-primary-50 text-gray-700 hover:text-primary-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2'
                     }`}
+                    aria-label={
+                      completed
+                        ? `${item.label} - Completed`
+                        : isUpdating
+                        ? `${item.label} - Loading`
+                        : item.label
+                    }
+                    aria-disabled={completed || isUpdating}
+                    type="button"
                   >
                     <div className="flex items-center flex-1 text-left">
                       {completed ? (
-                        <FiCheckCircle className="w-5 h-5 text-green-600 mr-3 flex-shrink-0" />
+                        <FiCheckCircle
+                          className="w-5 h-5 text-green-600 mr-3 flex-shrink-0"
+                          aria-hidden="true"
+                        />
                       ) : (
-                        <FiCircle className="w-5 h-5 text-gray-400 mr-3 flex-shrink-0" />
+                        <FiCircle
+                          className="w-5 h-5 text-gray-400 mr-3 flex-shrink-0"
+                          aria-hidden="true"
+                        />
                       )}
                       <span className="text-sm font-medium">{item.label}</span>
                     </div>
                     {!completed && !isUpdating && (
-                      <svg
+                      <FiArrowRight
                         className="w-4 h-4 ml-2 flex-shrink-0"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
+                        aria-hidden="true"
+                      />
                     )}
-                    {isUpdating && (
-                      <svg
-                        className="animate-spin h-4 w-4 ml-2 text-primary-600"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        ></circle>
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                      </svg>
-                    )}
+                    {isUpdating && <LoadingSpinner />}
                   </button>
                 </li>
               )
             })}
           </ul>
+
+          {/* Completion message */}
           {allCompleted && (
-            <div className="mt-4 p-3 bg-green-50 rounded-lg">
+            <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200" role="status" aria-live="polite">
               <p className="text-sm text-green-700 font-medium text-center">
-                🎉 All set! You&apos;re ready to create amazing lead magnets.
+                {COMPLETION_MESSAGES.ALL_COMPLETE}
               </p>
             </div>
           )}
@@ -218,3 +302,5 @@ export function OnboardingChecklist({ settings, onStartTour }: OnboardingCheckli
   )
 }
 
+// Memoize component to prevent unnecessary re-renders
+export const OnboardingChecklist = memo(OnboardingChecklistComponent)
