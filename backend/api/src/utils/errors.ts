@@ -1,19 +1,52 @@
 import { logger } from './logger';
+import { env } from './env';
 
 /**
  * Base API error class.
  * All API errors should extend this class for consistent error handling.
  */
 export class ApiError extends Error {
+  public readonly timestamp: string;
+  public readonly requestId?: string;
+  public readonly userId?: string;
+  public readonly tenantId?: string;
+
   constructor(
     message: string,
     public statusCode: number = 400,
     public code?: string,
-    public details?: Record<string, any>
+    public details?: Record<string, any>,
+    context?: {
+      requestId?: string;
+      userId?: string;
+      tenantId?: string;
+    }
   ) {
     super(message);
     this.name = 'ApiError';
+    this.timestamp = new Date().toISOString();
+    this.requestId = context?.requestId;
+    this.userId = context?.userId;
+    this.tenantId = context?.tenantId;
     Error.captureStackTrace(this, this.constructor);
+  }
+
+  /**
+   * Convert error to a loggable object with all context
+   */
+  toLogObject(): Record<string, any> {
+    return {
+      name: this.name,
+      message: this.message,
+      statusCode: this.statusCode,
+      code: this.code,
+      details: this.details,
+      timestamp: this.timestamp,
+      requestId: this.requestId,
+      userId: this.userId,
+      tenantId: this.tenantId,
+      stack: this.stack,
+    };
   }
 }
 
@@ -98,18 +131,51 @@ export class ServiceUnavailableError extends ApiError {
 }
 
 /**
+ * Error tracking hook - can be extended to send errors to monitoring services
+ */
+let errorTrackingHook: ((error: ApiError, context?: Record<string, any>) => void) | null = null;
+
+/**
+ * Set a custom error tracking hook for monitoring services
+ */
+export function setErrorTrackingHook(
+  hook: (error: ApiError, context?: Record<string, any>) => void
+): void {
+  errorTrackingHook = hook;
+}
+
+/**
  * Handle errors and convert them to API responses.
  * Provides consistent error formatting across the application.
  */
-export const handleError = (error: unknown): { statusCode: number; body: any } => {
+export const handleError = (
+  error: unknown,
+  context?: {
+    requestId?: string;
+    userId?: string;
+    tenantId?: string;
+    path?: string;
+    method?: string;
+  }
+): { statusCode: number; body: any } => {
   // ApiError instances are already formatted
   if (error instanceof ApiError) {
+    // Log with full context
     logger.debug('[Error Handler] API Error', {
-      statusCode: error.statusCode,
-      code: error.code,
-      message: error.message,
-      details: error.details,
+      ...error.toLogObject(),
+      ...(context && { context }),
     });
+
+    // Call error tracking hook if set
+    if (errorTrackingHook) {
+      try {
+        errorTrackingHook(error, context);
+      } catch (trackingError) {
+        logger.warn('[Error Handler] Error tracking hook failed', {
+          error: trackingError instanceof Error ? trackingError.message : String(trackingError),
+        });
+      }
+    }
 
     return {
       statusCode: error.statusCode,
@@ -117,6 +183,7 @@ export const handleError = (error: unknown): { statusCode: number; body: any } =
         error: error.message,
         code: error.code,
         ...(error.details && { details: error.details }),
+        ...(context?.requestId && { requestId: context.requestId }),
       },
     };
   }
@@ -127,15 +194,38 @@ export const handleError = (error: unknown): { statusCode: number; body: any } =
       error: error.message,
       stack: error.stack,
       name: error.name,
+      ...(context && { context }),
     });
 
+    // Convert to ApiError for consistent handling
+    const apiError = new InternalServerError(
+      'An unexpected error occurred',
+      {
+        originalError: error.message,
+        ...(context && { context }),
+      }
+    );
+
+    // Call error tracking hook if set
+    if (errorTrackingHook) {
+      try {
+        errorTrackingHook(apiError, context);
+      } catch (trackingError) {
+        logger.warn('[Error Handler] Error tracking hook failed', {
+          error: trackingError instanceof Error ? trackingError.message : String(trackingError),
+        });
+      }
+    }
+
     // Don't expose internal error details in production
-    const isDevelopment = process.env.NODE_ENV === 'development' || process.env.IS_LOCAL === 'true';
+    const isDevelopment = env.isDevelopment();
     
     return {
       statusCode: 500,
       body: {
         error: 'Internal server error',
+        code: 'INTERNAL_ERROR',
+        ...(context?.requestId && { requestId: context.requestId }),
         ...(isDevelopment && {
           message: error.message,
           stack: error.stack,

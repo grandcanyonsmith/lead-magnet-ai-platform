@@ -4,21 +4,21 @@ import { RouteResponse } from '../routes';
 import { ArtifactUrlService } from '../services/artifactUrlService';
 import { logger } from '../utils/logger';
 import { GetObjectCommand, HeadObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { env } from '../utils/env';
 
-const ARTIFACTS_TABLE = process.env.ARTIFACTS_TABLE;
-const JOBS_TABLE = process.env.JOBS_TABLE;
-const ARTIFACTS_BUCKET_ENV = process.env.ARTIFACTS_BUCKET;
+const ARTIFACTS_TABLE = env.artifactsTable;
+const JOBS_TABLE = env.jobsTable;
+const ARTIFACTS_BUCKET = env.artifactsBucket;
 
 if (!ARTIFACTS_TABLE) {
   logger.error('[Artifacts Controller] ARTIFACTS_TABLE environment variable is not set');
 }
 
-if (!ARTIFACTS_BUCKET_ENV) {
+if (!ARTIFACTS_BUCKET) {
   throw new Error('ARTIFACTS_BUCKET environment variable is required');
 }
 
-const ARTIFACTS_BUCKET: string = ARTIFACTS_BUCKET_ENV;
-const s3Client = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
+const s3Client = new S3Client({ region: env.awsRegion });
 
 class ArtifactsController {
   async list(tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {

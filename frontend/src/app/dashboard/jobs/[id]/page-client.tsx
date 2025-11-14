@@ -147,10 +147,50 @@ export default function JobDetailClient() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="h-8 bg-gray-200 rounded w-48 animate-pulse"></div>
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="h-64 bg-gray-200 rounded animate-pulse"></div>
+      <div>
+        {/* Header skeleton */}
+        <div className="mb-6">
+          <div className="h-10 bg-gray-200 rounded w-20 mb-4 animate-pulse"></div>
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-0">
+            <div>
+              <div className="h-7 sm:h-8 bg-gray-200 rounded w-64 mb-2 animate-pulse"></div>
+              <div className="h-4 sm:h-5 bg-gray-200 rounded w-96 max-w-full animate-pulse"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Job Details skeleton */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 mb-6">
+          <div className="space-y-4">
+            <div className="h-6 bg-gray-200 rounded w-32 animate-pulse"></div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-16 bg-gray-50 rounded-lg border border-gray-100 p-3">
+                  <div className="h-3 bg-gray-200 rounded w-24 mb-2 animate-pulse"></div>
+                  <div className="h-5 bg-gray-200 rounded w-32 animate-pulse"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Execution Steps skeleton */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+          <div className="h-6 bg-gray-200 rounded w-40 mb-4 animate-pulse"></div>
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="border border-gray-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <div className="h-6 w-6 bg-gray-200 rounded-full animate-pulse flex-shrink-0"></div>
+                  <div className="flex-1 space-y-2">
+                    <div className="h-5 bg-gray-200 rounded w-48 animate-pulse"></div>
+                    <div className="h-4 bg-gray-200 rounded w-32 animate-pulse"></div>
+                    <div className="h-20 bg-gray-100 rounded animate-pulse mt-2"></div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     )
@@ -223,24 +263,24 @@ export default function JobDetailClient() {
             />
 
             {/* Modal */}
-            <div className="relative z-50 w-full max-w-md bg-white rounded-lg shadow-xl">
-              <div className="p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            <div className="relative z-50 w-full max-w-md bg-white rounded-lg shadow-xl mx-4">
+              <div className="p-4 sm:p-6">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">
                   Step Updated Successfully
                 </h3>
-                <p className="text-sm text-gray-600 mb-6">
+                <p className="text-sm text-gray-600 mb-4 sm:mb-6">
                   Would you like to rerun this step with the updated configuration?
                 </p>
-                <div className="flex items-center justify-end gap-3">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3">
                   <button
                     onClick={handleCancelRerun}
-                    className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                    className="px-4 py-2.5 sm:py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors touch-target min-h-[44px] sm:min-h-0"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleConfirmRerun}
-                    className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                    className="px-4 py-2.5 sm:py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors touch-target min-h-[44px] sm:min-h-0"
                   >
                     Rerun Step
                   </button>
@@ -312,14 +352,14 @@ export default function JobDetailClient() {
       ) : null}
 
       {/* Details and Form Submission - Collapsible sections at bottom */}
-      <div className="mt-6 space-y-4">
+      <div className="mt-4 sm:mt-6 space-y-3 sm:space-y-4">
         {/* Job Details Section */}
         <div className="bg-white rounded-lg shadow">
           <button
             onClick={() => setShowDetails(!showDetails)}
-            className="flex items-center justify-between w-full text-left p-6 touch-target"
+            className="flex items-center justify-between w-full text-left p-4 sm:p-6 touch-target min-h-[48px] sm:min-h-0"
           >
-            <h2 className="text-lg font-semibold text-gray-900">Details</h2>
+            <h2 className="text-base sm:text-lg font-semibold text-gray-900">Details</h2>
             {showDetails ? (
               <FiChevronUp className="w-5 h-5 text-gray-500 flex-shrink-0 ml-2" />
             ) : (
@@ -327,8 +367,8 @@ export default function JobDetailClient() {
             )}
           </button>
           {showDetails && (
-            <div className="px-6 pb-6 border-t border-gray-200">
-              <div className="pt-6">
+            <div className="px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-200">
+              <div className="pt-4 sm:pt-6">
                 <JobDetails job={job} workflow={workflow} hideContainer={true} />
               </div>
             </div>
@@ -340,9 +380,9 @@ export default function JobDetailClient() {
           <div className="bg-white rounded-lg shadow">
             <button
               onClick={() => setShowFormSubmission(!showFormSubmission)}
-              className="flex items-center justify-between w-full text-left p-6 touch-target"
+              className="flex items-center justify-between w-full text-left p-4 sm:p-6 touch-target min-h-[48px] sm:min-h-0"
             >
-              <h2 className="text-lg font-semibold text-gray-900">Form Submission Details</h2>
+              <h2 className="text-base sm:text-lg font-semibold text-gray-900">Form Submission Details</h2>
               {showFormSubmission ? (
                 <FiChevronUp className="w-5 h-5 text-gray-500 flex-shrink-0 ml-2" />
               ) : (
@@ -350,8 +390,8 @@ export default function JobDetailClient() {
               )}
             </button>
             {showFormSubmission && (
-              <div className="px-6 pb-6 border-t border-gray-200">
-                <div className="pt-6">
+              <div className="px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-200">
+                <div className="pt-4 sm:pt-6">
                   {submission.submission_data ? (
                     <div className="space-y-3">
                       {Object.entries(submission.submission_data).map(([key, value]: [string, any]) => (

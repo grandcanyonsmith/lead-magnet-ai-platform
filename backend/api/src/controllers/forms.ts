@@ -7,9 +7,10 @@ import { logger } from '../utils/logger';
 import { ensureRequiredFields } from '../utils/formFieldUtils';
 import { cssGenerationService } from '../services/cssGenerationService';
 import { formSubmissionService, FormSubmissionData } from '../services/formSubmissionService';
+import { env } from '../utils/env';
 
-const FORMS_TABLE = process.env.FORMS_TABLE!;
-const USER_SETTINGS_TABLE = process.env.USER_SETTINGS_TABLE!;
+const FORMS_TABLE = env.formsTable;
+const USER_SETTINGS_TABLE = env.userSettingsTable;
 
 class FormsController {
   async list(tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {

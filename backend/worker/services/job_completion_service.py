@@ -5,7 +5,7 @@ Handles job finalization, artifact storage, delivery, and notifications.
 
 import logging
 from datetime import datetime
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 
 from artifact_service import ArtifactService
 from db_service import DynamoDBService
@@ -13,6 +13,7 @@ from s3_service import S3Service
 from delivery_service import DeliveryService
 from services.execution_step_manager import ExecutionStepManager
 from services.usage_service import UsageService
+from ai_service import AIService
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,7 @@ class JobCompletionService:
         self.s3 = s3_service
         self.delivery_service = delivery_service
         self.usage_service = usage_service
+        self.ai_service = AIService()
     
     def finalize_job(
         self,
@@ -228,6 +230,85 @@ class JobCompletionService:
         except Exception as e:
             logger.error(f"Error creating notification for job completion: {e}")
             # Don't fail the job if notification fails
+    
+    def generate_html_from_accumulated_context(
+        self,
+        accumulated_context: str,
+        submission_data: Dict[str, Any],
+        workflow: Dict[str, Any],
+        execution_steps: List[Dict[str, Any]],
+        job_id: str,
+        tenant_id: str
+    ) -> Tuple[str, str, str]:
+        """
+        Generate HTML from accumulated context (used during batch workflow execution).
+        
+        Args:
+            accumulated_context: Accumulated context from all workflow steps
+            submission_data: Submission data dictionary
+            workflow: Workflow configuration
+            execution_steps: List of execution steps (will be updated)
+            job_id: Job ID
+            tenant_id: Tenant ID
+            
+        Returns:
+            Tuple of (final_content, final_artifact_type, final_filename)
+        """
+        template = None
+        template_id = workflow.get('template_id')
+        if template_id:
+            try:
+                template = self.db.get_template(
+                    template_id,
+                    workflow.get('template_version', 0)
+                )
+                if not template:
+                    logger.warning(f"Template {template_id} not found, skipping HTML generation")
+            except Exception as e:
+                logger.warning(f"Failed to load template: {e}, skipping HTML generation")
+        
+        if not template:
+            # No template, return markdown
+            return "", 'markdown_final', 'final.md'
+        
+        # Check if we need to generate HTML (last step might already be HTML)
+        # This check is done by the caller in workflow_orchestrator
+        
+        # Generate HTML from accumulated context
+        logger.info("Generating HTML from accumulated step outputs")
+        html_start_time = datetime.utcnow()
+        
+        steps = workflow.get('steps', [])
+        sorted_steps = sorted(steps, key=lambda s: s.get('step_order', 0))
+        model = sorted_steps[-1].get('model', 'gpt-5') if sorted_steps else 'gpt-5'
+        
+        final_content, html_usage_info, html_request_details, html_response_details = self.ai_service.generate_styled_html(
+            research_content=accumulated_context,
+            template_html=template['html_content'],
+            template_style=template.get('style_description', ''),
+            submission_data=submission_data,
+            model=model
+        )
+        
+        html_duration = (datetime.utcnow() - html_start_time).total_seconds() * 1000
+        
+        # Store usage record
+        self.usage_service.store_usage_record(tenant_id, job_id, html_usage_info)
+        
+        # Add HTML generation step
+        html_step_data = ExecutionStepManager.create_html_generation_step(
+            model=model,
+            html_request_details=html_request_details,
+            html_response_details=html_response_details,
+            html_usage_info=html_usage_info,
+            html_start_time=html_start_time,
+            html_duration=html_duration,
+            step_order=len(execution_steps)
+        )
+        execution_steps.append(html_step_data)
+        self.db.update_job(job_id, {'execution_steps': execution_steps}, s3_service=self.s3)
+        
+        return final_content, 'html_final', 'final.html'
     
     def generate_html_from_steps(
         self,

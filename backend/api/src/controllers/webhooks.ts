@@ -6,14 +6,15 @@ import { ApiError } from '../utils/errors';
 import { RouteResponse } from '../routes';
 import { logger } from '../utils/logger';
 import { processJobLocally } from '../services/jobProcessor';
+import { env } from '../utils/env';
 
-const USER_SETTINGS_TABLE = process.env.USER_SETTINGS_TABLE!;
-const WORKFLOWS_TABLE = process.env.WORKFLOWS_TABLE!;
-const SUBMISSIONS_TABLE = process.env.SUBMISSIONS_TABLE!;
-const JOBS_TABLE = process.env.JOBS_TABLE!;
-const STEP_FUNCTIONS_ARN = process.env.STEP_FUNCTIONS_ARN!;
+const USER_SETTINGS_TABLE = env.userSettingsTable;
+const WORKFLOWS_TABLE = env.workflowsTable;
+const SUBMISSIONS_TABLE = env.submissionsTable;
+const JOBS_TABLE = env.jobsTable;
+const STEP_FUNCTIONS_ARN = env.stepFunctionsArn;
 
-const sfnClient = new SFNClient({ region: process.env.AWS_REGION || 'us-east-1' });
+const sfnClient = new SFNClient({ region: env.awsRegion });
 
 class WebhooksController {
   /**
@@ -126,7 +127,7 @@ class WebhooksController {
 
     // Trigger workflow execution (same logic as form submission)
     try {
-      if (process.env.IS_LOCAL === 'true' || process.env.NODE_ENV === 'development' || !STEP_FUNCTIONS_ARN) {
+      if (env.isDevelopment() || !STEP_FUNCTIONS_ARN) {
         logger.info('[Webhooks] Local mode detected, processing job directly', { jobId });
         
         setImmediate(async () => {

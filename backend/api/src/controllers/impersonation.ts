@@ -5,10 +5,11 @@ import { requireAdmin, getRealUserId, requireSuperAdmin } from '../utils/rbac';
 import { ApiError } from '../utils/errors';
 import { logger } from '../utils/logger';
 import { ulid } from 'ulid';
+import { env } from '../utils/env';
 
-const SESSIONS_TABLE = process.env.SESSIONS_TABLE || 'leadmagnet-sessions';
-const USERS_TABLE = process.env.USERS_TABLE || 'leadmagnet-users';
-const IMPERSONATION_LOGS_TABLE = process.env.IMPERSONATION_LOGS_TABLE || 'leadmagnet-impersonation-logs';
+const SESSIONS_TABLE = env.sessionsTable;
+const USERS_TABLE = env.usersTable;
+const IMPERSONATION_LOGS_TABLE = env.impersonationLogsTable;
 
 /**
  * Impersonation Controller

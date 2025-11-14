@@ -4,9 +4,10 @@ import { RequestContext } from '../routes/router';
 import { requireSuperAdmin, requireAdmin } from '../utils/rbac';
 import { ApiError } from '../utils/errors';
 import { logger } from '../utils/logger';
+import { env } from '../utils/env';
 
-const USERS_TABLE = process.env.USERS_TABLE || 'leadmagnet-users';
-const CUSTOMERS_TABLE = process.env.CUSTOMERS_TABLE || 'leadmagnet-customers';
+const USERS_TABLE = env.usersTable;
+const CUSTOMERS_TABLE = env.customersTable;
 
 /**
  * Admin Controller

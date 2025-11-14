@@ -4,12 +4,13 @@ import { db } from '../utils/db';
 import { logger } from '../utils/logger';
 import { ApiError } from '../utils/errors';
 import { processJobLocally } from './jobProcessor';
+import { env } from '../utils/env';
 
-const SUBMISSIONS_TABLE = process.env.SUBMISSIONS_TABLE!;
-const JOBS_TABLE = process.env.JOBS_TABLE!;
-const STEP_FUNCTIONS_ARN = process.env.STEP_FUNCTIONS_ARN!;
+const SUBMISSIONS_TABLE = env.submissionsTable;
+const JOBS_TABLE = env.jobsTable;
+const STEP_FUNCTIONS_ARN = env.stepFunctionsArn;
 
-const sfnClient = STEP_FUNCTIONS_ARN ? new SFNClient({ region: process.env.AWS_REGION || 'us-east-1' }) : null;
+const sfnClient = STEP_FUNCTIONS_ARN ? new SFNClient({ region: env.awsRegion }) : null;
 
 export interface FormSubmissionData extends Record<string, any> {
   name: string;
@@ -106,7 +107,7 @@ export class FormSubmissionService {
   ): Promise<void> {
     try {
       // Check if we're in local development - process job directly
-      if (process.env.IS_LOCAL === 'true' || process.env.NODE_ENV === 'development' || !STEP_FUNCTIONS_ARN) {
+      if (env.isDevelopment() || !STEP_FUNCTIONS_ARN) {
         logger.info('Local mode detected, processing job directly', { jobId });
         
         // Import worker processor for local processing
@@ -147,7 +148,7 @@ export class FormSubmissionService {
         error: error.message,
         errorStack: error.stack,
         jobId,
-        isLocal: process.env.IS_LOCAL === 'true' || process.env.NODE_ENV === 'development',
+        isLocal: env.isDevelopment(),
       });
       // Update job status to failed
       await db.update(JOBS_TABLE, { job_id: jobId }, {

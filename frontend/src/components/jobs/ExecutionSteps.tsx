@@ -7,7 +7,6 @@ import { useImageArtifacts } from '@/hooks/useImageArtifacts'
 import { StepHeader } from './StepHeader'
 import { StepInputOutput } from './StepInputOutput'
 import { StepProgressBar } from './StepProgressBar'
-import { ArtifactPreview } from './ArtifactPreview'
 import { ImagePreview } from './ImagePreview'
 import { getStepStatus, getPreviousSteps, getFormSubmission } from './utils'
 import { Artifact } from '@/types/artifact'
@@ -74,21 +73,32 @@ export function ExecutionSteps({
     <div className="mt-4 sm:mt-6 bg-white rounded-lg shadow p-4 sm:p-6">
       <button
         onClick={onToggleShow}
-        className="flex items-center justify-between w-full text-left mb-4 touch-target"
+        className="flex items-center justify-between w-full text-left mb-4 touch-target min-h-[48px] sm:min-h-0"
       >
-        <div className="flex items-center gap-3">
-          <h2 className="text-lg font-semibold text-gray-900">Execution Steps</h2>
-          <StepProgressBar 
-            steps={sortedSteps} 
-            jobStatus={jobStatus} 
-            getStepStatus={getStepStatusForStep}
-          />
+        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900">Execution Steps</h2>
+          <div className="hidden sm:block">
+            <StepProgressBar 
+              steps={sortedSteps} 
+              jobStatus={jobStatus} 
+              getStepStatus={getStepStatusForStep}
+            />
+          </div>
         </div>
-        {showExecutionSteps ? (
-          <FiChevronUp className="w-5 h-5 text-gray-500 flex-shrink-0 ml-2" />
-        ) : (
-          <FiChevronDown className="w-5 h-5 text-gray-500 flex-shrink-0 ml-2" />
-        )}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="sm:hidden">
+            <StepProgressBar 
+              steps={sortedSteps} 
+              jobStatus={jobStatus} 
+              getStepStatus={getStepStatusForStep}
+            />
+          </div>
+          {showExecutionSteps ? (
+            <FiChevronUp className="w-5 h-5 text-gray-500 flex-shrink-0" />
+          ) : (
+            <FiChevronDown className="w-5 h-5 text-gray-500 flex-shrink-0" />
+          )}
+        </div>
       </button>
 
       {showExecutionSteps && (
@@ -100,17 +110,17 @@ export function ExecutionSteps({
             const isPending = stepStatus === 'pending'
             const isInProgress = stepStatus === 'in_progress'
 
-            // Simple className based on status
+            // Enhanced className based on status with better visual separation
             const stepClassName = isPending
-              ? 'border-gray-200 bg-gray-50'
+              ? 'border-gray-300 bg-gray-50/50 shadow-sm'
               : isInProgress
-              ? 'border-blue-300 bg-blue-50'
-              : 'border-gray-200 bg-white hover:border-gray-300'
+              ? 'border-blue-400 bg-blue-50/80 shadow-md'
+              : 'border-gray-300 bg-white shadow-sm hover:shadow-md hover:border-gray-400'
 
             return (
               <div 
                 key={stepOrder} 
-                className={`border rounded-lg transition-colors ${stepClassName}`}
+                className={`border-2 rounded-xl transition-all ${stepClassName}`}
               >
                 <StepHeader
                   step={step}
@@ -236,6 +246,9 @@ export function ExecutionSteps({
                                 key={file.key}
                                 artifact={file.data}
                                 imageIndex={0}
+                                model={step.model}
+                                tools={step.input?.tools || step.tools}
+                                toolChoice={step.input?.tool_choice || step.tool_choice}
                               />
                             )
                           } else if (file.type === 'imageUrl') {
@@ -244,6 +257,9 @@ export function ExecutionSteps({
                                 key={file.key}
                                 imageUrl={file.data}
                                 imageIndex={0}
+                                model={step.model}
+                                tools={step.input?.tools || step.tools}
+                                toolChoice={step.input?.tool_choice || step.tool_choice}
                               />
                             )
                           }
@@ -255,13 +271,6 @@ export function ExecutionSteps({
                   
                   return null
                 })()}
-
-                {/* Show main artifact (step output) - highest priority */}
-                {step.artifact_id && (
-                  <div className="px-3 sm:px-4 pb-3 sm:pb-4">
-                    <ArtifactPreview artifactId={step.artifact_id} />
-                  </div>
-                )}
               </div>
             )
           })}

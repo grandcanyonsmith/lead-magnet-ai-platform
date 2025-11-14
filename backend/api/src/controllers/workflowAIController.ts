@@ -14,7 +14,7 @@ import { env } from '../utils/env';
 import { fetchICPContent, buildBrandContext } from '../utils/icpFetcher';
 
 const JOBS_TABLE = env.jobsTable;
-const USER_SETTINGS_TABLE = process.env.USER_SETTINGS_TABLE!;
+const USER_SETTINGS_TABLE = env.userSettingsTable;
 
 /**
  * Controller for AI-powered workflow operations.
@@ -89,7 +89,15 @@ export class WorkflowAIController {
             description,
             model,
           },
-          this.processWorkflowGenerationJob.bind(this)
+          async (jobId: string, tenantId: string, ...args: unknown[]) => {
+            const payload = args[0] as { description?: string; model?: string; source?: string };
+            await this.processWorkflowGenerationJob(
+              jobId,
+              tenantId,
+              payload.description || '',
+              payload.model || 'gpt-4'
+            );
+          }
         );
       }
     } catch (error: any) {
