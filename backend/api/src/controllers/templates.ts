@@ -4,8 +4,9 @@ import { validate, createTemplateSchema, updateTemplateSchema } from '../utils/v
 import { ApiError } from '../utils/errors';
 import { RouteResponse } from '../routes';
 import { templateAIService } from '../services/templateAIService';
+import { env } from '../utils/env';
 
-const TEMPLATES_TABLE = process.env.TEMPLATES_TABLE!;
+const TEMPLATES_TABLE = env.templatesTable;
 
 class TemplatesController {
   async list(tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {

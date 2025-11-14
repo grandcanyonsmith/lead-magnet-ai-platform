@@ -7,8 +7,9 @@ import { uploadFileToOpenAI, searchFilesSimple, deleteFileFromOpenAI } from '../
 import { ApiError } from '../utils/errors';
 import { logger } from '../utils/logger';
 import { ulid } from 'ulid';
+import { env } from '../utils/env';
 
-const FILES_TABLE = process.env.FILES_TABLE || 'leadmagnet-files';
+const FILES_TABLE = env.filesTable;
 
 /**
  * Files Controller
@@ -99,14 +100,6 @@ class FilesController {
 
       await db.put(FILES_TABLE, fileRecord);
 
-      logger.info('[Files] File uploaded successfully', {
-        fileId,
-        customerId,
-        filename,
-        s3Key,
-        openaiFileId,
-      });
-
       return {
         statusCode: 201,
         body: {
@@ -147,18 +140,7 @@ class FilesController {
     _tenantId: string | undefined,
     context?: RequestContext
   ): Promise<RouteResponse> {
-    logger.info('[Files] List files called', {
-      hasContext: !!context,
-      hasAuth: !!context?.auth,
-      customerId: context?.auth?.customerId,
-      viewMode: context?.auth?.viewMode,
-      selectedCustomerId: context?.auth?.selectedCustomerId,
-      tenantId: _tenantId,
-    });
-
     const customerId = getCustomerId(context);
-
-    logger.info('[Files] Using customerId', { customerId });
 
     const limit = parseInt(query.limit || '50', 10);
     const fileType = query.fileType;
@@ -316,13 +298,6 @@ class FilesController {
       // Delete from DynamoDB
       await db.delete(FILES_TABLE, { file_id: fileId });
 
-      logger.info('[Files] File deleted', {
-        fileId,
-        customerId,
-        s3Key: file.s3_key,
-        openaiFileId: file.openai_file_id,
-      });
-
       return {
         statusCode: 200,
         body: {
@@ -390,12 +365,6 @@ class FilesController {
 
       // Search files using OpenAI
       const searchResult = await searchFilesSimple(customerId, query, openaiFileIds);
-
-      logger.info('[Files] File search completed', {
-        customerId,
-        query: query.substring(0, 100),
-        filesSearched: openaiFileIds.length,
-      });
 
       return {
         statusCode: 200,

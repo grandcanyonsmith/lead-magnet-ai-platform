@@ -2,9 +2,10 @@ import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, GetO
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { logger } from '../utils/logger';
 import { ApiError } from '../utils/errors';
+import { env } from '../utils/env';
 
-const s3Client = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
-const BUCKET_NAME = process.env.ARTIFACTS_BUCKET;
+const s3Client = new S3Client({ region: env.awsRegion });
+const BUCKET_NAME = env.artifactsBucket;
 
 if (!BUCKET_NAME) {
   logger.warn('[S3Service] ARTIFACTS_BUCKET not set - file operations will fail');

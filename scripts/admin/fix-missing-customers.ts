@@ -1,16 +1,23 @@
 /**
  * Fix missing Customer records for generated customer_ids
  */
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, ScanCommand, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import {
+  getDynamoDbDocumentClient,
+  getTableName,
+  getAwsRegion,
+  printSuccess,
+  printError,
+  printSection,
+} from '../lib/common';
+import { ScanCommand, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 
-const client = new DynamoDBClient({ region: process.env.AWS_REGION || 'us-east-1' });
-const docClient = DynamoDBDocumentClient.from(client);
+const docClient = getDynamoDbDocumentClient();
 
-const USERS_TABLE = 'leadmagnet-users';
-const CUSTOMERS_TABLE = 'leadmagnet-customers';
+const USERS_TABLE = getTableName('users');
+const CUSTOMERS_TABLE = getTableName('customers');
 
 async function fixMissingCustomers() {
+  printSection('Fix Missing Customer Records');
   console.log('Scanning Users table for generated customer_ids...');
   const users = await docClient.send(new ScanCommand({ TableName: USERS_TABLE }));
   
@@ -36,14 +43,18 @@ async function fixMissingCustomers() {
             updated_at: new Date().toISOString(),
           }
         }));
-        console.log(`✓ Created customer: ${user.customer_id} for ${user.email}`);
+        printSuccess(`Created customer: ${user.customer_id} for ${user.email}`);
         created++;
       }
     }
   }
   
-  console.log(`\n✅ Created ${created} missing Customer records`);
+  printSection('Summary');
+  printSuccess(`Created ${created} missing Customer records`);
 }
 
-fixMissingCustomers().catch(console.error);
+fixMissingCustomers().catch((error) => {
+  printError(`Failed to fix missing customers: ${error}`);
+  process.exit(1);
+});
 

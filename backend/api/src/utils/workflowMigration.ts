@@ -1,26 +1,14 @@
 /**
- * Utility functions for migrating legacy workflow formats to the new steps-based format
+ * Utility functions for migrating legacy workflow formats to the new steps-based format.
+ * 
+ * @module workflowMigration
  */
 
-export interface LegacyWorkflowData {
-  research_enabled?: boolean;
-  html_enabled?: boolean;
-  ai_instructions?: string;
-  ai_model?: string;
-  rewrite_model?: string;
-  steps?: any[];
-}
+import { WorkflowStep, LegacyWorkflowData } from './types';
+import { ValidationError } from './errors';
 
-export interface WorkflowStep {
-  step_name: string;
-  step_description: string;
-  model: string;
-  instructions: string;
-  step_order: number;
-  depends_on?: number[]; // Array of step indices this step depends on
-  tools?: string[];
-  tool_choice?: 'auto' | 'required' | 'none';
-}
+// Re-export WorkflowStep for convenience
+export type { WorkflowStep } from './types';
 
 /**
  * Migrate legacy workflow format to steps format
@@ -107,10 +95,23 @@ export function migrateLegacyWorkflowOnUpdate(
 }
 
 /**
- * Ensure step defaults are set (step_order, tools, tool_choice, step_description, depends_on)
+ * Ensure step defaults are set (step_order, tools, tool_choice, step_description, depends_on).
+ * 
+ * @param steps - Workflow steps to normalize
+ * @returns Steps with defaults applied
+ * @throws {ValidationError} If steps array is invalid
+ * 
+ * @example
+ * ```typescript
+ * const normalizedSteps = ensureStepDefaults(steps);
+ * ```
  */
 export function ensureStepDefaults(steps: WorkflowStep[]): WorkflowStep[] {
-  return steps.map((step: any, index: number) => {
+  if (!Array.isArray(steps) || steps.length === 0) {
+    throw new ValidationError('Steps must be a non-empty array');
+  }
+
+  return steps.map((step: Partial<WorkflowStep>, index: number) => {
     const stepOrder = step.step_order !== undefined ? step.step_order : index;
     
     // Clean up and validate depends_on array
@@ -136,7 +137,11 @@ export function ensureStepDefaults(steps: WorkflowStep[]): WorkflowStep[] {
     if (dependsOn === undefined && stepOrder > 0) {
       // Find all steps with lower step_order
       const lowerOrderSteps = steps
-        .map((s: any, i: number) => ({ step: s, index: i, order: s.step_order !== undefined ? s.step_order : i }))
+        .map((s: Partial<WorkflowStep>, i: number) => ({ 
+          step: s, 
+          index: i, 
+          order: s.step_order !== undefined ? s.step_order : i 
+        }))
         .filter(({ order }) => order < stepOrder)
         .map(({ index }) => index)
         .filter((depIndex: number) => depIndex >= 0 && depIndex < steps.length && depIndex !== index);
@@ -158,55 +163,21 @@ export function ensureStepDefaults(steps: WorkflowStep[]): WorkflowStep[] {
     
     return {
       ...step,
+      step_name: step.step_name || `Step ${index + 1}`,
       step_order: stepOrder,
       step_description: step.step_description || step.step_name || `Step ${index + 1}`,
       depends_on: dependsOn,
       tools: step.tools || (index === 0 ? ['web_search_preview'] : []),
       tool_choice: (step.tool_choice || (index === 0 ? 'auto' : 'none')) as 'auto' | 'required' | 'none',
-    };
+      model: step.model || 'gpt-4',
+      instructions: step.instructions || '',
+    } as WorkflowStep;
   });
 }
 
 /**
- * Validate workflow steps structure
+ * Re-export workflow steps validation from validators module.
+ * This maintains backward compatibility while using centralized validation.
  */
-export function validateWorkflowSteps(steps: WorkflowStep[]): { valid: boolean; errors: string[] } {
-  const errors: string[] = [];
-  
-  if (!Array.isArray(steps)) {
-    errors.push('Steps must be an array');
-    return { valid: false, errors };
-  }
-  
-  if (steps.length === 0) {
-    errors.push('At least one step is required');
-    return { valid: false, errors };
-  }
-  
-  steps.forEach((step, index) => {
-    if (!step.step_name || typeof step.step_name !== 'string') {
-      errors.push(`Step ${index + 1}: step_name is required and must be a string`);
-    }
-    if (!step.instructions || typeof step.instructions !== 'string') {
-      errors.push(`Step ${index + 1}: instructions is required and must be a string`);
-    }
-    if (!step.model || typeof step.model !== 'string') {
-      errors.push(`Step ${index + 1}: model is required and must be a string`);
-    }
-    if (step.step_order === undefined || typeof step.step_order !== 'number') {
-      errors.push(`Step ${index + 1}: step_order is required and must be a number`);
-    }
-    if (step.tools && !Array.isArray(step.tools)) {
-      errors.push(`Step ${index + 1}: tools must be an array`);
-    }
-    if (step.tool_choice && !['auto', 'required', 'none'].includes(step.tool_choice)) {
-      errors.push(`Step ${index + 1}: tool_choice must be 'auto', 'required', or 'none'`);
-    }
-  });
-  
-  return {
-    valid: errors.length === 0,
-    errors,
-  };
-}
+export { validateWorkflowSteps } from './validators';
 

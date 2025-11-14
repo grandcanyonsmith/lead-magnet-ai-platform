@@ -2,8 +2,9 @@ import { db } from '../utils/db';
 import { ApiError } from '../utils/errors';
 import { RouteResponse } from '../routes';
 import { ulid } from 'ulid';
+import { env } from '../utils/env';
 
-const NOTIFICATIONS_TABLE = process.env.NOTIFICATIONS_TABLE!;
+const NOTIFICATIONS_TABLE = env.notificationsTable;
 
 export type NotificationType = 'workflow_created' | 'job_completed';
 

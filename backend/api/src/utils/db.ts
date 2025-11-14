@@ -8,9 +8,10 @@ import {
   QueryCommand,
   ScanCommand,
 } from '@aws-sdk/lib-dynamodb';
+import { env } from './env';
 
 const client = new DynamoDBClient({
-  region: process.env.AWS_REGION || 'us-east-1',
+  region: env.awsRegion,
 });
 
 export const docClient = DynamoDBDocumentClient.from(client, {

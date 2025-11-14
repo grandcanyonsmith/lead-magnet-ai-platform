@@ -239,16 +239,7 @@ class AIService:
             })
             
             response = self.openai_client.make_api_call(params)
-            print("YO")
-            print(response)
-            print(params)
-            print(validated_tools)
-            print(normalized_tool_choice)
-            print(instructions)
-            print(context)
-            print(previous_context)
-            print(tenant_id)
-            print(job_id)
+            
             # Process response
             return self.openai_client.process_api_response(
                 response=response,

@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Temporarily disabled for development - re-enable for production builds
-  output: 'export',
+  // Only use 'export' for production builds, not dev mode
+  // output: 'export', // Commented out for dev mode
   reactStrictMode: true,
   images: {
     unoptimized: true,

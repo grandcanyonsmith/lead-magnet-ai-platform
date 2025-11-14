@@ -2,10 +2,11 @@ import { db, normalizeQueryResult } from '../utils/db';
 import { RouteResponse } from '../routes';
 import { ApiError } from '../utils/errors';
 import { logger } from '../utils/logger';
+import { env } from '../utils/env';
 
-const JOBS_TABLE = process.env.JOBS_TABLE;
-const SUBMISSIONS_TABLE = process.env.SUBMISSIONS_TABLE;
-const WORKFLOWS_TABLE = process.env.WORKFLOWS_TABLE;
+const JOBS_TABLE = env.jobsTable;
+const SUBMISSIONS_TABLE = env.submissionsTable;
+const WORKFLOWS_TABLE = env.workflowsTable;
 
 if (!JOBS_TABLE) {
   logger.error('[Analytics Controller] JOBS_TABLE environment variable is not set');

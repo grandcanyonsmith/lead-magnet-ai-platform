@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
-import { FiPlus, FiEdit, FiTrash2, FiEye, FiExternalLink, FiCopy, FiCheck, FiMoreVertical, FiLoader, FiCheckCircle, FiXCircle, FiClock } from 'react-icons/fi'
+import { FiPlus, FiEdit, FiTrash2, FiEye, FiExternalLink, FiCopy, FiCheck, FiMoreVertical, FiLoader, FiCheckCircle, FiXCircle, FiClock, FiList, FiFileText } from 'react-icons/fi'
 
 export default function WorkflowsPage() {
   const router = useRouter()
@@ -339,82 +339,76 @@ export default function WorkflowsPage() {
                               <FiTrash2 className="w-3 h-3 mr-2" />
                               Delete
                             </button>
+                            {formUrl && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  e.preventDefault()
+                                  copyToClipboard(formUrl, workflow.workflow_id)
+                                  setOpenMenuId(null)
+                                }}
+                                onTouchStart={(e) => {
+                                  e.stopPropagation()
+                                }}
+                                className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 active:bg-gray-100 flex items-center touch-target border-t border-gray-100"
+                              >
+                                <FiCopy className="w-3 h-3 mr-2" />
+                                Copy Form URL
+                              </button>
+                            )}
                           </div>
                         </div>
                       )}
                     </div>
                   </div>
                   
-                  <div className="space-y-2 text-xs sm:text-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-500">Form:</span>
-                      {workflow.form ? (
-                        <span className="text-gray-900 font-medium truncate ml-2">{workflow.form.form_name}</span>
-                      ) : (
-                        <span className="text-gray-400 italic">No form</span>
-                      )}
-                    </div>
-                    
-                    {formUrl && (
-                      <div className="flex items-center gap-2 pt-1">
+                  <div className="space-y-2.5 text-xs">
+                    {/* Form Link - Consolidated */}
+                    {workflow.form && formUrl ? (
+                      <div className="flex items-center gap-2">
                         <a
                           href={formUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-primary-600 hover:text-primary-900 text-xs truncate flex-1 min-w-0"
+                          className="text-primary-600 hover:text-primary-900 font-medium truncate flex-1 min-w-0 flex items-center gap-1.5"
                           title={formUrl}
                         >
-                          {formatUrl(formUrl)}
-                        </a>
-                        <button
-                          onClick={() => copyToClipboard(formUrl, workflow.workflow_id)}
-                          className="text-gray-400 hover:text-gray-600 p-2 flex-shrink-0 touch-target"
-                          title="Copy URL"
-                        >
-                          {copiedUrl === workflow.workflow_id ? (
-                            <FiCheck className="w-3 h-3 text-green-600" />
-                          ) : (
-                            <FiCopy className="w-3 h-3" />
-                          )}
-                        </button>
-                        <a
-                          href={formUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-primary-600 hover:text-primary-900 flex-shrink-0"
-                          title="Open form"
-                        >
-                          <FiExternalLink className="w-3 h-3" />
+                          <FiExternalLink className="w-3 h-3 flex-shrink-0" />
+                          <span className="truncate">{workflow.form.form_name}</span>
                         </a>
                       </div>
-                    )}
+                    ) : workflow.form ? (
+                      <div className="text-gray-400 italic text-xs">No form URL</div>
+                    ) : null}
                     
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-500">Steps:</span>
-                      <div className="flex gap-1 flex-wrap justify-end">
-                        <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-                          {workflow.steps?.length || 0} step{workflow.steps?.length !== 1 ? 's' : ''}
-                        </span>
-                        {workflow.template_id && (
-                          <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-800">
-                            Template
+                    {/* Metadata - Two Column Grid */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="flex items-center gap-1.5">
+                        <FiList className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                        <div className="flex gap-1 flex-wrap">
+                          <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                            {workflow.steps?.length || 0} step{workflow.steps?.length !== 1 ? 's' : ''}
                           </span>
-                        )}
+                          {workflow.template_id && (
+                            <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                              Template
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-1.5">
+                        <FiClock className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                        <span className="text-gray-600 text-xs">{new Date(workflow.created_at).toLocaleDateString()}</span>
                       </div>
                     </div>
                     
-                    <div className="flex items-center justify-between pt-1 border-t border-gray-100">
-                      <span className="text-gray-500">Created:</span>
-                      <span className="text-gray-600">{new Date(workflow.created_at).toLocaleDateString()}</span>
-                    </div>
-                    
-                    {/* Jobs Section */}
-                    <div className="pt-2 border-t border-gray-100 mt-2">
-                      <div className="text-xs font-medium text-gray-700 mb-2">Generated Documents:</div>
+                    {/* Generated Documents - Simplified */}
+                    <div className="pt-1.5">
                       {loadingJobs[workflow.workflow_id] ? (
-                        <div className="text-xs text-gray-500 flex items-center">
-                          <FiLoader className="w-3 h-3 mr-1 animate-spin" />
-                          Loading...
+                        <div className="text-xs text-gray-500 flex items-center gap-1.5">
+                          <FiLoader className="w-3 h-3 animate-spin" />
+                          <span>Loading...</span>
                         </div>
                       ) : (() => {
                         const jobs = workflowJobs[workflow.workflow_id] || []
@@ -423,49 +417,52 @@ export default function WorkflowsPage() {
                         
                         if (processingJobs.length > 0) {
                           return (
-                            <div className="text-xs text-blue-600 flex items-center">
-                              <FiLoader className="w-3 h-3 mr-1 animate-spin" />
-                              Processing...
+                            <div className="text-xs text-blue-600 flex items-center gap-1.5">
+                              <FiLoader className="w-3 h-3 animate-spin" />
+                              <span>Processing...</span>
                             </div>
                           )
                         } else if (completedJobs.length > 0) {
+                          const mostRecentJob = completedJobs[0]
                           return (
-                            <div className="space-y-1">
-                              {completedJobs.slice(0, 3).map((job: any) => (
-                                <div key={job.job_id} className="flex items-center justify-between text-xs">
-                                  <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                                    {getJobStatusIcon(job.status)}
-                                    <span className="text-gray-600 truncate">{formatRelativeTime(job.created_at)}</span>
-                                  </div>
-                                  {job.output_url && (
-                                    <a
-                                      href={job.output_url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-primary-600 hover:text-primary-900 flex-shrink-0 ml-2"
-                                      onClick={(e) => e.stopPropagation()}
-                                    >
-                                      <FiExternalLink className="w-3 h-3" />
-                                    </a>
-                                  )}
-                                </div>
-                              ))}
-                              {completedJobs.length > 3 && (
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                                <FiFileText className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                                <span className="text-gray-600 text-xs">
+                                  {completedJobs.length} document{completedJobs.length !== 1 ? 's' : ''}
+                                </span>
+                                {mostRecentJob.output_url && (
+                                  <a
+                                    href={mostRecentJob.output_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-primary-600 hover:text-primary-900 flex-shrink-0"
+                                    onClick={(e) => e.stopPropagation()}
+                                    title="Open most recent document"
+                                  >
+                                    <FiExternalLink className="w-3 h-3" />
+                                  </a>
+                                )}
+                              </div>
+                              {completedJobs.length > 1 && (
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation()
                                     router.push(`/dashboard/jobs?workflow_id=${workflow.workflow_id}`)
                                   }}
-                                  className="text-xs text-primary-600 hover:text-primary-900 mt-1"
+                                  className="text-xs text-primary-600 hover:text-primary-900 flex-shrink-0"
                                 >
-                                  View all {completedJobs.length} documents
+                                  View all
                                 </button>
                               )}
                             </div>
                           )
                         } else {
                           return (
-                            <div className="text-xs text-gray-400 italic">No documents yet</div>
+                            <div className="text-xs text-gray-400 italic flex items-center gap-1.5">
+                              <FiFileText className="w-3.5 h-3.5" />
+                              <span>No documents yet</span>
+                            </div>
                           )
                         }
                       })()}

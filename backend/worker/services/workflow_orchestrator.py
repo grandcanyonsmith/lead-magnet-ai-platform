@@ -4,15 +4,14 @@ Handles orchestration of multi-step workflow execution.
 """
 
 import logging
-from datetime import datetime
 from typing import Dict, Any, List, Tuple, Optional
 
 from ai_service import AIService
 from db_service import DynamoDBService
 from s3_service import S3Service
-from services.execution_step_manager import ExecutionStepManager
 from services.step_processor import StepProcessor
 from services.field_label_service import FieldLabelService
+from services.job_completion_service import JobCompletionService
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +24,8 @@ class WorkflowOrchestrator:
         step_processor: StepProcessor,
         ai_service: AIService,
         db_service: DynamoDBService,
-        s3_service: S3Service
+        s3_service: S3Service,
+        job_completion_service: JobCompletionService
     ):
         """
         Initialize workflow orchestrator.
@@ -35,11 +35,13 @@ class WorkflowOrchestrator:
             ai_service: AI service instance
             db_service: DynamoDB service instance
             s3_service: S3 service instance
+            job_completion_service: Job completion service instance
         """
         self.step_processor = step_processor
         self.ai_service = ai_service
         self.db = db_service
         self.s3 = s3_service
+        self.job_completion_service = job_completion_service
     
     def execute_workflow(
         self,
@@ -136,7 +138,7 @@ class WorkflowOrchestrator:
             if image_urls:
                 accumulated_context += f"\n\nGenerated Images:\n" + "\n".join([f"- {url}" for url in image_urls])
         
-        # Generate final content
+        # Generate final content using job completion service
         final_content, final_artifact_type, final_filename = self._generate_final_content(
             workflow=workflow,
             step_outputs=step_outputs,
@@ -176,8 +178,9 @@ class WorkflowOrchestrator:
         Returns:
             Tuple of (final_content, final_artifact_type, final_filename)
         """
-        template = None
         template_id = workflow.get('template_id')
+        
+        # Check if template exists
         if template_id:
             try:
                 template = self.db.get_template(
@@ -185,13 +188,13 @@ class WorkflowOrchestrator:
                     workflow.get('template_version', 0)
                 )
                 if not template:
-                    logger.warning(f"Template {template_id} not found, skipping HTML generation")
+                    logger.warning(f"Template {template_id} not found, using markdown")
+                    template = None
             except Exception as e:
-                logger.warning(f"Failed to load template: {e}, skipping HTML generation")
-        
-        final_content = ""
-        final_artifact_type = ""
-        final_filename = ""
+                logger.warning(f"Failed to load template: {e}, using markdown")
+                template = None
+        else:
+            template = None
         
         if template:
             # Last step output should be HTML-ready, but if not, generate HTML
@@ -200,45 +203,18 @@ class WorkflowOrchestrator:
             # Check if last step output looks like HTML
             if last_step_output.strip().startswith('<'):
                 final_content = last_step_output
+                final_artifact_type = 'html_final'
+                final_filename = 'final.html'
             else:
-                # Generate HTML from accumulated context
-                logger.info("Generating HTML from accumulated step outputs")
-                html_start_time = datetime.utcnow()
-                
-                steps = workflow.get('steps', [])
-                sorted_steps = sorted(steps, key=lambda s: s.get('step_order', 0))
-                model = sorted_steps[-1].get('model', 'gpt-5') if sorted_steps else 'gpt-5'
-                
-                final_content, html_usage_info, html_request_details, html_response_details = self.ai_service.generate_styled_html(
-                    research_content=accumulated_context,
-                    template_html=template['html_content'],
-                    template_style=template.get('style_description', ''),
+                # Generate HTML from accumulated context using job completion service
+                final_content, final_artifact_type, final_filename = self.job_completion_service.generate_html_from_accumulated_context(
+                    accumulated_context=accumulated_context,
                     submission_data=submission_data,
-                    model=model
+                    workflow=workflow,
+                    execution_steps=execution_steps,
+                    job_id=job_id,
+                    tenant_id=tenant_id
                 )
-                
-                html_duration = (datetime.utcnow() - html_start_time).total_seconds() * 1000
-                
-                # Store usage record
-                from services.usage_service import UsageService
-                usage_service = UsageService(self.db)
-                usage_service.store_usage_record(tenant_id, job_id, html_usage_info)
-                
-                # Add HTML generation step
-                html_step_data = ExecutionStepManager.create_html_generation_step(
-                    model=model,
-                    html_request_details=html_request_details,
-                    html_response_details=html_response_details,
-                    html_usage_info=html_usage_info,
-                    html_start_time=html_start_time,
-                    html_duration=html_duration,
-                    step_order=len(execution_steps)
-                )
-                execution_steps.append(html_step_data)
-                self.db.update_job(job_id, {'execution_steps': execution_steps}, s3_service=self.s3)
-            
-            final_artifact_type = 'html_final'
-            final_filename = 'final.html'
         else:
             # Use last step output as final content
             final_content = step_outputs[-1]['output'] if step_outputs else accumulated_context

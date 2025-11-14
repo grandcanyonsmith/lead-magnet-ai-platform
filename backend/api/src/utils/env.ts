@@ -16,6 +16,11 @@ export class EnvConfig {
   readonly notificationsTable: string;
   readonly userSettingsTable: string;
   readonly usageRecordsTable: string;
+  readonly sessionsTable: string;
+  readonly usersTable: string;
+  readonly customersTable: string;
+  readonly filesTable: string;
+  readonly impersonationLogsTable: string;
 
   // AWS Configuration
   readonly awsRegion: string;
@@ -25,11 +30,23 @@ export class EnvConfig {
 
   // S3 Configuration
   readonly artifactsBucket: string | undefined;
+  readonly cloudfrontDomain: string;
 
   // Application Configuration
   readonly isLocal: boolean;
   readonly nodeEnv: string;
   readonly logLevel: string;
+  readonly apiUrl: string;
+  readonly apiGatewayUrl: string;
+
+  // Secrets Configuration
+  readonly openaiSecretName: string;
+
+  // Security Configuration
+  readonly superAdminEmails: string[];
+
+  // Worker Configuration
+  readonly workerScriptPath: string;
 
   constructor() {
     // DynamoDB Tables - required
@@ -42,6 +59,11 @@ export class EnvConfig {
     this.notificationsTable = this.getRequired('NOTIFICATIONS_TABLE');
     this.userSettingsTable = this.getRequired('USER_SETTINGS_TABLE');
     this.usageRecordsTable = this.getWithDefault('USAGE_RECORDS_TABLE', 'leadmagnet-usage-records');
+    this.sessionsTable = this.getWithDefault('SESSIONS_TABLE', 'leadmagnet-sessions');
+    this.usersTable = this.getWithDefault('USERS_TABLE', 'leadmagnet-users');
+    this.customersTable = this.getWithDefault('CUSTOMERS_TABLE', 'leadmagnet-customers');
+    this.filesTable = this.getWithDefault('FILES_TABLE', 'leadmagnet-files');
+    this.impersonationLogsTable = this.getWithDefault('IMPERSONATION_LOGS_TABLE', 'leadmagnet-impersonation-logs');
 
     // AWS Configuration
     this.awsRegion = this.getWithDefault('AWS_REGION', 'us-east-1');
@@ -51,11 +73,27 @@ export class EnvConfig {
 
     // S3 Configuration
     this.artifactsBucket = this.getOptional('ARTIFACTS_BUCKET');
+    this.cloudfrontDomain = (this.getOptional('CLOUDFRONT_DOMAIN') || '').trim();
 
     // Application Configuration
-    this.isLocal = process.env.IS_LOCAL === 'true';
-    this.nodeEnv = process.env.NODE_ENV || 'production';
-    this.logLevel = process.env.LOG_LEVEL || 'info';
+    this.isLocal = this.getWithDefault('IS_LOCAL', 'false') === 'true';
+    this.nodeEnv = this.getWithDefault('NODE_ENV', 'production');
+    this.logLevel = this.getWithDefault('LOG_LEVEL', 'info');
+    this.apiUrl = this.getOptional('API_URL') || '';
+    this.apiGatewayUrl = this.getOptional('API_GATEWAY_URL') || '';
+
+    // Secrets Configuration
+    this.openaiSecretName = this.getWithDefault('OPENAI_SECRET_NAME', 'leadmagnet/openai-api-key');
+
+    // Security Configuration
+    const superAdminEmailsStr = this.getOptional('SUPER_ADMIN_EMAILS') || '';
+    this.superAdminEmails = superAdminEmailsStr
+      .split(',')
+      .map((email) => email.trim().toLowerCase())
+      .filter(Boolean);
+
+    // Worker Configuration
+    this.workerScriptPath = this.getWithDefault('WORKER_SCRIPT_PATH', './backend/worker/worker.py');
 
     // Validate critical configuration
     this.validate();
@@ -137,9 +175,17 @@ export const getArtifactsTable = () => env.artifactsTable;
 export const getNotificationsTable = () => env.notificationsTable;
 export const getUserSettingsTable = () => env.userSettingsTable;
 export const getUsageRecordsTable = () => env.usageRecordsTable;
+export const getSessionsTable = () => env.sessionsTable;
+export const getUsersTable = () => env.usersTable;
+export const getCustomersTable = () => env.customersTable;
+export const getFilesTable = () => env.filesTable;
+export const getImpersonationLogsTable = () => env.impersonationLogsTable;
 export const getAwsRegion = () => env.awsRegion;
 export const getLambdaFunctionName = () => env.lambdaFunctionName;
 export const getStepFunctionsArn = () => env.stepFunctionsArn;
 export const getArtifactsBucket = () => env.artifactsBucket;
+export const getCloudfrontDomain = () => env.cloudfrontDomain;
+export const getOpenaiSecretName = () => env.openaiSecretName;
+export const getApiUrl = () => env.apiUrl || env.apiGatewayUrl;
 export const isLocal = () => env.isDevelopment();
 

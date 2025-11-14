@@ -2,10 +2,11 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import { db } from '../utils/db';
 import { logger } from '../utils/logger';
+import { env } from '../utils/env';
 
 const execAsync = promisify(exec);
 
-const JOBS_TABLE = process.env.JOBS_TABLE!;
+const JOBS_TABLE = env.jobsTable;
 
 /**
  * Process a job locally by calling the Python worker script
@@ -27,7 +28,7 @@ export async function processJobLocally(
     });
 
     // Try to call Python worker script if it exists
-    const workerPath = process.env.WORKER_SCRIPT_PATH || './backend/worker/worker.py';
+    const workerPath = env.workerScriptPath;
     
     try {
       // Set JOB_ID environment variable and run worker

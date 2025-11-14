@@ -1,6 +1,7 @@
 import { APIGatewayProxyEventV2 } from 'aws-lambda';
 import { db } from './db';
 import { logger } from './logger';
+import { env } from './env';
 
 /**
  * Auth context extracted from JWT claims and session
@@ -24,16 +25,34 @@ export interface ExtendedRequestContext {
   auth: AuthContext;
 }
 
-const SESSIONS_TABLE = process.env.SESSIONS_TABLE || 'leadmagnet-sessions';
-const USERS_TABLE = process.env.USERS_TABLE || 'leadmagnet-users';
-const isForcedSuperAdmin = (email?: string): boolean => {
+const SESSIONS_TABLE = env.sessionsTable;
+const USERS_TABLE = env.usersTable;
+
+/**
+ * Super Admin email allowlist configuration.
+ * Users with emails in this set are automatically elevated to SUPER_ADMIN role.
+ */
+const defaultSuperAdminEmails = ['canyon@coursecreator360.com'];
+const superAdminEmailSet = new Set([
+  ...defaultSuperAdminEmails.map((email) => email.toLowerCase()),
+  ...env.superAdminEmails,
+]);
+
+/**
+ * Check if an email is in the SUPER_ADMIN allowlist.
+ */
+function isForcedSuperAdmin(email?: string): boolean {
   if (!email) {
     return false;
   }
   return superAdminEmailSet.has(email.toLowerCase());
-};
+}
 
-async function ensureUserIsPersistedAsSuperAdmin(userId: string) {
+/**
+ * Persist SUPER_ADMIN role to database for a user.
+ * This ensures the role elevation persists across sessions.
+ */
+async function ensureUserIsPersistedAsSuperAdmin(userId: string): Promise<void> {
   try {
     const user = await db.get(USERS_TABLE, { user_id: userId });
     if (user && user.role !== 'SUPER_ADMIN') {
@@ -52,172 +71,148 @@ async function ensureUserIsPersistedAsSuperAdmin(userId: string) {
     });
   }
 }
-const defaultSuperAdminEmails = ['canyon@coursecreator360.com'];
-const configuredSuperAdminEmails = (process.env.SUPER_ADMIN_EMAILS || '')
-  .split(',')
-  .map((email) => email.trim().toLowerCase())
-  .filter(Boolean);
-const superAdminEmailSet = new Set([
-  ...defaultSuperAdminEmails.map((email) => email.toLowerCase()),
-  ...configuredSuperAdminEmails,
-]);
 
 /**
- * Extract auth context from JWT claims and session
+ * Get email from JWT claims or fallback to database lookup.
+ * 
+ * @param claims - JWT claims from API Gateway authorizer
+ * @param userId - User ID to lookup if email not in claims
+ * @returns Email address or undefined if not found
  */
-export async function extractAuthContext(event: APIGatewayProxyEventV2): Promise<AuthContext | null> {
-  const authorizer = (event.requestContext as any)?.authorizer;
-  const claims = authorizer?.jwt?.claims || {};
+async function getEmailFromClaimsOrDatabase(
+  claims: Record<string, any>,
+  userId: string
+): Promise<string | undefined> {
+  // Try JWT claims first
+  let email = claims.email as string | undefined || 
+              claims['custom:email'] as string | undefined;
 
-  // If no claims, user is not authenticated
-  if (!claims.sub) {
-    return null;
-  }
-
-  const realUserId = claims.sub as string;
-  let role = (claims['custom:role'] as string) || 'USER';
-  let emailClaim =
-    (claims.email as string | undefined) ||
-    (claims['custom:email'] as string | undefined);
-
-  // If email not in JWT claims, try to get from user record
-  if (!emailClaim) {
+  // Fallback to database lookup
+  if (!email) {
     try {
-      const user = await db.get(USERS_TABLE, { user_id: realUserId });
-      if (user && user.email) {
-        emailClaim = user.email;
-        logger.info('[AuthContext] Retrieved email from user record', {
-          realUserId,
-          email: emailClaim,
-        });
+      const user = await db.get(USERS_TABLE, { user_id: userId });
+      if (user?.email) {
+        email = user.email;
       }
     } catch (error) {
       logger.warn('[AuthContext] Could not fetch user email from database', {
         error: error instanceof Error ? error.message : String(error),
-        realUserId,
+        userId,
       });
     }
   }
 
-  logger.info('[AuthContext] Extracting auth context', {
-    realUserId,
-    roleFromJWT: role,
-    emailClaim,
-    emailFromClaims: claims.email,
-    customEmailFromClaims: claims['custom:email'],
-    isInAllowlist: emailClaim ? isForcedSuperAdmin(emailClaim) : false,
-    allowlistEmails: Array.from(superAdminEmailSet),
-  });
-
-  if (isForcedSuperAdmin(emailClaim) && role !== 'SUPER_ADMIN') {
-    logger.info('[AuthContext] Forcing SUPER_ADMIN based on email allowlist', {
-      emailClaim,
-      previousRole: role,
-    });
-    role = 'SUPER_ADMIN';
-    await ensureUserIsPersistedAsSuperAdmin(realUserId);
-  }
-  
-  // Check for session-based impersonation
-  // Frontend should send session_id in Authorization header or custom header
-  const sessionId = event.headers['x-session-id'] || 
-                    event.headers['X-Session-Id'] ||
-                    extractSessionIdFromAuth(event.headers.authorization);
-
-  let actingUserId = realUserId;
-  let customerId = claims['custom:customer_id'] as string | undefined;
-
-  if (sessionId) {
-    try {
-      const session = await db.get(SESSIONS_TABLE, { session_id: sessionId });
-      if (session && session.real_user_id === realUserId) {
-        // Verify session hasn't expired
-        // expires_at is stored as Unix timestamp (number)
-        const expiresAt = typeof session.expires_at === 'number' 
-          ? session.expires_at 
-          : Math.floor(new Date(session.expires_at).getTime() / 1000);
-        const now = Math.floor(Date.now() / 1000);
-        
-        if (expiresAt && expiresAt > now) {
-          actingUserId = session.acting_user_id;
-        }
-      }
-    } catch (error) {
-      logger.warn('[AuthContext] Error checking session', { error, sessionId });
-    }
-  }
-
-  // If impersonating, get customerId from acting user
-  if (actingUserId !== realUserId) {
-    try {
-      const actingUser = await db.get(USERS_TABLE, { user_id: actingUserId });
-      if (actingUser) {
-        customerId = actingUser.customer_id;
-      }
-    } catch (error) {
-      logger.warn('[AuthContext] Error fetching acting user', { error, actingUserId });
-    }
-  }
-
-  // If customerId still not set, try to get from claims or derive from user
-  if (!customerId) {
-    // Try to get from user record
-    try {
-      const user = await db.get(USERS_TABLE, { user_id: actingUserId });
-      if (user) {
-        customerId = user.customer_id;
-      }
-    } catch (error) {
-      logger.warn('[AuthContext] Error fetching user for customerId', { error, actingUserId });
-    }
-
-    // Last resort: use tenant_id fallback (for migration period)
-    if (!customerId && claims['custom:tenant_id']) {
-      customerId = claims['custom:tenant_id'] as string;
-      logger.warn('[AuthContext] Using tenant_id as customerId fallback', { customerId });
-    }
-  }
-
-  if (!customerId) {
-    logger.error('[AuthContext] No customerId found', { realUserId, actingUserId, role });
-    return null;
-  }
-
-  // Check for agency view mode (only for SUPER_ADMIN)
-  const viewMode = event.headers['x-view-mode'] || event.headers['X-View-Mode'];
-  const selectedCustomerId = event.headers['x-selected-customer-id'] || event.headers['X-Selected-Customer-Id'];
-  
-  let finalCustomerId = customerId;
-  let finalViewMode: 'agency' | 'subaccount' | undefined = undefined;
-
-  // Only SUPER_ADMIN can use agency view
-  if (role === 'SUPER_ADMIN') {
-    if (viewMode === 'agency') {
-      finalViewMode = 'agency';
-      // In agency view, use selected customer if provided, otherwise use real user's customer
-      if (selectedCustomerId) {
-        finalCustomerId = selectedCustomerId;
-      }
-      // If no selected customer, stay in agency view but use real user's customer as default
-    } else {
-      finalViewMode = 'subaccount';
-      // In subaccount view, use acting user's customer
-    }
-  }
-
-  return {
-    realUserId,
-    actingUserId,
-    role,
-    customerId: finalCustomerId,
-    isImpersonating: actingUserId !== realUserId,
-    viewMode: finalViewMode,
-    selectedCustomerId: selectedCustomerId || undefined,
-  };
+  return email;
 }
 
 /**
- * Extract session ID from Authorization header if present
+ * Elevate role to SUPER_ADMIN if email is in allowlist.
+ * 
+ * Role precedence: JWT claim → allowlist check → default USER
+ * 
+ * @param role - Current role from JWT claims
+ * @param email - User email address
+ * @param userId - User ID for database persistence
+ * @returns Effective role (SUPER_ADMIN if in allowlist, otherwise original role)
+ */
+async function elevateRoleIfInAllowlist(
+  role: string,
+  email: string | undefined,
+  userId: string
+): Promise<string> {
+  if (isForcedSuperAdmin(email) && role !== 'SUPER_ADMIN') {
+    logger.info('[AuthContext] Forcing SUPER_ADMIN based on email allowlist', {
+      email,
+      previousRole: role,
+    });
+    await ensureUserIsPersistedAsSuperAdmin(userId);
+    return 'SUPER_ADMIN';
+  }
+  return role;
+}
+
+/**
+ * Resolve customer ID from claims, impersonation session, or user record.
+ * 
+ * Resolution order:
+ * 1. If impersonating: acting user's customer_id
+ * 2. JWT claim: custom:customer_id
+ * 3. User record lookup
+ * 
+ * @param claims - JWT claims
+ * @param actingUserId - Acting user ID (may differ from real user if impersonating)
+ * @returns Customer ID or undefined if not found
+ */
+async function resolveCustomerId(
+  claims: Record<string, any>,
+  actingUserId: string
+): Promise<string | undefined> {
+  // Try JWT claim first
+  let customerId = claims['custom:customer_id'] as string | undefined;
+
+  // If not in claims, try user record lookup
+  if (!customerId) {
+    try {
+      const user = await db.get(USERS_TABLE, { user_id: actingUserId });
+      if (user?.customer_id) {
+        customerId = user.customer_id;
+      }
+    } catch (error) {
+      logger.warn('[AuthContext] Error fetching user for customerId', {
+        error: error instanceof Error ? error.message : String(error),
+        actingUserId,
+      });
+    }
+  }
+
+  return customerId;
+}
+
+/**
+ * Extract agency view context from request headers.
+ * Only SUPER_ADMIN users can use agency view.
+ * 
+ * @param event - API Gateway event
+ * @param role - User's role
+ * @param defaultCustomerId - Default customer ID (real user's customer)
+ * @returns Object with viewMode, selectedCustomerId, and effective customerId
+ */
+function extractAgencyViewContext(
+  event: APIGatewayProxyEventV2,
+  role: string,
+  defaultCustomerId: string
+): {
+  viewMode?: 'agency' | 'subaccount';
+  selectedCustomerId?: string;
+  effectiveCustomerId: string;
+} {
+  // Only SUPER_ADMIN can use agency view
+  if (role !== 'SUPER_ADMIN') {
+    return { effectiveCustomerId: defaultCustomerId };
+  }
+
+  const viewMode = event.headers['x-view-mode'] || event.headers['X-View-Mode'];
+  const selectedCustomerId = event.headers['x-selected-customer-id'] || 
+                              event.headers['X-Selected-Customer-Id'];
+
+  if (viewMode === 'agency') {
+    // In agency view, use selected customer if provided, otherwise use default
+    return {
+      viewMode: 'agency',
+      selectedCustomerId: selectedCustomerId || undefined,
+      effectiveCustomerId: selectedCustomerId || defaultCustomerId,
+    };
+  } else {
+    // In subaccount view, use default customer
+    return {
+      viewMode: 'subaccount',
+      effectiveCustomerId: defaultCustomerId,
+    };
+  }
+}
+
+/**
+ * Extract session ID from Authorization header if present.
  * Format: Bearer <token> or Session <session_id>
  */
 function extractSessionIdFromAuth(authHeader?: string): string | undefined {
@@ -230,3 +225,120 @@ function extractSessionIdFromAuth(authHeader?: string): string | undefined {
   
   return undefined;
 }
+
+/**
+ * Resolve acting user ID from impersonation session if present.
+ * 
+ * @param event - API Gateway event
+ * @param realUserId - Real user ID from JWT claims
+ * @returns Acting user ID (may differ from real user if impersonating)
+ */
+async function resolveActingUserId(
+  event: APIGatewayProxyEventV2,
+  realUserId: string
+): Promise<string> {
+  const sessionId = event.headers['x-session-id'] || 
+                    event.headers['X-Session-Id'] ||
+                    extractSessionIdFromAuth(event.headers.authorization);
+
+  if (!sessionId) {
+    return realUserId;
+  }
+
+  try {
+    const session = await db.get(SESSIONS_TABLE, { session_id: sessionId });
+    if (session && session.real_user_id === realUserId) {
+      // Verify session hasn't expired
+      const expiresAt = typeof session.expires_at === 'number' 
+        ? session.expires_at 
+        : Math.floor(new Date(session.expires_at).getTime() / 1000);
+      const now = Math.floor(Date.now() / 1000);
+      
+      if (expiresAt && expiresAt > now) {
+        return session.acting_user_id;
+      }
+    }
+  } catch (error) {
+    logger.warn('[AuthContext] Error checking session', { error, sessionId });
+  }
+
+  return realUserId;
+}
+
+/**
+ * Extract authentication context from JWT claims and session.
+ * 
+ * This is the main entry point for authentication. It:
+ * 1. Extracts user identity from JWT claims
+ * 2. Resolves email from claims or database
+ * 3. Elevates role if email is in SUPER_ADMIN allowlist
+ * 4. Handles session-based impersonation
+ * 5. Resolves customer ID for multi-tenant isolation
+ * 6. Extracts agency view context for SUPER_ADMIN users
+ * 
+ * @param event - API Gateway event with JWT authorizer claims
+ * @returns AuthContext if authenticated, null otherwise
+ */
+export async function extractAuthContext(event: APIGatewayProxyEventV2): Promise<AuthContext | null> {
+  const authorizer = (event.requestContext as any)?.authorizer;
+  const claims = authorizer?.jwt?.claims || {};
+
+  // If no claims, user is not authenticated
+  if (!claims.sub) {
+    return null;
+  }
+
+  const realUserId = claims.sub as string;
+  const baseRole = (claims['custom:role'] as string) || 'USER';
+
+  // Get email and elevate role if needed
+  const email = await getEmailFromClaimsOrDatabase(claims, realUserId);
+  const role = await elevateRoleIfInAllowlist(baseRole, email, realUserId);
+
+  // Resolve acting user (may differ if impersonating)
+  const actingUserId = await resolveActingUserId(event, realUserId);
+
+  // Resolve customer ID
+  let customerId: string | undefined;
+  
+  // If impersonating, get customerId from acting user first
+  if (actingUserId !== realUserId) {
+    try {
+      const actingUser = await db.get(USERS_TABLE, { user_id: actingUserId });
+      if (actingUser?.customer_id) {
+        customerId = actingUser.customer_id;
+      }
+    } catch (error) {
+      logger.warn('[AuthContext] Error fetching acting user', { error, actingUserId });
+    }
+  }
+
+  // If not impersonating or acting user lookup failed, resolve normally
+  if (!customerId) {
+    customerId = await resolveCustomerId(claims, actingUserId);
+  }
+
+  // Customer ID is required - fail if not found
+  if (!customerId) {
+    logger.error('[AuthContext] No customerId found', { 
+      realUserId, 
+      actingUserId, 
+      role 
+    });
+    return null;
+  }
+
+  // Extract agency view context (only for SUPER_ADMIN)
+  const agencyContext = extractAgencyViewContext(event, role, customerId);
+
+  return {
+    realUserId,
+    actingUserId,
+    role,
+    customerId: agencyContext.effectiveCustomerId,
+    isImpersonating: actingUserId !== realUserId,
+    viewMode: agencyContext.viewMode,
+    selectedCustomerId: agencyContext.selectedCustomerId,
+  };
+}
+

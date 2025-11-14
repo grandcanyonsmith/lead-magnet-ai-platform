@@ -3,40 +3,36 @@
 Find actual lead magnet generation jobs (not workflow generation jobs).
 """
 
-import boto3
-import json
-from decimal import Decimal
+import sys
+import argparse
+from pathlib import Path
 from botocore.exceptions import ClientError
 
-TENANT_ID = "84c8e438-0061-70f2-2ce0-7cb44989a329"
-TABLE_NAME = "leadmagnet-jobs"
-REGION = "us-east-1"
+# Add lib directory to path
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
-
-def convert_decimals(obj):
-    """Convert Decimal types to float/int for JSON serialization."""
-    if isinstance(obj, Decimal):
-        if obj % 1 == 0:
-            return int(obj)
-        return float(obj)
-    elif isinstance(obj, dict):
-        return {k: convert_decimals(v) for k, v in obj.items()}
-    elif isinstance(obj, list):
-        return [convert_decimals(item) for item in obj]
-    return obj
+from lib.common import (
+    convert_decimals,
+    get_dynamodb_resource,
+    get_table_name,
+    get_aws_region,
+    print_section,
+    format_timestamp,
+)
 
 
 def find_lead_magnet_jobs(tenant_id: str, workflow_id: str = None):
     """Find actual lead magnet generation jobs (not workflow generation)."""
-    dynamodb = boto3.resource("dynamodb", region_name=REGION)
-    table = dynamodb.Table(TABLE_NAME)
+    dynamodb = get_dynamodb_resource()
+    table = dynamodb.Table(get_table_name("jobs"))
     
     try:
-        print(f"Searching for lead magnet jobs...")
+        print_section("Lead Magnet Jobs Search")
         print(f"Tenant ID: {tenant_id}")
         if workflow_id:
             print(f"Workflow ID: {workflow_id}")
-        print("=" * 60)
+        print(f"Region: {get_aws_region()}")
+        print()
         
         # Query by tenant_id using GSI
         if workflow_id:
@@ -75,8 +71,8 @@ def find_lead_magnet_jobs(tenant_id: str, workflow_id: str = None):
             print(f"Job ID: {job.get('job_id')}")
             print(f"  Status: {job.get('status')}")
             print(f"  Workflow ID: {job.get('workflow_id', 'N/A')}")
-            print(f"  Created: {job.get('created_at', 'N/A')}")
-            print(f"  Updated: {job.get('updated_at', 'N/A')}")
+            print(f"  Created: {format_timestamp(job.get('created_at', 'N/A'))}")
+            print(f"  Updated: {format_timestamp(job.get('updated_at', 'N/A'))}")
             if job.get('output_url'):
                 print(f"  Output URL: {job.get('output_url')[:80]}...")
             if job.get('artifacts'):
@@ -93,14 +89,35 @@ def find_lead_magnet_jobs(tenant_id: str, workflow_id: str = None):
         return []
 
 
-if __name__ == "__main__":
-    import sys
+def main():
+    parser = argparse.ArgumentParser(
+        description="Find actual lead magnet generation jobs (not workflow generation jobs)"
+    )
+    parser.add_argument("tenant_id", help="Tenant ID to search for")
+    parser.add_argument(
+        "--workflow-id",
+        help="Optional workflow ID to filter by",
+        default=None,
+    )
+    parser.add_argument(
+        "--region",
+        help="AWS region (default: from environment or us-east-1)",
+        default=None,
+    )
+    args = parser.parse_args()
     
-    workflow_id = sys.argv[1] if len(sys.argv) > 1 else None
-    jobs = find_lead_magnet_jobs(TENANT_ID, workflow_id)
+    if args.region:
+        import os
+        os.environ["AWS_REGION"] = args.region
+    
+    jobs = find_lead_magnet_jobs(args.tenant_id, args.workflow_id)
     
     if not jobs:
         print("No lead magnet generation jobs found.")
         print("\nNote: Workflow generation jobs (wfgen_*) create workflows/templates.")
         print("Actual lead magnets are generated when users submit forms.")
+
+
+if __name__ == "__main__":
+    main()
 

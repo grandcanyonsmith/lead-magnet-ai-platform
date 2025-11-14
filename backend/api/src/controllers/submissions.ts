@@ -1,8 +1,9 @@
 import { db, normalizeQueryResult } from '../utils/db';
 import { ApiError } from '../utils/errors';
 import { RouteResponse } from '../routes';
+import { env } from '../utils/env';
 
-const SUBMISSIONS_TABLE = process.env.SUBMISSIONS_TABLE!;
+const SUBMISSIONS_TABLE = env.submissionsTable;
 
 class SubmissionsController {
   async list(tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {

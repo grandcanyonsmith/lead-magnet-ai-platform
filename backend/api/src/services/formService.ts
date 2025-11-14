@@ -2,8 +2,9 @@ import { ulid } from 'ulid';
 import { db } from '../utils/db';
 import { ApiError } from '../utils/errors';
 import { logger } from '../utils/logger';
+import { env } from '../utils/env';
 
-const FORMS_TABLE = process.env.FORMS_TABLE;
+const FORMS_TABLE = env.formsTable;
 
 if (!FORMS_TABLE) {
   logger.error('[FormService] FORMS_TABLE environment variable is not set');
