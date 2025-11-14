@@ -5,6 +5,7 @@
 
 import { TokenProvider } from './base.client'
 import { LocalStorageTokenProvider } from './token-provider'
+import { BaseApiClient } from './base.client'
 import { WorkflowsClient } from './workflows.client'
 import { FormsClient } from './forms.client'
 import { TemplatesClient } from './templates.client'
@@ -16,8 +17,9 @@ import { SettingsClient } from './settings.client'
 import { AnalyticsClient } from './analytics.client'
 import { UsageClient } from './usage.client'
 import { ApiClient, ArtifactListParams, ArtifactListResponse, Artifact, FormUpdateRequest, TemplateUpdateRequest, WorkflowUpdateRequest } from '@/types'
+import { AxiosRequestConfig } from 'axios'
 
-class ApiClientImpl implements ApiClient {
+class ApiClientImpl extends BaseApiClient implements ApiClient {
   public workflows: WorkflowsClient
   public forms: FormsClient
   public templates: TemplatesClient
@@ -29,10 +31,8 @@ class ApiClientImpl implements ApiClient {
   public analytics: AnalyticsClient
   public usage: UsageClient
 
-  private tokenProvider: TokenProvider
-
   constructor(tokenProvider?: TokenProvider) {
-    this.tokenProvider = tokenProvider || new LocalStorageTokenProvider()
+    super(tokenProvider || new LocalStorageTokenProvider())
     
     this.workflows = new WorkflowsClient(this.tokenProvider)
     this.forms = new FormsClient(this.tokenProvider)
@@ -44,6 +44,23 @@ class ApiClientImpl implements ApiClient {
     this.settings = new SettingsClient(this.tokenProvider)
     this.analytics = new AnalyticsClient(this.tokenProvider)
     this.usage = new UsageClient(this.tokenProvider)
+  }
+
+  // Generic HTTP methods for direct endpoint access
+  async get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
+    return super.get<T>(url, config)
+  }
+
+  async post<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
+    return super.post<T>(url, data, config)
+  }
+
+  async put<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
+    return super.put<T>(url, data, config)
+  }
+
+  async delete<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
+    return super.delete<T>(url, config)
   }
 
   // Workflows - delegate to workflows client

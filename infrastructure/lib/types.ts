@@ -17,6 +17,11 @@ export enum TableKey {
   USER_SETTINGS = 'userSettings',
   USAGE_RECORDS = 'usageRecords',
   NOTIFICATIONS = 'notifications',
+  USERS = 'users',
+  CUSTOMERS = 'customers',
+  FILES = 'files',
+  IMPERSONATION_LOGS = 'impersonationLogs',
+  SESSIONS = 'sessions',
 }
 
 /**
@@ -33,6 +38,11 @@ export interface TableMap {
   [TableKey.USER_SETTINGS]: dynamodb.ITable;
   [TableKey.USAGE_RECORDS]: dynamodb.ITable;
   [TableKey.NOTIFICATIONS]: dynamodb.ITable;
+  [TableKey.USERS]: dynamodb.ITable;
+  [TableKey.CUSTOMERS]: dynamodb.ITable;
+  [TableKey.FILES]: dynamodb.ITable;
+  [TableKey.IMPERSONATION_LOGS]: dynamodb.ITable;
+  [TableKey.SESSIONS]: dynamodb.ITable;
 }
 
 /**
