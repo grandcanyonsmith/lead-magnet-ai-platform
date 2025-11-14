@@ -18,8 +18,11 @@ interface ImagePreviewProps {
   toolChoice?: string
 }
 
+// Type for tool - can be a string or an object with a type property
+type Tool = string | { type: string; [key: string]: unknown }
+
 // Helper to get tool name from tool object or string
-function getToolName(tool: string | { type: string; [key: string]: unknown }): string {
+function getToolName(tool: Tool): string {
   return typeof tool === 'string' ? tool : (tool.type || 'unknown')
 }
 
@@ -48,7 +51,7 @@ export function ImagePreview({ imageUrl, artifact, imageIndex = 0, model, tools,
           {hasTools && (
             <>
               {tools.map((tool, toolIdx) => {
-                const toolName = getToolName(tool)
+                const toolName = getToolName(tool as Tool)
                 return (
                   <span
                     key={toolIdx}
