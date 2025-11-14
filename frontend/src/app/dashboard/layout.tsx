@@ -11,6 +11,7 @@ import { TourId } from '@/lib/tours'
 import { NotificationBell } from '@/components/NotificationBell'
 import { UserMenu } from '@/components/UserMenu'
 import { SearchModal } from '@/components/SearchModal'
+import { ShortcutsHelpModal } from '@/components/ShortcutsHelpModal'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { 
   FiHome, 
@@ -35,6 +36,7 @@ export default function DashboardLayout({
   const [settings, setSettings] = useState<any>(null)
   const [activeTourId, setActiveTourId] = useState<TourId | null>(null)
   const [searchOpen, setSearchOpen] = useState(false)
+  const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false)
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -114,6 +116,7 @@ export default function DashboardLayout({
   // Keyboard shortcuts
   useKeyboardShortcuts({
     onSearch: () => setSearchOpen(true),
+    onShortcutsHelp: () => setShortcutsHelpOpen(true),
     onNavigate: (index) => {
       if (navItems[index]) {
         router.push(navItems[index].href)
@@ -121,6 +124,7 @@ export default function DashboardLayout({
     },
     onClose: () => {
       setSearchOpen(false)
+      setShortcutsHelpOpen(false)
       setSidebarOpen(false)
     },
     navItemsCount: navItems.length,
