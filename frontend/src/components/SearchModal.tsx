@@ -122,7 +122,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
     })
 
     return results.slice(0, 10) // Limit to 10 results
-  }, [query, workflows, jobs])
+  }, [query, workflows, jobs, navItems])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
