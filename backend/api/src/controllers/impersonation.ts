@@ -1,11 +1,10 @@
 import { db } from '../utils/db';
 import { RouteResponse } from '../routes';
 import { RequestContext } from '../routes/router';
-import { requireAdmin, getRealUserId } from '../utils/rbac';
+import { requireAdmin, getRealUserId, requireSuperAdmin } from '../utils/rbac';
 import { ApiError } from '../utils/errors';
 import { logger } from '../utils/logger';
 import { ulid } from 'ulid';
-import { randomBytes } from 'crypto';
 
 const SESSIONS_TABLE = process.env.SESSIONS_TABLE || 'leadmagnet-sessions';
 const USERS_TABLE = process.env.USERS_TABLE || 'leadmagnet-users';
@@ -27,7 +26,7 @@ class ImpersonationController {
     _tenantId: string | undefined,
     context?: RequestContext
   ): Promise<RouteResponse> {
-    const auth = requireAdmin(context);
+    requireAdmin(context);
     const realUserId = getRealUserId(context);
 
     if (!body.targetUserId || typeof body.targetUserId !== 'string') {
@@ -49,7 +48,12 @@ class ImpersonationController {
       }
 
       // Prevent impersonating other admins (unless SUPER_ADMIN)
-      if (auth.role !== 'SUPER_ADMIN') {
+      // Check if real user is SUPER_ADMIN by trying to require it (will throw if not)
+      try {
+        requireSuperAdmin(context);
+        // If we get here, user is SUPER_ADMIN, so they can impersonate anyone
+      } catch {
+        // Not SUPER_ADMIN, so check if target is admin
         const targetRole = targetUser.role || 'USER';
         if (targetRole === 'ADMIN' || targetRole === 'SUPER_ADMIN') {
           throw new ApiError('You do not have permission to impersonate admins', 403);
@@ -123,7 +127,7 @@ class ImpersonationController {
     _tenantId: string | undefined,
     context?: RequestContext
   ): Promise<RouteResponse> {
-    const auth = requireAdmin(context);
+    requireAdmin(context);
     const realUserId = getRealUserId(context);
 
     const sessionId = body.sessionId || 

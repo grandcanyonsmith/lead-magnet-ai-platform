@@ -6,7 +6,6 @@
 import { getOpenAIClient } from './openaiService';
 import { logger } from '../utils/logger';
 import { ApiError } from '../utils/errors';
-import OpenAI from 'openai';
 
 /**
  * Upload a file to OpenAI for indexing
