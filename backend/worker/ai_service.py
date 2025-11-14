@@ -38,6 +38,7 @@ class AIService:
         tool_choice: str = "auto",
         tenant_id: Optional[str] = None,
         job_id: Optional[str] = None,
+        previous_image_urls: Optional[List[str]] = None,
     ) -> Tuple[str, Dict, Dict, Dict]:
         """
         Generate a report using OpenAI with configurable tools.
@@ -51,6 +52,7 @@ class AIService:
             tool_choice: How model should use tools - "auto", "required", or "none"
             tenant_id: Optional tenant ID for image storage context
             job_id: Optional job ID for image storage context
+            previous_image_urls: Optional list of image URLs from previous steps to include in input
             
         Returns:
             Tuple of (generated report content, usage info dict, request details dict, response details dict)
@@ -94,7 +96,8 @@ class AIService:
             'has_image_generation': has_image_generation,
             'instructions_length': len(instructions),
             'context_length': len(context),
-            'previous_context_length': len(previous_context)
+            'previous_context_length': len(previous_context),
+            'previous_image_urls_count': len(previous_image_urls) if previous_image_urls else 0
         })
         
         # Build input text
@@ -122,7 +125,8 @@ class AIService:
                     tools=validated_tools,
                     tool_choice=normalized_tool_choice,
                     has_computer_use=has_computer_use,
-                    reasoning_level=None
+                    reasoning_level=None,
+                    previous_image_urls=previous_image_urls if has_image_generation else None
                 )
                 
                 # Run CUA loop
@@ -213,7 +217,8 @@ class AIService:
                 tools=validated_tools,
                 tool_choice=normalized_tool_choice,
                 has_computer_use=has_computer_use,
-                reasoning_level=None  # Not supported in Responses API
+                reasoning_level=None,  # Not supported in Responses API
+                previous_image_urls=previous_image_urls if has_image_generation else None
             )
             
             logger.debug(f"[AI Service] API params built successfully", extra={
