@@ -108,7 +108,22 @@ export function UsageCharts({ usage }: UsageChartsProps) {
                 tick={{ fontSize: 12 }}
               />
               <YAxis />
-              <Tooltip formatter={(value) => `$${value.toFixed(4)}`} />
+              <Tooltip
+                formatter={(value: unknown) => {
+                  if (typeof value === 'number') {
+                    return `$${value.toFixed(4)}`
+                  }
+                  if (typeof value === 'string') {
+                    const numValue = parseFloat(value)
+                    return isNaN(numValue) ? '$0.0000' : `$${numValue.toFixed(4)}`
+                  }
+                  if (Array.isArray(value)) {
+                    const numValue = parseFloat(String(value[0] || 0))
+                    return isNaN(numValue) ? '$0.0000' : `$${numValue.toFixed(4)}`
+                  }
+                  return '$0.0000'
+                }}
+              />
               <Legend />
               <Bar dataKey="actualCost" fill="#10b981" name="Actual Cost" />
               <Bar dataKey="upchargeCost" fill="#3b82f6" name="Upcharge Cost" />
