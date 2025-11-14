@@ -5,26 +5,7 @@ import { FiTrash2, FiChevronUp, FiChevronDown, FiZap, FiChevronDown as FiChevron
 import { useWorkflowStepAI } from '@/hooks/useWorkflowStepAI'
 import StepDiffPreview from '@/components/workflows/edit/StepDiffPreview'
 import toast from 'react-hot-toast'
-
-export interface WorkflowStep {
-  step_name: string
-  step_description?: string
-  step_type?: 'ai_generation' | 'webhook' // Default: 'ai_generation'
-  model: string
-  instructions: string
-  step_order?: number
-  depends_on?: number[] // Array of step indices this step depends on
-  tools?: (string | { type: string; [key: string]: any })[]
-  tool_choice?: 'auto' | 'required' | 'none'
-  // Webhook step fields
-  webhook_url?: string
-  webhook_headers?: Record<string, string>
-  webhook_data_selection?: {
-    include_submission: boolean
-    exclude_step_indices?: number[] // Steps to exclude (all included by default)
-    include_job_info: boolean
-  }
-}
+import { WorkflowStep, AIModel } from '@/types/workflow'
 
 interface WorkflowStepEditorProps {
   step: WorkflowStep
@@ -415,7 +396,7 @@ export default function WorkflowStepEditor({
               </label>
               <select
                 value={localStep.model}
-                onChange={(e) => handleChange('model', e.target.value)}
+                onChange={(e) => handleChange('model', e.target.value as AIModel)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                 required
               >
