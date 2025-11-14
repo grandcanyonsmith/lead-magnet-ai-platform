@@ -143,6 +143,18 @@ export class ApiStack extends cdk.Stack {
     });
 
     // Authenticated Routes (require JWT auth) - /files and /me
+    // Add route for /files (exact match)
+    this.api.addRoutes({
+      path: '/files',
+      methods: [
+        apigateway.HttpMethod.GET,
+        apigateway.HttpMethod.POST,
+      ],
+      integration: lambdaIntegration,
+      authorizer: jwtAuthorizer,
+    });
+    
+    // Add route for /files/{proxy+} (for /files/:fileId, /files/search, etc.)
     this.api.addRoutes({
       path: '/files/{proxy+}',
       methods: [
