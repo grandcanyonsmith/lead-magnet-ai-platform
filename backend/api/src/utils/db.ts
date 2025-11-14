@@ -49,31 +49,75 @@ export class DynamoDBService {
     key: Record<string, any>,
     updates: Record<string, any>
   ) {
-    const updateExpression = Object.keys(updates)
-      .map((k) => `#${k} = :${k}`)
-      .join(', ');
+    // Validate inputs
+    if (!tableName || typeof tableName !== 'string' || tableName.trim().length === 0) {
+      throw new Error('Table name is required and must be a non-empty string');
+    }
 
-    const expressionAttributeNames = Object.keys(updates).reduce(
-      (acc, k) => ({ ...acc, [`#${k}`]: k }),
-      {}
+    if (!key || Object.keys(key).length === 0) {
+      throw new Error('Key is required and must be a non-empty object');
+    }
+
+    if (!updates || Object.keys(updates).length === 0) {
+      throw new Error('Updates object is required and must contain at least one field to update');
+    }
+
+    // Filter out undefined values from updates
+    const filteredUpdates = Object.entries(updates).reduce(
+      (acc, [k, v]) => {
+        if (v !== undefined) {
+          acc[k] = v;
+        }
+        return acc;
+      },
+      {} as Record<string, any>
     );
 
-    const expressionAttributeValues = Object.keys(updates).reduce(
-      (acc, k) => ({ ...acc, [`:${k}`]: updates[k] }),
-      {}
-    );
+    if (Object.keys(filteredUpdates).length === 0) {
+      throw new Error('Updates object must contain at least one non-undefined value');
+    }
 
-    const command = new UpdateCommand({
-      TableName: tableName,
-      Key: key,
-      UpdateExpression: `SET ${updateExpression}`,
-      ExpressionAttributeNames: expressionAttributeNames,
-      ExpressionAttributeValues: expressionAttributeValues,
-      ReturnValues: 'ALL_NEW',
-    });
+    try {
+      const updateExpression = Object.keys(filteredUpdates)
+        .map((k) => `#${k} = :${k}`)
+        .join(', ');
 
-    const result = await docClient.send(command);
-    return result.Attributes;
+      const expressionAttributeNames = Object.keys(filteredUpdates).reduce(
+        (acc, k) => ({ ...acc, [`#${k}`]: k }),
+        {}
+      );
+
+      const expressionAttributeValues = Object.keys(filteredUpdates).reduce(
+        (acc, k) => ({ ...acc, [`:${k}`]: filteredUpdates[k] }),
+        {}
+      );
+
+      const command = new UpdateCommand({
+        TableName: tableName,
+        Key: key,
+        UpdateExpression: `SET ${updateExpression}`,
+        ExpressionAttributeNames: expressionAttributeNames,
+        ExpressionAttributeValues: expressionAttributeValues,
+        ReturnValues: 'ALL_NEW',
+      });
+
+      const result = await docClient.send(command);
+      
+      // Validate that we got a result back
+      if (!result || !result.Attributes) {
+        throw new Error(`DynamoDB update operation completed but returned no attributes. Table: ${tableName}, Key: ${JSON.stringify(key)}`);
+      }
+
+      return result.Attributes;
+    } catch (error) {
+      // Re-throw with more context
+      if (error instanceof Error) {
+        throw new Error(
+          `Failed to update DynamoDB item: ${error.message}. Table: ${tableName}, Key: ${JSON.stringify(key)}, Updates: ${JSON.stringify(Object.keys(filteredUpdates))}`
+        );
+      }
+      throw error;
+    }
   }
 
   async delete(tableName: string, key: Record<string, any>) {
