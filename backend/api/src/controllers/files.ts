@@ -1,7 +1,7 @@
 import { db } from '../utils/db';
 import { RouteResponse } from '../routes';
 import { RequestContext } from '../routes/router';
-import { getCustomerId, requireUser } from '../utils/rbac';
+import { getCustomerId, getActingUserId } from '../utils/rbac';
 import { s3Service } from '../services/s3Service';
 import { uploadFileToOpenAI, searchFilesSimple, deleteFileFromOpenAI } from '../services/openaiFileService';
 import { ApiError } from '../utils/errors';
@@ -26,7 +26,6 @@ class FilesController {
     _tenantId: string | undefined,
     context?: RequestContext
   ): Promise<RouteResponse> {
-    const auth = requireUser(context);
     const customerId = getCustomerId(context);
 
     // Validate request
@@ -95,7 +94,7 @@ class FilesController {
         file_size: fileBuffer.length,
         content_type: contentType,
         created_at: now,
-        created_by: auth.actingUserId,
+        created_by: getActingUserId(context),
       };
 
       await db.put(FILES_TABLE, fileRecord);
@@ -148,7 +147,6 @@ class FilesController {
     _tenantId: string | undefined,
     context?: RequestContext
   ): Promise<RouteResponse> {
-    const auth = requireUser(context);
     const customerId = getCustomerId(context);
 
     const limit = parseInt(query.limit || '50', 10);
@@ -212,7 +210,6 @@ class FilesController {
     _tenantId: string | undefined,
     context?: RequestContext
   ): Promise<RouteResponse> {
-    const auth = requireUser(context);
     const customerId = getCustomerId(context);
 
     const fileId = params.fileId;
@@ -278,7 +275,6 @@ class FilesController {
     _tenantId: string | undefined,
     context?: RequestContext
   ): Promise<RouteResponse> {
-    const auth = requireUser(context);
     const customerId = getCustomerId(context);
 
     const fileId = params.fileId;
@@ -347,7 +343,6 @@ class FilesController {
     _tenantId: string | undefined,
     context?: RequestContext
   ): Promise<RouteResponse> {
-    const auth = requireUser(context);
     const customerId = getCustomerId(context);
 
     if (!body.query || typeof body.query !== 'string') {
