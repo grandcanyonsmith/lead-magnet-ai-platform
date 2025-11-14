@@ -120,25 +120,28 @@ export function BillingUsage() {
           {/* Breakdown Table */}
           {usage.openai?.by_service && Object.keys(usage.openai.by_service).length > 0 ? (
             <div className="overflow-x-auto -mx-6 px-6">
-              <table className="min-w-full divide-y divide-gray-200">
+              <div className="block md:hidden mb-4">
+                <p className="text-sm text-gray-600">Scroll horizontally to view all columns</p>
+              </div>
+              <table className="min-w-full divide-y divide-gray-200" role="table" aria-label="Usage breakdown by service">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Service
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Calls
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Input Tokens
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Output Tokens
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actual Cost
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Upcharge Cost
                     </th>
                   </tr>
@@ -146,9 +149,9 @@ export function BillingUsage() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {Object.values(usage.openai.by_service).map((service: ServiceUsage) => (
                     <tr key={service.service_type}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <th scope="row" className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         {formatServiceName(service.service_type)}
-                      </td>
+                      </th>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
                         {service.calls.toLocaleString()}
                       </td>

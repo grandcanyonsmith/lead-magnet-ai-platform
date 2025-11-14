@@ -27,20 +27,24 @@ export function SettingsTabs({ activeTab, onTabChange, children }: SettingsTabsP
     <div>
       {/* Tabs */}
       <div className="mb-6 border-b border-gray-200 overflow-x-auto">
-        <nav className="flex space-x-4 sm:space-x-8 min-w-max">
+        <nav className="flex space-x-4 sm:space-x-8 min-w-max" role="tablist" aria-label="Settings sections">
           {tabs.map((tab) => {
             const Icon = tab.icon
             return (
               <button
                 key={tab.id}
                 onClick={() => onTabChange(tab.id)}
-                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                role="tab"
+                aria-selected={activeTab === tab.id}
+                aria-controls={`tabpanel-${tab.id}`}
+                id={`tab-${tab.id}`}
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors touch-target ${
                   activeTab === tab.id
                     ? 'border-primary-500 text-primary-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                <Icon className="inline w-4 h-4 mr-2" />
+                <Icon className="inline w-4 h-4 mr-2" aria-hidden="true" />
                 {tab.label}
               </button>
             )
@@ -49,7 +53,9 @@ export function SettingsTabs({ activeTab, onTabChange, children }: SettingsTabsP
       </div>
 
       {/* Tab Content */}
-      <div>{children}</div>
+      <div role="tabpanel" id={`tabpanel-${activeTab}`} aria-labelledby={`tab-${activeTab}`}>
+        {children}
+      </div>
     </div>
   )
 }
