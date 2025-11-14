@@ -40,6 +40,9 @@ def main():
         'aws_region': os.environ.get('AWS_REGION', 'not set')
     })
     
+    # Initialize db_service to None to ensure it's always defined
+    db_service = None
+    
     try:
         # Initialize services
         logger.debug(f"[Worker] Initializing services", extra={'job_id': job_id})
@@ -59,15 +62,23 @@ def main():
             
     except Exception as e:
         # Use error handler service for consistent error handling
-        error_handler = ErrorHandlerService(db_service)
-        error_result = error_handler.handle_job_error(
-            job_id=job_id,
-            error=e,
-            step_index=None,
-            step_type='workflow_step'
-        )
-        
-        logger.error(f"Job {job_id} failed: {error_result.get('error')}")
+        # Only use error handler if db_service was successfully initialized
+        if db_service is not None:
+            try:
+                error_handler = ErrorHandlerService(db_service)
+                error_result = error_handler.handle_job_error(
+                    job_id=job_id,
+                    error=e,
+                    step_index=None,
+                    step_type='workflow_step'
+                )
+                logger.error(f"Job {job_id} failed: {error_result.get('error')}")
+            except Exception as handler_error:
+                logger.exception(f"Error handler failed: {handler_error}")
+                logger.error(f"Job {job_id} failed: {str(e)}")
+        else:
+            # If db_service wasn't initialized, log error directly
+            logger.exception(f"Fatal error processing job {job_id} (db_service not initialized): {e}")
         sys.exit(1)
 
 

@@ -5,7 +5,10 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
 import { ApiError } from './errors'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+// Default to production API URL so hosted builds work even if env vars are missing.
+// Local development overrides this via NEXT_PUBLIC_API_URL in .env.local.
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || 'https://czp5b77azd.execute-api.us-east-1.amazonaws.com'
 
 export interface TokenProvider {
   getToken(): string | null
@@ -144,4 +147,3 @@ export class BaseApiClient {
     return response.data
   }
 }
-

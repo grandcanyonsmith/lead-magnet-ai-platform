@@ -4,6 +4,7 @@
 
 import React from 'react'
 import { FiCheckCircle, FiXCircle, FiClock, FiLoader } from 'react-icons/fi'
+import { ExecutionStep } from '@/types/job'
 
 export function getStatusLabel(status: string): string {
   const labels: Record<string, string> = {
@@ -118,13 +119,23 @@ export function isHTML(str: string): boolean {
   return htmlPatterns.some(pattern => pattern.test(trimmed)) || (hasHTMLTags && hasClosingTags)
 }
 
-export function formatStepInput(step: any): { content: string | any, type: 'json' | 'markdown' | 'text', structure?: 'ai_input' } {
+interface WebhookInput {
+  webhook_url?: string
+  payload?: Record<string, unknown>
+}
+
+interface AIInput {
+  instructions?: string
+  input?: string | unknown
+}
+
+export function formatStepInput(step: ExecutionStep): { content: string | unknown, type: 'json' | 'markdown' | 'text', structure?: 'ai_input' } {
   if (step.step_type === 'form_submission') {
     return { content: step.input, type: 'json' }
   }
   if (step.step_type === 'webhook') {
     // For webhook steps, show webhook URL and payload
-    const inputObj = step.input as any
+    const inputObj = step.input as WebhookInput | undefined
     return {
       content: {
         webhook_url: inputObj?.webhook_url || 'N/A',
@@ -135,7 +146,7 @@ export function formatStepInput(step: any): { content: string | any, type: 'json
   }
   if (step.input && typeof step.input === 'object') {
     // For AI steps, show instructions and input
-    const inputObj = step.input as any
+    const inputObj = step.input as AIInput | undefined
     const inputText = inputObj.input || ''
     
     // Check if input text is markdown
@@ -165,13 +176,20 @@ export function formatStepInput(step: any): { content: string | any, type: 'json
   return { content: step.input, type: 'json' }
 }
 
-export function formatStepOutput(step: any): { content: string | any, type: 'json' | 'markdown' | 'text' | 'html' } {
+interface WebhookOutput {
+  success?: boolean
+  response_status?: string | number
+  response_body?: unknown
+  error?: string | null
+}
+
+export function formatStepOutput(step: ExecutionStep): { content: string | unknown, type: 'json' | 'markdown' | 'text' | 'html' } {
   if (step.step_type === 'final_output') {
     return { content: step.output, type: 'json' }
   }
   if (step.step_type === 'webhook') {
     // For webhook steps, show response details
-    const outputObj = step.output as any
+    const outputObj = step.output as WebhookOutput | undefined
     return {
       content: {
         success: outputObj?.success ?? false,

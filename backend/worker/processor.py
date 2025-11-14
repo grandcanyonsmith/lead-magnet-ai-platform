@@ -189,7 +189,7 @@ class JobProcessor:
             logger.debug(f"[JobProcessor] Retrieving submission data", extra={'submission_id': submission_id})
             submission = self.db.get_submission(submission_id)
             if not submission:
-                raise ValueError(f"Submission {job['submission_id']} not found")
+                raise ValueError(f"Submission {submission_id} not found")
             
             # Get form to retrieve field labels
             form = None
@@ -293,15 +293,24 @@ class JobProcessor:
             if not job:
                 raise ValueError(f"Job {job_id} not found")
             
+            # Validate required job fields
+            workflow_id = job.get('workflow_id')
+            if not workflow_id:
+                raise ValueError(f"Job {job_id} is missing required field 'workflow_id'")
+            
+            submission_id = job.get('submission_id')
+            if not submission_id:
+                raise ValueError(f"Job {job_id} is missing required field 'submission_id'")
+            
             # Get workflow configuration
-            workflow = self.db.get_workflow(job['workflow_id'])
+            workflow = self.db.get_workflow(workflow_id)
             if not workflow:
-                raise ValueError(f"Workflow {job['workflow_id']} not found")
+                raise ValueError(f"Workflow {workflow_id} not found")
             
             # Get submission data
-            submission = self.db.get_submission(job['submission_id'])
+            submission = self.db.get_submission(submission_id)
             if not submission:
-                raise ValueError(f"Submission {job['submission_id']} not found")
+                raise ValueError(f"Submission {submission_id} not found")
             
             submission_data = submission.get('submission_data', {})
             

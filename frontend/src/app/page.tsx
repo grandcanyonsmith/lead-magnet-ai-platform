@@ -9,32 +9,27 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    console.log('Home page mounted')
     setMounted(true)
   }, [])
 
   useEffect(() => {
     if (!mounted) {
-      console.log('Not mounted yet, waiting...')
       return
     }
 
-    console.log('Checking authentication...')
     try {
       // Redirect to dashboard if authenticated, otherwise to login
       const token = localStorage.getItem('access_token')
-      console.log('Token found:', !!token)
       
       if (token) {
-        console.log('Redirecting to dashboard...')
         router.push('/dashboard')
       } else {
-        console.log('No token, redirecting to login...')
         router.push('/auth/login')
       }
-    } catch (error: any) {
-      console.error('Error checking authentication:', error)
-      setError(error.message || 'Unknown error')
+    } catch (error) {
+      // Handle errors gracefully - fallback to login page
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      setError(errorMessage)
       // Fallback to login page on error
       setTimeout(() => {
         router.push('/auth/login')
