@@ -13,6 +13,8 @@ export interface FormField {
   placeholder?: string
   required: boolean
   options?: string[]
+  validation_regex?: string
+  max_length?: number
 }
 
 export interface FormFieldsSchema {
