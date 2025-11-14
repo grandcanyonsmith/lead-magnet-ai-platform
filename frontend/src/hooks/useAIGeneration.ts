@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 import { api } from '@/lib/api'
 import { AIModel } from '@/types'
-import { WorkflowStep } from '@/app/dashboard/workflows/components/WorkflowStepEditor'
+import { WorkflowStep } from '@/types/workflow'
 
 export interface AIGenerationResult {
   workflow: {

@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import { WorkflowStep } from '@/app/dashboard/workflows/components/WorkflowStepEditor'
+import { WorkflowStep } from '@/types/workflow'
 import { WorkflowFormData, TemplateData } from './useWorkflowForm'
 
 export interface ValidationResult {

@@ -2,7 +2,7 @@
 
 import { memo } from 'react'
 import { Handle, Position, NodeProps } from 'reactflow'
-import { WorkflowStep } from './WorkflowStepEditor'
+import { WorkflowStep } from '@/types/workflow'
 import {
   FiZap,
   FiSearch,
