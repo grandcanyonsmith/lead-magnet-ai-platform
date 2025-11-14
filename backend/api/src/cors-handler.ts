@@ -13,7 +13,7 @@ export interface CORSConfig {
 const DEFAULT_CORS_CONFIG: CORSConfig = {
   allowedOrigins: ['*'], // Allow all origins
   allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Session-Id'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Session-Id', 'x-view-mode', 'x-selected-customer-id'],
   allowCredentials: false,
 };
 
