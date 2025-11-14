@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { FiX } from 'react-icons/fi'
-import WorkflowStepEditor, { WorkflowStep } from './WorkflowStepEditor'
+import WorkflowStepEditor from './WorkflowStepEditor'
+import { WorkflowStep } from '@/types/workflow'
 
 interface FlowchartSidePanelProps {
   step: WorkflowStep | null

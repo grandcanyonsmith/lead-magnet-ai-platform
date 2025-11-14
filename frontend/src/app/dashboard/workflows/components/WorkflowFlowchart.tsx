@@ -19,7 +19,7 @@ import ReactFlow, {
 } from 'reactflow'
 import 'reactflow/dist/style.css'
 import FlowchartNode from './FlowchartNode'
-import { WorkflowStep } from './WorkflowStepEditor'
+import { WorkflowStep } from '@/types/workflow'
 import { FiPlus, FiMaximize2 } from 'react-icons/fi'
 
 const nodeTypes = {
@@ -49,7 +49,9 @@ const getStepWarnings = (step: WorkflowStep, index: number): string[] => {
   if (!step.instructions.trim()) {
     warnings.push(`Add synthesis instructions so the model knows what to do.`)
   }
-  if ((step.tools || []).some((tool) => typeof tool === 'string' ? tool === 'image_generation' : tool.type === 'image_generation')) {
+  if ((step.tools || []).some((tool) => {
+    return typeof tool === 'string' && tool === 'image_generation'
+  })) {
     if (step.tool_choice !== 'required') {
       warnings.push('Image generation works best when tool choice is set to "required".')
     }
