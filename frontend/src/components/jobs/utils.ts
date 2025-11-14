@@ -2,7 +2,7 @@
  * Utility functions for job components
  */
 
-import { MergedStep, StepStatus } from '@/types/job'
+import { ExecutionStep, MergedStep, StepStatus } from '@/types/job'
 
 /**
  * Check if a step has completed (has output)
@@ -56,12 +56,7 @@ export function getStepStatus(
 export function getPreviousSteps(
   currentStep: MergedStep,
   sortedSteps: MergedStep[]
-): Array<{
-  step_order: number
-  step_name: string
-  output: any
-  image_urls?: string[]
-}> {
+): ExecutionStep[] {
   const currentOrder = currentStep.step_order ?? 0
 
   return sortedSteps
@@ -76,6 +71,7 @@ export function getPreviousSteps(
     .sort((a, b) => (a.step_order ?? 0) - (b.step_order ?? 0))
     .map((step) => ({
       step_order: step.step_order ?? 0,
+      step_type: step.step_type,
       step_name: step.step_name || `Step ${step.step_order}`,
       output: step.output,
       image_urls: step.image_urls,
