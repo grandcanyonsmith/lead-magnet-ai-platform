@@ -43,8 +43,8 @@ export class WorkflowGenerationService {
   private formFieldGenerationService: FormFieldGenerationService;
 
   constructor(
-    private openai: OpenAI,
-    private storeUsageRecord: (
+    openai: OpenAI,
+    storeUsageRecord: (
       tenantId: string,
       serviceType: string,
       model: string,
