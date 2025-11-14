@@ -32,6 +32,15 @@ export default function SettingsPage() {
         logo_url: settings.logo_url || '',
         ghl_webhook_url: settings.ghl_webhook_url || '',
         lead_phone_field: settings.lead_phone_field || '',
+        // Brand information fields
+        brand_description: settings.brand_description || '',
+        brand_voice: settings.brand_voice || '',
+        target_audience: settings.target_audience || '',
+        company_values: settings.company_values || '',
+        industry: settings.industry || '',
+        company_size: settings.company_size || '',
+        brand_messaging_guidelines: settings.brand_messaging_guidelines || '',
+        icp_document_url: settings.icp_document_url || '',
       })
     }
   }, [settings])
@@ -47,7 +56,15 @@ export default function SettingsPage() {
       formData.default_ai_model !== (settings.default_ai_model || 'gpt-5') ||
       formData.logo_url !== (settings.logo_url || '') ||
       formData.ghl_webhook_url !== (settings.ghl_webhook_url || '') ||
-      formData.lead_phone_field !== (settings.lead_phone_field || '')
+      formData.lead_phone_field !== (settings.lead_phone_field || '') ||
+      formData.brand_description !== (settings.brand_description || '') ||
+      formData.brand_voice !== (settings.brand_voice || '') ||
+      formData.target_audience !== (settings.target_audience || '') ||
+      formData.company_values !== (settings.company_values || '') ||
+      formData.industry !== (settings.industry || '') ||
+      formData.company_size !== (settings.company_size || '') ||
+      formData.brand_messaging_guidelines !== (settings.brand_messaging_guidelines || '') ||
+      formData.icp_document_url !== (settings.icp_document_url || '')
     )
   }, [settings, formData])
 
@@ -88,6 +105,10 @@ export default function SettingsPage() {
       newErrors.ghl_webhook_url = 'Please enter a valid URL (must start with http:// or https://)'
     }
 
+    if (formData.icp_document_url && !/^https?:\/\/.+/.test(formData.icp_document_url)) {
+      newErrors.icp_document_url = 'Please enter a valid URL (must start with http:// or https://)'
+    }
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -107,6 +128,15 @@ export default function SettingsPage() {
       logo_url: formData.logo_url,
       ghl_webhook_url: formData.ghl_webhook_url,
       lead_phone_field: formData.lead_phone_field,
+      // Brand information fields
+      brand_description: formData.brand_description,
+      brand_voice: formData.brand_voice,
+      target_audience: formData.target_audience,
+      company_values: formData.company_values,
+      industry: formData.industry,
+      company_size: formData.company_size,
+      brand_messaging_guidelines: formData.brand_messaging_guidelines,
+      icp_document_url: formData.icp_document_url,
     })
 
     if (updatedSettings) {
