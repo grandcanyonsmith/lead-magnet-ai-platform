@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { isAuthenticated } from '@/lib/auth'
+import { isAuthenticated, useAuth } from '@/lib/auth'
 import { api } from '@/lib/api'
 import { OnboardingChecklist } from '@/components/OnboardingChecklist'
 import { TourProvider } from '@/components/TourProvider'
@@ -24,7 +24,8 @@ import {
   FiBarChart2,
   FiMenu,
   FiX,
-  FiSearch
+  FiSearch,
+  FiUsers
 } from 'react-icons/fi'
 
 export default function DashboardLayout({
@@ -34,6 +35,7 @@ export default function DashboardLayout({
 }) {
   const router = useRouter()
   const pathname = usePathname()
+  const { role } = useAuth()
   const [loading, setLoading] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [settings, setSettings] = useState<any>(null)
@@ -110,7 +112,7 @@ export default function DashboardLayout({
     setActiveTourId(null)
   }
 
-  const navItems = [
+  const baseNavItems = [
     { href: '/dashboard', label: 'Dashboard', icon: FiHome },
     { href: '/dashboard/workflows', label: 'Lead Magnets', icon: FiList },
     { href: '/dashboard/jobs', label: 'Generated Lead Magnets', icon: FiBarChart2 },
@@ -118,6 +120,12 @@ export default function DashboardLayout({
     { href: '/dashboard/files', label: 'Files', icon: FiFileText },
     { href: '/dashboard/settings', label: 'Settings', icon: FiSettings },
   ]
+  const navItems = role === 'SUPER_ADMIN'
+    ? [
+        ...baseNavItems,
+        { href: '/dashboard/agency/users', label: 'Agency Users', icon: FiUsers },
+      ]
+    : baseNavItems
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
@@ -282,4 +290,3 @@ export default function DashboardLayout({
     </TourProvider>
   )
 }
-
