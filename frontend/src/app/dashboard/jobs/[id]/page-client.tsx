@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { FiChevronDown, FiChevronUp, FiExternalLink } from 'react-icons/fi'
 import { useJobDetail } from '@/hooks/useJobDetail'
 import { useJobExecutionSteps } from '@/hooks/useJobExecutionSteps'
@@ -11,7 +11,7 @@ import { JobDetails } from '@/components/jobs/JobDetails'
 import { ExecutionSteps } from '@/components/jobs/ExecutionSteps'
 import { TechnicalDetails } from '@/components/jobs/TechnicalDetails'
 import { ResubmitModal } from '@/components/jobs/ResubmitModal'
-import { StepEditModal } from '@/components/jobs/StepEditModal'
+import FlowchartSidePanel from '@/app/dashboard/workflows/components/FlowchartSidePanel'
 import { api } from '@/lib/api'
 import { WorkflowStep } from '@/types'
 import { toast } from 'react-hot-toast'
@@ -20,8 +20,12 @@ export default function JobDetailClient() {
   const router = useRouter()
   const [showResubmitModal, setShowResubmitModal] = useState(false)
   const [editingStepIndex, setEditingStepIndex] = useState<number | null>(null)
+  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false)
+  const [showRerunConfirm, setShowRerunConfirm] = useState(false)
+  const [stepIndexForRerun, setStepIndexForRerun] = useState<number | null>(null)
   const [showDetails, setShowDetails] = useState(false)
   const [showFormSubmission, setShowFormSubmission] = useState(false)
+  const latestStepUpdateRef = useRef<WorkflowStep | null>(null)
   const {
     job,
     workflow,
@@ -61,6 +65,9 @@ export default function JobDetailClient() {
 
   const handleEditStep = (stepIndex: number) => {
     setEditingStepIndex(stepIndex)
+    setIsSidePanelOpen(true)
+    // Reset the ref when opening
+    latestStepUpdateRef.current = null
   }
 
   const handleSaveStep = async (updatedStep: WorkflowStep) => {
@@ -88,8 +95,15 @@ export default function JobDetailClient() {
       // Show success toast
       toast.success('Step updated successfully')
 
-      // Close the modal
+      // Store the step index for rerun confirmation
+      setStepIndexForRerun(editingStepIndex)
+
+      // Close the side panel
       setEditingStepIndex(null)
+      setIsSidePanelOpen(false)
+
+      // Show confirmation dialog for rerun
+      setShowRerunConfirm(true)
 
       // Refresh the page to show updated data
       router.refresh()
@@ -100,8 +114,34 @@ export default function JobDetailClient() {
     }
   }
 
-  const handleCancelEdit = () => {
+  const handleCancelEdit = async () => {
+    // FlowchartSidePanel's handleClose calls onChange with latest step, then onClose
+    // So latestStepUpdateRef should have the latest changes
+    // Only save if there are actual changes (ref is set)
+    if (latestStepUpdateRef.current && editingStepIndex !== null) {
+      const currentStep = workflow?.steps?.[editingStepIndex]
+      // Check if there are actual changes by comparing step data
+      const hasChanges = currentStep && JSON.stringify(currentStep) !== JSON.stringify(latestStepUpdateRef.current)
+      if (hasChanges) {
+        await handleSaveStep(latestStepUpdateRef.current)
+      }
+      latestStepUpdateRef.current = null
+    }
     setEditingStepIndex(null)
+    setIsSidePanelOpen(false)
+  }
+
+  const handleConfirmRerun = async () => {
+    if (stepIndexForRerun !== null && handleRerunStep) {
+      setShowRerunConfirm(false)
+      await handleRerunStep(stepIndexForRerun)
+      setStepIndexForRerun(null)
+    }
+  }
+
+  const handleCancelRerun = () => {
+    setShowRerunConfirm(false)
+    setStepIndexForRerun(null)
   }
 
 
@@ -142,16 +182,74 @@ export default function JobDetailClient() {
         isResubmitting={resubmitting}
       />
 
-      {/* Step Edit Modal */}
-      <StepEditModal
-        step={editingStepIndex !== null && workflow?.steps?.[editingStepIndex] ? workflow.steps[editingStepIndex] : null}
-        isOpen={editingStepIndex !== null}
-        onClose={handleCancelEdit}
-        onSave={handleSaveStep}
-        jobStatus={job.status}
-        allSteps={workflow?.steps || []}
-        currentStepIndex={editingStepIndex ?? undefined}
-      />
+      {/* Step Edit Side Panel */}
+      {editingStepIndex !== null && workflow?.steps?.[editingStepIndex] && (
+        <FlowchartSidePanel
+          step={workflow.steps[editingStepIndex]}
+          index={editingStepIndex}
+          totalSteps={workflow.steps.length}
+          allSteps={workflow.steps}
+          isOpen={isSidePanelOpen}
+          onClose={handleCancelEdit}
+          onChange={(index, updatedStep) => {
+            // Store the latest step update in a ref
+            // When onClose is called, it will have the latest changes
+            latestStepUpdateRef.current = updatedStep
+          }}
+          onDelete={() => {
+            // Disable delete in execution viewer context
+            toast.error('Cannot delete steps from execution viewer. Please edit the workflow template.')
+          }}
+          onMoveUp={() => {
+            // Disable move in execution viewer context
+            toast.error('Cannot reorder steps from execution viewer. Please edit the workflow template.')
+          }}
+          onMoveDown={() => {
+            // Disable move in execution viewer context
+            toast.error('Cannot reorder steps from execution viewer. Please edit the workflow template.')
+          }}
+          workflowId={workflow.workflow_id}
+        />
+      )}
+
+      {/* Rerun Confirmation Dialog */}
+      {showRerunConfirm && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex min-h-screen items-center justify-center p-4">
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+              onClick={handleCancelRerun}
+            />
+
+            {/* Modal */}
+            <div className="relative z-50 w-full max-w-md bg-white rounded-lg shadow-xl">
+              <div className="p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Step Updated Successfully
+                </h3>
+                <p className="text-sm text-gray-600 mb-6">
+                  Would you like to rerun this step with the updated configuration?
+                </p>
+                <div className="flex items-center justify-end gap-3">
+                  <button
+                    onClick={handleCancelRerun}
+                    className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleConfirmRerun}
+                    className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                  >
+                    Rerun Step
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Execution Steps */}
       {(workflow?.steps && Array.isArray(workflow.steps) && workflow.steps.length > 0) || 
