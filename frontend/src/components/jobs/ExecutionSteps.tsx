@@ -132,6 +132,8 @@ export function ExecutionSteps({
                   formSubmission={formSubmission}
                   imageArtifacts={imageArtifactsByStep.get(stepOrder) || []}
                   loadingImageArtifacts={loadingImageArtifacts}
+                  onEditStep={onEditStep}
+                  canEdit={canEdit}
                 />
 
                 {/* Show generated files/images in preview with deduplication */}

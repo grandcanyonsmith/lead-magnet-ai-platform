@@ -4,7 +4,7 @@
  */
 
 import React from 'react'
-import { FiCopy, FiChevronDown, FiChevronUp, FiLoader } from 'react-icons/fi'
+import { FiCopy, FiChevronDown, FiChevronUp, FiLoader, FiEdit2 } from 'react-icons/fi'
 import { formatStepInput, formatStepOutput } from '@/utils/jobFormatting'
 import { StepContent } from './StepContent'
 import { MergedStep, StepStatus } from '@/types/job'
@@ -23,6 +23,8 @@ interface StepInputOutputProps {
   formSubmission: any
   imageArtifacts?: Artifact[]
   loadingImageArtifacts?: boolean
+  onEditStep?: (stepIndex: number) => void
+  canEdit?: boolean
 }
 
 // Helper to get tool name from tool object or string
@@ -214,6 +216,8 @@ export function StepInputOutput({
   formSubmission,
   imageArtifacts = [],
   loadingImageArtifacts = false,
+  onEditStep,
+  canEdit = false,
 }: StepInputOutputProps) {
   const isPending = status === 'pending'
   const isCompleted = status === 'completed'
@@ -341,8 +345,22 @@ export function StepInputOutput({
           {isPending ? (
             /* For pending steps, show configuration only */
             <div className="border border-gray-200 rounded-xl overflow-hidden">
-              <div className="bg-gray-50 px-4 py-3 md:py-2 border-b border-gray-200">
+              <div className="bg-gray-50 px-4 py-3 md:py-2 border-b border-gray-200 flex items-center justify-between">
                 <span className="text-base md:text-sm font-semibold text-gray-700">Configuration</span>
+                {canEdit && onEditStep && step.step_type === 'workflow_step' && step.step_order !== undefined && step.step_order > 0 && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      const workflowStepIndex = step.step_order - 1
+                      onEditStep(workflowStepIndex)
+                    }}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-primary-600 hover:text-primary-800 hover:bg-primary-50 rounded-lg transition-colors"
+                    title="Edit workflow step"
+                  >
+                    <FiEdit2 className="w-4 h-4" />
+                    <span>Edit Step</span>
+                  </button>
+                )}
               </div>
               <div className="p-4 md:p-4 bg-white space-y-4 md:space-y-3">
                 {step.model && (
@@ -381,21 +399,37 @@ export function StepInputOutput({
                 <div className="bg-gray-50 px-4 py-3 md:px-4 md:py-2 border-b border-gray-200">
                   <div className="flex items-center justify-between gap-3 md:gap-2">
                     <span className="text-base md:text-sm font-semibold text-gray-700">Input</span>
-                    <button
-                      onClick={() => {
-                        const formatted = formatStepInput(step)
-                        const text = formatted.type === 'json' 
-                          ? JSON.stringify(formatted.content, null, 2)
-                          : typeof formatted.content === 'string' 
-                            ? formatted.content 
-                            : formatted.content.input || JSON.stringify(formatted.content, null, 2)
-                        onCopy(text)
-                      }}
-                      className="text-sm md:text-xs text-gray-500 hover:text-gray-700 active:text-gray-900 flex items-center space-x-2 md:space-x-1 px-3 py-3 md:px-2 md:py-1.5 rounded-lg hover:bg-gray-100 active:bg-gray-200 touch-target min-h-[48px] md:min-h-0"
-                    >
-                      <FiCopy className="w-5 h-5 md:w-4 md:h-4" />
-                      <span className="md:inline">Copy</span>
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {canEdit && onEditStep && step.step_type === 'workflow_step' && step.step_order !== undefined && step.step_order > 0 && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            const workflowStepIndex = step.step_order - 1
+                            onEditStep(workflowStepIndex)
+                          }}
+                          className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-primary-600 hover:text-primary-800 hover:bg-primary-50 rounded transition-colors"
+                          title="Edit workflow step"
+                        >
+                          <FiEdit2 className="w-3.5 h-3.5" />
+                          <span>Edit</span>
+                        </button>
+                      )}
+                      <button
+                        onClick={() => {
+                          const formatted = formatStepInput(step)
+                          const text = formatted.type === 'json' 
+                            ? JSON.stringify(formatted.content, null, 2)
+                            : typeof formatted.content === 'string' 
+                              ? formatted.content 
+                              : formatted.content.input || JSON.stringify(formatted.content, null, 2)
+                          onCopy(text)
+                        }}
+                        className="text-sm md:text-xs text-gray-500 hover:text-gray-700 active:text-gray-900 flex items-center space-x-2 md:space-x-1 px-3 py-3 md:px-2 md:py-1.5 rounded-lg hover:bg-gray-100 active:bg-gray-200 touch-target min-h-[48px] md:min-h-0"
+                      >
+                        <FiCopy className="w-5 h-5 md:w-4 md:h-4" />
+                        <span className="md:inline">Copy</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
                 <div className="p-4 md:p-4 bg-white max-h-[450px] md:max-h-96 overflow-y-auto">
@@ -412,21 +446,37 @@ export function StepInputOutput({
                 <div className="bg-gray-50 px-4 py-3 md:px-4 md:py-2 border-b border-gray-200">
                   <div className="flex items-center justify-between gap-3 md:gap-2">
                     <span className="text-base md:text-sm font-semibold text-gray-700">Output</span>
-                    <button
-                      onClick={() => {
-                        const formatted = formatStepOutput(step)
-                        const text = formatted.type === 'json' 
-                          ? JSON.stringify(formatted.content, null, 2)
-                          : typeof formatted.content === 'string' 
-                            ? formatted.content 
-                            : JSON.stringify(formatted.content, null, 2)
-                        onCopy(text)
-                      }}
-                      className="text-sm md:text-xs text-gray-500 hover:text-gray-700 active:text-gray-900 flex items-center space-x-2 md:space-x-1 px-3 py-3 md:px-2 md:py-1.5 rounded-lg hover:bg-gray-100 active:bg-gray-200 touch-target min-h-[48px] md:min-h-0"
-                    >
-                      <FiCopy className="w-5 h-5 md:w-4 md:h-4" />
-                      <span className="md:inline">Copy</span>
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {canEdit && onEditStep && step.step_type === 'workflow_step' && step.step_order !== undefined && step.step_order > 0 && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            const workflowStepIndex = step.step_order - 1
+                            onEditStep(workflowStepIndex)
+                          }}
+                          className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-primary-600 hover:text-primary-800 hover:bg-primary-50 rounded transition-colors"
+                          title="Edit workflow step"
+                        >
+                          <FiEdit2 className="w-3.5 h-3.5" />
+                          <span>Edit</span>
+                        </button>
+                      )}
+                      <button
+                        onClick={() => {
+                          const formatted = formatStepOutput(step)
+                          const text = formatted.type === 'json' 
+                            ? JSON.stringify(formatted.content, null, 2)
+                            : typeof formatted.content === 'string' 
+                              ? formatted.content 
+                              : JSON.stringify(formatted.content, null, 2)
+                          onCopy(text)
+                        }}
+                        className="text-sm md:text-xs text-gray-500 hover:text-gray-700 active:text-gray-900 flex items-center space-x-2 md:space-x-1 px-3 py-3 md:px-2 md:py-1.5 rounded-lg hover:bg-gray-100 active:bg-gray-200 touch-target min-h-[48px] md:min-h-0"
+                      >
+                        <FiCopy className="w-5 h-5 md:w-4 md:h-4" />
+                        <span className="md:inline">Copy</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
                 <div className="p-4 md:p-4 bg-white max-h-[450px] md:max-h-96 overflow-y-auto">
