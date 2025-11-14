@@ -142,6 +142,27 @@ class StepProcessor:
         # Current step context (empty for subsequent steps, initial_context for first step)
         current_step_context = ContextBuilder.get_current_step_context(step_index, initial_context)
         
+        # Collect previous image URLs for image generation steps
+        previous_image_urls = []
+        # Check if this step uses image_generation tool
+        has_image_generation = any(
+            isinstance(t, dict) and t.get('type') == 'image_generation' 
+            for t in step_tools
+        ) if step_tools else False
+        
+        if has_image_generation:
+            previous_image_urls = ContextBuilder.collect_previous_image_urls(
+                execution_steps=execution_steps,
+                current_step_order=step_index + 1
+            )
+            logger.info(f"[StepProcessor] Collected previous image URLs for image generation step (batch mode)", extra={
+                'job_id': job_id,
+                'step_index': step_index,
+                'step_name': step_name,
+                'previous_image_urls_count': len(previous_image_urls),
+                'previous_image_urls': previous_image_urls
+            })
+        
         # Generate step output
         step_output, usage_info, request_details, response_details = self.ai_service.generate_report(
             model=step_model,
@@ -151,7 +172,8 @@ class StepProcessor:
             tools=step_tools,
             tool_choice=step_tool_choice,
             tenant_id=tenant_id,
-            job_id=job_id
+            job_id=job_id,
+            previous_image_urls=previous_image_urls if has_image_generation else None
         )
         
         logger.info("[StepProcessor] Received response_details from AI service", extra={
@@ -606,6 +628,27 @@ class StepProcessor:
         # Current step context
         current_step_context = ContextBuilder.get_current_step_context(step_index, initial_context)
         
+        # Collect previous image URLs for image generation steps
+        previous_image_urls = []
+        # Check if this step uses image_generation tool
+        has_image_generation = any(
+            isinstance(t, dict) and t.get('type') == 'image_generation' 
+            for t in step_tools
+        ) if step_tools else False
+        
+        if has_image_generation:
+            previous_image_urls = ContextBuilder.collect_previous_image_urls(
+                execution_steps=execution_steps,
+                current_step_order=step_index + 1
+            )
+            logger.info(f"[StepProcessor] Collected previous image URLs for image generation step", extra={
+                'job_id': job_id,
+                'step_index': step_index,
+                'step_name': step_name,
+                'previous_image_urls_count': len(previous_image_urls),
+                'previous_image_urls': previous_image_urls
+            })
+        
         logger.info(f"[StepProcessor] Processing step {step_index + 1}", extra={
             'job_id': job_id,
             'step_index': step_index,
@@ -615,7 +658,9 @@ class StepProcessor:
             'step_tools_count': len(step_tools) if step_tools else 0,
             'step_tools': [t.get('type') if isinstance(t, dict) else t for t in step_tools] if step_tools else [],
             'current_step_context_length': len(current_step_context),
-            'previous_context_length': len(all_previous_context)
+            'previous_context_length': len(all_previous_context),
+            'has_image_generation': has_image_generation,
+            'previous_image_urls_count': len(previous_image_urls)
         })
         
         # Generate step output
@@ -628,7 +673,8 @@ class StepProcessor:
                 tools=step_tools,
                 tool_choice=step_tool_choice,
                 tenant_id=job['tenant_id'],
-                job_id=job_id
+                job_id=job_id,
+                previous_image_urls=previous_image_urls if has_image_generation else None
             )
             
             logger.info("[StepProcessor] Received response_details from AI service", extra={
