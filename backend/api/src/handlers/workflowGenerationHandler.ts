@@ -1,8 +1,9 @@
 import { APIGatewayProxyResultV2 } from 'aws-lambda';
-import { workflowsController } from '../controllers/workflows';
+import { workflowAIController } from '../controllers/workflowAIController';
 import { db } from '../utils/db';
+import { env } from '../utils/env';
 
-const JOBS_TABLE = process.env.JOBS_TABLE || 'leadmagnet-jobs';
+const JOBS_TABLE = env.jobsTable;
 
 /**
  * Handle workflow generation job (async Lambda invocation).
@@ -26,7 +27,7 @@ export async function handleWorkflowGenerationJob(event: any): Promise<APIGatewa
     finalTenantId = finalTenantId || job.tenant_id;
   }
 
-  await workflowsController.processWorkflowGenerationJob(
+  await workflowAIController.processWorkflowGenerationJob(
     job_id,
     finalTenantId,
     finalDescription,
