@@ -39,7 +39,7 @@ export const handler = async (
       {
         allowedOrigins: ['*'],
         allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-        allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Session-Id'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Session-Id', 'x-view-mode', 'x-selected-customer-id'],
         allowCredentials: false,
       }
     );
@@ -67,7 +67,7 @@ export const handler = async (
     const corsHeaders = handleCORS(origin, {
       allowedOrigins: ['*'],
       allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Session-Id'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Session-Id', 'x-view-mode', 'x-selected-customer-id'],
       allowCredentials: false,
     });
 
@@ -94,7 +94,7 @@ export const handler = async (
     const corsHeaders = handleCORS(origin, {
       allowedOrigins: ['*'],
       allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Session-Id'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Session-Id', 'x-view-mode', 'x-selected-customer-id'],
       allowCredentials: false,
     });
 
