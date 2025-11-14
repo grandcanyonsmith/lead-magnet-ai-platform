@@ -101,10 +101,11 @@ export function DeliverySettings({
             </button>
           </div>
           {settings.webhook_url && (
-            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-xs font-medium text-blue-900 mb-1">Example Usage:</p>
-              <pre className="text-xs text-blue-800 overflow-x-auto">
-                {`curl -X POST "${settings.webhook_url}" \\
+            <>
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-xs font-medium text-blue-900 mb-1">Example Usage:</p>
+                <pre className="text-xs text-blue-800 overflow-x-auto">
+                  {`curl -X POST "${settings.webhook_url}" \\
   -H "Content-Type: application/json" \\
   -d '{
     "workflow_id": "wf_xxxxx",
@@ -114,8 +115,10 @@ export function DeliverySettings({
       "phone": "+14155551234"
     }
   }'`}
-              </pre>
-            </div>
+                </pre>
+              </div>
+              <WebhookTester webhookUrl={settings.webhook_url} />
+            </>
           )}
         </div>
 

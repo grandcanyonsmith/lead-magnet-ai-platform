@@ -62,6 +62,9 @@ export function FormField({
           className={baseInputClasses}
           rows={4}
           data-tour={dataTour}
+          aria-describedby={helpText && !error ? `${inputId}-help` : undefined}
+          aria-invalid={error ? 'true' : 'false'}
+          aria-required={required ? 'true' : 'false'}
         />
       )
     }
@@ -77,6 +80,9 @@ export function FormField({
           disabled={disabled}
           className={baseInputClasses}
           data-tour={dataTour}
+          aria-describedby={helpText && !error ? `${inputId}-help` : undefined}
+          aria-invalid={error ? 'true' : 'false'}
+          aria-required={required ? 'true' : 'false'}
         >
           {options.map((option) => (
             <option key={option.value} value={option.value}>
@@ -87,37 +93,42 @@ export function FormField({
       )
     }
 
-    return (
-      <input
-        id={inputId}
-        name={name}
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        required={required}
-        disabled={disabled}
-        readOnly={readOnly}
-        className={baseInputClasses}
-        data-tour={dataTour}
-      />
-    )
+      return (
+        <input
+          id={inputId}
+          name={name}
+          type={type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          required={required}
+          disabled={disabled}
+          readOnly={readOnly}
+          className={baseInputClasses}
+          data-tour={dataTour}
+          aria-describedby={helpText && !error ? `${inputId}-help` : undefined}
+          aria-invalid={error ? 'true' : 'false'}
+          aria-required={required ? 'true' : 'false'}
+        />
+      )
   }
 
   return (
     <div>
       <label htmlFor={inputId} className="block text-sm font-medium text-gray-700 mb-2">
         {label}
-        {required && <span className="text-red-500 ml-1">*</span>}
+        {required && <span className="text-red-500 ml-1" aria-label="required">*</span>}
       </label>
       {renderInput()}
       {error && (
-        <p className="mt-1 text-sm text-red-600" role="alert">
+        <p className="mt-1 text-sm text-red-600" role="alert" aria-live="polite">
           {error}
         </p>
       )}
       {helpText && !error && (
-        <p className="mt-1 text-sm text-gray-500">{helpText}</p>
+        <p className="mt-1 text-sm text-gray-500" id={`${inputId}-help`}>
+          {helpText}
+        </p>
       )}
     </div>
   )
