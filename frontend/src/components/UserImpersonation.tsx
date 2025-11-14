@@ -19,11 +19,6 @@ export function UserImpersonation() {
   const [isImpersonating, setIsImpersonating] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  // Only show for admins
-  if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
-    return null
-  }
-
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -40,14 +35,6 @@ export function UserImpersonation() {
     }
   }, [isOpen])
 
-  useEffect(() => {
-    if (searchTerm.length >= 2) {
-      searchUsers()
-    } else {
-      setUsers([])
-    }
-  }, [searchTerm])
-
   const searchUsers = async () => {
     setIsLoading(true)
     try {
@@ -61,6 +48,20 @@ export function UserImpersonation() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  useEffect(() => {
+    if (searchTerm.length >= 2) {
+      searchUsers()
+    } else {
+      setUsers([])
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm])
+
+  // Only show for admins - must be after all hooks
+  if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
+    return null
   }
 
   const handleImpersonate = async (targetUserId: string) => {
