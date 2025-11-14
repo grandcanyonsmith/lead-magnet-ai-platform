@@ -29,13 +29,20 @@ export class BaseApiClient {
   }
 
   private setupInterceptors(): void {
-    // Request interceptor - add auth token
+    // Request interceptor - add auth token and session ID
     this.client.interceptors.request.use(
       (config) => {
         const token = this.tokenProvider.getToken()
         if (token) {
           config.headers.Authorization = `Bearer ${token}`
         }
+        
+        // Add session ID if present (for impersonation)
+        const sessionId = localStorage.getItem('impersonation_session_id')
+        if (sessionId) {
+          config.headers['X-Session-Id'] = sessionId
+        }
+        
         return config
       },
       (error) => Promise.reject(error)

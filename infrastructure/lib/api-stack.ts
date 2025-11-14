@@ -112,7 +112,7 @@ export class ApiStack extends cdk.Stack {
           apigateway.CorsHttpMethod.PATCH,
           apigateway.CorsHttpMethod.OPTIONS,
         ],
-        allowHeaders: ['content-type', 'authorization', 'x-api-key'],
+        allowHeaders: ['content-type', 'authorization', 'x-api-key', 'x-session-id'],
         maxAge: cdk.Duration.days(1),
       },
     });
@@ -140,6 +140,25 @@ export class ApiStack extends cdk.Stack {
         apigateway.HttpMethod.POST,
       ],
       integration: lambdaIntegration,
+    });
+
+    // Authenticated Routes (require JWT auth) - /files and /me
+    this.api.addRoutes({
+      path: '/files/{proxy+}',
+      methods: [
+        apigateway.HttpMethod.GET,
+        apigateway.HttpMethod.POST,
+        apigateway.HttpMethod.DELETE,
+      ],
+      integration: lambdaIntegration,
+      authorizer: jwtAuthorizer,
+    });
+
+    this.api.addRoutes({
+      path: '/me',
+      methods: [apigateway.HttpMethod.GET],
+      integration: lambdaIntegration,
+      authorizer: jwtAuthorizer,
     });
 
     // Admin Routes (require JWT auth) - catch-all for /admin/*
