@@ -1,4 +1,6 @@
 import { jobsController } from '../controllers/jobs';
+import { executionStepsController } from '../controllers/executionStepsController';
+import { jobRerunController } from '../controllers/jobRerunController';
 import { router } from './router';
 import { ApiError } from '../utils/errors';
 import { logger } from '../utils/logger';
@@ -25,13 +27,13 @@ export function registerJobRoutes(): void {
     if (stepIndex === undefined || stepIndex === null) {
       throw new ApiError('step_index is required in request body', 400);
     }
-    return await jobsController.rerunStep(tenantId!, params.id, stepIndex);
+    return await jobRerunController.rerunStep(tenantId!, params.id, stepIndex);
   });
 
   // Quick edit step
   router.register('POST', '/admin/jobs/:id/quick-edit-step', async (params, body, _query, tenantId) => {
     logger.info('[Router] Matched /admin/jobs/:id/quick-edit-step route', { id: params.id });
-    return await jobsController.quickEditStep(tenantId!, params.id, body);
+    return await executionStepsController.quickEditStep(tenantId!, params.id, body);
   });
 
   // Get job document
@@ -41,7 +43,7 @@ export function registerJobRoutes(): void {
 
   // Get execution steps
   router.register('GET', '/admin/jobs/:id/execution-steps', async (params, _body, _query, tenantId) => {
-    return await jobsController.getExecutionSteps(tenantId!, params.id);
+    return await executionStepsController.getExecutionSteps(tenantId!, params.id);
   });
 
   // Get job
