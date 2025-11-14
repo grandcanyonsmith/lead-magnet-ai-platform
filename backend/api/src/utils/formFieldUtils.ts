@@ -7,8 +7,9 @@ export interface FormField {
   field_id: string;
   field_type: string;
   label: string;
-  placeholder: string;
-  required: boolean;
+  placeholder?: string;
+  required?: boolean;
+  [key: string]: any; // Allow additional fields
 }
 
 /**
@@ -24,10 +25,10 @@ const REQUIRED_FIELDS: FormField[] = [
  * Ensures that required fields (name, email, phone) are present in the form fields schema.
  * Adds missing required fields at the beginning of the fields array.
  * 
- * @param fields - Array of existing form fields
+ * @param fields - Array of existing form fields (can be any form field structure)
  * @returns Array with required fields added if missing
  */
-export function ensureRequiredFields(fields: FormField[]): FormField[] {
+export function ensureRequiredFields(fields: any[]): any[] {
   const existingFieldIds = new Set(fields.map((f: any) => f.field_id));
   const fieldsToAdd = REQUIRED_FIELDS.filter(f => !existingFieldIds.has(f.field_id));
   
