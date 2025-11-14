@@ -347,7 +347,7 @@ export function StepInputOutput({
             <div className="border border-gray-200 rounded-xl overflow-hidden">
               <div className="bg-gray-50 px-4 py-3 md:py-2 border-b border-gray-200 flex items-center justify-between">
                 <span className="text-base md:text-sm font-semibold text-gray-700">Configuration</span>
-                {canEdit && onEditStep && step.step_type === 'workflow_step' && step.step_order !== undefined && step.step_order > 0 && (
+                {canEdit && onEditStep && (step.step_type === 'workflow_step' || step.step_type === 'ai_generation' || step.step_type === 'webhook') && step.step_order !== undefined && step.step_order > 0 && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
@@ -400,7 +400,7 @@ export function StepInputOutput({
                   <div className="flex items-center justify-between gap-3 md:gap-2">
                     <span className="text-base md:text-sm font-semibold text-gray-700">Input</span>
                     <div className="flex items-center gap-2">
-                      {canEdit && onEditStep && step.step_type === 'workflow_step' && step.step_order !== undefined && step.step_order > 0 && (
+                      {canEdit && onEditStep && (step.step_type === 'workflow_step' || step.step_type === 'ai_generation' || step.step_type === 'webhook') && step.step_order !== undefined && step.step_order > 0 && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation()
@@ -447,7 +447,7 @@ export function StepInputOutput({
                   <div className="flex items-center justify-between gap-3 md:gap-2">
                     <span className="text-base md:text-sm font-semibold text-gray-700">Output</span>
                     <div className="flex items-center gap-2">
-                      {canEdit && onEditStep && step.step_type === 'workflow_step' && step.step_order !== undefined && step.step_order > 0 && (
+                      {canEdit && onEditStep && (step.step_type === 'workflow_step' || step.step_type === 'ai_generation' || step.step_type === 'webhook') && step.step_order !== undefined && step.step_order > 0 && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation()
