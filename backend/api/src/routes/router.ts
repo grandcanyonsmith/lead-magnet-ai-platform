@@ -133,6 +133,7 @@ class SimpleRouter {
         routePath: route.path,
         params,
         hasAuth: !!authContext,
+        role: authContext?.role,
         effectiveTenantId,
         customerId: authContext?.customerId,
         viewMode: authContext?.viewMode,

@@ -76,11 +76,44 @@ export async function extractAuthContext(event: APIGatewayProxyEventV2): Promise
 
   const realUserId = claims.sub as string;
   let role = (claims['custom:role'] as string) || 'USER';
-  const emailClaim =
+  let emailClaim =
     (claims.email as string | undefined) ||
     (claims['custom:email'] as string | undefined);
 
+  // If email not in JWT claims, try to get from user record
+  if (!emailClaim) {
+    try {
+      const user = await db.get(USERS_TABLE, { user_id: realUserId });
+      if (user && user.email) {
+        emailClaim = user.email;
+        logger.info('[AuthContext] Retrieved email from user record', {
+          realUserId,
+          email: emailClaim,
+        });
+      }
+    } catch (error) {
+      logger.warn('[AuthContext] Could not fetch user email from database', {
+        error: error instanceof Error ? error.message : String(error),
+        realUserId,
+      });
+    }
+  }
+
+  logger.info('[AuthContext] Extracting auth context', {
+    realUserId,
+    roleFromJWT: role,
+    emailClaim,
+    emailFromClaims: claims.email,
+    customEmailFromClaims: claims['custom:email'],
+    isInAllowlist: emailClaim ? isForcedSuperAdmin(emailClaim) : false,
+    allowlistEmails: Array.from(superAdminEmailSet),
+  });
+
   if (isForcedSuperAdmin(emailClaim) && role !== 'SUPER_ADMIN') {
+    logger.info('[AuthContext] Forcing SUPER_ADMIN based on email allowlist', {
+      emailClaim,
+      previousRole: role,
+    });
     role = 'SUPER_ADMIN';
     await ensureUserIsPersistedAsSuperAdmin(realUserId);
   }
