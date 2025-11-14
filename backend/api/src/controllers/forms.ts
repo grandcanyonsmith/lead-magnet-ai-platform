@@ -6,7 +6,7 @@ import { RouteResponse } from '../routes';
 import { logger } from '../utils/logger';
 import { ensureRequiredFields } from '../utils/formFieldUtils';
 import { cssGenerationService } from '../services/cssGenerationService';
-import { formSubmissionService } from '../services/formSubmissionService';
+import { formSubmissionService, FormSubmissionData } from '../services/formSubmissionService';
 
 const FORMS_TABLE = process.env.FORMS_TABLE!;
 const USER_SETTINGS_TABLE = process.env.USER_SETTINGS_TABLE!;
@@ -141,7 +141,7 @@ class FormsController {
     // Submit form and start job processing
     const result = await formSubmissionService.submitFormAndStartJob(
       form,
-      submission_data,
+      submission_data as FormSubmissionData,
       sourceIp,
       form.thank_you_message,
       form.redirect_url
