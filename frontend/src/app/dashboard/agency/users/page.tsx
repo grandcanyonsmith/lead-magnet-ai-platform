@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth/context'
 import { api } from '@/lib/api'
-import { FiUsers, FiSearch, FiEdit2, FiShield, FiUser, FiUserCheck } from 'react-icons/fi'
+import { FiUsers, FiSearch, FiEdit2, FiShield, FiUser, FiUserCheck, FiLogIn } from 'react-icons/fi'
 
 interface User {
   user_id: string
@@ -15,13 +16,15 @@ interface User {
 }
 
 export default function AgencyUsersPage() {
-  const { role, viewMode } = useAuth()
+  const { role, viewMode, refreshAuth, setViewMode } = useAuth()
+  const router = useRouter()
   const [users, setUsers] = useState<User[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [newRole, setNewRole] = useState<string>('')
   const [isSaving, setIsSaving] = useState(false)
+  const [impersonatingUserId, setImpersonatingUserId] = useState<string | null>(null)
 
   const loadUsers = async () => {
     setIsLoading(true)
@@ -105,6 +108,31 @@ export default function AgencyUsersPage() {
     }
   }
 
+  const handleImpersonate = async (user: User) => {
+    setImpersonatingUserId(user.user_id)
+    try {
+      const response = await api.post<{ session_id: string }>('/admin/impersonate', {
+        targetUserId: user.user_id,
+      })
+
+      localStorage.setItem('impersonation_session_id', response.session_id)
+      await refreshAuth()
+
+      if (user.customer_id) {
+        setViewMode('subaccount', user.customer_id)
+      } else {
+        setViewMode('subaccount')
+      }
+
+      router.push('/dashboard')
+    } catch (error) {
+      console.error('Error starting impersonation from agency table:', error)
+      alert('Failed to login as this user. Please try again.')
+    } finally {
+      setImpersonatingUserId(null)
+    }
+  }
+
   return (
     <div className="max-w-7xl mx-auto">
       <div className="mb-6">
@@ -185,13 +213,23 @@ export default function AgencyUsersPage() {
                       {new Date(user.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button
-                        onClick={() => handleEditUser(user)}
-                        className="text-primary-600 hover:text-primary-900 flex items-center gap-1"
-                      >
-                        <FiEdit2 className="w-4 h-4" />
-                        Edit Role
-                      </button>
+                      <div className="flex items-center justify-end gap-4">
+                        <button
+                          onClick={() => handleEditUser(user)}
+                          className="text-primary-600 hover:text-primary-900 flex items-center gap-1"
+                        >
+                          <FiEdit2 className="w-4 h-4" />
+                          Edit Role
+                        </button>
+                        <button
+                          onClick={() => handleImpersonate(user)}
+                          disabled={impersonatingUserId === user.user_id}
+                          className="text-indigo-600 hover:text-indigo-900 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <FiLogIn className="w-4 h-4" />
+                          {impersonatingUserId === user.user_id ? 'Logging in...' : 'Log in as'}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -252,4 +290,3 @@ export default function AgencyUsersPage() {
     </div>
   )
 }
-
