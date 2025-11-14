@@ -4,6 +4,7 @@ import { settingsController } from '../controllers/settings';
 import { billingController } from '../controllers/billing';
 import { analyticsController } from '../controllers/analytics';
 import { notificationsController } from '../controllers/notifications';
+import { adminController } from '../controllers/admin';
 import { router } from './router';
 import { logger } from '../utils/logger';
 
@@ -78,5 +79,11 @@ export function registerAdminRoutes(): void {
 
   router.register('PUT', '/admin/notifications/read-all', async (_params, _body, _query, tenantId) => {
     return await notificationsController.markAllAsRead(tenantId!);
+  });
+
+  // Admin users listing
+  router.register('GET', '/admin/users', async (_params, _body, query, tenantId, context) => {
+    logger.info('[Admin Routes] GET /admin/users');
+    return await adminController.listUsers(_params, _body, query, tenantId, context);
   });
 }

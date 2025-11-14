@@ -4,12 +4,19 @@ import { logger } from './logger';
 /**
  * Extract tenant ID from JWT claims with fallback logic.
  * Returns undefined if no tenant ID can be determined (for public routes).
+ * 
+ * @deprecated Use extractAuthContext instead for new code. This function is kept for backward compatibility.
  */
 export function extractTenantId(event: APIGatewayProxyEventV2): string | undefined {
   const authorizer = (event.requestContext as any)?.authorizer;
   const claims = authorizer?.jwt?.claims || {};
 
-  // Try custom tenant_id attribute first
+  // Try customer_id first (new approach)
+  if (claims['custom:customer_id']) {
+    return claims['custom:customer_id'] as string;
+  }
+
+  // Try custom tenant_id attribute (legacy)
   if (claims['custom:tenant_id']) {
     return claims['custom:tenant_id'] as string;
   }

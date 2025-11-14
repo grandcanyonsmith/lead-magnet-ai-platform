@@ -27,6 +27,11 @@ export const TABLE_NAMES = {
   USER_SETTINGS: 'leadmagnet-user-settings',
   USAGE_RECORDS: 'leadmagnet-usage-records',
   NOTIFICATIONS: 'leadmagnet-notifications',
+  USERS: 'leadmagnet-users',
+  CUSTOMERS: 'leadmagnet-customers',
+  FILES: 'leadmagnet-files',
+  IMPERSONATION_LOGS: 'leadmagnet-impersonation-logs',
+  SESSIONS: 'leadmagnet-sessions',
 } as const;
 
 /**
@@ -137,6 +142,11 @@ export const TABLE_ENV_VAR_MAP: Record<string, string> = {
   userSettings: 'USER_SETTINGS_TABLE',
   usageRecords: 'USAGE_RECORDS_TABLE',
   notifications: 'NOTIFICATIONS_TABLE',
+  users: 'USERS_TABLE',
+  customers: 'CUSTOMERS_TABLE',
+  files: 'FILES_TABLE',
+  impersonationLogs: 'IMPERSONATION_LOGS_TABLE',
+  sessions: 'SESSIONS_TABLE',
 } as const;
 
 /**

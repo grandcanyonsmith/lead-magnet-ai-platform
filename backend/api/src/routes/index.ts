@@ -7,6 +7,9 @@ import { registerFormRoutes } from './formRoutes';
 import { registerTemplateRoutes } from './templateRoutes';
 import { registerJobRoutes } from './jobRoutes';
 import { registerAdminRoutes } from './adminRoutes';
+import { registerFileRoutes } from './fileRoutes';
+import { registerImpersonationRoutes } from './impersonationRoutes';
+import { registerAuthRoutes } from './authRoutes';
 
 // Re-export RouteResponse for use in other modules
 export type { RouteResponse };
@@ -18,6 +21,9 @@ registerFormRoutes();
 registerTemplateRoutes();
 registerJobRoutes();
 registerAdminRoutes();
+registerFileRoutes();
+registerImpersonationRoutes();
+registerAuthRoutes();
 
 /**
  * Main router function.
