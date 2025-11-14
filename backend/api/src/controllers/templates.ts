@@ -3,7 +3,6 @@ import { db } from '../utils/db';
 import { validate, createTemplateSchema, updateTemplateSchema } from '../utils/validation';
 import { ApiError } from '../utils/errors';
 import { RouteResponse } from '../routes';
-import { logger } from '../utils/logger';
 import { templateAIService } from '../services/templateAIService';
 
 const TEMPLATES_TABLE = process.env.TEMPLATES_TABLE!;
