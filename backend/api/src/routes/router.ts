@@ -127,16 +127,26 @@ class SimpleRouter {
       const effectiveTenantId = authContext?.customerId || tenantId;
 
       // Execute handler
-      logger.debug('[Router] Matched route', {
+      logger.info('[Router] Matched route', {
         method,
         path,
         routePath: route.path,
         params,
         hasAuth: !!authContext,
+        effectiveTenantId,
+        customerId: authContext?.customerId,
+        viewMode: authContext?.viewMode,
+        selectedCustomerId: authContext?.selectedCustomerId,
       });
 
       return await route.handler(params, body, query, effectiveTenantId, context);
     }
+
+    logger.warn('[Router] No route matched', {
+      method,
+      path,
+      registeredRoutes: this.routes.map(r => `${r.method} ${r.path}`),
+    });
 
     throw new ApiError("This page doesn't exist", 404);
   }

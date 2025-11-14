@@ -147,7 +147,18 @@ class FilesController {
     _tenantId: string | undefined,
     context?: RequestContext
   ): Promise<RouteResponse> {
+    logger.info('[Files] List files called', {
+      hasContext: !!context,
+      hasAuth: !!context?.auth,
+      customerId: context?.auth?.customerId,
+      viewMode: context?.auth?.viewMode,
+      selectedCustomerId: context?.auth?.selectedCustomerId,
+      tenantId: _tenantId,
+    });
+
     const customerId = getCustomerId(context);
+
+    logger.info('[Files] Using customerId', { customerId });
 
     const limit = parseInt(query.limit || '50', 10);
     const fileType = query.fileType;
