@@ -2,7 +2,6 @@ import { getOpenAIClient } from './openaiService';
 import { callResponsesWithTimeout } from '../utils/openaiHelpers';
 import { calculateOpenAICost } from './costService';
 import { usageTrackingService } from './usageTrackingService';
-import { cssGenerationService } from './cssGenerationService';
 import { logger } from '../utils/logger';
 import { ApiError } from '../utils/errors';
 
