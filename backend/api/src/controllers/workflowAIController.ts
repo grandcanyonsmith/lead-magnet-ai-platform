@@ -12,8 +12,10 @@ import { logger } from '../utils/logger';
 import { getOpenAIClient } from '../services/openaiService';
 import { usageTrackingService } from '../services/usageTrackingService';
 import { env } from '../utils/env';
+import { fetchICPContent, buildBrandContext } from '../utils/icpFetcher';
 
 const JOBS_TABLE = env.jobsTable;
+const USER_SETTINGS_TABLE = process.env.USER_SETTINGS_TABLE!;
 const lambdaClient = new LambdaClient({ region: env.awsRegion });
 
 /**
@@ -169,19 +171,58 @@ export class WorkflowAIController {
       const workflowStartTime = Date.now();
       logger.info('[Workflow Generation] OpenAI client initialized');
 
+      // Fetch settings to get brand context and ICP URL
+      const settings = await db.get(USER_SETTINGS_TABLE, { tenant_id: tenantId });
+      const brandContext = settings ? buildBrandContext(settings) : '';
+      
+      // Fetch ICP document content if URL is provided
+      let icpContext: string | null = null;
+      if (settings?.icp_document_url) {
+        logger.info('[Workflow Generation] Fetching ICP document', { url: settings.icp_document_url });
+        icpContext = await fetchICPContent(settings.icp_document_url);
+        if (icpContext) {
+          logger.info('[Workflow Generation] ICP document fetched successfully', { contentLength: icpContext.length });
+        } else {
+          logger.warn('[Workflow Generation] Failed to fetch ICP document, continuing without it');
+        }
+      }
+
       // Generate workflow config first (needed for form generation)
-      const workflowResult = await generationService.generateWorkflowConfig(description, model, tenantId, jobId);
+      const workflowResult = await generationService.generateWorkflowConfig(
+        description,
+        model,
+        tenantId,
+        jobId,
+        brandContext || undefined,
+        icpContext || undefined
+      );
       
       // Generate template HTML, metadata, and form fields in parallel
       const [templateHtmlResult, templateMetadataResult, formFieldsResult] = await Promise.all([
-        generationService.generateTemplateHTML(description, model, tenantId, jobId),
-        generationService.generateTemplateMetadata(description, model, tenantId, jobId),
+        generationService.generateTemplateHTML(
+          description,
+          model,
+          tenantId,
+          jobId,
+          brandContext || undefined,
+          icpContext || undefined
+        ),
+        generationService.generateTemplateMetadata(
+          description,
+          model,
+          tenantId,
+          jobId,
+          brandContext || undefined,
+          icpContext || undefined
+        ),
         generationService.generateFormFields(
           description,
           workflowResult.workflowData.workflow_name,
           model,
           tenantId,
-          jobId
+          jobId,
+          brandContext || undefined,
+          icpContext || undefined
         ),
       ]);
 

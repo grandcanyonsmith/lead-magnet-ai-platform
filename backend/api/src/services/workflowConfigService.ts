@@ -35,9 +35,19 @@ export class WorkflowConfigService {
     description: string,
     model: string,
     tenantId: string,
-    jobId?: string
+    jobId?: string,
+    brandContext?: string,
+    icpContext?: string
   ): Promise<{ workflowData: any; usageInfo: UsageInfo }> {
-    const workflowPrompt = `You are an expert at creating AI-powered lead magnets. Based on this description: "${description}", generate a complete lead magnet configuration with workflow steps.
+    let contextSection = '';
+    if (brandContext) {
+      contextSection += `\n\n## Brand Context\n${brandContext}`;
+    }
+    if (icpContext) {
+      contextSection += `\n\n## Ideal Customer Profile (ICP) Document\n${icpContext}`;
+    }
+    
+    const workflowPrompt = `You are an expert at creating AI-powered lead magnets. Based on this description: "${description}", generate a complete lead magnet configuration with workflow steps.${contextSection}
 
 ## What to Generate
 

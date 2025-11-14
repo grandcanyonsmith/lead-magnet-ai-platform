@@ -230,6 +230,15 @@ export const updateSettingsSchema = z.object({
   webhooks: z.array(z.string().url()).optional(),
   ghl_webhook_url: z.string().url().optional(),
   lead_phone_field: z.string().optional(),
+  // Brand information fields
+  brand_description: z.string().optional(),
+  brand_voice: z.string().optional(),
+  target_audience: z.string().optional(),
+  company_values: z.string().optional(),
+  industry: z.string().optional(),
+  company_size: z.string().optional(),
+  brand_messaging_guidelines: z.string().optional(),
+  icp_document_url: z.string().url().optional(),
   // Onboarding fields
   onboarding_survey_completed: z.boolean().optional(),
   onboarding_survey_responses: z.record(z.any()).optional(),
