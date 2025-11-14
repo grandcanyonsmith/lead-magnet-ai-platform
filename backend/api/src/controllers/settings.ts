@@ -4,111 +4,255 @@ import { RouteResponse } from '../routes';
 import { RequestContext } from '../routes/router';
 import { getCustomerId } from '../utils/rbac';
 import { generateWebhookToken } from '../utils/webhookToken';
+import { logger } from '../utils/logger';
+import { ApiError, InternalServerError, ValidationError } from '../utils/errors';
 
-const USER_SETTINGS_TABLE = process.env.USER_SETTINGS_TABLE!;
+const USER_SETTINGS_TABLE = process.env.USER_SETTINGS_TABLE;
 const API_URL = process.env.API_URL || process.env.API_GATEWAY_URL || '';
+
+// Validate environment variables on module load
+if (!USER_SETTINGS_TABLE) {
+  logger.error('[SettingsController] USER_SETTINGS_TABLE environment variable is not set');
+  throw new Error('USER_SETTINGS_TABLE environment variable is required');
+}
 
 class SettingsController {
   async get(_params: Record<string, string>, _body: any, _query: Record<string, string | undefined>, _tenantId: string | undefined, context?: RequestContext): Promise<RouteResponse> {
-    const customerId = getCustomerId(context);
-    // Use customer_id as tenant_id for backward compatibility (settings table uses tenant_id as key)
-    const tenantId = customerId;
-    
-    let settings = await db.get(USER_SETTINGS_TABLE, { tenant_id: tenantId });
+    try {
+      if (!USER_SETTINGS_TABLE) {
+        throw new InternalServerError('USER_SETTINGS_TABLE environment variable is not configured');
+      }
 
-    // If settings don't exist, create default settings
-    if (!settings) {
-      settings = {
-        tenant_id: tenantId,
-        organization_name: '',
-        contact_email: '',
-        default_ai_model: 'gpt-4o',
-        api_usage_limit: 1000000,
-        api_usage_current: 0,
-        billing_tier: 'free',
-        onboarding_survey_completed: false,
-        onboarding_survey_responses: {},
-        onboarding_checklist: {
-          complete_profile: false,
-          create_first_lead_magnet: false,
-          view_generated_lead_magnets: false,
+      const customerId = getCustomerId(context);
+      // Use customer_id as tenant_id for backward compatibility (settings table uses tenant_id as key)
+      const tenantId = customerId;
+      
+      logger.debug('[SettingsController.get] Fetching settings', {
+        customerId,
+        tenantId,
+        hasContext: !!context,
+        hasAuth: !!context?.auth,
+      });
+
+      let settings = await db.get(USER_SETTINGS_TABLE, { tenant_id: tenantId });
+
+      // If settings don't exist, create default settings
+      if (!settings) {
+        logger.info('[SettingsController.get] Creating default settings', { tenantId });
+        settings = {
+          tenant_id: tenantId,
+          organization_name: '',
+          contact_email: '',
+          default_ai_model: 'gpt-4o',
+          api_usage_limit: 1000000,
+          api_usage_current: 0,
+          billing_tier: 'free',
+          onboarding_survey_completed: false,
+          onboarding_survey_responses: {},
+          onboarding_checklist: {
+            complete_profile: false,
+            create_first_lead_magnet: false,
+            view_generated_lead_magnets: false,
+          },
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        await db.put(USER_SETTINGS_TABLE, settings);
+      }
+
+      // Auto-generate webhook_token if missing
+      if (!settings?.webhook_token) {
+        logger.info('[SettingsController.get] Generating webhook token', { tenantId });
+        const webhookToken = generateWebhookToken();
+        settings = await db.update(USER_SETTINGS_TABLE, { tenant_id: tenantId }, {
+          webhook_token: webhookToken,
+          updated_at: new Date().toISOString(),
+        });
+      }
+
+      // Construct webhook URL
+      const webhookUrl = settings?.webhook_token
+        ? `${API_URL}/v1/webhooks/${settings.webhook_token}`
+        : null;
+
+      return {
+        statusCode: 200,
+        body: {
+          ...settings,
+          webhook_url: webhookUrl,
         },
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
       };
-      await db.put(USER_SETTINGS_TABLE, settings);
-    }
-
-    // Auto-generate webhook_token if missing
-    if (!settings?.webhook_token) {
-      const webhookToken = generateWebhookToken();
-      settings = await db.update(USER_SETTINGS_TABLE, { tenant_id: tenantId }, {
-        webhook_token: webhookToken,
-        updated_at: new Date().toISOString(),
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      logger.error('[SettingsController.get] Unexpected error', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        hasContext: !!context,
+        hasAuth: !!context?.auth,
+      });
+      throw new InternalServerError('Failed to retrieve settings', {
+        originalError: error instanceof Error ? error.message : String(error),
       });
     }
-
-    // Construct webhook URL
-    const webhookUrl = settings?.webhook_token
-      ? `${API_URL}/v1/webhooks/${settings.webhook_token}`
-      : null;
-
-    return {
-      statusCode: 200,
-      body: {
-        ...settings,
-        webhook_url: webhookUrl,
-      },
-    };
   }
 
   async update(_params: Record<string, string>, body: any, _query: Record<string, string | undefined>, _tenantId: string | undefined, context?: RequestContext): Promise<RouteResponse> {
-    const customerId = getCustomerId(context);
-    // Use customer_id as tenant_id for backward compatibility (settings table uses tenant_id as key)
-    const tenantId = customerId;
-    
-    const data = validate(updateSettingsSchema, body);
+    try {
+      if (!USER_SETTINGS_TABLE) {
+        throw new InternalServerError('USER_SETTINGS_TABLE environment variable is not configured');
+      }
 
-    let existing = await db.get(USER_SETTINGS_TABLE, { tenant_id: tenantId });
+      // Validate context and authentication
+      if (!context) {
+        logger.error('[SettingsController.update] Missing request context');
+        throw new ApiError('Request context is missing', 500, 'MISSING_CONTEXT');
+      }
 
-    if (!existing) {
-      // Create new settings
-      existing = {
-        tenant_id: tenantId,
-        ...data,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+      if (!context.auth) {
+        logger.error('[SettingsController.update] Missing authentication context', {
+          hasContext: !!context,
+        });
+        throw new ApiError('Authentication required. Please sign in to access this resource.', 401, 'AUTHENTICATION_REQUIRED', {
+          message: 'User authentication context is missing. This may indicate a problem with the superadmin account configuration.',
+        });
+      }
+
+      const customerId = getCustomerId(context);
+      // Use customer_id as tenant_id for backward compatibility (settings table uses tenant_id as key)
+      const tenantId = customerId;
+      
+      logger.debug('[SettingsController.update] Updating settings', {
+        customerId,
+        tenantId,
+        role: context.auth.role,
+        isImpersonating: context.auth.isImpersonating,
+        hasBody: !!body,
+        bodyKeys: body ? Object.keys(body) : [],
+      });
+
+      // Validate request body
+      let data;
+      try {
+        data = validate(updateSettingsSchema, body);
+      } catch (validationError) {
+        logger.warn('[SettingsController.update] Validation error', {
+          error: validationError instanceof Error ? validationError.message : String(validationError),
+          body,
+        });
+        throw new ValidationError(
+          validationError instanceof Error ? validationError.message : 'Invalid settings data',
+          { body, validationError: validationError instanceof Error ? validationError.message : String(validationError) }
+        );
+      }
+
+      // Get existing settings
+      let existing;
+      try {
+        existing = await db.get(USER_SETTINGS_TABLE, { tenant_id: tenantId });
+      } catch (dbError) {
+        logger.error('[SettingsController.update] Database error fetching settings', {
+          error: dbError instanceof Error ? dbError.message : String(dbError),
+          tenantId,
+          table: USER_SETTINGS_TABLE,
+        });
+        throw new InternalServerError('Failed to fetch existing settings', {
+          originalError: dbError instanceof Error ? dbError.message : String(dbError),
+          tenantId,
+        });
+      }
+
+      // Create or update settings
+      try {
+        if (!existing) {
+          // Create new settings
+          logger.info('[SettingsController.update] Creating new settings', { tenantId });
+          existing = {
+            tenant_id: tenantId,
+            ...data,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          };
+          await db.put(USER_SETTINGS_TABLE, existing);
+        } else {
+          // Update existing
+          logger.info('[SettingsController.update] Updating existing settings', { tenantId });
+          existing = await db.update(USER_SETTINGS_TABLE, { tenant_id: tenantId }, {
+            ...data,
+            updated_at: new Date().toISOString(),
+          });
+        }
+      } catch (dbError) {
+        logger.error('[SettingsController.update] Database error saving settings', {
+          error: dbError instanceof Error ? dbError.message : String(dbError),
+          tenantId,
+          table: USER_SETTINGS_TABLE,
+          isNew: !existing,
+        });
+        throw new InternalServerError('Failed to save settings', {
+          originalError: dbError instanceof Error ? dbError.message : String(dbError),
+          tenantId,
+        });
+      }
+
+      // Ensure webhook_token exists
+      if (!existing?.webhook_token) {
+        try {
+          logger.info('[SettingsController.update] Generating webhook token', { tenantId });
+          const webhookToken = generateWebhookToken();
+          existing = await db.update(USER_SETTINGS_TABLE, { tenant_id: tenantId }, {
+            webhook_token: webhookToken,
+            updated_at: new Date().toISOString(),
+          });
+        } catch (dbError) {
+          logger.error('[SettingsController.update] Database error updating webhook token', {
+            error: dbError instanceof Error ? dbError.message : String(dbError),
+            tenantId,
+          });
+          // Don't fail the request if webhook token generation fails, just log it
+        }
+      }
+
+      // Construct webhook URL
+      const webhookUrl = existing?.webhook_token
+        ? `${API_URL}/v1/webhooks/${existing.webhook_token}`
+        : null;
+
+      logger.info('[SettingsController.update] Settings updated successfully', {
+        tenantId,
+        updatedFields: Object.keys(data),
+      });
+
+      return {
+        statusCode: 200,
+        body: {
+          ...existing,
+          webhook_url: webhookUrl,
+        },
       };
-      await db.put(USER_SETTINGS_TABLE, existing);
-    } else {
-      // Update existing
-      existing = await db.update(USER_SETTINGS_TABLE, { tenant_id: tenantId }, {
-        ...data,
-        updated_at: new Date().toISOString(),
+    } catch (error) {
+      // Re-throw ApiError instances as-is
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      
+      // Log and wrap unexpected errors
+      logger.error('[SettingsController.update] Unexpected error', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        hasContext: !!context,
+        hasAuth: !!context?.auth,
+        customerId: context?.auth?.customerId,
+        role: context?.auth?.role,
+      });
+      
+      throw new InternalServerError('An error occurred while updating settings', {
+        originalError: error instanceof Error ? error.message : String(error),
+        customerId: context?.auth?.customerId,
+        role: context?.auth?.role,
       });
     }
-
-    // Ensure webhook_token exists
-    if (!existing?.webhook_token) {
-      const webhookToken = generateWebhookToken();
-      existing = await db.update(USER_SETTINGS_TABLE, { tenant_id: tenantId }, {
-        webhook_token: webhookToken,
-        updated_at: new Date().toISOString(),
-      });
-    }
-
-    // Construct webhook URL
-    const webhookUrl = existing?.webhook_token
-      ? `${API_URL}/v1/webhooks/${existing.webhook_token}`
-      : null;
-
-    return {
-      statusCode: 200,
-      body: {
-        ...existing,
-        webhook_url: webhookUrl,
-      },
-    };
   }
 
   /**

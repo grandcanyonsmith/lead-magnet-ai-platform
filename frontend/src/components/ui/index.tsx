@@ -10,6 +10,10 @@ export { LoadingState } from './LoadingState'
 export { ErrorState } from './ErrorState'
 export { EmptyState as EmptyStateNew } from './EmptyState'
 export { StatusBadge as StatusBadgeNew } from './StatusBadge'
+export { SectionCard } from './SectionCard'
+export { KeyValueList } from './KeyValueList'
+export { StatPill } from './StatPill'
+export { VisuallyHidden } from './VisuallyHidden'
 
 // Legacy components for backward compatibility
 interface LoadingSpinnerProps {
@@ -91,4 +95,3 @@ export function StatusBadge({ status, className = '' }: StatusBadgeProps) {
     </span>
   )
 }
-
