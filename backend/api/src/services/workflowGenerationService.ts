@@ -67,9 +67,11 @@ export class WorkflowGenerationService {
     description: string,
     model: string,
     tenantId: string,
-    jobId?: string
+    jobId?: string,
+    brandContext?: string,
+    icpContext?: string
   ): Promise<{ workflowData: any; usageInfo: UsageInfo }> {
-    return this.workflowConfigService.generateWorkflowConfig(description, model, tenantId, jobId);
+    return this.workflowConfigService.generateWorkflowConfig(description, model, tenantId, jobId, brandContext, icpContext);
   }
 
   /**
@@ -80,9 +82,11 @@ export class WorkflowGenerationService {
     description: string,
     model: string,
     tenantId: string,
-    jobId?: string
+    jobId?: string,
+    brandContext?: string,
+    icpContext?: string
   ): Promise<{ htmlContent: string; usageInfo: UsageInfo }> {
-    return this.templateGenerationService.generateTemplateHTML(description, model, tenantId, jobId);
+    return this.templateGenerationService.generateTemplateHTML(description, model, tenantId, jobId, brandContext, icpContext);
   }
 
   /**
@@ -93,9 +97,11 @@ export class WorkflowGenerationService {
     description: string,
     model: string,
     tenantId: string,
-    jobId?: string
+    jobId?: string,
+    brandContext?: string,
+    icpContext?: string
   ): Promise<{ templateName: string; templateDescription: string; usageInfo: UsageInfo }> {
-    return this.templateGenerationService.generateTemplateMetadata(description, model, tenantId, jobId);
+    return this.templateGenerationService.generateTemplateMetadata(description, model, tenantId, jobId, brandContext, icpContext);
   }
 
   /**
@@ -107,9 +113,11 @@ export class WorkflowGenerationService {
     workflowName: string,
     model: string,
     tenantId: string,
-    jobId?: string
+    jobId?: string,
+    brandContext?: string,
+    icpContext?: string
   ): Promise<{ formData: any; usageInfo: UsageInfo }> {
-    return this.formFieldGenerationService.generateFormFields(description, workflowName, model, tenantId, jobId);
+    return this.formFieldGenerationService.generateFormFields(description, workflowName, model, tenantId, jobId, brandContext, icpContext);
   }
 
   /**
