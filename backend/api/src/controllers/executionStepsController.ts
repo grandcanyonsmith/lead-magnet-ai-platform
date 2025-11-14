@@ -2,7 +2,6 @@ import { db } from '../utils/db';
 import { ApiError } from '../utils/errors';
 import { RouteResponse } from '../routes';
 import { logger } from '../utils/logger';
-import { getOpenAIClient } from '../services/openaiService';
 import { executionStepsService } from '../services/executionStepsService';
 import { env } from '../utils/env';
 
