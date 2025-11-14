@@ -56,8 +56,8 @@ function renderToolBadges(tools?: string[] | unknown[], toolChoice?: string, sho
   return (
     <>
       <div className="flex flex-wrap gap-1">
-        {tools.map((tool: Tool, toolIdx: number) => {
-          const toolName = getToolName(tool)
+        {tools.map((tool, toolIdx) => {
+          const toolName = getToolName(tool as Tool)
           return (
             <span
               key={toolIdx}
@@ -422,11 +422,17 @@ export function StepInputOutput({
                       <button
                         onClick={() => {
                           const formatted = formatStepInput(step)
-                          const text = formatted.type === 'json' 
-                            ? JSON.stringify(formatted.content, null, 2)
-                            : typeof formatted.content === 'string' 
-                              ? formatted.content 
-                              : formatted.content.input || JSON.stringify(formatted.content, null, 2)
+                          let text: string
+                          if (formatted.type === 'json') {
+                            text = JSON.stringify(formatted.content, null, 2)
+                          } else if (typeof formatted.content === 'string') {
+                            text = formatted.content
+                          } else if (typeof formatted.content === 'object' && formatted.content !== null && 'input' in formatted.content) {
+                            const contentObj = formatted.content as { input?: unknown }
+                            text = contentObj.input ? String(contentObj.input) : JSON.stringify(formatted.content, null, 2)
+                          } else {
+                            text = JSON.stringify(formatted.content, null, 2)
+                          }
                           onCopy(text)
                         }}
                         className="text-sm md:text-xs text-gray-500 hover:text-gray-700 active:text-gray-900 flex items-center space-x-2 md:space-x-1 px-3 py-3 md:px-2 md:py-1.5 rounded-lg hover:bg-gray-100 active:bg-gray-200 touch-target min-h-[48px] md:min-h-0"

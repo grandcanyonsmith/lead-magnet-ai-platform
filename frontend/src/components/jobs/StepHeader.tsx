@@ -64,8 +64,8 @@ function renderToolBadges(tools?: string[] | unknown[], toolChoice?: string) {
   return (
     <>
       <div className="flex flex-wrap gap-1">
-        {tools.map((tool: Tool, toolIdx: number) => {
-          const toolName = getToolName(tool)
+        {tools.map((tool, toolIdx) => {
+          const toolName = getToolName(tool as Tool)
           return (
             <span
               key={toolIdx}

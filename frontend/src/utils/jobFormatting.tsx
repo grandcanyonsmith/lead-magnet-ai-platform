@@ -147,6 +147,9 @@ export function formatStepInput(step: ExecutionStep): { content: string | unknow
   if (step.input && typeof step.input === 'object') {
     // For AI steps, show instructions and input
     const inputObj = step.input as AIInput | undefined
+    if (!inputObj) {
+      return { content: step.input, type: 'json' }
+    }
     const inputText = inputObj.input || ''
     
     // Check if input text is markdown
