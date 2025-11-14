@@ -1,22 +1,15 @@
 import { ulid } from 'ulid';
-import { SFNClient, StartExecutionCommand } from '@aws-sdk/client-sfn';
 import { db, normalizeQueryResult } from '../utils/db';
 import { validate, createFormSchema, updateFormSchema, submitFormSchema } from '../utils/validation';
 import { ApiError } from '../utils/errors';
 import { RouteResponse } from '../routes';
 import { logger } from '../utils/logger';
-import { calculateOpenAICost } from '../services/costService';
-import { callResponsesWithTimeout } from '../utils/openaiHelpers';
-import { getOpenAIClient } from '../services/openaiService';
-import { usageTrackingService } from '../services/usageTrackingService';
+import { ensureRequiredFields } from '../utils/formFieldUtils';
+import { cssGenerationService } from '../services/cssGenerationService';
+import { formSubmissionService } from '../services/formSubmissionService';
 
 const FORMS_TABLE = process.env.FORMS_TABLE!;
-const SUBMISSIONS_TABLE = process.env.SUBMISSIONS_TABLE!;
-const JOBS_TABLE = process.env.JOBS_TABLE!;
-const STEP_FUNCTIONS_ARN = process.env.STEP_FUNCTIONS_ARN!;
 const USER_SETTINGS_TABLE = process.env.USER_SETTINGS_TABLE!;
-
-const sfnClient = new SFNClient({ region: process.env.AWS_REGION || 'us-east-1' });
 
 class FormsController {
   async list(tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {
@@ -96,19 +89,7 @@ class FormsController {
       }
 
       // Ensure name, email, and phone fields are always present
-      const requiredFields = [
-        { field_id: 'name', field_type: 'text' as const, label: 'Name', placeholder: 'Your name', required: true },
-        { field_id: 'email', field_type: 'email' as const, label: 'Email', placeholder: 'your@email.com', required: true },
-        { field_id: 'phone', field_type: 'tel' as const, label: 'Phone', placeholder: 'Your phone number', required: true },
-      ];
-
-      const existingFieldIds = new Set(form.form_fields_schema.fields.map((f: any) => f.field_id));
-      const fieldsToAdd = requiredFields.filter(f => !existingFieldIds.has(f.field_id));
-      
-      // Add required fields at the beginning if they don't exist
-      const fieldsWithRequired = fieldsToAdd.length > 0 
-        ? [...fieldsToAdd, ...form.form_fields_schema.fields]
-        : form.form_fields_schema.fields;
+      const fieldsWithRequired = ensureRequiredFields(form.form_fields_schema.fields);
 
       // Return only public fields
       return {
@@ -157,116 +138,21 @@ class FormsController {
 
     // Note: Rate limiting can be implemented here based on sourceIp and form.rate_limit_per_hour if needed
 
-    // Ensure name, email, and phone are present (validation should catch this, but double-check)
-    if (!submission_data.name || !submission_data.email || !submission_data.phone) {
-      throw new ApiError('Form submission must include name, email, and phone fields', 400);
-    }
-
-    // Create submission record
-    const submissionId = `sub_${ulid()}`;
-    const submission = {
-      submission_id: submissionId,
-      tenant_id: form.tenant_id,
-      form_id: form.form_id,
-      workflow_id: form.workflow_id,
+    // Submit form and start job processing
+    const result = await formSubmissionService.submitFormAndStartJob(
+      form,
       submission_data,
-      submitter_ip: sourceIp,
-      submitter_email: submission_data.email || null,
-      submitter_phone: submission_data.phone || null,
-      submitter_name: submission_data.name || null,
-      created_at: new Date().toISOString(),
-      ttl: Math.floor(Date.now() / 1000) + 90 * 24 * 60 * 60, // 90 days
-    };
-
-    await db.put(SUBMISSIONS_TABLE, submission);
-
-    // Create job record
-    const jobId = `job_${ulid()}`;
-    const job = {
-      job_id: jobId,
-      tenant_id: form.tenant_id,
-      workflow_id: form.workflow_id,
-      submission_id: submissionId,
-      status: 'pending',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-
-    await db.put(JOBS_TABLE, job);
-
-    // Update submission with job_id
-    await db.update(SUBMISSIONS_TABLE, { submission_id: submissionId }, { job_id: jobId });
-
-    // Execution Path Selection:
-    // The platform supports two execution paths:
-    // 1. Step Functions (Production): AWS Step Functions orchestrates workflow execution
-    //    - Used when STEP_FUNCTIONS_ARN is set and not in local/dev mode
-    //    - Provides automatic retry, error handling, and state management
-    // 2. Direct Processing (Local): Lambda function processes jobs directly
-    //    - Used when IS_LOCAL=true OR NODE_ENV=development OR STEP_FUNCTIONS_ARN not set
-    //    - Faster iteration and easier debugging for local development
-    //
-    // See docs/EXECUTION_PATHS.md for detailed explanation.
-    try {
-      // Check if we're in local development - process job directly
-      if (process.env.IS_LOCAL === 'true' || process.env.NODE_ENV === 'development' || !STEP_FUNCTIONS_ARN) {
-        logger.info('Local mode detected, processing job directly', { jobId });
-        
-        // Import worker processor for local processing
-        setImmediate(async () => {
-          try {
-            const { processJobLocally } = await import('../services/jobProcessor');
-            await processJobLocally(jobId, form.tenant_id, form.workflow_id, submissionId);
-          } catch (error: any) {
-            logger.error('Error processing job in local mode', {
-              jobId,
-              error: error.message,
-              errorStack: error.stack,
-            });
-            // Update job status to failed
-            await db.update(JOBS_TABLE, { job_id: jobId }, {
-              status: 'failed',
-              error_message: `Processing failed: ${error.message}`,
-              updated_at: new Date().toISOString(),
-            });
-          }
-        });
-      } else {
-        const command = new StartExecutionCommand({
-          stateMachineArn: STEP_FUNCTIONS_ARN,
-          input: JSON.stringify({
-            job_id: jobId,
-            workflow_id: form.workflow_id,
-            submission_id: submissionId,
-            tenant_id: form.tenant_id,
-          }),
-        });
-
-        await sfnClient.send(command);
-        logger.info('Started Step Functions execution', { jobId, workflowId: form.workflow_id });
-      }
-    } catch (error: any) {
-      logger.error('Failed to start job processing', { 
-        error: error.message,
-        errorStack: error.stack,
-        jobId,
-        isLocal: process.env.IS_LOCAL === 'true' || process.env.NODE_ENV === 'development',
-      });
-      // Update job status to failed
-      await db.update(JOBS_TABLE, { job_id: jobId }, {
-        status: 'failed',
-        error_message: `Failed to start processing: ${error.message}`,
-        updated_at: new Date().toISOString(),
-      });
-      throw new ApiError(`Failed to start job processing: ${error.message}`, 500);
-    }
+      sourceIp,
+      form.thank_you_message,
+      form.redirect_url
+    );
 
     return {
       statusCode: 202,
       body: {
-        message: form.thank_you_message || 'Thank you! Your submission is being processed.',
-        job_id: jobId,
-        redirect_url: form.redirect_url,
+        message: result.message,
+        job_id: result.jobId,
+        redirect_url: result.redirectUrl,
       },
     };
   }
@@ -302,17 +188,7 @@ class FormsController {
     }
 
     // Ensure name, email, and phone fields are always present
-    const requiredFields = [
-      { field_id: 'name', field_type: 'text' as const, label: 'Name', placeholder: 'Your name', required: true },
-      { field_id: 'email', field_type: 'email' as const, label: 'Email', placeholder: 'your@email.com', required: true },
-      { field_id: 'phone', field_type: 'tel' as const, label: 'Phone', placeholder: 'Your phone number', required: true },
-    ];
-
-    const existingFieldIds = new Set(data.form_fields_schema.fields.map((f: any) => f.field_id));
-    const fieldsToAdd = requiredFields.filter(f => !existingFieldIds.has(f.field_id));
-    
-    // Add required fields at the beginning
-    data.form_fields_schema.fields = [...fieldsToAdd, ...data.form_fields_schema.fields];
+    data.form_fields_schema.fields = ensureRequiredFields(data.form_fields_schema.fields);
 
     const form = {
       form_id: `form_${ulid()}`,
@@ -360,17 +236,7 @@ class FormsController {
 
     // Ensure name, email, and phone fields are always present if form_fields_schema is being updated
     if (data.form_fields_schema && data.form_fields_schema.fields) {
-      const requiredFields = [
-        { field_id: 'name', field_type: 'text' as const, label: 'Name', placeholder: 'Your name', required: true },
-        { field_id: 'email', field_type: 'email' as const, label: 'Email', placeholder: 'your@email.com', required: true },
-        { field_id: 'phone', field_type: 'tel' as const, label: 'Phone', placeholder: 'Your phone number', required: true },
-      ];
-
-      const existingFieldIds = new Set(data.form_fields_schema.fields.map((f: any) => f.field_id));
-      const fieldsToAdd = requiredFields.filter(f => !existingFieldIds.has(f.field_id));
-      
-      // Add required fields at the beginning
-      data.form_fields_schema.fields = [...fieldsToAdd, ...data.form_fields_schema.fields];
+      data.form_fields_schema.fields = ensureRequiredFields(data.form_fields_schema.fields);
     }
 
     const updated = await db.update(FORMS_TABLE, { form_id: formId }, {
@@ -413,270 +279,35 @@ class FormsController {
   }
 
   async generateCSS(tenantId: string, body: any): Promise<RouteResponse> {
-    const { form_fields_schema, css_prompt, model = 'gpt-5' } = body;
-
-    if (!form_fields_schema || !form_fields_schema.fields || form_fields_schema.fields.length === 0) {
-      throw new ApiError('Form fields schema is required', 400);
-    }
-
-    if (!css_prompt || !css_prompt.trim()) {
-      throw new ApiError('CSS prompt is required', 400);
-    }
-
-    logger.info('[Form CSS Generation] Starting CSS generation', {
+    const css = await cssGenerationService.generateCSS({
+      form_fields_schema: body.form_fields_schema,
+      css_prompt: body.css_prompt,
+      model: body.model,
       tenantId,
-      model,
-      fieldCount: form_fields_schema.fields.length,
-      cssPromptLength: css_prompt.length,
-      timestamp: new Date().toISOString(),
     });
 
-    try {
-      const openai = await getOpenAIClient();
-      logger.info('[Form CSS Generation] OpenAI client initialized');
-
-      const fieldsDescription = form_fields_schema.fields.map((f: any) => 
-        `- ${f.field_type}: ${f.label} (${f.required ? 'required' : 'optional'})`
-      ).join('\n');
-
-      const prompt = `You are an expert CSS designer. Generate CSS styles for a form based on this description: "${css_prompt}"
-
-Form Fields:
-${fieldsDescription}
-
-Requirements:
-1. Generate valid CSS only (no HTML, no markdown formatting)
-2. Style the form container, fields, labels, inputs, textareas, selects, and buttons
-3. Use modern, clean design principles
-4. Make it responsive and mobile-friendly
-5. Apply the requested styling from the description
-
-Return ONLY the CSS code, no markdown formatting, no explanations.`;
-
-      logger.info('[Form CSS Generation] Calling OpenAI for CSS generation', {
-        model,
-        promptLength: prompt.length,
-      });
-
-      const cssStartTime = Date.now();
-      const completionParams: any = {
-        model,
-        instructions: 'You are an expert CSS designer. Return only valid CSS code without markdown formatting.',
-        input: prompt,
-      };
-      // GPT-5 only supports default temperature (1), don't set custom temperature
-      if (model !== 'gpt-5') {
-        completionParams.temperature = 0.7;
-      }
-      const completion = await callResponsesWithTimeout(
-        () => openai.responses.create(completionParams),
-        'form CSS generation'
-      );
-
-      const cssDuration = Date.now() - cssStartTime;
-      const cssModelUsed = (completion as any).model || model;
-      logger.info('[Form CSS Generation] CSS generation completed', {
-        duration: `${cssDuration}ms`,
-        tokensUsed: completion.usage?.total_tokens,
-        model: cssModelUsed,
-      });
-
-      // Track usage
-      const usage = completion.usage;
-      if (usage) {
-        const inputTokens = usage.input_tokens || 0;
-        const outputTokens = usage.output_tokens || 0;
-        const costData = calculateOpenAICost(cssModelUsed, inputTokens, outputTokens);
-        
-        await usageTrackingService.storeUsageRecord({
-          tenantId,
-          serviceType: 'openai_form_css',
-          model: cssModelUsed,
-          inputTokens,
-          outputTokens,
-          costUsd: costData.cost_usd,
-        });
-      }
-
-      // Validate response has output_text
-      if (!completion.output_text) {
-        throw new ApiError('OpenAI Responses API returned empty response. output_text is missing for form CSS generation.', 500);
-      }
-      
-      const cssContent = completion.output_text;
-      logger.info('[Form CSS Generation] Raw CSS received', {
-        cssLength: cssContent.length,
-        firstChars: cssContent.substring(0, 100),
-      });
-      
-      // Clean up markdown code blocks if present
-      let cleanedCss = cssContent.trim();
-      if (cleanedCss.startsWith('```css')) {
-        cleanedCss = cleanedCss.replace(/^```css\s*/i, '').replace(/\s*```$/i, '');
-        logger.info('[Form CSS Generation] Removed ```css markers');
-      } else if (cleanedCss.startsWith('```')) {
-        cleanedCss = cleanedCss.replace(/^```\s*/i, '').replace(/\s*```$/i, '');
-        logger.info('[Form CSS Generation] Removed ``` markers');
-      }
-
-      const totalDuration = Date.now() - cssStartTime;
-      logger.info('[Form CSS Generation] Success!', {
-        tenantId,
-        cssLength: cleanedCss.length,
-        totalDuration: `${totalDuration}ms`,
-        timestamp: new Date().toISOString(),
-      });
-
-      return {
-        statusCode: 200,
-        body: {
-          css: cleanedCss,
-        },
-      };
-    } catch (error: any) {
-      logger.error('[Form CSS Generation] Error occurred', {
-        tenantId,
-        errorMessage: error.message,
-        errorName: error.name,
-        errorStack: error.stack,
-        timestamp: new Date().toISOString(),
-      });
-      throw new ApiError(
-        error.message || 'Failed to generate CSS with AI',
-        500
-      );
-    }
+    return {
+      statusCode: 200,
+      body: {
+        css,
+      },
+    };
   }
 
   async refineCSS(tenantId: string, body: any): Promise<RouteResponse> {
-    const { current_css, css_prompt, model = 'gpt-5' } = body;
-
-    if (!current_css || !current_css.trim()) {
-      throw new ApiError('Current CSS is required', 400);
-    }
-
-    if (!css_prompt || !css_prompt.trim()) {
-      throw new ApiError('CSS prompt is required', 400);
-    }
-
-    logger.info('[Form CSS Refinement] Starting refinement', {
+    const css = await cssGenerationService.refineCSS({
+      current_css: body.current_css,
+      css_prompt: body.css_prompt,
+      model: body.model,
       tenantId,
-      model,
-      currentCssLength: current_css.length,
-      cssPromptLength: css_prompt.length,
-      timestamp: new Date().toISOString(),
     });
 
-    try {
-      const openai = await getOpenAIClient();
-      logger.info('[Form CSS Refinement] OpenAI client initialized');
-
-      const prompt = `You are an expert CSS designer. Modify the following CSS based on these instructions: "${css_prompt}"
-
-Current CSS:
-${current_css}
-
-Requirements:
-1. Apply the requested changes while maintaining valid CSS syntax
-2. Keep the overall structure unless specifically asked to change it
-3. Ensure the CSS remains well-organized and readable
-4. Return only the modified CSS code, no markdown formatting, no explanations
-
-Return ONLY the modified CSS code, no markdown formatting, no explanations.`;
-
-      logger.info('[Form CSS Refinement] Calling OpenAI for refinement', {
-        model,
-        promptLength: prompt.length,
-      });
-
-      const refineStartTime = Date.now();
-      const completionParams: any = {
-        model,
-        instructions: 'You are an expert CSS designer. Return only valid CSS code without markdown formatting.',
-        input: prompt,
-      };
-      // GPT-5 only supports default temperature (1), don't set custom temperature
-      if (model !== 'gpt-5') {
-        completionParams.temperature = 0.7;
-      }
-      const completion = await callResponsesWithTimeout(
-        () => openai.responses.create(completionParams),
-        'form CSS refinement'
-      );
-
-      const refineDuration = Date.now() - refineStartTime;
-      const refineCssModel = (completion as any).model || model;
-      logger.info('[Form CSS Refinement] Refinement completed', {
-        duration: `${refineDuration}ms`,
-        tokensUsed: completion.usage?.total_tokens,
-        model: refineCssModel,
-      });
-
-      // Track usage
-      const usage = completion.usage;
-      if (usage) {
-        const inputTokens = usage.input_tokens || 0;
-        const outputTokens = usage.output_tokens || 0;
-        const costData = calculateOpenAICost(refineCssModel, inputTokens, outputTokens);
-        
-        await usageTrackingService.storeUsageRecord({
-          tenantId,
-          serviceType: 'openai_form_css_refine',
-          model: refineCssModel,
-          inputTokens,
-          outputTokens,
-          costUsd: costData.cost_usd,
-        });
-      }
-
-      // Validate response has output_text
-      if (!completion.output_text) {
-        throw new ApiError('OpenAI Responses API returned empty response. output_text is missing for form CSS refinement.', 500);
-      }
-      
-      const cssContent = completion.output_text;
-      logger.info('[Form CSS Refinement] Refined CSS received', {
-        cssLength: cssContent.length,
-        firstChars: cssContent.substring(0, 100),
-      });
-      
-      // Clean up markdown code blocks if present
-      let cleanedCss = cssContent.trim();
-      if (cleanedCss.startsWith('```css')) {
-        cleanedCss = cleanedCss.replace(/^```css\s*/i, '').replace(/\s*```$/i, '');
-        logger.info('[Form CSS Refinement] Removed ```css markers');
-      } else if (cleanedCss.startsWith('```')) {
-        cleanedCss = cleanedCss.replace(/^```\s*/i, '').replace(/\s*```$/i, '');
-        logger.info('[Form CSS Refinement] Removed ``` markers');
-      }
-
-      const totalDuration = Date.now() - refineStartTime;
-      logger.info('[Form CSS Refinement] Success!', {
-        tenantId,
-        cssLength: cleanedCss.length,
-        totalDuration: `${totalDuration}ms`,
-        timestamp: new Date().toISOString(),
-      });
-
-      return {
-        statusCode: 200,
-        body: {
-          css: cleanedCss,
-        },
-      };
-    } catch (error: any) {
-      logger.error('[Form CSS Refinement] Error occurred', {
-        tenantId,
-        errorMessage: error.message,
-        errorName: error.name,
-        errorStack: error.stack,
-        timestamp: new Date().toISOString(),
-      });
-      throw new ApiError(
-        error.message || 'Failed to refine CSS with AI',
-        500
-      );
-    }
+    return {
+      statusCode: 200,
+      body: {
+        css,
+      },
+    };
   }
 }
 
