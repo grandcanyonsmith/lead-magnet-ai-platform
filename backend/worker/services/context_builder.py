@@ -234,4 +234,65 @@ class ContextBuilder:
             Current step context string
         """
         return initial_context if step_index == 0 else ""
+    
+    @staticmethod
+    def collect_previous_image_urls(
+        execution_steps: List[Dict[str, Any]],
+        current_step_order: int
+    ) -> List[str]:
+        """
+        Collect all image URLs from previous execution steps.
+        
+        Iterates through execution_steps and extracts all image URLs from steps
+        that come before the current step. Handles both array and single value
+        formats, and deduplicates the results.
+        
+        Args:
+            execution_steps: List of all execution step dictionaries
+            current_step_order: Current step order (1-indexed)
+            
+        Returns:
+            List of unique image URLs from previous steps, sorted alphabetically
+        """
+        from utils.step_utils import normalize_step_order
+        
+        all_image_urls: Set[str] = set()
+        
+        # Filter to only include AI generation steps that come before current step
+        for step_data in execution_steps:
+            # Only process AI generation steps
+            if step_data.get('step_type') != 'ai_generation':
+                continue
+            
+            step_order = normalize_step_order(step_data)
+            
+            # Only include steps that come before the current step
+            if step_order >= current_step_order:
+                continue
+            
+            # Extract image URLs from multiple sources:
+            # 1. From image_urls array in execution step
+            image_urls_raw = step_data.get('image_urls', [])
+            if image_urls_raw is None:
+                image_urls_from_array = []
+            elif isinstance(image_urls_raw, list):
+                image_urls_from_array = [url for url in image_urls_raw if url]  # Filter out None/empty strings
+            else:
+                # If it's not a list, try to convert (shouldn't happen, but be safe)
+                image_urls_from_array = [str(image_urls_raw)] if image_urls_raw else []
+            
+            # 2. Extract image URLs from the output text itself
+            step_output = step_data.get('output', '')
+            image_urls_from_text = []
+            if isinstance(step_output, str):
+                image_urls_from_text = extract_image_urls(step_output)
+            elif isinstance(step_output, (dict, list)):
+                image_urls_from_text = extract_image_urls_from_object(step_output)
+            
+            # Combine and add to set (automatically deduplicates)
+            all_image_urls.update(image_urls_from_array)
+            all_image_urls.update(image_urls_from_text)
+        
+        # Return sorted list for consistent ordering
+        return sorted(list(all_image_urls))
 
