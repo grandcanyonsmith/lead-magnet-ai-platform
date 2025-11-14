@@ -27,9 +27,12 @@ interface StepHeaderProps {
   onRerunStep?: (stepIndex: number) => Promise<void>
 }
 
+// Type for tool - can be a string or an object with a type property
+type Tool = string | { type: string; [key: string]: unknown }
+
 // Helper to get tool name from tool object or string
-function getToolName(tool: any): string {
-  return typeof tool === 'string' ? tool : tool.type || 'unknown'
+function getToolName(tool: Tool): string {
+  return typeof tool === 'string' ? tool : (tool.type || 'unknown')
 }
 
 // Render status icon inline
@@ -61,7 +64,7 @@ function renderToolBadges(tools?: string[] | unknown[], toolChoice?: string) {
   return (
     <>
       <div className="flex flex-wrap gap-1">
-        {tools.map((tool: any, toolIdx: number) => {
+        {tools.map((tool: Tool, toolIdx: number) => {
           const toolName = getToolName(tool)
           return (
             <span

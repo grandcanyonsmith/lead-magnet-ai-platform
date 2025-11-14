@@ -7,7 +7,7 @@ import React from 'react'
 import { FiCopy, FiChevronDown, FiChevronUp, FiLoader, FiEdit2 } from 'react-icons/fi'
 import { formatStepInput, formatStepOutput } from '@/utils/jobFormatting'
 import { StepContent } from './StepContent'
-import { MergedStep, StepStatus } from '@/types/job'
+import { MergedStep, StepStatus, ExecutionStep } from '@/types/job'
 import { PreviewRenderer } from '@/components/artifacts/PreviewRenderer'
 import { Artifact } from '@/types/artifact'
 import { extractImageUrls } from '@/utils/imageUtils'
@@ -19,17 +19,20 @@ interface StepInputOutputProps {
   isExpanded: boolean
   onToggle: () => void
   onCopy: (text: string) => void
-  previousSteps: any[]
-  formSubmission: any
+  previousSteps: ExecutionStep[]
+  formSubmission: Record<string, unknown> | null | undefined
   imageArtifacts?: Artifact[]
   loadingImageArtifacts?: boolean
   onEditStep?: (stepIndex: number) => void
   canEdit?: boolean
 }
 
+// Type for tool - can be a string or an object with a type property
+type Tool = string | { type: string; [key: string]: unknown }
+
 // Helper to get tool name from tool object or string
-function getToolName(tool: any): string {
-  return typeof tool === 'string' ? tool : tool.type || 'unknown'
+function getToolName(tool: Tool): string {
+  return typeof tool === 'string' ? tool : (tool.type || 'unknown')
 }
 
 // Helper to truncate long URLs for display
@@ -53,7 +56,7 @@ function renderToolBadges(tools?: string[] | unknown[], toolChoice?: string, sho
   return (
     <>
       <div className="flex flex-wrap gap-1">
-        {tools.map((tool: any, toolIdx: number) => {
+        {tools.map((tool: Tool, toolIdx: number) => {
           const toolName = getToolName(tool)
           return (
             <span
@@ -122,8 +125,8 @@ function renderTextWithImages(text: string): React.ReactNode {
 }
 
 // Render previous steps context inline
-function renderPreviousStepsContext(previousSteps: any[], formSubmission: any, currentStepOrder: number) {
-  if (!previousSteps.length && !formSubmission) {
+function renderPreviousStepsContext(previousSteps: ExecutionStep[], formSubmission: Record<string, unknown> | null | undefined, currentStepOrder: number) {
+  if ((!previousSteps || previousSteps.length === 0) && !formSubmission) {
     return null
   }
 
@@ -167,7 +170,9 @@ function renderPreviousStepsContext(previousSteps: any[], formSubmission: any, c
         const stepOutput =
           typeof step.output === 'string'
             ? step.output
-            : JSON.stringify(step.output, null, 2)
+            : step.output !== null && step.output !== undefined
+              ? JSON.stringify(step.output, null, 2)
+              : ''
         const stepImageUrls = extractImageUrls(stepOutput)
 
         return (
@@ -482,10 +487,6 @@ export function StepInputOutput({
                 <div className="p-4 md:p-4 bg-white max-h-[450px] md:max-h-96 overflow-y-auto">
                   {(() => {
                     const stepImageUrls = step.image_urls && Array.isArray(step.image_urls) && step.image_urls.length > 0 ? step.image_urls : []
-                    // Debug: log image URLs if present
-                    if (stepImageUrls.length > 0) {
-                      console.log(`[StepInputOutput] Step ${step.step_order} has ${stepImageUrls.length} image URLs:`, stepImageUrls)
-                    }
                     return (
                       <StepContent 
                         formatted={formatStepOutput(step)} 
