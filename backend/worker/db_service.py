@@ -178,7 +178,25 @@ class DynamoDBService:
                 })
                 
                 # Always store in S3 - single source of truth
-                s3_key = f"jobs/{job_id}/execution_steps.json"
+                # Nest under the workflow run folder to keep artifacts organized by run
+                tenant_id_for_key = None
+                try:
+                    job_item = self.jobs_table.get_item(Key={'job_id': job_id}).get('Item')
+                    tenant_id_for_key = job_item.get('tenant_id') if job_item else None
+                except Exception as lookup_error:
+                    logger.warning(
+                        "[DynamoDB] Failed to look up tenant_id for job while building execution_steps S3 key",
+                        extra={
+                            'job_id': job_id,
+                            'error_type': type(lookup_error).__name__,
+                            'error_message': str(lookup_error)
+                        }
+                    )
+                # Fallback to legacy path if tenant_id is unavailable (backward compatible)
+                if tenant_id_for_key:
+                    s3_key = f"{tenant_id_for_key}/jobs/{job_id}/execution_steps.json"
+                else:
+                    s3_key = f"jobs/{job_id}/execution_steps.json"
                 execution_steps_json = json.dumps(execution_steps, default=str)
                 s3_service.upload_artifact(s3_key, execution_steps_json, content_type='application/json', public=True)  # Public so URLs never expire
                 
