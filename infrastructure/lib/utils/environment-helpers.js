@@ -1,0 +1,47 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.createTableEnvironmentVars = createTableEnvironmentVars;
+exports.getSecretArn = getSecretArn;
+const types_1 = require("../types");
+const constants_1 = require("../config/constants");
+/**
+ * Creates environment variables from a tables map
+ *
+ * Maps table keys to their corresponding environment variable names
+ * using the centralized configuration.
+ *
+ * @param tablesMap - Map of table keys to DynamoDB table references
+ * @returns Record of environment variable names to table names
+ * @throws Error if required tables are missing
+ */
+function createTableEnvironmentVars(tablesMap) {
+    const env = {};
+    // Validate that all required tables are present
+    const requiredKeys = Object.values(types_1.TableKey);
+    const missingKeys = requiredKeys.filter(key => !tablesMap[key]);
+    if (missingKeys.length > 0) {
+        throw new Error(`Missing required tables in tablesMap: ${missingKeys.join(', ')}`);
+    }
+    // Use centralized mapping from constants
+    Object.entries(tablesMap).forEach(([key, table]) => {
+        const envVarName = constants_1.TABLE_ENV_VAR_MAP[key];
+        if (envVarName) {
+            env[envVarName] = table.tableName;
+        }
+        else {
+            console.warn(`No environment variable mapping found for table key: ${key}`);
+        }
+    });
+    return env;
+}
+/**
+ * Generates a Secrets Manager ARN for a secret name
+ *
+ * @param scope - CDK construct scope (for account/region access)
+ * @param secretName - Name of the secret
+ * @returns ARN string for the secret
+ */
+function getSecretArn(scope, secretName) {
+    return `arn:aws:secretsmanager:${scope.region}:${scope.account}:secret:${secretName}*`;
+}
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiZW52aXJvbm1lbnQtaGVscGVycy5qcyIsInNvdXJjZVJvb3QiOiIiLCJzb3VyY2VzIjpbImVudmlyb25tZW50LWhlbHBlcnMudHMiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6Ijs7QUFhQSxnRUF3QkM7QUFTRCxvQ0FFQztBQWhERCxvQ0FBOEM7QUFDOUMsbURBQXdEO0FBRXhEOzs7Ozs7Ozs7R0FTRztBQUNILFNBQWdCLDBCQUEwQixDQUFDLFNBQW1CO0lBQzVELE1BQU0sR0FBRyxHQUEyQixFQUFFLENBQUM7SUFFdkMsZ0RBQWdEO0lBQ2hELE1BQU0sWUFBWSxHQUFHLE1BQU0sQ0FBQyxNQUFNLENBQUMsZ0JBQVEsQ0FBQyxDQUFDO0lBQzdDLE1BQU0sV0FBVyxHQUFHLFlBQVksQ0FBQyxNQUFNLENBQUMsR0FBRyxDQUFDLEVBQUUsQ0FBQyxDQUFDLFNBQVMsQ0FBQyxHQUFHLENBQUMsQ0FBQyxDQUFDO0lBRWhFLElBQUksV0FBVyxDQUFDLE1BQU0sR0FBRyxDQUFDLEVBQUUsQ0FBQztRQUMzQixNQUFNLElBQUksS0FBSyxDQUNiLHlDQUF5QyxXQUFXLENBQUMsSUFBSSxDQUFDLElBQUksQ0FBQyxFQUFFLENBQ2xFLENBQUM7SUFDSixDQUFDO0lBRUQseUNBQXlDO0lBQ3pDLE1BQU0sQ0FBQyxPQUFPLENBQUMsU0FBUyxDQUFDLENBQUMsT0FBTyxDQUFDLENBQUMsQ0FBQyxHQUFHLEVBQUUsS0FBSyxDQUFDLEVBQUUsRUFBRTtRQUNqRCxNQUFNLFVBQVUsR0FBRyw2QkFBaUIsQ0FBQyxHQUFHLENBQUMsQ0FBQztRQUMxQyxJQUFJLFVBQVUsRUFBRSxDQUFDO1lBQ2YsR0FBRyxDQUFDLFVBQVUsQ0FBQyxHQUFHLEtBQUssQ0FBQyxTQUFTLENBQUM7UUFDcEMsQ0FBQzthQUFNLENBQUM7WUFDTixPQUFPLENBQUMsSUFBSSxDQUFDLHdEQUF3RCxHQUFHLEVBQUUsQ0FBQyxDQUFDO1FBQzlFLENBQUM7SUFDSCxDQUFDLENBQUMsQ0FBQztJQUVILE9BQU8sR0FBRyxDQUFDO0FBQ2IsQ0FBQztBQUVEOzs7Ozs7R0FNRztBQUNILFNBQWdCLFlBQVksQ0FBQyxLQUEwQyxFQUFFLFVBQWtCO0lBQ3pGLE9BQU8sMEJBQTBCLEtBQUssQ0FBQyxNQUFNLElBQUksS0FBSyxDQUFDLE9BQU8sV0FBVyxVQUFVLEdBQUcsQ0FBQztBQUN6RixDQUFDIiwic291cmNlc0NvbnRlbnQiOlsiaW1wb3J0IHsgVGFibGVNYXAsIFRhYmxlS2V5IH0gZnJvbSAnLi4vdHlwZXMnO1xuaW1wb3J0IHsgVEFCTEVfRU5WX1ZBUl9NQVAgfSBmcm9tICcuLi9jb25maWcvY29uc3RhbnRzJztcblxuLyoqXG4gKiBDcmVhdGVzIGVudmlyb25tZW50IHZhcmlhYmxlcyBmcm9tIGEgdGFibGVzIG1hcFxuICogXG4gKiBNYXBzIHRhYmxlIGtleXMgdG8gdGhlaXIgY29ycmVzcG9uZGluZyBlbnZpcm9ubWVudCB2YXJpYWJsZSBuYW1lc1xuICogdXNpbmcgdGhlIGNlbnRyYWxpemVkIGNvbmZpZ3VyYXRpb24uXG4gKiBcbiAqIEBwYXJhbSB0YWJsZXNNYXAgLSBNYXAgb2YgdGFibGUga2V5cyB0byBEeW5hbW9EQiB0YWJsZSByZWZlcmVuY2VzXG4gKiBAcmV0dXJucyBSZWNvcmQgb2YgZW52aXJvbm1lbnQgdmFyaWFibGUgbmFtZXMgdG8gdGFibGUgbmFtZXNcbiAqIEB0aHJvd3MgRXJyb3IgaWYgcmVxdWlyZWQgdGFibGVzIGFyZSBtaXNzaW5nXG4gKi9cbmV4cG9ydCBmdW5jdGlvbiBjcmVhdGVUYWJsZUVudmlyb25tZW50VmFycyh0YWJsZXNNYXA6IFRhYmxlTWFwKTogUmVjb3JkPHN0cmluZywgc3RyaW5nPiB7XG4gIGNvbnN0IGVudjogUmVjb3JkPHN0cmluZywgc3RyaW5nPiA9IHt9O1xuXG4gIC8vIFZhbGlkYXRlIHRoYXQgYWxsIHJlcXVpcmVkIHRhYmxlcyBhcmUgcHJlc2VudFxuICBjb25zdCByZXF1aXJlZEtleXMgPSBPYmplY3QudmFsdWVzKFRhYmxlS2V5KTtcbiAgY29uc3QgbWlzc2luZ0tleXMgPSByZXF1aXJlZEtleXMuZmlsdGVyKGtleSA9PiAhdGFibGVzTWFwW2tleV0pO1xuICBcbiAgaWYgKG1pc3NpbmdLZXlzLmxlbmd0aCA+IDApIHtcbiAgICB0aHJvdyBuZXcgRXJyb3IoXG4gICAgICBgTWlzc2luZyByZXF1aXJlZCB0YWJsZXMgaW4gdGFibGVzTWFwOiAke21pc3NpbmdLZXlzLmpvaW4oJywgJyl9YFxuICAgICk7XG4gIH1cblxuICAvLyBVc2UgY2VudHJhbGl6ZWQgbWFwcGluZyBmcm9tIGNvbnN0YW50c1xuICBPYmplY3QuZW50cmllcyh0YWJsZXNNYXApLmZvckVhY2goKFtrZXksIHRhYmxlXSkgPT4ge1xuICAgIGNvbnN0IGVudlZhck5hbWUgPSBUQUJMRV9FTlZfVkFSX01BUFtrZXldO1xuICAgIGlmIChlbnZWYXJOYW1lKSB7XG4gICAgICBlbnZbZW52VmFyTmFtZV0gPSB0YWJsZS50YWJsZU5hbWU7XG4gICAgfSBlbHNlIHtcbiAgICAgIGNvbnNvbGUud2FybihgTm8gZW52aXJvbm1lbnQgdmFyaWFibGUgbWFwcGluZyBmb3VuZCBmb3IgdGFibGUga2V5OiAke2tleX1gKTtcbiAgICB9XG4gIH0pO1xuXG4gIHJldHVybiBlbnY7XG59XG5cbi8qKlxuICogR2VuZXJhdGVzIGEgU2VjcmV0cyBNYW5hZ2VyIEFSTiBmb3IgYSBzZWNyZXQgbmFtZVxuICogXG4gKiBAcGFyYW0gc2NvcGUgLSBDREsgY29uc3RydWN0IHNjb3BlIChmb3IgYWNjb3VudC9yZWdpb24gYWNjZXNzKVxuICogQHBhcmFtIHNlY3JldE5hbWUgLSBOYW1lIG9mIHRoZSBzZWNyZXRcbiAqIEByZXR1cm5zIEFSTiBzdHJpbmcgZm9yIHRoZSBzZWNyZXRcbiAqL1xuZXhwb3J0IGZ1bmN0aW9uIGdldFNlY3JldEFybihzY29wZTogeyBhY2NvdW50OiBzdHJpbmc7IHJlZ2lvbjogc3RyaW5nIH0sIHNlY3JldE5hbWU6IHN0cmluZyk6IHN0cmluZyB7XG4gIHJldHVybiBgYXJuOmF3czpzZWNyZXRzbWFuYWdlcjoke3Njb3BlLnJlZ2lvbn06JHtzY29wZS5hY2NvdW50fTpzZWNyZXQ6JHtzZWNyZXROYW1lfSpgO1xufVxuXG4iXX0=
