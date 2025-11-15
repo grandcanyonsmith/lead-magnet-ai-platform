@@ -9,13 +9,9 @@ import { logger } from '../utils/logger';
 import { env } from '../utils/env';
 
 const WORKFLOWS_TABLE = env.workflowsTable;
-const FORMS_TABLE = env.formsTable;
 
 if (!WORKFLOWS_TABLE) {
   logger.error('[Workflows Controller] WORKFLOWS_TABLE environment variable is not set');
-}
-if (!FORMS_TABLE) {
-  logger.error('[Workflows Controller] FORMS_TABLE environment variable is not set');
 }
 
 class WorkflowsController {
