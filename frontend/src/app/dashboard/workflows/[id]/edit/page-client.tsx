@@ -236,8 +236,17 @@ export default function EditWorkflowPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Edit Lead Magnet</h1>
-        <p className="text-gray-600">Update your AI lead magnet and form configuration</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Edit Lead Magnet</h1>
+            <p className="text-gray-600">Update your AI lead magnet and form configuration</p>
+          </div>
+          {workflowEdit.workflowStatus === 'draft' && (
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+              Draft
+            </span>
+          )}
+        </div>
       </div>
 
       {error && (

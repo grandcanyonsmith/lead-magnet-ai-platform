@@ -46,17 +46,22 @@ export function useAIGeneration() {
 
     setIsGenerating(true)
     setError(null)
-    setGenerationStatus('Starting workflow generation...')
+    setGenerationStatus('Creating your lead magnet...')
     setResult(null)
 
     try {
       const startTime = Date.now()
       
-      // Step 1: Initiate async generation (returns 202 with job_id)
-      // Step 1: Initiate async generation (returns 202 with job_id)
+      // Generate webhook URL template (backend will replace {jobId} with actual jobId)
+      const webhookUrl = typeof window !== 'undefined' 
+        ? `${window.location.origin}/api/webhooks/workflow-completion/{jobId}`
+        : undefined
+      
+      // Step 1: Initiate async generation (returns immediately with job_id)
       const initResponse = await api.generateWorkflowWithAI({
         description: description.trim(),
         model: model as AIModel | undefined,
+        webhook_url: webhookUrl,
       })
       
       // Check if we got a job_id (async flow)
@@ -64,59 +69,20 @@ export function useAIGeneration() {
         const jobId = initResponse.job_id
         console.log('[Workflow Generation] Job created', { jobId, status: initResponse.status })
         
-        setGenerationStatus('Generating your lead magnet configuration... This may take a minute.')
+        setGenerationStatus('Creating your lead magnet... This may take a minute.')
         
-        // Step 2: Poll for completion
-        let attempts = 0
-        const maxAttempts = 900 // 15 minutes max (1 second intervals)
-        let pollResult: any = null
-        
-        while (attempts < maxAttempts) {
-          await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1 second
-          
-          const statusResponse = await api.getWorkflowGenerationStatus(jobId)
-          console.log('[Workflow Generation] Polling status', { 
-            jobId, 
-            status: statusResponse.status, 
-            attempt: attempts + 1 
-          })
-          
-          if (statusResponse.status === 'completed') {
-            pollResult = statusResponse.result
-            console.log('[Workflow Generation] Job completed', { result: pollResult })
-            break
-          } else if (statusResponse.status === 'failed') {
-            throw new Error(statusResponse.error_message || 'Workflow generation failed')
-          } else if (statusResponse.status === 'processing') {
-            setGenerationStatus(`Processing... (${attempts + 1}s)`)
-          } else {
-            setGenerationStatus(`Preparing... (${attempts + 1}s)`)
-          }
-          
-          attempts++
+        // Store job_id for webhook handler
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem(`workflow_generation_job_${jobId}`, JSON.stringify({
+            jobId,
+            description: description.trim(),
+            model,
+            createdAt: new Date().toISOString(),
+          }))
         }
         
-        if (!pollResult) {
-          throw new Error('Workflow generation timed out. Please try again.')
-        }
-        
-        const duration = Date.now() - startTime
-        console.log('[Workflow Generation] Success!', {
-          duration: `${duration}ms`,
-          workflow: pollResult.workflow,
-          template: pollResult.template,
-          form: pollResult.form,
-          timestamp: new Date().toISOString(),
-        })
-
-        setGenerationStatus('Generation complete!')
-        setResult(pollResult)
-        
-        setTimeout(() => {
-          setGenerationStatus(null)
-        }, 3000)
-        
-        return pollResult
+        // Return job_id - the webhook will trigger navigation
+        return { job_id: jobId, status: 'pending' } as any
       } else {
         // Fallback: synchronous response (legacy behavior)
         const syncResult = initResponse

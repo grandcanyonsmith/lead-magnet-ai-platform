@@ -13,13 +13,15 @@ import { useWorkflowForm } from '@/hooks/useWorkflowForm'
 import { useWorkflowSteps } from '@/hooks/useWorkflowSteps'
 import { useWorkflowValidation } from '@/hooks/useWorkflowValidation'
 import { useWorkflowSubmission } from '@/hooks/useWorkflowSubmission'
+import { useWorkflowGenerationStatus } from '@/hooks/useWorkflowGenerationStatus'
 
 export default function NewWorkflowPage() {
   const router = useRouter()
-  const [step, setStep] = useState<'prompt' | 'form'>('prompt')
+  const [step, setStep] = useState<'prompt' | 'form' | 'creating'>('prompt')
   const [prompt, setPrompt] = useState('')
   const [generatedTemplateId, setGeneratedTemplateId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [generationJobId, setGenerationJobId] = useState<string | null>(null)
 
   // Hooks
   const aiGeneration = useAIGeneration()
@@ -27,6 +29,7 @@ export default function NewWorkflowPage() {
   const workflowSteps = useWorkflowSteps()
   const validation = useWorkflowValidation(workflowForm.formData, workflowSteps.steps, workflowForm.templateData)
   const submission = useWorkflowSubmission()
+  const generationStatus = useWorkflowGenerationStatus(generationJobId)
 
   // Handle AI generation result
   useEffect(() => {
@@ -66,15 +69,33 @@ export default function NewWorkflowPage() {
     }
 
     setError(null)
+    setStep('creating')
     const result = await aiGeneration.generateWorkflow(prompt.trim(), 'gpt-5')
     
-    if (result) {
+    if (result && result.job_id) {
+      // Store job_id for status tracking
+      setGenerationJobId(result.job_id)
+    } else if (result) {
+      // Fallback: synchronous result (legacy behavior)
       // Auto-save will be handled by useEffect
       aiGeneration.generationStatus && setTimeout(() => {
         // Status will be cleared by hook
           }, 5000)
     }
   }
+
+  // Handle generation status changes
+  useEffect(() => {
+    if (generationStatus.status === 'completed' && generationStatus.workflowId) {
+      // Navigation is handled by useWorkflowGenerationStatus hook
+      // Just clear the creating state
+      setStep('form')
+    } else if (generationStatus.status === 'failed') {
+      setError(generationStatus.error || 'Workflow generation failed')
+      setStep('prompt')
+      setGenerationJobId(null)
+    }
+  }, [generationStatus.status, generationStatus.workflowId, generationStatus.error])
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -100,6 +121,45 @@ export default function NewWorkflowPage() {
     if (workflow) {
       router.push('/dashboard/workflows')
     }
+  }
+
+  // Creating Step
+  if (step === 'creating') {
+    return (
+      <div>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Creating Your Lead Magnet</h1>
+          <p className="text-gray-600">AI is generating your lead magnet configuration...</p>
+        </div>
+
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            {error}
+          </div>
+        )}
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-8 text-center">
+            <div className="flex flex-col items-center justify-center space-y-4">
+              <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-purple-600"></div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  {aiGeneration.generationStatus || 'Creating your lead magnet...'}
+                </h3>
+                <p className="text-sm text-gray-600">
+                  This may take a minute. We'll automatically take you to the edit page when it's ready.
+                </p>
+                {generationJobId && (
+                  <p className="text-xs text-gray-500 mt-2 font-mono">
+                    Job ID: {generationJobId}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   // Prompt Step

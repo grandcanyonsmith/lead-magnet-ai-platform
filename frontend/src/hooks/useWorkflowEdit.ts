@@ -32,6 +32,7 @@ export function useWorkflowEdit() {
   const [steps, setSteps] = useState<WorkflowStep[]>([])
   const [formId, setFormId] = useState<string | null>(null)
   const [workflowForm, setWorkflowForm] = useState<any>(null)
+  const [workflowStatus, setWorkflowStatus] = useState<'active' | 'inactive' | 'draft' | null>(null)
 
   useEffect(() => {
     if (workflowId) {
@@ -81,6 +82,9 @@ export function useWorkflowEdit() {
         setFormId(workflow.form.form_id)
         setWorkflowForm(workflow.form)
       }
+      
+      // Store workflow status
+      setWorkflowStatus(workflow.status || 'active')
     } catch (error: any) {
       console.error('Failed to load workflow:', error)
       setError(error.response?.data?.message || error.message || 'Failed to load workflow')
@@ -154,6 +158,7 @@ export function useWorkflowEdit() {
     setSteps,
     formId,
     workflowForm,
+    workflowStatus,
     handleChange,
     handleStepChange,
     handleAddStep,
