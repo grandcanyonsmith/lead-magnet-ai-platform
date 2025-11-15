@@ -18,14 +18,12 @@ import { ViewSwitcher } from '@/components/ViewSwitcher'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { 
   FiHome, 
-  FiSettings, 
   FiFileText, 
   FiList, 
   FiBarChart2,
   FiMenu,
   FiX,
-  FiSearch,
-  FiUsers
+  FiSearch
 } from 'react-icons/fi'
 
 export default function DashboardLayout({
@@ -118,14 +116,8 @@ export default function DashboardLayout({
     { href: '/dashboard/jobs', label: 'Generated Lead Magnets', icon: FiBarChart2 },
     { href: '/dashboard/artifacts', label: 'Downloads', icon: FiFileText },
     { href: '/dashboard/files', label: 'Files', icon: FiFileText },
-    { href: '/dashboard/settings', label: 'Settings', icon: FiSettings },
   ]
-  const navItems = role === 'SUPER_ADMIN'
-    ? [
-        ...baseNavItems,
-        { href: '/dashboard/agency/users', label: 'Agency Users', icon: FiUsers },
-      ]
-    : baseNavItems
+  const navItems = baseNavItems
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
@@ -276,7 +268,7 @@ export default function DashboardLayout({
           
           {/* Mobile admin controls - shown below header on mobile */}
           {/* Always render to prevent layout shift, but hide when no admin controls */}
-          <div className="sm:hidden bg-white border-b border-gray-200 px-3 py-2 min-h-[48px] flex items-center gap-2 overflow-x-auto">
+          <div className="sm:hidden bg-white border-b border-gray-200 px-3 py-2 min-h-[48px] flex items-center gap-2 overflow-x-auto -mt-px">
             <ViewSwitcher />
             <UserImpersonation />
           </div>

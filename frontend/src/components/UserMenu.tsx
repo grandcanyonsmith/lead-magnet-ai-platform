@@ -1,14 +1,14 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
-import { FiUser, FiSettings, FiLogOut, FiChevronDown, FiX } from 'react-icons/fi'
+import { FiUser, FiSettings, FiLogOut, FiChevronDown, FiX, FiUsers } from 'react-icons/fi'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth/context'
 import { signOut } from '@/lib/auth'
 
 export const UserMenu: React.FC = () => {
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, role, isLoading } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -40,6 +40,11 @@ export const UserMenu: React.FC = () => {
     setIsOpen(false)
   }
 
+  const handleAgencyUsersClick = () => {
+    router.push('/dashboard/agency/users')
+    setIsOpen(false)
+  }
+
   const getInitials = (name?: string, email?: string) => {
     if (name) {
       const parts = name.split(' ')
@@ -54,8 +59,9 @@ export const UserMenu: React.FC = () => {
     return 'U'
   }
 
-  const displayName = user?.name || user?.email || 'User'
-  const initials = getInitials(user?.name, user?.email)
+  // Don't show "User" placeholder while loading - wait for actual user data
+  const displayName = isLoading ? '' : (user?.name || user?.email || 'User')
+  const initials = isLoading ? '' : getInitials(user?.name, user?.email)
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -65,11 +71,17 @@ export const UserMenu: React.FC = () => {
         aria-label="User menu"
       >
         <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white text-sm font-semibold">
-          {initials}
+          {isLoading ? (
+            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          ) : (
+            initials
+          )}
         </div>
-        <span className="hidden sm:block text-sm font-medium text-gray-700 max-w-[120px] truncate">
-          {displayName}
-        </span>
+        {!isLoading && (
+          <span className="hidden sm:block text-sm font-medium text-gray-700 max-w-[120px] truncate">
+            {displayName}
+          </span>
+        )}
         <FiChevronDown className={`hidden sm:block w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
@@ -78,15 +90,28 @@ export const UserMenu: React.FC = () => {
           <div className="p-4 border-b border-gray-200">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white text-sm font-semibold">
-                {initials}
+                {isLoading ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  initials
+                )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-gray-900 truncate">
-                  {user?.name || 'User'}
-                </p>
-                <p className="text-xs text-gray-500 truncate">
-                  {user?.email || ''}
-                </p>
+                {isLoading ? (
+                  <>
+                    <div className="h-4 bg-gray-200 rounded w-24 mb-2 animate-pulse" />
+                    <div className="h-3 bg-gray-200 rounded w-32 animate-pulse" />
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm font-semibold text-gray-900 truncate">
+                      {user?.name || 'User'}
+                    </p>
+                    <p className="text-xs text-gray-500 truncate">
+                      {user?.email || ''}
+                    </p>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -99,6 +124,15 @@ export const UserMenu: React.FC = () => {
               <FiSettings className="w-4 h-4 mr-3 text-gray-400" />
               <span>Settings</span>
             </button>
+            {role === 'SUPER_ADMIN' && (
+              <button
+                onClick={handleAgencyUsersClick}
+                className="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                <FiUsers className="w-4 h-4 mr-3 text-gray-400" />
+                <span>Agency Users</span>
+              </button>
+            )}
           </div>
 
           <div className="border-t border-gray-200 py-2">
