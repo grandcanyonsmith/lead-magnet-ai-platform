@@ -7,12 +7,10 @@ import { ulid } from 'ulid';
 import { db } from '../utils/db';
 import { logger } from '../utils/logger';
 import { env } from '../utils/env';
-import { FormService, ensureRequiredFields } from './formService';
-import { ensureStepDefaults } from '../utils/stepDefaults';
-import { WorkflowStep } from '../types/resources';
+import { FormService } from './formService';
+import { ensureStepDefaults, WorkflowStep } from '../utils/workflowMigration';
 
 const WORKFLOWS_TABLE = env.workflowsTable;
-const FORMS_TABLE = env.formsTable;
 const formService = new FormService();
 
 export interface DraftWorkflowData {
