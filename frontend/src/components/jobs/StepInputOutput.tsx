@@ -57,8 +57,8 @@ function hasImageGeneration(
   
   // Check if step tools include image generation
   const tools = step.input?.tools || step.tools || []
-  const hasImageGenerationTool = Array.isArray(tools) && tools.some((tool: Tool) => {
-    const toolName = getToolName(tool)
+  const hasImageGenerationTool = Array.isArray(tools) && tools.some((tool) => {
+    const toolName = getToolName(tool as Tool)
     return toolName === 'image_generation'
   })
   
