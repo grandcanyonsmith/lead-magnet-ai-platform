@@ -139,7 +139,9 @@ class AIService:
                     tool_choice=normalized_tool_choice,
                     params=params,
                     max_iterations=50,
-                    max_duration_seconds=300
+                    max_duration_seconds=300,
+                    tenant_id=tenant_id,
+                    job_id=job_id
                 )
                 
                 # Build usage info from CUA loop
