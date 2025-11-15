@@ -14,14 +14,29 @@ interface JobHeaderProps {
 export function JobHeader({ error, job }: JobHeaderProps) {
   const router = useRouter()
 
-  const totalCost =
-    job?.execution_steps && Array.isArray(job.execution_steps)
-      ? job.execution_steps.reduce((sum: number, step) => {
-          const value = (step.usage_info?.cost_usd as unknown) ?? 0
-          const numeric = typeof value === 'number' ? value : parseFloat(String(value))
-          return sum + (isNaN(numeric) ? 0 : numeric)
-        }, 0)
-      : null
+  const totalCost = (() => {
+    if (!job?.execution_steps || !Array.isArray(job.execution_steps)) {
+      return null
+    }
+    
+    const sum = job.execution_steps.reduce((acc: number, step) => {
+      const cost = step.usage_info?.cost_usd
+      if (cost === undefined || cost === null) {
+        return acc
+      }
+      if (typeof cost === 'number') {
+        return acc + cost
+      }
+      if (typeof cost === 'string') {
+        const parsed = parseFloat(cost)
+        return acc + (isNaN(parsed) ? 0 : parsed)
+      }
+      return acc
+    }, 0)
+    
+    
+    return sum
+  })()
 
   return (
     <div className="mb-6">
