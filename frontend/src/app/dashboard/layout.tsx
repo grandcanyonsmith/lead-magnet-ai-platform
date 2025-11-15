@@ -268,7 +268,7 @@ export default function DashboardLayout({
           
           {/* Mobile admin controls - shown below header on mobile */}
           {/* Always render to prevent layout shift, but hide when no admin controls */}
-          <div className="sm:hidden bg-white border-b border-gray-200 px-3 py-2 min-h-[48px] flex items-center gap-2 overflow-x-auto -mt-px">
+          <div className="sm:hidden bg-white border-b border-gray-200 px-3 py-2 min-h-[48px] flex items-center gap-2 overflow-x-auto">
             <ViewSwitcher />
             <UserImpersonation />
           </div>

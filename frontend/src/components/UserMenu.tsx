@@ -1,16 +1,20 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
-import { FiUser, FiSettings, FiLogOut, FiChevronDown, FiX, FiUsers } from 'react-icons/fi'
-import { useRouter } from 'next/navigation'
+import { FiUser, FiSettings, FiLogOut, FiChevronDown, FiX, FiUsers, FiFilter } from 'react-icons/fi'
+import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from '@/lib/auth/context'
 import { signOut } from '@/lib/auth'
+import { useJobFiltersContext } from '@/contexts/JobFiltersContext'
 
 export const UserMenu: React.FC = () => {
   const router = useRouter()
+  const pathname = usePathname()
   const { user, role, isLoading } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const jobFilters = useJobFiltersContext()
+  const isJobsPage = pathname === '/dashboard/jobs'
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -117,6 +121,54 @@ export const UserMenu: React.FC = () => {
           </div>
 
           <div className="py-2">
+            {/* Mobile Filters - Only show on jobs page and mobile */}
+            {isJobsPage && jobFilters && (
+              <div className="sm:hidden border-b border-gray-200 pb-2 mb-2">
+                <div className="px-4 py-2">
+                  <div className="flex items-center mb-2">
+                    <FiFilter className="w-4 h-4 mr-2 text-gray-400" />
+                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Filters</span>
+                  </div>
+                  <div className="space-y-2">
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Status</label>
+                      <select
+                        value={jobFilters.statusFilter}
+                        onChange={(e) => {
+                          jobFilters.setStatusFilter(e.target.value)
+                        }}
+                        className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-transparent"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <option value="all">All Statuses</option>
+                        <option value="pending">Queued</option>
+                        <option value="processing">Generating</option>
+                        <option value="completed">Ready</option>
+                        <option value="failed">Error</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Lead Magnet</label>
+                      <select
+                        value={jobFilters.workflowFilter}
+                        onChange={(e) => {
+                          jobFilters.setWorkflowFilter(e.target.value)
+                        }}
+                        className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-transparent"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <option value="all">All Lead Magnets</option>
+                        {jobFilters.workflows.map((wf: any) => (
+                          <option key={wf.workflow_id} value={wf.workflow_id}>
+                            {wf.workflow_name || wf.workflow_id}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
             <button
               onClick={handleSettingsClick}
               className="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
