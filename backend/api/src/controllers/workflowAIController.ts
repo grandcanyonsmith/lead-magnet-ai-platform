@@ -12,6 +12,7 @@ import { getOpenAIClient } from '../services/openaiService';
 import { usageTrackingService } from '../services/usageTrackingService';
 import { env } from '../utils/env';
 import { fetchICPContent, buildBrandContext } from '../utils/icpFetcher';
+import { sendWorkflowGenerationWebhook } from '../services/webhookService';
 
 const JOBS_TABLE = env.jobsTable;
 const USER_SETTINGS_TABLE = env.userSettingsTable;
@@ -26,22 +27,36 @@ export class WorkflowAIController {
    * Creates a job and triggers async processing.
    */
   async generateWithAI(tenantId: string, body: any): Promise<RouteResponse> {
-    const { description, model = 'gpt-5' } = body;
+    const { description, model = 'gpt-5', webhook_url } = body;
 
     if (!description || !description.trim()) {
       throw new ApiError('Description is required', 400);
+    }
+
+    // Validate webhook_url if provided
+    if (webhook_url) {
+      if (typeof webhook_url !== 'string' || !webhook_url.trim()) {
+        throw new ApiError('webhook_url must be a valid URL string', 400);
+      }
+      // Basic URL validation
+      try {
+        new URL(webhook_url);
+      } catch {
+        throw new ApiError('webhook_url must be a valid URL', 400);
+      }
     }
 
     logger.info('[Workflow Generation] Starting async generation', {
       tenantId,
       model,
       descriptionLength: description.length,
+      hasWebhookUrl: !!webhook_url,
       timestamp: new Date().toISOString(),
     });
 
     // Create workflow generation job record
     const jobId = `wfgen_${ulid()}`;
-    const job = {
+    const job: any = {
       job_id: jobId,
       tenant_id: tenantId,
       job_type: 'workflow_generation',
@@ -53,6 +68,11 @@ export class WorkflowAIController {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
+
+    // Store webhook_url if provided
+    if (webhook_url) {
+      job.webhook_url = webhook_url;
+    }
 
     await db.put(JOBS_TABLE, job);
     logger.info('[Workflow Generation] Created job record', { jobId });
@@ -128,6 +148,16 @@ export class WorkflowAIController {
   async processWorkflowGenerationJob(jobId: string, tenantId: string, description: string, model: string): Promise<void> {
     logger.info('[Workflow Generation] Processing job', { jobId, tenantId });
 
+    // Load job to get webhook_url and description if not provided
+    const job = await db.get(JOBS_TABLE, { job_id: jobId });
+    if (!job) {
+      throw new Error(`Job ${jobId} not found`);
+    }
+
+    // Use job description if not provided as parameter
+    const jobDescription = description || job.description || '';
+    const jobModel = model || job.model || 'gpt-5';
+
     try {
       // Update job status to processing
       await db.update(JOBS_TABLE, { job_id: jobId }, {
@@ -173,8 +203,8 @@ export class WorkflowAIController {
 
       // Generate workflow config first (needed for form generation)
       const workflowResult = await generationService.generateWorkflowConfig(
-        description,
-        model,
+        jobDescription,
+        jobModel,
         tenantId,
         jobId,
         brandContext || undefined,
@@ -184,25 +214,25 @@ export class WorkflowAIController {
       // Generate template HTML, metadata, and form fields in parallel
       const [templateHtmlResult, templateMetadataResult, formFieldsResult] = await Promise.all([
         generationService.generateTemplateHTML(
-          description,
-          model,
+          jobDescription,
+          jobModel,
           tenantId,
           jobId,
           brandContext || undefined,
           icpContext || undefined
         ),
         generationService.generateTemplateMetadata(
-          description,
-          model,
+          jobDescription,
+          jobModel,
           tenantId,
           jobId,
           brandContext || undefined,
           icpContext || undefined
         ),
         generationService.generateFormFields(
-          description,
+          jobDescription,
           workflowResult.workflowData.workflow_name,
-          model,
+          jobModel,
           tenantId,
           jobId,
           brandContext || undefined,
@@ -238,16 +268,57 @@ export class WorkflowAIController {
       });
 
       logger.info('[Workflow Generation] Job completed successfully', { jobId });
+
+      // Send webhook notification if webhook_url was provided
+      if (job.webhook_url) {
+        try {
+          await sendWorkflowGenerationWebhook(job.webhook_url, {
+            job_id: jobId,
+            status: 'completed',
+            workflow: result,
+            completed_at: new Date().toISOString(),
+          });
+        } catch (webhookError: any) {
+          // Log webhook error but don't fail the job
+          logger.error('[Workflow Generation] Failed to send completion webhook', {
+            jobId,
+            webhookUrl: job.webhook_url,
+            error: webhookError.message,
+          });
+        }
+      }
     } catch (error: any) {
       logger.error('[Workflow Generation] Job failed', {
         jobId,
         error: error.message,
       });
+      
+      const errorMessage = error.message || 'Unknown error';
       await db.update(JOBS_TABLE, { job_id: jobId }, {
         status: 'failed',
-        error_message: error.message || 'Unknown error',
+        error_message: errorMessage,
         updated_at: new Date().toISOString(),
       });
+
+      // Send webhook notification for failure if webhook_url was provided
+      if (job.webhook_url) {
+        try {
+          await sendWorkflowGenerationWebhook(job.webhook_url, {
+            job_id: jobId,
+            status: 'failed',
+            error_message: errorMessage,
+            failed_at: new Date().toISOString(),
+          });
+        } catch (webhookError: any) {
+          // Log webhook error but don't fail the job
+          logger.error('[Workflow Generation] Failed to send failure webhook', {
+            jobId,
+            webhookUrl: job.webhook_url,
+            error: webhookError.message,
+          });
+        }
+      }
+
       throw error;
     }
   }
