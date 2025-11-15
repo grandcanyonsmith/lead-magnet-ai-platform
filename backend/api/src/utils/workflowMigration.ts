@@ -116,49 +116,64 @@ export function ensureStepDefaults(steps: WorkflowStep[]): WorkflowStep[] {
     
     // Clean up and validate depends_on array
     let dependsOn = step.depends_on;
+    let shouldAutoGenerate = false;
     
-    // If depends_on is explicitly provided (even if empty array), clean it up
+    // If depends_on is explicitly provided, clean it up
     if (dependsOn !== undefined && dependsOn !== null) {
       if (Array.isArray(dependsOn)) {
         // Filter out invalid indices: must be >= 0, < steps.length, and not equal to current index
-        dependsOn = dependsOn.filter((depIndex: number) => 
+        const validDeps = dependsOn.filter((depIndex: number) => 
           typeof depIndex === 'number' && 
           depIndex >= 0 && 
           depIndex < steps.length && 
           depIndex !== index
         );
+        
+        // If step_order > 0 and depends_on is empty, auto-generate dependencies
+        // (empty array for step_order > 0 likely means AI didn't provide dependencies)
+        // But if step_order === 0, empty array is correct (no dependencies)
+        if (validDeps.length === 0 && stepOrder > 0) {
+          shouldAutoGenerate = true;
+        } else {
+          dependsOn = validDeps;
+        }
       } else {
-        // Invalid type, reset to undefined to auto-generate
-        dependsOn = undefined;
+        // Invalid type, reset to auto-generate
+        shouldAutoGenerate = true;
       }
+    } else {
+      // Not provided at all, auto-generate
+      shouldAutoGenerate = true;
     }
     
-    // Auto-generate depends_on from step_order if not provided
-    if (dependsOn === undefined && stepOrder > 0) {
-      // Find all steps with lower step_order
-      const lowerOrderSteps = steps
-        .map((s: Partial<WorkflowStep>, i: number) => ({ 
-          step: s, 
-          index: i, 
-          order: s.step_order !== undefined ? s.step_order : i 
-        }))
-        .filter(({ order }) => order < stepOrder)
-        .map(({ index }) => index)
-        .filter((depIndex: number) => depIndex >= 0 && depIndex < steps.length && depIndex !== index);
-      
-      // If there are lower order steps, depend on all of them
-      // Otherwise, if index > 0, depend on the previous step by index
-      if (lowerOrderSteps.length > 0) {
-        dependsOn = lowerOrderSteps;
-      } else if (index > 0) {
-        dependsOn = [index - 1];
-      } else {
-        // First step (index 0) with stepOrder > 0 but no lower order steps - no dependencies
+    // Auto-generate depends_on from step_order if needed
+    if (shouldAutoGenerate) {
+      if (stepOrder === 0) {
+        // First step (stepOrder === 0) - no dependencies
         dependsOn = [];
+      } else {
+        // Find all steps with lower step_order
+        const lowerOrderSteps = steps
+          .map((s: Partial<WorkflowStep>, i: number) => ({ 
+            step: s, 
+            index: i, 
+            order: s.step_order !== undefined ? s.step_order : i 
+          }))
+          .filter(({ order }) => order < stepOrder)
+          .map(({ index }) => index)
+          .filter((depIndex: number) => depIndex >= 0 && depIndex < steps.length && depIndex !== index);
+        
+        // If there are lower order steps, depend on all of them
+        // Otherwise, if index > 0, depend on the previous step by index
+        if (lowerOrderSteps.length > 0) {
+          dependsOn = lowerOrderSteps;
+        } else if (index > 0) {
+          dependsOn = [index - 1];
+        } else {
+          // First step (index 0) with stepOrder > 0 but no lower order steps - no dependencies
+          dependsOn = [];
+        }
       }
-    } else if (dependsOn === undefined) {
-      // First step (stepOrder === 0) - no dependencies
-      dependsOn = [];
     }
     
     return {
