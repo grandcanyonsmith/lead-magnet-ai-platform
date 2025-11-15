@@ -25,7 +25,7 @@ from services.usage_service import UsageService
 from services.image_artifact_service import ImageArtifactService
 from services.webhook_step_service import WebhookStepService
 from services.ai_step_processor import AIStepProcessor
-from utils.step_utils import normalize_step_order
+from utils.step_utils import normalize_step_order, normalize_dependency_list
 from dependency_resolver import get_ready_steps, get_step_status
 
 logger = logging.getLogger(__name__)
@@ -582,6 +582,9 @@ class StepProcessor:
                 i for i, s in enumerate(steps)
                 if s.get('step_order', i) < step_order
             ]
+        else:
+            # Normalize dependency values (handle Decimal types from DynamoDB)
+            step_deps = normalize_dependency_list(step_deps)
         
         # Get completed step indices from execution_steps (include both AI and webhook steps)
         completed_step_indices = [
