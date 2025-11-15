@@ -1,6 +1,7 @@
 import { formsController } from '../controllers/forms';
 import { jobsController } from '../controllers/jobs';
 import { webhooksController } from '../controllers/webhooks';
+import { openAIWebhookController } from '../controllers/openaiWebhookController';
 import { router } from './router';
 import { logger } from '../utils/logger';
 
@@ -31,6 +32,14 @@ export function registerPublicRoutes(): void {
   router.register('POST', '/v1/webhooks/:token', async (params, body, _query, _tenantId, context) => {
     logger.info('[Public Routes] POST /v1/webhooks/:token', { token: params.token });
     return await webhooksController.handleWebhook(params.token, body, context?.sourceIp || '');
+  }, false);
+
+  // OpenAI webhook endpoint
+  router.register('POST', '/v1/openai/webhook', async (_params, body, _query, _tenantId, context) => {
+    logger.info('[Public Routes] POST /v1/openai/webhook');
+    const headers = context?.event?.headers || {};
+    const rawBody = context?.event?.body;
+    return await openAIWebhookController.handleWebhook(body, headers, rawBody);
   }, false);
 }
 
