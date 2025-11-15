@@ -72,7 +72,7 @@ export interface Workflow extends BaseEntity {
   template_id: string
   template_version: number
   steps?: WorkflowStep[]
-  status: 'active' | 'inactive'
+  status: 'active' | 'inactive' | 'draft'
   form?: {
     form_id: string
     form_name: string
@@ -119,6 +119,7 @@ export interface WorkflowListResponse {
 export interface WorkflowGenerationRequest {
   description: string
   model?: AIModel
+  webhook_url?: string
 }
 
 export interface WorkflowGenerationResponse {

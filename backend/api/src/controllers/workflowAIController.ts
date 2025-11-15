@@ -13,6 +13,7 @@ import { usageTrackingService } from '../services/usageTrackingService';
 import { env } from '../utils/env';
 import { fetchICPContent, buildBrandContext } from '../utils/icpFetcher';
 import { sendWorkflowGenerationWebhook } from '../services/webhookService';
+import { saveDraftWorkflow } from '../services/draftWorkflowService';
 
 const JOBS_TABLE = env.jobsTable;
 const USER_SETTINGS_TABLE = env.userSettingsTable;
@@ -69,9 +70,9 @@ export class WorkflowAIController {
       updated_at: new Date().toISOString(),
     };
 
-    // Store webhook_url if provided
+    // Store webhook_url if provided, replacing {jobId} placeholder with actual jobId
     if (webhook_url) {
-      job.webhook_url = webhook_url;
+      job.webhook_url = webhook_url.replace('{jobId}', jobId);
     }
 
     await db.put(JOBS_TABLE, job);
@@ -260,14 +261,36 @@ export class WorkflowAIController {
         formFieldsResult.formData
       );
 
-      // Update job with result
+      // Save workflow as draft
+      logger.info('[Workflow Generation] Saving workflow as draft', { jobId });
+      const { workflow_id, form_id } = await saveDraftWorkflow(
+        tenantId,
+        {
+          workflow_name: result.workflow.workflow_name,
+          workflow_description: result.workflow.workflow_description,
+          steps: result.workflow.steps || [],
+          form_fields_schema: result.form.form_fields_schema,
+        },
+        result.template.html_content,
+        result.template.template_name,
+        result.template.template_description
+      );
+
+      logger.info('[Workflow Generation] Draft workflow saved', {
+        jobId,
+        workflowId: workflow_id,
+        formId: form_id,
+      });
+
+      // Update job with result and workflow_id
       await db.update(JOBS_TABLE, { job_id: jobId }, {
         status: 'completed',
         result: result,
+        workflow_id: workflow_id,
         updated_at: new Date().toISOString(),
       });
 
-      logger.info('[Workflow Generation] Job completed successfully', { jobId });
+      logger.info('[Workflow Generation] Job completed successfully', { jobId, workflowId: workflow_id });
 
       // Send webhook notification if webhook_url was provided
       if (job.webhook_url) {
@@ -275,6 +298,7 @@ export class WorkflowAIController {
           await sendWorkflowGenerationWebhook(job.webhook_url, {
             job_id: jobId,
             status: 'completed',
+            workflow_id: workflow_id,
             workflow: result,
             completed_at: new Date().toISOString(),
           });
@@ -380,6 +404,7 @@ export class WorkflowAIController {
         status: job.status,
         result: job.result,
         error_message: job.error_message,
+        workflow_id: job.workflow_id, // Include workflow_id if available
         created_at: job.created_at,
         updated_at: job.updated_at,
       },
