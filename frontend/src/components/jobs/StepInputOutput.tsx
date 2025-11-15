@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useRef } from 'react'
-import { FiCopy, FiChevronDown, FiChevronUp, FiLoader, FiEdit } from 'react-icons/fi'
+import { FiCopy, FiChevronDown, FiChevronUp, FiLoader, FiEdit, FiCpu } from 'react-icons/fi'
 import { formatStepInput, formatStepOutput } from '@/utils/jobFormatting'
 import { StepContent } from './StepContent'
 import { MergedStep, StepStatus, ExecutionStep } from '@/types/job'
@@ -321,9 +321,45 @@ export function StepInputOutput({
     if (!hasImageUrls && !hasImageArtifacts) {
       return null
     }
+
+    // Get model and tools for display
+    const model = step.model || step.input?.model
+    const tools = step.input?.tools || step.tools || []
+    const toolChoice = step.input?.tool_choice || step.tool_choice
+    const hasTools = tools && Array.isArray(tools) && tools.length > 0
     
     return (
       <div className="mt-3 md:mt-2.5 pt-3 md:pt-2.5 border-t border-gray-200">
+        {/* Show model and tools when image generation is used */}
+        {(model || hasTools) && (
+          <div className="flex items-center gap-2 mb-3 md:mb-2 flex-wrap">
+            {model && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800 border border-purple-200">
+                <FiCpu className="w-3 h-3" />
+                {model}
+              </span>
+            )}
+            {hasTools && (
+              <>
+                {tools.map((tool, toolIdx) => {
+                  const toolName = getToolName(tool as Tool)
+                  return (
+                    <span
+                      key={toolIdx}
+                      className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 border border-blue-200 whitespace-nowrap"
+                    >
+                      {toolName}
+                    </span>
+                  )
+                })}
+                {toolChoice && toolChoice !== 'auto' && (
+                  <span className="text-xs text-gray-500">({toolChoice})</span>
+                )}
+              </>
+            )}
+          </div>
+        )}
+        
         <span className="text-sm md:text-xs font-semibold text-gray-700 mb-2.5 md:mb-2 block">Generated Images:</span>
         
         {/* Loading state */}
@@ -548,18 +584,24 @@ export function StepInputOutput({
                   </div>
                 </div>
                 <div ref={outputScrollRef} className="p-3 md:p-2.5 bg-green-50/20 max-h-[350px] md:max-h-72 overflow-y-auto scrollbar-hide-until-hover">
-                  {(() => {
-                    const stepImageUrls = step.image_urls && Array.isArray(step.image_urls) && step.image_urls.length > 0 ? step.image_urls : []
-                    return (
-                      <StepContent 
-                        formatted={formatStepOutput(step)} 
-                        imageUrls={stepImageUrls}
-                      />
-                    )
-                  })()}
-                  
-                  {/* Display images in Output section only if image generation was NOT used (for backwards compatibility) */}
-                  {!usedImageGeneration && renderImageSection()}
+                  {usedImageGeneration ? (
+                    /* For image generation steps, only show the image URL, not markdown preview */
+                    renderImageSection()
+                  ) : (
+                    /* For non-image generation steps, show the normal output content */
+                    <>
+                      {(() => {
+                        const stepImageUrls = step.image_urls && Array.isArray(step.image_urls) && step.image_urls.length > 0 ? step.image_urls : []
+                        return (
+                          <StepContent 
+                            formatted={formatStepOutput(step)} 
+                            imageUrls={stepImageUrls}
+                          />
+                        )
+                      })()}
+                      {renderImageSection()}
+                    </>
+                  )}
                   
                   {/* Show main artifact (step output) */}
                   {step.artifact_id && (
