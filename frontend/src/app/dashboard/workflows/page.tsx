@@ -298,10 +298,20 @@ export default function WorkflowsPage() {
                               onClick={(e) => {
                                 e.stopPropagation()
                                 e.preventDefault()
-                                router.push(`/dashboard/workflows/${workflow.workflow_id}`)
                                 setOpenMenuId(null)
+                                if (typeof window !== 'undefined') {
+                                  window.location.href = `/dashboard/workflows/${workflow.workflow_id}`
+                                } else {
+                                  router.push(`/dashboard/workflows/${workflow.workflow_id}`)
+                                }
+                              }}
+                              onPointerDown={(e) => {
+                                e.stopPropagation()
                               }}
                               onTouchStart={(e) => {
+                                e.stopPropagation()
+                              }}
+                              onMouseDown={(e) => {
                                 e.stopPropagation()
                               }}
                               className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 active:bg-gray-100 flex items-center touch-target"
@@ -313,10 +323,20 @@ export default function WorkflowsPage() {
                               onClick={(e) => {
                                 e.stopPropagation()
                                 e.preventDefault()
-                                router.push(`/dashboard/workflows/${workflow.workflow_id}/edit`)
                                 setOpenMenuId(null)
+                                if (typeof window !== 'undefined') {
+                                  window.location.href = `/dashboard/workflows/${workflow.workflow_id}/edit`
+                                } else {
+                                  router.push(`/dashboard/workflows/${workflow.workflow_id}/edit`)
+                                }
+                              }}
+                              onPointerDown={(e) => {
+                                e.stopPropagation()
                               }}
                               onTouchStart={(e) => {
+                                e.stopPropagation()
+                              }}
+                              onMouseDown={(e) => {
                                 e.stopPropagation()
                               }}
                               className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 active:bg-gray-100 flex items-center touch-target"

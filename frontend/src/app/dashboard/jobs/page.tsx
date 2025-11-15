@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { FiCheckCircle, FiXCircle, FiClock, FiLoader, FiRefreshCw, FiExternalLink, FiChevronDown, FiChevronUp } from 'react-icons/fi'
 import { useJobFilters, useJobSorting } from '@/hooks/useJobFilters'
+import { JobFiltersProvider } from '@/contexts/JobFiltersContext'
 
 const getStatusLabel = (status: string) => {
   const labels: Record<string, string> = {
@@ -196,54 +197,63 @@ export default function JobsPage() {
   }
 
   return (
-    <div>
-      <div className="mb-4 sm:mb-6">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-0">
-          <div>
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Generated Lead Magnets</h1>
-            <p className="text-sm sm:text-base text-gray-600 mt-1">Your generated lead magnets and documents</p>
-          </div>
-          <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
-            <span className="text-xs sm:text-sm text-gray-600 whitespace-nowrap">
-              {jobs.length} {jobs.length === 1 ? 'lead magnet' : 'lead magnets'}
-            </span>
-            <button
-              onClick={() => loadJobs(true)}
-              disabled={refreshing}
-              className="flex items-center px-3 sm:px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 text-sm sm:text-base"
-            >
-              <FiRefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Refresh</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Search Bar */}
-      {jobs.length > 0 && (
+    <JobFiltersProvider 
+      statusFilter={filters.statusFilter}
+      workflowFilter={filters.workflowFilter}
+      setStatusFilter={filters.setStatusFilter}
+      setWorkflowFilter={filters.setWorkflowFilter}
+      workflows={workflows}
+    >
+      <div>
         <div className="mb-4 sm:mb-6">
-          <div className="relative">
-            <input
-              type="text"
-              value={filters.searchQuery}
-              onChange={(e) => filters.setSearchQuery(e.target.value)}
-              placeholder="Search by lead magnet name or job ID..."
-              className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            />
-            <svg
-              className="absolute left-3 top-2.5 w-5 h-5 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-0">
+            <div>
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Generated Lead Magnets</h1>
+              <p className="text-sm sm:text-base text-gray-600 mt-1">Your generated lead magnets and documents</p>
+            </div>
+            <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
+              <span className="text-xs sm:text-sm text-gray-600 whitespace-nowrap">
+                {jobs.length} {jobs.length === 1 ? 'lead magnet' : 'lead magnets'}
+              </span>
+              <button
+                onClick={() => loadJobs(true)}
+                disabled={refreshing}
+                className="flex items-center px-3 sm:px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 text-sm sm:text-base"
+              >
+                <FiRefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Refresh</span>
+              </button>
+            </div>
           </div>
         </div>
-      )}
 
-      {/* Filters */}
-      <div className="mb-4 sm:mb-6 bg-white rounded-lg shadow p-3 sm:p-4" data-tour="job-filters">
+      {/* Search and Filters - Combined on desktop, search only on mobile */}
+      <div className="mb-4 sm:mb-6 space-y-3 sm:space-y-0">
+        {/* Search Bar */}
+        {jobs.length > 0 && (
+          <div className="sm:mb-4">
+            <div className="relative">
+              <input
+                type="text"
+                value={filters.searchQuery}
+                onChange={(e) => filters.setSearchQuery(e.target.value)}
+                placeholder="Search by lead magnet name..."
+                className="w-full px-4 py-2.5 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+              />
+              <svg
+                className="absolute left-3 top-3 w-5 h-5 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+          </div>
+        )}
+
+        {/* Filters - Hidden on mobile, shown in user menu instead */}
+        <div className="hidden sm:block bg-white rounded-lg shadow p-3 sm:p-4" data-tour="job-filters">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Status</label>
@@ -274,6 +284,7 @@ export default function JobsPage() {
               ))}
             </select>
           </div>
+        </div>
         </div>
       </div>
 
@@ -614,6 +625,7 @@ export default function JobsPage() {
           Auto-refreshing every 5 seconds...
         </div>
       )}
-    </div>
+      </div>
+    </JobFiltersProvider>
   )
 }
