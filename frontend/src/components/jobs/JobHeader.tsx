@@ -2,15 +2,26 @@
 
 import { useRouter } from 'next/navigation'
 import { FiArrowLeft } from 'react-icons/fi'
+import type { Job } from '@/types/job'
 
 interface JobHeaderProps {
   error: string | null
   resubmitting: boolean
   onResubmit: () => void
+  job?: Job | null
 }
 
-export function JobHeader({ error }: JobHeaderProps) {
+export function JobHeader({ error, job }: JobHeaderProps) {
   const router = useRouter()
+
+  const totalCost =
+    job?.execution_steps && Array.isArray(job.execution_steps)
+      ? job.execution_steps.reduce((sum: number, step) => {
+          const value = (step.usage_info?.cost_usd as unknown) ?? 0
+          const numeric = typeof value === 'number' ? value : parseFloat(String(value))
+          return sum + (isNaN(numeric) ? 0 : numeric)
+        }, 0)
+      : null
 
   return (
     <div className="mb-6">
@@ -31,6 +42,12 @@ export function JobHeader({ error }: JobHeaderProps) {
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Lead Magnet Details</h1>
           <p className="text-sm sm:text-base text-gray-600 mt-1">View details and status of your generated lead magnet</p>
         </div>
+        {totalCost !== null && (
+          <div className="sm:text-right">
+            <div className="text-xs font-medium uppercase tracking-wide text-gray-500">Total Cost</div>
+            <div className="text-sm sm:text-base text-gray-900 mt-1">${totalCost.toFixed(2)}</div>
+          </div>
+        )}
       </div>
     </div>
   )

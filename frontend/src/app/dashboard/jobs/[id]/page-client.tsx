@@ -213,7 +213,7 @@ export default function JobDetailClient() {
 
   return (
     <div>
-      <JobHeader error={error} resubmitting={resubmitting} onResubmit={handleResubmitClick} />
+      <JobHeader error={error} resubmitting={resubmitting} onResubmit={handleResubmitClick} job={job} />
       
       <ResubmitModal
         isOpen={showResubmitModal}
