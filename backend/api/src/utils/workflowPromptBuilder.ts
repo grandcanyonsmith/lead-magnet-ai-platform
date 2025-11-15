@@ -146,14 +146,16 @@ Create a personalized action plan document for [name] at [company_name]. Use ins
 - **Step 1+**: Build upon previous steps, transform or enhance content
 - **Final Step**: Often HTML generation (tool_choice: "none", tools: [])
 
-**Dependencies (\`depends_on\` field):**
-- Use depends_on to explicitly control which steps must complete before this step runs
+**Dependencies (\`depends_on\` field) - REQUIRED:**
+- **YOU MUST include depends_on for EVERY step** - it is a required field
 - depends_on is an array of step indices (0-based) that this step depends on
-- If depends_on is not provided, dependencies are auto-detected from step_order:
-  - Steps with the same step_order can run in parallel
-  - Steps with higher step_order depend on all steps with lower step_order
-- **Example**: If Step 2 depends on Step 0 and Step 1, set depends_on: [0, 1]
-- **Parallel execution**: Steps with same step_order and no explicit depends_on can run simultaneously
+- **Rules for setting depends_on:**
+  - Steps with `step_order: 0` should have `depends_on: []` (no dependencies, can run first)
+  - Steps with the same `step_order` should have `depends_on: []` (can run in parallel)
+  - Steps with higher `step_order` MUST depend on all steps with lower `step_order`
+  - **Example**: If Step 2 has `step_order: 1` and Step 0 and Step 1 both have `step_order: 0`, then Step 2 should have `depends_on: [0, 1]`
+- **Parallel execution**: Steps with same step_order and `depends_on: []` can run simultaneously
+- **Sequential execution**: Steps with higher step_order must wait for all lower step_order steps to complete
 
 Common patterns:
 - Research → Analysis → Content Generation → HTML Formatting
@@ -244,7 +246,7 @@ Return ONLY valid JSON matching this structure:
       "model": "...",
       "instructions": "Detailed, specific instructions with [field_name] references",
       "step_order": 0,
-      "depends_on": [],  // Array of step indices this step depends on (optional, auto-detected from step_order if not provided)
+      "depends_on": [],  // REQUIRED: Array of step indices (0-based) this step depends on. Steps with step_order: 0 should have []. Steps with higher step_order must include all lower step_order indices.
       "tools": ["..."],
       "tool_choice": "auto|required|none"
     }

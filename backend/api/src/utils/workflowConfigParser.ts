@@ -182,7 +182,7 @@ function normalizeStep(step: RawStep, index: number): WorkflowStep {
       : index,
     depends_on: isArray(step.depends_on) 
       ? step.depends_on.filter((d): d is number => typeof d === 'number' && d >= 0 && d < 1000)
-      : undefined,
+      : [], // Default to empty array if not provided - ensureStepDefaults will generate proper dependencies
     tools: tools.length > 0 ? tools : undefined,
     tool_choice: toolChoice,
   };
