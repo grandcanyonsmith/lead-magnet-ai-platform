@@ -573,6 +573,25 @@ class StepProcessor:
         step_model = step.get('model', 'gpt-5')
         step_instructions = step.get('instructions', '')
         
+        # Reload execution_steps from database/S3 to ensure we have the latest data
+        # This is important when steps are processed in separate Lambda invocations
+        try:
+            job_with_steps = self.db.get_job(job_id, s3_service=self.s3)
+            if job_with_steps and job_with_steps.get('execution_steps'):
+                execution_steps = job_with_steps['execution_steps']
+                logger.debug(f"[StepProcessor] Reloaded execution_steps from database", extra={
+                    'job_id': job_id,
+                    'step_index': step_index,
+                    'execution_steps_count': len(execution_steps)
+                })
+        except Exception as e:
+            logger.warning(f"[StepProcessor] Failed to reload execution_steps, using provided list", extra={
+                'job_id': job_id,
+                'step_index': step_index,
+                'error': str(e)
+            })
+            # Continue with provided execution_steps if reload fails
+        
         # Check if dependencies are satisfied
         step_deps = step.get('depends_on', [])
         if not step_deps:
@@ -592,6 +611,17 @@ class StepProcessor:
             for s in execution_steps
             if s.get('step_type') in ['ai_generation', 'webhook'] and normalize_step_order(s) > 0
         ]
+        
+        logger.debug(f"[StepProcessor] Dependency check", extra={
+            'job_id': job_id,
+            'step_index': step_index,
+            'step_name': step_name,
+            'step_deps': step_deps,
+            'completed_step_indices': completed_step_indices,
+            'execution_steps_count': len(execution_steps),
+            'execution_steps_types': [s.get('step_type') for s in execution_steps],
+            'execution_steps_orders': [normalize_step_order(s) for s in execution_steps]
+        })
         
         # Check if all dependencies are completed
         all_deps_completed = len(step_deps) == 0 or all(dep_index in completed_step_indices for dep_index in step_deps)
