@@ -323,7 +323,8 @@ export function StepInputOutput({
     }
 
     // Get model and tools for display
-    const model = step.model || step.input?.model
+    const modelValue = step.model || step.input?.model
+    const modelString: string | undefined = typeof modelValue === 'string' ? modelValue : undefined
     const tools = step.input?.tools || step.tools || []
     const toolChoice = step.input?.tool_choice || step.tool_choice
     const hasTools = tools && Array.isArray(tools) && tools.length > 0
@@ -331,12 +332,12 @@ export function StepInputOutput({
     return (
       <div className="mt-3 md:mt-2.5 pt-3 md:pt-2.5 border-t border-gray-200">
         {/* Show model and tools when image generation is used */}
-        {(model || hasTools) && (
+        {(modelString || hasTools) && (
           <div className="flex items-center gap-2 mb-3 md:mb-2 flex-wrap">
-            {model && (
+            {modelString && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800 border border-purple-200">
                 <FiCpu className="w-3 h-3" />
-                {model}
+                {modelString}
               </span>
             )}
             {hasTools && (
