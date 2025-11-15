@@ -12,6 +12,7 @@ const MAX_RETRY_ATTEMPTS = 3;
 export interface WorkflowGenerationWebhookPayload {
   job_id: string;
   status: 'completed' | 'failed';
+  workflow_id?: string;
   workflow?: any;
   error_message?: string;
   completed_at?: string;
