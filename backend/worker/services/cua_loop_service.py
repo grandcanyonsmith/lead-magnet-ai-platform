@@ -34,7 +34,9 @@ class CUALoopService:
         tool_choice: str,
         params: Dict,
         max_iterations: int = 50,
-        max_duration_seconds: int = 300
+        max_duration_seconds: int = 300,
+        tenant_id: Optional[str] = None,
+        job_id: Optional[str] = None,
     ) -> Tuple[str, List[str], Dict]:
         """
         Run the full Computer Use API loop: execute actions → capture screenshots → send back to model.
@@ -189,8 +191,13 @@ class CUALoopService:
                     screenshot_b64 = browser.capture_screenshot()
                     current_url = browser.get_current_url()
                     
-                    # Upload screenshot to S3
-                    screenshot_url = self.image_handler.upload_base64_image_to_s3(screenshot_b64, 'image/png')
+                    # Upload screenshot to S3 under the workflow run folder if context is available
+                    screenshot_url = self.image_handler.upload_base64_image_to_s3(
+                        screenshot_b64,
+                        'image/png',
+                        tenant_id=tenant_id,
+                        job_id=job_id,
+                    )
                     if screenshot_url:
                         screenshot_urls.append(screenshot_url)
                         logger.info(f"[CUALoopService] Screenshot captured and uploaded: {screenshot_url}")
