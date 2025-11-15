@@ -11,9 +11,10 @@ import { withTimeout } from './timeout';
 import { logger } from './logger';
 
 /**
- * Default timeout for OpenAI responses (30 seconds).
+ * Default timeout for OpenAI responses (no timeout by default).
+ * Set to 0 to disable timeout entirely.
  */
-export const RESPONSES_TIMEOUT_MS = 30000;
+export const RESPONSES_TIMEOUT_MS = 0;
 
 /**
  * Call an async function with optional timeout.
@@ -23,7 +24,7 @@ export const RESPONSES_TIMEOUT_MS = 30000;
  * 
  * @param promiseFactory - Function that returns a promise to execute
  * @param contextLabel - Context label for logging (optional, for compatibility)
- * @param timeoutMs - Timeout in milliseconds (optional, defaults to RESPONSES_TIMEOUT_MS)
+ * @param timeoutMs - Timeout in milliseconds (optional, defaults to 0 - no timeout)
  * @returns Promise result
  * @throws Error if timeout is exceeded
  * 
@@ -41,7 +42,7 @@ export async function callResponsesWithTimeout<T>(
   contextLabel?: string,
   timeoutMs?: number
 ): Promise<T> {
-  const timeout = timeoutMs !== undefined && timeoutMs > 0 ? timeoutMs : RESPONSES_TIMEOUT_MS;
+  const timeout = timeoutMs !== undefined && timeoutMs > 0 ? timeoutMs : 0;
   
   if (timeout <= 0) {
     // No timeout - just call the promise factory directly
