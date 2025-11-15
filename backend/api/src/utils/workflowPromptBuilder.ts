@@ -146,15 +146,15 @@ Create a personalized action plan document for [name] at [company_name]. Use ins
 - **Step 1+**: Build upon previous steps, transform or enhance content
 - **Final Step**: Often HTML generation (tool_choice: "none", tools: [])
 
-**Dependencies (\`depends_on\` field) - REQUIRED:**
+**Dependencies (depends_on field) - REQUIRED:**
 - **YOU MUST include depends_on for EVERY step** - it is a required field
 - depends_on is an array of step indices (0-based) that this step depends on
 - **Rules for setting depends_on:**
-  - Steps with `step_order: 0` should have `depends_on: []` (no dependencies, can run first)
-  - Steps with the same `step_order` should have `depends_on: []` (can run in parallel)
-  - Steps with higher `step_order` MUST depend on all steps with lower `step_order`
-  - **Example**: If Step 2 has `step_order: 1` and Step 0 and Step 1 both have `step_order: 0`, then Step 2 should have `depends_on: [0, 1]`
-- **Parallel execution**: Steps with same step_order and `depends_on: []` can run simultaneously
+  - Steps with step_order: 0 should have depends_on: [] (no dependencies, can run first)
+  - Steps with the same step_order should have depends_on: [] (can run in parallel)
+  - Steps with higher step_order MUST depend on all steps with lower step_order
+  - **Example**: If Step 2 has step_order: 1 and Step 0 and Step 1 both have step_order: 0, then Step 2 should have depends_on: [0, 1]
+- **Parallel execution**: Steps with same step_order and depends_on: [] can run simultaneously
 - **Sequential execution**: Steps with higher step_order must wait for all lower step_order steps to complete
 
 Common patterns:
