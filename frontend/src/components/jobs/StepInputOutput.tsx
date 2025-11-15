@@ -44,6 +44,27 @@ function truncateUrl(url: string, maxLength: number = 50): string {
   return url.substring(0, maxLength) + '...'
 }
 
+// Helper to detect if image generation was used in this step
+function hasImageGeneration(
+  step: MergedStep,
+  imageArtifacts: Artifact[]
+): boolean {
+  // Check if step has image URLs
+  const hasImageUrls = step.image_urls && Array.isArray(step.image_urls) && step.image_urls.length > 0
+  
+  // Check if step has image artifacts
+  const hasImageArtifacts = imageArtifacts.length > 0
+  
+  // Check if step tools include image generation
+  const tools = step.input?.tools || step.tools || []
+  const hasImageGenerationTool = Array.isArray(tools) && tools.some((tool: Tool) => {
+    const toolName = getToolName(tool)
+    return toolName === 'image_generation'
+  })
+  
+  return hasImageUrls || hasImageArtifacts || hasImageGenerationTool
+}
+
 // Render tool badges inline
 function renderToolBadges(tools?: string[] | unknown[], toolChoice?: string, showLabel: boolean = true) {
   if (!tools || !Array.isArray(tools) || tools.length === 0) {
@@ -387,6 +408,9 @@ export function StepInputOutput({
     )
   }
 
+  // Check if image generation was used
+  const usedImageGeneration = hasImageGeneration(step, imageArtifacts)
+
   return (
     <div className="px-3 sm:px-3 pb-3 sm:pb-3 pt-0 border-t border-gray-200">
       <button
@@ -493,6 +517,9 @@ export function StepInputOutput({
                   
                   {/* Current Step Input */}
                   <StepContent formatted={formatStepInput(step)} />
+                  
+                  {/* Display images in Input section if image generation was used */}
+                  {usedImageGeneration && renderImageSection()}
                 </div>
               </div>
 
@@ -531,8 +558,8 @@ export function StepInputOutput({
                     )
                   })()}
                   
-                  {/* Display images in separate section (for backwards compatibility) */}
-                  {renderImageSection()}
+                  {/* Display images in Output section only if image generation was NOT used (for backwards compatibility) */}
+                  {!usedImageGeneration && renderImageSection()}
                   
                   {/* Show main artifact (step output) */}
                   {step.artifact_id && (

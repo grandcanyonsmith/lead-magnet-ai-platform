@@ -176,9 +176,8 @@ export function ExecutionSteps({
                   const displayedFiles = new Set<string>()
                   const filesToShow: Array<{ type: 'artifact' | 'imageArtifact' | 'imageUrl', data: any, key: string }> = []
                   
-                  // Priority 1: Main artifact (step.artifact_id) - show as ArtifactPreview
+                  // Priority 1: Main artifact (step.artifact_id) - shown in Output section, skip here to avoid duplicates
                   if (mainArtifactId) {
-                    // We'll show this separately below, but track it to avoid duplicates
                     displayedFiles.add(`artifact:${mainArtifactId}`)
                   }
                   

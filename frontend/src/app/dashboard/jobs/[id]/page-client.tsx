@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useState, useRef } from 'react'
-import { FiChevronDown, FiChevronUp, FiExternalLink } from 'react-icons/fi'
+import { FiChevronDown, FiChevronUp, FiExternalLink, FiRefreshCw } from 'react-icons/fi'
 import { useJobDetail } from '@/hooks/useJobDetail'
 import { useJobExecutionSteps } from '@/hooks/useJobExecutionSteps'
 import { useMergedSteps } from '@/hooks/useMergedSteps'
@@ -378,17 +378,31 @@ export default function JobDetailClient() {
         {/* Form Submission Details Section */}
         {submission && (
           <div className="bg-white rounded-lg shadow">
-            <button
-              onClick={() => setShowFormSubmission(!showFormSubmission)}
-              className="flex items-center justify-between w-full text-left p-4 sm:p-6 touch-target min-h-[48px] sm:min-h-0"
-            >
-              <h2 className="text-base sm:text-lg font-semibold text-gray-900">Form Submission Details</h2>
-              {showFormSubmission ? (
-                <FiChevronUp className="w-5 h-5 text-gray-500 flex-shrink-0 ml-2" />
-              ) : (
-                <FiChevronDown className="w-5 h-5 text-gray-500 flex-shrink-0 ml-2" />
-              )}
-            </button>
+            <div className="flex items-center justify-between p-4 sm:p-6">
+              <button
+                onClick={() => setShowFormSubmission(!showFormSubmission)}
+                className="flex items-center justify-between flex-1 text-left touch-target min-h-[48px] sm:min-h-0"
+              >
+                <h2 className="text-base sm:text-lg font-semibold text-gray-900">Form Submission Details</h2>
+                {showFormSubmission ? (
+                  <FiChevronUp className="w-5 h-5 text-gray-500 flex-shrink-0 ml-2" />
+                ) : (
+                  <FiChevronDown className="w-5 h-5 text-gray-500 flex-shrink-0 ml-2" />
+                )}
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleResubmitClick()
+                }}
+                disabled={resubmitting}
+                className="ml-4 flex items-center gap-2 px-3 py-2 text-sm font-medium text-primary-600 hover:text-primary-800 hover:bg-primary-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-target min-h-[44px] sm:min-h-0"
+                title="Resubmit with same form answers"
+              >
+                <FiRefreshCw className={`w-4 h-4 ${resubmitting ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Resubmit</span>
+              </button>
+            </div>
             {showFormSubmission && (
               <div className="px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-200">
                 <div className="pt-4 sm:pt-6">
