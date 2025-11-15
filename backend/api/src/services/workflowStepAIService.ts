@@ -29,9 +29,6 @@ const AVAILABLE_MODELS = [
   'gpt-5',
   'gpt-4o',
   'gpt-4o-mini',
-  'claude-3-7-sonnet-20250219',
-  'claude-3-5-sonnet-20241022',
-  'claude-3-5-haiku-20241022',
 ];
 
 const AVAILABLE_TOOLS = [
@@ -76,9 +73,9 @@ You must respond with a JSON object that follows this schema:
 
 Guidelines:
 1. Choose the most appropriate model based on the task:
-   - gpt-5: For creative content, rewriting, general tasks
-   - claude-3-7-sonnet: For complex reasoning and long-form content
-   - gpt-4o/gpt-4o-mini: For balanced performance tasks
+   - gpt-5: For creative content, rewriting, general tasks (highest quality)
+   - gpt-4o: For balanced performance and quality
+   - gpt-4o-mini: For cost-effective tasks with good quality
 
 2. Select tools based on what the step needs to accomplish:
    - Research/data gathering: web_search_preview
