@@ -3,7 +3,10 @@
 
 set -e
 
-cd "$(dirname "$0")/../backend/worker"
+# Get the project root directory (two levels up from this script)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+cd "$PROJECT_ROOT/backend/worker"
 
 echo "🐳 Building Lambda container image..."
 
