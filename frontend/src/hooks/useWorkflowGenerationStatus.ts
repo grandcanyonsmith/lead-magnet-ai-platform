@@ -3,7 +3,7 @@
  * Handles webhook completion events and polling fallback
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 
@@ -19,6 +19,7 @@ export function useWorkflowGenerationStatus(jobId: string | null) {
   const [status, setStatus] = useState<'pending' | 'processing' | 'completed' | 'failed' | null>(null);
   const [workflowId, setWorkflowId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Listen for webhook completion events
   useEffect(() => {
@@ -109,21 +110,35 @@ export function useWorkflowGenerationStatus(jobId: string | null) {
 
   // Start polling if webhook hasn't completed after a delay
   useEffect(() => {
-    if (!jobId || status === 'completed' || status === 'failed') return;
+    if (!jobId) return;
+
+    // Clear any existing interval
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+
+    // If already completed or failed, don't poll
+    if (status === 'completed' || status === 'failed') {
+      return;
+    }
 
     // Wait 5 seconds before starting to poll (give webhook time to arrive)
     const pollTimer = setTimeout(() => {
-      if (status !== 'completed' && status !== 'failed') {
-        // Poll every 2 seconds
-        const interval = setInterval(() => {
-          pollStatus();
-        }, 2000);
-
-        return () => clearInterval(interval);
-      }
+      // Start polling every 2 seconds
+      // The pollStatus function will check the current status and update accordingly
+      intervalRef.current = setInterval(() => {
+        pollStatus();
+      }, 2000);
     }, 5000);
 
-    return () => clearTimeout(pollTimer);
+    return () => {
+      clearTimeout(pollTimer);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
   }, [jobId, status, pollStatus]);
 
   return {
