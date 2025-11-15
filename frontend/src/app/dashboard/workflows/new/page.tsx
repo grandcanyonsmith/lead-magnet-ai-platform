@@ -48,8 +48,8 @@ export default function NewWorkflowPage() {
       
       // Move to form step
       setStep('form')
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aiGeneration.result])
 
   // Set error from hooks
@@ -147,7 +147,7 @@ export default function NewWorkflowPage() {
                   {aiGeneration.generationStatus || 'Creating your lead magnet...'}
                 </h3>
                 <p className="text-sm text-gray-600">
-                  This may take a minute. We'll automatically take you to the edit page when it's ready.
+                  This may take a minute. We&apos;ll automatically take you to the edit page when it&apos;s ready.
                 </p>
                 {generationJobId && (
                   <p className="text-xs text-gray-500 mt-2 font-mono">
