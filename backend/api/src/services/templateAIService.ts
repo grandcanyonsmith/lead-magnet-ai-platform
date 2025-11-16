@@ -1,5 +1,4 @@
 import { getOpenAIClient } from './openaiService';
-import { callResponsesWithTimeout } from '../utils/openaiHelpers';
 import { calculateOpenAICost } from './costService';
 import { usageTrackingService } from './usageTrackingService';
 import { logger } from '../utils/logger';
@@ -77,10 +76,7 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
       if (model !== 'gpt-5') {
         // Note: temperature not set for gpt-5, but this is fine
       }
-      const completion = await callResponsesWithTimeout(
-        () => openai.responses.create(completionParams),
-        'template HTML generation'
-      );
+      const completion = await openai.responses.create(completionParams);
 
       const htmlDuration = Date.now() - htmlStartTime;
       const htmlModelUsed = (completion as any).model || model;
@@ -237,10 +233,7 @@ Return ONLY the modified HTML code, no markdown formatting, no explanations.`;
       if (model !== 'gpt-5') {
         completionParams.temperature = 0.7;
       }
-      const completion = await callResponsesWithTimeout(
-        () => openai.responses.create(completionParams),
-        'template refinement'
-      );
+      const completion = await openai.responses.create(completionParams);
 
       const refineDuration = Date.now() - refineStartTime;
       const refinementModelUsed = (completion as any).model || model;
@@ -341,10 +334,7 @@ Return JSON format: {"name": "...", "description": "..."}`;
     if (model !== 'gpt-5') {
       nameCompletionParams.temperature = 0.5;
     }
-    const nameCompletion = await callResponsesWithTimeout(
-      () => openai.responses.create(nameCompletionParams),
-      'template name generation'
-    );
+    const nameCompletion = await openai.responses.create(nameCompletionParams);
 
     const nameDuration = Date.now() - nameStartTime;
     const namingModelUsed = (nameCompletion as any).model || model;

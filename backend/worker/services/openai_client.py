@@ -55,7 +55,7 @@ class OpenAIClient:
             tools: List of tools
             tool_choice: Tool choice setting
             has_computer_use: Whether computer_use_preview is in tools
-            reasoning_level: Reasoning level (deprecated, kept for compatibility)
+            reasoning_level: Reasoning level (deprecated - not supported in Responses API, will be removed in next major version)
             previous_image_urls: Optional list of image URLs from previous steps to include in input
             job_id: Optional job ID for logging
             tenant_id: Optional tenant ID for logging

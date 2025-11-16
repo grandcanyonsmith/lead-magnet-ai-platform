@@ -162,7 +162,7 @@ class CUALoopService:
                                         for sc in pending_safety_checks]
                     })
                     # For now, acknowledge all safety checks automatically
-                    # TODO: Implement user confirmation flow
+                    # Note: User confirmation flow is a future enhancement
                     acknowledged_safety_checks = [
                         {
                             'id': sc.id if hasattr(sc, 'id') else None,

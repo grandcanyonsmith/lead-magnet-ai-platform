@@ -2,7 +2,7 @@ import { BaseApiClient, TokenProvider } from './base.client'
 import { Folder, FolderCreateRequest, FolderUpdateRequest, FolderListResponse } from '@/types/folder'
 
 export class FoldersClient extends BaseApiClient {
-  constructor(tokenProvider?: TokenProvider) {
+  constructor(tokenProvider: TokenProvider) {
     super(tokenProvider)
   }
 

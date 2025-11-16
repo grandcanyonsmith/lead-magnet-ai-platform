@@ -2,7 +2,7 @@
 
 > **Last Updated**: 2025-11-12  
 > **Status**: Production Ready  
-> **Related Docs**: [Webhook Testing Guide](./WEBHOOK_TESTING.md), [Architecture Overview](./ARCHITECTURE.md)
+> **Related Docs**: [Architecture Overview](./ARCHITECTURE.md)
 
 ## Overview
 
@@ -168,6 +168,162 @@ result = response.json()
 print(f"Job ID: {result['job_id']}")
 ```
 
+## Testing
+
+### Prerequisites
+
+1. **Get your webhook token:**
+   - Log in to the dashboard
+   - Navigate to Settings (`/admin/settings`)
+   - Copy your `webhook_url` from the response
+   - Extract the token (the part after `/v1/webhooks/`)
+
+2. **Have a workflow ready:**
+   - Create a workflow or note an existing `workflow_id` or `workflow_name`
+
+### Testing Methods
+
+#### Method 1: Using the Test Script (Recommended)
+
+```bash
+# Set your webhook token
+export WEBHOOK_TOKEN="your_token_here"
+
+# Run the test script
+./scripts/test-webhook.sh
+```
+
+Or provide the token interactively:
+```bash
+./scripts/test-webhook.sh
+# Enter your token when prompted
+```
+
+#### Method 2: Manual Testing with curl
+
+**Test 1: Webhook with workflow_id**
+```bash
+curl -X POST "https://your-api-url/v1/webhooks/YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workflow_id": "wf_xxxxx",
+    "form_data": {
+      "name": "Test User",
+      "email": "test@example.com",
+      "phone": "+14155551234",
+      "custom_field": "Custom value"
+    }
+  }'
+```
+
+**Test 2: Invalid token (should return 404)**
+```bash
+curl -X POST "https://your-api-url/v1/webhooks/invalid_token" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workflow_id": "wf_xxxxx",
+    "form_data": {
+      "name": "Test",
+      "email": "test@test.com",
+      "phone": "+14155551234"
+    }
+  }'
+```
+
+**Test 3: Missing workflow identifier (should return 400)**
+```bash
+curl -X POST "https://your-api-url/v1/webhooks/YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "form_data": {
+      "name": "Test",
+      "email": "test@test.com",
+      "phone": "+14155551234"
+    }
+  }'
+```
+
+### Verification Steps
+
+After triggering a webhook:
+
+1. **Check job status:**
+   ```bash
+   curl "https://your-api-url/v1/jobs/JOB_ID/status"
+   ```
+
+2. **Check job in dashboard:**
+   - Navigate to `/admin/jobs`
+   - Find the job by `job_id`
+   - Verify submission data matches what you sent
+
+3. **Verify submission:**
+   - Check `/admin/submissions`
+   - Verify the submission record was created
+   - Check that `submitter_email`, `submitter_name`, etc. match
+
+### Testing Checklist
+
+- [ ] Webhook URL retrieved from settings
+- [ ] Webhook accepts POST requests
+- [ ] Webhook with `workflow_id` creates job
+- [ ] Webhook with `workflow_name` creates job
+- [ ] Invalid token returns 404
+- [ ] Missing workflow identifier returns 400
+- [ ] Job is created in database
+- [ ] Submission record is created
+- [ ] Workflow execution is triggered
+- [ ] Token regeneration works
+- [ ] Form data is preserved in submission
+
+## Deployment
+
+### API Deployment
+
+**Lambda Function**: `leadmagnet-api-handler`
+- **Status**: Deployed successfully
+- **Code Size**: 229KB
+- **Region**: us-east-1
+
+**New Endpoints Available**:
+- `POST /v1/webhooks/{token}` - Public webhook endpoint
+- `GET /admin/settings/webhook` - Get webhook URL
+- `POST /admin/settings/webhook/regenerate` - Regenerate token
+
+### Frontend Deployment
+
+Frontend changes need to be deployed to see the webhook UI in the settings page.
+
+**To Deploy Frontend**:
+```bash
+cd frontend
+npm install
+npm run build
+# Deploy to S3/CloudFront (use your deployment script)
+```
+
+### Post-Deployment Verification
+
+1. Verify API Endpoints (see Testing section above)
+2. Verify Frontend:
+   - Navigate to Settings page
+   - Check "Delivery Settings" section
+   - Verify webhook URL is displayed
+   - Test Copy button
+   - Test Regenerate button
+
+### Environment Variables
+
+Ensure these are set in Lambda:
+- `API_URL` or `API_GATEWAY_URL` - For constructing full webhook URLs
+- All existing table environment variables
+- `STEP_FUNCTIONS_ARN` - For workflow execution
+
+### Database Migration
+
+- No migration required - `webhook_token` field is added automatically
+- Existing users will get tokens generated on first settings access
+
 ## Security Considerations
 
 1. **Token Security**: Webhook tokens are cryptographically secure (32 random bytes)
@@ -206,6 +362,31 @@ print(f"Job ID: {result['job_id']}")
 }
 ```
 
+## Common Issues
+
+### Issue: 404 Invalid webhook token
+**Solution:** 
+- Verify you copied the correct token from settings
+- Check that the token hasn't been regenerated
+- Ensure you're using the full token (no truncation)
+
+### Issue: 404 Workflow not found
+**Solution:**
+- Verify the `workflow_id` exists and belongs to your tenant
+- If using `workflow_name`, ensure it matches exactly (case-sensitive)
+- Check that the workflow hasn't been deleted
+
+### Issue: 400 Missing workflow identifier
+**Solution:**
+- Ensure either `workflow_id` OR `workflow_name` is provided in the request body
+- Check JSON syntax is valid
+
+### Issue: Job not processing
+**Solution:**
+- Check Step Functions execution (if in production)
+- Check Lambda logs for errors
+- Verify workflow configuration is valid
+
 ## Implementation Details
 
 ### Token Generation
@@ -242,44 +423,6 @@ print(f"Job ID: {result['job_id']}")
 1. Navigate to Settings (`/dashboard/settings`)
 2. Scroll to "Delivery Settings" section
 3. Copy your webhook URL from the "Your Webhook URL" field
-
-## Testing
-
-See [Webhook Testing Guide](./WEBHOOK_TESTING.md) for detailed testing instructions.
-
-### Quick Test
-```bash
-# Get your webhook token from settings
-WEBHOOK_TOKEN="your_token_here"
-WORKFLOW_ID="wf_xxxxx"
-
-# Test webhook
-curl -X POST "https://your-api-url/v1/webhooks/$WEBHOOK_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"workflow_id\": \"$WORKFLOW_ID\",
-    \"form_data\": {
-      \"name\": \"Test User\",
-      \"email\": \"test@example.com\",
-      \"phone\": \"+14155551234\"
-    }
-  }"
-```
-
-## Deployment Notes
-
-### Environment Variables
-- `API_URL` or `API_GATEWAY_URL`: Used to construct full webhook URLs
-- If not set, webhook URLs will be relative paths
-
-### Database Migration
-- No migration required - `webhook_token` field is added automatically
-- Existing users will get tokens generated on first settings access
-
-### Backward Compatibility
-- Existing API endpoints unchanged
-- New endpoints are additive
-- No breaking changes
 
 ## Future Enhancements
 

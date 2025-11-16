@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 import { calculateOpenAICost } from './costService';
-import { callResponsesWithTimeout } from '../utils/openaiHelpers';
+import { logger } from '../utils/logger';
 
 export interface UsageInfo {
   service_type: string;
@@ -61,7 +61,7 @@ Requirements:
 
 Return ONLY the HTML code, no markdown formatting, no explanations.`;
 
-    console.log('[Template Generation Service] Calling OpenAI for template HTML generation...');
+    logger.info('[Template Generation Service] Calling OpenAI for template HTML generation...');
     const templateStartTime = Date.now();
     
     const templateCompletionParams: any = {
@@ -72,14 +72,11 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
     if (model !== 'gpt-5') {
       templateCompletionParams.temperature = 0.7;
     }
-    const templateCompletion = await callResponsesWithTimeout(
-      () => this.openai.responses.create(templateCompletionParams),
-      'template HTML generation'
-    );
+    const templateCompletion = await this.openai.responses.create(templateCompletionParams);
 
     const templateDuration = Date.now() - templateStartTime;
     const templateModelUsed = (templateCompletion as any).model || model;
-    console.log('[Template Generation Service] Template HTML generation completed', {
+    logger.info('[Template Generation Service] Template HTML generation completed', {
       duration: `${templateDuration}ms`,
       tokensUsed: templateCompletion.usage?.total_tokens,
       modelUsed: templateModelUsed,
@@ -161,7 +158,7 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
 
 Return JSON format: {"name": "...", "description": "..."}`;
 
-    console.log('[Template Generation Service] Calling OpenAI for template name/description generation...');
+    logger.info('[Template Generation Service] Calling OpenAI for template name/description generation...');
     const templateNameStartTime = Date.now();
     
     const templateNameCompletionParams: any = {
@@ -171,14 +168,11 @@ Return JSON format: {"name": "...", "description": "..."}`;
     if (model !== 'gpt-5') {
       templateNameCompletionParams.temperature = 0.5;
     }
-    const templateNameCompletion = await callResponsesWithTimeout(
-      () => this.openai.responses.create(templateNameCompletionParams),
-      'template name generation'
-    );
+    const templateNameCompletion = await this.openai.responses.create(templateNameCompletionParams);
 
     const templateNameDuration = Date.now() - templateNameStartTime;
     const templateNameModel = (templateNameCompletion as any).model || model;
-    console.log('[Template Generation Service] Template name/description generation completed', {
+    logger.info('[Template Generation Service] Template name/description generation completed', {
       duration: `${templateNameDuration}ms`,
       modelUsed: templateNameModel,
     });
@@ -234,7 +228,7 @@ Return JSON format: {"name": "...", "description": "..."}`;
         templateDescription = parsed.description || templateDescription;
       }
     } catch (e) {
-      console.warn('[Template Generation Service] Failed to parse template name JSON, using defaults', e);
+      logger.warn('[Template Generation Service] Failed to parse template name JSON, using defaults', { error: e });
     }
 
     return { templateName, templateDescription, usageInfo };

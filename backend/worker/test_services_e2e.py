@@ -22,10 +22,17 @@ logger = logging.getLogger(__name__)
 
 
 def test_imports():
-    """Test that all services can be imported."""
+    """Test that all services and utilities can be imported."""
     logger.info("Testing imports...")
     
     try:
+        # Test utility imports
+        from utils.error_utils import create_descriptive_error, normalize_error_message
+        from utils.step_utils import normalize_step_order
+        from utils.decimal_utils import convert_floats_to_decimal, convert_decimals_to_float
+        logger.info("✅ Utility imports successful")
+        
+        # Test service imports
         from services.openai_client import OpenAIClient
         from services.api_key_manager import APIKeyManager
         from services.error_handler_service import ErrorHandlerService
@@ -37,7 +44,13 @@ def test_imports():
         from services.execution_step_manager import ExecutionStepManager
         from services.cua_loop_service import CUALoopService
         from services.browser_service import BrowserService
-        logger.info("✅ All service imports successful")
+        logger.info("✅ Service imports successful")
+        
+        # Test processor import
+        from processor import JobProcessor
+        logger.info("✅ Processor import successful")
+        
+        logger.info("✅ All imports successful")
         return True
     except Exception as e:
         logger.error(f"❌ Import failed: {e}", exc_info=True)

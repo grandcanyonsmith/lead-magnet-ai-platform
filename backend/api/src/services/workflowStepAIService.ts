@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import { WorkflowStep } from '../utils/workflowMigration';
+import { logger } from '../utils/logger';
 
 export interface AIStepGenerationRequest {
   userPrompt: string;
@@ -144,7 +145,7 @@ Suggested Action: ${suggestedAction}
 
 Please generate the workflow step configuration.`;
 
-    console.log('[WorkflowStepAI] Generating step', {
+    logger.info('[WorkflowStepAI] Generating step', {
       workflow: workflowContext.workflow_name,
       userPrompt: userPrompt.substring(0, 100),
       action: suggestedAction,
@@ -176,7 +177,7 @@ Please generate the workflow step configuration.`;
 
       // Validate model
       if (!AVAILABLE_MODELS.includes(parsedResponse.step.model)) {
-        console.warn(`[WorkflowStepAI] Invalid model ${parsedResponse.step.model}, defaulting to gpt-5`);
+        logger.warn(`[WorkflowStepAI] Invalid model ${parsedResponse.step.model}, defaulting to gpt-5`);
         parsedResponse.step.model = 'gpt-5';
       }
 
@@ -207,7 +208,7 @@ Please generate the workflow step configuration.`;
         // If AI didn't provide depends_on, preserve the original
         if (parsedResponse.step.depends_on === undefined || parsedResponse.step.depends_on === null) {
           parsedResponse.step.depends_on = currentStep.depends_on || [];
-          console.log('[WorkflowStepAI] Preserved existing dependencies', {
+          logger.info('[WorkflowStepAI] Preserved existing dependencies', {
             depends_on: parsedResponse.step.depends_on,
           });
         }
@@ -218,7 +219,7 @@ Please generate the workflow step configuration.`;
         }
       }
 
-      console.log('[WorkflowStepAI] Step generated successfully', {
+      logger.info('[WorkflowStepAI] Step generated successfully', {
         action: parsedResponse.action,
         stepName: parsedResponse.step.step_name,
         model: parsedResponse.step.model,
@@ -228,7 +229,7 @@ Please generate the workflow step configuration.`;
 
       return parsedResponse;
     } catch (error: any) {
-      console.error('[WorkflowStepAI] Error generating step', {
+      logger.error('[WorkflowStepAI] Error generating step', {
         error: error.message,
         stack: error.stack,
       });
