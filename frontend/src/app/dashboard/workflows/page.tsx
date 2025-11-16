@@ -336,7 +336,12 @@ export default function WorkflowsPage() {
                                 e.stopPropagation()
                                 setOpenMenuId(openMenuId === workflow.workflow_id ? null : workflow.workflow_id)
                               }}
-                              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all"
+                              onTouchStart={(e) => {
+                                e.stopPropagation()
+                                setOpenMenuId(openMenuId === workflow.workflow_id ? null : workflow.workflow_id)
+                              }}
+                              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all touch-target"
+                              aria-label="Actions"
                             >
                               <FiMoreVertical className="w-4 h-4" />
                             </button>
@@ -344,72 +349,203 @@ export default function WorkflowsPage() {
                               <div
                                 ref={(el) => { menuRefs.current[workflow.workflow_id] = el; }}
                                 className="absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-200 z-10"
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onTouchStart={(e) => e.stopPropagation()}
                               >
                                 <div className="py-1">
-                                  <button
-                                    onClick={() => {
-                                      setOpenMenuId(null)
-                                      setMoveToFolderMenuId(workflow.workflow_id)
-                                    }}
-                                    className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 flex items-center"
-                                  >
-                                    <FiFolder className="w-3 h-3 mr-2" />
-                                    Move to folder
-                                  </button>
-                                  {moveToFolderMenuId === workflow.workflow_id && (
-                                    <MoveToFolderMenu
-                                      workflow={workflow}
-                                      onClose={() => setMoveToFolderMenuId(null)}
-                                      onMove={() => {
-                                        loadWorkflows()
-                                        setMoveToFolderMenuId(null)
+                                  <div className="relative">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        e.preventDefault()
+                                        setOpenMenuId(null)
+                                        setMoveToFolderMenuId(workflow.workflow_id)
                                       }}
-                                    />
-                                  )}
+                                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 active:bg-gray-100 flex items-center touch-target"
+                                    >
+                                      <FiFolder className="w-3 h-3 mr-2" />
+                                      Move to folder
+                                    </button>
+                                    {moveToFolderMenuId === workflow.workflow_id && (
+                                      <MoveToFolderMenu
+                                        workflow={workflow}
+                                        onClose={() => setMoveToFolderMenuId(null)}
+                                        onMove={() => {
+                                          loadWorkflows()
+                                          setMoveToFolderMenuId(null)
+                                        }}
+                                      />
+                                    )}
+                                  </div>
                                   <button
-                                    onClick={() => {
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      e.preventDefault()
                                       setOpenMenuId(null)
-                                      router.push(`/dashboard/workflows/${workflow.workflow_id}`)
+                                      if (typeof window !== 'undefined') {
+                                        window.location.href = `/dashboard/workflows/${workflow.workflow_id}`
+                                      } else {
+                                        router.push(`/dashboard/workflows/${workflow.workflow_id}`)
+                                      }
                                     }}
-                                    className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 flex items-center"
+                                    className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 active:bg-gray-100 flex items-center touch-target"
                                   >
                                     <FiEye className="w-3 h-3 mr-2" />
                                     View
                                   </button>
                                   <button
-                                    onClick={() => {
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      e.preventDefault()
                                       setOpenMenuId(null)
-                                      router.push(`/dashboard/workflows/${workflow.workflow_id}/edit`)
+                                      if (typeof window !== 'undefined') {
+                                        window.location.href = `/dashboard/workflows/${workflow.workflow_id}/edit`
+                                      } else {
+                                        router.push(`/dashboard/workflows/${workflow.workflow_id}/edit`)
+                                      }
                                     }}
-                                    className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 flex items-center"
+                                    className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 active:bg-gray-100 flex items-center touch-target"
                                   >
                                     <FiEdit className="w-3 h-3 mr-2" />
                                     Edit
                                   </button>
                                   <button
-                                    onClick={() => {
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      e.preventDefault()
                                       setOpenMenuId(null)
                                       handleDelete(workflow.workflow_id)
                                     }}
-                                    className="w-full text-left px-3 py-2 text-xs text-red-600 hover:bg-red-50 flex items-center"
+                                    className="w-full text-left px-3 py-2 text-xs text-red-600 hover:bg-red-50 active:bg-red-50 flex items-center touch-target"
                                   >
                                     <FiTrash2 className="w-3 h-3 mr-2" />
                                     Delete
                                   </button>
+                                  {formUrl && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        e.preventDefault()
+                                        copyToClipboard(formUrl, workflow.workflow_id)
+                                        setOpenMenuId(null)
+                                      }}
+                                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 active:bg-gray-100 flex items-center touch-target border-t border-gray-100"
+                                    >
+                                      <FiCopy className="w-3 h-3 mr-2" />
+                                      Copy Form URL
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                             )}
                           </div>
                         </div>
-                        {/* Rest of workflow card content - simplified for brevity */}
-                        <div className="text-xs text-gray-600">
-                          {workflow.form?.form_name && (
-                            <div className="mb-2">
-                              <a href={formUrl || '#'} target="_blank" rel="noopener noreferrer" className="text-primary-600">
-                                {workflow.form.form_name}
+                        
+                        <div className="space-y-2.5 text-xs">
+                          {/* Form Link */}
+                          {workflow.form && formUrl ? (
+                            <div className="flex items-center gap-2">
+                              <a
+                                href={formUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary-600 hover:text-primary-900 font-medium truncate flex-1 min-w-0 flex items-center gap-1.5"
+                                title={formUrl}
+                              >
+                                <FiExternalLink className="w-3 h-3 flex-shrink-0" />
+                                <span className="truncate">{workflow.form.form_name}</span>
                               </a>
                             </div>
-                          )}
+                          ) : workflow.form ? (
+                            <div className="text-gray-400 italic text-xs">No form URL</div>
+                          ) : null}
+                          
+                          {/* Metadata */}
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="flex items-center gap-1.5">
+                              <FiList className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                              <div className="flex gap-1 flex-wrap">
+                                <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                                  {workflow.steps?.length || 0} step{workflow.steps?.length !== 1 ? 's' : ''}
+                                </span>
+                                {workflow.template_id && (
+                                  <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                                    Template
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-1.5">
+                              <FiClock className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                              <span className="text-gray-600 text-xs">{new Date(workflow.created_at).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                          
+                          {/* Generated Documents */}
+                          <div className="pt-1.5">
+                            {loadingJobs[workflow.workflow_id] ? (
+                              <div className="text-xs text-gray-500 flex items-center gap-1.5">
+                                <FiLoader className="w-3 h-3 animate-spin" />
+                                <span>Loading...</span>
+                              </div>
+                            ) : (() => {
+                              const jobs = workflowJobs[workflow.workflow_id] || []
+                              const processingJobs = jobs.filter((j: any) => j.status === 'processing' || j.status === 'pending')
+                              const completedJobs = jobs.filter((j: any) => j.status === 'completed')
+                              
+                              if (processingJobs.length > 0) {
+                                return (
+                                  <div className="text-xs text-blue-600 flex items-center gap-1.5">
+                                    <FiLoader className="w-3 h-3 animate-spin" />
+                                    <span>Processing...</span>
+                                  </div>
+                                )
+                              } else if (completedJobs.length > 0) {
+                                const mostRecentJob = completedJobs[0]
+                                return (
+                                  <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                                      <FiFileText className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                                      <span className="text-gray-600 text-xs">
+                                        {completedJobs.length} document{completedJobs.length !== 1 ? 's' : ''}
+                                      </span>
+                                      {mostRecentJob.output_url && (
+                                        <a
+                                          href={mostRecentJob.output_url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-primary-600 hover:text-primary-900 flex-shrink-0"
+                                          onClick={(e) => e.stopPropagation()}
+                                          title="Open most recent document"
+                                        >
+                                          <FiExternalLink className="w-3 h-3" />
+                                        </a>
+                                      )}
+                                    </div>
+                                    {completedJobs.length > 1 && (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          router.push(`/dashboard/jobs?workflow_id=${workflow.workflow_id}`)
+                                        }}
+                                        className="text-xs text-primary-600 hover:text-primary-900 flex-shrink-0"
+                                      >
+                                        View all
+                                      </button>
+                                    )}
+                                  </div>
+                                )
+                              } else {
+                                return (
+                                  <div className="text-xs text-gray-400 italic flex items-center gap-1.5">
+                                    <FiFileText className="w-3.5 h-3.5" />
+                                    <span>No documents yet</span>
+                                  </div>
+                                )
+                              }
+                            })()}
+                          </div>
                         </div>
                       </div>
                     )
@@ -462,6 +598,28 @@ export default function WorkflowsPage() {
                           onTouchStart={(e) => e.stopPropagation()}
                         >
                           <div className="py-1">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                e.preventDefault()
+                                setOpenMenuId(null)
+                                setMoveToFolderMenuId(workflow.workflow_id)
+                              }}
+                              className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 active:bg-gray-100 flex items-center touch-target"
+                            >
+                              <FiFolder className="w-3 h-3 mr-2" />
+                              Move to folder
+                            </button>
+                            {moveToFolderMenuId === workflow.workflow_id && (
+                              <MoveToFolderMenu
+                                workflow={workflow}
+                                onClose={() => setMoveToFolderMenuId(null)}
+                                onMove={() => {
+                                  loadWorkflows()
+                                  setMoveToFolderMenuId(null)
+                                }}
+                              />
+                            )}
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
@@ -659,39 +817,54 @@ export default function WorkflowsPage() {
                 </div>
               )
             })}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Desktop Table View */}
-          <div className="hidden md:block bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Lead Magnet Name
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Form
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Research Model
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Features
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Created
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Generated Documents
-                  </th>
-                  <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-100">
-                {filteredWorkflows.map((workflow) => {
+          <div className="hidden md:block space-y-6">
+            {/* Folders */}
+            {folders
+              .filter((folder) => workflowsByFolder.grouped[folder.folder_id]?.length > 0)
+              .map((folder) => (
+                <div key={folder.folder_id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                  <div className="bg-gray-50 px-6 py-3 border-b border-gray-200">
+                    <div className="flex items-center gap-2">
+                      <FiFolder className="w-5 h-5 text-blue-600" />
+                      <span className="text-sm font-semibold text-gray-900">{folder.folder_name}</span>
+                      <span className="text-xs text-gray-500">({workflowsByFolder.grouped[folder.folder_id]?.length || 0})</span>
+                    </div>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Lead Magnet Name
+                          </th>
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Form
+                          </th>
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Research Model
+                          </th>
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Features
+                          </th>
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Created
+                          </th>
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Generated Documents
+                          </th>
+                          <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-100">
+                        {(workflowsByFolder.grouped[folder.folder_id] || []).map((workflow) => {
                   const formUrl = workflow.form ? publicUrlFor(workflow.form) : null
                   const jobs = workflowJobs[workflow.workflow_id] || []
                   const processingJobs = jobs.filter((j: any) => j.status === 'processing' || j.status === 'pending')
@@ -832,6 +1005,30 @@ export default function WorkflowsPage() {
                                   onClick={(e) => {
                                     e.stopPropagation()
                                     e.preventDefault()
+                                    setOpenMenuId(null)
+                                    setMoveToFolderMenuId(workflow.workflow_id)
+                                  }}
+                                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 active:bg-gray-100 flex items-center touch-target"
+                                >
+                                  <FiFolder className="w-4 h-4 mr-2" />
+                                  Move to folder
+                                </button>
+                                {moveToFolderMenuId === workflow.workflow_id && (
+                                  <div className="relative">
+                                    <MoveToFolderMenu
+                                      workflow={workflow}
+                                      onClose={() => setMoveToFolderMenuId(null)}
+                                      onMove={() => {
+                                        loadWorkflows()
+                                        setMoveToFolderMenuId(null)
+                                      }}
+                                    />
+                                  </div>
+                                )}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    e.preventDefault()
                                     router.push(`/dashboard/workflows/${workflow.workflow_id}`)
                                     setOpenMenuId(null)
                                   }}
@@ -879,12 +1076,259 @@ export default function WorkflowsPage() {
                         </div>
                       </td>
                     </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+                        )
+                      })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
+
+            {/* Uncategorized Section - Desktop */}
+            {workflowsByFolder.uncategorized.length > 0 && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="bg-gray-50 px-6 py-3 border-b border-gray-200">
+                  <div className="flex items-center gap-2">
+                    <FiFolder className="w-5 h-5 text-gray-400" />
+                    <span className="text-sm font-semibold text-gray-900">Uncategorized</span>
+                    <span className="text-xs text-gray-500">({workflowsByFolder.uncategorized.length})</span>
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                          Lead Magnet Name
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                          Form
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                          Research Model
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                          Features
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                          Created
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                          Generated Documents
+                        </th>
+                        <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-100">
+                      {workflowsByFolder.uncategorized.map((workflow) => {
+                        const formUrl = workflow.form ? publicUrlFor(workflow.form) : null
+                        const jobs = workflowJobs[workflow.workflow_id] || []
+                        const processingJobs = jobs.filter((j: any) => j.status === 'processing' || j.status === 'pending')
+                        const completedJobs = jobs.filter((j: any) => j.status === 'completed')
+                        
+                        return (
+                          <tr key={workflow.workflow_id} className="hover:bg-gray-50 transition-colors">
+                            <td className="px-6 py-4">
+                              <div className="text-sm font-semibold text-gray-900">{workflow.workflow_name}</div>
+                              {workflow.workflow_description && (
+                                <div className="text-sm text-gray-500 mt-1">{workflow.workflow_description}</div>
+                              )}
+                            </td>
+                            <td className="px-6 py-4">
+                              {workflow.form ? (
+                                <div className="space-y-1">
+                                  <div className="text-sm text-gray-900">{workflow.form.form_name}</div>
+                                  {formUrl && (
+                                    <div className="flex items-center gap-2">
+                                      <a
+                                        href={formUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-xs text-primary-600 hover:text-primary-900 break-all"
+                                        title={formUrl}
+                                      >
+                                        {formatUrl(formUrl)}
+                                      </a>
+                                      <button
+                                        onClick={() => copyToClipboard(formUrl, workflow.workflow_id)}
+                                        className="text-gray-400 hover:text-gray-600 p-2 touch-target"
+                                        title="Copy URL"
+                                      >
+                                        {copiedUrl === workflow.workflow_id ? (
+                                          <FiCheck className="w-3 h-3 text-green-600" />
+                                        ) : (
+                                          <FiCopy className="w-3 h-3" />
+                                        )}
+                                      </button>
+                                      <a
+                                        href={formUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-primary-600 hover:text-primary-900"
+                                        title="Open form"
+                                      >
+                                        <FiExternalLink className="w-3 h-3" />
+                                      </a>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-sm text-gray-400 italic">No form</span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex gap-2">
+                                <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                                  {workflow.steps?.length || 0} step{workflow.steps?.length !== 1 ? 's' : ''}
+                                </span>
+                                {workflow.template_id && (
+                                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                                    Template
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                              {new Date(workflow.created_at).toLocaleDateString()}
+                            </td>
+                            <td className="px-6 py-4">
+                              {loadingJobs[workflow.workflow_id] ? (
+                                <div className="text-xs text-gray-500 flex items-center">
+                                  <FiLoader className="w-3 h-3 mr-1 animate-spin" />
+                                  Loading...
+                                </div>
+                              ) : processingJobs.length > 0 ? (
+                                <div className="text-xs text-blue-600 flex items-center">
+                                  <FiLoader className="w-3 h-3 mr-1 animate-spin" />
+                                  Processing...
+                                </div>
+                              ) : completedJobs.length > 0 ? (
+                                <div className="space-y-1">
+                                  {completedJobs.slice(0, 2).map((job: any) => (
+                                    <div key={job.job_id} className="flex items-center gap-2 text-xs">
+                                      {getJobStatusIcon(job.status)}
+                                      <span className="text-gray-600">{formatRelativeTime(job.created_at)}</span>
+                                      {job.output_url && (
+                                        <a
+                                          href={job.output_url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-primary-600 hover:text-primary-900"
+                                        >
+                                          <FiExternalLink className="w-3 h-3" />
+                                        </a>
+                                      )}
+                                    </div>
+                                  ))}
+                                  {completedJobs.length > 2 && (
+                                    <button
+                                      onClick={() => router.push(`/dashboard/jobs?workflow_id=${workflow.workflow_id}`)}
+                                      className="text-xs text-primary-600 hover:text-primary-900"
+                                    >
+                                      View all {completedJobs.length}
+                                    </button>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-xs text-gray-400 italic">No documents yet</span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right">
+                              <div className="relative inline-block">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setOpenMenuId(openMenuId === workflow.workflow_id ? null : workflow.workflow_id)
+                                  }}
+                                  className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all touch-target"
+                                  title="Actions"
+                                >
+                                  <FiMoreVertical className="w-5 h-5" />
+                                </button>
+                                {openMenuId === workflow.workflow_id && (
+                                  <div
+                                    ref={(el) => { menuRefs.current[workflow.workflow_id] = el; }}
+                                    className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10"
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                    onTouchStart={(e) => e.stopPropagation()}
+                                  >
+                                    <div className="py-1">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          e.preventDefault()
+                                          setOpenMenuId(null)
+                                          setMoveToFolderMenuId(workflow.workflow_id)
+                                        }}
+                                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 active:bg-gray-100 flex items-center touch-target"
+                                      >
+                                        <FiFolder className="w-4 h-4 mr-2" />
+                                        Move to folder
+                                      </button>
+                                      {moveToFolderMenuId === workflow.workflow_id && (
+                                        <div className="relative">
+                                          <MoveToFolderMenu
+                                            workflow={workflow}
+                                            onClose={() => setMoveToFolderMenuId(null)}
+                                            onMove={() => {
+                                              loadWorkflows()
+                                              setMoveToFolderMenuId(null)
+                                            }}
+                                          />
+                                        </div>
+                                      )}
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          e.preventDefault()
+                                          router.push(`/dashboard/workflows/${workflow.workflow_id}`)
+                                          setOpenMenuId(null)
+                                        }}
+                                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 active:bg-gray-100 flex items-center touch-target"
+                                      >
+                                        <FiEye className="w-4 h-4 mr-2" />
+                                        View
+                                      </button>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          e.preventDefault()
+                                          router.push(`/dashboard/workflows/${workflow.workflow_id}/edit`)
+                                          setOpenMenuId(null)
+                                        }}
+                                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 active:bg-gray-100 flex items-center touch-target"
+                                      >
+                                        <FiEdit className="w-4 h-4 mr-2" />
+                                        Edit
+                                      </button>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          e.preventDefault()
+                                          setOpenMenuId(null)
+                                          handleDelete(workflow.workflow_id)
+                                        }}
+                                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 active:bg-red-50 flex items-center touch-target"
+                                      >
+                                        <FiTrash2 className="w-4 h-4 mr-2" />
+                                        Delete
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
-        </div>
         </>
       )}
     </div>

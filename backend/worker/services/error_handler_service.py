@@ -111,6 +111,10 @@ class ErrorHandlerService:
             return "timeout"
         elif "connection" in error_lower:
             return "connection"
+        elif ("image data" in error_lower and "does not represent a valid image" in error_lower) or \
+             ("invalid_value" in error_lower and "image" in error_lower) or \
+             ("image" in error_lower and "format" in error_lower and "not supported" in error_lower):
+            return "image_validation"
         else:
             return "unknown"
     
@@ -161,6 +165,14 @@ class ErrorHandlerService:
         elif error_category == "connection":
             logger.error(f"[ErrorHandlerService] Connection error - network issue")
             return Exception(f"Unable to connect to OpenAI API. Please check your network connection: {error_message}")
+        elif error_category == "image_validation":
+            logger.error(f"[ErrorHandlerService] Image validation error - invalid image data provided", extra={
+                'error_message': error_message,
+                'error_type': error_type,
+                'model': model,
+                'tools': [t.get('type') if isinstance(t, dict) else t for t in tools] if tools else []
+            })
+            return Exception(f"OpenAI API error: Invalid image data provided. The image data does not represent a valid image format. Supported formats: JPEG, PNG, GIF, WebP. This may occur if base64 image data is corrupted or if an invalid image URL is provided. Please check your workflow configuration and ensure all image URLs are valid HTTP/HTTPS URLs. Original error: {error_message}")
         else:
             logger.error(f"[ErrorHandlerService] Unexpected API error: {error_type}")
             return Exception(f"OpenAI API error ({error_type}): {error_message}")

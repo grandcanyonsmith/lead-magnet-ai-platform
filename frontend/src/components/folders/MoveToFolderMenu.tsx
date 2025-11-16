@@ -37,7 +37,7 @@ export function MoveToFolderMenu({ workflow, onClose, onMove }: MoveToFolderMenu
   return (
     <div
       ref={menuRef}
-      className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
+      className="absolute left-full top-0 ml-1 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
       onMouseDown={(e) => e.stopPropagation()}
     >
       <div className="py-1">

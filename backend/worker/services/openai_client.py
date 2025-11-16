@@ -41,7 +41,9 @@ class OpenAIClient:
         tool_choice: str = "auto",
         has_computer_use: bool = False,
         reasoning_level: Optional[str] = None,
-        previous_image_urls: Optional[List[str]] = None
+        previous_image_urls: Optional[List[str]] = None,
+        job_id: Optional[str] = None,
+        tenant_id: Optional[str] = None
     ) -> Dict:
         """
         Build parameters for OpenAI Responses API call.
@@ -55,6 +57,8 @@ class OpenAIClient:
             has_computer_use: Whether computer_use_preview is in tools
             reasoning_level: Reasoning level (deprecated, kept for compatibility)
             previous_image_urls: Optional list of image URLs from previous steps to include in input
+            job_id: Optional job ID for logging
+            tenant_id: Optional tenant ID for logging
             
         Returns:
             API parameters dictionary for Responses API
@@ -70,18 +74,39 @@ class OpenAIClient:
         # Build input: if image_generation tool is present and we have previous image URLs,
         # use list format with text and images; otherwise use string format (backward compatible)
         if has_image_generation and previous_image_urls and len(previous_image_urls) > 0:
+            # Validate and filter image URLs before using them
+            from utils.image_utils import validate_and_filter_image_urls
+            
+            valid_image_urls, filtered_urls = validate_and_filter_image_urls(
+                image_urls=previous_image_urls,
+                job_id=job_id,
+                tenant_id=tenant_id
+            )
+            
+            # Log filtered URLs for debugging
+            if filtered_urls:
+                for url, reason in filtered_urls:
+                    logger.warning("[OpenAI Client] Filtered invalid image URL from previous_image_urls", extra={
+                        'job_id': job_id,
+                        'tenant_id': tenant_id,
+                        'url_preview': url[:100] + '...' if len(url) > 100 else url,
+                        'reason': reason,
+                        'total_urls': len(previous_image_urls),
+                        'valid_urls_count': len(valid_image_urls),
+                        'filtered_count': len(filtered_urls)
+                    })
+            
             # Build input as list of content items
             input_content = [
                 {"type": "input_text", "text": input_text}
             ]
             
-            # Add each previous image URL as input_image
-            for image_url in previous_image_urls:
-                if image_url:  # Only add non-empty URLs
-                    input_content.append({
-                        "type": "input_image",
-                        "image_url": image_url
-                    })
+            # Add each valid previous image URL as input_image
+            for image_url in valid_image_urls:
+                input_content.append({
+                    "type": "input_image",
+                    "image_url": image_url
+                })
             
             # OpenAI Responses API expects input as a list with role and content
             api_input = [
@@ -92,7 +117,11 @@ class OpenAIClient:
             ]
             
             logger.info("[OpenAI Client] Building API params with previous image URLs", extra={
-                'previous_image_urls_count': len(previous_image_urls),
+                'job_id': job_id,
+                'tenant_id': tenant_id,
+                'original_image_urls_count': len(previous_image_urls),
+                'valid_image_urls_count': len(valid_image_urls),
+                'filtered_image_urls_count': len(filtered_urls),
                 'input_content_items': len(input_content),
                 'has_image_generation': has_image_generation
             })

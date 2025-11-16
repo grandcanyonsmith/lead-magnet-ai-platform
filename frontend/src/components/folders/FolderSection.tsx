@@ -5,7 +5,6 @@ import { FiFolder, FiChevronDown, FiChevronRight, FiEdit, FiTrash2, FiMoreVertic
 import { Folder } from '@/types/folder'
 import { Workflow } from '@/types'
 import { useUpdateFolder, useDeleteFolder } from '@/hooks/api/useFolders'
-import { CreateFolderModal } from './CreateFolderModal'
 
 interface FolderSectionProps {
   folder: Folder

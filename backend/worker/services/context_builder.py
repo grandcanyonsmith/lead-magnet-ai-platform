@@ -245,16 +245,18 @@ class ContextBuilder:
         
         Iterates through execution_steps and extracts all image URLs from steps
         that come before the current step. Handles both array and single value
-        formats, and deduplicates the results.
+        formats, and deduplicates the results. Filters out invalid URLs (e.g., 
+        base64 data URLs) that should have been converted to S3 URLs.
         
         Args:
             execution_steps: List of all execution step dictionaries
             current_step_order: Current step order (1-indexed)
             
         Returns:
-            List of unique image URLs from previous steps, sorted alphabetically
+            List of unique valid image URLs from previous steps, sorted alphabetically
         """
         from utils.step_utils import normalize_step_order
+        from utils.image_utils import is_base64_data_url, is_valid_http_url
         
         all_image_urls: Set[str] = set()
         
@@ -289,9 +291,25 @@ class ContextBuilder:
             elif isinstance(step_output, (dict, list)):
                 image_urls_from_text = extract_image_urls_from_object(step_output)
             
-            # Combine and add to set (automatically deduplicates)
-            all_image_urls.update(image_urls_from_array)
-            all_image_urls.update(image_urls_from_text)
+            # Filter out invalid URLs (base64 data URLs, invalid HTTP URLs)
+            # Only keep valid HTTP/HTTPS URLs
+            for url in image_urls_from_array + image_urls_from_text:
+                # Skip base64 data URLs - they should have been converted to S3 URLs
+                if is_base64_data_url(url):
+                    logger.warning(f"[ContextBuilder] Filtered base64 data URL from previous step (should be S3 URL)", extra={
+                        'url_preview': url[:100] + '...' if len(url) > 100 else url,
+                        'step_order': step_order
+                    })
+                    continue
+                
+                # Only keep valid HTTP/HTTPS URLs
+                if is_valid_http_url(url):
+                    all_image_urls.add(url)
+                else:
+                    logger.warning(f"[ContextBuilder] Filtered invalid image URL from previous step", extra={
+                        'url_preview': url[:100] + '...' if len(url) > 100 else url,
+                        'step_order': step_order
+                    })
         
         # Return sorted list for consistent ordering
         return sorted(list(all_image_urls))
