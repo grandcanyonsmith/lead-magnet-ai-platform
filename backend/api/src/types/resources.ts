@@ -11,16 +11,12 @@ export interface Workflow {
   steps?: WorkflowStep[];
   status: 'draft' | 'active' | 'archived';
   form_id?: string;
+  folder_id?: string;
   created_at: string;
   updated_at: string;
   deleted_at?: string;
-  // Legacy fields (deprecated - kept for backward compatibility with existing database records)
-  // All new workflows must use the steps format. These fields are ignored.
-  ai_model?: string;
-  ai_instructions?: string;
-  rewrite_model?: string;
-  research_enabled?: boolean;
-  html_enabled?: boolean;
+  // Note: Legacy fields (ai_model, ai_instructions, rewrite_model, research_enabled, html_enabled)
+  // may exist in database records but are no longer used. All workflows must use steps format.
   template_id?: string;
   template_version?: number;
   delivery_method?: 'webhook' | 'sms' | 'none';
@@ -176,5 +172,14 @@ export interface UsageRecord {
   output_tokens: number;
   cost_usd: number;
   created_at: string;
+}
+
+export interface Folder {
+  folder_id: string;
+  tenant_id: string;
+  folder_name: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string;
 }
 

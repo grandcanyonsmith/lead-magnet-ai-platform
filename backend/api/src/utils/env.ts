@@ -21,6 +21,7 @@ export class EnvConfig {
   readonly customersTable: string;
   readonly filesTable: string;
   readonly impersonationLogsTable: string;
+  readonly foldersTable: string;
 
   // AWS Configuration
   readonly awsRegion: string;
@@ -64,6 +65,7 @@ export class EnvConfig {
     this.customersTable = this.getWithDefault('CUSTOMERS_TABLE', 'leadmagnet-customers');
     this.filesTable = this.getWithDefault('FILES_TABLE', 'leadmagnet-files');
     this.impersonationLogsTable = this.getWithDefault('IMPERSONATION_LOGS_TABLE', 'leadmagnet-impersonation-logs');
+    this.foldersTable = this.getWithDefault('FOLDERS_TABLE', 'leadmagnet-folders');
 
     // AWS Configuration
     this.awsRegion = this.getWithDefault('AWS_REGION', 'us-east-1');
@@ -180,6 +182,7 @@ export const getUsersTable = () => env.usersTable;
 export const getCustomersTable = () => env.customersTable;
 export const getFilesTable = () => env.filesTable;
 export const getImpersonationLogsTable = () => env.impersonationLogsTable;
+export const getFoldersTable = () => env.foldersTable;
 export const getAwsRegion = () => env.awsRegion;
 export const getLambdaFunctionName = () => env.lambdaFunctionName;
 export const getStepFunctionsArn = () => env.stepFunctionsArn;

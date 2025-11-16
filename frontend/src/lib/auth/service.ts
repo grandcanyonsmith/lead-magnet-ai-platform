@@ -137,7 +137,9 @@ export class AuthService {
             return
           }
           
-          console.log('Signup successful, user auto-confirmed')
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Signup successful, user auto-confirmed')
+          }
           resolve({ success: true })
         })
       } catch (error: unknown) {

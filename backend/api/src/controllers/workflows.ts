@@ -207,7 +207,7 @@ class WorkflowsController {
     // All workflows must use steps format
     if (!data.steps || data.steps.length === 0) {
       throw new ApiError(
-        'Workflow must have at least one step. Legacy format is no longer supported.',
+        'Workflow must have at least one step.',
         400
       );
     }
@@ -332,7 +332,7 @@ class WorkflowsController {
     
     if (!hasStepsInUpdate && !hasExistingSteps) {
       throw new ApiError(
-        'Workflow must have at least one step. Legacy format is no longer supported.',
+        'Workflow must have at least one step.',
         400
       );
     }
@@ -342,7 +342,7 @@ class WorkflowsController {
     // If steps are being updated, ensure they have proper defaults
     if (hasStepsInUpdate) {
       updateData.steps = ensureStepDefaults(data.steps);
-      console.log('[Workflows Update] After ensureStepDefaults', {
+      logger.debug('[Workflows Update] After ensureStepDefaults', {
         workflowId,
         stepsToSave: updateData.steps?.length || 0,
         stepNames: updateData.steps?.map((s: any) => s.step_name) || [],
@@ -355,7 +355,7 @@ class WorkflowsController {
     });
     
     if (updated) {
-      console.log('[Workflows Update] After DB update', {
+      logger.debug('[Workflows Update] After DB update', {
         workflowId,
         savedStepsCount: updated.steps?.length || 0,
         savedStepNames: updated.steps?.map((s: any) => s.step_name) || [],

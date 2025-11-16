@@ -49,16 +49,12 @@ export const workflowStepSchema = z.object({
 const baseWorkflowSchema = z.object({
   workflow_name: z.string().min(1).max(200),
   workflow_description: z.string().max(1000).optional(),
-  // New multi-step workflow support
+  // Steps format is required for all workflows
   steps: z.array(workflowStepSchema).optional(),
-  // Legacy fields (kept for backward compatibility in database, but not used for new workflows)
-  ai_model: z.string().optional(),
-  ai_instructions: z.string().optional(),
-  rewrite_model: z.string().optional(),
-  research_enabled: z.boolean().optional(),
-  html_enabled: z.boolean().optional(),
   template_id: z.string().optional(),
   template_version: z.number().default(0),
+  // Folder organization
+  folder_id: z.string().optional().nullable(),
   // Delivery configuration
   delivery_method: z.enum(['webhook', 'sms', 'none']).default('none'),
   delivery_webhook_url: z.string().url().optional(),
@@ -147,7 +143,7 @@ export const createWorkflowSchema = baseWorkflowSchema.refine((data) => {
   
   return true;
 }, {
-  message: 'Workflow must have at least one step. Legacy format is no longer supported. Also ensure dependencies are valid and non-circular.',
+  message: 'Workflow must have at least one step. Also ensure dependencies are valid and non-circular.',
 });
 
 export const updateWorkflowSchema = baseWorkflowSchema.partial().refine((data) => {
@@ -213,6 +209,13 @@ export const createTemplateSchema = z.object({
 });
 
 export const updateTemplateSchema = createTemplateSchema.partial();
+
+// Folder schemas
+export const createFolderSchema = z.object({
+  folder_name: z.string().min(1).max(200),
+});
+
+export const updateFolderSchema = createFolderSchema.partial();
 
 // Settings schema
 export const updateSettingsSchema = z.object({

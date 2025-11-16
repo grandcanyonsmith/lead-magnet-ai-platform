@@ -23,8 +23,6 @@ export interface JobProcessorStateMachineProps {
  * - Multi-step workflows with dependency resolution
  * - HTML generation for templates
  * - Error handling and job status updates
- * 
- * Note: Legacy format is no longer supported. All workflows must use steps format.
  */
 export function createJobProcessorStateMachine(
   scope: Construct,
@@ -52,7 +50,7 @@ export function createJobProcessorStateMachine(
   // Create error handlers using helper functions
   const handleStepFailure = createStepFailureHandler(scope, jobsTable);
   const handleHtmlGenerationFailure = createHtmlGenerationFailureHandler(scope, jobsTable);
-  const parseErrorLegacy = createExceptionHandlerChain(scope, 'ParseErrorLegacy', jobsTable, false);
+  const parseErrorHtmlGeneration = createExceptionHandlerChain(scope, 'ParseErrorHtmlGeneration', jobsTable, false);
   const parseErrorStep = createExceptionHandlerChain(scope, 'ParseErrorStep', jobsTable, true);
 
   // Initialize steps: Load workflow and get step count
@@ -94,9 +92,9 @@ export function createJobProcessorStateMachine(
   });
 
   // Add error handling for HTML generation failures
-  // Note: Use parseErrorLegacy (not parseErrorStep) because HTML generation
+  // Note: Use parseErrorHtmlGeneration (not parseErrorStep) because HTML generation
   // runs after all workflow steps are complete, so step_index is not in context
-  processHtmlGeneration.addCatch(parseErrorLegacy, {
+  processHtmlGeneration.addCatch(parseErrorHtmlGeneration, {
     resultPath: '$.error',
     errors: ['States.ALL'],
   });
@@ -235,7 +233,6 @@ export function createJobProcessorStateMachine(
   }).next(checkTemplateExists);
 
   // Define workflow: Update status -> Initialize steps -> Compute steps length -> Check template -> Process steps
-  // All workflows must use steps format - legacy format is no longer supported
   return updateJobStatus
     .next(initializeSteps)
     .next(computeStepsLength);

@@ -1,0 +1,146 @@
+{
+  "total": 73,
+  "computer_use": 6,
+  "computer_use_workflows": [
+    {
+      "workflow_id": "wf_01K9JF4NXRM47CA6G5DSJP39Q9",
+      "workflow_name": "Call Flow Audit",
+      "tenant_id": "84c8e438-0061-70f2-2ce0-7cb44989a329",
+      "steps_count": 6,
+      "computer_use_steps": [
+        {
+          "step_index": 0,
+          "step_name": "Journey Emulation and Capture",
+          "model": "computer-use-preview",
+          "tool_config": {
+            "display_height": 768,
+            "environment": "browser",
+            "type": "computer_use_preview",
+            "display_width": 1024
+          }
+        }
+      ]
+    },
+    {
+      "workflow_id": "wf_01K92MER8DY9WTAPPM8YE81PZR",
+      "workflow_name": "brand style guidev2",
+      "tenant_id": "84c8e438-0061-70f2-2ce0-7cb44989a329",
+      "steps_count": 2,
+      "computer_use_steps": [
+        {
+          "step_index": 0,
+          "step_name": "Deep Research",
+          "model": "computer-use-preview",
+          "tool_config": {
+            "display_height": 768,
+            "environment": "browser",
+            "type": "computer_use_preview",
+            "display_width": 1024
+          }
+        }
+      ]
+    },
+    {
+      "workflow_id": "wf_01K9FN54S3D0TDVHKCSDT5V0NA",
+      "workflow_name": "Money Map Planner",
+      "tenant_id": "84c8e438-0061-70f2-2ce0-7cb44989a329",
+      "steps_count": 7,
+      "computer_use_steps": [
+        {
+          "step_index": 1,
+          "step_name": "Brand Assets Extraction",
+          "model": "gpt-5",
+          "tool_config": {
+            "type": "computer_use_preview"
+          }
+        }
+      ]
+    },
+    {
+      "workflow_id": "wf_01K9JF3CJ00ZQ0CH4W1ACA9E6S",
+      "workflow_name": "Call Flow Audit",
+      "tenant_id": "84c8e438-0061-70f2-2ce0-7cb44989a329",
+      "steps_count": 6,
+      "computer_use_steps": [
+        {
+          "step_index": 0,
+          "step_name": "Journey Emulation and Capture",
+          "model": "gpt-4o",
+          "tool_config": {
+            "type": "computer_use_preview"
+          }
+        }
+      ]
+    },
+    {
+      "workflow_id": "wf_1763102072998",
+      "workflow_name": "E2E Test - Playwright Actions 1763102072",
+      "tenant_id": "84c8e438-0061-70f2-2ce0-7cb44989a329",
+      "steps_count": 1,
+      "computer_use_steps": [
+        {
+          "step_index": 0,
+          "step_name": "Browser Navigation Test",
+          "model": "computer-use-preview",
+          "tool_config": {
+            "display_height": 768,
+            "environment": "browser",
+            "type": "computer_use_preview",
+            "display_width": 1024
+          }
+        }
+      ]
+    },
+    {
+      "workflow_id": "wf_01K9GKJ46MSQRCCQ96TK1THP82",
+      "workflow_name": "District Safety Map",
+      "tenant_id": "84c8e438-0061-70f2-2ce0-7cb44989a329",
+      "steps_count": 9,
+      "computer_use_steps": [
+        {
+          "step_index": 0,
+          "step_name": "Scope & Inputs Normalization",
+          "model": "computer-use-preview",
+          "tool_config": {
+            "display_height": 768,
+            "environment": "browser",
+            "type": "computer_use_preview",
+            "display_width": 1024
+          }
+        }
+      ]
+    }
+  ],
+  "tenant_stats": {
+    "84c8e438-0061-70f2-2ce0-7cb44989a329": {
+      "total": 55,
+      "computer_use": 6,
+      "steps": 239
+    },
+    "cust_84c8e438": {
+      "total": 9,
+      "computer_use": 0,
+      "steps": 72
+    },
+    "94b834b8-f091-70b6-7a0d-0294df45b956": {
+      "total": 1,
+      "computer_use": 0,
+      "steps": 2
+    },
+    "canyon_coursecreator360_com": {
+      "total": 1,
+      "computer_use": 0,
+      "steps": 2
+    },
+    "24c82488-0071-7090-d8ce-b39075af0987": {
+      "total": 4,
+      "computer_use": 0,
+      "steps": 28
+    },
+    "tenant_test_001": {
+      "total": 3,
+      "computer_use": 0,
+      "steps": 6
+    }
+  }
+}

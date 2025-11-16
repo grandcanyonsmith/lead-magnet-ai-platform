@@ -3,98 +3,11 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
-import { FiCheckCircle, FiXCircle, FiClock, FiLoader, FiRefreshCw, FiExternalLink, FiChevronDown, FiChevronUp } from 'react-icons/fi'
+import { FiLoader, FiRefreshCw, FiChevronDown, FiChevronUp } from 'react-icons/fi'
 import { useJobFilters, useJobSorting } from '@/hooks/useJobFilters'
 import { JobFiltersProvider } from '@/contexts/JobFiltersContext'
-
-const getStatusLabel = (status: string) => {
-  const labels: Record<string, string> = {
-    pending: 'Queued',
-    processing: 'Generating',
-    completed: 'Ready',
-    failed: 'Error',
-  }
-  return labels[status] || status
-}
-
-const getStatusIcon = (status: string) => {
-  switch (status) {
-    case 'completed':
-      return <FiCheckCircle className="w-5 h-5 text-green-600" />
-    case 'failed':
-      return <FiXCircle className="w-5 h-5 text-red-600" />
-    case 'processing':
-      return <FiLoader className="w-5 h-5 text-yellow-600 animate-spin" />
-    case 'pending':
-      return <FiCheckCircle className="w-5 h-5 text-yellow-600" />
-    default:
-      return <FiCheckCircle className="w-5 h-5 text-yellow-600" />
-  }
-}
-
-const getStatusBadge = (status: string) => {
-  const colors: Record<string, string> = {
-    completed: 'bg-green-100 text-green-800',
-    failed: 'bg-red-100 text-red-800',
-    processing: 'bg-yellow-100 text-yellow-800',
-    pending: 'bg-yellow-100 text-yellow-800',
-  }
-  return (
-    <span className={`px-2 py-1 text-xs font-medium rounded-full ${colors[status] || 'bg-gray-100 text-gray-800'}`}>
-      {getStatusLabel(status)}
-    </span>
-  )
-}
-
-const formatRelativeTime = (dateString: string) => {
-  const date = new Date(dateString)
-  const now = new Date()
-  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
-  
-  if (seconds < 60) return `${seconds}s ago`
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  return `${days}d ago`
-}
-
-const formatDuration = (seconds: number) => {
-  if (seconds === 0) return 'Instant'
-  if (seconds < 60) return `${seconds}s`
-  const minutes = Math.floor(seconds / 60)
-  const remainingSeconds = seconds % 60
-  if (minutes < 60) return `${minutes}m ${remainingSeconds}s`
-  const hours = Math.floor(minutes / 60)
-  const remainingMinutes = minutes % 60
-  return `${hours}h ${remainingMinutes}m`
-}
-
-const getStepProgress = (job: any) => {
-  const steps = job.execution_steps || []
-  if (steps.length === 0) return null
-  
-  // For failed jobs, count steps with outputs but cap at failed step
-  // For other jobs, count all steps with outputs
-  let completedSteps = 0
-  
-  for (let i = 0; i < steps.length; i++) {
-    const step = steps[i]
-    const hasOutput = step.output !== null && step.output !== undefined && step.output !== ''
-    
-    // If this step has explicit failed status, stop counting here
-    if (step._status === 'failed' || (job.status === 'failed' && !hasOutput)) {
-      break
-    }
-    
-    if (hasOutput) {
-      completedSteps++
-    }
-  }
-  
-  return { completed: completedSteps, total: steps.length }
-}
+import { JobCard } from '@/components/jobs/JobCard'
+import { JobTableRow } from '@/components/jobs/JobTableRow'
 
 export default function JobsPage() {
   const router = useRouter()
@@ -298,80 +211,24 @@ export default function JobsPage() {
           {/* Mobile Card View */}
           <div className="block md:hidden space-y-3" data-tour="jobs-list">
             {sorting.sortedJobs.map((job) => {
-              const duration = job.completed_at && job.created_at
-                ? Math.round((new Date(job.completed_at).getTime() - new Date(job.created_at).getTime()) / 1000)
-                : null
+              const workflowName = workflowMap[job.workflow_id] || job.workflow_id || '-'
               
-              const hasError = job.status === 'failed' && job.error_message
+              const handleClick = () => {
+                // Use window.location for static export compatibility on mobile
+                if (typeof window !== 'undefined') {
+                  window.location.href = `/dashboard/jobs/${job.job_id}`
+                } else {
+                  router.push(`/dashboard/jobs/${job.job_id}`)
+                }
+              }
               
               return (
-                <div
+                <JobCard
                   key={job.job_id}
-                  onClick={() => {
-                    // Use window.location for static export compatibility on mobile
-                    if (typeof window !== 'undefined') {
-                      window.location.href = `/dashboard/jobs/${job.job_id}`
-                    } else {
-                      router.push(`/dashboard/jobs/${job.job_id}`)
-                    }
-                  }}
-                  className="bg-white rounded-lg shadow-sm border border-gray-100 p-3 cursor-pointer hover:shadow transition-shadow"
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-semibold text-gray-900 truncate">
-                        {workflowMap[job.workflow_id] || job.workflow_id || '-'}
-                      </h3>
-                      {(() => {
-                        const progress = getStepProgress(job)
-                        return progress && (
-                          <div className="text-xs text-gray-500 mt-0.5">
-                            Step {progress.completed}/{progress.total}
-                          </div>
-                        )
-                      })()}
-                    </div>
-                    <div className="ml-2 flex-shrink-0" data-tour="job-status">
-                      {getStatusIcon(job.status)}
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-1 text-xs">
-                    <div className="flex items-center justify-between text-gray-600">
-                      <span>{formatRelativeTime(job.created_at)}</span>
-                      {duration !== null && <span>{formatDuration(duration)}</span>}
-                    </div>
-                    
-                    {job.output_url && (
-                      <div className="pt-1" onClick={(e) => e.stopPropagation()} data-tour="view-artifacts">
-                        <a
-                          href={job.output_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            e.preventDefault()
-                            if (typeof window !== 'undefined') {
-                              window.open(job.output_url, '_blank', 'noopener,noreferrer')
-                            }
-                          }}
-                          onMouseDown={(e) => e.stopPropagation()}
-                          onTouchStart={(e) => e.stopPropagation()}
-                          className="inline-flex items-center text-primary-600 hover:text-primary-900 text-xs"
-                        >
-                          <FiExternalLink className="w-3 h-3 mr-1" />
-                          View
-                        </a>
-                      </div>
-                    )}
-                    
-                    {hasError && (
-                      <div className="pt-1">
-                        <p className="text-red-600 text-xs line-clamp-1">{job.error_message}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                  job={job}
+                  workflowName={workflowName}
+                  onClick={handleClick}
+                />
               )
             })}
           </div>
@@ -416,128 +273,24 @@ export default function JobsPage() {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {sorting.sortedJobs.map((job) => {
-                const duration = job.completed_at && job.created_at
-                  ? Math.round((new Date(job.completed_at).getTime() - new Date(job.created_at).getTime()) / 1000)
-                  : null
+                const workflowName = workflowMap[job.workflow_id] || job.workflow_id || '-'
                 
-                const hasError = job.status === 'failed' && job.error_message
-                const errorPreview = hasError 
-                  ? (job.error_message.length > 60 
-                      ? job.error_message.substring(0, 60) + '...' 
-                      : job.error_message)
-                  : null
-
+                const handleClick = () => {
+                  // Use window.location for static export compatibility
+                  if (typeof window !== 'undefined') {
+                    window.location.href = `/dashboard/jobs/${job.job_id}`
+                  } else {
+                    router.push(`/dashboard/jobs/${job.job_id}`)
+                  }
+                }
+                
                 return (
-                  <React.Fragment key={job.job_id}>
-                    <tr 
-                      className="hover:bg-gray-50 cursor-pointer transition-colors"
-                      onClick={() => {
-                        // Use window.location for static export compatibility
-                        if (typeof window !== 'undefined') {
-                          window.location.href = `/dashboard/jobs/${job.job_id}`
-                        } else {
-                          router.push(`/dashboard/jobs/${job.job_id}`)
-                        }
-                      }}
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          {workflowMap[job.workflow_id] || job.workflow_id || '-'}
-                        </div>
-                        {(() => {
-                          const progress = getStepProgress(job)
-                          return progress && (
-                            <div className="text-xs text-gray-500 mt-0.5">
-                              Step {progress.completed}/{progress.total}
-                            </div>
-                          )
-                        })()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap" data-tour="job-status">
-                        <div className="flex items-center gap-2">
-                          {getStatusIcon(job.status)}
-                          {getStatusBadge(job.status)}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {formatRelativeTime(job.created_at)}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {new Date(job.created_at).toLocaleDateString()}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {duration !== null ? formatDuration(duration) : '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm" onClick={(e) => e.stopPropagation()}>
-                        {job.output_url ? (
-                          <button
-                            data-tour="view-artifacts"
-                            onClick={async (e) => {
-                              e.stopPropagation()
-                              e.preventDefault()
-                              try {
-                                const blobUrl = await api.getJobDocumentBlobUrl(job.job_id)
-                                window.open(blobUrl, '_blank', 'noopener,noreferrer')
-                                // Clean up blob URL after a delay
-                                setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)
-                              } catch (error) {
-                                console.error('Failed to open document:', error)
-                                alert('Failed to open document. Please try again.')
-                              }
-                            }}
-                            onMouseDown={(e) => e.stopPropagation()}
-                            onTouchStart={(e) => e.stopPropagation()}
-                            className="inline-flex items-center text-primary-600 hover:text-primary-900 font-medium"
-                          >
-                            View
-                            <FiExternalLink className="w-4 h-4 ml-1" />
-                          </button>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
-                      </td>
-                    </tr>
-                    {hasError && (
-                      <tr 
-                        key={`${job.job_id}-error`}
-                        className="bg-red-50 hover:bg-red-100 cursor-pointer transition-colors"
-                        onClick={() => {
-                          // Use window.location for static export compatibility
-                          if (typeof window !== 'undefined') {
-                            window.location.href = `/dashboard/jobs/${job.job_id}`
-                          } else {
-                            router.push(`/dashboard/jobs/${job.job_id}`)
-                          }
-                        }}
-                      >
-                        <td colSpan={5} className="px-6 py-3">
-                          <div className="flex items-start">
-                            <FiXCircle className="w-4 h-4 text-red-600 mt-0.5 mr-2 flex-shrink-0" />
-                            <div className="flex-1">
-                              <p className="text-sm text-red-800 font-medium">Generation failed</p>
-                              <p className="text-xs text-red-700 mt-1">{errorPreview}</p>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  // Use window.location for static export compatibility
-                                  if (typeof window !== 'undefined') {
-                                    window.location.href = `/dashboard/jobs/${job.job_id}`
-                                  } else {
-                                    router.push(`/dashboard/jobs/${job.job_id}`)
-                                  }
-                                }}
-                                className="text-xs text-red-600 hover:text-red-800 font-medium mt-1 underline"
-                              >
-                                View details
-                              </button>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
+                  <JobTableRow
+                    key={job.job_id}
+                    job={job}
+                    workflowName={workflowName}
+                    onClick={handleClick}
+                  />
                 )
               })}
             </tbody>

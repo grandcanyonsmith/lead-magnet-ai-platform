@@ -15,14 +15,29 @@ function LoginForm() {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    // Pre-fill email from query params (but clear password from URL for security)
+    // Security: Immediately clear any password from URL
+    const hasPassword = searchParams?.get('password')
     const emailParam = searchParams?.get('email')
-    if (emailParam) {
-      setEmail(emailParam)
+    const redirectParam = searchParams?.get('redirect')
+    
+    if (hasPassword && typeof window !== 'undefined') {
+      // Remove password from URL immediately for security
+      const newUrl = new URL(window.location.href)
+      newUrl.searchParams.delete('password')
+      window.history.replaceState({}, '', newUrl.toString())
+      
+      // Also use Next.js router to clean up
+      const cleanPath = redirectParam 
+        ? `/auth/login?email=${encodeURIComponent(emailParam || '')}&redirect=${encodeURIComponent(redirectParam)}`
+        : emailParam
+          ? `/auth/login?email=${encodeURIComponent(emailParam)}`
+          : '/auth/login'
+      router.replace(cleanPath, { scroll: false })
     }
-    // Clear any password from URL for security
-    if (searchParams?.get('password')) {
-      router.replace('/auth/login', { scroll: false })
+    
+    // Pre-fill email from query params (safe to do)
+    if (emailParam && !hasPassword) {
+      setEmail(emailParam)
     }
   }, [searchParams, router])
 
@@ -30,9 +45,11 @@ function LoginForm() {
     e.preventDefault()
     e.stopPropagation()
     
-    // Clear URL if it contains credentials (security fix)
-    if (window.location.search.includes('password')) {
-      router.replace('/auth/login', { scroll: false })
+    // Security: Ensure URL is clean before submission
+    if (typeof window !== 'undefined' && window.location.search.includes('password')) {
+      const newUrl = new URL(window.location.href)
+      newUrl.searchParams.delete('password')
+      window.history.replaceState({}, '', newUrl.toString())
     }
     
     setError('')
