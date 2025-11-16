@@ -97,14 +97,14 @@ export function StepCard({
 
       {filesToShow.length > 0 && (
         <div className="px-3 sm:px-4 pb-3 sm:pb-4">
-          {filesToShow.map((file) => {
+          {filesToShow.map((file, idx) => {
             if (file.type === 'imageArtifact') {
               const artifact = file.data as Artifact
               return (
                 <ImagePreview
                   key={file.key}
                   artifact={artifact}
-                  imageIndex={0}
+                  imageIndex={idx}
                   model={step.model}
                   tools={step.input?.tools || step.tools}
                   toolChoice={step.input?.tool_choice || step.tool_choice}
@@ -117,7 +117,7 @@ export function StepCard({
                 <ImagePreview
                   key={file.key}
                   imageUrl={imageUrl}
-                  imageIndex={0}
+                  imageIndex={idx}
                   model={step.model}
                   tools={step.input?.tools || step.tools}
                   toolChoice={step.input?.tool_choice || step.tool_choice}
