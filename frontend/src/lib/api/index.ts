@@ -16,6 +16,7 @@ import { NotificationsClient } from './notifications.client'
 import { SettingsClient } from './settings.client'
 import { AnalyticsClient } from './analytics.client'
 import { UsageClient } from './usage.client'
+import { FoldersClient } from './folders.client'
 import { ApiClient, ArtifactListParams, ArtifactListResponse, Artifact, FormUpdateRequest, TemplateUpdateRequest, WorkflowUpdateRequest } from '@/types'
 import { AxiosRequestConfig } from 'axios'
 
@@ -30,6 +31,7 @@ class ApiClientImpl extends BaseApiClient implements ApiClient {
   public settings: SettingsClient
   public analytics: AnalyticsClient
   public usage: UsageClient
+  public folders: FoldersClient
 
   constructor(tokenProvider?: TokenProvider) {
     super(tokenProvider || new LocalStorageTokenProvider())
@@ -44,6 +46,7 @@ class ApiClientImpl extends BaseApiClient implements ApiClient {
     this.settings = new SettingsClient(this.tokenProvider)
     this.analytics = new AnalyticsClient(this.tokenProvider)
     this.usage = new UsageClient(this.tokenProvider)
+    this.folders = new FoldersClient(this.tokenProvider)
   }
 
   // Generic HTTP methods for direct endpoint access
@@ -263,6 +266,27 @@ class ApiClientImpl extends BaseApiClient implements ApiClient {
 
   async updateOnboardingChecklist(checklist: Record<string, boolean>) {
     return this.settings.updateOnboardingChecklist(checklist)
+  }
+
+  // Folders - delegate to folders client
+  async getFolders(params?: Record<string, unknown>) {
+    return this.folders.getFolders(params)
+  }
+
+  async getFolder(id: string) {
+    return this.folders.getFolder(id)
+  }
+
+  async createFolder(data: Parameters<FoldersClient['createFolder']>[0]) {
+    return this.folders.createFolder(data)
+  }
+
+  async updateFolder(id: string, data: Parameters<FoldersClient['updateFolder']>[1]) {
+    return this.folders.updateFolder(id, data)
+  }
+
+  async deleteFolder(id: string) {
+    return this.folders.deleteFolder(id)
   }
 }
 

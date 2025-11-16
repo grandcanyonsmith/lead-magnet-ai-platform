@@ -92,7 +92,6 @@ lead-magnent-ai/
 │       ├── template_service.py  # Template rendering
 │       ├── artifact_service.py  # Artifact storage service
 │       ├── delivery_service.py   # Webhook/SMS delivery service
-│       ├── legacy_processor.py  # Legacy workflow processor
 │       ├── Dockerfile
 │       └── requirements.txt
 │

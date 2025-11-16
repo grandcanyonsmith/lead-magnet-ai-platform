@@ -49,10 +49,14 @@ export default function DashboardLayout({
       try {
         const authenticated = await isAuthenticated()
         if (!authenticated) {
-          console.log('Not authenticated, redirecting to login')
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Not authenticated, redirecting to login')
+          }
           router.push('/auth/login')
         } else {
-          console.log('Authenticated, showing dashboard')
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Authenticated, showing dashboard')
+          }
           setLoading(false)
           // Load settings for onboarding checklist
           loadSettings()

@@ -8,55 +8,7 @@ The platform uses a **Steps Format** for all workflows. The legacy format has be
 
 **All workflows must use the Steps Format.**
 
-## Legacy Format (Historical)
-
-> **Status**: Removed - No longer supported  
-> **Note**: This section is kept for historical reference only. All workflows have been migrated to Steps Format.
-
-The legacy format (removed) used boolean flags to control workflow behavior:
-
-```typescript
-{
-  workflow_name: "My Lead Magnet",
-  research_enabled: true,
-  html_enabled: true,
-  ai_instructions: "Generate a comprehensive report about...",
-  ai_model: "gpt-5",
-  rewrite_model: "gpt-5",
-  template_id: "template_123",
-  template_version: 0
-}
-```
-
-### Legacy Format Fields
-
-- `research_enabled` (boolean): If `true`, generates an AI research report first
-- `html_enabled` (boolean): If `true`, converts the research report into HTML using a template
-- `ai_instructions` (string): Instructions for the research step
-- `ai_model` (string): Model to use for research (default: "gpt-5")
-- `rewrite_model` (string): Model to use for HTML generation (default: "gpt-5")
-- `template_id` (string): Template ID for HTML generation (required if `html_enabled` is true)
-
-### Legacy Format Processing Flow
-
-1. **Research Step** (if `research_enabled` is true):
-   - Uses `ai_instructions` and form submission data
-   - Generates a research report
-   - Stores report as artifact
-
-2. **HTML Generation Step** (if `html_enabled` is true):
-   - Uses research report (if available) or form submission data
-   - Applies HTML template
-   - Generates final HTML deliverable
-
-### Limitations
-
-- Only supports 2 steps maximum (research + HTML)
-- No support for custom step dependencies
-- No support for parallel execution
-- Limited flexibility for complex workflows
-
-## New Steps Format
+## Steps Format
 
 The new steps format provides full flexibility for multi-step workflows:
 
@@ -134,57 +86,6 @@ Each step can have:
 4. **Context Building**: Each step receives accumulated context from previous steps
 5. **HTML Generation** (if template is configured): Final step converts output to HTML
 
-## Historical: Legacy Format Migration
-
-> **Note**: All workflows have been migrated to Steps Format. This section is kept for historical reference.
-
-### Migration (Completed)
-
-All legacy workflows were automatically migrated to steps format. The migration process converted:
-
-You can manually migrate a legacy workflow:
-
-```typescript
-// Legacy format
-{
-  research_enabled: true,
-  html_enabled: true,
-  ai_instructions: "Generate report about X",
-  ai_model: "gpt-5",
-  rewrite_model: "gpt-5"
-}
-
-// Migrated to steps format
-{
-  steps: [
-    {
-      step_name: "Deep Research",
-      step_description: "Generate comprehensive research report",
-      step_order: 0,
-      model: "gpt-5",
-      instructions: "Generate report about X",
-      tools: ["web_search_preview"],
-      tool_choice: "auto"
-    },
-    {
-      step_name: "HTML Rewrite",
-      step_description: "Rewrite content into styled HTML matching template",
-      step_order: 1,
-      model: "gpt-5",
-      instructions: "Rewrite the research content into styled HTML...",
-      tools: [],
-      tool_choice: "none"
-    }
-  ]
-}
-```
-
-### Migration Utility (Historical)
-
-> **Note**: Migration functions are deprecated and kept for reference only.
-
-The migration utility functions (`migrateLegacyWorkflowToSteps`, `migrateLegacyWorkflowOnUpdate`) are deprecated and should not be used in new code.
-
 ## Current Status
 
 - ✅ **All workflows use Steps Format**
@@ -204,19 +105,7 @@ The migration utility functions (`migrateLegacyWorkflowToSteps`, `migrateLegacyW
 
 ## Examples
 
-### Example 1: Simple Research + HTML (Legacy)
-
-```typescript
-{
-  workflow_name: "Hospital Checklist",
-  research_enabled: true,
-  html_enabled: true,
-  ai_instructions: "Create a comprehensive hospital checklist for pregnant women",
-  template_id: "checklist_template_123"
-}
-```
-
-### Example 2: Multi-Step Research (Steps Format)
+### Example 1: Simple Research + HTML (Steps Format)
 
 ```typescript
 {

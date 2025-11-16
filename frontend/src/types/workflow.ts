@@ -73,19 +73,15 @@ export interface Workflow extends BaseEntity {
   template_version: number
   steps?: WorkflowStep[]
   status: 'active' | 'inactive' | 'draft'
+  folder_id?: string | null
   form?: {
     form_id: string
     form_name: string
     public_slug: string
     status: string
   }
-  // Legacy fields (deprecated - kept for backward compatibility with existing database records)
-  // All new workflows must use the steps format. These fields are ignored.
-  ai_model?: AIModel
-  ai_instructions?: string
-  rewrite_model?: AIModel
-  research_enabled?: boolean
-  html_enabled?: boolean
+  // Note: Legacy fields (ai_model, ai_instructions, rewrite_model, research_enabled, html_enabled)
+  // may exist in database records but are no longer used. All workflows must use steps format.
 }
 
 export interface WorkflowCreateRequest {
@@ -94,12 +90,6 @@ export interface WorkflowCreateRequest {
   template_id?: string
   template_version?: number
   steps?: WorkflowStep[]
-  // Legacy fields (deprecated - kept for backward compatibility, but ignored)
-  ai_model?: AIModel
-  ai_instructions?: string
-  rewrite_model?: AIModel
-  research_enabled?: boolean
-  html_enabled?: boolean
   delivery_method?: DeliveryMethod
   delivery_webhook_url?: string
   delivery_webhook_headers?: Record<string, string>

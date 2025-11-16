@@ -1,98 +1,14 @@
 /**
- * Utility functions for migrating legacy workflow formats to the new steps-based format.
+ * Utility functions for workflow step normalization and validation.
  * 
  * @module workflowMigration
  */
 
-import { WorkflowStep, LegacyWorkflowData } from './types';
+import { WorkflowStep } from './types';
 import { ValidationError } from './errors';
 
 // Re-export WorkflowStep for convenience
 export type { WorkflowStep } from './types';
-
-/**
- * Migrate legacy workflow format to steps format
- * 
- * @deprecated Legacy format is no longer supported. All workflows must use steps format.
- * This function is kept for reference only and should not be used in new code.
- */
-export function migrateLegacyWorkflowToSteps(workflowData: LegacyWorkflowData): WorkflowStep[] {
-  const steps: WorkflowStep[] = [];
-  
-  if (workflowData.research_enabled && workflowData.ai_instructions) {
-    steps.push({
-      step_name: 'Deep Research',
-      step_description: 'Generate comprehensive research report',
-      model: workflowData.ai_model || 'gpt-5',
-      instructions: workflowData.ai_instructions,
-      step_order: 0,
-      tools: ['web_search_preview'],
-      tool_choice: 'auto',
-    });
-  }
-  
-  if (workflowData.html_enabled) {
-    steps.push({
-      step_name: 'HTML Rewrite',
-      step_description: 'Rewrite content into styled HTML matching template',
-      model: workflowData.rewrite_model || 'gpt-5',
-      instructions: workflowData.html_enabled 
-        ? 'Rewrite the research content into styled HTML matching the provided template. Ensure the output is complete, valid HTML that matches the template\'s design and structure.'
-        : 'Generate HTML output',
-      step_order: steps.length,
-      tools: [],
-      tool_choice: 'none',
-    });
-  }
-  
-  return steps;
-}
-
-/**
- * Migrate legacy workflow during update (considers existing workflow state)
- * 
- * @deprecated Legacy format is no longer supported. All workflows must use steps format.
- * This function is kept for reference only and should not be used in new code.
- */
-export function migrateLegacyWorkflowOnUpdate(
-  updateData: LegacyWorkflowData,
-  existingWorkflow: LegacyWorkflowData
-): WorkflowStep[] {
-  const steps: WorkflowStep[] = [];
-  const researchEnabled = updateData.research_enabled !== undefined 
-    ? updateData.research_enabled 
-    : existingWorkflow.research_enabled;
-  const htmlEnabled = updateData.html_enabled !== undefined 
-    ? updateData.html_enabled 
-    : existingWorkflow.html_enabled;
-  const aiInstructions = updateData.ai_instructions || existingWorkflow.ai_instructions;
-  
-  if (researchEnabled && aiInstructions) {
-    steps.push({
-      step_name: 'Deep Research',
-      step_description: 'Generate comprehensive research report',
-      model: updateData.ai_model || existingWorkflow.ai_model || 'gpt-5',
-      instructions: aiInstructions,
-      step_order: 0,
-      tools: ['web_search_preview'],
-      tool_choice: 'auto',
-    });
-  }
-  
-  if (htmlEnabled) {
-    steps.push({
-      step_name: 'HTML Rewrite',
-      step_description: 'Rewrite content into styled HTML matching template',
-      model: updateData.rewrite_model || existingWorkflow.rewrite_model || 'gpt-5',
-      instructions: 'Rewrite the research content into styled HTML matching the provided template. Ensure the output is complete, valid HTML that matches the template\'s design and structure.',
-      step_order: steps.length,
-      tools: [],
-      tool_choice: 'none',
-    });
-  }
-  
-  return steps;
-}
 
 /**
  * Ensure step defaults are set (step_order, tools, tool_choice, step_description, depends_on).

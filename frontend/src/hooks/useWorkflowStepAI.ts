@@ -38,12 +38,14 @@ export function useWorkflowStepAI(workflowId?: string) {
     setProposal(null)
 
     try {
-      console.log('[useWorkflowStepAI] Generating step', {
-        workflowId,
-        promptLength: userPrompt.length,
-        action: suggestedAction,
-        hasCurrentStep: !!currentStep,
-      })
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[useWorkflowStepAI] Generating step', {
+          workflowId,
+          promptLength: userPrompt.length,
+          action: suggestedAction,
+          hasCurrentStep: !!currentStep,
+        })
+      }
 
       const result = await api.generateStepWithAI(workflowId, {
         userPrompt,
@@ -52,10 +54,12 @@ export function useWorkflowStepAI(workflowId?: string) {
         currentStepIndex,
       })
 
-      console.log('[useWorkflowStepAI] Generation successful', {
-        action: result.action,
-        stepName: result.step.step_name,
-      })
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[useWorkflowStepAI] Generation successful', {
+          action: result.action,
+          stepName: result.step.step_name,
+        })
+      }
 
       // Create proposal for review
       const aiProposal: AIStepProposal = {

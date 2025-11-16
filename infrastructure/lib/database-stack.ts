@@ -250,6 +250,23 @@ export class DatabaseStack extends cdk.Stack {
       }
     );
 
+    // Table 15: Folders (for organizing workflows)
+    const foldersTable = createTableWithGSI(
+      this,
+      'FoldersTable',
+      {
+        tableName: TABLE_NAMES.FOLDERS,
+        partitionKey: { name: 'folder_id', type: dynamodb.AttributeType.STRING },
+      },
+      [
+        {
+          indexName: 'gsi_tenant_created',
+          partitionKey: { name: 'tenant_id', type: dynamodb.AttributeType.STRING },
+          sortKey: { name: 'created_at', type: dynamodb.AttributeType.STRING },
+        },
+      ]
+    );
+
     // Export table names and references using TableKey enum for type safety
     this.tablesMap = {
       [TableKey.WORKFLOWS]: workflowsTable,
@@ -266,6 +283,7 @@ export class DatabaseStack extends cdk.Stack {
       [TableKey.FILES]: filesTable,
       [TableKey.IMPERSONATION_LOGS]: impersonationLogsTable,
       [TableKey.SESSIONS]: sessionsTable,
+      [TableKey.FOLDERS]: foldersTable,
     };
 
     // CloudFormation outputs
