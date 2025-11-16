@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { FiChevronDown, FiChevronUp, FiCopy, FiExternalLink } from 'react-icons/fi'
 import { useState } from 'react'
+import { copyToClipboard } from '@/utils/clipboard'
 
 interface TechnicalDetailsProps {
   job: any
@@ -12,13 +13,6 @@ interface TechnicalDetailsProps {
 export function TechnicalDetails({ job, form }: TechnicalDetailsProps) {
   const router = useRouter()
   const [showTechnicalDetails, setShowTechnicalDetails] = useState(false)
-  const [copied, setCopied] = useState(false)
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
 
   return (
     <div className="mt-4 sm:mt-6 bg-white rounded-lg shadow p-4 sm:p-6">
@@ -224,11 +218,6 @@ export function TechnicalDetails({ job, form }: TechnicalDetailsProps) {
             </div>
           )}
 
-          {copied && (
-            <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-[60]">
-              Copied!
-            </div>
-          )}
         </div>
       )}
     </div>

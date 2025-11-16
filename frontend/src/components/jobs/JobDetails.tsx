@@ -12,6 +12,7 @@ import {
 } from 'react-icons/fi'
 import { toast } from 'react-hot-toast'
 import { formatDurationSeconds, formatRelativeTime } from '@/utils/jobFormatting'
+import { copyToClipboard } from '@/utils/clipboard'
 import { api } from '@/lib/api'
 import { SectionCard } from '@/components/ui/SectionCard'
 import { StatPill } from '@/components/ui/StatPill'
@@ -50,22 +51,8 @@ export function JobDetails({ job, workflow, hideContainer = false }: JobDetailsP
 
   const hasDocument = Boolean(job.output_url)
 
-  const handleCopyValue = async (value: string) => {
-    try {
-      if (typeof navigator !== 'undefined' && navigator.clipboard) {
-        await navigator.clipboard.writeText(value)
-      } else {
-        const textarea = document.createElement('textarea')
-        textarea.value = value
-        document.body.appendChild(textarea)
-        textarea.select()
-        document.execCommand('copy')
-        document.body.removeChild(textarea)
-      }
-      toast.success('Copied to clipboard')
-    } catch {
-      toast.error('Unable to copy automatically. Please copy manually.')
-    }
+  const handleCopyValue = (value: string) => {
+    copyToClipboard(value)
   }
 
   const handleViewDocument = async () => {

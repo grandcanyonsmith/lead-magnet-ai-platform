@@ -1,31 +1,44 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState, useRef } from 'react'
-import { FiChevronDown, FiChevronUp, FiExternalLink, FiRefreshCw } from 'react-icons/fi'
+import { FiChevronDown, FiChevronUp, FiRefreshCw } from 'react-icons/fi'
 import { useJobDetail } from '@/hooks/useJobDetail'
 import { useJobExecutionSteps } from '@/hooks/useJobExecutionSteps'
 import { useMergedSteps } from '@/hooks/useMergedSteps'
+import { useJobDetailState } from '@/hooks/useJobDetailState'
 import { JobHeader } from '@/components/jobs/JobHeader'
 import { JobDetails } from '@/components/jobs/JobDetails'
 import { ExecutionSteps } from '@/components/jobs/ExecutionSteps'
+import { ExecutionStepsError } from '@/components/jobs/ExecutionStepsError'
 import { TechnicalDetails } from '@/components/jobs/TechnicalDetails'
 import { ResubmitModal } from '@/components/jobs/ResubmitModal'
+import { JobDetailSkeleton } from '@/components/jobs/JobDetailSkeleton'
+import { RerunConfirmDialog } from '@/components/jobs/RerunConfirmDialog'
 import FlowchartSidePanel from '@/app/dashboard/workflows/components/FlowchartSidePanel'
 import { api } from '@/lib/api'
-import { WorkflowStep } from '@/types'
+import { copyToClipboard } from '@/utils/clipboard'
 import { toast } from 'react-hot-toast'
 
+/**
+ * Job Detail Page Client Component
+ * 
+ * Displays detailed information about a job execution including:
+ * - Job status and metadata
+ * - Execution steps with ability to edit and rerun
+ * - Form submission details
+ * - Technical details and artifacts
+ * 
+ * Features:
+ * - Real-time polling for processing jobs
+ * - Step editing via side panel
+ * - Step rerun functionality
+ * - Job resubmission
+ */
 export default function JobDetailClient() {
   const router = useRouter()
-  const [showResubmitModal, setShowResubmitModal] = useState(false)
-  const [editingStepIndex, setEditingStepIndex] = useState<number | null>(null)
-  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false)
-  const [showRerunConfirm, setShowRerunConfirm] = useState(false)
-  const [stepIndexForRerun, setStepIndexForRerun] = useState<number | null>(null)
-  const [showDetails, setShowDetails] = useState(false)
-  const [showFormSubmission, setShowFormSubmission] = useState(false)
-  const latestStepUpdateRef = useRef<WorkflowStep | null>(null)
+  
+  // Consolidated state management
+  const state = useJobDetailState()
   const {
     job,
     workflow,
@@ -45,33 +58,33 @@ export default function JobDetailClient() {
     setShowExecutionSteps,
     expandedSteps,
     toggleStep,
-  } = useJobExecutionSteps()
+  } = useJobExecutionSteps({ jobId })
 
-  // Use the extracted merged steps hook
-  const mergedSteps = useMergedSteps({ job, workflow })
+  const mergedSteps = useMergedSteps({ job, workflow, rerunningStep })
+  const hasSteps = (workflow?.steps?.length ?? 0) > 0 || (job?.execution_steps?.length ?? 0) > 0
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
-  }
-
-  const handleResubmitClick = () => {
-    setShowResubmitModal(true)
-  }
-
+  /**
+   * Handle resubmit confirmation - creates a new job with same submission data
+   */
   const handleResubmitConfirm = async () => {
     await handleResubmit()
-    setShowResubmitModal(false)
+    state.closeResubmitModal()
   }
 
+  /**
+   * Open step editor panel for the specified step index
+   */
   const handleEditStep = (stepIndex: number) => {
-    setEditingStepIndex(stepIndex)
-    setIsSidePanelOpen(true)
-    // Reset the ref when opening
-    latestStepUpdateRef.current = null
+    state.openEditStep(stepIndex)
   }
 
-  const handleSaveStep = async (updatedStep: WorkflowStep) => {
-    if (!workflow || editingStepIndex === null || !workflow.steps) {
+  /**
+   * Save updated step configuration and prompt for rerun
+   * 
+   * @param updatedStep - Updated step configuration from the editor
+   */
+  const handleSaveStep = async (updatedStep: any) => {
+    if (!workflow || state.editingStepIndex === null || !workflow.steps) {
       toast.error('Unable to save: Workflow data not available')
       return
     }
@@ -79,10 +92,10 @@ export default function JobDetailClient() {
     try {
       // Clone the steps array and merge updated step with original to preserve all fields
       const updatedSteps = [...workflow.steps]
-      const originalStep = updatedSteps[editingStepIndex]
+      const originalStep = updatedSteps[state.editingStepIndex]
       
       // Merge: keep all original fields, override with updated form fields
-      updatedSteps[editingStepIndex] = {
+      updatedSteps[state.editingStepIndex] = {
         ...originalStep,
         ...updatedStep,
       }
@@ -92,18 +105,12 @@ export default function JobDetailClient() {
         steps: updatedSteps,
       })
 
-      // Show success toast
       toast.success('Step updated successfully')
 
-      // Store the step index for rerun confirmation
-      setStepIndexForRerun(editingStepIndex)
-
-      // Close the side panel
-      setEditingStepIndex(null)
-      setIsSidePanelOpen(false)
-
-      // Show confirmation dialog for rerun
-      setShowRerunConfirm(true)
+      // Store the step index for rerun confirmation and close panel
+      const stepIndex = state.editingStepIndex
+      state.closeEditStep()
+      state.openRerunConfirm(stepIndex)
 
       // Refresh the page to show updated data
       router.refresh()
@@ -114,86 +121,37 @@ export default function JobDetailClient() {
     }
   }
 
+  /**
+   * Cancel step editing - saves changes if any were made
+   * FlowchartSidePanel calls onChange before onClose, so ref contains latest changes
+   */
   const handleCancelEdit = async () => {
-    // FlowchartSidePanel's handleClose calls onChange with latest step, then onClose
-    // So latestStepUpdateRef should have the latest changes
-    // Only save if there are actual changes (ref is set)
-    if (latestStepUpdateRef.current && editingStepIndex !== null) {
-      const currentStep = workflow?.steps?.[editingStepIndex]
-      // Check if there are actual changes by comparing step data
-      const hasChanges = currentStep && JSON.stringify(currentStep) !== JSON.stringify(latestStepUpdateRef.current)
+    if (state.latestStepUpdateRef.current && state.editingStepIndex !== null) {
+      const currentStep = workflow?.steps?.[state.editingStepIndex]
+      const hasChanges = currentStep && 
+        JSON.stringify(currentStep) !== JSON.stringify(state.latestStepUpdateRef.current)
       if (hasChanges) {
-        await handleSaveStep(latestStepUpdateRef.current)
+        await handleSaveStep(state.latestStepUpdateRef.current)
       }
-      latestStepUpdateRef.current = null
+      state.latestStepUpdateRef.current = null
     }
-    setEditingStepIndex(null)
-    setIsSidePanelOpen(false)
+    state.closeEditStep()
   }
 
+  /**
+   * Confirm and execute step rerun after editing
+   */
   const handleConfirmRerun = async () => {
-    if (stepIndexForRerun !== null && handleRerunStep) {
-      setShowRerunConfirm(false)
-      await handleRerunStep(stepIndexForRerun)
-      setStepIndexForRerun(null)
+    if (state.stepIndexForRerun !== null && handleRerunStep) {
+      const stepIndex = state.stepIndexForRerun
+      state.closeRerunConfirm()
+      await handleRerunStep(stepIndex)
     }
-  }
-
-  const handleCancelRerun = () => {
-    setShowRerunConfirm(false)
-    setStepIndexForRerun(null)
   }
 
 
   if (loading) {
-    return (
-      <div>
-        {/* Header skeleton */}
-        <div className="mb-6">
-          <div className="h-10 bg-gray-200 rounded w-20 mb-4 animate-pulse"></div>
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-0">
-            <div>
-              <div className="h-7 sm:h-8 bg-gray-200 rounded w-64 mb-2 animate-pulse"></div>
-              <div className="h-4 sm:h-5 bg-gray-200 rounded w-96 max-w-full animate-pulse"></div>
-            </div>
-          </div>
-        </div>
-
-        {/* Job Details skeleton */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 mb-6">
-          <div className="space-y-4">
-            <div className="h-6 bg-gray-200 rounded w-32 animate-pulse"></div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="h-16 bg-gray-50 rounded-lg border border-gray-100 p-3">
-                  <div className="h-3 bg-gray-200 rounded w-24 mb-2 animate-pulse"></div>
-                  <div className="h-5 bg-gray-200 rounded w-32 animate-pulse"></div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Execution Steps skeleton */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
-          <div className="h-6 bg-gray-200 rounded w-40 mb-4 animate-pulse"></div>
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="border border-gray-200 rounded-lg p-4">
-                <div className="flex items-start gap-3">
-                  <div className="h-6 w-6 bg-gray-200 rounded-full animate-pulse flex-shrink-0"></div>
-                  <div className="flex-1 space-y-2">
-                    <div className="h-5 bg-gray-200 rounded w-48 animate-pulse"></div>
-                    <div className="h-4 bg-gray-200 rounded w-32 animate-pulse"></div>
-                    <div className="h-20 bg-gray-100 rounded animate-pulse mt-2"></div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    )
+    return <JobDetailSkeleton />
   }
 
   if (error && !job) {
@@ -213,107 +171,52 @@ export default function JobDetailClient() {
 
   return (
     <div>
-      <JobHeader error={error} resubmitting={resubmitting} onResubmit={handleResubmitClick} job={job} />
+      <JobHeader error={error} resubmitting={resubmitting} onResubmit={state.openResubmitModal} job={job} />
       
       <ResubmitModal
-        isOpen={showResubmitModal}
-        onClose={() => setShowResubmitModal(false)}
+        isOpen={state.showResubmitModal}
+        onClose={state.closeResubmitModal}
         onConfirm={handleResubmitConfirm}
         isResubmitting={resubmitting}
       />
 
       {/* Step Edit Side Panel */}
-      {editingStepIndex !== null && workflow?.steps?.[editingStepIndex] && (
+      {state.editingStepIndex !== null && workflow?.steps?.[state.editingStepIndex] && (
         <FlowchartSidePanel
-          step={workflow.steps[editingStepIndex]}
-          index={editingStepIndex}
+          step={workflow.steps[state.editingStepIndex]}
+          index={state.editingStepIndex}
           totalSteps={workflow.steps.length}
           allSteps={workflow.steps}
-          isOpen={isSidePanelOpen}
+          isOpen={state.isSidePanelOpen}
           onClose={handleCancelEdit}
           onChange={(index, updatedStep) => {
             // Store the latest step update in a ref
             // When onClose is called, it will have the latest changes
-            latestStepUpdateRef.current = updatedStep
+            state.latestStepUpdateRef.current = updatedStep
           }}
-          onDelete={() => {
-            // Disable delete in execution viewer context
-            toast.error('Cannot delete steps from execution viewer. Please edit the workflow template.')
-          }}
-          onMoveUp={() => {
-            // Disable move in execution viewer context
-            toast.error('Cannot reorder steps from execution viewer. Please edit the workflow template.')
-          }}
-          onMoveDown={() => {
-            // Disable move in execution viewer context
-            toast.error('Cannot reorder steps from execution viewer. Please edit the workflow template.')
-          }}
+          onDelete={() => toast.error('Cannot delete steps from execution viewer. Please edit the workflow template.')}
+          onMoveUp={() => toast.error('Cannot reorder steps from execution viewer. Please edit the workflow template.')}
+          onMoveDown={() => toast.error('Cannot reorder steps from execution viewer. Please edit the workflow template.')}
           workflowId={workflow.workflow_id}
         />
       )}
 
       {/* Rerun Confirmation Dialog */}
-      {showRerunConfirm && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex min-h-screen items-center justify-center p-4">
-            {/* Backdrop */}
-            <div
-              className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
-              onClick={handleCancelRerun}
-            />
-
-            {/* Modal */}
-            <div className="relative z-50 w-full max-w-md bg-white rounded-lg shadow-xl mx-4">
-              <div className="p-4 sm:p-6">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">
-                  Step Updated Successfully
-                </h3>
-                <p className="text-sm text-gray-600 mb-4 sm:mb-6">
-                  Would you like to rerun this step with the updated configuration?
-                </p>
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3">
-                  <button
-                    onClick={handleCancelRerun}
-                    className="px-4 py-2.5 sm:py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors touch-target min-h-[44px] sm:min-h-0"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleConfirmRerun}
-                    className="px-4 py-2.5 sm:py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors touch-target min-h-[44px] sm:min-h-0"
-                  >
-                    Rerun Step
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <RerunConfirmDialog
+        isOpen={state.showRerunConfirm}
+        onConfirm={handleConfirmRerun}
+        onCancel={state.closeRerunConfirm}
+      />
 
       {/* Execution Steps */}
-      {(workflow?.steps && Array.isArray(workflow.steps) && workflow.steps.length > 0) || 
-       (job.execution_steps && Array.isArray(job.execution_steps) && job.execution_steps.length > 0) ? (
+      {hasSteps ? (
         <>
           {executionStepsError && (
-            <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg mb-4">
-              <div className="flex items-start">
-                <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="ml-3 flex-1">
-                  <h3 className="text-sm font-medium">Execution Steps Loading Error</h3>
-                  <p className="mt-1 text-sm">{executionStepsError}</p>
-                  {job?.execution_steps_s3_key && !executionStepsError?.includes('S3 Key:') && (
-                    <p className="mt-2 text-xs font-mono break-all">
-                      S3 Key: {job.execution_steps_s3_key}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
+            <ExecutionStepsError 
+              error={executionStepsError} 
+              s3Key={job?.execution_steps_s3_key}
+              className="mb-4"
+            />
           )}
           <ExecutionSteps
             steps={mergedSteps}
@@ -331,24 +234,11 @@ export default function JobDetailClient() {
           />
         </>
       ) : executionStepsError ? (
-        <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg">
-          <div className="flex items-start">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3 flex-1">
-              <h3 className="text-sm font-medium">Execution Steps Not Available</h3>
-              <p className="mt-1 text-sm">{executionStepsError}</p>
-              {process.env.NODE_ENV === 'development' && job?.execution_steps_s3_key && (
-                <p className="mt-2 text-xs font-mono break-all">
-                  S3 Key: {job.execution_steps_s3_key}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
+        <ExecutionStepsError 
+          error={executionStepsError} 
+          s3Key={job?.execution_steps_s3_key}
+          title="Execution Steps Not Available"
+        />
       ) : null}
 
       {/* Details and Form Submission - Collapsible sections at bottom */}
@@ -356,17 +246,17 @@ export default function JobDetailClient() {
         {/* Job Details Section */}
         <div className="bg-white rounded-lg shadow">
           <button
-            onClick={() => setShowDetails(!showDetails)}
+            onClick={() => state.setShowDetails(!state.showDetails)}
             className="flex items-center justify-between w-full text-left p-4 sm:p-6 touch-target min-h-[48px] sm:min-h-0"
           >
             <h2 className="text-base sm:text-lg font-semibold text-gray-900">Details</h2>
-            {showDetails ? (
+            {state.showDetails ? (
               <FiChevronUp className="w-5 h-5 text-gray-500 flex-shrink-0 ml-2" />
             ) : (
               <FiChevronDown className="w-5 h-5 text-gray-500 flex-shrink-0 ml-2" />
             )}
           </button>
-          {showDetails && (
+          {state.showDetails && (
             <div className="px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-200">
               <div className="pt-4 sm:pt-6">
                 <JobDetails job={job} workflow={workflow} hideContainer={true} />
@@ -380,11 +270,11 @@ export default function JobDetailClient() {
           <div className="bg-white rounded-lg shadow">
             <div className="flex items-center justify-between p-4 sm:p-6">
               <button
-                onClick={() => setShowFormSubmission(!showFormSubmission)}
+                onClick={() => state.setShowFormSubmission(!state.showFormSubmission)}
                 className="flex items-center justify-between flex-1 text-left touch-target min-h-[48px] sm:min-h-0"
               >
                 <h2 className="text-base sm:text-lg font-semibold text-gray-900">Form Submission Details</h2>
-                {showFormSubmission ? (
+                {state.showFormSubmission ? (
                   <FiChevronUp className="w-5 h-5 text-gray-500 flex-shrink-0 ml-2" />
                 ) : (
                   <FiChevronDown className="w-5 h-5 text-gray-500 flex-shrink-0 ml-2" />
@@ -393,7 +283,7 @@ export default function JobDetailClient() {
               <button
                 onClick={(e) => {
                   e.stopPropagation()
-                  handleResubmitClick()
+                  state.openResubmitModal()
                 }}
                 disabled={resubmitting}
                 className="ml-4 flex items-center gap-2 px-3 py-2 text-sm font-medium text-primary-600 hover:text-primary-800 hover:bg-primary-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-target min-h-[44px] sm:min-h-0"
@@ -403,7 +293,7 @@ export default function JobDetailClient() {
                 <span className="hidden sm:inline">Resubmit</span>
               </button>
             </div>
-            {showFormSubmission && (
+            {state.showFormSubmission && (
               <div className="px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-200">
                 <div className="pt-4 sm:pt-6">
                   {submission.submission_data ? (
