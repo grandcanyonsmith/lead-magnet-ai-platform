@@ -44,7 +44,7 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div>
+      <div className="max-w-7xl mx-auto">
         {/* Header skeleton */}
         <div className="mb-4 sm:mb-6">
           <div className="h-7 sm:h-8 lg:h-9 bg-gray-200 rounded w-48 mb-2 sm:mb-2 animate-pulse"></div>
@@ -154,7 +154,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div>
+    <div className="max-w-7xl mx-auto">
       <div className="mb-4 sm:mb-6">
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">Dashboard</h1>
         <p className="text-sm sm:text-base text-gray-600">Create and manage AI-powered lead magnets that convert leads 10x better</p>

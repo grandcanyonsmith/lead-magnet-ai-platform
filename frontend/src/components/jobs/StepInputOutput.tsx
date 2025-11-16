@@ -15,8 +15,8 @@ interface StepInputOutputProps {
   onCopy: (text: string) => void
   previousSteps: ExecutionStep[]
   formSubmission: Record<string, unknown> | null | undefined
-  imageGallery: ImageGalleryData
-  usedImageGeneration: boolean
+  imageGallery?: ImageGalleryData
+  usedImageGeneration?: boolean
   onEditStep?: (stepIndex: number) => void
   canEdit?: boolean
 }
@@ -55,6 +55,21 @@ function CopyButton({ onClick }: CopyButtonProps) {
   )
 }
 
+function buildFallbackGallery(step: MergedStep): ImageGalleryData {
+  const stepImageUrls = Array.isArray(step.image_urls) ? step.image_urls : []
+  const modelValue = step.model || step.input?.model
+  const modelString: string | undefined = typeof modelValue === 'string' ? modelValue : undefined
+
+  return {
+    imageUrls: stepImageUrls,
+    artifacts: [],
+    model: modelString,
+    tools: step.input?.tools || step.tools || [],
+    toolChoice: step.input?.tool_choice || step.tool_choice,
+    loading: false,
+  }
+}
+
 export function StepInputOutput({
   step,
   status,
@@ -79,14 +94,16 @@ export function StepInputOutput({
     step.step_order !== undefined &&
     step.step_order > 0
 
-  const showContext = previousSteps.length > 0 || Boolean(formSubmission)
-  const hasGalleryContent =
-    imageGallery.imageUrls.length > 0 ||
-    imageGallery.artifacts.length > 0 ||
-    Boolean(imageGallery.loading)
+  const gallery = imageGallery ?? buildFallbackGallery(step)
+  const showGallery =
+    gallery.imageUrls.length > 0 ||
+    gallery.artifacts.length > 0 ||
+    Boolean(gallery.loading)
 
-  const showGallery = hasGalleryContent
-  const hideOutputContent = usedImageGeneration && showGallery
+  const showContext = previousSteps.length > 0 || Boolean(formSubmission)
+  const effectiveUsedImageGeneration =
+    usedImageGeneration ?? (gallery.imageUrls.length > 0 || gallery.artifacts.length > 0)
+  const hideOutputContent = effectiveUsedImageGeneration && showGallery
   const isInProgress = status === 'in_progress'
   const hasOutputContent = Boolean(step.output)
 
@@ -146,7 +163,7 @@ export function StepInputOutput({
 
           {showGallery && (
             <ImageGallery
-              {...imageGallery}
+              {...gallery}
               className="border-none pt-4"
             />
           )}
@@ -165,16 +182,16 @@ export function StepInputOutput({
           className="p-3 md:p-2.5 bg-green-50/20 max-h-[350px] md:max-h-72 overflow-y-auto scrollbar-hide-until-hover"
         >
           {hideOutputContent ? (
-            <ImageGallery {...imageGallery} />
+            <ImageGallery {...gallery} />
           ) : (
             <>
               <StepContent
                 formatted={formatStepOutput(step)}
-                imageUrls={Array.isArray(step.image_urls) ? step.image_urls : []}
+                imageUrls={gallery.imageUrls}
               />
               {showGallery && (
                 <ImageGallery
-                  {...imageGallery}
+                  {...gallery}
                   className="border-none"
                 />
               )}

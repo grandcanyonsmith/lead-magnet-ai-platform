@@ -126,7 +126,7 @@ export default function NewWorkflowPage() {
   // Creating Step
   if (step === 'creating') {
     return (
-      <div>
+      <div className="max-w-7xl mx-auto">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Creating Your Lead Magnet</h1>
           <p className="text-gray-600">AI is generating your lead magnet configuration...</p>
@@ -165,7 +165,7 @@ export default function NewWorkflowPage() {
   // Prompt Step
   if (step === 'prompt') {
     return (
-      <div>
+      <div className="max-w-7xl mx-auto">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Create Lead Magnet</h1>
           <p className="text-gray-600">Describe what you want to build, and AI will generate everything for you</p>
@@ -231,7 +231,7 @@ export default function NewWorkflowPage() {
 
   // Form Step - Show all generated fields
   return (
-    <div>
+    <div className="max-w-7xl mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Create Lead Magnet</h1>
         <p className="text-gray-600">Review and edit the generated configuration</p>
