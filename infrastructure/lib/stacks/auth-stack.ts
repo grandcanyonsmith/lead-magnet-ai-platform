@@ -14,17 +14,18 @@ export class AuthStack extends cdk.Stack {
     super(scope, id, props);
 
     // Create Lambda function to auto-confirm users and set tenant_id
+    // Path is relative to infrastructure directory (where CDK is executed from)
     const autoConfirmLambda = new lambda.Function(this, 'AutoConfirmLambda', {
       runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'index.handler',
-      code: lambda.Code.fromAsset('../lib/lambdas'),
+      code: lambda.Code.fromAsset('lib/lambdas'),
     });
 
     // Create Lambda function for PostConfirmation to set customer_id
     const postConfirmationLambda = new lambda.Function(this, 'PostConfirmationLambda', {
       runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'postConfirmation.handler',
-      code: lambda.Code.fromAsset('../lib/lambdas'),
+      code: lambda.Code.fromAsset('lib/lambdas'),
       environment: {
         USERS_TABLE: TABLE_NAMES.USERS,
         CUSTOMERS_TABLE: TABLE_NAMES.CUSTOMERS,
