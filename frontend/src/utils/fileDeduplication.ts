@@ -1,5 +1,6 @@
 import { Artifact } from '@/types/artifact'
 import { MergedStep } from '@/types/job'
+import { extractImageUrls } from '@/utils/imageUtils'
 
 export type FileToShow = {
   type: 'imageArtifact' | 'imageUrl'
@@ -59,13 +60,37 @@ function normalizeFilename(filename: string): string {
  * @param imageArtifacts - Image artifacts from the useImageArtifacts hook
  * @returns Array of unique files to display, ordered by priority
  */
+function collectStepOutputImageUrls(step: MergedStep): string[] {
+  if (!step.output) {
+    return []
+  }
+
+  if (typeof step.output === 'string') {
+    return extractImageUrls(step.output)
+  }
+
+  try {
+    return extractImageUrls(JSON.stringify(step.output))
+  } catch {
+    return []
+  }
+}
+
 export function deduplicateStepFiles(
   step: MergedStep,
   imageArtifacts: Artifact[]
 ): FileToShow[] {
-  const stepImageUrls = (step.image_urls && Array.isArray(step.image_urls) && step.image_urls.length > 0) 
+  const rawImageUrls = (step.image_urls && Array.isArray(step.image_urls) && step.image_urls.length > 0) 
     ? step.image_urls 
     : []
+  const outputImageUrls = collectStepOutputImageUrls(step)
+  const stepImageUrls = Array.from(
+    new Set(
+      [...rawImageUrls, ...outputImageUrls].filter(
+        (url): url is string => typeof url === 'string' && url.length > 0
+      )
+    )
+  )
   const stepImageArtifacts = imageArtifacts || []
   const mainArtifactId = step.artifact_id
   

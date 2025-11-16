@@ -135,6 +135,7 @@ export function ExecutionSteps({
                 key={stepOrder} 
                 className={`border-2 rounded-xl transition-all hover:shadow-md ${stepClassName}`}
                 data-step-status={stepStatus}
+                data-step-order={stepOrder}
               >
                 <StepHeader
                   step={step}

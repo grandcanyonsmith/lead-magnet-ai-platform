@@ -7,7 +7,7 @@ import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 
  */
 
 import { MergedStep, StepStatus } from '@/types/job'
-import { formatDurationMs } from '@/utils/jobFormatting'
+import { formatDurationMs, formatRelativeTime } from '@/utils/jobFormatting'
 import { FiEdit2, FiRefreshCw, FiLoader, FiCheckCircle, FiCircle, FiXCircle, FiMoreVertical } from 'react-icons/fi'
 import { Tooltip } from '@/components/ui/Tooltip'
 
@@ -37,6 +37,43 @@ const STEP_STATUS_COLORS: Record<StepStatus, string> = {
 
 const EDITABLE_STEP_TYPES = new Set(['workflow_step', 'ai_generation', 'webhook'])
 const RERUNNABLE_STEP_TYPES = new Set(['workflow_step', 'ai_generation', 'html_generation'])
+
+type StatusSubtextTone = 'default' | 'danger'
+
+function getStatusSubtext(step: MergedStep, status: StepStatus): { text: string; tone: StatusSubtextTone } | null {
+  if (status === 'completed' && step.completed_at) {
+    return {
+      text: `Completed ${formatRelativeTime(step.completed_at)}`,
+      tone: 'default',
+    }
+  }
+
+  if (status === 'in_progress') {
+    if (step.started_at) {
+      return {
+        text: `Started ${formatRelativeTime(step.started_at)}`,
+        tone: 'default',
+      }
+    }
+    return {
+      text: 'Currently running',
+      tone: 'default',
+    }
+  }
+
+  if (status === 'failed') {
+    if (step.error) {
+      return { text: step.error, tone: 'danger' }
+    }
+    return { text: 'Step failed before producing output', tone: 'danger' }
+  }
+
+  if (status === 'pending') {
+    return { text: 'Waiting for the workflow to reach this step', tone: 'default' }
+  }
+
+  return null
+}
 
 interface StepHeaderProps {
   step: MergedStep
@@ -139,6 +176,7 @@ export function StepHeader({
   const hasMenuActions = canEditStep || canRerunStep
   const disableEdit = jobStatus === 'processing'
   const disableRerun = jobIsActivelyProcessing || isRerunningStep || isAnotherStepRerunning
+  const statusSubtext = getStatusSubtext(step, status)
 
   useEffect(() => {
     if (!menuOpen) return
@@ -200,11 +238,6 @@ export function StepHeader({
               {isRerunningStep ? 'Rerunning...' : 'Processing...'}
             </span>
           )}
-          {isFailed && step.error && (
-            <span className="text-xs font-medium text-red-600 truncate max-w-[180px]" title={step.error}>
-              {step.error}
-            </span>
-          )}
         </div>
         <div className="flex items-center flex-wrap gap-2">
           <h3
@@ -218,6 +251,15 @@ export function StepHeader({
             <span className="text-xs text-gray-500 whitespace-nowrap">({step.model})</span>
           )}
         </div>
+        {statusSubtext && (
+          <div
+            className={`text-xs mt-1 ${
+              statusSubtext.tone === 'danger' ? 'text-red-600' : 'text-gray-500'
+            }`}
+          >
+            {statusSubtext.text}
+          </div>
+        )}
         
         {/* Tools Section - Only show if step is completed or has tools info */}
         {!isPending && (
