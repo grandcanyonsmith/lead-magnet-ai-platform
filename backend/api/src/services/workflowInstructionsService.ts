@@ -1,5 +1,4 @@
 import { getOpenAIClient } from './openaiService';
-import { callResponsesWithTimeout } from '../utils/openaiHelpers';
 import { calculateOpenAICost } from './costService';
 import { usageTrackingService } from './usageTrackingService';
 import { logger } from '../utils/logger';
@@ -59,10 +58,7 @@ export class WorkflowInstructionsService {
       if (model !== 'gpt-5') {
         completionParams.temperature = 0.7;
       }
-      const completion = await callResponsesWithTimeout(
-        () => openai.responses.create(completionParams),
-        'workflow instructions refinement'
-      );
+      const completion = await openai.responses.create(completionParams);
 
       const refineDuration = Date.now() - refineStartTime;
       const refinementModel = (completion as any).model || model;

@@ -157,7 +157,7 @@ export class OpenAIWebhookController {
       hasOutput: !!event.data.output,
     });
 
-    // TODO: Update job status if response_id is linked to a job
+    // Note: Job status update when response_id is linked to a job is a future enhancement
     // This would require storing response_id when making OpenAI API calls
   }
 
@@ -179,7 +179,7 @@ export class OpenAIWebhookController {
       errorCode: event.data.error?.code,
     });
 
-    // TODO: Update job status if response_id is linked to a job
+    // Note: Job status update when response_id is linked to a job is a future enhancement
   }
 
   /**
@@ -190,7 +190,7 @@ export class OpenAIWebhookController {
       responseId: event.data.id,
     });
 
-    // TODO: Handle cancellation
+    // Note: Cancellation handling is a future enhancement
   }
 
   /**
@@ -201,7 +201,7 @@ export class OpenAIWebhookController {
       responseId: event.data.id,
     });
 
-    // TODO: Handle incomplete responses
+    // Note: Incomplete response handling is a future enhancement
   }
 }
 

@@ -1,8 +1,8 @@
 import OpenAI from 'openai';
 import { calculateOpenAICost } from './costService';
-import { callResponsesWithTimeout } from '../utils/openaiHelpers';
 import { buildWorkflowPrompt } from '../utils/workflowPromptBuilder';
 import { parseWorkflowConfig } from '../utils/workflowConfigParser';
+import { logger } from '../utils/logger';
 
 export interface UsageInfo {
   service_type: string;
@@ -47,7 +47,7 @@ export class WorkflowConfigService {
       icpContext,
     });
 
-    console.log('[Workflow Config Service] Calling OpenAI for workflow generation...');
+    logger.info('[Workflow Config Service] Calling OpenAI for workflow generation...');
     const workflowStartTime = Date.now();
     
     const workflowCompletionParams: any = {
@@ -58,14 +58,11 @@ export class WorkflowConfigService {
     if (model !== 'gpt-5') {
       workflowCompletionParams.temperature = 0.7;
     }
-    const workflowCompletion = await callResponsesWithTimeout(
-      () => this.openai.responses.create(workflowCompletionParams),
-      'workflow generation'
-    );
+    const workflowCompletion = await this.openai.responses.create(workflowCompletionParams);
 
     const workflowDuration = Date.now() - workflowStartTime;
     const workflowUsedModel = (workflowCompletion as any).model || model;
-    console.log('[Workflow Config Service] Workflow generation completed', {
+    logger.info('[Workflow Config Service] Workflow generation completed', {
       duration: `${workflowDuration}ms`,
       tokensUsed: workflowCompletion.usage?.total_tokens,
       modelUsed: workflowUsedModel,

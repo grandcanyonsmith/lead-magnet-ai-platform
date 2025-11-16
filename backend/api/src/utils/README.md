@@ -44,7 +44,6 @@ This directory contains utility functions and helpers used throughout the API co
 - **`retry.ts`** - Retry logic with exponential backoff
 - **`timeout.ts`** - Timeout utilities for async operations
 - **`transformers.ts`** - Data transformation utilities
-- **`openaiHelpers.ts`** - OpenAI API call helpers with timeout
 
 ### External Data
 

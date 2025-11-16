@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 import { calculateOpenAICost } from './costService';
-import { callResponsesWithTimeout } from '../utils/openaiHelpers';
+import { logger } from '../utils/logger';
 
 export interface UsageInfo {
   service_type: string;
@@ -76,7 +76,7 @@ Return JSON format:
 
 The public_slug should be URL-friendly (lowercase, hyphens only, no spaces).`;
 
-    console.log('[Form Field Generation Service] Calling OpenAI for form generation...');
+    logger.info('[Form Field Generation Service] Calling OpenAI for form generation...');
     const formStartTime = Date.now();
     
     const formCompletionParams: any = {
@@ -87,14 +87,11 @@ The public_slug should be URL-friendly (lowercase, hyphens only, no spaces).`;
     if (model !== 'gpt-5') {
       formCompletionParams.temperature = 0.7;
     }
-    const formCompletion = await callResponsesWithTimeout(
-      () => this.openai.responses.create(formCompletionParams),
-      'form generation'
-    );
+    const formCompletion = await this.openai.responses.create(formCompletionParams);
 
     const formDuration = Date.now() - formStartTime;
     const formModelUsed = (formCompletion as any).model || model;
-    console.log('[Form Field Generation Service] Form generation completed', {
+    logger.info('[Form Field Generation Service] Form generation completed', {
       duration: `${formDuration}ms`,
       tokensUsed: formCompletion.usage?.total_tokens,
       modelUsed: formModelUsed,
@@ -167,7 +164,7 @@ The public_slug should be URL-friendly (lowercase, hyphens only, no spaces).`;
         formData = JSON.parse(jsonMatch[0]);
       }
     } catch (e) {
-      console.warn('[Form Field Generation Service] Failed to parse form JSON, using defaults', e);
+      logger.warn('[Form Field Generation Service] Failed to parse form JSON, using defaults', { error: e });
     }
 
     // Ensure field_id is generated for each field if missing

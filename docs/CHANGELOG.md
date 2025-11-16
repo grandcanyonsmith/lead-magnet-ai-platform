@@ -18,7 +18,7 @@ All notable changes to the Lead Magnet AI platform are documented in this file.
   - Auto-generates webhook tokens when users access settings
   - Token regeneration endpoint for security
   - Frontend UI in settings page with copy/regenerate buttons
-  - See [Webhook Feature Documentation](./WEBHOOK_FEATURE.md) for details
+  - See [Webhook Documentation](./WEBHOOK.md) for details
 
 ## [Unreleased] - 2025-11-07
 

@@ -145,7 +145,9 @@ interface UseDeleteFolderResult {
 
 export function useDeleteFolder(): UseDeleteFolderResult {
   const { mutateAsync, isPending, error } = useMutation<void, Error, string>(
-    (id: string) => api.deleteFolder(id),
+    async (id: string) => {
+      await api.deleteFolder(id)
+    },
     {
       showSuccessToast: 'Folder deleted successfully',
       showErrorToast: true,

@@ -1,5 +1,4 @@
 import { getOpenAIClient } from './openaiService';
-import { callResponsesWithTimeout } from '../utils/openaiHelpers';
 import { calculateOpenAICost } from './costService';
 import { usageTrackingService } from './usageTrackingService';
 import { logger } from '../utils/logger';
@@ -88,10 +87,7 @@ Return ONLY the CSS code, no markdown formatting, no explanations.`;
       if (model !== 'gpt-5') {
         completionParams.temperature = 0.7;
       }
-      const completion = await callResponsesWithTimeout(
-        () => openai.responses.create(completionParams),
-        'form CSS generation'
-      );
+      const completion = await openai.responses.create(completionParams);
 
       const cssDuration = Date.now() - cssStartTime;
       const cssModelUsed = (completion as any).model || model;
@@ -210,10 +206,7 @@ Return ONLY the modified CSS code, no markdown formatting, no explanations.`;
       if (model !== 'gpt-5') {
         completionParams.temperature = 0.7;
       }
-      const completion = await callResponsesWithTimeout(
-        () => openai.responses.create(completionParams),
-        'form CSS refinement'
-      );
+      const completion = await openai.responses.create(completionParams);
 
       const refineDuration = Date.now() - refineStartTime;
       const refineCssModel = (completion as any).model || model;
