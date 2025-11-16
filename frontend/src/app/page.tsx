@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { CanyonButton } from '@/components/ui/CanyonButton'
 
 export default function Home() {
   const router = useRouter()
@@ -39,26 +40,36 @@ export default function Home() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center max-w-md p-6">
-          <h1 className="text-2xl font-bold mb-4 text-gray-900">Error</h1>
+      <main className="min-h-screen flex items-center justify-center px-6">
+        <div className="w-full max-w-md rounded-2xl bg-white/95 p-8 text-center shadow-2xl">
+          <h1 className="text-2xl font-bold mb-4 text-canyon-green">Error</h1>
           <p className="text-red-600 mb-4">{error}</p>
-          <p className="text-gray-600 text-sm">Redirecting to login...</p>
+          <p className="text-canyon-green/80 text-sm">Redirecting to login...</p>
         </div>
-      </div>
+      </main>
     )
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4 text-gray-900">Lead Magnet AI Platform</h1>
-        <p className="text-gray-600">Loading...</p>
+    <main className="min-h-screen flex items-center justify-center px-6">
+      <div className="w-full max-w-xl rounded-3xl bg-white/95 p-10 text-center shadow-[0_25px_60px_rgba(0,0,0,0.25)]">
+        <p className="text-sm font-semibold uppercase tracking-[0.3em] text-canyon-green/80">
+          Lead Magnet AI
+        </p>
+        <h1 className="text-4xl font-bold mb-4 text-canyon-green">Preparing your workspace</h1>
+        <p className="text-lg text-canyon-green/80">Loading...</p>
         {mounted && (
-          <p className="text-sm text-gray-400 mt-2">Checking authentication...</p>
+          <p className="text-sm text-canyon-green/70 mt-2">
+            Checking authentication...
+          </p>
         )}
+        <div className="mt-8 flex justify-center">
+          <CanyonButton onClick={() => alert('Canyon Button Clicked!')}>
+            Click Me
+          </CanyonButton>
+        </div>
       </div>
-    </div>
+    </main>
   )
 }
 
