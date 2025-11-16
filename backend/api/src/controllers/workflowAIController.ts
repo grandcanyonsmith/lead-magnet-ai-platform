@@ -308,7 +308,7 @@ export class WorkflowAIController {
     tenantId: string,
     jobId: string,
     startTime: number
-  ): Promise<{ workflow_id: string; form_id: string; result: any }> {
+  ): Promise<{ workflow_id: string; form_id: string | null; result: any }> {
     const totalDuration = Date.now() - startTime;
     logger.info('[Workflow Generation] Success!', {
       tenantId,
