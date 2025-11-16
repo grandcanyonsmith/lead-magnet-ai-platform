@@ -7,7 +7,7 @@ import logging
 from datetime import datetime
 from typing import Dict, Any, List, Optional, Tuple
 
-from ai_service import AIService
+from core.ai_service import AIService
 try:
     from model_types import Step, StepOutput, ExecutionStep, WebhookResult
 except ImportError:
@@ -16,9 +16,9 @@ except ImportError:
     StepOutput = Dict[str, Any]
     ExecutionStep = Dict[str, Any]
     WebhookResult = Dict[str, Any]
-from artifact_service import ArtifactService
-from db_service import DynamoDBService
-from s3_service import S3Service
+from core.artifact_service import ArtifactService
+from core.db_service import DynamoDBService
+from core.s3_service import S3Service
 from services.context_builder import ContextBuilder
 from services.execution_step_manager import ExecutionStepManager
 from services.usage_service import UsageService
@@ -26,7 +26,7 @@ from services.image_artifact_service import ImageArtifactService
 from services.webhook_step_service import WebhookStepService
 from services.ai_step_processor import AIStepProcessor
 from utils.step_utils import normalize_step_order, normalize_dependency_list
-from dependency_resolver import get_ready_steps, get_step_status
+from core.dependency_resolver import get_ready_steps, get_step_status
 
 logger = logging.getLogger(__name__)
 
@@ -119,10 +119,8 @@ class StepProcessor:
         # Regular AI generation step
         step_model = step.get('model', 'gpt-5')
         
-        # Extract tools and tool_choice from step config
-        step_tools_raw = step.get('tools', ['web_search_preview'])
-        step_tools = [{"type": tool} if isinstance(tool, str) else tool for tool in step_tools_raw]
-        step_tool_choice = step.get('tool_choice', 'auto')
+        # Extract tools and tool_choice
+        step_tools, step_tool_choice = self._extract_step_tools_and_choice(step)
         
         logger.info(f"[StepProcessor] Processing step {step_index + 1}/{len(sorted_steps)}", extra={
             'job_id': job_id,
@@ -136,7 +134,7 @@ class StepProcessor:
         
         step_start_time = datetime.utcnow()
         
-        # Build context with ALL previous step outputs
+        # Build context with ALL previous step outputs (batch mode uses step_outputs)
         all_previous_context = ContextBuilder.build_previous_context_from_step_outputs(
             initial_context=initial_context,
             step_outputs=step_outputs,
@@ -157,7 +155,6 @@ class StepProcessor:
         
         # Collect previous image URLs for image generation steps
         previous_image_urls = None
-        # Check if this step uses image_generation tool
         has_image_generation = any(
             isinstance(t, dict) and t.get('type') == 'image_generation' 
             for t in step_tools
@@ -177,7 +174,7 @@ class StepProcessor:
             })
         
         # Process AI step using AI step processor
-        step_output, usage_info, request_details, response_details, image_artifact_ids, step_artifact_id = self.ai_step_processor.process_ai_step(
+        step_output, usage_info, request_details, response_details, image_artifact_ids, step_artifact_id = self._process_ai_step_with_processor(
             step=step,
             step_index=step_index,
             job_id=job_id,
@@ -204,7 +201,8 @@ class StepProcessor:
             'image_urls': image_urls
         }
         
-        # Add execution step
+        # Create and add execution step
+        step_duration = (datetime.utcnow() - step_start_time).total_seconds() * 1000
         step_data = ExecutionStepManager.create_ai_generation_step(
             step_name=step_name,
             step_order=step_index + 1,
@@ -213,7 +211,7 @@ class StepProcessor:
             response_details=response_details,
             usage_info=usage_info,
             step_start_time=step_start_time,
-            step_duration=(datetime.utcnow() - step_start_time).total_seconds() * 1000,
+            step_duration=step_duration,
             artifact_id=step_output_dict['artifact_id']
         )
         execution_steps.append(step_data)
@@ -411,6 +409,401 @@ class StepProcessor:
                 })
         return step_outputs
     
+    def _reload_execution_steps_from_db(
+        self,
+        job_id: str,
+        execution_steps: List[Dict[str, Any]],
+        step_index: int
+    ) -> List[Dict[str, Any]]:
+        """
+        Reload execution_steps from database/S3 to ensure we have the latest data.
+        This is important when steps are processed in separate Lambda invocations.
+        
+        Args:
+            job_id: Job ID
+            execution_steps: Current execution steps list
+            step_index: Step index for logging
+            
+        Returns:
+            Updated execution_steps list (from DB if available, otherwise original)
+        """
+        try:
+            job_with_steps = self.db.get_job(job_id, s3_service=self.s3)
+            if job_with_steps and job_with_steps.get('execution_steps'):
+                execution_steps = job_with_steps['execution_steps']
+                logger.debug(f"[StepProcessor] Reloaded execution_steps from database", extra={
+                    'job_id': job_id,
+                    'step_index': step_index,
+                    'execution_steps_count': len(execution_steps)
+                })
+        except Exception as e:
+            logger.warning(f"[StepProcessor] Failed to reload execution_steps, using provided list", extra={
+                'job_id': job_id,
+                'step_index': step_index,
+                'error': str(e)
+            })
+        return execution_steps
+    
+    def _normalize_step_dependencies(
+        self,
+        step: Dict[str, Any],
+        step_index: int,
+        steps: List[Dict[str, Any]]
+    ) -> List[int]:
+        """
+        Normalize and extract step dependencies.
+        
+        Args:
+            step: Step configuration dictionary
+            step_index: Step index (0-based)
+            steps: List of all steps
+            
+        Returns:
+            List of dependency indices (0-based)
+        """
+        step_deps = step.get('depends_on', [])
+        if not step_deps:
+            # Auto-detect from step_order
+            step_order = step.get('step_order', step_index)
+            step_deps = [
+                i for i, s in enumerate(steps)
+                if s.get('step_order', i) < step_order
+            ]
+        else:
+            # Normalize dependency values (handle Decimal types from DynamoDB)
+            step_deps = normalize_dependency_list(step_deps)
+        return step_deps
+    
+    def _get_completed_step_indices(
+        self,
+        execution_steps: List[Dict[str, Any]]
+    ) -> List[int]:
+        """
+        Get list of completed step indices from execution_steps.
+        
+        Args:
+            execution_steps: List of execution steps
+            
+        Returns:
+            List of completed step indices (0-based)
+        """
+        return [
+            normalize_step_order(s) - 1  # Convert 1-indexed step_order to 0-indexed
+            for s in execution_steps
+            if s.get('step_type') in ['ai_generation', 'webhook'] and normalize_step_order(s) > 0
+        ]
+    
+    def _validate_step_dependencies(
+        self,
+        step: Dict[str, Any],
+        step_index: int,
+        steps: List[Dict[str, Any]],
+        execution_steps: List[Dict[str, Any]],
+        job_id: str
+    ) -> None:
+        """
+        Validate that all step dependencies are satisfied.
+        
+        Args:
+            step: Step configuration dictionary
+            step_index: Step index (0-based)
+            steps: List of all steps
+            execution_steps: List of execution steps
+            job_id: Job ID for logging
+            
+        Raises:
+            ValueError: If dependencies are not satisfied
+        """
+        step_name = step.get('step_name', f'Step {step_index + 1}')
+        step_type = step.get('step_type', 'ai_generation')
+        
+        # Normalize dependencies
+        step_deps = self._normalize_step_dependencies(step, step_index, steps)
+        
+        # Get completed step indices
+        completed_step_indices = self._get_completed_step_indices(execution_steps)
+        
+        logger.debug(f"[StepProcessor] Dependency check", extra={
+            'job_id': job_id,
+            'step_index': step_index,
+            'step_name': step_name,
+            'step_deps': step_deps,
+            'completed_step_indices': completed_step_indices,
+            'execution_steps_count': len(execution_steps),
+            'execution_steps_types': [s.get('step_type') for s in execution_steps],
+            'execution_steps_orders': [normalize_step_order(s) for s in execution_steps]
+        })
+        
+        # Check if all dependencies are completed
+        all_deps_completed = len(step_deps) == 0 or all(dep_index in completed_step_indices for dep_index in step_deps)
+        
+        if not all_deps_completed:
+            missing_deps = [dep for dep in step_deps if dep not in completed_step_indices]
+            logger.warning(f"[StepProcessor] Step {step_index + 1} ({step_name}) waiting for dependencies", extra={
+                'job_id': job_id,
+                'step_index': step_index,
+                'step_name': step_name,
+                'step_status': 'waiting',
+                'missing_dependencies': missing_deps,
+                'completed_steps': completed_step_indices
+            })
+            raise ValueError(f"Step {step_index + 1} ({step_name}) cannot execute yet. Missing dependencies: {missing_deps}")
+        
+        # Get ready steps for logging (only for AI steps)
+        if step_type != 'webhook':
+            ready_steps = get_ready_steps(completed_step_indices, steps)
+            step_status_map = get_step_status(completed_step_indices, [], steps)
+            
+            logger.info(f"[StepProcessor] Step readiness check", extra={
+                'job_id': job_id,
+                'step_index': step_index,
+                'step_name': step_name,
+                'step_status': 'ready',
+                'dependencies': step_deps,
+                'all_dependencies_completed': all_deps_completed,
+                'ready_steps': ready_steps,
+                'step_status_map': {k: v for k, v in step_status_map.items()}
+            })
+    
+    def _extract_step_tools_and_choice(
+        self,
+        step: Dict[str, Any]
+    ) -> Tuple[List[Dict[str, Any]], str]:
+        """
+        Extract and normalize tools and tool_choice from step config.
+        
+        Args:
+            step: Step configuration dictionary
+            
+        Returns:
+            Tuple of (step_tools, step_tool_choice)
+        """
+        step_tools_raw = step.get('tools', ['web_search_preview'])
+        step_tools = [{"type": tool} if isinstance(tool, str) else tool for tool in step_tools_raw]
+        step_tool_choice = step.get('tool_choice', 'auto')
+        return step_tools, step_tool_choice
+    
+    def _build_step_contexts(
+        self,
+        step: Dict[str, Any],
+        step_index: int,
+        initial_context: str,
+        execution_steps: List[Dict[str, Any]],
+        step_deps: List[int],
+        step_tools: List[Dict[str, Any]],
+        job_id: str
+    ) -> Tuple[str, str, Optional[List[str]]]:
+        """
+        Build previous context, current step context, and collect previous image URLs.
+        
+        Args:
+            step: Step configuration dictionary
+            step_index: Step index (0-based)
+            initial_context: Initial formatted submission context
+            execution_steps: List of execution steps
+            step_deps: List of dependency indices
+            step_tools: List of step tools
+            job_id: Job ID for logging
+            
+        Returns:
+            Tuple of (all_previous_context, current_step_context, previous_image_urls)
+        """
+        step_name = step.get('step_name', f'Step {step_index + 1}')
+        current_step_order = step_index + 1
+        
+        # Build context only from dependency steps
+        all_previous_context = ContextBuilder.build_previous_context_from_execution_steps(
+            initial_context=initial_context,
+            execution_steps=execution_steps,
+            current_step_order=current_step_order,
+            dependency_indices=step_deps
+        )
+        
+        logger.info(f"[StepProcessor] Built previous context for step {step_index + 1}", extra={
+            'job_id': job_id,
+            'step_index': step_index,
+            'current_step_order': current_step_order,
+            'previous_steps_count': len([s for s in execution_steps if s.get('step_type') == 'ai_generation' and normalize_step_order(s) < current_step_order]),
+            'previous_context_length': len(all_previous_context),
+            'previous_steps_with_images': len([s for s in execution_steps if s.get('step_type') == 'ai_generation' and normalize_step_order(s) < current_step_order and s.get('image_urls')])
+        })
+        
+        # Current step context
+        current_step_context = ContextBuilder.get_current_step_context(step_index, initial_context)
+        
+        # Collect previous image URLs for image generation steps
+        previous_image_urls = None
+        has_image_generation = any(
+            isinstance(t, dict) and t.get('type') == 'image_generation' 
+            for t in step_tools
+        ) if step_tools else False
+        
+        if has_image_generation:
+            previous_image_urls = ContextBuilder.collect_previous_image_urls(
+                execution_steps=execution_steps,
+                current_step_order=current_step_order
+            )
+            logger.info(f"[StepProcessor] Collected previous image URLs for image generation step", extra={
+                'job_id': job_id,
+                'step_index': step_index,
+                'step_name': step_name,
+                'previous_image_urls_count': len(previous_image_urls),
+                'previous_image_urls': previous_image_urls
+            })
+        
+        return all_previous_context, current_step_context, previous_image_urls
+    
+    def _process_ai_step_with_processor(
+        self,
+        step: Dict[str, Any],
+        step_index: int,
+        job_id: str,
+        tenant_id: str,
+        initial_context: str,
+        previous_context: str,
+        current_step_context: str,
+        step_tools: List[Dict[str, Any]],
+        step_tool_choice: str,
+        previous_image_urls: Optional[List[str]]
+    ) -> Tuple[str, Dict[str, Any], Dict[str, Any], Dict[str, Any], List[str], Optional[str]]:
+        """
+        Process AI step using AI step processor.
+        
+        Args:
+            step: Step configuration dictionary
+            step_index: Step index (0-based)
+            job_id: Job ID
+            tenant_id: Tenant ID
+            initial_context: Initial formatted submission context
+            previous_context: Previous step context
+            current_step_context: Current step context
+            step_tools: List of step tools
+            step_tool_choice: Tool choice setting
+            previous_image_urls: Previous image URLs (if any)
+            
+        Returns:
+            Tuple of (step_output, usage_info, request_details, response_details, image_artifact_ids, step_artifact_id)
+            
+        Raises:
+            Exception: If step processing fails
+        """
+        step_name = step.get('step_name', f'Step {step_index + 1}')
+        
+        try:
+            step_output, usage_info, request_details, response_details, image_artifact_ids, step_artifact_id = self.ai_step_processor.process_ai_step(
+                step=step,
+                step_index=step_index,
+                job_id=job_id,
+                tenant_id=tenant_id,
+                initial_context=initial_context,
+                previous_context=previous_context,
+                current_step_context=current_step_context,
+                step_tools=step_tools,
+                step_tool_choice=step_tool_choice,
+                previous_image_urls=previous_image_urls
+            )
+            
+            logger.info("[StepProcessor] Received response_details from AI service", extra={
+                'job_id': job_id,
+                'step_index': step_index,
+                'step_name': step_name,
+                'response_details_keys': list(response_details.keys()) if isinstance(response_details, dict) else None,
+                'has_image_urls_key': 'image_urls' in response_details if isinstance(response_details, dict) else False,
+                'image_urls_count': len(response_details.get('image_urls', [])) if isinstance(response_details, dict) else 0,
+                'image_urls': response_details.get('image_urls', []) if isinstance(response_details, dict) else []
+            })
+            
+            return step_output, usage_info, request_details, response_details, image_artifact_ids, step_artifact_id
+            
+        except Exception as step_error:
+            step_model = step.get('model', 'gpt-5')
+            logger.error(f"[StepProcessor] Error generating report for step {step_index + 1}", extra={
+                'job_id': job_id,
+                'step_index': step_index,
+                'step_name': step_name,
+                'step_model': step_model,
+                'step_tool_choice': step_tool_choice,
+                'step_tools_count': len(step_tools) if step_tools else 0,
+                'step_tools': [t.get('type') if isinstance(t, dict) else t for t in step_tools] if step_tools else [],
+                'error_type': type(step_error).__name__,
+                'error_message': str(step_error)
+            }, exc_info=True)
+            raise
+    
+    def _create_and_update_execution_step(
+        self,
+        step_name: str,
+        step_index: int,
+        step_model: str,
+        request_details: Dict[str, Any],
+        response_details: Dict[str, Any],
+        usage_info: Dict[str, Any],
+        step_start_time: datetime,
+        step_duration: float,
+        step_artifact_id: Optional[str],
+        execution_steps: List[Dict[str, Any]],
+        step_type: str = 'ai_generation'
+    ) -> None:
+        """
+        Create execution step and update execution_steps list with rerun support.
+        
+        Args:
+            step_name: Name of the step
+            step_index: Step index (0-based)
+            step_model: Model used for the step
+            request_details: Request details dictionary
+            response_details: Response details dictionary
+            usage_info: Usage information dictionary
+            step_start_time: Start time of the step
+            step_duration: Duration of the step in milliseconds
+            step_artifact_id: Artifact ID (if any)
+            execution_steps: List of execution steps (modified in place)
+            step_type: Type of step ('ai_generation' or 'webhook')
+        """
+        step_data = ExecutionStepManager.create_ai_generation_step(
+            step_name=step_name,
+            step_order=step_index + 1,
+            step_model=step_model,
+            request_details=request_details,
+            response_details=response_details,
+            usage_info=usage_info,
+            step_start_time=step_start_time,
+            step_duration=step_duration,
+            artifact_id=step_artifact_id
+        )
+        
+        self._update_execution_steps_with_rerun_support(
+            execution_steps=execution_steps,
+            step_data=step_data,
+            step_order=step_index + 1,
+            step_type=step_type
+        )
+    
+    def _update_job_artifacts(
+        self,
+        job: Dict[str, Any],
+        step_artifact_id: Optional[str],
+        image_artifact_ids: List[str]
+    ) -> List[str]:
+        """
+        Update job's artifacts list with new artifacts.
+        
+        Args:
+            job: Job dictionary
+            step_artifact_id: Step artifact ID
+            image_artifact_ids: List of image artifact IDs
+            
+        Returns:
+            Updated artifacts list
+        """
+        artifacts_list = job.get('artifacts', [])
+        if step_artifact_id and step_artifact_id not in artifacts_list:
+            artifacts_list.append(step_artifact_id)
+        for image_artifact_id in image_artifact_ids:
+            if image_artifact_id not in artifacts_list:
+                artifacts_list.append(image_artifact_id)
+        return artifacts_list
+    
     def _update_execution_steps_with_rerun_support(
         self,
         execution_steps: List[Dict[str, Any]],
@@ -571,93 +964,18 @@ class StepProcessor:
         
         # Regular AI generation step
         step_model = step.get('model', 'gpt-5')
-        step_instructions = step.get('instructions', '')
         
         # Reload execution_steps from database/S3 to ensure we have the latest data
-        # This is important when steps are processed in separate Lambda invocations
-        try:
-            job_with_steps = self.db.get_job(job_id, s3_service=self.s3)
-            if job_with_steps and job_with_steps.get('execution_steps'):
-                execution_steps = job_with_steps['execution_steps']
-                logger.debug(f"[StepProcessor] Reloaded execution_steps from database", extra={
-                    'job_id': job_id,
-                    'step_index': step_index,
-                    'execution_steps_count': len(execution_steps)
-                })
-        except Exception as e:
-            logger.warning(f"[StepProcessor] Failed to reload execution_steps, using provided list", extra={
-                'job_id': job_id,
-                'step_index': step_index,
-                'error': str(e)
-            })
-            # Continue with provided execution_steps if reload fails
+        execution_steps = self._reload_execution_steps_from_db(job_id, execution_steps, step_index)
         
-        # Check if dependencies are satisfied
-        step_deps = step.get('depends_on', [])
-        if not step_deps:
-            # Auto-detect from step_order
-            step_order = step.get('step_order', step_index)
-            step_deps = [
-                i for i, s in enumerate(steps)
-                if s.get('step_order', i) < step_order
-            ]
-        else:
-            # Normalize dependency values (handle Decimal types from DynamoDB)
-            step_deps = normalize_dependency_list(step_deps)
+        # Validate dependencies
+        self._validate_step_dependencies(step, step_index, steps, execution_steps, job_id)
         
-        # Get completed step indices from execution_steps (include both AI and webhook steps)
-        completed_step_indices = [
-            normalize_step_order(s) - 1  # Convert 1-indexed step_order to 0-indexed
-            for s in execution_steps
-            if s.get('step_type') in ['ai_generation', 'webhook'] and normalize_step_order(s) > 0
-        ]
+        # Extract tools and tool_choice
+        step_tools, step_tool_choice = self._extract_step_tools_and_choice(step)
         
-        logger.debug(f"[StepProcessor] Dependency check", extra={
-            'job_id': job_id,
-            'step_index': step_index,
-            'step_name': step_name,
-            'step_deps': step_deps,
-            'completed_step_indices': completed_step_indices,
-            'execution_steps_count': len(execution_steps),
-            'execution_steps_types': [s.get('step_type') for s in execution_steps],
-            'execution_steps_orders': [normalize_step_order(s) for s in execution_steps]
-        })
-        
-        # Check if all dependencies are completed
-        all_deps_completed = len(step_deps) == 0 or all(dep_index in completed_step_indices for dep_index in step_deps)
-        
-        if not all_deps_completed:
-            missing_deps = [dep for dep in step_deps if dep not in completed_step_indices]
-            logger.warning(f"[StepProcessor] Step {step_index + 1} ({step_name}) waiting for dependencies", extra={
-                'job_id': job_id,
-                'step_index': step_index,
-                'step_name': step_name,
-                'step_status': 'waiting',
-                'missing_dependencies': missing_deps,
-                'completed_steps': completed_step_indices
-            })
-            raise ValueError(f"Step {step_index + 1} ({step_name}) cannot execute yet. Missing dependencies: {missing_deps}")
-        
-        # Get ready steps for logging (only for AI steps)
-        if step_type != 'webhook':
-            ready_steps = get_ready_steps(completed_step_indices, steps)
-            step_status_map = get_step_status(completed_step_indices, [], steps)
-            
-            logger.info(f"[StepProcessor] Step readiness check", extra={
-                'job_id': job_id,
-                'step_index': step_index,
-                'step_name': step_name,
-                'step_status': 'ready',
-                'dependencies': step_deps,
-                'all_dependencies_completed': all_deps_completed,
-                'ready_steps': ready_steps,
-                'step_status_map': {k: v for k, v in step_status_map.items()}
-            })
-        
-        # Extract tools and tool_choice from step config
-        step_tools_raw = step.get('tools', ['web_search_preview'])
-        step_tools = [{"type": tool} if isinstance(tool, str) else tool for tool in step_tools_raw]
-        step_tool_choice = step.get('tool_choice', 'auto')
+        # Get normalized dependencies for context building
+        step_deps = self._normalize_step_dependencies(step, step_index, steps)
         
         logger.info(f"Processing step {step_index + 1}/{len(steps)}: {step_name}", extra={
             'job_id': job_id,
@@ -667,50 +985,20 @@ class StepProcessor:
         })
         
         step_start_time = datetime.utcnow()
-        image_artifact_ids = []
-        current_step_order = step_index + 1
         
-        # Build context only from dependency steps
-        all_previous_context = ContextBuilder.build_previous_context_from_execution_steps(
+        # Build contexts
+        all_previous_context, current_step_context, previous_image_urls = self._build_step_contexts(
+            step=step,
+            step_index=step_index,
             initial_context=initial_context,
             execution_steps=execution_steps,
-            current_step_order=step_index + 1,
-            dependency_indices=step_deps
+            step_deps=step_deps,
+            step_tools=step_tools,
+            job_id=job_id
         )
         
-        logger.info(f"[StepProcessor] Built previous context for step {step_index + 1}", extra={
-            'job_id': job_id,
-            'step_index': step_index,
-            'current_step_order': current_step_order,
-            'previous_steps_count': len([s for s in execution_steps if s.get('step_type') == 'ai_generation' and normalize_step_order(s) < current_step_order]),
-            'previous_context_length': len(all_previous_context),
-            'previous_steps_with_images': len([s for s in execution_steps if s.get('step_type') == 'ai_generation' and normalize_step_order(s) < current_step_order and s.get('image_urls')])
-        })
-        
-        # Current step context
-        current_step_context = ContextBuilder.get_current_step_context(step_index, initial_context)
-        
-        # Collect previous image URLs for image generation steps
-        previous_image_urls = []
-        # Check if this step uses image_generation tool
-        has_image_generation = any(
-            isinstance(t, dict) and t.get('type') == 'image_generation' 
-            for t in step_tools
-        ) if step_tools else False
-        
-        if has_image_generation:
-            previous_image_urls = ContextBuilder.collect_previous_image_urls(
-                execution_steps=execution_steps,
-                current_step_order=step_index + 1
-            )
-            logger.info(f"[StepProcessor] Collected previous image URLs for image generation step", extra={
-                'job_id': job_id,
-                'step_index': step_index,
-                'step_name': step_name,
-                'previous_image_urls_count': len(previous_image_urls),
-                'previous_image_urls': previous_image_urls
-            })
-        
+        # Log processing details
+        has_image_generation = previous_image_urls is not None
         logger.info(f"[StepProcessor] Processing step {step_index + 1}", extra={
             'job_id': job_id,
             'step_index': step_index,
@@ -722,80 +1010,45 @@ class StepProcessor:
             'current_step_context_length': len(current_step_context),
             'previous_context_length': len(all_previous_context),
             'has_image_generation': has_image_generation,
-            'previous_image_urls_count': len(previous_image_urls)
+            'previous_image_urls_count': len(previous_image_urls) if previous_image_urls else 0
         })
         
-        # Process AI step using AI step processor
-        try:
-            step_output, usage_info, request_details, response_details, image_artifact_ids, step_artifact_id = self.ai_step_processor.process_ai_step(
-                step=step,
-                step_index=step_index,
-                job_id=job_id,
-                tenant_id=job['tenant_id'],
-                initial_context=initial_context,
-                previous_context=all_previous_context,
-                current_step_context=current_step_context,
-                step_tools=step_tools,
-                step_tool_choice=step_tool_choice,
-                previous_image_urls=previous_image_urls if has_image_generation else None
-            )
-            
-            logger.info("[StepProcessor] Received response_details from AI service", extra={
-                'job_id': job_id,
-                'step_index': step_index,
-                'step_name': step_name,
-                'response_details_keys': list(response_details.keys()) if isinstance(response_details, dict) else None,
-                'has_image_urls_key': 'image_urls' in response_details if isinstance(response_details, dict) else False,
-                'image_urls_count': len(response_details.get('image_urls', [])) if isinstance(response_details, dict) else 0,
-                'image_urls': response_details.get('image_urls', []) if isinstance(response_details, dict) else []
-            })
-        except Exception as step_error:
-            logger.error(f"[StepProcessor] Error generating report for step {step_index + 1}", extra={
-                'job_id': job_id,
-                'step_index': step_index,
-                'step_name': step_name,
-                'step_model': step_model,
-                'step_tool_choice': step_tool_choice,
-                'step_tools_count': len(step_tools) if step_tools else 0,
-                'step_tools': [t.get('type') if isinstance(t, dict) else t for t in step_tools] if step_tools else [],
-                'error_type': type(step_error).__name__,
-                'error_message': str(step_error)
-            }, exc_info=True)
-            raise
+        # Process AI step
+        step_output, usage_info, request_details, response_details, image_artifact_ids, step_artifact_id = self._process_ai_step_with_processor(
+            step=step,
+            step_index=step_index,
+            job_id=job_id,
+            tenant_id=job['tenant_id'],
+            initial_context=initial_context,
+            previous_context=all_previous_context,
+            current_step_context=current_step_context,
+            step_tools=step_tools,
+            step_tool_choice=step_tool_choice,
+            previous_image_urls=previous_image_urls
+        )
         
         step_duration = (datetime.utcnow() - step_start_time).total_seconds() * 1000
         
         # Extract image URLs from response
         image_urls = response_details.get('image_urls', [])
         
-        # Add execution step
-        step_data = ExecutionStepManager.create_ai_generation_step(
+        # Create and update execution step
+        self._create_and_update_execution_step(
             step_name=step_name,
-            step_order=step_index + 1,
+            step_index=step_index,
             step_model=step_model,
             request_details=request_details,
             response_details=response_details,
             usage_info=usage_info,
             step_start_time=step_start_time,
             step_duration=step_duration,
-            artifact_id=step_artifact_id
-        )
-        
-        # Update execution steps with rerun support
-        self._update_execution_steps_with_rerun_support(
+            step_artifact_id=step_artifact_id,
             execution_steps=execution_steps,
-            step_data=step_data,
-            step_order=step_index + 1,
             step_type='ai_generation'
         )
         
-        # Update job with execution steps and add artifacts to job's artifacts list
-        artifacts_list = job.get('artifacts', [])
-        if step_artifact_id not in artifacts_list:
-            artifacts_list.append(step_artifact_id)
-        for image_artifact_id in image_artifact_ids:
-            if image_artifact_id not in artifacts_list:
-                artifacts_list.append(image_artifact_id)
+        # Update job with execution steps and artifacts
+        artifacts_list = self._update_job_artifacts(job, step_artifact_id, image_artifact_ids)
         
         self.db.update_job(job_id, {
             'execution_steps': execution_steps,

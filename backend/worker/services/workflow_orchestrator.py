@@ -6,9 +6,9 @@ Handles orchestration of multi-step workflow execution.
 import logging
 from typing import Dict, Any, List, Tuple, Optional
 
-from ai_service import AIService
-from db_service import DynamoDBService
-from s3_service import S3Service
+from core.ai_service import AIService
+from core.db_service import DynamoDBService
+from core.s3_service import S3Service
 from services.step_processor import StepProcessor
 from services.field_label_service import FieldLabelService
 from services.job_completion_service import JobCompletionService

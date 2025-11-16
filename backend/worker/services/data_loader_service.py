@@ -7,7 +7,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, Any, Optional, Tuple
 
-from db_service import DynamoDBService
+from core.db_service import DynamoDBService
 
 logger = logging.getLogger(__name__)
 

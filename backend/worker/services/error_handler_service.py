@@ -7,7 +7,7 @@ import logging
 from datetime import datetime
 from typing import Dict, Any, Optional, List
 
-from db_service import DynamoDBService
+from core.db_service import DynamoDBService
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +111,10 @@ class ErrorHandlerService:
             return "timeout"
         elif "connection" in error_lower:
             return "connection"
+        elif "error while downloading" in error_lower or \
+             ("invalid_value" in error_lower and "url" in error_lower and "downloading" in error_lower) or \
+             ("downloading" in error_lower and "url" in error_lower and "invalid" in error_lower):
+            return "url_download_error"
         elif ("image data" in error_lower and "does not represent a valid image" in error_lower) or \
              ("invalid_value" in error_lower and "image" in error_lower) or \
              ("image" in error_lower and "format" in error_lower and "not supported" in error_lower):
@@ -165,6 +169,14 @@ class ErrorHandlerService:
         elif error_category == "connection":
             logger.error(f"[ErrorHandlerService] Connection error - network issue")
             return Exception(f"Unable to connect to OpenAI API. Please check your network connection: {error_message}")
+        elif error_category == "url_download_error":
+            logger.error(f"[ErrorHandlerService] URL download error - OpenAI cannot download image from URL", extra={
+                'error_message': error_message,
+                'error_type': error_type,
+                'model': model,
+                'tools': [t.get('type') if isinstance(t, dict) else t for t in tools] if tools else []
+            })
+            return Exception(f"OpenAI API error: Unable to download image from URL. This typically occurs with Firebase Storage URLs or other URLs that require authentication or have access restrictions. The system will automatically attempt to download and convert these images to base64 format. If this error persists, please check that the image URL is publicly accessible or contact support. Original error: {error_message}")
         elif error_category == "image_validation":
             logger.error(f"[ErrorHandlerService] Image validation error - invalid image data provided", extra={
                 'error_message': error_message,

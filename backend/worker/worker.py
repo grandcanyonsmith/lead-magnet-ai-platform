@@ -10,8 +10,8 @@ import logging
 from typing import Dict, Any
 
 from processor import JobProcessor
-from db_service import DynamoDBService
-from s3_service import S3Service
+from core.db_service import DynamoDBService
+from core.s3_service import S3Service
 from services.error_handler_service import ErrorHandlerService
 
 # Setup logging

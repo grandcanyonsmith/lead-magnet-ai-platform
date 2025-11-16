@@ -7,7 +7,7 @@ import logging
 from datetime import datetime
 from typing import Dict, Any, Optional, List, Tuple
 
-from ai_service import AIService
+from core.ai_service import AIService
 try:
     from model_types import Job, Workflow, Step, Submission, Form, ExecutionStep
 except ImportError:
@@ -18,11 +18,11 @@ except ImportError:
     Submission = Dict[str, Any]
     Form = Dict[str, Any]
     ExecutionStep = Dict[str, Any]
-from template_service import TemplateService
-from db_service import DynamoDBService
-from s3_service import S3Service
-from artifact_service import ArtifactService
-from delivery_service import DeliveryService
+from core.template_service import TemplateService
+from core.db_service import DynamoDBService
+from core.s3_service import S3Service
+from core.artifact_service import ArtifactService
+from core.delivery_service import DeliveryService
 from services.execution_step_manager import ExecutionStepManager
 from services.usage_service import UsageService
 from services.field_label_service import FieldLabelService

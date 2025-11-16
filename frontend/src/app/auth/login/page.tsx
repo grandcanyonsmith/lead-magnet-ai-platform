@@ -3,8 +3,8 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { signIn } from '@/lib/auth'
-import { api } from '@/lib/api'
+import { signIn } from '@/features/auth/lib'
+import { api } from '@/shared/lib/api'
 
 function LoginForm() {
   const router = useRouter()

@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { api } from '@/lib/api'
-import { isAuthenticated } from '@/lib/auth'
+import { api } from '@/shared/lib/api'
+import { isAuthenticated } from '@/features/auth/lib'
 import { FiActivity, FiCheckCircle, FiXCircle, FiClock, FiTrendingUp, FiFileText } from 'react-icons/fi'
 
 export default function DashboardPage() {

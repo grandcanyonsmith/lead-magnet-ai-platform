@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/lib/auth/context'
-import { api } from '@/lib/api'
+import { useAuth } from '@/features/auth/lib/auth/context'
+import { api } from '@/shared/lib/api'
 import { FiUsers, FiSearch, FiEdit2, FiShield, FiUser, FiUserCheck, FiLogIn, FiCopy, FiCheck } from 'react-icons/fi'
 
 interface User {

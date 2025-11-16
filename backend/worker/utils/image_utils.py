@@ -3,8 +3,10 @@ Image URL extraction utilities
 """
 
 import re
+import base64
 import logging
-from typing import List, Any, Set, Tuple
+import requests
+from typing import List, Any, Set, Tuple, Optional
 from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
@@ -215,4 +217,195 @@ def validate_and_filter_image_urls(
         })
     
     return valid_urls, filtered_urls
+
+
+def is_problematic_url(url: str) -> bool:
+    """
+    Check if a URL is problematic for OpenAI API to access directly.
+    
+    Some URLs (like Firebase Storage URLs) may require authentication or
+    have access restrictions that prevent OpenAI's servers from downloading them.
+    These URLs should be downloaded locally and converted to base64 data URLs.
+    
+    Args:
+        url: URL to check
+        
+    Returns:
+        True if URL is problematic and should be downloaded locally
+    """
+    if not url or not isinstance(url, str):
+        return False
+    
+    try:
+        parsed = urlparse(url)
+        hostname = parsed.netloc.lower()
+        
+        # Check for Firebase Storage URLs
+        if 'firebasestorage.googleapis.com' in hostname:
+            return True
+        
+        # Add other problematic URL patterns here if needed
+        # For example:
+        # - Private storage services that require authentication
+        # - URLs with access tokens that expire quickly
+        # - Internal/private network URLs
+        
+        return False
+    except Exception as e:
+        logger.warning(f"[Image Utils] Error parsing URL for problematic check: {e}")
+        return False
+
+
+def download_image_and_convert_to_data_url(
+    url: str,
+    timeout: int = 30,
+    job_id: Optional[str] = None,
+    tenant_id: Optional[str] = None
+) -> Optional[str]:
+    """
+    Download an image from a URL and convert it to a base64 data URL.
+    
+    This function is used for URLs that OpenAI API cannot access directly
+    (e.g., Firebase Storage URLs with authentication tokens).
+    
+    Args:
+        url: URL of the image to download
+        timeout: Request timeout in seconds (default: 30)
+        job_id: Optional job ID for logging
+        tenant_id: Optional tenant ID for logging
+        
+    Returns:
+        Base64 data URL string (format: data:image/...;base64,...) or None if download fails
+        
+    Example:
+        >>> data_url = download_image_and_convert_to_data_url("https://example.com/image.png")
+        >>> # Returns: "data:image/png;base64,iVBORw0KGgoAAAANS..."
+    """
+    if not url or not isinstance(url, str):
+        logger.error("[Image Utils] Invalid URL provided for download", extra={
+            'job_id': job_id,
+            'tenant_id': tenant_id,
+            'url': str(url)
+        })
+        return None
+    
+    # Validate URL scheme
+    try:
+        parsed = urlparse(url)
+        if parsed.scheme not in ('http', 'https'):
+            logger.error("[Image Utils] URL must use HTTP or HTTPS scheme", extra={
+                'job_id': job_id,
+                'tenant_id': tenant_id,
+                'url_preview': url[:100] + '...' if len(url) > 100 else url,
+                'scheme': parsed.scheme
+            })
+            return None
+    except Exception as e:
+        logger.error("[Image Utils] Error parsing URL", extra={
+            'job_id': job_id,
+            'tenant_id': tenant_id,
+            'url_preview': url[:100] + '...' if len(url) > 100 else url,
+            'error': str(e)
+        })
+        return None
+    
+    logger.info("[Image Utils] Downloading image from URL for base64 conversion", extra={
+        'job_id': job_id,
+        'tenant_id': tenant_id,
+        'url_preview': url[:100] + '...' if len(url) > 100 else url,
+        'timeout': timeout
+    })
+    
+    try:
+        # Download image
+        response = requests.get(url, timeout=timeout, stream=True)
+        response.raise_for_status()
+        
+        # Read the content
+        image_bytes = response.content
+        image_size = len(image_bytes)
+        
+        if image_size == 0:
+            logger.error("[Image Utils] Downloaded image is empty", extra={
+                'job_id': job_id,
+                'tenant_id': tenant_id,
+                'url_preview': url[:100] + '...' if len(url) > 100 else url
+            })
+            return None
+        
+        # Detect MIME type from Content-Type header or file extension
+        mime_type = response.headers.get('Content-Type', '').split(';')[0].strip()
+        
+        # If Content-Type is not available or not an image type, try to detect from URL
+        if not mime_type or not mime_type.startswith('image/'):
+            # Try to detect from file extension
+            url_lower = url.lower()
+            if url_lower.endswith('.png') or '.png?' in url_lower:
+                mime_type = 'image/png'
+            elif url_lower.endswith('.jpg') or '.jpg?' in url_lower or url_lower.endswith('.jpeg') or '.jpeg?' in url_lower:
+                mime_type = 'image/jpeg'
+            elif url_lower.endswith('.gif') or '.gif?' in url_lower:
+                mime_type = 'image/gif'
+            elif url_lower.endswith('.webp') or '.webp?' in url_lower:
+                mime_type = 'image/webp'
+            else:
+                # Default to PNG if we can't determine
+                mime_type = 'image/png'
+                logger.warning("[Image Utils] Could not determine MIME type, defaulting to image/png", extra={
+                    'job_id': job_id,
+                    'tenant_id': tenant_id,
+                    'url_preview': url[:100] + '...' if len(url) > 100 else url,
+                    'content_type_header': response.headers.get('Content-Type')
+                })
+        
+        # Encode to base64
+        b64_string = base64.b64encode(image_bytes).decode("utf-8")
+        
+        # Create data URL
+        data_url = f"data:{mime_type};base64,{b64_string}"
+        
+        logger.info("[Image Utils] Successfully downloaded and converted image to data URL", extra={
+            'job_id': job_id,
+            'tenant_id': tenant_id,
+            'url_preview': url[:100] + '...' if len(url) > 100 else url,
+            'image_size_bytes': image_size,
+            'mime_type': mime_type,
+            'data_url_length': len(data_url)
+        })
+        
+        return data_url
+        
+    except requests.Timeout:
+        logger.error("[Image Utils] Timeout downloading image from URL", extra={
+            'job_id': job_id,
+            'tenant_id': tenant_id,
+            'url_preview': url[:100] + '...' if len(url) > 100 else url,
+            'timeout': timeout
+        })
+        return None
+    except requests.HTTPError as e:
+        logger.error("[Image Utils] HTTP error downloading image from URL", extra={
+            'job_id': job_id,
+            'tenant_id': tenant_id,
+            'url_preview': url[:100] + '...' if len(url) > 100 else url,
+            'status_code': e.response.status_code if e.response else None,
+            'error': str(e)
+        })
+        return None
+    except requests.RequestException as e:
+        logger.error("[Image Utils] Request error downloading image from URL", extra={
+            'job_id': job_id,
+            'tenant_id': tenant_id,
+            'url_preview': url[:100] + '...' if len(url) > 100 else url,
+            'error': str(e)
+        })
+        return None
+    except Exception as e:
+        logger.error("[Image Utils] Unexpected error downloading/converting image", extra={
+            'job_id': job_id,
+            'tenant_id': tenant_id,
+            'url_preview': url[:100] + '...' if len(url) > 100 else url,
+            'error': str(e)
+        }, exc_info=True)
+        return None
 
