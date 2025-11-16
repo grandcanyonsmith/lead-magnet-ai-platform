@@ -16,7 +16,9 @@ export function createTable(
     partitionKey: config.partitionKey,
     sortKey: config.sortKey,
     billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-    pointInTimeRecovery: true,
+    pointInTimeRecoverySpecification: {
+      pointInTimeRecoveryEnabled: true,
+    },
     removalPolicy: cdk.RemovalPolicy.RETAIN,
     encryption: dynamodb.TableEncryption.AWS_MANAGED,
     timeToLiveAttribute: config.timeToLiveAttribute,
