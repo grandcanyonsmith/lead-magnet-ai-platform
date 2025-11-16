@@ -1,6 +1,6 @@
- 'use client'
+'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type MouseEvent } from 'react'
 /**
  * Step Header Component
  * Displays step header with status, name, metrics, and action buttons
@@ -125,6 +125,7 @@ export function StepHeader({
   const statusColorClass = STEP_STATUS_COLORS[status]
   const workflowStepIndex = stepOrder > 0 ? stepOrder - 1 : 0
   const isRerunningStep = rerunningStep === workflowStepIndex
+  const isAnotherStepRerunning = rerunningStep !== null && !isRerunningStep
   const jobIsActivelyProcessing = jobStatus === 'processing' && rerunningStep === null
   const canEditStep =
     !!canEdit &&
@@ -137,7 +138,7 @@ export function StepHeader({
     stepOrder > 0
   const hasMenuActions = canEditStep || canRerunStep
   const disableEdit = jobStatus === 'processing'
-  const disableRerun = jobIsActivelyProcessing || isRerunningStep
+  const disableRerun = jobIsActivelyProcessing || isRerunningStep || isAnotherStepRerunning
 
   useEffect(() => {
     if (!menuOpen) return
@@ -163,21 +164,19 @@ export function StepHeader({
     }
   }, [menuOpen])
 
-  const handleEditClick = (event?: React.MouseEvent) => {
+  const handleEditClick = (event?: MouseEvent<HTMLButtonElement>) => {
     event?.stopPropagation()
     if (!canEditStep || !onEditStep || disableEdit) return
     onEditStep(workflowStepIndex)
     setMenuOpen(false)
   }
 
-  const handleRerunClick = (event?: React.MouseEvent) => {
+  const handleRerunClick = (event?: MouseEvent<HTMLButtonElement>) => {
     event?.stopPropagation()
     if (!onRerunStep || disableRerun || !canRerunStep) return
     onRerunStep(workflowStepIndex)
     setMenuOpen(false)
   }
-
-  const stepTypeColor = STEP_TYPE_COLORS[step.step_type] || DEFAULT_STEP_TYPE_COLOR
 
   return (
     <div className="flex flex-col gap-3 p-3 sm:p-4 lg:flex-row lg:items-start">

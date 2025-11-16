@@ -306,12 +306,7 @@ export function StepInputOutput({
   const isPending = status === 'pending'
   const isCompleted = status === 'completed'
   const isInProgress = status === 'in_progress'
-
-  // Show section if step is completed, in progress, or pending with instructions
-  const shouldShow = isCompleted || isInProgress || (isPending && step.instructions)
-  if (!shouldShow) {
-    return null
-  }
+  const contextContent = renderPreviousStepsContext(previousSteps, formSubmission, step.step_order ?? 0)
 
   const renderImageSection = () => {
     const stepOrder = step.step_order ?? 0
@@ -493,10 +488,20 @@ export function StepInputOutput({
                     <pre className="text-sm text-gray-700 mt-1 whitespace-pre-wrap font-sans bg-gray-50 p-2.5 rounded border border-gray-200">{step.instructions}</pre>
                   </div>
                 )}
+                {!step.instructions && (
+                  <div className="text-sm text-gray-500">
+                    This step is configured but does not have custom instructions yet. It will run with the default workflow settings once triggered.
+                  </div>
+                )}
                 {step.tool_choice && step.tool_choice !== 'auto' && (
                   <div>
                     <span className="text-xs font-semibold text-gray-600 uppercase">Tool Choice</span>
                     <p className="text-sm text-gray-700 mt-1 font-mono">{step.tool_choice}</p>
+                  </div>
+                )}
+                {contextContent && (
+                  <div className="pt-3 md:pt-2.5 border-t border-dashed border-gray-200">
+                    {contextContent}
                   </div>
                 )}
               </div>
@@ -550,7 +555,7 @@ export function StepInputOutput({
                 </div>
                 <div ref={inputScrollRef} className="p-3 md:p-2.5 bg-blue-50/20 max-h-[350px] md:max-h-72 overflow-y-auto scrollbar-hide-until-hover">
                   {/* Previous Steps Context */}
-                  {renderPreviousStepsContext(previousSteps, formSubmission, step.step_order ?? 0)}
+                  {contextContent}
                   
                   {/* Current Step Input */}
                   <StepContent formatted={formatStepInput(step)} />

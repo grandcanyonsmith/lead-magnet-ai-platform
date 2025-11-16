@@ -109,18 +109,32 @@ export function ExecutionSteps({
             const stepStatus = getStepStatusForStep(step)
             const isPending = stepStatus === 'pending'
             const isInProgress = stepStatus === 'in_progress'
+            const isFailed = stepStatus === 'failed'
+            const isRerunning = rerunningStep !== null && stepOrder > 0 && rerunningStep === stepOrder - 1
+            const isCompleted = stepStatus === 'completed'
 
             // Enhanced className based on status with better visual separation
-            const stepClassName = isPending
-              ? 'border-gray-300 bg-gray-50/50 shadow-sm'
-              : isInProgress
-              ? 'border-blue-400 bg-blue-50/80 shadow-md'
-              : 'border-gray-300 bg-white shadow-sm hover:shadow-md hover:border-gray-400'
+            const stepClassName = (() => {
+              if (isRerunning) {
+                return 'border-blue-500 bg-blue-50/90 shadow-lg ring-1 ring-blue-200'
+              }
+              if (isInProgress) {
+                return 'border-blue-400 bg-blue-50/80 shadow-md ring-1 ring-blue-100'
+              }
+              if (isFailed) {
+                return 'border-red-300 bg-red-50/80 shadow-md'
+              }
+              if (isCompleted) {
+                return 'border-green-200 bg-white shadow-sm'
+              }
+              return 'border-gray-300 bg-gray-50/50 shadow-sm'
+            })()
 
             return (
               <div 
                 key={stepOrder} 
-                className={`border-2 rounded-xl transition-all ${stepClassName}`}
+                className={`border-2 rounded-xl transition-all hover:shadow-md ${stepClassName}`}
+                data-step-status={stepStatus}
               >
                 <StepHeader
                   step={step}
