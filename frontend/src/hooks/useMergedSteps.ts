@@ -92,14 +92,34 @@ export function useMergedSteps({ job, workflow }: UseMergedStepsParams): MergedS
       
       if (existingStep) {
         // Step has been executed - enrich with workflow step info
+        // Get tools from workflow step, execution step input, or execution step directly
+        const mergedTools = workflowStep.tools || existingStep.input?.tools || existingStep.tools || []
+        const mergedToolChoice = workflowStep.tool_choice || existingStep.input?.tool_choice || existingStep.tool_choice || 'auto'
+        
         mergedStepsMap.set(executionStepOrder, {
           ...existingStep,
+          // Set step_type to 'workflow_step' for workflow steps (required for edit icon)
+          step_type: 'workflow_step',
           // Override with workflow step info for consistency
           step_name: workflowStep.step_name || existingStep.step_name,
           model: workflowStep.model || existingStep.model,
-          tools: workflowStep.tools || existingStep.input?.tools || existingStep.tools,
-          tool_choice: workflowStep.tool_choice || existingStep.input?.tool_choice || existingStep.tool_choice,
-          // Preserve image_urls from execution step
+          tools: mergedTools,
+          tool_choice: mergedToolChoice,
+          instructions: workflowStep.instructions || existingStep.instructions,
+          // Ensure input object is properly populated
+          input: {
+            ...existingStep.input,
+            tools: mergedTools,
+            tool_choice: mergedToolChoice,
+          },
+          // Preserve execution step fields: duration_ms, usage_info, started_at, completed_at, output, error, artifact_id, image_urls
+          duration_ms: existingStep.duration_ms,
+          usage_info: existingStep.usage_info,
+          started_at: existingStep.started_at,
+          completed_at: existingStep.completed_at,
+          output: existingStep.output,
+          error: existingStep.error,
+          artifact_id: existingStep.artifact_id,
           image_urls: existingStep.image_urls
         })
       } else {
@@ -131,12 +151,34 @@ export function useMergedSteps({ job, workflow }: UseMergedStepsParams): MergedS
         
         // If step exists but has no output, use its data; otherwise create new pending step
         if (executingStep) {
+          // Get tools from workflow step, execution step input, or execution step directly
+          const mergedTools = workflowStep.tools || executingStep.input?.tools || executingStep.tools || []
+          const mergedToolChoice = workflowStep.tool_choice || executingStep.input?.tool_choice || executingStep.tool_choice || 'auto'
+          
           mergedStepsMap.set(executionStepOrder, {
             ...executingStep,
+            // Set step_type to 'workflow_step' for workflow steps (required for edit icon)
+            step_type: 'workflow_step',
             step_name: workflowStep.step_name || executingStep.step_name,
             model: workflowStep.model || executingStep.model,
-            tools: workflowStep.tools || executingStep.tools || [],
-            tool_choice: workflowStep.tool_choice || executingStep.tool_choice || 'auto',
+            tools: mergedTools,
+            tool_choice: mergedToolChoice,
+            instructions: workflowStep.instructions || executingStep.instructions,
+            // Ensure input object is properly populated
+            input: {
+              ...executingStep.input,
+              tools: mergedTools,
+              tool_choice: mergedToolChoice,
+            },
+            // Preserve execution step fields
+            duration_ms: executingStep.duration_ms,
+            usage_info: executingStep.usage_info,
+            started_at: executingStep.started_at,
+            completed_at: executingStep.completed_at,
+            output: executingStep.output,
+            error: executingStep.error,
+            artifact_id: executingStep.artifact_id,
+            image_urls: executingStep.image_urls,
             _status: 'in_progress' as const,
           })
         } else {
