@@ -90,6 +90,7 @@ export interface WorkflowCreateRequest {
   template_id?: string
   template_version?: number
   steps?: WorkflowStep[]
+  folder_id?: string | null
   delivery_method?: DeliveryMethod
   delivery_webhook_url?: string
   delivery_webhook_headers?: Record<string, string>
