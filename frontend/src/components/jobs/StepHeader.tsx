@@ -1,3 +1,6 @@
+ 'use client'
+
+import { useEffect, useRef, useState } from 'react'
 /**
  * Step Header Component
  * Displays step header with status, name, metrics, and action buttons
@@ -5,7 +8,7 @@
 
 import { MergedStep, StepStatus } from '@/types/job'
 import { formatDurationMs } from '@/utils/jobFormatting'
-import { FiEdit2, FiRefreshCw, FiLoader, FiCheckCircle, FiCircle, FiXCircle } from 'react-icons/fi'
+import { FiEdit2, FiRefreshCw, FiLoader, FiCheckCircle, FiCircle, FiXCircle, FiMoreVertical } from 'react-icons/fi'
 import { Tooltip } from '@/components/ui/Tooltip'
 
 const STEP_TYPE_COLORS: Record<string, string> = {
@@ -17,6 +20,23 @@ const STEP_TYPE_COLORS: Record<string, string> = {
 }
 
 const DEFAULT_STEP_TYPE_COLOR = 'bg-gray-100 text-gray-800'
+
+const STEP_STATUS_LABELS: Record<StepStatus, string> = {
+  completed: 'Completed',
+  in_progress: 'In Progress',
+  failed: 'Failed',
+  pending: 'Pending',
+}
+
+const STEP_STATUS_COLORS: Record<StepStatus, string> = {
+  completed: 'bg-green-100 text-green-800 border border-green-200',
+  in_progress: 'bg-blue-100 text-blue-800 border border-blue-200',
+  failed: 'bg-red-100 text-red-800 border border-red-200',
+  pending: 'bg-gray-100 text-gray-700 border border-gray-200',
+}
+
+const EDITABLE_STEP_TYPES = new Set(['workflow_step', 'ai_generation', 'webhook'])
+const RERUNNABLE_STEP_TYPES = new Set(['workflow_step', 'ai_generation', 'html_generation'])
 
 interface StepHeaderProps {
   step: MergedStep
@@ -93,14 +113,74 @@ export function StepHeader({
   onEditStep,
   onRerunStep,
 }: StepHeaderProps) {
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
   const isPending = status === 'pending'
   const isCompleted = status === 'completed'
   const isInProgress = status === 'in_progress'
-  
+  const isFailed = status === 'failed'
+  const stepOrder = step.step_order ?? 0
+  const stepTypeColor = STEP_TYPE_COLORS[step.step_type] || DEFAULT_STEP_TYPE_COLOR
+  const statusLabel = STEP_STATUS_LABELS[status]
+  const statusColorClass = STEP_STATUS_COLORS[status]
+  const workflowStepIndex = stepOrder > 0 ? stepOrder - 1 : 0
+  const isRerunningStep = rerunningStep === workflowStepIndex
+  const jobIsActivelyProcessing = jobStatus === 'processing' && rerunningStep === null
+  const canEditStep =
+    !!canEdit &&
+    !!onEditStep &&
+    EDITABLE_STEP_TYPES.has(step.step_type) &&
+    stepOrder > 0
+  const canRerunStep =
+    !!onRerunStep &&
+    RERUNNABLE_STEP_TYPES.has(step.step_type) &&
+    stepOrder > 0
+  const hasMenuActions = canEditStep || canRerunStep
+  const disableEdit = jobStatus === 'processing'
+  const disableRerun = jobIsActivelyProcessing || isRerunningStep
+
+  useEffect(() => {
+    if (!menuOpen) return
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleEscape)
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [menuOpen])
+
+  const handleEditClick = (event?: React.MouseEvent) => {
+    event?.stopPropagation()
+    if (!canEditStep || !onEditStep || disableEdit) return
+    onEditStep(workflowStepIndex)
+    setMenuOpen(false)
+  }
+
+  const handleRerunClick = (event?: React.MouseEvent) => {
+    event?.stopPropagation()
+    if (!onRerunStep || disableRerun || !canRerunStep) return
+    onRerunStep(workflowStepIndex)
+    setMenuOpen(false)
+  }
+
   const stepTypeColor = STEP_TYPE_COLORS[step.step_type] || DEFAULT_STEP_TYPE_COLOR
 
   return (
-    <div className="flex items-start gap-3 p-3 sm:p-4">
+    <div className="flex flex-col gap-3 p-3 sm:p-4 lg:flex-row lg:items-start">
       {/* Status Icon */}
       <div className="flex-shrink-0 mt-0.5">
         {renderStatusIcon(status)}
@@ -110,16 +190,29 @@ export function StepHeader({
       <div className="flex-1 min-w-0">
         <div className="flex items-center flex-wrap gap-2 mb-2">
           <span className={`px-2 py-1 text-xs font-medium rounded flex-shrink-0 ${stepTypeColor}`}>
-            Step {step.step_order}
+            Step {stepOrder}
           </span>
-          {isInProgress && (
-            <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full animate-pulse">
-              Processing...
+          <span className={`px-2 py-1 text-[11px] font-semibold uppercase tracking-wide rounded-full ${statusColorClass}`}>
+            {statusLabel}
+          </span>
+          {(isInProgress || isRerunningStep) && (
+            <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full animate-pulse flex items-center gap-1">
+              <FiLoader className="w-3.5 h-3.5 animate-spin" />
+              {isRerunningStep ? 'Rerunning...' : 'Processing...'}
             </span>
           )}
-          <h3 className={`text-sm sm:text-base font-semibold break-words ${
-            isPending ? 'text-gray-500' : 'text-gray-900'
-          }`}>
+          {isFailed && step.error && (
+            <span className="text-xs font-medium text-red-600 truncate max-w-[180px]" title={step.error}>
+              {step.error}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center flex-wrap gap-2">
+          <h3
+            className={`text-sm sm:text-base font-semibold break-words ${
+              isPending ? 'text-gray-500' : 'text-gray-900'
+            }`}
+          >
             {step.step_name}
           </h3>
           {step.model && !isPending && (
@@ -137,7 +230,7 @@ export function StepHeader({
       </div>
 
       {/* Right: Metrics and Actions */}
-      <div className="flex items-center gap-2 flex-shrink-0">
+      <div className="flex items-center gap-2 flex-shrink-0 lg:self-start">
         {/* Metrics - Only show for completed steps - Compact summary with tooltip */}
         {isCompleted && (step.duration_ms !== undefined || step.usage_info) && (
           <Tooltip
@@ -182,68 +275,67 @@ export function StepHeader({
           </Tooltip>
         )}
 
-        {/* Action Buttons - Icon only with tooltips */}
-        <div className="flex items-center gap-1">
-          {/* Edit Step Button - Only for workflow template steps */}
-          {canEdit && onEditStep && step.step_type === 'workflow_step' && step.step_order > 0 && (
-            <Tooltip
-              content={
-                jobStatus === 'processing'
-                  ? 'Editing disabled while run is in progress'
-                  : 'Edit workflow template step'
-              }
-              position="top"
-            >
+        {/* Action Menu */}
+        {hasMenuActions && (
+          <div className="relative" ref={menuRef}>
+            <Tooltip content="Step actions" position="top">
               <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  if (jobStatus === 'processing') {
-                    return
-                  }
-                  const workflowStepIndex = step.step_order - 1
-                  onEditStep(workflowStepIndex)
+                onClick={(event) => {
+                  event.stopPropagation()
+                  setMenuOpen((prev) => !prev)
                 }}
-                disabled={jobStatus === 'processing'}
-                aria-label="Edit workflow template step"
-                className={`p-1.5 rounded transition-colors touch-target min-h-[44px] sm:min-h-0 ${
-                  jobStatus === 'processing'
-                    ? 'text-yellow-600 cursor-not-allowed opacity-60'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                }`}
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+                className="p-2 rounded-full text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors touch-target min-h-[44px] sm:min-h-0"
               >
-                <FiEdit2 className="w-4 h-4" />
+                <FiMoreVertical className="w-4 h-4" />
               </button>
             </Tooltip>
-          )}
-
-          {/* Rerun Step Button */}
-          {onRerunStep && step.step_order > 0 && step.step_type === 'ai_generation' && (
-            <Tooltip
-              content={
-                rerunningStep === step.step_order - 1
-                  ? 'Rerunning step...'
-                  : 'Rerun this step'
-              }
-              position="top"
-            >
-              <button
-                onClick={() => {
-                  const stepIndex = step.step_order - 1
-                  onRerunStep(stepIndex)
-                }}
-                disabled={rerunningStep === step.step_order - 1}
-                className="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-target min-h-[44px] sm:min-h-0"
-                aria-label="Rerun this step"
+            {menuOpen && (
+              <div
+                role="menu"
+                className="absolute right-0 z-20 mt-2 w-48 rounded-xl border border-gray-100 bg-white shadow-lg ring-1 ring-black ring-opacity-5"
               >
-                {rerunningStep === step.step_order - 1 ? (
-                  <FiLoader className="w-4 h-4 animate-spin" />
-                ) : (
-                  <FiRefreshCw className="w-4 h-4" />
-                )}
-              </button>
-            </Tooltip>
-          )}
-        </div>
+                <div className="py-1">
+                  {canEditStep && (
+                    <button
+                      role="menuitem"
+                      onClick={handleEditClick}
+                      disabled={disableEdit}
+                      className={`w-full px-4 py-2 text-sm flex items-center gap-2 text-left ${
+                        disableEdit
+                          ? 'text-gray-400 cursor-not-allowed'
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      <FiEdit2 className="w-4 h-4" />
+                      Edit Step
+                    </button>
+                  )}
+                  {canRerunStep && (
+                    <button
+                      role="menuitem"
+                      onClick={handleRerunClick}
+                      disabled={disableRerun}
+                      className={`w-full px-4 py-2 text-sm flex items-center gap-2 text-left ${
+                        disableRerun
+                          ? 'text-gray-400 cursor-not-allowed'
+                          : 'text-blue-700 hover:bg-blue-50'
+                      }`}
+                    >
+                      {isRerunningStep ? (
+                        <FiLoader className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <FiRefreshCw className="w-4 h-4" />
+                      )}
+                      Rerun Step
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

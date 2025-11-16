@@ -40,6 +40,7 @@ export default function JobDetailClient() {
   // Consolidated state management
   const state = useJobDetailState()
   const {
+    jobId,
     job,
     workflow,
     form,
