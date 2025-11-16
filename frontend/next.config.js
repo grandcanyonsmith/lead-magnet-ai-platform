@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Only use 'export' for production builds, not dev mode
-  // output: 'export', // Commented out for dev mode
+  output: 'export', // Enable static export for S3 deployment
   reactStrictMode: true,
   images: {
     unoptimized: true,
