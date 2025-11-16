@@ -65,6 +65,23 @@ function hasImageGeneration(
   return hasImageUrls || hasImageArtifacts || hasImageGenerationTool
 }
 
+// Helper to extract image URLs directly from step output (e.g., markdown or text)
+function collectOutputImageUrls(step: MergedStep): string[] {
+  if (!step.output) {
+    return []
+  }
+
+  if (typeof step.output === 'string') {
+    return extractImageUrls(step.output)
+  }
+
+  try {
+    return extractImageUrls(JSON.stringify(step.output))
+  } catch {
+    return []
+  }
+}
+
 // Render tool badges inline
 function renderToolBadges(tools?: string[] | unknown[], toolChoice?: string, showLabel: boolean = true) {
   if (!tools || !Array.isArray(tools) || tools.length === 0) {
@@ -309,8 +326,16 @@ export function StepInputOutput({
   const contextContent = renderPreviousStepsContext(previousSteps, formSubmission, step.step_order ?? 0)
 
   const renderImageSection = () => {
-    const stepOrder = step.step_order ?? 0
-    const hasImageUrls = step.image_urls && Array.isArray(step.image_urls) && step.image_urls.length > 0
+    const outputImageUrls = collectOutputImageUrls(step)
+    const stepImageUrls = Array.isArray(step.image_urls) ? step.image_urls : []
+    const mergedImageUrls = Array.from(
+      new Set(
+        [...stepImageUrls, ...outputImageUrls].filter(
+          (url): url is string => typeof url === 'string' && url.length > 0
+        )
+      )
+    )
+    const hasImageUrls = mergedImageUrls.length > 0
     const hasImageArtifacts = imageArtifacts.length > 0
     
     if (!hasImageUrls && !hasImageArtifacts) {
@@ -366,10 +391,10 @@ export function StepInputOutput({
           </div>
         )}
         
-        {/* Render from image_urls if available */}
-        {hasImageUrls && step.image_urls ? (
+        {/* Render from image URLs or extracted output URLs */}
+        {hasImageUrls ? (
           <div className="grid grid-cols-1 gap-2.5 md:gap-2">
-            {step.image_urls.map((imageUrl: string, imgIdx: number) => (
+            {mergedImageUrls.map((imageUrl: string, imgIdx: number) => (
               <div key={`url-${imgIdx}`} className="border border-gray-200 rounded-xl overflow-hidden">
                 <div className="aspect-video bg-gray-100">
                   <PreviewRenderer

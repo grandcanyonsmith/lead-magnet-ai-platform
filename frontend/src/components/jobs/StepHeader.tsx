@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, type MouseEvent } from 'react'
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
 /**
  * Step Header Component
  * Displays step header with status, name, metrics, and action buttons
@@ -143,7 +143,7 @@ export function StepHeader({
   useEffect(() => {
     if (!menuOpen) return
 
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (event: globalThis.MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setMenuOpen(false)
       }
@@ -164,14 +164,14 @@ export function StepHeader({
     }
   }, [menuOpen])
 
-  const handleEditClick = (event?: MouseEvent<HTMLButtonElement>) => {
+  const handleEditClick = (event?: ReactMouseEvent<HTMLButtonElement>) => {
     event?.stopPropagation()
     if (!canEditStep || !onEditStep || disableEdit) return
     onEditStep(workflowStepIndex)
     setMenuOpen(false)
   }
 
-  const handleRerunClick = (event?: MouseEvent<HTMLButtonElement>) => {
+  const handleRerunClick = (event?: ReactMouseEvent<HTMLButtonElement>) => {
     event?.stopPropagation()
     if (!onRerunStep || disableRerun || !canRerunStep) return
     onRerunStep(workflowStepIndex)

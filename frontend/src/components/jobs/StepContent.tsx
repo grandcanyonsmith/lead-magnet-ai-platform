@@ -130,9 +130,6 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
       return null
     }
     
-    // Debug: log when rendering images
-    console.log(`[StepContent] Rendering ${imageUrls.length} inline images:`, imageUrls)
-    
     return (
       <div className="mt-5 md:mt-4 space-y-4 md:space-y-2">
         <div className="text-sm md:text-xs font-medium text-gray-600 mb-3 md:mb-2">Generated Images:</div>
