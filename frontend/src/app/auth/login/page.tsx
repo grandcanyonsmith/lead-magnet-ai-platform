@@ -13,6 +13,7 @@ function LoginForm() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [labelDebug, setLabelDebug] = useState({ email: '', password: '' })
 
   useEffect(() => {
     // Pre-fill email from query params
@@ -21,6 +22,15 @@ function LoginForm() {
       setEmail(emailParam)
     }
   }, [searchParams])
+
+  useEffect(() => {
+    const emailLabel = document.querySelector<HTMLLabelElement>('label[for="email"]')
+    const passwordLabel = document.querySelector<HTMLLabelElement>('label[for="password"]')
+    setLabelDebug({
+      email: emailLabel?.textContent || '',
+      password: passwordLabel?.textContent || ''
+    })
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -101,6 +111,11 @@ function LoginForm() {
           </p>
         </div>
         
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 text-xs text-gray-600 font-mono">
+          <div>Email label: {labelDebug.email} ({labelDebug.email.split('').map((char) => char.charCodeAt(0)).join(', ')})</div>
+          <div>Password label: {labelDebug.password} ({labelDebug.password.split('').map((char) => char.charCodeAt(0)).join(', ')})</div>
+        </div>
+
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
           <form className="space-y-6" onSubmit={handleSubmit}>
             {error && (

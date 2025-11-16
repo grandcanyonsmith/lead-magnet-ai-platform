@@ -135,12 +135,12 @@ export function useJobDetail() {
    * Load execution steps from API (proxied from S3)
    * Consolidated logic used by both loadJob and polling
    * 
-   * @param jobData - Optional job data object (uses state if not provided)
+   * @param jobData - Job data object (required, always passed by callers)
    * @param isPolling - Whether this is a polling update (affects error handling)
    */
-  const loadExecutionSteps = useCallback(async (jobData?: any, isPolling: boolean = false) => {
-    const data = jobData || job
-    if (!data || !jobId) return
+  const loadExecutionSteps = useCallback(async (jobData: any, isPolling: boolean = false) => {
+    if (!jobData || !jobId) return
+    const data = jobData
 
     try {
       const executionSteps = await api.getExecutionSteps(jobId)
