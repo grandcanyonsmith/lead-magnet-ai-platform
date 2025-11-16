@@ -2,9 +2,19 @@
  * Webhook endpoint for workflow generation completion
  * Receives webhook from backend when workflow generation completes
  * Stores completion data in memory for client polling
+ * 
+ * NOTE: This route does not work with static export (output: 'export').
+ * In production, webhooks should be handled by the backend API.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+
+// Required for static export (but this route won't work in static export)
+export async function generateStaticParams() {
+  // Return empty array - this route won't be statically generated
+  // In production, webhooks should go to the backend API
+  return [];
+}
 
 // In-memory store for webhook completion data
 // In production, consider using Redis or a database
