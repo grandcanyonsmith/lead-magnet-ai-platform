@@ -7,7 +7,7 @@ import logging
 import re
 from typing import Dict, Any, List, Optional
 
-from artifact_service import ArtifactService
+from core.artifact_service import ArtifactService
 
 logger = logging.getLogger(__name__)
 

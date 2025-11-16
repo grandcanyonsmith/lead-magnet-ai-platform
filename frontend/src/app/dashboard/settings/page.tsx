@@ -2,16 +2,16 @@
 
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { FiSave } from 'react-icons/fi'
-import { useSettings, useUpdateSettings } from '@/hooks/api/useSettings'
-import { Settings } from '@/types'
-import { LoadingState } from '@/components/ui/LoadingState'
-import { ErrorState } from '@/components/ui/ErrorState'
-import { SettingsTabs, SettingsTab } from '@/components/settings/SettingsTabs'
-import { GeneralSettings } from '@/components/settings/GeneralSettings'
-import { BrandingSettings } from '@/components/settings/BrandingSettings'
-import { DeliverySettings } from '@/components/settings/DeliverySettings'
-import { BillingUsage } from '@/components/settings/BillingUsage'
-import { useUnsavedChanges } from '@/hooks/useUnsavedChanges'
+import { useSettings, useUpdateSettings } from '@/features/settings/hooks/useSettings'
+import { Settings } from '@/shared/types'
+import { LoadingState } from '@/shared/components/ui/LoadingState'
+import { ErrorState } from '@/shared/components/ui/ErrorState'
+import { SettingsTabs, SettingsTab } from '@/features/settings/components/settings/SettingsTabs'
+import { GeneralSettings } from '@/features/settings/components/settings/GeneralSettings'
+import { BrandingSettings } from '@/features/settings/components/settings/BrandingSettings'
+import { DeliverySettings } from '@/features/settings/components/settings/DeliverySettings'
+import { BillingUsage } from '@/features/settings/components/settings/BillingUsage'
+import { useUnsavedChanges } from '@/shared/hooks/useUnsavedChanges'
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('general')

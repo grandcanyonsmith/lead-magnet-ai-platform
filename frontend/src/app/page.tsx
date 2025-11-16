@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { CanyonButton } from '@/components/ui/CanyonButton'
+import { CanyonButton } from '@/shared/components/ui/CanyonButton'
 
 export default function Home() {
   const router = useRouter()

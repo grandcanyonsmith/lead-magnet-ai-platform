@@ -7,13 +7,13 @@ import logging
 from datetime import datetime
 from typing import Dict, Any, List, Optional, Tuple
 
-from artifact_service import ArtifactService
-from db_service import DynamoDBService
-from s3_service import S3Service
-from delivery_service import DeliveryService
+from core.artifact_service import ArtifactService
+from core.db_service import DynamoDBService
+from core.s3_service import S3Service
+from core.delivery_service import DeliveryService
 from services.execution_step_manager import ExecutionStepManager
 from services.usage_service import UsageService
-from ai_service import AIService
+from core.ai_service import AIService
 
 logger = logging.getLogger(__name__)
 
@@ -371,7 +371,7 @@ class JobCompletionService:
                 model = sorted_steps[-1].get('model', 'gpt-5')
         
         # Generate HTML
-        from ai_service import AIService
+        from core.ai_service import AIService
         ai_service = AIService()
         
         final_content, html_usage_info, html_request_details, html_response_details = ai_service.generate_styled_html(

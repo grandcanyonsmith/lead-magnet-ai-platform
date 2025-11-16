@@ -1,11 +1,11 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
-import { api } from '@/lib/api'
+import { api } from '@/shared/lib/api'
 import { FiRefreshCw, FiInbox } from 'react-icons/fi'
-import { PreviewCard } from '@/components/artifacts/PreviewCard'
-import { FiltersBar } from '@/components/artifacts/FiltersBar'
-import { PaginationControls } from '@/components/artifacts/PaginationControls'
+import { PreviewCard } from '@/features/artifacts/components/artifacts/PreviewCard'
+import { FiltersBar } from '@/features/artifacts/components/artifacts/FiltersBar'
+import { PaginationControls } from '@/features/artifacts/components/artifacts/PaginationControls'
 
 type Artifact = {
   artifact_id: string

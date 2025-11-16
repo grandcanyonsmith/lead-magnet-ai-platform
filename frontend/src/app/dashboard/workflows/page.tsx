@@ -1,68 +1,37 @@
 'use client'
 
-import { useEffect, useState, useRef, useMemo } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { api } from '@/lib/api'
-import { FiPlus, FiEdit, FiTrash2, FiEye, FiExternalLink, FiCopy, FiCheck, FiMoreVertical, FiLoader, FiCheckCircle, FiXCircle, FiClock, FiList, FiFileText, FiFolder } from 'react-icons/fi'
-import { useFolders } from '@/hooks/api/useFolders'
-import { CreateFolderModal } from '@/components/folders/CreateFolderModal'
-import { FolderSection } from '@/components/folders/FolderSection'
-import { MoveToFolderMenu } from '@/components/folders/MoveToFolderMenu'
-import { Workflow } from '@/types'
+import { FiPlus, FiEdit, FiTrash2, FiEye, FiExternalLink, FiCopy, FiCheck, FiMoreVertical, FiLoader, FiList, FiFileText, FiFolder, FiClock } from 'react-icons/fi'
+import { useFolders } from '@/features/folders/hooks/useFolders'
+import { useWorkflows } from '@/features/workflows/hooks/workflows-extra/useWorkflows'
+import { useWorkflowJobs } from '@/features/workflows/hooks/workflows-extra/useWorkflowJobs'
+import { useWorkflowSearch } from '@/features/workflows/hooks/workflows-extra/useWorkflowSearch'
+import { useWorkflowFolders } from '@/features/workflows/hooks/workflows-extra/useWorkflowFolders'
+import { CreateFolderModal } from '@/features/folders/components/folders/CreateFolderModal'
+import { FolderSection } from '@/features/folders/components/folders/FolderSection'
+import { MoveToFolderMenu } from '@/features/folders/components/folders/MoveToFolderMenu'
+import { WorkflowSearchBar } from '@/features/workflows/components/workflows-extra/WorkflowSearchBar'
+import { publicUrlFor, formatUrl, formatRelativeTime, getJobStatusIcon } from '@/features/workflows/utils/workflowUtils'
+import { Workflow } from '@/shared/types'
 
 export default function WorkflowsPage() {
   const router = useRouter()
-  const [workflows, setWorkflows] = useState<Workflow[]>([])
-  const [loading, setLoading] = useState(true)
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const [moveToFolderMenuId, setMoveToFolderMenuId] = useState<string | null>(null)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [workflowJobs, setWorkflowJobs] = useState<Record<string, any[]>>({})
-  const [loadingJobs, setLoadingJobs] = useState<Record<string, boolean>>({})
   const [showCreateFolderModal, setShowCreateFolderModal] = useState(false)
   const menuRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const { folders, refetch: refetchFolders } = useFolders()
 
-  useEffect(() => {
-    loadWorkflows()
-  }, [])
+  const { workflows, loading, loadWorkflows, handleDelete } = useWorkflows()
+  const { workflowJobs, loadingJobs } = useWorkflowJobs(workflows)
+  const { searchQuery, setSearchQuery, filteredWorkflows } = useWorkflowSearch(workflows)
+  const workflowsByFolder = useWorkflowFolders(filteredWorkflows)
 
   useEffect(() => {
     refetchFolders()
   }, [refetchFolders])
-
-  // Load jobs for each workflow
-  useEffect(() => {
-    if (workflows.length > 0) {
-      workflows.forEach((workflow) => {
-        loadJobsForWorkflow(workflow.workflow_id)
-      })
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workflows])
-
-  // Auto-refresh jobs for workflows that have processing jobs
-  useEffect(() => {
-    const hasProcessingJobs = Object.values(workflowJobs).some((jobs) =>
-      jobs.some((job: any) => job.status === 'processing' || job.status === 'pending')
-    )
-
-    if (!hasProcessingJobs) return
-
-    const interval = setInterval(() => {
-      workflows.forEach((workflow) => {
-        const jobs = workflowJobs[workflow.workflow_id] || []
-        const hasProcessing = jobs.some((job: any) => job.status === 'processing' || job.status === 'pending')
-        if (hasProcessing) {
-          loadJobsForWorkflow(workflow.workflow_id)
-        }
-      })
-    }, 5000)
-
-    return () => clearInterval(interval)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workflows, workflowJobs])
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -83,62 +52,6 @@ export default function WorkflowsPage() {
     }
   }, [openMenuId])
 
-  const loadJobsForWorkflow = async (workflowId: string) => {
-    if (loadingJobs[workflowId]) return
-    
-    setLoadingJobs((prev) => ({ ...prev, [workflowId]: true }))
-    try {
-      const data = await api.getJobs({ workflow_id: workflowId, limit: 5 })
-      setWorkflowJobs((prev) => ({ ...prev, [workflowId]: data.jobs || [] }))
-    } catch (error) {
-      console.error(`Failed to load jobs for workflow ${workflowId}:`, error)
-      setWorkflowJobs((prev) => ({ ...prev, [workflowId]: [] }))
-    } finally {
-      setLoadingJobs((prev) => ({ ...prev, [workflowId]: false }))
-    }
-  }
-
-  const loadWorkflows = async () => {
-    try {
-      const data = await api.getWorkflows()
-      const workflowsList = data.workflows || []
-      // Sort by created_at DESC (most recent first) as fallback
-      workflowsList.sort((a: any, b: any) => {
-        const dateA = new Date(a.created_at || 0).getTime()
-        const dateB = new Date(b.created_at || 0).getTime()
-        return dateB - dateA // DESC order
-      })
-      setWorkflows(workflowsList)
-    } catch (error) {
-      console.error('Failed to load workflows:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this lead magnet? This will also delete its associated form.')) {
-      return
-    }
-
-    try {
-      await api.deleteWorkflow(id)
-      await loadWorkflows()
-    } catch (error) {
-      console.error('Failed to delete workflow:', error)
-      alert('Failed to delete lead magnet')
-    }
-  }
-
-
-  const publicUrlFor = (form: any) => {
-    if (!form || !form.public_slug) return null
-    if (typeof window !== 'undefined') {
-      return `${window.location.origin}/v1/forms/${form.public_slug}`
-    }
-    return `/v1/forms/${form.public_slug}`
-  }
-
   const copyToClipboard = async (text: string, workflowId: string) => {
     try {
       await navigator.clipboard.writeText(text)
@@ -148,71 +61,6 @@ export default function WorkflowsPage() {
       console.error('Failed to copy:', error)
     }
   }
-
-  const formatUrl = (url: string) => {
-    if (url.length > 40) {
-      return url.substring(0, 37) + '...'
-    }
-    return url
-  }
-
-  const getJobStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <FiCheckCircle className="w-3 h-3 text-green-600" />
-      case 'failed':
-        return <FiXCircle className="w-3 h-3 text-red-600" />
-      case 'processing':
-        return <FiLoader className="w-3 h-3 text-blue-600 animate-spin" />
-      default:
-        return <FiClock className="w-3 h-3 text-yellow-600" />
-    }
-  }
-
-  const formatRelativeTime = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
-    
-    if (seconds < 60) return `${seconds}s ago`
-    const minutes = Math.floor(seconds / 60)
-    if (minutes < 60) return `${minutes}m ago`
-    const hours = Math.floor(minutes / 60)
-    if (hours < 24) return `${hours}h ago`
-    const days = Math.floor(hours / 24)
-    return `${days}d ago`
-  }
-
-  // Filter workflows based on search query
-  const filteredWorkflows = useMemo(() => {
-    return workflows.filter((workflow) => {
-      if (!searchQuery.trim()) return true
-      const query = searchQuery.toLowerCase()
-      const name = (workflow.workflow_name || '').toLowerCase()
-      const description = (workflow.workflow_description || '').toLowerCase()
-      const formName = (workflow.form?.form_name || '').toLowerCase()
-      return name.includes(query) || description.includes(query) || formName.includes(query)
-    })
-  }, [workflows, searchQuery])
-
-  // Group workflows by folder
-  const workflowsByFolder = useMemo(() => {
-    const grouped: Record<string, Workflow[]> = {}
-    const uncategorized: Workflow[] = []
-
-    filteredWorkflows.forEach((workflow) => {
-      if (workflow.folder_id) {
-        if (!grouped[workflow.folder_id]) {
-          grouped[workflow.folder_id] = []
-        }
-        grouped[workflow.folder_id].push(workflow)
-      } else {
-        uncategorized.push(workflow)
-      }
-    })
-
-    return { grouped, uncategorized }
-  }, [filteredWorkflows])
 
   if (loading) {
     return (
@@ -264,27 +112,11 @@ export default function WorkflowsPage() {
       />
 
       {/* Search Bar */}
-      {workflows.length > 0 && (
-        <div className="mb-4 sm:mb-6">
-          <div className="relative">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search lead magnets by name, description, or form..."
-              className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            />
-            <svg
-              className="absolute left-3 top-2.5 w-5 h-5 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </div>
-        </div>
-      )}
+      <WorkflowSearchBar
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        workflowsCount={workflows.length}
+      />
 
       {filteredWorkflows.length === 0 && workflows.length > 0 ? (
         <div className="bg-white rounded-lg shadow p-6 sm:p-12 text-center">

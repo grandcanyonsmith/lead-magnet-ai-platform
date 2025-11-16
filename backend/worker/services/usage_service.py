@@ -9,7 +9,7 @@ from decimal import Decimal
 from typing import Dict, Any
 from ulid import new as ulid
 
-from db_service import DynamoDBService
+from core.db_service import DynamoDBService
 
 logger = logging.getLogger(__name__)
 

@@ -32,6 +32,178 @@ class OpenAIClient:
             return f"{previous_context}\n\n--- Current Step Context ---\n{context}"
         return context
     
+    def _check_image_generation_tool(self, tools: Optional[List[Dict]]) -> bool:
+        """
+        Check if image_generation tool is present in tools list.
+        
+        Args:
+            tools: List of tools
+            
+        Returns:
+            True if image_generation tool is present
+        """
+        if not tools:
+            return False
+        for tool in tools:
+            if isinstance(tool, dict) and tool.get('type') == 'image_generation':
+                return True
+        return False
+    
+    def _validate_image_urls(
+        self,
+        previous_image_urls: List[str],
+        job_id: Optional[str] = None,
+        tenant_id: Optional[str] = None
+    ) -> Tuple[List[str], List[Tuple[str, str]]]:
+        """
+        Validate and filter image URLs.
+        
+        Args:
+            previous_image_urls: List of image URLs to validate
+            job_id: Optional job ID for logging
+            tenant_id: Optional tenant ID for logging
+            
+        Returns:
+            Tuple of (valid_image_urls, filtered_urls_with_reasons)
+        """
+        from utils.image_utils import validate_and_filter_image_urls
+        
+        valid_image_urls, filtered_urls = validate_and_filter_image_urls(
+            image_urls=previous_image_urls,
+            job_id=job_id,
+            tenant_id=tenant_id
+        )
+        
+        # Log filtered URLs for debugging
+        if filtered_urls:
+            for url, reason in filtered_urls:
+                logger.warning("[OpenAI Client] Filtered invalid image URL from previous_image_urls", extra={
+                    'job_id': job_id,
+                    'tenant_id': tenant_id,
+                    'url_preview': url[:100] + '...' if len(url) > 100 else url,
+                    'reason': reason,
+                    'total_urls': len(previous_image_urls),
+                    'valid_urls_count': len(valid_image_urls),
+                    'filtered_count': len(filtered_urls)
+                })
+        
+        return valid_image_urls, filtered_urls
+    
+    def _build_input_with_images(
+        self,
+        input_text: str,
+        valid_image_urls: List[str],
+        job_id: Optional[str] = None,
+        tenant_id: Optional[str] = None
+    ) -> List[Dict]:
+        """
+        Build input content with text and images.
+        
+        For problematic URLs (like Firebase Storage URLs), downloads the image
+        locally and converts it to a base64 data URL before passing to OpenAI API.
+        
+        Args:
+            input_text: Text input
+            valid_image_urls: List of valid image URLs
+            job_id: Optional job ID for logging
+            tenant_id: Optional tenant ID for logging
+            
+        Returns:
+            API input format with role and content
+        """
+        from utils.image_utils import is_problematic_url, download_image_and_convert_to_data_url
+        
+        # Build input as list of content items
+        input_content = [
+            {"type": "input_text", "text": input_text}
+        ]
+        
+        converted_count = 0
+        failed_count = 0
+        
+        # Add each valid previous image URL as input_image
+        for image_url in valid_image_urls:
+            final_image_url = image_url
+            
+            # Check if this URL is problematic (e.g., Firebase Storage)
+            if is_problematic_url(image_url):
+                logger.info("[OpenAI Client] Detected problematic URL, downloading and converting to base64", extra={
+                    'job_id': job_id,
+                    'tenant_id': tenant_id,
+                    'url_preview': image_url[:100] + '...' if len(image_url) > 100 else image_url
+                })
+                
+                # Download and convert to base64 data URL
+                data_url = download_image_and_convert_to_data_url(
+                    url=image_url,
+                    job_id=job_id,
+                    tenant_id=tenant_id
+                )
+                
+                if data_url:
+                    final_image_url = data_url
+                    converted_count += 1
+                    logger.info("[OpenAI Client] Successfully converted problematic URL to data URL", extra={
+                        'job_id': job_id,
+                        'tenant_id': tenant_id,
+                        'url_preview': image_url[:100] + '...' if len(image_url) > 100 else image_url,
+                        'data_url_length': len(data_url)
+                    })
+                else:
+                    failed_count += 1
+                    logger.error("[OpenAI Client] Failed to download/convert problematic URL, using original URL", extra={
+                        'job_id': job_id,
+                        'tenant_id': tenant_id,
+                        'url_preview': image_url[:100] + '...' if len(image_url) > 100 else image_url
+                    })
+                    # Continue with original URL - OpenAI will try to download it
+                    # This may still fail, but we've logged the issue
+            
+            input_content.append({
+                "type": "input_image",
+                "image_url": final_image_url
+            })
+        
+        # OpenAI Responses API expects input as a list with role and content
+        api_input = [
+            {
+                "role": "user",
+                "content": input_content
+            }
+        ]
+        
+        logger.info("[OpenAI Client] Building API params with previous image URLs", extra={
+            'job_id': job_id,
+            'tenant_id': tenant_id,
+            'valid_image_urls_count': len(valid_image_urls),
+            'input_content_items': len(input_content),
+            'converted_to_data_url_count': converted_count,
+            'failed_conversion_count': failed_count
+        })
+        
+        return api_input
+    
+    def _build_input_text_only(
+        self,
+        input_text: str,
+        has_image_generation: bool,
+        previous_image_urls: Optional[List[str]]
+    ) -> str:
+        """
+        Build simple text input (backward compatible format).
+        
+        Args:
+            input_text: Text input
+            has_image_generation: Whether image generation tool is present
+            previous_image_urls: Previous image URLs (for logging)
+            
+        Returns:
+            Simple text input string
+        """
+        if has_image_generation and previous_image_urls:
+            logger.debug("[OpenAI Client] Image generation tool present but no previous image URLs to include")
+        return input_text
+    
     def build_api_params(
         self,
         model: str,
@@ -64,72 +236,30 @@ class OpenAIClient:
             API parameters dictionary for Responses API
         """
         # Check if image_generation tool is present
-        has_image_generation = False
-        if tools:
-            for tool in tools:
-                if isinstance(tool, dict) and tool.get('type') == 'image_generation':
-                    has_image_generation = True
-                    break
+        has_image_generation = self._check_image_generation_tool(tools)
         
         # Build input: if image_generation tool is present and we have previous image URLs,
         # use list format with text and images; otherwise use string format (backward compatible)
         if has_image_generation and previous_image_urls and len(previous_image_urls) > 0:
-            # Validate and filter image URLs before using them
-            from utils.image_utils import validate_and_filter_image_urls
-            
-            valid_image_urls, filtered_urls = validate_and_filter_image_urls(
-                image_urls=previous_image_urls,
+            valid_image_urls, filtered_urls = self._validate_image_urls(
+                previous_image_urls=previous_image_urls,
                 job_id=job_id,
                 tenant_id=tenant_id
             )
             
-            # Log filtered URLs for debugging
-            if filtered_urls:
-                for url, reason in filtered_urls:
-                    logger.warning("[OpenAI Client] Filtered invalid image URL from previous_image_urls", extra={
-                        'job_id': job_id,
-                        'tenant_id': tenant_id,
-                        'url_preview': url[:100] + '...' if len(url) > 100 else url,
-                        'reason': reason,
-                        'total_urls': len(previous_image_urls),
-                        'valid_urls_count': len(valid_image_urls),
-                        'filtered_count': len(filtered_urls)
-                    })
-            
-            # Build input as list of content items
-            input_content = [
-                {"type": "input_text", "text": input_text}
-            ]
-            
-            # Add each valid previous image URL as input_image
-            for image_url in valid_image_urls:
-                input_content.append({
-                    "type": "input_image",
-                    "image_url": image_url
-                })
-            
-            # OpenAI Responses API expects input as a list with role and content
-            api_input = [
-                {
-                    "role": "user",
-                    "content": input_content
-                }
-            ]
-            
-            logger.info("[OpenAI Client] Building API params with previous image URLs", extra={
-                'job_id': job_id,
-                'tenant_id': tenant_id,
-                'original_image_urls_count': len(previous_image_urls),
-                'valid_image_urls_count': len(valid_image_urls),
-                'filtered_image_urls_count': len(filtered_urls),
-                'input_content_items': len(input_content),
-                'has_image_generation': has_image_generation
-            })
+            api_input = self._build_input_with_images(
+                input_text=input_text,
+                valid_image_urls=valid_image_urls,
+                job_id=job_id,
+                tenant_id=tenant_id
+            )
         else:
             # Use string format (backward compatible)
-            api_input = input_text
-            if has_image_generation and previous_image_urls:
-                logger.debug("[OpenAI Client] Image generation tool present but no previous image URLs to include")
+            api_input = self._build_input_text_only(
+                input_text=input_text,
+                has_image_generation=has_image_generation,
+                previous_image_urls=previous_image_urls
+            )
         
         params = {
             "model": model,
@@ -237,6 +367,88 @@ class OpenAIClient:
         """Make API call to OpenAI Responses API."""
         return self.create_response(**params)
     
+    def _process_base64_asset(
+        self,
+        asset: Dict,
+        image_handler,
+        tenant_id: Optional[str] = None,
+        job_id: Optional[str] = None
+    ) -> Optional[str]:
+        """
+        Process a single base64 image asset and convert it to a URL.
+        
+        Args:
+            asset: Asset dictionary with base64 image data
+            image_handler: ImageHandler instance for uploading images
+            tenant_id: Optional tenant ID for S3 path structure
+            job_id: Optional job ID for S3 path structure
+            
+        Returns:
+            Image URL if successful, None otherwise
+        """
+        encoding = asset.get('encoding', '').lower()
+        content_type = asset.get('content_type', '')
+        data_field = asset.get('data', '')
+        
+        # Must have encoding="base64", content_type starting with "image/", and data field
+        if not (encoding == 'base64' and 
+                content_type.startswith('image/') and 
+                isinstance(data_field, str) and 
+                len(data_field) > 0):
+            return None
+        
+        try:
+            # Extract filename from asset if available
+            filename = asset.get('name', '')
+            if not filename:
+                # Generate filename from asset ID or index
+                asset_id = asset.get('id', '')
+                if asset_id:
+                    # Try to determine extension from content_type
+                    ext = 'png'
+                    if 'jpeg' in content_type or 'jpg' in content_type:
+                        ext = 'jpg'
+                    elif 'png' in content_type:
+                        ext = 'png'
+                    filename = f"{asset_id}.{ext}"
+                else:
+                    import time
+                    import uuid
+                    ext = 'png'
+                    if 'jpeg' in content_type or 'jpg' in content_type:
+                        ext = 'jpg'
+                    filename = f"image_{int(time.time())}_{str(uuid.uuid4())[:8]}.{ext}"
+            
+            # Upload base64 image to S3
+            image_url = image_handler.upload_base64_image_to_s3(
+                image_b64=data_field,
+                content_type=content_type,
+                tenant_id=tenant_id,
+                job_id=job_id,
+                filename=filename
+            )
+            
+            if image_url:
+                # Replace base64 data with URL
+                asset['data'] = image_url
+                asset['encoding'] = 'url'
+                # Keep original data in a backup field for reference
+                asset['original_data_encoding'] = 'base64'
+                
+                logger.info("[OpenAI Client] Converted base64 image to URL", extra={
+                    'asset_id': asset.get('id', 'unknown'),
+                    'image_filename': filename,
+                    'image_url_preview': image_url[:80] + '...' if len(image_url) > 80 else image_url,
+                    'content_type': content_type
+                })
+                return image_url
+            else:
+                logger.warning(f"[OpenAI Client] Failed to upload base64 image for asset {asset.get('id', 'unknown')}")
+                return None
+        except Exception as e:
+            logger.error(f"[OpenAI Client] Error converting base64 image: {e}", exc_info=True)
+            return None
+    
     def _extract_and_convert_base64_images(
         self,
         content: str,
@@ -283,68 +495,16 @@ class OpenAIClient:
                 if not isinstance(asset, dict):
                     continue
                 
-                # Check if this asset has base64 image data
-                encoding = asset.get('encoding', '').lower()
-                content_type = asset.get('content_type', '')
-                data_field = asset.get('data', '')
+                image_url = self._process_base64_asset(
+                    asset=asset,
+                    image_handler=image_handler,
+                    tenant_id=tenant_id,
+                    job_id=job_id
+                )
                 
-                # Must have encoding="base64", content_type starting with "image/", and data field
-                if (encoding == 'base64' and 
-                    content_type.startswith('image/') and 
-                    isinstance(data_field, str) and 
-                    len(data_field) > 0):
-                    
-                    try:
-                        # Extract filename from asset if available
-                        filename = asset.get('name', '')
-                        if not filename:
-                            # Generate filename from asset ID or index
-                            asset_id = asset.get('id', '')
-                            if asset_id:
-                                # Try to determine extension from content_type
-                                ext = 'png'
-                                if 'jpeg' in content_type or 'jpg' in content_type:
-                                    ext = 'jpg'
-                                elif 'png' in content_type:
-                                    ext = 'png'
-                                filename = f"{asset_id}.{ext}"
-                            else:
-                                import time
-                                import uuid
-                                ext = 'png'
-                                if 'jpeg' in content_type or 'jpg' in content_type:
-                                    ext = 'jpg'
-                                filename = f"image_{int(time.time())}_{str(uuid.uuid4())[:8]}.{ext}"
-                        
-                        # Upload base64 image to S3
-                        image_url = image_handler.upload_base64_image_to_s3(
-                            image_b64=data_field,
-                            content_type=content_type,
-                            tenant_id=tenant_id,
-                            job_id=job_id,
-                            filename=filename
-                        )
-                        
-                        if image_url:
-                            # Replace base64 data with URL
-                            asset['data'] = image_url
-                            asset['encoding'] = 'url'
-                            # Keep original data in a backup field for reference
-                            asset['original_data_encoding'] = 'base64'
-                            image_urls.append(image_url)
-                            modified = True
-                            
-                            logger.info("[OpenAI Client] Converted base64 image to URL", extra={
-                                'asset_id': asset.get('id', 'unknown'),
-                                'image_filename': filename,
-                                'image_url_preview': image_url[:80] + '...' if len(image_url) > 80 else image_url,
-                                'content_type': content_type
-                            })
-                        else:
-                            logger.warning(f"[OpenAI Client] Failed to upload base64 image for asset {asset.get('id', 'unknown')}")
-                    except Exception as e:
-                        logger.error(f"[OpenAI Client] Error converting base64 image: {e}", exc_info=True)
-                        # Continue processing other assets even if one fails
+                if image_url:
+                    image_urls.append(image_url)
+                    modified = True
             
             # If we modified any assets, update the content
             if modified:
@@ -362,29 +522,25 @@ class OpenAIClient:
             # Return original content on error
             return content, []
     
-    def process_api_response(
+    def _log_response_structure(
         self,
         response,
-        model: str,
-        instructions: str,
-        input_text: str,
-        previous_context: str,
-        context: str,
         tools: List[Dict],
-        tool_choice: str,
-        params: Dict,
-        image_handler,
-        tenant_id: Optional[str] = None,
-        job_id: Optional[str] = None
-    ):
-        """Process Responses API response and return formatted results."""
-        from cost_service import calculate_openai_cost
+        job_id: Optional[str] = None,
+        tenant_id: Optional[str] = None
+    ) -> None:
+        """
+        Log response structure for debugging.
         
-        # Log raw response structure for debugging
+        Args:
+            response: OpenAI API response
+            tools: List of tools used
+            job_id: Optional job ID for logging
+            tenant_id: Optional tenant ID for logging
+        """
         logger.info("[OpenAI Client] Processing API response - starting image URL extraction", extra={
             'job_id': job_id,
             'tenant_id': tenant_id,
-            'model': model,
             'has_image_generation_tool': any(
                 isinstance(t, dict) and t.get('type') == 'image_generation' 
                 for t in tools
@@ -458,21 +614,44 @@ class OpenAIClient:
             logger.info("[OpenAI Client] Response does NOT have 'tool_calls' attribute", extra={
                 'job_id': job_id
             })
+    
+    def _extract_output_text(self, response) -> str:
+        """
+        Extract output text from response.
         
+        Args:
+            response: OpenAI API response
+            
+        Returns:
+            Extracted text content
+        """
         # Responses API uses output_text instead of choices[0].message.content
         content = getattr(response, "output_text", "")
         if not content and hasattr(response, "choices"):
             # Fallback for backwards compatibility
             if response.choices and len(response.choices) > 0:
                 content = response.choices[0].message.content or ""
+        return content
+    
+    def _process_images_in_content(
+        self,
+        content: str,
+        image_handler,
+        tenant_id: Optional[str] = None,
+        job_id: Optional[str] = None
+    ) -> Tuple[str, List[str]]:
+        """
+        Process base64 images in content and convert to URLs.
         
-        logger.debug("[OpenAI Client] Extracted content from response", extra={
-            'job_id': job_id,
-            'content_length': len(content) if content else 0,
-            'content_preview': content[:200] + '...' if content and len(content) > 200 else content
-        })
-        
-        # Extract and convert base64 images in JSON responses
+        Args:
+            content: Response content that may contain base64 images
+            image_handler: ImageHandler instance
+            tenant_id: Optional tenant ID
+            job_id: Optional job ID
+            
+        Returns:
+            Tuple of (updated_content, base64_image_urls)
+        """
         base64_image_urls = []
         if content and image_handler:
             try:
@@ -507,6 +686,25 @@ class OpenAIClient:
                 })
                 # Continue with original content if conversion fails
         
+        return content, base64_image_urls
+    
+    def _calculate_usage(
+        self,
+        response,
+        model: str
+    ) -> Dict[str, any]:
+        """
+        Calculate usage information from response.
+        
+        Args:
+            response: OpenAI API response
+            model: Model name
+            
+        Returns:
+            Usage information dictionary
+        """
+        from cost_service import calculate_openai_cost
+        
         usage = response.usage if hasattr(response, "usage") and response.usage else None
         input_tokens = getattr(usage, "input_tokens", 0) if usage else getattr(usage, "prompt_tokens", 0) if usage else 0
         output_tokens = getattr(usage, "output_tokens", 0) if usage else getattr(usage, "completion_tokens", 0) if usage else 0
@@ -514,7 +712,7 @@ class OpenAIClient:
         
         cost_data = calculate_openai_cost(model, input_tokens, output_tokens)
         
-        usage_info = {
+        return {
             "model": model,
             "input_tokens": input_tokens,
             "output_tokens": output_tokens,
@@ -522,7 +720,121 @@ class OpenAIClient:
             "cost_usd": cost_data["cost_usd"],
             "service_type": "openai_worker_report"
         }
+    
+    def _extract_image_urls_from_response(
+        self,
+        response,
+        image_handler,
+        base64_image_urls: List[str],
+        tenant_id: Optional[str] = None,
+        job_id: Optional[str] = None
+    ) -> List[str]:
+        """
+        Extract image URLs from response.
         
+        Args:
+            response: OpenAI API response
+            image_handler: ImageHandler instance
+            base64_image_urls: List of base64 image URLs already converted
+            tenant_id: Optional tenant ID
+            job_id: Optional job ID
+            
+        Returns:
+            List of image URLs
+        """
+        from services.response_parser import ResponseParser
+        return ResponseParser.extract_image_urls_from_response(
+            response=response,
+            image_handler=image_handler,
+            tenant_id=tenant_id,
+            job_id=job_id,
+            base64_image_urls=base64_image_urls
+        )
+    
+    def _build_response_details(
+        self,
+        content: str,
+        image_urls: List[str],
+        usage_info: Dict[str, any],
+        model: str,
+        job_id: Optional[str] = None
+    ) -> Dict[str, any]:
+        """
+        Build response details dictionary.
+        
+        Args:
+            content: Output text content
+            image_urls: List of image URLs
+            usage_info: Usage information dictionary
+            model: Model name
+            job_id: Optional job ID for logging
+            
+        Returns:
+            Response details dictionary
+        """
+        response_details = {
+            "output_text": content,
+            "image_urls": image_urls,
+            "usage": {
+                "input_tokens": usage_info["input_tokens"],
+                "output_tokens": usage_info["output_tokens"],
+                "total_tokens": usage_info["total_tokens"]
+            },
+            "model": model
+        }
+        
+        logger.info("[OpenAI Client] Final response_details prepared", extra={
+            'job_id': job_id,
+            'final_image_urls_count': len(image_urls),
+            'final_image_urls': image_urls,
+            'output_text_length': len(content) if content else 0,
+            'input_tokens': usage_info["input_tokens"],
+            'output_tokens': usage_info["output_tokens"],
+            'total_tokens': usage_info["total_tokens"]
+        })
+        
+        return response_details
+    
+    def process_api_response(
+        self,
+        response,
+        model: str,
+        instructions: str,
+        input_text: str,
+        previous_context: str,
+        context: str,
+        tools: List[Dict],
+        tool_choice: str,
+        params: Dict,
+        image_handler,
+        tenant_id: Optional[str] = None,
+        job_id: Optional[str] = None
+    ):
+        """Process Responses API response and return formatted results."""
+        # Log response structure
+        self._log_response_structure(response, tools, job_id, tenant_id)
+        
+        # Extract output text
+        content = self._extract_output_text(response)
+        
+        logger.debug("[OpenAI Client] Extracted content from response", extra={
+            'job_id': job_id,
+            'content_length': len(content) if content else 0,
+            'content_preview': content[:200] + '...' if content and len(content) > 200 else content
+        })
+        
+        # Process images in content
+        content, base64_image_urls = self._process_images_in_content(
+            content=content,
+            image_handler=image_handler,
+            tenant_id=tenant_id,
+            job_id=job_id
+        )
+        
+        # Calculate usage
+        usage_info = self._calculate_usage(response, model)
+        
+        # Build request details
         request_details = {
             "model": model,
             "instructions": instructions,
@@ -533,39 +845,23 @@ class OpenAIClient:
             "tool_choice": tool_choice
         }
         
-        # Extract image URLs from response when image_generation tool is used
-        from services.response_parser import ResponseParser
-        image_urls = ResponseParser.extract_image_urls_from_response(
+        # Extract image URLs from response
+        image_urls = self._extract_image_urls_from_response(
             response=response,
             image_handler=image_handler,
+            base64_image_urls=base64_image_urls,
             tenant_id=tenant_id,
-            job_id=job_id,
-            base64_image_urls=base64_image_urls
+            job_id=job_id
         )
         
-        # Image URL extraction is now handled by ResponseParser
-        # The complex extraction logic has been moved to response_parser.py
-        
-        response_details = {
-            "output_text": content,
-            "image_urls": image_urls,
-            "usage": {
-                "input_tokens": input_tokens,
-                "output_tokens": output_tokens,
-                "total_tokens": total_tokens
-            },
-            "model": model
-        }
-        
-        logger.info("[OpenAI Client] Final response_details prepared", extra={
-            'job_id': job_id,
-            'final_image_urls_count': len(image_urls),
-            'final_image_urls': image_urls,
-            'output_text_length': len(content) if content else 0,
-            'input_tokens': input_tokens,
-            'output_tokens': output_tokens,
-            'total_tokens': total_tokens
-        })
+        # Build response details
+        response_details = self._build_response_details(
+            content=content,
+            image_urls=image_urls,
+            usage_info=usage_info,
+            model=model,
+            job_id=job_id
+        )
         
         return content, usage_info, request_details, response_details
     

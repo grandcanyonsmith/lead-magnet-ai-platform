@@ -24,38 +24,34 @@ const USER_SETTINGS_TABLE = env.userSettingsTable;
  */
 export class WorkflowAIController {
   /**
-   * Generate a workflow with AI (async).
-   * Creates a job and triggers async processing.
+   * Validate webhook URL format.
    */
-  async generateWithAI(tenantId: string, body: any): Promise<RouteResponse> {
-    const { description, model = 'gpt-5', webhook_url } = body;
-
-    if (!description || !description.trim()) {
-      throw new ApiError('Description is required', 400);
+  private _validateWebhookUrl(webhook_url: any): void {
+    if (!webhook_url) {
+      return;
     }
-
-    // Validate webhook_url if provided
-    if (webhook_url) {
-      if (typeof webhook_url !== 'string' || !webhook_url.trim()) {
-        throw new ApiError('webhook_url must be a valid URL string', 400);
-      }
-      // Basic URL validation
-      try {
-        new URL(webhook_url);
-      } catch {
-        throw new ApiError('webhook_url must be a valid URL', 400);
-      }
+    
+    if (typeof webhook_url !== 'string' || !webhook_url.trim()) {
+      throw new ApiError('webhook_url must be a valid URL string', 400);
     }
+    
+    // Basic URL validation
+    try {
+      new URL(webhook_url);
+    } catch {
+      throw new ApiError('webhook_url must be a valid URL', 400);
+    }
+  }
 
-    logger.info('[Workflow Generation] Starting async generation', {
-      tenantId,
-      model,
-      descriptionLength: description.length,
-      hasWebhookUrl: !!webhook_url,
-      timestamp: new Date().toISOString(),
-    });
-
-    // Create workflow generation job record
+  /**
+   * Create workflow generation job record.
+   */
+  private async _createWorkflowGenerationJob(
+    tenantId: string,
+    description: string,
+    model: string,
+    webhook_url?: string
+  ): Promise<string> {
     const jobId = `wfgen_${ulid()}`;
     const job: any = {
       job_id: jobId,
@@ -77,50 +73,95 @@ export class WorkflowAIController {
 
     await db.put(JOBS_TABLE, job);
     logger.info('[Workflow Generation] Created job record', { jobId });
+    
+    return jobId;
+  }
+
+  /**
+   * Trigger async job processing (Lambda or local).
+   */
+  private async _triggerJobProcessing(
+    jobId: string,
+    tenantId: string,
+    description: string,
+    model: string
+  ): Promise<void> {
+    // Check if we're in local development - process synchronously
+    if (env.isDevelopment()) {
+      logger.info('[Workflow Generation] Local mode detected, processing synchronously', { jobId });
+      // Process the job synchronously in local dev (fire and forget, but with error handling)
+      setImmediate(async () => {
+        try {
+          await this.processWorkflowGenerationJob(jobId, tenantId, description, model);
+        } catch (error: any) {
+          logger.error('[Workflow Generation] Error processing job in local mode', {
+            jobId,
+            error: error.message,
+            errorStack: error.stack,
+          });
+          // Update job status to failed
+          await db.update(JOBS_TABLE, { job_id: jobId }, {
+            status: 'failed',
+            error_message: `Processing failed: ${error.message}`,
+            updated_at: new Date().toISOString(),
+          });
+        }
+      });
+    } else {
+      await JobProcessingUtils.triggerAsyncProcessing(
+        jobId,
+        tenantId,
+        {
+          source: 'workflow-generation-job',
+          description,
+          model,
+        },
+        async (jobId: string, tenantId: string, ...args: unknown[]) => {
+          const payload = args[0] as { description?: string; model?: string; source?: string };
+          await this.processWorkflowGenerationJob(
+            jobId,
+            tenantId,
+            payload.description || '',
+            payload.model || 'gpt-4'
+          );
+        }
+      );
+    }
+  }
+
+  /**
+   * Generate a workflow with AI (async).
+   * Creates a job and triggers async processing.
+   */
+  async generateWithAI(tenantId: string, body: any): Promise<RouteResponse> {
+    const { description, model = 'gpt-5', webhook_url } = body;
+
+    if (!description || !description.trim()) {
+      throw new ApiError('Description is required', 400);
+    }
+
+    // Validate webhook_url if provided
+    this._validateWebhookUrl(webhook_url);
+
+    logger.info('[Workflow Generation] Starting async generation', {
+      tenantId,
+      model,
+      descriptionLength: description.length,
+      hasWebhookUrl: !!webhook_url,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Create workflow generation job record
+    const jobId = await this._createWorkflowGenerationJob(
+      tenantId,
+      description,
+      model,
+      webhook_url
+    );
 
     // Invoke Lambda asynchronously to process workflow generation
     try {
-      // Check if we're in local development - process synchronously
-      if (env.isDevelopment()) {
-        logger.info('[Workflow Generation] Local mode detected, processing synchronously', { jobId });
-        // Process the job synchronously in local dev (fire and forget, but with error handling)
-        setImmediate(async () => {
-          try {
-            await this.processWorkflowGenerationJob(jobId, tenantId, description, model);
-          } catch (error: any) {
-            logger.error('[Workflow Generation] Error processing job in local mode', {
-              jobId,
-              error: error.message,
-              errorStack: error.stack,
-            });
-            // Update job status to failed
-            await db.update(JOBS_TABLE, { job_id: jobId }, {
-              status: 'failed',
-              error_message: `Processing failed: ${error.message}`,
-              updated_at: new Date().toISOString(),
-            });
-          }
-        });
-      } else {
-        await JobProcessingUtils.triggerAsyncProcessing(
-          jobId,
-          tenantId,
-          {
-            source: 'workflow-generation-job',
-            description,
-            model,
-          },
-          async (jobId: string, tenantId: string, ...args: unknown[]) => {
-            const payload = args[0] as { description?: string; model?: string; source?: string };
-            await this.processWorkflowGenerationJob(
-              jobId,
-              tenantId,
-              payload.description || '',
-              payload.model || 'gpt-4'
-            );
-          }
-        );
-      }
+      await this._triggerJobProcessing(jobId, tenantId, description, model);
     } catch (error: any) {
       logger.error('[Workflow Generation] Failed to trigger async processing', {
         error: error.message,
@@ -140,6 +181,241 @@ export class WorkflowAIController {
         message: 'Workflow generation started. Poll /admin/workflows/generation-status/:jobId for status.',
       },
     };
+  }
+
+  /**
+   * Initialize generation service and start timing.
+   */
+  private async _initializeGeneration(): Promise<{ generationService: WorkflowGenerationService; startTime: number }> {
+    const openai = await getOpenAIClient();
+    const generationService = new WorkflowGenerationService(
+      openai,
+      async (tenantId, serviceType, model, inputTokens, outputTokens, costUsd, jobId) => {
+        await usageTrackingService.storeUsageRecord({
+          tenantId,
+          serviceType,
+          model,
+          inputTokens,
+          outputTokens,
+          costUsd,
+          jobId,
+        });
+      }
+    );
+    
+    const startTime = Date.now();
+    logger.info('[Workflow Generation] OpenAI client initialized');
+    
+    return { generationService, startTime };
+  }
+
+  /**
+   * Fetch brand context and ICP content.
+   */
+  private async _fetchBrandAndICPContext(tenantId: string): Promise<{ brandContext: string; icpContext: string | null }> {
+    // Fetch settings to get brand context and ICP URL
+    const settings = await db.get(USER_SETTINGS_TABLE, { tenant_id: tenantId });
+    const brandContext = settings ? buildBrandContext(settings) : '';
+    
+    // Fetch ICP document content if URL is provided
+    let icpContext: string | null = null;
+    if (settings?.icp_document_url) {
+      logger.info('[Workflow Generation] Fetching ICP document', { url: settings.icp_document_url });
+      icpContext = await fetchICPContent(settings.icp_document_url);
+      if (icpContext) {
+        logger.info('[Workflow Generation] ICP document fetched successfully', { contentLength: icpContext.length });
+      } else {
+        logger.warn('[Workflow Generation] Failed to fetch ICP document, continuing without it');
+      }
+    }
+    
+    return { brandContext, icpContext };
+  }
+
+  /**
+   * Generate all workflow components in parallel.
+   */
+  private async _generateWorkflowComponents(
+    generationService: WorkflowGenerationService,
+    jobDescription: string,
+    jobModel: string,
+    tenantId: string,
+    jobId: string,
+    brandContext: string,
+    icpContext: string | null
+  ): Promise<{
+    workflowResult: any;
+    templateHtmlResult: any;
+    templateMetadataResult: any;
+    formFieldsResult: any;
+  }> {
+    // Generate workflow config first (needed for form generation)
+    const workflowResult = await generationService.generateWorkflowConfig(
+      jobDescription,
+      jobModel,
+      tenantId,
+      jobId,
+      brandContext || undefined,
+      icpContext || undefined
+    );
+    
+    // Generate template HTML, metadata, and form fields in parallel
+    const [templateHtmlResult, templateMetadataResult, formFieldsResult] = await Promise.all([
+      generationService.generateTemplateHTML(
+        jobDescription,
+        jobModel,
+        tenantId,
+        jobId,
+        brandContext || undefined,
+        icpContext || undefined
+      ),
+      generationService.generateTemplateMetadata(
+        jobDescription,
+        jobModel,
+        tenantId,
+        jobId,
+        brandContext || undefined,
+        icpContext || undefined
+      ),
+      generationService.generateFormFields(
+        jobDescription,
+        workflowResult.workflowData.workflow_name,
+        jobModel,
+        tenantId,
+        jobId,
+        brandContext || undefined,
+        icpContext || undefined
+      ),
+    ]);
+
+    return {
+      workflowResult,
+      templateHtmlResult,
+      templateMetadataResult,
+      formFieldsResult,
+    };
+  }
+
+  /**
+   * Save workflow result and update job status.
+   */
+  private async _saveWorkflowResult(
+    generationService: WorkflowGenerationService,
+    workflowResult: any,
+    templateMetadataResult: any,
+    templateHtmlResult: any,
+    formFieldsResult: any,
+    tenantId: string,
+    jobId: string,
+    startTime: number
+  ): Promise<{ workflow_id: string; form_id: string; result: any }> {
+    const totalDuration = Date.now() - startTime;
+    logger.info('[Workflow Generation] Success!', {
+      tenantId,
+      workflowName: workflowResult.workflowData.workflow_name,
+      templateName: templateMetadataResult.templateName,
+      htmlLength: templateHtmlResult.htmlContent.length,
+      formFieldsCount: formFieldsResult.formData.fields.length,
+      totalDuration: `${totalDuration}ms`,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Process results into final format
+    const result = generationService.processGenerationResult(
+      workflowResult.workflowData,
+      templateMetadataResult.templateName,
+      templateMetadataResult.templateDescription,
+      templateHtmlResult.htmlContent,
+      formFieldsResult.formData
+    );
+
+    // Save workflow as draft
+    logger.info('[Workflow Generation] Saving workflow as draft', { jobId });
+    const { workflow_id, form_id } = await saveDraftWorkflow(
+      tenantId,
+      {
+        workflow_name: result.workflow.workflow_name,
+        workflow_description: result.workflow.workflow_description,
+        steps: result.workflow.steps || [],
+        form_fields_schema: result.form.form_fields_schema,
+      },
+      result.template.html_content,
+      result.template.template_name,
+      result.template.template_description
+    );
+
+    logger.info('[Workflow Generation] Draft workflow saved', {
+      jobId,
+      workflowId: workflow_id,
+      formId: form_id,
+    });
+
+    // Update job with result and workflow_id
+    await db.update(JOBS_TABLE, { job_id: jobId }, {
+      status: 'completed',
+      result: result,
+      workflow_id: workflow_id,
+      updated_at: new Date().toISOString(),
+    });
+
+    logger.info('[Workflow Generation] Job completed successfully', { jobId, workflowId: workflow_id });
+
+    return { workflow_id, form_id, result };
+  }
+
+  /**
+   * Send webhook notification.
+   */
+  private async _sendWebhookNotification(
+    webhook_url: string,
+    payload: any,
+    jobId: string
+  ): Promise<void> {
+    try {
+      await sendWorkflowGenerationWebhook(webhook_url, payload);
+    } catch (webhookError: any) {
+      // Log webhook error but don't fail the job
+      logger.error('[Workflow Generation] Failed to send webhook', {
+        jobId,
+        webhookUrl: webhook_url,
+        error: webhookError.message,
+      });
+    }
+  }
+
+  /**
+   * Handle job error and send failure webhook if needed.
+   */
+  private async _handleJobError(
+    error: any,
+    jobId: string,
+    job: any
+  ): Promise<void> {
+    logger.error('[Workflow Generation] Job failed', {
+      jobId,
+      error: error.message,
+    });
+    
+    const errorMessage = error.message || 'Unknown error';
+    await db.update(JOBS_TABLE, { job_id: jobId }, {
+      status: 'failed',
+      error_message: errorMessage,
+      updated_at: new Date().toISOString(),
+    });
+
+    // Send webhook notification for failure if webhook_url was provided
+    if (job.webhook_url) {
+      await this._sendWebhookNotification(
+        job.webhook_url,
+        {
+          job_id: jobId,
+          status: 'failed',
+          error_message: errorMessage,
+          failed_at: new Date().toISOString(),
+        },
+        jobId
+      );
+    }
   }
 
   /**
@@ -166,183 +442,56 @@ export class WorkflowAIController {
         updated_at: new Date().toISOString(),
       });
 
-      // Initialize OpenAI client and generation service
-      const openai = await getOpenAIClient();
-      const generationService = new WorkflowGenerationService(
-        openai,
-        async (tenantId, serviceType, model, inputTokens, outputTokens, costUsd, jobId) => {
-          await usageTrackingService.storeUsageRecord({
-            tenantId,
-            serviceType,
-            model,
-            inputTokens,
-            outputTokens,
-            costUsd,
-            jobId,
-          });
-        }
-      );
-      
-      const workflowStartTime = Date.now();
-      logger.info('[Workflow Generation] OpenAI client initialized');
+      // Initialize generation
+      const { generationService, startTime } = await this._initializeGeneration();
 
-      // Fetch settings to get brand context and ICP URL
-      const settings = await db.get(USER_SETTINGS_TABLE, { tenant_id: tenantId });
-      const brandContext = settings ? buildBrandContext(settings) : '';
-      
-      // Fetch ICP document content if URL is provided
-      let icpContext: string | null = null;
-      if (settings?.icp_document_url) {
-        logger.info('[Workflow Generation] Fetching ICP document', { url: settings.icp_document_url });
-        icpContext = await fetchICPContent(settings.icp_document_url);
-        if (icpContext) {
-          logger.info('[Workflow Generation] ICP document fetched successfully', { contentLength: icpContext.length });
-        } else {
-          logger.warn('[Workflow Generation] Failed to fetch ICP document, continuing without it');
-        }
-      }
+      // Fetch context
+      const { brandContext, icpContext } = await this._fetchBrandAndICPContext(tenantId);
 
-      // Generate workflow config first (needed for form generation)
-      const workflowResult = await generationService.generateWorkflowConfig(
+      // Generate all components
+      const {
+        workflowResult,
+        templateHtmlResult,
+        templateMetadataResult,
+        formFieldsResult,
+      } = await this._generateWorkflowComponents(
+        generationService,
         jobDescription,
         jobModel,
         tenantId,
         jobId,
-        brandContext || undefined,
-        icpContext || undefined
+        brandContext,
+        icpContext
       );
-      
-      // Generate template HTML, metadata, and form fields in parallel
-      const [templateHtmlResult, templateMetadataResult, formFieldsResult] = await Promise.all([
-        generationService.generateTemplateHTML(
-          jobDescription,
-          jobModel,
-          tenantId,
-          jobId,
-          brandContext || undefined,
-          icpContext || undefined
-        ),
-        generationService.generateTemplateMetadata(
-          jobDescription,
-          jobModel,
-          tenantId,
-          jobId,
-          brandContext || undefined,
-          icpContext || undefined
-        ),
-        generationService.generateFormFields(
-          jobDescription,
-          workflowResult.workflowData.workflow_name,
-          jobModel,
-          tenantId,
-          jobId,
-          brandContext || undefined,
-          icpContext || undefined
-        ),
-      ]);
 
-      const totalDuration = Date.now() - workflowStartTime;
-      logger.info('[Workflow Generation] Success!', {
+      // Save results
+      const { workflow_id, result } = await this._saveWorkflowResult(
+        generationService,
+        workflowResult,
+        templateMetadataResult,
+        templateHtmlResult,
+        formFieldsResult,
         tenantId,
-        workflowName: workflowResult.workflowData.workflow_name,
-        templateName: templateMetadataResult.templateName,
-        htmlLength: templateHtmlResult.htmlContent.length,
-        formFieldsCount: formFieldsResult.formData.fields.length,
-        totalDuration: `${totalDuration}ms`,
-        timestamp: new Date().toISOString(),
-      });
-
-      // Process results into final format
-      const result = generationService.processGenerationResult(
-        workflowResult.workflowData,
-        templateMetadataResult.templateName,
-        templateMetadataResult.templateDescription,
-        templateHtmlResult.htmlContent,
-        formFieldsResult.formData
-      );
-
-      // Save workflow as draft
-      logger.info('[Workflow Generation] Saving workflow as draft', { jobId });
-      const { workflow_id, form_id } = await saveDraftWorkflow(
-        tenantId,
-        {
-          workflow_name: result.workflow.workflow_name,
-          workflow_description: result.workflow.workflow_description,
-          steps: result.workflow.steps || [],
-          form_fields_schema: result.form.form_fields_schema,
-        },
-        result.template.html_content,
-        result.template.template_name,
-        result.template.template_description
-      );
-
-      logger.info('[Workflow Generation] Draft workflow saved', {
         jobId,
-        workflowId: workflow_id,
-        formId: form_id,
-      });
-
-      // Update job with result and workflow_id
-      await db.update(JOBS_TABLE, { job_id: jobId }, {
-        status: 'completed',
-        result: result,
-        workflow_id: workflow_id,
-        updated_at: new Date().toISOString(),
-      });
-
-      logger.info('[Workflow Generation] Job completed successfully', { jobId, workflowId: workflow_id });
+        startTime
+      );
 
       // Send webhook notification if webhook_url was provided
       if (job.webhook_url) {
-        try {
-          await sendWorkflowGenerationWebhook(job.webhook_url, {
+        await this._sendWebhookNotification(
+          job.webhook_url,
+          {
             job_id: jobId,
             status: 'completed',
             workflow_id: workflow_id,
             workflow: result,
             completed_at: new Date().toISOString(),
-          });
-        } catch (webhookError: any) {
-          // Log webhook error but don't fail the job
-          logger.error('[Workflow Generation] Failed to send completion webhook', {
-            jobId,
-            webhookUrl: job.webhook_url,
-            error: webhookError.message,
-          });
-        }
+          },
+          jobId
+        );
       }
     } catch (error: any) {
-      logger.error('[Workflow Generation] Job failed', {
-        jobId,
-        error: error.message,
-      });
-      
-      const errorMessage = error.message || 'Unknown error';
-      await db.update(JOBS_TABLE, { job_id: jobId }, {
-        status: 'failed',
-        error_message: errorMessage,
-        updated_at: new Date().toISOString(),
-      });
-
-      // Send webhook notification for failure if webhook_url was provided
-      if (job.webhook_url) {
-        try {
-          await sendWorkflowGenerationWebhook(job.webhook_url, {
-            job_id: jobId,
-            status: 'failed',
-            error_message: errorMessage,
-            failed_at: new Date().toISOString(),
-          });
-        } catch (webhookError: any) {
-          // Log webhook error but don't fail the job
-          logger.error('[Workflow Generation] Failed to send failure webhook', {
-            jobId,
-            webhookUrl: job.webhook_url,
-            error: webhookError.message,
-          });
-        }
-      }
-
+      await this._handleJobError(error, jobId, job);
       throw error;
     }
   }

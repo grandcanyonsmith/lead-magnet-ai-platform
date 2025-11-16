@@ -7,8 +7,8 @@ import logging
 from datetime import datetime
 from typing import Dict, Any, List, Tuple, Optional
 
-from ai_service import AIService
-from artifact_service import ArtifactService
+from core.ai_service import AIService
+from core.artifact_service import ArtifactService
 from services.context_builder import ContextBuilder
 from services.execution_step_manager import ExecutionStepManager
 from services.usage_service import UsageService

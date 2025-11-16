@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { api } from '@/lib/api'
+import { api } from '@/shared/lib/api'
 import { FiArrowLeft, FiEdit, FiTrash2, FiClock, FiCheckCircle, FiXCircle, FiExternalLink, FiLink, FiZap, FiSettings, FiFileText, FiCalendar, FiCopy } from 'react-icons/fi'
-import { useWorkflowId } from '@/hooks/useWorkflowId'
+import { useWorkflowId } from '@/features/workflows/hooks/useWorkflowId'
 
 export default function WorkflowDetailPage() {
   const router = useRouter()

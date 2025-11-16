@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { api } from '@/lib/api'
-import { useAuth } from '@/lib/auth/context'
+import { api } from '@/shared/lib/api'
+import { useAuth } from '@/features/auth/lib/auth/context'
 
 interface File {
   file_id: string

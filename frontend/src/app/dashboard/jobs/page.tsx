@@ -2,12 +2,12 @@
 
 import React, { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { api } from '@/lib/api'
+import { api } from '@/shared/lib/api'
 import { FiLoader, FiRefreshCw, FiChevronDown, FiChevronUp } from 'react-icons/fi'
-import { useJobFilters, useJobSorting } from '@/hooks/useJobFilters'
-import { JobFiltersProvider } from '@/contexts/JobFiltersContext'
-import { JobCard } from '@/components/jobs/JobCard'
-import { JobTableRow } from '@/components/jobs/JobTableRow'
+import { useJobFilters, useJobSorting } from '@/features/jobs/hooks/useJobFilters'
+import { JobFiltersProvider } from '@/features/jobs/contexts/JobFiltersContext'
+import { JobCard } from '@/features/jobs/components/jobs/JobCard'
+import { JobTableRow } from '@/features/jobs/components/jobs/JobTableRow'
 
 export default function JobsPage() {
   const router = useRouter()

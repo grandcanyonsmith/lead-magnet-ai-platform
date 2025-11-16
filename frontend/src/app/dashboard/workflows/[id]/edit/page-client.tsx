@@ -2,16 +2,16 @@
 
 import { useState, useEffect } from 'react'
 import { FiSettings, FiFileText, FiLayout } from 'react-icons/fi'
-import { api } from '@/lib/api'
-import { AIModel, Tool } from '@/types'
-import { useWorkflowEdit } from '@/hooks/useWorkflowEdit'
-import { useFormEdit } from '@/hooks/useFormEdit'
-import { useTemplateEdit } from '@/hooks/useTemplateEdit'
-import { WorkflowTab } from '@/components/workflows/edit/WorkflowTab'
-import { FormTab } from '@/components/workflows/edit/FormTab'
-import { TemplateTab } from '@/components/workflows/edit/TemplateTab'
-import { extractPlaceholders } from '@/utils/templateUtils'
-import { formatHTML } from '@/utils/templateUtils'
+import { api } from '@/shared/lib/api'
+import { AIModel, Tool } from '@/shared/types'
+import { useWorkflowEdit } from '@/features/workflows/hooks/useWorkflowEdit'
+import { useFormEdit } from '@/features/forms/hooks/useFormEdit'
+import { useTemplateEdit } from '@/features/templates/hooks/useTemplateEdit'
+import { WorkflowTab } from '@/features/workflows/components/workflows/edit/WorkflowTab'
+import { FormTab } from '@/features/workflows/components/workflows/edit/FormTab'
+import { TemplateTab } from '@/features/workflows/components/workflows/edit/TemplateTab'
+import { extractPlaceholders } from '@/features/templates/utils/templateUtils'
+import { formatHTML } from '@/features/templates/utils/templateUtils'
 
 export default function EditWorkflowPage() {
   const [activeTab, setActiveTab] = useState<'workflow' | 'form' | 'template'>('workflow')

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { api } from '@/lib/api'
+import { api } from '@/shared/lib/api'
 import { FiArrowLeft, FiSave } from 'react-icons/fi'
 
 type FormField = {
