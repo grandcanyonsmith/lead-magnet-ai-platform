@@ -210,7 +210,7 @@ export default function JobDetailClient() {
       />
 
       {/* Execution Steps */}
-      {hasSteps ? (
+      {hasSteps && job ? (
         <>
           {executionStepsError && (
             <ExecutionStepsError 

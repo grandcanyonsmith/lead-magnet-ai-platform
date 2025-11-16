@@ -203,7 +203,7 @@ export function useJobDetail() {
         }
       }
     }
-  }, [jobId, job])
+  }, [jobId])
 
   // Poll for job and execution steps updates when job is processing
   // Fixed: Properly include jobId in dependencies and use useCallback for loadExecutionSteps (Bug 1.3, 4.2 fix)
