@@ -324,6 +324,7 @@ export function StepInputOutput({
   const isCompleted = status === 'completed'
   const isInProgress = status === 'in_progress'
   const contextContent = renderPreviousStepsContext(previousSteps, formSubmission, step.step_order ?? 0)
+  const hasOutputContent = step.output !== null && step.output !== undefined && step.output !== ''
 
   const renderImageSection = () => {
     const outputImageUrls = collectOutputImageUrls(step)
@@ -634,6 +635,19 @@ export function StepInputOutput({
                     </>
                   )}
                   
+                  {isInProgress && (
+                    <div className="mt-3 text-xs text-gray-500 flex items-center gap-2">
+                      <FiLoader className="w-3.5 h-3.5 animate-spin" />
+                      <span>Step is currently running and will update once output is available.</span>
+                    </div>
+                  )}
+
+                  {!isInProgress && !isCompleted && !hasOutputContent && (
+                    <div className="mt-3 text-xs text-gray-500">
+                      This step hasn’t produced output yet.
+                    </div>
+                  )}
+
                   {/* Show main artifact (step output) */}
                   {step.artifact_id && (
                     <div className="mt-3 pt-3 border-t border-gray-200">
