@@ -4,7 +4,7 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import { Construct } from 'constructs';
-import { RESOURCE_PREFIXES, LAMBDA_DEFAULTS, COGNITO_CONFIG, TABLE_NAMES } from './config/constants';
+import { RESOURCE_PREFIXES, LAMBDA_DEFAULTS, COGNITO_CONFIG, TABLE_NAMES } from '../config/constants';
 
 export class AuthStack extends cdk.Stack {
   public readonly userPool: cognito.UserPool;
@@ -17,14 +17,14 @@ export class AuthStack extends cdk.Stack {
     const autoConfirmLambda = new lambda.Function(this, 'AutoConfirmLambda', {
       runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'index.handler',
-      code: lambda.Code.fromAsset('lib/lambdas'),
+      code: lambda.Code.fromAsset('../lib/lambdas'),
     });
 
     // Create Lambda function for PostConfirmation to set customer_id
     const postConfirmationLambda = new lambda.Function(this, 'PostConfirmationLambda', {
       runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'postConfirmation.handler',
-      code: lambda.Code.fromAsset('lib/lambdas'),
+      code: lambda.Code.fromAsset('../lib/lambdas'),
       environment: {
         USERS_TABLE: TABLE_NAMES.USERS,
         CUSTOMERS_TABLE: TABLE_NAMES.CUSTOMERS,

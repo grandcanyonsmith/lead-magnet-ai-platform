@@ -8,8 +8,16 @@ import logging
 import requests
 from typing import List, Any, Set, Tuple, Optional
 from urllib.parse import urlparse
+from io import BytesIO
 
 logger = logging.getLogger(__name__)
+
+try:
+    from PIL import Image
+    PIL_AVAILABLE = True
+except ImportError:
+    PIL_AVAILABLE = False
+    logger.warning("[Image Utils] PIL/Pillow not available. Image validation will be limited.")
 
 
 def extract_image_urls(text: str) -> List[str]:
@@ -95,6 +103,94 @@ def is_base64_data_url(url: str) -> bool:
     if not url or not isinstance(url, str):
         return False
     return url.startswith('data:image/') and ';base64,' in url
+
+
+def validate_base64_data_url(
+    data_url: str,
+    max_size_mb: int = 20,
+    job_id: Optional[str] = None,
+    tenant_id: Optional[str] = None
+) -> Tuple[bool, Optional[bytes], str]:
+    """
+    Validate a base64 data URL and extract the image bytes.
+    
+    Args:
+        data_url: Base64 data URL to validate (format: data:image/...;base64,...)
+        max_size_mb: Maximum image size in MB (default: 20MB)
+        job_id: Optional job ID for logging
+        tenant_id: Optional tenant ID for logging
+        
+    Returns:
+        Tuple of (is_valid, image_bytes, error_message)
+        - is_valid: True if data URL is valid
+        - image_bytes: Decoded image bytes if valid, None otherwise
+        - error_message: Error description if invalid, empty string if valid
+    """
+    if not data_url or not isinstance(data_url, str):
+        return False, None, "Data URL is empty or not a string"
+    
+    if not is_base64_data_url(data_url):
+        return False, None, "Not a valid base64 data URL format"
+    
+    try:
+        # Parse data URL: data:image/png;base64,<base64_data>
+        parts = data_url.split(';base64,', 1)
+        if len(parts) != 2:
+            return False, None, "Invalid data URL format: missing base64 data"
+        
+        mime_part = parts[0]
+        base64_data = parts[1]
+        
+        # Extract MIME type
+        if not mime_part.startswith('data:image/'):
+            return False, None, f"Invalid MIME type in data URL: {mime_part}"
+        
+        # Check size before decoding (base64 is ~33% larger than binary)
+        estimated_binary_size = len(base64_data) * 3 / 4
+        max_size_bytes = max_size_mb * 1024 * 1024
+        if estimated_binary_size > max_size_bytes:
+            return False, None, f"Data URL too large (estimated {estimated_binary_size / 1024 / 1024:.2f}MB, max {max_size_mb}MB)"
+        
+        # Decode base64
+        try:
+            image_bytes = base64.b64decode(base64_data, validate=True)
+        except Exception as e:
+            return False, None, f"Invalid base64 encoding: {str(e)}"
+        
+        if len(image_bytes) == 0:
+            return False, None, "Decoded image bytes are empty"
+        
+        # Validate the decoded bytes are actually a valid image
+        is_valid, detected_mime_type, error_message = validate_image_bytes(
+            image_bytes=image_bytes,
+            max_size_mb=max_size_mb,
+            job_id=job_id,
+            tenant_id=tenant_id
+        )
+        
+        if not is_valid:
+            return False, None, f"Invalid image data: {error_message}"
+        
+        # Verify MIME type matches detected type
+        expected_mime = mime_part.replace('data:', '')
+        if detected_mime_type != expected_mime:
+            logger.warning("[Image Utils] MIME type mismatch in data URL", extra={
+                'job_id': job_id,
+                'tenant_id': tenant_id,
+                'declared_mime_type': expected_mime,
+                'detected_mime_type': detected_mime_type
+            })
+            # Still return valid, but with detected MIME type
+        
+        return True, image_bytes, ""
+        
+    except Exception as e:
+        logger.error("[Image Utils] Error validating base64 data URL", extra={
+            'job_id': job_id,
+            'tenant_id': tenant_id,
+            'error': str(e)
+        }, exc_info=True)
+        return False, None, f"Error validating data URL: {str(e)}"
 
 
 def is_valid_http_url(url: str) -> bool:
@@ -256,6 +352,110 @@ def is_problematic_url(url: str) -> bool:
         return False
 
 
+def validate_image_bytes(
+    image_bytes: bytes,
+    max_size_mb: int = 20,
+    job_id: Optional[str] = None,
+    tenant_id: Optional[str] = None
+) -> Tuple[bool, str, str]:
+    """
+    Validate that image bytes represent a valid image and detect the format.
+    
+    Uses PIL/Pillow to verify the image is valid and detect the actual format
+    from the image data itself, not just headers or file extensions.
+    
+    Args:
+        image_bytes: Raw image bytes to validate
+        max_size_mb: Maximum image size in MB (default: 20MB)
+        job_id: Optional job ID for logging
+        tenant_id: Optional tenant ID for logging
+        
+    Returns:
+        Tuple of (is_valid, mime_type, error_message)
+        - is_valid: True if bytes represent a valid image
+        - mime_type: Detected MIME type (e.g., 'image/png') or empty string if invalid
+        - error_message: Error description if invalid, empty string if valid
+        
+    Example:
+        >>> bytes_data = b'...'
+        >>> is_valid, mime_type, error = validate_image_bytes(bytes_data)
+        >>> if is_valid:
+        ...     print(f"Valid {mime_type} image")
+    """
+    if not image_bytes or len(image_bytes) == 0:
+        return False, "", "Image bytes are empty"
+    
+    # Check size limit (convert MB to bytes)
+    max_size_bytes = max_size_mb * 1024 * 1024
+    if len(image_bytes) > max_size_bytes:
+        return False, "", f"Image size ({len(image_bytes) / 1024 / 1024:.2f}MB) exceeds maximum ({max_size_mb}MB)"
+    
+    if not PIL_AVAILABLE:
+        # Without PIL, we can't validate, so return a warning but allow it
+        logger.warning("[Image Utils] PIL/Pillow not available, skipping image validation", extra={
+            'job_id': job_id,
+            'tenant_id': tenant_id,
+            'image_size_bytes': len(image_bytes)
+        })
+        # Try to guess MIME type from magic bytes as fallback
+        if image_bytes.startswith(b'\x89PNG\r\n\x1a\n'):
+            return True, 'image/png', ""
+        elif image_bytes.startswith(b'\xff\xd8\xff'):
+            return True, 'image/jpeg', ""
+        elif image_bytes.startswith(b'GIF87a') or image_bytes.startswith(b'GIF89a'):
+            return True, 'image/gif', ""
+        elif image_bytes.startswith(b'RIFF') and b'WEBP' in image_bytes[:12]:
+            return True, 'image/webp', ""
+        else:
+            return False, "", "Could not determine image format (PIL not available)"
+    
+    try:
+        # Open image with PIL to validate it's actually an image
+        image = Image.open(BytesIO(image_bytes))
+        
+        # Verify the image can be loaded (this will raise an exception if invalid)
+        image.verify()
+        
+        # Get the format from PIL
+        image_format = image.format
+        if not image_format:
+            return False, "", "Could not determine image format"
+        
+        # Map PIL format to MIME type
+        format_to_mime = {
+            'PNG': 'image/png',
+            'JPEG': 'image/jpeg',
+            'JPG': 'image/jpeg',
+            'GIF': 'image/gif',
+            'WEBP': 'image/webp',
+        }
+        
+        mime_type = format_to_mime.get(image_format.upper())
+        if not mime_type:
+            return False, "", f"Unsupported image format: {image_format}. Supported: PNG, JPEG, GIF, WebP"
+        
+        logger.debug("[Image Utils] Image validation successful", extra={
+            'job_id': job_id,
+            'tenant_id': tenant_id,
+            'image_size_bytes': len(image_bytes),
+            'format': image_format,
+            'mime_type': mime_type
+        })
+        
+        return True, mime_type, ""
+        
+    except Image.UnidentifiedImageError:
+        return False, "", "Image bytes do not represent a valid image format"
+    except Exception as e:
+        logger.error("[Image Utils] Error validating image bytes", extra={
+            'job_id': job_id,
+            'tenant_id': tenant_id,
+            'image_size_bytes': len(image_bytes),
+            'error': str(e)
+        }, exc_info=True)
+        return False, "", f"Error validating image: {str(e)}"
+
+
 def download_image_and_convert_to_data_url(
     url: str,
     timeout: int = 30,
@@ -333,35 +533,28 @@ def download_image_and_convert_to_data_url(
             })
             return None
         
-        # Detect MIME type from Content-Type header or file extension
-        mime_type = response.headers.get('Content-Type', '').split(';')[0].strip()
+        # Validate that the downloaded bytes are actually a valid image
+        is_valid, mime_type, error_message = validate_image_bytes(
+            image_bytes=image_bytes,
+            job_id=job_id,
+            tenant_id=tenant_id
+        )
         
-        # If Content-Type is not available or not an image type, try to detect from URL
-        if not mime_type or not mime_type.startswith('image/'):
-            # Try to detect from file extension
-            url_lower = url.lower()
-            if url_lower.endswith('.png') or '.png?' in url_lower:
-                mime_type = 'image/png'
-            elif url_lower.endswith('.jpg') or '.jpg?' in url_lower or url_lower.endswith('.jpeg') or '.jpeg?' in url_lower:
-                mime_type = 'image/jpeg'
-            elif url_lower.endswith('.gif') or '.gif?' in url_lower:
-                mime_type = 'image/gif'
-            elif url_lower.endswith('.webp') or '.webp?' in url_lower:
-                mime_type = 'image/webp'
-            else:
-                # Default to PNG if we can't determine
-                mime_type = 'image/png'
-                logger.warning("[Image Utils] Could not determine MIME type, defaulting to image/png", extra={
-                    'job_id': job_id,
-                    'tenant_id': tenant_id,
-                    'url_preview': url[:100] + '...' if len(url) > 100 else url,
-                    'content_type_header': response.headers.get('Content-Type')
-                })
+        if not is_valid:
+            logger.error("[Image Utils] Downloaded content is not a valid image", extra={
+                'job_id': job_id,
+                'tenant_id': tenant_id,
+                'url_preview': url[:100] + '...' if len(url) > 100 else url,
+                'image_size_bytes': image_size,
+                'error_message': error_message,
+                'content_type_header': response.headers.get('Content-Type')
+            })
+            return None
         
         # Encode to base64
         b64_string = base64.b64encode(image_bytes).decode("utf-8")
         
-        # Create data URL
+        # Create data URL using validated MIME type
         data_url = f"data:{mime_type};base64,{b64_string}"
         
         logger.info("[Image Utils] Successfully downloaded and converted image to data URL", extra={

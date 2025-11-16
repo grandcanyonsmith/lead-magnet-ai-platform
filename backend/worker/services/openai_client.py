@@ -119,11 +119,12 @@ class OpenAIClient:
         ]
         
         converted_count = 0
-        failed_count = 0
+        skipped_count = 0
         
         # Add each valid previous image URL as input_image
         for image_url in valid_image_urls:
             final_image_url = image_url
+            should_skip = False
             
             # Check if this URL is problematic (e.g., Firebase Storage)
             if is_problematic_url(image_url):
@@ -150,19 +151,23 @@ class OpenAIClient:
                         'data_url_length': len(data_url)
                     })
                 else:
-                    failed_count += 1
-                    logger.error("[OpenAI Client] Failed to download/convert problematic URL, using original URL", extra={
+                    # Validation failed - skip this image entirely instead of using original URL
+                    # This prevents sending invalid image data to OpenAI API
+                    skipped_count += 1
+                    should_skip = True
+                    logger.warning("[OpenAI Client] Failed to download/convert problematic URL, skipping image", extra={
                         'job_id': job_id,
                         'tenant_id': tenant_id,
-                        'url_preview': image_url[:100] + '...' if len(image_url) > 100 else image_url
+                        'url_preview': image_url[:100] + '...' if len(image_url) > 100 else image_url,
+                        'reason': 'Image validation failed or download failed'
                     })
-                    # Continue with original URL - OpenAI will try to download it
-                    # This may still fail, but we've logged the issue
             
-            input_content.append({
-                "type": "input_image",
-                "image_url": final_image_url
-            })
+            # Only add image to input if it wasn't skipped
+            if not should_skip:
+                input_content.append({
+                    "type": "input_image",
+                    "image_url": final_image_url
+                })
         
         # OpenAI Responses API expects input as a list with role and content
         api_input = [
@@ -178,7 +183,7 @@ class OpenAIClient:
             'valid_image_urls_count': len(valid_image_urls),
             'input_content_items': len(input_content),
             'converted_to_data_url_count': converted_count,
-            'failed_conversion_count': failed_count
+            'skipped_images_count': skipped_count
         })
         
         return api_input

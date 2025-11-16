@@ -63,24 +63,32 @@ infrastructure/
 ├── bin/
 │   └── app.ts                    # CDK app entry point
 ├── lib/
-│   ├── config/
+│   ├── stacks/                   # CDK stack definitions
+│   │   ├── api-stack.ts          # API Gateway stack
+│   │   ├── auth-stack.ts         # Cognito stack
+│   │   ├── compute-stack.ts      # Step Functions + Lambda stack
+│   │   ├── database-stack.ts     # DynamoDB stack
+│   │   ├── storage-stack.ts      # S3 + CloudFront stack
+│   │   └── worker-stack.ts       # ECR stack
+│   ├── types/                    # TypeScript type definitions
+│   │   └── index.ts              # Shared types and interfaces
+│   ├── config/                   # Configuration constants
 │   │   └── constants.ts          # Centralized configuration constants
-│   ├── monitoring/
-│   │   └── alarms.ts             # CloudWatch alarm helpers
-│   ├── stepfunctions/
-│   │   ├── job-processor-state-machine.ts  # Step Functions definition
-│   │   └── error-handlers.ts     # Reusable error handling patterns
-│   ├── utils/
+│   ├── utils/                    # Helper functions
 │   │   ├── dynamodb-helpers.ts   # DynamoDB table creation helpers
 │   │   ├── environment-helpers.ts # Environment variable helpers
 │   │   └── lambda-helpers.ts     # Lambda function creation helpers
-│   ├── api-stack.ts              # API Gateway stack
-│   ├── auth-stack.ts             # Cognito stack
-│   ├── compute-stack.ts          # Step Functions + Lambda stack
-│   ├── database-stack.ts         # DynamoDB stack
-│   ├── storage-stack.ts          # S3 + CloudFront stack
-│   ├── types.ts                  # TypeScript type definitions
-│   └── worker-stack.ts           # ECR stack
+│   ├── monitoring/               # CloudWatch monitoring
+│   │   └── alarms.ts             # CloudWatch alarm helpers
+│   ├── stepfunctions/            # Step Functions definitions
+│   │   ├── job-processor-state-machine.ts  # Step Functions definition
+│   │   └── error-handlers.ts     # Reusable error handling patterns
+│   └── lambdas/                  # Cognito trigger Lambda functions
+│       ├── index.js              # PreSignUp trigger
+│       └── postConfirmation.js   # PostConfirmation trigger
+├── tests/                        # Test directory
+│   └── README.md                 # Test setup documentation
+├── dist/                         # Compiled TypeScript output (generated)
 ├── cdk.json                      # CDK configuration
 ├── package.json                  # Node.js dependencies
 └── tsconfig.json                 # TypeScript configuration

@@ -9,10 +9,10 @@ import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
-import { TableMap } from './types';
-import { createLambdaRole, grantDynamoDBPermissions, grantS3Permissions, grantSecretsAccess } from './utils/lambda-helpers';
-import { createTableEnvironmentVars } from './utils/environment-helpers';
-import { FUNCTION_NAMES, SECRET_NAMES, LAMBDA_DEFAULTS, ENV_VAR_NAMES, DEFAULT_LOG_LEVEL, RESOURCE_PREFIXES } from './config/constants';
+import { TableMap } from '../types';
+import { createLambdaRole, grantDynamoDBPermissions, grantS3Permissions, grantSecretsAccess } from '../utils/lambda-helpers';
+import { createTableEnvironmentVars } from '../utils/environment-helpers';
+import { FUNCTION_NAMES, SECRET_NAMES, LAMBDA_DEFAULTS, ENV_VAR_NAMES, DEFAULT_LOG_LEVEL, RESOURCE_PREFIXES } from '../config/constants';
 
 export interface ApiStackProps extends cdk.StackProps {
   userPool: cognito.UserPool;

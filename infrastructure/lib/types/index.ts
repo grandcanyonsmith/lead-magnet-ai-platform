@@ -2,7 +2,7 @@ import * as cdk from 'aws-cdk-lib';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
-import { TABLE_NAMES } from './config/constants';
+import { TABLE_NAMES } from '../config/constants';
 
 /**
  * Enum for table keys used in TableMap

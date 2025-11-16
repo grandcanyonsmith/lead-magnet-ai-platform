@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
-import { DatabaseStack } from '../lib/database-stack';
-import { AuthStack } from '../lib/auth-stack';
-import { StorageStack } from '../lib/storage-stack';
-import { WorkerStack } from '../lib/worker-stack';
-import { ComputeStack } from '../lib/compute-stack';
-import { ApiStack } from '../lib/api-stack';
+import { DatabaseStack } from '../lib/stacks/database-stack';
+import { AuthStack } from '../lib/stacks/auth-stack';
+import { StorageStack } from '../lib/stacks/storage-stack';
+import { WorkerStack } from '../lib/stacks/worker-stack';
+import { ComputeStack } from '../lib/stacks/compute-stack';
+import { ApiStack } from '../lib/stacks/api-stack';
 import { STACK_NAMES, DEFAULT_REGION } from '../lib/config/constants';
 
 /**

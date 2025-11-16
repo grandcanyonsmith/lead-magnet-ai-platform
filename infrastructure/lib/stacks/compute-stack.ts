@@ -7,10 +7,10 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
 import { Construct } from 'constructs';
-import { TableMap, TableKey } from './types';
-import { createLambdaWithTables, grantSecretsAccess, grantDynamoDBPermissions, grantS3Permissions } from './utils/lambda-helpers';
-import { createJobProcessorStateMachine } from './stepfunctions/job-processor-state-machine';
-import { SECRET_NAMES, LAMBDA_DEFAULTS, ENV_VAR_NAMES, DEFAULT_LOG_LEVEL, PLAYWRIGHT_BROWSERS_PATH, RESOURCE_PREFIXES, STEP_FUNCTIONS_DEFAULTS } from './config/constants';
+import { TableMap, TableKey } from '../types';
+import { createLambdaWithTables, grantSecretsAccess, grantDynamoDBPermissions, grantS3Permissions } from '../utils/lambda-helpers';
+import { createJobProcessorStateMachine } from '../stepfunctions/job-processor-state-machine';
+import { SECRET_NAMES, LAMBDA_DEFAULTS, ENV_VAR_NAMES, DEFAULT_LOG_LEVEL, PLAYWRIGHT_BROWSERS_PATH, RESOURCE_PREFIXES, STEP_FUNCTIONS_DEFAULTS } from '../config/constants';
 
 export interface ComputeStackProps extends cdk.StackProps {
   tablesMap: TableMap;
