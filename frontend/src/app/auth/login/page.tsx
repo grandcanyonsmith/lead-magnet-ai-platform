@@ -13,27 +13,28 @@ function LoginForm() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [labelDebug, setLabelDebug] = useState({ email: '', password: '' })
 
   useEffect(() => {
-    // Pre-fill email from query params
+    // Pre-fill email from query params (but clear password from URL for security)
     const emailParam = searchParams?.get('email')
     if (emailParam) {
       setEmail(emailParam)
     }
-  }, [searchParams])
+    // Clear any password from URL for security
+    if (searchParams?.get('password')) {
+      router.replace('/auth/login', { scroll: false })
+    }
+  }, [searchParams, router])
 
-  useEffect(() => {
-    const emailLabel = document.querySelector<HTMLLabelElement>('label[for="email"]')
-    const passwordLabel = document.querySelector<HTMLLabelElement>('label[for="password"]')
-    setLabelDebug({
-      email: emailLabel?.textContent || '',
-      password: passwordLabel?.textContent || ''
-    })
-  }, [])
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    e.stopPropagation()
+    
+    // Clear URL if it contains credentials (security fix)
+    if (window.location.search.includes('password')) {
+      router.replace('/auth/login', { scroll: false })
+    }
+    
     setError('')
     setLoading(true)
 
@@ -110,14 +111,15 @@ function LoginForm() {
             Sign in to your account to get started
           </p>
         </div>
-        
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 text-xs text-gray-600 font-mono">
-          <div>Email label: {labelDebug.email} ({labelDebug.email.split('').map((char) => char.charCodeAt(0)).join(', ')})</div>
-          <div>Password label: {labelDebug.password} ({labelDebug.password.split('').map((char) => char.charCodeAt(0)).join(', ')})</div>
-        </div>
 
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-          <form className="space-y-6" onSubmit={handleSubmit}>
+          <form 
+            className="space-y-6" 
+            onSubmit={handleSubmit}
+            method="post"
+            action="#"
+            noValidate
+          >
             {error && (
               <div className="bg-red-50 border-l-4 border-red-400 text-red-700 px-4 py-3 rounded-md flex items-start">
                 <svg className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -129,8 +131,8 @@ function LoginForm() {
             
             <div className="space-y-4">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                  Email address
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1 min-w-0">
+                  <span className="inline-block">Email address</span>
                 </label>
                 <input
                   id="email"
@@ -145,8 +147,8 @@ function LoginForm() {
                 />
               </div>
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                  Password
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1 min-w-0">
+                  <span className="inline-block">Password</span>
                 </label>
                 <input
                   id="password"
