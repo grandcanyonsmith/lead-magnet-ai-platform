@@ -178,7 +178,69 @@ export function StepHeader({
   }
 
   return (
-    <div className="flex flex-col gap-3 p-3 sm:p-4 lg:flex-row lg:items-start">
+    <div className="relative flex flex-col gap-2 p-3 sm:p-4 pr-10 sm:pr-12 lg:flex-row lg:items-start lg:pr-4">
+      {/* Action Menu - Always in top right corner */}
+      {hasMenuActions && (
+        <div className="absolute top-2 right-2 z-10" ref={menuRef}>
+          <Tooltip content="Step actions" position="top">
+            <button
+              onClick={(event) => {
+                event.stopPropagation()
+                setMenuOpen((prev) => !prev)
+              }}
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              className="p-1.5 rounded-full text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors touch-target min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center"
+            >
+              <FiMoreVertical className="w-4 h-4" />
+            </button>
+          </Tooltip>
+          {menuOpen && (
+            <div
+              role="menu"
+              className="absolute right-0 z-20 mt-2 w-48 rounded-xl border border-gray-100 bg-white shadow-lg ring-1 ring-black ring-opacity-5"
+            >
+              <div className="py-1">
+                {canEditStep && (
+                  <button
+                    role="menuitem"
+                    onClick={handleEditClick}
+                    disabled={disableEdit}
+                    className={`w-full px-4 py-2 text-sm flex items-center gap-2 text-left ${
+                      disableEdit
+                        ? 'text-gray-400 cursor-not-allowed'
+                        : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    <FiEdit2 className="w-4 h-4" />
+                    Edit Step
+                  </button>
+                )}
+                {canRerunStep && (
+                  <button
+                    role="menuitem"
+                    onClick={handleRerunClick}
+                    disabled={disableRerun}
+                    className={`w-full px-4 py-2 text-sm flex items-center gap-2 text-left ${
+                      disableRerun
+                        ? 'text-gray-400 cursor-not-allowed'
+                        : 'text-blue-700 hover:bg-blue-50'
+                    }`}
+                  >
+                    {isRerunningStep ? (
+                      <FiLoader className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <FiRefreshCw className="w-4 h-4" />
+                    )}
+                    Rerun Step
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Status Icon */}
       <div className="flex-shrink-0 mt-0.5">
         {renderStatusIcon(status)}
@@ -186,16 +248,16 @@ export function StepHeader({
       
       {/* Step Content */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center flex-wrap gap-2 mb-2">
-          <span className={`px-2 py-1 text-xs font-medium rounded flex-shrink-0 ${stepTypeColor}`}>
+        <div className="flex items-center flex-wrap gap-1.5 mb-2">
+          <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded flex-shrink-0 ${stepTypeColor}`}>
             Step {stepOrder}
           </span>
-          <span className={`px-2 py-1 text-[11px] font-semibold uppercase tracking-wide rounded-full ${statusColorClass}`}>
+          <span className={`px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide rounded-full ${statusColorClass}`}>
             {statusLabel}
           </span>
           {(isInProgress || isRerunningStep) && (
-            <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full animate-pulse flex items-center gap-1">
-              <FiLoader className="w-3.5 h-3.5 animate-spin" />
+            <span className="px-1.5 py-0.5 text-[10px] font-medium bg-blue-100 text-blue-800 rounded-full animate-pulse flex items-center gap-1">
+              <FiLoader className="w-3 h-3 animate-spin" />
               {isRerunningStep ? 'Rerunning...' : 'Processing...'}
             </span>
           )}
@@ -231,10 +293,9 @@ export function StepHeader({
         )}
       </div>
 
-      {/* Right: Metrics and Actions */}
-      <div className="flex items-center gap-2 flex-shrink-0 lg:self-start">
-        {/* Metrics - Only show for completed steps - Compact summary with tooltip */}
-        {isCompleted && (step.duration_ms !== undefined || step.usage_info) && (
+      {/* Right: Metrics - Only on desktop, below content on mobile */}
+      {isCompleted && (step.duration_ms !== undefined || step.usage_info) && (
+        <div className="flex items-center gap-2 flex-shrink-0 lg:self-start mt-2 lg:mt-0">
           <Tooltip
             content={
               <div className="text-left space-y-1">
@@ -275,70 +336,8 @@ export function StepHeader({
               )}
             </div>
           </Tooltip>
-        )}
-
-        {/* Action Menu */}
-        {hasMenuActions && (
-          <div className="relative" ref={menuRef}>
-            <Tooltip content="Step actions" position="top">
-              <button
-                onClick={(event) => {
-                  event.stopPropagation()
-                  setMenuOpen((prev) => !prev)
-                }}
-                aria-haspopup="menu"
-                aria-expanded={menuOpen}
-                className="p-2 rounded-full text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors touch-target min-h-[44px] sm:min-h-0"
-              >
-                <FiMoreVertical className="w-4 h-4" />
-              </button>
-            </Tooltip>
-            {menuOpen && (
-              <div
-                role="menu"
-                className="absolute right-0 z-20 mt-2 w-48 rounded-xl border border-gray-100 bg-white shadow-lg ring-1 ring-black ring-opacity-5"
-              >
-                <div className="py-1">
-                  {canEditStep && (
-                    <button
-                      role="menuitem"
-                      onClick={handleEditClick}
-                      disabled={disableEdit}
-                      className={`w-full px-4 py-2 text-sm flex items-center gap-2 text-left ${
-                        disableEdit
-                          ? 'text-gray-400 cursor-not-allowed'
-                          : 'text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      <FiEdit2 className="w-4 h-4" />
-                      Edit Step
-                    </button>
-                  )}
-                  {canRerunStep && (
-                    <button
-                      role="menuitem"
-                      onClick={handleRerunClick}
-                      disabled={disableRerun}
-                      className={`w-full px-4 py-2 text-sm flex items-center gap-2 text-left ${
-                        disableRerun
-                          ? 'text-gray-400 cursor-not-allowed'
-                          : 'text-blue-700 hover:bg-blue-50'
-                      }`}
-                    >
-                      {isRerunningStep ? (
-                        <FiLoader className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <FiRefreshCw className="w-4 h-4" />
-                      )}
-                      Rerun Step
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }

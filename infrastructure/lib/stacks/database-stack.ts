@@ -1,9 +1,9 @@
 import * as cdk from 'aws-cdk-lib';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import { Construct } from 'constructs';
-import { createTable, createTableWithGSI } from './utils/dynamodb-helpers';
-import { TableMap, TableKey } from './types';
-import { TABLE_NAMES } from './config/constants';
+import { createTable, createTableWithGSI } from '../utils/dynamodb-helpers';
+import { TableMap, TableKey } from '../types';
+import { TABLE_NAMES } from '../config/constants';
 
 /**
  * Database Stack

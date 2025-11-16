@@ -209,12 +209,33 @@ class CUALoopService:
                 
                 # Build next request with screenshot (only if screenshot was captured successfully)
                 if screenshot_b64:
+                    # Validate screenshot base64 data before creating data URL
+                    from utils.image_utils import validate_base64_data_url
+                    
+                    data_url = f"data:image/png;base64,{screenshot_b64}"
+                    is_valid, image_bytes, error_message = validate_base64_data_url(
+                        data_url=data_url,
+                        job_id=job_id,
+                        tenant_id=tenant_id
+                    )
+                    
+                    if not is_valid:
+                        logger.error(f"[CUALoopService] Screenshot validation failed: {error_message}", extra={
+                            'job_id': job_id,
+                            'tenant_id': tenant_id,
+                            'screenshot_b64_length': len(screenshot_b64) if screenshot_b64 else 0
+                        })
+                        # If screenshot validation fails, we can't continue the loop
+                        logger.error(f"[CUALoopService] Screenshot validation failed, cannot continue CUA loop")
+                        break
+                    
+                    # Screenshot is valid, create next_input
                     next_input = [{
                         'type': 'computer_call_output',
                         'call_id': call_id,
                         'output': {
                             'type': 'input_image',
-                            'image_url': f"data:image/png;base64,{screenshot_b64}"
+                            'image_url': data_url
                         }
                     }]
                     
