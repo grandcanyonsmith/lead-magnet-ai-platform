@@ -1,177 +1,169 @@
-# Mobile QA Testing Report
+# Mobile QA Report
 
-**Date:** November 16, 2025  
-**Tester:** AI Assistant  
-**Test Environment:** Local development (localhost:3000)  
-**Viewport:** 375x812 (iPhone-sized mobile viewport)  
-**Browser:** Chrome DevTools responsive mode
+**Date:** 2025-01-27  
+**Tester:** Automated QA  
+**Viewport:** 375x667 (iPhone SE size)  
+**Browser:** Chrome DevTools Mobile Emulation  
+**Credentials Used:** canyon@coursecreator360.com / Sterling7147!
 
 ## Executive Summary
 
-A comprehensive mobile QA pass was conducted on the Lead Magnet AI Platform. The app was tested across multiple pages and user flows in a mobile viewport (375x812). While core functionality appears to work, there are **significant text truncation issues** throughout the application that impact readability and user experience on mobile devices.
+Mobile testing was conducted on the Lead Magnet AI Platform frontend. Several critical issues were identified, particularly around authentication flow, text truncation, and form submission security. The application shows good responsive design patterns but requires fixes for mobile usability.
 
 ## Critical Issues
 
-### 1. Text Truncation Throughout Application (HIGH PRIORITY)
+### 1. **SECURITY: Credentials Exposed in URL Query String**
+- **Severity:** 🔴 Critical
+- **Location:** `/auth/login`
+- **Description:** When attempting to log in, credentials are being appended to the URL query string (`?email=...&password=...`). This is a serious security vulnerability as:
+  - Credentials appear in browser history
+  - Credentials can be logged by web servers
+  - Credentials are visible in browser address bar
+  - Credentials may be shared if URL is copied
+- **Reproduction Steps:**
+  1. Navigate to `/auth/login`
+  2. Enter email and password
+  3. Click "Sign in"
+  4. Observe URL contains credentials
+- **Expected Behavior:** Form should submit via POST with credentials in request body only
+- **Actual Behavior:** Credentials appear in URL query parameters
+- **Impact:** High - Sensitive user data exposed
 
-**Severity:** High  
-**Impact:** Affects readability and user experience across all pages
+### 2. **Login Form Not Submitting Properly**
+- **Severity:** 🔴 Critical
+- **Location:** `/auth/login`
+- **Description:** Login form submission does not appear to trigger authentication API calls. No network requests to authentication endpoints are visible in network logs.
+- **Reproduction Steps:**
+  1. Navigate to `/auth/login`
+  2. Fill in credentials
+  3. Click "Sign in"
+  4. Check browser network tab
+- **Expected Behavior:** POST request to authentication API endpoint
+- **Actual Behavior:** No authentication requests visible, form appears to submit but no redirect occurs
+- **Impact:** High - Users cannot log in
 
-Text labels and content are being truncated on mobile viewports, making the interface difficult to read and understand. This appears to be a systematic issue affecting multiple components.
+### 3. **Text Truncation on Form Labels**
+- **Severity:** 🟡 Medium
+- **Location:** `/auth/login`
+- **Description:** Form labels are truncated on mobile viewport:
+  - "Email address" displays as "Email addre"
+  - "Password" displays as "Pa word"
+- **Reproduction Steps:**
+  1. Navigate to `/auth/login` on mobile viewport (375px width)
+  2. Observe form labels
+- **Expected Behavior:** Full label text visible or properly wrapped
+- **Actual Behavior:** Labels truncated mid-word
+- **Impact:** Medium - Reduces usability and accessibility
+- **Screenshot/Evidence:** Labels visible in browser snapshot as "Email addre" and "Pa word"
 
-#### Affected Areas:
+## Medium Priority Issues
 
-**Login Page (`/auth/login`):**
-- "Email addre" instead of "Email address"
-- "Pa word" instead of "Password"
-- "Don't have an account? Sign up" - text appears truncated
+### 4. **Dashboard Requires Authentication (Expected Behavior)**
+- **Severity:** ℹ️ Informational
+- **Location:** `/dashboard`
+- **Description:** Dashboard correctly redirects to login when not authenticated. This is expected behavior but prevents full mobile testing without successful authentication.
+- **Impact:** Low - This is correct security behavior
 
-**Dashboard Navigation:**
-- "Da hboard" instead of "Dashboard" (appears in sidebar navigation)
-- "Generated Lead Magnet   ection" instead of "Generated Lead Magnet Section"
-- "Monitor your generated lead magnet  and form  ubmi ion  in the Generated Lead Magnet   ection ." - severe truncation
+### 5. **Font Preload Warning**
+- **Severity:** 🟢 Low
+- **Location:** All pages
+- **Description:** Console warning: "The resource http://localhost:3000/_next/static/media/e4af272ccee01ff0-s.p.woff2 was preloaded using link preload but not used within a few seconds from the window's load event."
+- **Impact:** Low - Performance optimization issue, doesn't affect functionality
 
-**Settings Page (`/dashboard/settings`):**
-- "Billing & U age" instead of "Billing & Usage"
-- "Web ite URL" instead of "Website URL"
-- "Your organization'  web ite URL" instead of "Your organization's website URL"
-- "Email addre  for notification  and  upport" instead of "Email address for notifications and support"
-- "Default AI model u ed for generating lead magnet" instead of "Default AI model used for generating lead magnet"
-- "Save Setting" instead of "Save Settings" (may be intentional, but inconsistent)
+## Testing Coverage
 
-**New Workflow Page (`/dashboard/workflows/new`):**
-- "De cribe your lead magnet idea. AI will generate the name, de cription, re earch in truction , and template HTML for you." instead of "Describe your lead magnet idea. AI will generate the name, description, research instructions, and template HTML for you."
+### Pages Tested
+- ✅ `/auth/login` - Login page (issues found)
+- ⚠️ `/dashboard` - Dashboard (requires authentication)
+- ❌ `/dashboard/workflows` - Not tested (requires authentication)
+- ❌ `/dashboard/jobs` - Not tested (requires authentication)
+- ❌ `/dashboard/artifacts` - Not tested (requires authentication)
+- ❌ `/dashboard/files` - Not tested (requires authentication)
+- ❌ `/dashboard/settings` - Not tested (requires authentication)
 
-**Workflows Page:**
-- Multiple instances of truncated text in table cells
-- Form URLs and descriptions appear truncated
+### Functional Areas Tested
+- ✅ Login form UI rendering
+- ✅ Mobile viewport responsiveness
+- ✅ Form input fields
+- ❌ Authentication flow (blocked by issue #2)
+- ❌ Dashboard navigation (blocked by authentication)
+- ❌ Workflow creation (blocked by authentication)
+- ❌ Job viewing (blocked by authentication)
+- ❌ Settings management (blocked by authentication)
 
-**Jobs Page:**
-- Similar truncation issues in table displays
+## Responsive Design Observations
 
-#### Root Cause Analysis:
-The truncation appears to be caused by:
-1. CSS text-overflow or width constraints that are too restrictive on mobile
-2. Missing responsive text sizing
-3. Fixed widths on text containers that don't account for mobile viewports
-4. Possible font rendering issues on mobile
+### Positive Observations
+- Application uses responsive Tailwind classes (`sm:`, `md:`, `lg:` breakpoints)
+- Mobile-first approach evident in code structure
+- Loading states and skeletons are implemented
+- Touch targets appear appropriately sized
 
-#### Recommendation:
-- Review all text containers for proper responsive sizing
-- Implement text wrapping instead of truncation where appropriate
-- Use responsive font sizes (rem/em instead of fixed px)
-- Test with actual mobile devices to verify font rendering
-- Consider using `text-overflow: ellipsis` only where truncation is intentional (e.g., long URLs)
-
-## Functional Issues
-
-### 2. Forms Route Returns 404 (MEDIUM PRIORITY)
-
-**Severity:** Medium  
-**Impact:** Users cannot access forms list page directly
-
-**Issue:** Navigating to `/dashboard/forms` returns a 404 error.
-
-**Expected Behavior:** Should display a list of forms or redirect to an appropriate page.
-
-**Actual Behavior:** 404 page is displayed.
-
-**Note:** Forms can be accessed via:
-- `/dashboard/forms/[id]/edit` (individual form edit)
-- `/dashboard/forms/new` (create new form)
-- From workflow detail pages
-
-**Recommendation:**
-- Create a forms list page at `/dashboard/forms`
-- Or redirect `/dashboard/forms` to an appropriate existing page
-- Update navigation links if forms list page is not intended
-
-### 3. Button Click Error on Workflows Page (LOW PRIORITY)
-
-**Severity:** Low  
-**Impact:** Intermittent issue with "Create Lead Magnet" button
-
-**Issue:** Attempting to click the "Create Lead Magnet" button on the workflows page resulted in a script execution error.
-
-**Note:** Direct navigation to `/dashboard/workflows/new` works correctly, so this may be an intermittent issue or related to the browser automation tool rather than the actual application.
-
-**Recommendation:**
-- Test manually on actual mobile device
-- Check for JavaScript errors in console
-- Verify button event handlers are properly bound
-
-## UI/UX Observations
-
-### 4. Mobile Menu Functionality
-
-**Status:** ✅ Working  
-The mobile hamburger menu opens and closes correctly. Navigation links function properly.
-
-### 5. Responsive Layout
-
-**Status:** ⚠️ Partially Working  
-- Sidebar navigation is properly hidden/shown on mobile
-- Main content area adjusts to viewport
-- Tables may need horizontal scrolling on mobile (expected behavior for data tables)
-
-### 6. Touch Targets
-
-**Status:** ✅ Good  
-Buttons and interactive elements appear to have adequate touch target sizes for mobile interaction.
-
-### 7. Form Input Fields
-
-**Status:** ✅ Working  
-Form inputs are accessible and functional on mobile. However, text truncation in labels affects usability.
-
-## Pages Tested
-
-1. ✅ Login Page (`/auth/login`)
-2. ✅ Dashboard (`/dashboard`)
-3. ✅ Workflows List (`/dashboard/workflows`)
-4. ✅ New Workflow (`/dashboard/workflows/new`)
-5. ✅ Jobs Page (`/dashboard/jobs`)
-6. ✅ Settings Page (`/dashboard/settings`)
-7. ❌ Forms List (`/dashboard/forms`) - 404 error
-
-## Testing Limitations
-
-1. **Login Testing:** Could not fully test login flow with provided credentials (`canyon@coursecreator360.com` / `Sterling7147!`) as the local development environment may require different authentication setup. The app was already authenticated from a previous session.
-
-2. **Browser Automation:** Some interactions may have been limited by browser automation tools rather than actual application issues.
-
-3. **Real Device Testing:** Testing was conducted in Chrome DevTools responsive mode. Actual mobile devices may show different behavior, especially regarding font rendering and touch interactions.
+### Areas for Improvement
+- Text truncation issues need resolution
+- Form label widths may need adjustment for mobile
+- Need to verify all interactive elements are easily tappable on mobile
 
 ## Recommendations
 
-### Immediate Actions (High Priority):
-1. **Fix text truncation issues** - This is the most critical issue affecting mobile usability
-2. **Create forms list page** or fix routing for `/dashboard/forms`
-3. **Conduct manual testing** on actual mobile devices to verify findings
+### Immediate Actions Required
+1. **Fix authentication form submission** - Investigate why form submission isn't triggering API calls
+2. **Remove credentials from URL** - Ensure form uses POST method and credentials are only in request body
+3. **Fix label truncation** - Adjust CSS to prevent text truncation or use responsive text sizing
 
-### Short-term Improvements:
-1. Implement comprehensive responsive typography system
-2. Add mobile-specific CSS optimizations
-3. Test all form interactions on mobile devices
-4. Review and optimize table displays for mobile
+### Short-term Improvements
+1. Add error messages display testing on mobile
+2. Test all navigation menus on mobile viewport
+3. Verify all modals and dialogs are mobile-friendly
+4. Test form validation messages on mobile
+5. Verify touch targets meet minimum size requirements (44x44px)
 
-### Long-term Enhancements:
-1. Implement mobile-first design approach
-2. Add mobile-specific navigation patterns
-3. Optimize images and assets for mobile
-4. Consider progressive web app (PWA) features
+### Long-term Enhancements
+1. Implement comprehensive mobile testing in CI/CD
+2. Add automated visual regression testing for mobile
+3. Create mobile-specific user flows documentation
+4. Consider mobile app wrapper if native experience is desired
+
+## Technical Details
+
+### Environment
+- **Frontend:** Next.js 14.2.33
+- **Backend API:** Running on localhost:3001
+- **Frontend Dev Server:** Running on localhost:3000
+- **Viewport:** 375x667 (iPhone SE dimensions)
+
+### Browser Console Errors
+- Font preload warning (low priority)
+
+### Network Requests Observed
+- Static asset requests (CSS, JS, fonts)
+- No authentication API requests (issue #2)
+
+## Next Steps
+
+1. **Fix Critical Issues First:**
+   - Resolve authentication form submission
+   - Remove credentials from URL
+   - Fix label truncation
+
+2. **Re-test After Fixes:**
+   - Complete full mobile QA pass with authentication working
+   - Test all dashboard sections
+   - Test workflow creation and editing
+   - Test job viewing and management
+   - Test settings pages
+
+3. **Expand Testing:**
+   - Test on multiple mobile viewport sizes
+   - Test on actual mobile devices
+   - Test touch interactions
+   - Test mobile-specific features (swipe, pinch, etc.)
 
 ## Conclusion
 
-The Lead Magnet AI Platform is **functionally operational** on mobile devices, with core features working as expected. However, **text truncation issues significantly impact readability and user experience**. These issues should be addressed as a high priority to ensure the application is fully usable on mobile devices.
-
-The application demonstrates good responsive design principles in terms of layout and navigation, but typography and text rendering need attention for optimal mobile experience.
+The application shows good responsive design foundations but has critical authentication issues that prevent full mobile testing. Once authentication is fixed, a complete mobile QA pass should be conducted to verify all functionality works correctly on mobile devices.
 
 ---
 
-**Next Steps:**
-1. Review and fix text truncation CSS issues
-2. Create or fix forms list page routing
-3. Conduct manual testing on real mobile devices
-4. Implement fixes and re-test
-
+**Report Generated:** 2025-01-27  
+**Status:** ⚠️ Blocked by authentication issues - Partial testing completed
