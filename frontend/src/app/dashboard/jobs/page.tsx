@@ -204,7 +204,7 @@ export default function JobsPage() {
       setWorkflowFilter={filters.setWorkflowFilter}
       workflows={workflows}
     >
-      <div>
+      <div className="max-w-7xl mx-auto">
         <div className="mb-4 sm:mb-6">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-0">
             <div>

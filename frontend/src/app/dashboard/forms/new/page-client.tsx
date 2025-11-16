@@ -141,7 +141,7 @@ export default function NewFormClient() {
   }
 
   return (
-    <div>
+    <div className="max-w-7xl mx-auto">
       <div className="mb-6">
         <button
           onClick={() => router.back()}

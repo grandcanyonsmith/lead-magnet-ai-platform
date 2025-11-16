@@ -227,14 +227,16 @@ export default function EditWorkflowPage() {
 
   if (loading) {
     return (
-      <div className="text-center py-12">
-        <p className="text-gray-600">Loading workflow...</p>
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center py-12">
+          <p className="text-gray-600">Loading workflow...</p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div>
+    <div className="max-w-7xl mx-auto">
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div>

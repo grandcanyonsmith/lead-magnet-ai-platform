@@ -175,10 +175,12 @@ export default function EditFormClient() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="h-8 bg-gray-200 rounded w-48 animate-pulse"></div>
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="h-64 bg-gray-200 rounded animate-pulse"></div>
+      <div className="max-w-7xl mx-auto">
+        <div className="space-y-6">
+          <div className="h-8 bg-gray-200 rounded w-48 animate-pulse"></div>
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="h-64 bg-gray-200 rounded animate-pulse"></div>
+          </div>
         </div>
       </div>
     )
@@ -186,7 +188,7 @@ export default function EditFormClient() {
 
   if (error && !formFormData.form_name) {
     return (
-      <div>
+      <div className="max-w-7xl mx-auto">
         <div className="mb-6">
           <button
             onClick={() => router.back()}
@@ -204,7 +206,7 @@ export default function EditFormClient() {
   }
 
   return (
-    <div>
+    <div className="max-w-7xl mx-auto">
       <div className="mb-6">
         <button
           onClick={() => router.back()}

@@ -171,7 +171,7 @@ export default function JobDetailClient() {
   }
 
   return (
-    <div>
+    <div className="max-w-7xl mx-auto">
       <JobHeader error={error} resubmitting={resubmitting} onResubmit={state.openResubmitModal} job={job} />
       
       <ResubmitModal

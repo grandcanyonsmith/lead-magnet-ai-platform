@@ -128,15 +128,17 @@ export default function WorkflowDetailPage() {
 
   if (loading) {
     return (
-      <div className="text-center py-12">
-        <p className="text-gray-600">Loading workflow...</p>
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center py-12">
+          <p className="text-gray-600">Loading workflow...</p>
+        </div>
       </div>
     )
   }
 
   if (error && !workflow) {
     return (
-      <div>
+      <div className="max-w-7xl mx-auto">
         <div className="mb-6">
           <button
             onClick={() => router.back()}
@@ -158,7 +160,7 @@ export default function WorkflowDetailPage() {
   }
 
   return (
-    <div>
+    <div className="max-w-7xl mx-auto">
       <div className="mb-4 sm:mb-6">
         <button
           onClick={() => router.back()}

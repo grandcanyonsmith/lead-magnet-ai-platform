@@ -197,7 +197,7 @@ export default function WorkflowsPage() {
   }
 
   return (
-    <div>
+    <div className="max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6">
         <div className="mb-2 sm:mb-0">
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-1">Lead Magnets</h1>
