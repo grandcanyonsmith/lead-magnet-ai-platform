@@ -14,6 +14,7 @@ export { SectionCard } from './SectionCard'
 export { KeyValueList } from './KeyValueList'
 export { StatPill } from './StatPill'
 export { VisuallyHidden } from './VisuallyHidden'
+export { CanyonButton } from './CanyonButton'
 
 // Legacy components for backward compatibility
 interface LoadingSpinnerProps {
