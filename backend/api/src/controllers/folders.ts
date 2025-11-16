@@ -15,6 +15,7 @@ if (!FOLDERS_TABLE) {
 }
 
 class FoldersController extends BaseController {
+  // @ts-expect-error - Public method with custom signature for routes; base method is protected with different signature
   async list(tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {
     if (!FOLDERS_TABLE) {
       throw new ApiError('FOLDERS_TABLE environment variable is not configured', 500);
@@ -81,19 +82,18 @@ class FoldersController extends BaseController {
     }
   }
 
+  // @ts-expect-error - Public method with custom signature for routes; base method is protected with different signature
   async get(tenantId: string, folderId: string): Promise<RouteResponse> {
     if (!FOLDERS_TABLE) {
       throw new ApiError('FOLDERS_TABLE environment variable is not configured', 500);
     }
 
-    const folder = await this.validateTenantAccess<Folder>(
+    return super.get<Folder>(
       FOLDERS_TABLE!,
       { folder_id: folderId },
       tenantId,
       'folder'
     );
-
-    return this.success(folder);
   }
 
   async create(tenantId: string, body: any): Promise<RouteResponse> {
@@ -124,46 +124,44 @@ class FoldersController extends BaseController {
     return this.created(folder);
   }
 
+  // @ts-expect-error - Public method with custom signature for routes; base method is protected with different signature
   async update(tenantId: string, folderId: string, body: any): Promise<RouteResponse> {
     if (!FOLDERS_TABLE) {
       throw new ApiError('FOLDERS_TABLE environment variable is not configured', 500);
     }
 
-    const existing = await this.validateTenantAccess<Folder>(
-      FOLDERS_TABLE!,
-      { folder_id: folderId },
-      tenantId,
-      'folder'
-    );
-
     const data = validate(updateFolderSchema, body);
 
-    const updates: Partial<Folder> = {
-      updated_at: new Date().toISOString(),
-    };
-
+    const updates: Partial<Folder> = {};
     if (data.folder_name !== undefined) {
       updates.folder_name = data.folder_name;
     }
 
-    await db.update(FOLDERS_TABLE!, { folder_id: folderId }, updates);
-
-    const updated = { ...existing, ...updates };
+    // Use base update method which handles tenant validation and updated_at
+    const result = await super.update<Folder>(
+      FOLDERS_TABLE!,
+      { folder_id: folderId },
+      updates,
+      tenantId,
+      'folder'
+    );
 
     logger.info('[Folders Update] Folder updated', {
       folderId,
       tenantId,
     });
 
-    return this.success(updated);
+    return result;
   }
 
+  // @ts-expect-error - Public method with custom signature for routes; base method is protected with different signature
   async delete(tenantId: string, folderId: string): Promise<RouteResponse> {
     if (!FOLDERS_TABLE) {
       throw new ApiError('FOLDERS_TABLE environment variable is not configured', 500);
     }
 
-    const folder = await this.validateTenantAccess<Folder>(
+    // Validate tenant access first
+    await this.validateTenantAccess<Folder>(
       FOLDERS_TABLE!,
       { folder_id: folderId },
       tenantId,
