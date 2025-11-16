@@ -10,6 +10,7 @@ import { MergedStep, StepStatus } from '@/types/job'
 import { formatDurationMs, formatRelativeTime } from '@/utils/jobFormatting'
 import { FiEdit2, FiRefreshCw, FiLoader, FiCheckCircle, FiCircle, FiXCircle, FiMoreVertical } from 'react-icons/fi'
 import { Tooltip } from '@/components/ui/Tooltip'
+import { ToolBadgeList } from './ToolBadgeList'
 
 const STEP_TYPE_COLORS: Record<string, string> = {
   form_submission: 'bg-blue-100 text-blue-800',
@@ -85,14 +86,6 @@ interface StepHeaderProps {
   onRerunStep?: (stepIndex: number) => Promise<void>
 }
 
-// Type for tool - can be a string or an object with a type property
-type Tool = string | { type: string; [key: string]: unknown }
-
-// Helper to get tool name from tool object or string
-function getToolName(tool: Tool): string {
-  return typeof tool === 'string' ? tool : (tool.type || 'unknown')
-}
-
 // Render status icon inline
 function renderStatusIcon(status: StepStatus) {
   const iconClass = "w-5 h-5 flex-shrink-0"
@@ -107,38 +100,6 @@ function renderStatusIcon(status: StepStatus) {
     default:
       return <FiCircle className={`${iconClass} text-gray-400`} />
   }
-}
-
-// Render tool badges inline
-function renderToolBadges(tools?: string[] | unknown[], toolChoice?: string) {
-  if (!tools || !Array.isArray(tools) || tools.length === 0) {
-    return (
-      <span className="px-2 py-0.5 text-xs bg-gray-50 text-gray-600 rounded border border-gray-200">
-        None
-      </span>
-    )
-  }
-
-  return (
-    <>
-      <div className="flex flex-wrap gap-1">
-        {tools.map((tool, toolIdx) => {
-          const toolName = getToolName(tool as Tool)
-          return (
-            <span
-              key={toolIdx}
-              className="px-2 py-0.5 text-xs bg-blue-50 text-blue-700 rounded border border-blue-200 whitespace-nowrap"
-            >
-              {toolName}
-            </span>
-          )
-        })}
-      </div>
-      {toolChoice && (
-        <span className="text-gray-500">({toolChoice})</span>
-      )}
-    </>
-  )
 }
 
 export function StepHeader({
@@ -265,7 +226,7 @@ export function StepHeader({
         {!isPending && (
           <div className="flex items-center flex-wrap gap-1.5 text-xs">
             <span className="text-gray-500 font-medium">Tools:</span>
-            {renderToolBadges(step.input?.tools || step.tools, step.input?.tool_choice || step.tool_choice)}
+            <ToolBadgeList tools={step.input?.tools || step.tools} toolChoice={step.input?.tool_choice || step.tool_choice} />
           </div>
         )}
       </div>

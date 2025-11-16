@@ -60,7 +60,7 @@ function normalizeFilename(filename: string): string {
  * @param imageArtifacts - Image artifacts from the useImageArtifacts hook
  * @returns Array of unique files to display, ordered by priority
  */
-function collectStepOutputImageUrls(step: MergedStep): string[] {
+export function collectStepOutputImageUrls(step: MergedStep): string[] {
   if (!step.output) {
     return []
   }

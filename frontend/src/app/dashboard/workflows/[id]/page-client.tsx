@@ -1,29 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { FiArrowLeft, FiEdit, FiTrash2, FiClock, FiCheckCircle, FiXCircle, FiExternalLink, FiLink, FiZap, FiSettings, FiFileText, FiCalendar, FiCopy } from 'react-icons/fi'
+import { useWorkflowId } from '@/hooks/useWorkflowId'
 
 export default function WorkflowDetailPage() {
   const router = useRouter()
-  const params = useParams()
-  // Extract workflow ID from params, or fallback to URL pathname if param is '_' (Vercel rewrite)
-  const getWorkflowId = () => {
-    const paramId = params?.id as string
-    if (paramId && paramId !== '_') {
-      return paramId
-    }
-    // Fallback: extract from browser URL
-    if (typeof window !== 'undefined') {
-      const pathMatch = window.location.pathname.match(/\/dashboard\/workflows\/([^/]+)/)
-      if (pathMatch && pathMatch[1] && pathMatch[1] !== '_') {
-        return pathMatch[1]
-      }
-    }
-    return paramId || ''
-  }
-  const workflowId = getWorkflowId()
+  const workflowId = useWorkflowId()
   
   const [workflow, setWorkflow] = useState<any>(null)
   const [jobs, setJobs] = useState<any[]>([])
@@ -33,15 +18,16 @@ export default function WorkflowDetailPage() {
   const [creatingForm, setCreatingForm] = useState(false)
 
   useEffect(() => {
-    if (workflowId) {
-      Promise.all([loadWorkflow(), loadJobs()])
+    if (!workflowId || workflowId.trim() === '' || workflowId === '_') {
+      return
     }
+    Promise.all([loadWorkflow(workflowId), loadJobs(workflowId)])
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workflowId])
 
-  const loadWorkflow = async () => {
+  const loadWorkflow = async (id: string = workflowId) => {
     try {
-      const data = await api.getWorkflow(workflowId)
+      const data = await api.getWorkflow(id)
       setWorkflow(data)
       setError(null)
     } catch (error: any) {
@@ -51,9 +37,9 @@ export default function WorkflowDetailPage() {
     }
   }
 
-  const loadJobs = async () => {
+  const loadJobs = async (id: string = workflowId) => {
     try {
-      const data = await api.getJobs({ workflow_id: workflowId, limit: 10 })
+      const data = await api.getJobs({ workflow_id: id, limit: 10 })
       const jobsList = data.jobs || []
       setJobs(jobsList)
       

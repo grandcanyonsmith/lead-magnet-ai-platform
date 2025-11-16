@@ -8,6 +8,7 @@
 import { FiCpu } from 'react-icons/fi'
 import { PreviewRenderer } from '@/components/artifacts/PreviewRenderer'
 import { Artifact } from '@/types/artifact'
+import { ToolBadgeList } from './ToolBadgeList'
 
 interface ImagePreviewProps {
   imageUrl?: string
@@ -16,14 +17,6 @@ interface ImagePreviewProps {
   model?: string
   tools?: string[] | unknown[]
   toolChoice?: string
-}
-
-// Type for tool - can be a string or an object with a type property
-type Tool = string | { type: string; [key: string]: unknown }
-
-// Helper to get tool name from tool object or string
-function getToolName(tool: Tool): string {
-  return typeof tool === 'string' ? tool : (tool.type || 'unknown')
 }
 
 export function ImagePreview({ imageUrl, artifact, imageIndex = 0, model, tools, toolChoice }: ImagePreviewProps) {
@@ -49,22 +42,13 @@ export function ImagePreview({ imageUrl, artifact, imageIndex = 0, model, tools,
             </span>
           )}
           {hasTools && (
-            <>
-              {tools.map((tool, toolIdx) => {
-                const toolName = getToolName(tool as Tool)
-                return (
-                  <span
-                    key={toolIdx}
-                    className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 border border-blue-200 whitespace-nowrap"
-                  >
-                    {toolName}
-                  </span>
-                )
-              })}
-              {toolChoice && toolChoice !== 'auto' && (
-                <span className="text-xs text-gray-500">({toolChoice})</span>
-              )}
-            </>
+            <ToolBadgeList
+              tools={tools}
+              toolChoice={toolChoice && toolChoice !== 'auto' ? toolChoice : undefined}
+              showEmptyState={false}
+              className="flex flex-wrap gap-1"
+              badgeClassName="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 border border-blue-200 whitespace-nowrap"
+            />
           )}
         </div>
       )}

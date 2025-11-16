@@ -4,12 +4,9 @@ import { useMemo } from 'react'
 import { FiChevronDown, FiChevronUp } from 'react-icons/fi'
 import { MergedStep } from '@/types/job'
 import { useImageArtifacts } from '@/hooks/useImageArtifacts'
-import { StepHeader } from './StepHeader'
-import { StepInputOutput } from './StepInputOutput'
 import { StepProgressBar } from './StepProgressBar'
-import { ImagePreview } from './ImagePreview'
 import { getStepStatus, getPreviousSteps, getFormSubmission } from './utils'
-import { deduplicateStepFiles } from '@/utils/fileDeduplication'
+import { StepCard } from './StepCard'
 
 interface ExecutionStepsProps {
   steps: MergedStep[]
@@ -107,105 +104,26 @@ export function ExecutionSteps({
             const stepOrder = step.step_order ?? 0
             const isExpanded = expandedSteps.has(stepOrder)
             const stepStatus = getStepStatusForStep(step)
-            const isPending = stepStatus === 'pending'
-            const isInProgress = stepStatus === 'in_progress'
-            const isFailed = stepStatus === 'failed'
-            const isRerunning = rerunningStep !== null && stepOrder > 0 && rerunningStep === stepOrder - 1
-            const isCompleted = stepStatus === 'completed'
-
-            // Enhanced className based on status with better visual separation
-            const stepClassName = (() => {
-              if (isRerunning) {
-                return 'border-blue-500 bg-blue-50/90 shadow-lg ring-1 ring-blue-200'
-              }
-              if (isInProgress) {
-                return 'border-blue-400 bg-blue-50/80 shadow-md ring-1 ring-blue-100'
-              }
-              if (isFailed) {
-                return 'border-red-300 bg-red-50/80 shadow-md'
-              }
-              if (isCompleted) {
-                return 'border-green-200 bg-white shadow-sm'
-              }
-              return 'border-gray-300 bg-gray-50/50 shadow-sm'
-            })()
+            const imageArtifacts = imageArtifactsByStep.get(stepOrder) || []
 
             return (
-              <div 
-                key={stepOrder} 
-                className={`border-2 rounded-xl transition-all hover:shadow-md ${stepClassName}`}
-                data-step-status={stepStatus}
-                data-step-order={stepOrder}
-              >
-                <StepHeader
-                  step={step}
-                  status={stepStatus}
-                  jobStatus={jobStatus}
-                  canEdit={canEdit}
-                  rerunningStep={rerunningStep}
-                  onEditStep={onEditStep}
-                  onRerunStep={onRerunStep}
-                />
-
-                <StepInputOutput
-                  step={step}
-                  status={stepStatus}
-                  isExpanded={isExpanded}
-                  onToggle={() => onToggleStep(stepOrder)}
-                  onCopy={onCopy}
-                  previousSteps={getPreviousSteps(step, sortedSteps)}
-                  formSubmission={formSubmission}
-                  imageArtifacts={imageArtifactsByStep.get(stepOrder) || []}
-                  loadingImageArtifacts={loadingImageArtifacts}
-                  onEditStep={onEditStep}
-                  canEdit={canEdit}
-                />
-
-                {/* Show generated files/images in preview with deduplication */}
-                {(() => {
-                  const stepImageArtifacts = imageArtifactsByStep.get(stepOrder) || []
-                  const filesToShow = deduplicateStepFiles(step, stepImageArtifacts)
-                  
-                  if (filesToShow.length > 0) {
-                    return (
-                      <div className="px-3 sm:px-4 pb-3 sm:pb-4">
-                        {filesToShow.map((file) => {
-                          if (file.type === 'imageArtifact') {
-                            // Type guard: file.data is Artifact when type is 'imageArtifact'
-                            const artifact = file.data as import('@/types/artifact').Artifact
-                            return (
-                              <ImagePreview
-                                key={file.key}
-                                artifact={artifact}
-                                imageIndex={0}
-                                model={step.model}
-                                tools={step.input?.tools || step.tools}
-                                toolChoice={step.input?.tool_choice || step.tool_choice}
-                              />
-                            )
-                          } else if (file.type === 'imageUrl') {
-                            // Type guard: file.data is string when type is 'imageUrl'
-                            const imageUrl = file.data as string
-                            return (
-                              <ImagePreview
-                                key={file.key}
-                                imageUrl={imageUrl}
-                                imageIndex={0}
-                                model={step.model}
-                                tools={step.input?.tools || step.tools}
-                                toolChoice={step.input?.tool_choice || step.tool_choice}
-                              />
-                            )
-                          }
-                          return null
-                        })}
-                      </div>
-                    )
-                  }
-                  
-                  return null
-                })()}
-              </div>
+              <StepCard
+                key={stepOrder}
+                step={step}
+                status={stepStatus}
+                jobStatus={jobStatus}
+                rerunningStep={rerunningStep}
+                isExpanded={isExpanded}
+                onToggle={() => onToggleStep(stepOrder)}
+                onCopy={onCopy}
+                previousSteps={getPreviousSteps(step, sortedSteps)}
+                formSubmission={formSubmission}
+                imageArtifacts={imageArtifacts}
+                loadingImageArtifacts={loadingImageArtifacts}
+                onRerunStep={onRerunStep}
+                onEditStep={onEditStep}
+                canEdit={canEdit}
+              />
             )
           })}
         </div>
