@@ -13,12 +13,27 @@ function hasCompleted(step: MergedStep): boolean {
 
 /**
  * Determine step status based on step data and job status
+ * 
+ * @param step - Step to determine status for
+ * @param sortedSteps - All steps sorted by order
+ * @param jobStatus - Current job status
+ * @param rerunningStep - Zero-based index of step being rerun (optional)
  */
 export function getStepStatus(
   step: MergedStep,
   sortedSteps: MergedStep[],
-  jobStatus?: string
+  jobStatus?: string,
+  rerunningStep?: number | null
 ): StepStatus {
+  // Check if this step is being rerun (Bug 2.1, 2.3 fix)
+  const stepOrder = step.step_order ?? 0
+  const isBeingRerun = rerunningStep !== null && rerunningStep !== undefined && stepOrder > 0 && rerunningStep === stepOrder - 1
+  
+  // If step is being rerun, show as in_progress (Bug 2.1, 2.3 fix)
+  if (isBeingRerun) {
+    return 'in_progress'
+  }
+
   // Use explicit status if provided
   if (step._status) {
     return step._status

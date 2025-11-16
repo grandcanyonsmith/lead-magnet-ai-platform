@@ -9,7 +9,7 @@ import { StepInputOutput } from './StepInputOutput'
 import { StepProgressBar } from './StepProgressBar'
 import { ImagePreview } from './ImagePreview'
 import { getStepStatus, getPreviousSteps, getFormSubmission } from './utils'
-import { Artifact } from '@/types/artifact'
+import { deduplicateStepFiles } from '@/utils/fileDeduplication'
 
 interface ExecutionStepsProps {
   steps: MergedStep[]
@@ -62,7 +62,7 @@ export function ExecutionSteps({
 
   // Helper function for step status (not memoized - simple computation)
   const getStepStatusForStep = (step: MergedStep) => {
-    return getStepStatus(step, sortedSteps, jobStatus)
+    return getStepStatus(step, sortedSteps, jobStatus, rerunningStep)
   }
 
   if (!steps || steps.length === 0) {
@@ -148,102 +148,20 @@ export function ExecutionSteps({
 
                 {/* Show generated files/images in preview with deduplication */}
                 {(() => {
-                  const stepImageUrls = (step.image_urls && Array.isArray(step.image_urls) && step.image_urls.length > 0) ? step.image_urls : []
                   const stepImageArtifacts = imageArtifactsByStep.get(stepOrder) || []
-                  const mainArtifactId = step.artifact_id
+                  const filesToShow = deduplicateStepFiles(step, stepImageArtifacts)
                   
-                  // Helper to extract filename from URL
-                  const getFilenameFromUrl = (url: string): string => {
-                    try {
-                      const urlObj = new URL(url)
-                      const pathname = urlObj.pathname
-                      const filename = pathname.split('/').pop() || ''
-                      return filename
-                    } catch {
-                      // If URL parsing fails, try to extract from string
-                      const parts = url.split('/')
-                      return parts[parts.length - 1] || url
-                    }
-                  }
-                  
-                  // Helper to normalize filename for comparison (remove query params, etc.)
-                  const normalizeFilename = (filename: string): string => {
-                    return filename.split('?')[0].toLowerCase()
-                  }
-                  
-                  // Get main artifact filename if it exists (we'll fetch it if needed)
-                  // For now, we'll use a simpler approach: collect all unique files
-                  const displayedFiles = new Set<string>()
-                  const filesToShow: Array<{ type: 'artifact' | 'imageArtifact' | 'imageUrl', data: any, key: string }> = []
-                  
-                  // Priority 1: Main artifact (step.artifact_id) - shown in Output section, skip here to avoid duplicates
-                  if (mainArtifactId) {
-                    displayedFiles.add(`artifact:${mainArtifactId}`)
-                  }
-                  
-                  // Priority 2: Image artifacts (from imageArtifacts hook)
-                  stepImageArtifacts.forEach((artifact: Artifact) => {
-                    const artifactId = artifact.artifact_id
-                    const fileName = artifact.file_name || artifact.artifact_name || ''
-                    const normalizedName = normalizeFilename(fileName)
-                    
-                    // Skip if this is the main artifact
-                    if (artifactId === mainArtifactId) {
-                      return
-                    }
-                    
-                    // Skip if we've already seen this filename from another source
-                    if (normalizedName && displayedFiles.has(`filename:${normalizedName}`)) {
-                      return
-                    }
-                    
-                    displayedFiles.add(`filename:${normalizedName}`)
-                    displayedFiles.add(`artifact:${artifactId}`)
-                    filesToShow.push({
-                      type: 'imageArtifact',
-                      data: artifact,
-                      key: `image-artifact-${artifactId}`
-                    })
-                  })
-                  
-                  // Priority 3: Image URLs (from step.image_urls)
-                  stepImageUrls.forEach((imageUrl: string, idx: number) => {
-                    const filename = getFilenameFromUrl(imageUrl)
-                    const normalizedName = normalizeFilename(filename)
-                    
-                    // Skip if we've already seen this filename
-                    if (normalizedName && displayedFiles.has(`filename:${normalizedName}`)) {
-                      return
-                    }
-                    
-                    // Check if this URL matches any artifact we're already showing
-                    const matchesExistingArtifact = stepImageArtifacts.some((artifact: Artifact) => {
-                      const artifactUrl = artifact.object_url || artifact.public_url
-                      return artifactUrl === imageUrl || normalizeFilename(artifact.file_name || artifact.artifact_name || '') === normalizedName
-                    })
-                    
-                    if (matchesExistingArtifact) {
-                      return
-                    }
-                    
-                    displayedFiles.add(`filename:${normalizedName}`)
-                    filesToShow.push({
-                      type: 'imageUrl',
-                      data: imageUrl,
-                      key: `image-url-${idx}`
-                    })
-                  })
-                  
-                  // Render unique files
                   if (filesToShow.length > 0) {
                     return (
                       <div className="px-3 sm:px-4 pb-3 sm:pb-4">
                         {filesToShow.map((file) => {
                           if (file.type === 'imageArtifact') {
+                            // Type guard: file.data is Artifact when type is 'imageArtifact'
+                            const artifact = file.data as import('@/types/artifact').Artifact
                             return (
                               <ImagePreview
                                 key={file.key}
-                                artifact={file.data}
+                                artifact={artifact}
                                 imageIndex={0}
                                 model={step.model}
                                 tools={step.input?.tools || step.tools}
@@ -251,10 +169,12 @@ export function ExecutionSteps({
                               />
                             )
                           } else if (file.type === 'imageUrl') {
+                            // Type guard: file.data is string when type is 'imageUrl'
+                            const imageUrl = file.data as string
                             return (
                               <ImagePreview
                                 key={file.key}
-                                imageUrl={file.data}
+                                imageUrl={imageUrl}
                                 imageIndex={0}
                                 model={step.model}
                                 tools={step.input?.tools || step.tools}
