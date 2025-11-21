@@ -85,71 +85,62 @@ export function ContextSection({
   const formText = stringifyFormSubmission(formSubmission)
   const formImageUrls = formText ? extractImageUrls(formText) : []
 
+  const entries: { title: string; subtitle: string; body: string; images: string[] }[] = []
+
+  if (hasFormData) {
+    entries.push({
+      title: 'Form Submission',
+      subtitle: 'Step 0',
+      body: formText,
+      images: formImageUrls,
+    })
+  }
+
+  previousSteps.forEach((step) => {
+    const stepOutput =
+      typeof step.output === 'string'
+        ? step.output
+        : step.output !== null && step.output !== undefined
+          ? JSON.stringify(step.output, null, 2)
+          : ''
+    const stepImageUrls = extractImageUrls(stepOutput)
+    entries.push({
+      title: step.step_name || `Step ${step.step_order}`,
+      subtitle: `Step ${step.step_order}`,
+      body: stepOutput,
+      images: stepImageUrls,
+    })
+  })
+
   return (
-    <div className="mb-5 md:mb-4 pb-5 md:pb-4 border-b border-gray-200">
-      <div className="text-sm md:text-xs font-medium text-gray-700 mb-3 md:mb-2">
-        Context from Previous Steps:
-      </div>
-
-      {hasFormData && (
-        <div className="mb-2">
-          <div className="text-sm md:text-xs font-medium text-gray-600 mb-2 md:mb-1">
-            Form Submission <span className="text-gray-500">(Step 0)</span>
-          </div>
-          <div className="text-sm md:text-xs text-gray-700 whitespace-pre-wrap font-mono overflow-x-auto bg-gray-50 p-3 md:p-2.5 rounded-lg border border-gray-200 max-h-32 overflow-y-auto scrollbar-hide-until-hover leading-relaxed">
-            {renderTextWithImages(formText)}
-          </div>
-          {formImageUrls.length > 0 && (
-            <div className="mt-4 space-y-4 md:space-y-2">
-              {formImageUrls.map((url, idx) => (
-                <InlineImage key={`form-image-${idx}`} url={url} alt={`Form submission image ${idx + 1}`} />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {previousSteps.map((step, index) => {
-        const stepOutput =
-          typeof step.output === 'string'
-            ? step.output
-            : step.output !== null && step.output !== undefined
-              ? JSON.stringify(step.output, null, 2)
-              : ''
-        const stepImageUrls = extractImageUrls(stepOutput)
-
-        return (
-          <div key={`${currentStepOrder}-prev-${step.step_order}-${index}`} className="mb-2 last:mb-0">
-            <div className="text-sm md:text-xs font-medium text-gray-600 mb-2 md:mb-1">
-              {step.step_name || `Step ${step.step_order}`}{' '}
-              <span className="text-gray-500">(Step {step.step_order})</span>
-            </div>
-            <div className="text-sm md:text-xs text-gray-700 whitespace-pre-wrap font-mono overflow-x-auto bg-gray-50 p-3 md:p-2.5 rounded-lg border border-gray-200 max-h-32 overflow-y-auto scrollbar-hide-until-hover leading-relaxed">
-              {renderTextWithImages(stepOutput)}
-            </div>
-            {stepImageUrls.length > 0 && (
-              <div className="mt-4 md:mt-2 space-y-4 md:space-y-2">
-                {stepImageUrls.map((url, idx) => (
-                  <InlineImage key={`step-output-image-${idx}`} url={url} alt={`Step ${step.step_order} output image ${idx + 1}`} />
-                ))}
+    <div className="mb-5 md:mb-4 pb-5 md:pb-4 border-b border-white/60 space-y-2">
+      <div className="flex flex-wrap gap-2">
+        {entries.map((entry, idx) => (
+          <details
+            key={`${currentStepOrder}-context-${idx}`}
+            className="group rounded-full border border-white/60 bg-white shadow-soft overflow-hidden"
+          >
+            <summary className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-ink-800 cursor-pointer">
+              <span className="truncate max-w-[220px]">
+                {entry.title} <span className="text-ink-500 font-normal">({entry.subtitle})</span>
+              </span>
+              <span className="text-ink-400">↕</span>
+            </summary>
+            <div className="px-3 pb-3 md:px-3 md:pb-3 space-y-3 bg-white">
+              <div className="text-sm md:text-xs text-ink-800 whitespace-pre-wrap font-mono overflow-x-auto bg-surface-50 p-3 md:p-2.5 rounded-2xl border border-white/60 max-h-40 overflow-y-auto scrollbar-hide-until-hover leading-relaxed">
+                {renderTextWithImages(entry.body || 'No context')}
               </div>
-            )}
-            {step.image_urls && step.image_urls.length > 0 && (
-              <div className="mt-4 md:mt-2">
-                <div className="text-sm md:text-xs font-medium text-gray-600 mb-3 md:mb-1">
-                  Generated Images:
-                </div>
-                <div className="space-y-4 md:space-y-2">
-                  {step.image_urls.map((url: string, idx: number) => (
-                    <InlineImage key={`step-image-url-${idx}`} url={url} alt={`Generated image ${idx + 1}`} />
+              {entry.images.length > 0 && (
+                <div className="space-y-2 md:space-y-1">
+                  {entry.images.map((url, imageIdx) => (
+                    <InlineImage key={`context-image-${idx}-${imageIdx}`} url={url} alt={`${entry.title} image ${imageIdx + 1}`} />
                   ))}
                 </div>
-              </div>
-            )}
-          </div>
-        )
-      })}
+              )}
+            </div>
+          </details>
+        ))}
+      </div>
     </div>
   )
 }
-

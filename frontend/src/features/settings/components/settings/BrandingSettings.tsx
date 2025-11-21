@@ -26,10 +26,10 @@ export function BrandingSettings({ settings, onChange, errors }: BrandingSetting
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-6 space-y-6">
+    <div className="bg-white rounded-2xl shadow-soft border border-white/60 p-6 space-y-6">
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Branding</h3>
-        <p className="text-sm text-gray-600 mb-6">
+        <h3 className="text-lg font-semibold text-ink-900 mb-2">Branding</h3>
+        <p className="text-sm text-ink-600 mb-4">
           Customize your branding that appears on all forms and lead magnets.
         </p>
       </div>
@@ -39,7 +39,7 @@ export function BrandingSettings({ settings, onChange, errors }: BrandingSetting
           label={
             <>
               Logo URL
-              <span className="ml-2 text-xs text-gray-500" title="Logo URL that will appear on all forms">
+              <span className="ml-2 text-xs text-ink-500" title="Logo URL that will appear on all forms">
                 ℹ️
               </span>
             </>
@@ -55,11 +55,11 @@ export function BrandingSettings({ settings, onChange, errors }: BrandingSetting
 
         {settings.logo_url && !imageError && (
           <div className="mt-3">
-            <p className="text-sm text-gray-600 mb-2">Preview:</p>
+            <p className="text-sm text-ink-600 mb-2">Preview:</p>
             <img
               src={settings.logo_url}
               alt="Logo preview"
-              className="max-h-20 max-w-xs border border-gray-200 rounded"
+              className="max-h-20 max-w-xs border border-white/60 rounded-2xl"
               onError={handleImageError}
               onLoad={handleImageLoad}
             />
@@ -67,16 +67,16 @@ export function BrandingSettings({ settings, onChange, errors }: BrandingSetting
         )}
 
         {imageError && (
-          <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-2xl">
             <p className="text-sm text-red-700">
               Failed to load image. Please check that the URL is correct and the image is publicly accessible.
             </p>
           </div>
         )}
 
-        <div className="border-t border-gray-200 pt-6">
-          <h4 className="text-md font-medium text-gray-900 mb-4">Brand Information</h4>
-          <p className="text-sm text-gray-600 mb-4">
+        <div className="border-t border-white/60 pt-6">
+          <h4 className="text-base font-medium text-ink-900 mb-3">Brand Information</h4>
+          <p className="text-sm text-ink-600 mb-4">
             Provide detailed information about your brand. This will be used as context when generating lead magnets to ensure they align with your brand voice and target audience.
           </p>
           
@@ -160,9 +160,9 @@ export function BrandingSettings({ settings, onChange, errors }: BrandingSetting
           </div>
         </div>
 
-        <div className="border-t border-gray-200 pt-6">
-          <h4 className="text-md font-medium text-gray-900 mb-4">Ideal Customer Profile (ICP)</h4>
-          <p className="text-sm text-gray-600 mb-4">
+        <div className="border-t border-white/60 pt-6">
+          <h4 className="text-base font-medium text-ink-900 mb-3">Ideal Customer Profile (ICP)</h4>
+          <p className="text-sm text-ink-600 mb-4">
             Provide a URL to an ICP document that will be referenced when generating lead magnets. This helps ensure generated content is tailored to your ideal customer profile.
           </p>
           
@@ -181,4 +181,3 @@ export function BrandingSettings({ settings, onChange, errors }: BrandingSetting
     </div>
   )
 }
-

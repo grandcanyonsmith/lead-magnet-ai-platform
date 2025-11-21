@@ -1,6 +1,7 @@
 import { Artifact } from '@/features/artifacts/types'
 import { MergedStep } from '@/features/jobs/types'
 import { collectStepOutputImageUrls, deduplicateStepFiles, type FileToShow } from '@/shared/utils/fileDeduplication'
+import { isLikelyImageUrl } from '@/shared/utils/imageUtils'
 
 export type ToolValue = string | { type?: string; [key: string]: unknown }
 
@@ -54,23 +55,33 @@ export function getMergedImageUrls(step: MergedStep): string[] {
 
   return Array.from(
     new Set(
-      [...stepUrls, ...outputUrls].filter(
-        (url): url is string => typeof url === 'string' && url.length > 0
-      )
+      [...stepUrls, ...outputUrls]
+        .filter((url): url is string => typeof url === 'string' && url.length > 0)
+        .filter((url) => isLikelyImageUrl(url))
     )
   )
 }
 
+export function isImageArtifact(artifact: Artifact): boolean {
+  if (!artifact) return false
+  const contentType = artifact.content_type || ''
+  const fileName = artifact.file_name || artifact.artifact_name || ''
+  const isImageMime = typeof contentType === 'string' && contentType.toLowerCase().startsWith('image/')
+  const isImageExt = typeof fileName === 'string' && /\.(png|jpe?g)$/i.test(fileName)
+  return isImageMime || isImageExt
+}
+
 export function stepUsesImageGeneration(step: MergedStep, artifacts: Artifact[]): boolean {
-  if (artifacts.length > 0) {
-    return true
-  }
+  const toolNames = getStepToolNames(step).map((name) => name.toLowerCase())
+  const IMAGE_TOOL_KEYS = ['image_generation', 'image-gen', 'image', 'vision', 'dalle', 'generate_image']
+  const hasImageTool = toolNames.some((name) =>
+    IMAGE_TOOL_KEYS.some((key) => name.includes(key))
+  )
+  if (!hasImageTool) return false
 
-  if (getMergedImageUrls(step).length > 0) {
-    return true
-  }
-
-  return getStepToolNames(step).some((name) => name === 'image_generation')
+  const imageArtifacts = artifacts.filter(isImageArtifact)
+  const imageUrls = getMergedImageUrls(step)
+  return imageArtifacts.length > 0 || imageUrls.length > 0
 }
 
 export function getStepFilePreviews(step: MergedStep, artifacts: Artifact[]): FileToShow[] {
@@ -84,4 +95,3 @@ export function truncateUrl(url: string, maxLength = 50): string {
 
   return `${url.substring(0, maxLength)}...`
 }
-

@@ -67,10 +67,10 @@ export function StepProgressBar({ steps, jobStatus, getStepStatus }: StepProgres
   if (!progress) return null
 
   return (
-    <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${
+    <span className={`px-3 py-1.5 text-xs font-bold rounded-xl shadow-sm ring-1 transition-all duration-200 ${
       progress.isProcessing 
-        ? 'bg-blue-100 text-blue-800 animate-pulse' 
-        : 'bg-gray-100 text-gray-800'
+        ? 'bg-gradient-to-br from-blue-100 to-blue-50 text-blue-800 ring-blue-200/60 animate-pulse' 
+        : 'bg-gradient-to-br from-gray-100 to-gray-50 text-gray-800 ring-gray-200/60'
     }`}>
       {progress.current}/{progress.total}
     </span>

@@ -21,7 +21,7 @@ if (!ARTIFACTS_BUCKET) {
 const s3Client = new S3Client({ region: env.awsRegion });
 
 class ArtifactsController {
-  async list(tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {
+  async list(_tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {
     if (!ARTIFACTS_TABLE) {
       throw new ApiError('ARTIFACTS_TABLE environment variable is not configured', 500);
     }
@@ -41,23 +41,12 @@ class ArtifactsController {
         limit
       );
     } else if (artifactType) {
-      artifactsResult = await db.query(
-        ARTIFACTS_TABLE!,
-        'gsi_tenant_type',
-        'tenant_id = :tenant_id AND artifact_type = :artifact_type',
-        { ':tenant_id': tenantId, ':artifact_type': artifactType },
-        undefined,
-        limit
-      );
+      // Remove tenant_id filtering - show all artifacts from all accounts
+      const allArtifacts = await db.scan(ARTIFACTS_TABLE!, limit * 10); // Scan more to filter by type
+      artifactsResult = { items: allArtifacts.filter((a: any) => a.artifact_type === artifactType).slice(0, limit) };
     } else {
-      artifactsResult = await db.query(
-        ARTIFACTS_TABLE!,
-        'gsi_tenant_type',
-        'tenant_id = :tenant_id',
-        { ':tenant_id': tenantId },
-        undefined,
-        limit
-      );
+      // Remove tenant_id filtering - show all artifacts from all accounts
+      artifactsResult = { items: await db.scan(ARTIFACTS_TABLE!, limit) };
     }
     let artifacts = normalizeQueryResult(artifactsResult);
 
@@ -155,7 +144,7 @@ class ArtifactsController {
     };
   }
 
-  async get(tenantId: string, artifactId: string): Promise<RouteResponse> {
+  async get(_tenantId: string, artifactId: string): Promise<RouteResponse> {
     if (!ARTIFACTS_TABLE) {
       throw new ApiError('ARTIFACTS_TABLE environment variable is not configured', 500);
     }
@@ -166,9 +155,7 @@ class ArtifactsController {
       throw new ApiError('This file doesn\'t exist', 404);
     }
 
-    if (artifact.tenant_id !== tenantId) {
-      throw new ApiError('You don\'t have permission to access this file', 403);
-    }
+    // Removed tenant_id check - allow access to all artifacts from all accounts
 
     // Don't allow access to report.md files through the API
     const fileName = artifact.artifact_name || artifact.file_name || '';
@@ -200,7 +187,7 @@ class ArtifactsController {
    * Get artifact content by fetching directly from S3.
    * This endpoint proxies the artifact content to avoid presigned URL expiration issues.
    */
-  async getContent(tenantId: string, artifactId: string): Promise<RouteResponse> {
+  async getContent(_tenantId: string, artifactId: string): Promise<RouteResponse> {
     if (!ARTIFACTS_TABLE) {
       throw new ApiError('ARTIFACTS_TABLE environment variable is not configured', 500);
     }
@@ -211,9 +198,7 @@ class ArtifactsController {
       throw new ApiError('Artifact not found', 404);
     }
 
-    if (artifact.tenant_id !== tenantId) {
-      throw new ApiError('You don\'t have permission to access this artifact', 403);
-    }
+    // Removed tenant_id check - allow access to all artifacts from all accounts
 
     if (!artifact.s3_key) {
       throw new ApiError('Artifact S3 key not found', 404);

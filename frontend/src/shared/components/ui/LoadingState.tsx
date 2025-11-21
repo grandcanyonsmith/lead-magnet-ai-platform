@@ -17,10 +17,9 @@ export function LoadingState({ message = 'Loading...', fullPage = false, classNa
   return (
     <div className={`${containerClass} ${className}`}>
       <div className="text-center">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mb-4"></div>
-        <p className="text-gray-600">{message}</p>
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mb-4"></div>
+        <p className="text-ink-600">{message}</p>
       </div>
     </div>
   )
 }
-

@@ -17,7 +17,7 @@ const ARTIFACTS_BUCKET = env.artifactsBucket;
 const s3Client = new S3Client({ region: env.awsRegion });
 
 class JobsController {
-  async list(tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {
+  async list(_tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {
     const workflowId = queryParams.workflow_id;
     const status = queryParams.status;
     const pageSize = queryParams.limit ? parseInt(queryParams.limit) : 20;
@@ -53,26 +53,10 @@ class JobsController {
       jobs = result.items;
       totalCount = jobs.length;
     } else {
-      const result = await db.query(
-        JOBS_TABLE,
-        'gsi_tenant_created',
-        'tenant_id = :tenant_id',
-        { ':tenant_id': tenantId },
-        undefined,
-        fetchLimit
-      );
-      jobs = result.items;
-      // For tenant queries, try to get a better count estimate
-      // Fetch a larger sample to estimate total
-      const countResult = await db.query(
-        JOBS_TABLE,
-        'gsi_tenant_created',
-        'tenant_id = :tenant_id',
-        { ':tenant_id': tenantId },
-        undefined,
-        1000 // Sample size for count estimation
-      );
-      const countJobs = countResult.items;
+      // Remove tenant_id filtering - show all jobs from all accounts
+      jobs = await db.scan(JOBS_TABLE, fetchLimit);
+      // For global queries, try to get a better count estimate
+      const countJobs = await db.scan(JOBS_TABLE, 1000); // Sample size for count estimation
       totalCount = countJobs.length >= 1000 ? 1000 : countJobs.length;
     }
 
@@ -108,9 +92,7 @@ class JobsController {
       throw new ApiError('This generated lead magnet doesn\'t exist', 404);
     }
 
-    if (job.tenant_id !== tenantId) {
-      throw new ApiError('You don\'t have permission to access this lead magnet', 403);
-    }
+    // Removed tenant_id check - allow access to all jobs from all accounts
 
     // Execution steps are ALWAYS stored in S3 (never in DynamoDB).
     // Generate public URL for execution_steps so frontend can fetch them directly from S3.
@@ -274,7 +256,7 @@ class JobsController {
     };
   }
 
-  async resubmit(tenantId: string, jobId: string): Promise<RouteResponse> {
+  async resubmit(_tenantId: string, jobId: string): Promise<RouteResponse> {
     // Get the original job
     const originalJob = await db.get(JOBS_TABLE, { job_id: jobId });
 
@@ -282,9 +264,7 @@ class JobsController {
       throw new ApiError('This generated lead magnet doesn\'t exist', 404);
     }
 
-    if (originalJob.tenant_id !== tenantId) {
-      throw new ApiError('You don\'t have permission to resubmit this lead magnet', 403);
-    }
+    // Removed tenant_id check - allow access to all jobs from all accounts
 
     // Get the submission data
     if (!originalJob.submission_id) {
@@ -296,9 +276,7 @@ class JobsController {
       throw new ApiError('Cannot resubmit: submission data not found', 404);
     }
 
-    if (submission.tenant_id !== tenantId) {
-      throw new ApiError('You don\'t have permission to resubmit this lead magnet', 403);
-    }
+    // Removed tenant_id check - allow access to all jobs from all accounts
 
     // Create a new submission record (copy of the original)
     const newSubmissionId = `sub_${ulid()}`;

@@ -175,15 +175,15 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] px-4">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm"
+        className="fixed inset-0 bg-ink-900/60 backdrop-blur-sm"
         onClick={onClose}
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-2xl bg-white rounded-lg shadow-2xl border border-gray-200">
+      <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-soft border border-white/60">
         {/* Search Input */}
-        <div className="flex items-center gap-3 p-4 border-b border-gray-200">
-          <FiSearch className="w-5 h-5 text-gray-400 flex-shrink-0" />
+        <div className="flex items-center gap-3 p-4 border-b border-white/60">
+          <FiSearch className="w-5 h-5 text-ink-400 flex-shrink-0" />
           <input
             ref={inputRef}
             type="text"
@@ -191,15 +191,15 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Search pages, workflows, jobs..."
-            className="flex-1 text-base outline-none placeholder-gray-400"
+            className="flex-1 text-base outline-none placeholder-ink-400 text-ink-900"
           />
           <div className="flex items-center gap-2">
-            <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold text-gray-500 bg-gray-100 border border-gray-300 rounded">
+            <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold text-ink-500 bg-surface-50 border border-white/60 rounded-2xl shadow-soft">
               <FiCommand className="w-3 h-3" />K
             </kbd>
             <button
               onClick={onClose}
-              className="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 transition-colors"
+              className="p-1 text-ink-400 hover:text-ink-700 rounded-2xl hover:bg-surface-50 transition-colors"
               aria-label="Close"
             >
               <FiX className="w-5 h-5" />
@@ -213,12 +213,12 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
           className="max-h-96 overflow-y-auto"
         >
           {loading ? (
-            <div className="p-8 text-center text-gray-500">Loading...</div>
+            <div className="p-8 text-center text-ink-500">Loading...</div>
           ) : searchResults.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
-              <FiSearch className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+            <div className="p-8 text-center text-ink-500">
+              <FiSearch className="w-12 h-12 mx-auto mb-2 text-ink-300" />
               <p>No results found</p>
-              <p className="text-sm text-gray-400 mt-1">Try a different search term</p>
+              <p className="text-sm text-ink-400 mt-1">Try a different search term</p>
             </div>
           ) : (
             <div className="py-2">
@@ -228,28 +228,28 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
                   onClick={() => handleSelect(result)}
                   className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
                     index === selectedIndex
-                      ? 'bg-primary-50 text-primary-900'
-                      : 'hover:bg-gray-50 text-gray-900'
+                      ? 'bg-brand-50 text-brand-700'
+                      : 'hover:bg-surface-50 text-ink-900'
                   }`}
                 >
-                  <div className={`flex-shrink-0 ${index === selectedIndex ? 'text-primary-600' : 'text-gray-400'}`}>
+                  <div className={`flex-shrink-0 ${index === selectedIndex ? 'text-brand-600' : 'text-ink-400'}`}>
                     {getIcon(result.type)}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-medium truncate">{result.title}</div>
                     {result.subtitle && (
-                      <div className={`text-sm truncate ${index === selectedIndex ? 'text-primary-600' : 'text-gray-500'}`}>
+                      <div className={`text-sm truncate ${index === selectedIndex ? 'text-brand-600' : 'text-ink-500'}`}>
                         {result.subtitle}
                       </div>
                     )}
                   </div>
                   {result.type === 'workflow' && (
-                    <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded">
+                    <span className="text-xs px-2 py-0.5 bg-surface-50 text-ink-600 rounded-2xl">
                       Workflow
                     </span>
                   )}
                   {result.type === 'job' && (
-                    <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded">
+                    <span className="text-xs px-2 py-0.5 bg-surface-50 text-ink-600 rounded-2xl">
                       Job
                     </span>
                   )}
@@ -260,18 +260,18 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
         </div>
 
         {/* Footer */}
-        <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 flex items-center justify-between text-xs text-gray-500">
+        <div className="px-4 py-3 border-t border-white/60 bg-surface-50 flex items-center justify-between text-xs text-ink-500">
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 bg-white border border-gray-300 rounded">↑↓</kbd>
+              <kbd className="px-1.5 py-0.5 bg-white border border-white/60 rounded-2xl shadow-soft">↑↓</kbd>
               Navigate
             </span>
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 bg-white border border-gray-300 rounded">↵</kbd>
+              <kbd className="px-1.5 py-0.5 bg-white border border-white/60 rounded-2xl shadow-soft">↵</kbd>
               Select
             </span>
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 bg-white border border-gray-300 rounded">Esc</kbd>
+              <kbd className="px-1.5 py-0.5 bg-white border border-white/60 rounded-2xl shadow-soft">Esc</kbd>
               Close
             </span>
           </div>
@@ -280,4 +280,3 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
     </div>
   )
 }
-

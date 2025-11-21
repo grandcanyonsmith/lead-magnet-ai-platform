@@ -4,12 +4,14 @@
 
 'use client'
 
+import { useState } from 'react'
 import { Settings } from '@/shared/types'
 import { FormField } from './FormField'
 import { FiCopy, FiRefreshCw } from 'react-icons/fi'
 import { toast } from 'react-hot-toast'
 import { useRegenerateWebhookToken } from '@/features/settings/hooks/useSettings'
 import { WebhookTester } from './WebhookTester'
+import { ConfirmDialog } from '@/shared/components/ConfirmDialog'
 
 interface DeliverySettingsProps {
   settings: Settings
@@ -25,6 +27,7 @@ export function DeliverySettings({
   errors,
 }: DeliverySettingsProps) {
   const { regenerateToken, loading: isRegenerating } = useRegenerateWebhookToken()
+  const [showConfirm, setShowConfirm] = useState(false)
 
   const handleCopyWebhookUrl = async () => {
     if (settings.webhook_url) {
@@ -38,25 +41,18 @@ export function DeliverySettings({
   }
 
   const handleRegenerateToken = async () => {
-    if (
-      !confirm(
-        'Are you sure you want to regenerate your webhook token? The old URL will stop working.'
-      )
-    ) {
-      return
-    }
-
     const updatedSettings = await regenerateToken()
     if (updatedSettings) {
       onSettingsUpdate(updatedSettings)
     }
+    setShowConfirm(false)
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-6 space-y-6">
+    <div className="bg-white rounded-2xl shadow-soft border border-white/60 p-6 space-y-6">
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Delivery Settings</h3>
-        <p className="text-sm text-gray-600 mb-6">
+        <h3 className="text-lg font-semibold text-ink-900 mb-2">Delivery Settings</h3>
+        <p className="text-sm text-ink-600 mb-4">
           Configure webhook endpoints and delivery preferences for your lead magnets.
         </p>
       </div>
@@ -67,7 +63,7 @@ export function DeliverySettings({
             label={
               <>
                 Your Webhook URL
-                <span className="ml-2 text-xs text-gray-500" title="Public webhook endpoint for triggering workflows">
+                <span className="ml-2 text-xs text-ink-500" title="Public webhook endpoint for triggering workflows">
                   ℹ️
                 </span>
               </>
@@ -85,16 +81,16 @@ export function DeliverySettings({
               type="button"
               onClick={handleCopyWebhookUrl}
               disabled={!settings.webhook_url}
-              className="flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center px-4 py-2 bg-surface-100 text-ink-700 rounded-2xl hover:bg-surface-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-white/60 shadow-soft"
             >
               <FiCopy className="w-4 h-4 mr-2" />
               Copy
             </button>
             <button
               type="button"
-              onClick={handleRegenerateToken}
+              onClick={() => setShowConfirm(true)}
               disabled={isRegenerating || !settings.webhook_url}
-              className="flex items-center px-4 py-2 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center px-4 py-2 bg-amber-100 text-amber-800 rounded-2xl hover:bg-amber-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-amber-200 shadow-soft"
             >
               <FiRefreshCw className={`w-4 h-4 mr-2 ${isRegenerating ? 'animate-spin' : ''}`} />
               Regenerate
@@ -102,9 +98,9 @@ export function DeliverySettings({
           </div>
           {settings.webhook_url && (
             <>
-              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-xs font-medium text-blue-900 mb-1">Example Usage:</p>
-                <pre className="text-xs text-blue-800 overflow-x-auto">
+              <div className="mt-4 p-3 bg-brand-50/70 border border-brand-100 rounded-2xl">
+                <p className="text-xs font-medium text-brand-900 mb-1">Example Usage:</p>
+                <pre className="text-xs text-brand-800 overflow-x-auto">
                   {`curl -X POST "${settings.webhook_url}" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -126,7 +122,7 @@ export function DeliverySettings({
           label={
             <>
               GHL Webhook URL
-              <span className="ml-2 text-xs text-gray-500" title="Your GoHighLevel webhook endpoint for SMS/Email delivery">
+              <span className="ml-2 text-xs text-ink-500" title="Your GoHighLevel webhook endpoint for SMS/Email delivery">
                 ℹ️
               </span>
             </>
@@ -151,7 +147,17 @@ export function DeliverySettings({
           placeholder="phone"
         />
       </div>
+
+      <ConfirmDialog
+        open={showConfirm}
+        title="Regenerate webhook token?"
+        description="The existing webhook URL will stop working after regeneration."
+        confirmLabel="Regenerate token"
+        tone="danger"
+        loading={isRegenerating}
+        onConfirm={handleRegenerateToken}
+        onCancel={() => setShowConfirm(false)}
+      />
     </div>
   )
 }
-

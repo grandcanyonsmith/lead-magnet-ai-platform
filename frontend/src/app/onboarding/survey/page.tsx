@@ -135,26 +135,26 @@ export default function OnboardingSurveyPage() {
         return (
           <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-ink-800 mb-2">
                 Business Name <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 value={formData.businessName}
                 onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full px-4 py-3 border border-white/60 rounded-2xl bg-white/90 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-ink-900 placeholder-ink-400 shadow-soft"
                 placeholder="Enter your business name"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-ink-800 mb-2">
                 Industry <span className="text-red-500">*</span>
               </label>
               <select
                 value={formData.industry}
                 onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full px-4 py-3 border border-white/60 rounded-2xl bg-white/90 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-ink-900 placeholder-ink-400 shadow-soft"
               >
                 <option value="">Select your industry</option>
                 {industries.map((industry) => (
@@ -166,13 +166,13 @@ export default function OnboardingSurveyPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-ink-800 mb-2">
                 Company Size <span className="text-red-500">*</span>
               </label>
               <select
                 value={formData.companySize}
                 onChange={(e) => setFormData({ ...formData, companySize: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full px-4 py-3 border border-white/60 rounded-2xl bg-white/90 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-ink-900 placeholder-ink-400 shadow-soft"
               >
                 <option value="">Select company size</option>
                 {companySizes.map((size) => (
@@ -189,17 +189,17 @@ export default function OnboardingSurveyPage() {
         return (
           <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-ink-800 mb-2">
                 Target Customer Profile <span className="text-red-500">*</span>
               </label>
               <textarea
                 value={formData.targetCustomerProfile}
                 onChange={(e) => setFormData({ ...formData, targetCustomerProfile: e.target.value })}
                 rows={6}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full px-4 py-3 border border-white/60 rounded-2xl bg-white/90 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-ink-900 placeholder-ink-400 shadow-soft"
                 placeholder="Describe your ideal customer. What are their characteristics, needs, and behaviors?"
               />
-              <p className="mt-2 text-sm text-gray-500">
+              <p className="mt-2 text-sm text-ink-500">
                 Help us understand who you&apos;re targeting so we can personalize your lead magnets.
               </p>
             </div>
@@ -210,33 +210,33 @@ export default function OnboardingSurveyPage() {
         return (
           <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-ink-800 mb-2">
                 Customer Pain Points <span className="text-red-500">*</span>
               </label>
               <textarea
                 value={formData.customerPainPoints}
                 onChange={(e) => setFormData({ ...formData, customerPainPoints: e.target.value })}
                 rows={6}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full px-4 py-3 border border-white/60 rounded-2xl bg-white/90 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-ink-900 placeholder-ink-400 shadow-soft"
                 placeholder="What problems or challenges do your customers face that your lead magnets can solve?"
               />
-              <p className="mt-2 text-sm text-gray-500">
+              <p className="mt-2 text-sm text-ink-500">
                 Understanding pain points helps create more valuable and relevant lead magnets.
               </p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-ink-800 mb-2">
                 Domain/Niche <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 value={formData.domain}
                 onChange={(e) => setFormData({ ...formData, domain: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full px-4 py-3 border border-white/60 rounded-2xl bg-white/90 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-ink-900 placeholder-ink-400 shadow-soft"
                 placeholder="e.g., SaaS, Fitness, Real Estate Investing"
               />
-              <p className="mt-2 text-sm text-gray-500">
+              <p className="mt-2 text-sm text-ink-500">
                 What specific domain or niche does your business operate in?
               </p>
             </div>
@@ -247,10 +247,10 @@ export default function OnboardingSurveyPage() {
         return (
           <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-4">
+              <label className="block text-sm font-medium text-ink-800 mb-4">
                 Primary Goals <span className="text-red-500">*</span>
               </label>
-              <p className="text-sm text-gray-600 mb-4">
+              <p className="text-sm text-ink-600 mb-4">
                 Select all that apply. What are your main objectives with lead magnets?
               </p>
               <div className="space-y-3">
@@ -259,15 +259,15 @@ export default function OnboardingSurveyPage() {
                     key={goal}
                     type="button"
                     onClick={() => handleGoalToggle(goal)}
-                    className={`w-full flex items-center justify-between p-4 border-2 rounded-lg transition-all ${
+                    className={`w-full flex items-center justify-between p-4 border-2 rounded-2xl transition-all ${
                       formData.primaryGoals.includes(goal)
-                        ? 'border-primary-500 bg-primary-50'
-                        : 'border-gray-200 hover:border-gray-300'
+                        ? 'border-brand-200 bg-brand-50 shadow-soft'
+                        : 'border-white/60 bg-white hover:bg-surface-50 shadow-soft'
                     }`}
                   >
-                    <span className="font-medium text-gray-900">{goal}</span>
+                    <span className="font-medium text-ink-900">{goal}</span>
                     {formData.primaryGoals.includes(goal) && (
-                      <FiCheck className="w-5 h-5 text-primary-600" />
+                      <FiCheck className="w-5 h-5 text-brand-600" />
                     )}
                   </button>
                 ))}
@@ -283,31 +283,31 @@ export default function OnboardingSurveyPage() {
 
   if (!authChecked) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
+      <div className="min-h-screen bg-surface-50 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-ink-600">Loading...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-surface-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl w-full">
-        <div className="bg-white rounded-2xl shadow-xl p-8 sm:p-10">
+        <div className="bg-white rounded-2xl shadow-soft border border-white/60 p-8 sm:p-10">
           {/* Progress Bar */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-600">
+              <span className="text-sm font-medium text-ink-600">
                 Step {currentStep} of {totalSteps}
               </span>
-              <span className="text-sm font-medium text-gray-600">
+              <span className="text-sm font-medium text-ink-600">
                 {Math.round((currentStep / totalSteps) * 100)}%
               </span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
+            <div className="w-full bg-white/60 rounded-full h-2">
               <div
-                className="bg-primary-600 h-2 rounded-full transition-all duration-300"
+                className="bg-brand-600 h-2 rounded-full transition-all duration-300"
                 style={{ width: `${(currentStep / totalSteps) * 100}%` }}
               />
             </div>
@@ -315,13 +315,13 @@ export default function OnboardingSurveyPage() {
 
           {/* Step Title */}
           <div className="mb-8">
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+            <h2 className="text-2xl sm:text-3xl font-bold text-ink-900 mb-2">
               {currentStep === 1 && 'Tell us about your business'}
               {currentStep === 2 && 'Who are your customers?'}
               {currentStep === 3 && 'What problems do you solve?'}
               {currentStep === 4 && 'What are your goals?'}
             </h2>
-            <p className="text-gray-600">
+            <p className="text-ink-600">
               {currentStep === 1 && 'Help us personalize your Lead Magnet AI experience'}
               {currentStep === 2 && 'Understanding your customers helps us create better lead magnets'}
               {currentStep === 3 && 'Knowing pain points enables us to create more valuable content'}
@@ -331,7 +331,7 @@ export default function OnboardingSurveyPage() {
 
           {/* Error Message */}
           {error && (
-            <div className="mb-6 bg-red-50 border-l-4 border-red-400 text-red-700 px-4 py-3 rounded">
+            <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl shadow-soft">
               {error}
             </div>
           )}
@@ -340,12 +340,12 @@ export default function OnboardingSurveyPage() {
           <div className="mb-8">{renderStep()}</div>
 
           {/* Navigation Buttons */}
-          <div className="flex items-center justify-between pt-6 border-t border-gray-200">
+          <div className="flex items-center justify-between pt-6 border-t border-white/60">
             <button
               type="button"
               onClick={handleBack}
               disabled={currentStep === 1}
-              className="flex items-center px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center px-6 py-3 border border-white/60 rounded-2xl text-ink-800 bg-white hover:bg-surface-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-soft"
             >
               <FiArrowLeft className="w-5 h-5 mr-2" />
               Back
@@ -362,7 +362,7 @@ export default function OnboardingSurveyPage() {
                     setError('Please fill in all required fields')
                   }
                 }}
-                className="flex items-center px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                className="flex items-center px-6 py-3 bg-brand-600 text-white rounded-2xl hover:bg-brand-700 transition-colors"
               >
                 Next
                 <FiArrowRight className="w-5 h-5 ml-2" />
@@ -372,7 +372,7 @@ export default function OnboardingSurveyPage() {
                 type="button"
                 onClick={handleSubmit}
                 disabled={loading || !validateStep(currentStep)}
-                className="flex items-center px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center px-6 py-3 bg-brand-600 text-white rounded-2xl hover:bg-brand-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <>
@@ -412,4 +412,3 @@ export default function OnboardingSurveyPage() {
     </div>
   )
 }
-

@@ -6,6 +6,29 @@ import { api } from '@/shared/lib/api'
 import { extractJobId } from '@/features/jobs/utils/jobIdExtraction'
 
 /**
+ * Helper function to temporarily remove agency_selected_customer_id for API calls
+ * This ensures resources are fetched from the user's own customer, not filtered by agency view
+ */
+async function withOwnCustomerId<T>(fn: () => Promise<T>): Promise<T> {
+  const savedCustomerId = typeof window !== 'undefined' 
+    ? localStorage.getItem('agency_selected_customer_id')
+    : null
+  
+  if (savedCustomerId && typeof window !== 'undefined') {
+    localStorage.removeItem('agency_selected_customer_id')
+  }
+
+  try {
+    return await fn()
+  } finally {
+    // Restore the saved customer ID if it existed
+    if (savedCustomerId && typeof window !== 'undefined') {
+      localStorage.setItem('agency_selected_customer_id', savedCustomerId)
+    }
+  }
+}
+
+/**
  * Load workflow data by workflow ID
  * 
  * @param workflowId - Workflow ID to load
@@ -13,7 +36,7 @@ import { extractJobId } from '@/features/jobs/utils/jobIdExtraction'
  */
 async function loadWorkflowData(workflowId: string, setWorkflow: (data: any) => void): Promise<void> {
   try {
-    const workflowData = await api.getWorkflow(workflowId)
+    const workflowData = await withOwnCustomerId(() => api.getWorkflow(workflowId))
     setWorkflow(workflowData)
   } catch (err) {
     console.error('Failed to load workflow:', err)
@@ -34,12 +57,12 @@ async function loadSubmissionData(
   setForm: (data: any) => void
 ): Promise<void> {
   try {
-    const submissionData = await api.getSubmission(submissionId)
+    const submissionData = await withOwnCustomerId(() => api.getSubmission(submissionId))
     setSubmission(submissionData)
     
     if (submissionData.form_id) {
       try {
-        const formData = await api.getForm(submissionData.form_id)
+        const formData = await withOwnCustomerId(() => api.getForm(submissionData.form_id))
         setForm(formData)
       } catch (err) {
         console.error('Failed to load form:', err)
@@ -118,7 +141,7 @@ export function useJobDetail() {
       setExecutionStepsError(null)
       setJobId(newJobId)
     }
-  }, [params?.id, jobId, params])
+  }, [params?.id, params?.slug, jobId, params])
   
   // Load job data when jobId changes
   useEffect(() => {
@@ -143,7 +166,7 @@ export function useJobDetail() {
     const data = jobData
 
     try {
-      const executionSteps = await api.getExecutionSteps(jobId)
+      const executionSteps = await withOwnCustomerId(() => api.getExecutionSteps(jobId))
       
       // Only update if we got valid data and this is still the current job (Bug 4.1 fix)
       if (Array.isArray(executionSteps)) {
@@ -222,7 +245,7 @@ export function useJobDetail() {
     const pollInterval = setInterval(async () => {
       try {
         // Refresh job status and execution steps
-        const data = await api.getJob(jobId)
+        const data = await withOwnCustomerId(() => api.getJob(jobId))
         
         // Update job status and execution steps atomically (Bug 4.1 fix)
         setJob((prevJob: any) => {
@@ -266,7 +289,7 @@ export function useJobDetail() {
    */
   const loadJob = async () => {
     try {
-      const data = await api.getJob(jobId)
+      const data = await withOwnCustomerId(() => api.getJob(jobId))
       
       // Load execution steps from API (proxied from S3)
       await loadExecutionSteps(data, false)

@@ -66,23 +66,23 @@ export function ViewSwitcher() {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200 border border-gray-200 hover:border-gray-300 touch-target min-h-[44px] sm:min-h-0"
+        className="flex min-h-[44px] items-center gap-1.5 rounded-2xl border border-white/60 bg-white/80 px-3 py-2 text-sm font-medium text-ink-500 shadow-soft transition hover:text-ink-900 sm:min-h-0"
         aria-label="Switch view mode"
       >
         {viewMode === 'agency' ? (
           <>
-            <FiBriefcase className="w-4 h-4 flex-shrink-0" />
+            <FiBriefcase className="h-4 w-4 flex-shrink-0" />
             <span className="hidden md:inline">Agency View</span>
           </>
         ) : (
           <>
-            <FiUsers className="w-4 h-4 flex-shrink-0" />
+            <FiUsers className="h-4 w-4 flex-shrink-0" />
             <span className="hidden md:inline">
               {currentCustomer ? currentCustomer.name : 'Subaccount View'}
             </span>
           </>
         )}
-        <FiChevronDown className="w-4 h-4 flex-shrink-0" />
+        <FiChevronDown className="h-4 w-4 flex-shrink-0 text-ink-300" />
       </button>
 
       {isOpen && (
@@ -92,53 +92,55 @@ export function ViewSwitcher() {
             className="fixed inset-0 bg-black bg-opacity-25 z-40 md:hidden"
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute left-0 md:right-0 mt-2 w-[calc(100vw-1rem)] max-w-[20rem] sm:w-80 md:w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-[calc(100vh-8rem)] flex flex-col">
-            <div className="p-3 sm:p-4 border-b border-gray-200 flex-shrink-0">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-900">Switch View</h3>
+          <div className="absolute left-0 z-50 mt-3 flex max-h-[calc(100vh-8rem)] w-[calc(100vw-1rem)] max-w-[20rem] flex-col rounded-3xl border border-white/60 bg-white/95 shadow-soft backdrop-blur-xl sm:w-80 md:right-0 md:w-72">
+            <div className="flex-shrink-0 border-b border-white/60 px-4 py-3">
+              <h3 className="text-base font-semibold text-ink-900">Switch View</h3>
             </div>
             <div className="p-2 overflow-y-auto flex-1">
               <button
                 onClick={handleSwitchToAgency}
-                className={`w-full text-left px-3 py-2.5 sm:py-2 rounded-md text-sm transition-colors touch-target ${
+                className={`w-full rounded-2xl px-3 py-2.5 text-left text-sm transition ${
                   viewMode === 'agency'
-                    ? 'bg-primary-100 text-primary-700 font-medium'
-                    : 'text-gray-700 hover:bg-gray-50'
+                    ? 'bg-brand-50 text-brand-700 shadow-ring'
+                    : 'text-ink-600 hover:bg-white/70'
                 }`}
               >
                 <div className="flex items-center gap-2">
-                  <FiBriefcase className="w-4 h-4 flex-shrink-0" />
+                  <FiBriefcase className="h-4 w-4 flex-shrink-0" />
                   <div className="min-w-0">
-                    <div className="font-medium truncate">Agency View</div>
-                    <div className="text-xs text-gray-500">Manage all users and accounts</div>
+                    <div className="font-medium text-ink-900">Agency View</div>
+                    <div className="text-xs text-ink-400">Manage all users and accounts</div>
                   </div>
                 </div>
               </button>
 
               <div className="mt-2 pt-2 border-t border-gray-200">
-                <div className="px-3 py-1.5 sm:py-1 text-xs font-semibold text-gray-500 uppercase">Subaccounts</div>
+                <div className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-ink-400">
+                  Subaccounts
+                </div>
                 {isLoading ? (
-                  <div className="px-3 py-2 text-sm text-gray-500">Loading...</div>
+                  <div className="px-3 py-2 text-sm text-ink-400">Loading...</div>
                 ) : customers.length === 0 ? (
-                  <div className="px-3 py-2 text-sm text-gray-500">No customers found</div>
+                  <div className="px-3 py-2 text-sm text-ink-400">No customers found</div>
                 ) : (
-                  <div className="max-h-48 sm:max-h-60 overflow-y-auto">
+                  <div className="max-h-48 overflow-y-auto sm:max-h-60">
                     {customers.map((customer) => (
                       <button
                         key={customer.customer_id}
                         onClick={() => handleSwitchToSubaccount(customer.customer_id)}
-                        className={`w-full text-left px-3 py-2.5 sm:py-2 rounded-md text-sm transition-colors touch-target ${
+                        className={`w-full rounded-2xl px-3 py-2.5 text-left text-sm transition ${
                           (selectedCustomerId === customer.customer_id || customerId === customer.customer_id) &&
                           viewMode === 'subaccount'
-                            ? 'bg-primary-100 text-primary-700 font-medium'
-                            : 'text-gray-700 hover:bg-gray-50'
+                            ? 'bg-brand-50 text-brand-700 shadow-ring'
+                            : 'text-ink-600 hover:bg-white/70'
                         }`}
                       >
-                        <div className="flex items-center justify-between min-w-0">
-                          <div className="min-w-0 flex-1">
-                            <div className="font-medium truncate">{customer.name || customer.customer_id}</div>
-                            <div className="text-xs text-gray-500">
-                              {customer.user_count} {customer.user_count === 1 ? 'user' : 'users'}
-                            </div>
+                        <div className="min-w-0">
+                          <div className="font-medium text-ink-900">
+                            {customer.name || customer.customer_id}
+                          </div>
+                          <div className="text-xs text-ink-400">
+                            {customer.user_count} {customer.user_count === 1 ? 'user' : 'users'}
                           </div>
                         </div>
                       </button>

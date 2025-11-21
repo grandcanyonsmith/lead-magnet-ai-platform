@@ -4,7 +4,12 @@ import './globals.css'
 import { Providers } from '@/shared/components/providers/Providers'
 import { ErrorBoundaryWrapper } from '@/shared/components/providers/ErrorBoundaryWrapper'
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-sans',
+  display: 'swap',
+  preload: true,
+})
 
 export const metadata: Metadata = {
   title: 'Lead Magnet AI Platform',
@@ -21,7 +26,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${inter.className} bg-canyon-green`}>
+      <body className={`${inter.variable} font-sans text-ink-900 antialiased`}>
         <ErrorBoundaryWrapper>
           <Providers>{children}</Providers>
         </ErrorBoundaryWrapper>

@@ -5,6 +5,7 @@ import { api } from '@/shared/lib/api'
 import { useState, useEffect, useRef } from 'react'
 import { AuthUser } from '@/features/auth/types'
 import { FiUser } from 'react-icons/fi'
+import { toast } from 'react-hot-toast'
 
 interface UserSearchResult {
   users: AuthUser[]
@@ -83,7 +84,7 @@ export function UserImpersonation() {
       setUsers([])
     } catch (error) {
       console.error('Error starting impersonation:', error)
-      alert('Failed to start impersonation. Please try again.')
+      toast.error('Failed to start impersonation. Please try again.')
     } finally {
       setIsImpersonating(false)
     }
@@ -93,10 +94,10 @@ export function UserImpersonation() {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="px-2 sm:px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md touch-target min-h-[44px] sm:min-h-0 flex items-center gap-1.5"
+        className="flex min-h-[44px] items-center gap-1.5 rounded-2xl border border-white/60 bg-white/80 px-3 py-2 text-sm font-medium text-ink-500 shadow-soft transition hover:text-ink-900 sm:min-h-0"
         aria-label="View as user"
       >
-        <FiUser className="w-4 h-4 sm:hidden" />
+        <FiUser className="h-4 w-4 sm:hidden" />
         <span className="hidden sm:inline">View as user</span>
       </button>
 
@@ -107,23 +108,23 @@ export function UserImpersonation() {
             className="fixed inset-0 bg-black bg-opacity-25 z-40 md:hidden"
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute left-0 md:right-0 mt-2 w-[calc(100vw-1rem)] max-w-[20rem] sm:w-80 bg-white rounded-md shadow-lg z-50 border border-gray-200 max-h-[calc(100vh-8rem)] flex flex-col">
-            <div className="p-3 border-b border-gray-200 flex-shrink-0">
+          <div className="absolute left-0 z-50 mt-3 flex max-h-[calc(100vh-8rem)] w-[calc(100vw-1rem)] max-w-[20rem] flex-col rounded-3xl border border-white/60 bg-white/95 shadow-soft backdrop-blur-xl sm:w-80 md:right-0">
+            <div className="flex-shrink-0 border-b border-white/60 p-3">
               <input
                 type="text"
                 placeholder="Search users by name or email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-3 py-2.5 sm:py-2 border border-gray-300 rounded-md text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-2xl border border-white/60 bg-white/90 px-3 py-2 text-sm text-ink-600 shadow-soft focus:border-brand-200 focus:outline-none focus:ring-2 focus:ring-brand-100"
                 autoFocus
               />
             </div>
 
-            <div className="max-h-64 overflow-y-auto flex-1">
+            <div className="max-h-64 flex-1 overflow-y-auto">
               {isLoading ? (
-                <div className="p-4 text-center text-gray-500 text-sm">Searching...</div>
+                <div className="p-4 text-center text-sm text-ink-400">Searching...</div>
               ) : users.length === 0 ? (
-                <div className="p-4 text-center text-gray-500 text-sm">
+                <div className="p-4 text-center text-sm text-ink-400">
                   {searchTerm.length < 2
                     ? 'Type at least 2 characters to search'
                     : 'No users found'}
@@ -135,12 +136,12 @@ export function UserImpersonation() {
                       <button
                         onClick={() => handleImpersonate(user.user_id)}
                         disabled={isImpersonating}
-                        className="w-full text-left px-4 py-3 sm:py-2 hover:bg-gray-100 text-sm disabled:opacity-50 disabled:cursor-not-allowed touch-target transition-colors"
+                        className="w-full rounded-2xl px-4 py-2 text-left text-sm text-ink-600 transition hover:bg-white/70 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        <div className="font-medium truncate">{user.name || user.email}</div>
-                        <div className="text-gray-500 text-xs truncate mt-0.5">{user.email}</div>
+                        <div className="font-medium text-ink-900">{user.name || user.email}</div>
+                        <div className="mt-0.5 text-xs text-ink-400">{user.email}</div>
                         {user.role && (
-                          <div className="text-gray-400 text-xs mt-0.5">Role: {user.role}</div>
+                          <div className="mt-0.5 text-xs text-ink-400 opacity-80">Role: {user.role}</div>
                         )}
                       </button>
                     </li>
@@ -154,4 +155,3 @@ export function UserImpersonation() {
     </div>
   )
 }
-

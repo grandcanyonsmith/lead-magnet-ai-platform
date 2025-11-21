@@ -25,8 +25,10 @@ import { useParams } from 'next/navigation'
  * ```
  */
 export function extractJobId(params: ReturnType<typeof useParams>): string {
-  // First try to get from params
-  const paramId = params?.id as string
+  // First try to get from params (supports both /[id] and /[[...slug]] patterns)
+  const paramSlug = params?.slug as string[] | string | undefined
+  const slugId = Array.isArray(paramSlug) ? paramSlug[0] : paramSlug
+  const paramId = (slugId || (params?.id as string | undefined)) ?? ''
   if (paramId && paramId !== '_' && paramId.trim() !== '') {
     return paramId
   }
@@ -45,6 +47,6 @@ export function extractJobId(params: ReturnType<typeof useParams>): string {
     }
   }
   
-  return paramId || ''
+  return ''
 }
 

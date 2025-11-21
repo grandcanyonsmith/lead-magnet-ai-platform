@@ -5,6 +5,7 @@ import { FiFolder, FiChevronDown, FiChevronRight, FiEdit, FiTrash2, FiMoreVertic
 import { Folder } from '@/features/folders/types'
 import { Workflow } from '@/shared/types'
 import { useUpdateFolder, useDeleteFolder } from '@/features/folders/hooks/useFolders'
+import { ConfirmDialog } from '@/shared/components/ConfirmDialog'
 
 interface FolderSectionProps {
   folder: Folder
@@ -39,22 +40,24 @@ export function FolderSection({
   }
 
   const handleDelete = async () => {
-    if (confirm(`Are you sure you want to delete "${folder.folder_name}"? All workflows in this folder will be moved to Uncategorized.`)) {
+    try {
       await deleteFolder(folder.folder_id)
-      setShowDeleteConfirm(false)
-      setShowMenu(false)
+    } catch (error) {
+      console.error('Failed to delete folder:', error)
     }
+    setShowDeleteConfirm(false)
+    setShowMenu(false)
   }
 
   return (
     <div className="mb-4">
       {/* Folder Header */}
-      <div className="bg-gray-50 rounded-lg border border-gray-200 p-3 mb-2">
+      <div className="bg-white rounded-2xl shadow-soft border border-white/60 p-4 mb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <button
               onClick={() => setIsExpanded(!isExpanded)}
-              className="text-gray-500 hover:text-gray-700 transition-colors"
+              className="p-2 rounded-2xl bg-surface-100 text-ink-600 hover:text-ink-900 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
             >
               {isExpanded ? (
                 <FiChevronDown className="w-5 h-5" />
@@ -63,7 +66,7 @@ export function FolderSection({
               )}
             </button>
             
-            <FiFolder className="w-5 h-5 text-blue-600 flex-shrink-0" />
+            <FiFolder className="w-5 h-5 text-brand-600 flex-shrink-0" />
             
             {isEditing ? (
               <input
@@ -79,7 +82,7 @@ export function FolderSection({
                     setIsEditing(false)
                   }
                 }}
-                className="flex-1 px-2 py-1 text-sm font-medium border border-primary-500 rounded focus:outline-none focus:ring-1 focus:ring-primary-500"
+                className="flex-1 px-3 py-2 text-sm font-medium border border-brand-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white/90 shadow-soft"
                 autoFocus
               />
             ) : (
@@ -87,10 +90,10 @@ export function FolderSection({
                 onClick={() => setIsExpanded(!isExpanded)}
                 className="flex-1 text-left min-w-0"
               >
-                <span className="text-sm font-medium text-gray-900 truncate">
+                <span className="text-sm font-semibold text-ink-900 truncate">
                   {folder.folder_name}
                 </span>
-                <span className="text-xs text-gray-500 ml-2">
+                <span className="text-xs text-ink-500 ml-2">
                   ({workflows.length})
                 </span>
               </button>
@@ -101,22 +104,22 @@ export function FolderSection({
             <div className="relative flex-shrink-0">
               <button
                 onClick={() => setShowMenu(!showMenu)}
-                className="p-1 text-gray-500 hover:text-gray-700 rounded transition-colors"
+                className="p-2 text-ink-500 hover:text-ink-900 rounded-2xl transition-colors hover:bg-surface-100"
               >
                 <FiMoreVertical className="w-4 h-4" />
               </button>
               
               {showMenu && (
-                <div className="absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
+                <div className="absolute right-0 mt-1 w-44 bg-white rounded-2xl shadow-soft border border-white/60 z-10">
                   <div className="py-1">
                     <button
                       onClick={() => {
                         setIsEditing(true)
                         setShowMenu(false)
                       }}
-                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                      className="w-full text-left px-3 py-2 text-sm text-ink-700 hover:bg-surface-100 flex items-center gap-2"
                     >
-                      <FiEdit className="w-3 h-3" />
+                      <FiEdit className="w-4 h-4" />
                       Rename
                     </button>
                     <button
@@ -124,9 +127,9 @@ export function FolderSection({
                         setShowDeleteConfirm(true)
                         setShowMenu(false)
                       }}
-                      className="w-full text-left px-3 py-2 text-xs text-red-600 hover:bg-red-50 flex items-center gap-2"
+                      className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
                     >
-                      <FiTrash2 className="w-3 h-3" />
+                      <FiTrash2 className="w-4 h-4" />
                       Delete
                     </button>
                   </div>
@@ -141,7 +144,7 @@ export function FolderSection({
       {isExpanded && (
         <div className="ml-4 space-y-2">
           {workflows.length === 0 ? (
-            <div className="text-sm text-gray-500 italic p-4 text-center bg-gray-50 rounded-lg">
+            <div className="text-sm text-ink-500 italic p-4 text-center bg-surface-50 rounded-2xl border border-white/60">
               No workflows in this folder
             </div>
           ) : (
@@ -149,8 +152,21 @@ export function FolderSection({
           )}
         </div>
       )}
+
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        title="Delete folder?"
+        description={
+          <span>
+            All workflows in <span className="font-semibold">{folder.folder_name}</span> will move to Uncategorized.
+          </span>
+        }
+        confirmLabel="Delete"
+        tone="danger"
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
     </div>
   )
 }
-
-

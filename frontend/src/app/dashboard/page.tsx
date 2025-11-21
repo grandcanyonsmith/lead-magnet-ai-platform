@@ -2,19 +2,15 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { api } from '@/shared/lib/api'
 import { isAuthenticated } from '@/features/auth/lib'
-import { FiActivity, FiCheckCircle, FiXCircle, FiClock, FiTrendingUp, FiFileText } from 'react-icons/fi'
+import { FiActivity, FiFileText } from 'react-icons/fi'
 
 export default function DashboardPage() {
   const router = useRouter()
-  const [analytics, setAnalytics] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [authChecked, setAuthChecked] = useState(false)
 
   useEffect(() => {
     const checkAndLoad = async () => {
-      // Wait a bit for auth to be ready
       await new Promise(resolve => setTimeout(resolve, 150))
       
       const authenticated = await isAuthenticated()
@@ -23,214 +19,61 @@ export default function DashboardPage() {
         return
       }
       
-      setAuthChecked(true)
-      await loadAnalytics()
+      setLoading(false)
     }
     
     checkAndLoad()
   }, [router])
 
-  const loadAnalytics = async () => {
-    try {
-      const data = await api.getAnalytics({ days: 30 })
-      setAnalytics(data)
-    } catch (error: any) {
-      console.error('Failed to load analytics:', error)
-      // Don't redirect on API errors - just show empty state
-    } finally {
-      setLoading(false)
-    }
-  }
-
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto">
-        {/* Header skeleton */}
-        <div className="mb-4 sm:mb-6">
-          <div className="h-7 sm:h-8 lg:h-9 bg-gray-200 rounded w-48 mb-2 sm:mb-2 animate-pulse"></div>
-          <div className="h-4 sm:h-5 bg-gray-200 rounded w-96 max-w-full animate-pulse"></div>
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-8">
+          <div className="h-8 bg-ink-200 rounded w-48 mb-2 animate-pulse"></div>
+          <div className="h-5 bg-ink-200 rounded w-64 animate-pulse"></div>
         </div>
-
-        {/* Stats Grid skeleton */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6 mb-6 sm:mb-8">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="bg-white rounded-lg sm:rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100">
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <div className="h-10 w-10 sm:h-12 sm:w-12 bg-gray-200 rounded-lg sm:rounded-xl animate-pulse"></div>
-              </div>
-              <div className="h-8 sm:h-9 bg-gray-200 rounded w-20 mb-1 animate-pulse"></div>
-              <div className="h-4 sm:h-5 bg-gray-200 rounded w-32 animate-pulse"></div>
-            </div>
-          ))}
-        </div>
-
-        {/* Quick Actions skeleton */}
-        <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-6 sm:mb-8">
-          <div className="h-5 sm:h-6 bg-gray-200 rounded w-32 mb-3 sm:mb-4 animate-pulse"></div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <div className="h-11 sm:h-12 bg-gray-200 rounded-lg animate-pulse"></div>
-          </div>
-        </div>
-
-        {/* Additional Information skeleton */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg sm:rounded-xl shadow-sm border border-blue-100 p-4 sm:p-6">
-            <div className="h-5 sm:h-6 bg-gray-300 rounded w-48 mb-2 sm:mb-3 animate-pulse"></div>
-            <div className="space-y-2 sm:space-y-3">
-              <div className="h-4 sm:h-5 bg-gray-200 rounded w-full animate-pulse"></div>
-              <div className="h-4 sm:h-5 bg-gray-200 rounded w-5/6 animate-pulse"></div>
-              <div className="h-4 sm:h-5 bg-gray-200 rounded w-4/6 animate-pulse"></div>
-            </div>
-          </div>
-          <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
-            <div className="h-5 sm:h-6 bg-gray-200 rounded w-40 mb-3 sm:mb-4 animate-pulse"></div>
-            <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
-                  <div className="h-4 bg-gray-200 rounded w-32 animate-pulse"></div>
-                  <div className="h-4 bg-gray-200 rounded w-12 animate-pulse"></div>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
-            <div className="h-5 sm:h-6 bg-gray-200 rounded w-36 mb-3 sm:mb-4 animate-pulse"></div>
-            <div className="h-4 sm:h-5 bg-gray-200 rounded w-full animate-pulse"></div>
-            <div className="h-4 sm:h-5 bg-gray-200 rounded w-3/4 mt-2 animate-pulse"></div>
+        <div className="space-y-6">
+          <div className="h-24 bg-white rounded-2xl shadow-soft border border-white/60 animate-pulse"></div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="h-24 bg-white rounded-2xl shadow-soft border border-white/60 animate-pulse"></div>
+            <div className="h-24 bg-white rounded-2xl shadow-soft border border-white/60 animate-pulse"></div>
           </div>
         </div>
       </div>
     )
   }
 
-  const overview = analytics?.overview || {}
-  
-  const stats = [
-    {
-      label: 'Lead Magnets Generated',
-      value: overview.total_jobs || 0,
-      icon: FiActivity,
-      color: 'blue',
-    },
-    {
-      label: 'Completed Lead Magnets',
-      value: overview.completed_jobs || 0,
-      icon: FiCheckCircle,
-      color: 'green',
-    },
-    {
-      label: 'Failed Lead Magnets',
-      value: overview.failed_jobs || 0,
-      icon: FiXCircle,
-      color: 'red',
-    },
-    {
-      label: 'Pending Lead Magnets',
-      value: overview.pending_jobs || 0,
-      icon: FiClock,
-      color: 'yellow',
-    },
-    {
-      label: 'Success Rate',
-      value: `${overview.success_rate || 0}%`,
-      icon: FiTrendingUp,
-      color: 'purple',
-    },
-    {
-      label: 'Avg Processing Time',
-      value: `${overview.avg_processing_time_seconds || 0}s`,
-      icon: FiClock,
-      color: 'indigo',
-    },
-  ]
-
-  const colorMap: Record<string, string> = {
-    blue: 'bg-blue-100 text-blue-600',
-    green: 'bg-green-100 text-green-600',
-    red: 'bg-red-100 text-red-600',
-    yellow: 'bg-yellow-100 text-yellow-600',
-    purple: 'bg-purple-100 text-purple-600',
-    indigo: 'bg-indigo-100 text-indigo-600',
-  }
-
   return (
-    <div className="max-w-7xl mx-auto">
-      <div className="mb-4 sm:mb-6">
-        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">Dashboard</h1>
-        <p className="text-sm sm:text-base text-gray-600">Create and manage AI-powered lead magnets that convert leads 10x better</p>
+    <div className="max-w-4xl mx-auto">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-ink-900 mb-2">Dashboard</h1>
+        <p className="text-ink-600">Create AI-powered lead magnets</p>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6 mb-6 sm:mb-8">
-        {stats.map((stat) => {
-          const Icon = stat.icon
-          return (
-            <div key={stat.label} className="bg-white rounded-lg sm:rounded-xl shadow-sm hover:shadow-md transition-shadow p-4 sm:p-6 border border-gray-100 group">
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <div className={`p-2 sm:p-3 rounded-lg sm:rounded-xl ${colorMap[stat.color]} group-hover:scale-110 transition-transform`}>
-                  <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
-                </div>
-              </div>
-              <p className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">{stat.value}</p>
-              <p className="text-xs sm:text-sm text-gray-600 font-medium leading-tight">{stat.label}</p>
-            </div>
-          )
-        })}
-      </div>
+      <div className="space-y-6">
+        <a
+          href="/dashboard/workflows/new"
+          className="block w-full bg-brand-600 text-white rounded-2xl hover:bg-brand-700 transition-colors shadow-soft p-6 text-center focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
+        >
+          <FiActivity className="w-6 h-6 mx-auto mb-2" />
+          <span className="text-lg font-medium">Create Lead Magnet</span>
+        </a>
 
-      {/* Quick Actions */}
-      <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-6 sm:mb-8">
-        <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 gap-4">
           <a
-            href="/dashboard/workflows/new"
-            className="flex items-center justify-center px-3 sm:px-4 py-2.5 sm:py-3 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg hover:from-primary-700 hover:to-primary-800 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 text-sm sm:text-base"
+            href="/dashboard/workflows"
+            className="bg-white rounded-2xl shadow-soft border border-white/60 p-6 hover:shadow-md transition-shadow text-center"
           >
-            <FiActivity className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-            Create Lead Magnet
+            <FiFileText className="w-5 h-5 mx-auto mb-2 text-brand-600" />
+            <div className="text-sm font-medium text-ink-900">Lead Magnets</div>
           </a>
-        </div>
-      </div>
-
-      {/* Additional Information */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg sm:rounded-xl shadow-sm border border-blue-100 p-4 sm:p-6">
-          <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-2 sm:mb-3">What Are AI Lead Magnets?</h2>
-          <p className="text-xs sm:text-sm text-gray-700 mb-2 sm:mb-3 leading-relaxed">
-            AI lead magnets are personalized resources that use artificial intelligence to create custom content for each lead. Instead of sending a generic PDF, you send a personalized report generated specifically for that lead.
-          </p>
-          <p className="text-xs sm:text-sm text-gray-700 font-semibold">
-            🚀 This approach is <strong>10x more effective</strong> at converting leads because it solves their specific problems!
-          </p>
-        </div>
-
-        <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
-          <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">System Overview</h2>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0 text-sm">
-              <span className="text-gray-600">Total Submissions</span>
-              <span className="font-semibold text-gray-900">{overview.total_submissions || 0}</span>
-            </div>
-            <div className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0 text-sm">
-              <span className="text-gray-600">Total Lead Magnets</span>
-              <span className="font-semibold text-gray-900">{overview.total_workflows || 0}</span>
-            </div>
-            <div className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0 text-sm">
-              <span className="text-gray-600">Active Lead Magnets</span>
-              <span className="font-semibold text-green-600">{overview.active_workflows || 0}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
-          <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Recent Activity</h2>
-          <p className="text-gray-600 text-xs sm:text-sm leading-relaxed">
-            Monitor your generated lead magnets and form submissions in the{' '}
-            <a href="/dashboard/jobs" className="text-primary-600 hover:text-primary-700 font-medium">
-              Generated Lead Magnets section
-            </a>
-            .
-          </p>
+          <a
+            href="/dashboard/jobs"
+            className="bg-white rounded-2xl shadow-soft border border-white/60 p-6 hover:shadow-md transition-shadow text-center"
+          >
+            <FiActivity className="w-5 h-5 mx-auto mb-2 text-brand-600" />
+            <div className="text-sm font-medium text-ink-900">Generated</div>
+          </a>
         </div>
       </div>
     </div>

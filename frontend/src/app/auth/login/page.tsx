@@ -15,48 +15,52 @@ function LoginForm() {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    // Security: Immediately clear any password from URL
-    const hasPassword = searchParams?.get('password')
+    // Security: remove any credentials that might have been placed in the URL
     const emailParam = searchParams?.get('email')
     const redirectParam = searchParams?.get('redirect')
-    
-    if (hasPassword && typeof window !== 'undefined') {
-      // Remove password from URL immediately for security
-      const newUrl = new URL(window.location.href)
-      newUrl.searchParams.delete('password')
-      window.history.replaceState({}, '', newUrl.toString())
-      
-      // Also use Next.js router to clean up
-      const cleanPath = redirectParam 
-        ? `/auth/login?email=${encodeURIComponent(emailParam || '')}&redirect=${encodeURIComponent(redirectParam)}`
-        : emailParam
-          ? `/auth/login?email=${encodeURIComponent(emailParam)}`
-          : '/auth/login'
-      router.replace(cleanPath, { scroll: false })
+    const cleanedEmail = emailParam || ''
+    const basePath = redirectParam
+      ? `/auth/login?redirect=${encodeURIComponent(redirectParam)}`
+      : '/auth/login'
+
+    // Always strip password query params if they exist
+    if (typeof window !== 'undefined') {
+      const nextUrl = new URL(window.location.href)
+      if (nextUrl.searchParams.has('password') || nextUrl.searchParams.has('pass')) {
+        nextUrl.searchParams.delete('password')
+        nextUrl.searchParams.delete('pass')
+        nextUrl.searchParams.delete('password1')
+        window.history.replaceState({}, '', nextUrl.toString())
+        router.replace(cleanedEmail ? `${basePath}&email=${encodeURIComponent(cleanedEmail)}` : basePath, {
+          scroll: false,
+        })
+      }
     }
-    
-    // Pre-fill email from query params (safe to do)
-    if (emailParam && !hasPassword) {
-      setEmail(emailParam)
+
+    if (cleanedEmail) {
+      setEmail(cleanedEmail)
     }
   }, [searchParams, router])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     e.stopPropagation()
+    const redirectParam = searchParams?.get('redirect')
     
-    // Security: Ensure URL is clean before submission
-    if (typeof window !== 'undefined' && window.location.search.includes('password')) {
+    // Security: Ensure URL is clean before submission and route stays POST-only
+    if (typeof window !== 'undefined') {
       const newUrl = new URL(window.location.href)
-      newUrl.searchParams.delete('password')
-      window.history.replaceState({}, '', newUrl.toString())
+      if (newUrl.searchParams.size > 0 || redirectParam) {
+        newUrl.search = redirectParam ? `?redirect=${encodeURIComponent(redirectParam)}` : ''
+        window.history.replaceState({}, '', newUrl.toString())
+      }
     }
     
     setError('')
     setLoading(true)
 
     try {
-      const result = await signIn(email, password)
+      const result = await signIn(email.trim(), password)
       if (result.success) {
         // Wait a bit longer to ensure tokens are stored in localStorage
         // Cognito SDK stores tokens asynchronously
@@ -113,32 +117,30 @@ function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-surface-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <div className="mx-auto h-16 w-16 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
+          <div className="mx-auto h-16 w-16 bg-brand-600 rounded-2xl flex items-center justify-center mb-4 shadow-soft">
             <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
           </div>
-          <h2 className="text-3xl font-bold text-gray-900">
+          <h2 className="text-3xl font-bold text-ink-900">
             Lead Magnet AI
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
+          <p className="mt-2 text-sm text-ink-600">
             Sign in to your account to get started
           </p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+        <div className="bg-white rounded-2xl shadow-soft p-8 border border-white/60">
           <form 
             className="space-y-6" 
             onSubmit={handleSubmit}
-            method="post"
-            action="#"
             noValidate
           >
             {error && (
-              <div className="bg-red-50 border-l-4 border-red-400 text-red-700 px-4 py-3 rounded-md flex items-start">
+              <div className="bg-red-50/80 border-l-4 border-red-400 text-red-700 px-4 py-3 rounded-2xl flex items-start">
                 <svg className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                 </svg>
@@ -148,8 +150,8 @@ function LoginForm() {
             
             <div className="space-y-4">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1 min-w-0">
-                  <span className="inline-block">Email address</span>
+                <label htmlFor="email" className="block text-sm font-semibold text-ink-800 mb-2 leading-5">
+                  Email address
                 </label>
                 <input
                   id="email"
@@ -159,13 +161,13 @@ function LoginForm() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all outline-none text-gray-900 placeholder-gray-400"
+                  className="w-full px-4 py-3 border border-white/60 rounded-2xl bg-white/90 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all outline-none text-ink-900 placeholder-ink-400 shadow-soft text-base leading-6"
                   placeholder="you@example.com"
                 />
               </div>
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1 min-w-0">
-                  <span className="inline-block">Password</span>
+                <label htmlFor="password" className="block text-sm font-semibold text-ink-800 mb-2 leading-5">
+                  Password
                 </label>
                 <input
                   id="password"
@@ -175,7 +177,7 @@ function LoginForm() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all outline-none text-gray-900 placeholder-gray-400"
+                  className="w-full px-4 py-3 border border-white/60 rounded-2xl bg-white/90 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all outline-none text-ink-900 placeholder-ink-400 shadow-soft text-base leading-6"
                   placeholder="Enter your password"
                 />
               </div>
@@ -184,7 +186,7 @@ function LoginForm() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex justify-center items-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:transform-none"
+              className="w-full flex justify-center items-center py-3 px-4 border border-transparent text-sm font-medium rounded-2xl text-white bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-soft disabled:transform-none"
             >
               {loading ? (
                 <>
@@ -199,10 +201,10 @@ function LoginForm() {
               )}
             </button>
 
-            <div className="text-center pt-4 border-t border-gray-200">
-              <p className="text-sm text-gray-600">
+            <div className="text-center pt-4 border-t border-white/60">
+              <p className="text-sm text-ink-600">
                 Don&apos;t have an account?{' '}
-                <Link href="/auth/signup" className="font-medium text-primary-600 hover:text-primary-700 transition-colors">
+                <Link href="/auth/signup" className="font-medium text-brand-600 hover:text-brand-700 transition-colors">
                   Sign up
                 </Link>
               </p>
@@ -217,10 +219,10 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <div className="min-h-screen flex items-center justify-center bg-surface-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-600 mx-auto"></div>
+          <p className="mt-4 text-ink-600">Loading...</p>
         </div>
       </div>
     }>
@@ -228,4 +230,3 @@ export default function LoginPage() {
     </Suspense>
   )
 }
-

@@ -46,16 +46,16 @@ export class BaseApiClient {
           config.headers['X-Session-Id'] = sessionId
         }
         
-        // Add view mode headers if present (for agency view)
-        const viewMode = localStorage.getItem('agency_view_mode')
-        if (viewMode) {
-          config.headers['X-View-Mode'] = viewMode
-        }
-        
-        const selectedCustomerId = localStorage.getItem('agency_selected_customer_id')
-        if (selectedCustomerId) {
-          config.headers['X-Selected-Customer-Id'] = selectedCustomerId
-        }
+        // Removed customer ID headers - all users can see all data from all accounts
+        // const viewMode = localStorage.getItem('agency_view_mode')
+        // if (viewMode) {
+        //   config.headers['X-View-Mode'] = viewMode
+        // }
+        // 
+        // const selectedCustomerId = localStorage.getItem('agency_selected_customer_id')
+        // if (selectedCustomerId) {
+        //   config.headers['X-Selected-Customer-Id'] = selectedCustomerId
+        // }
         
         return config
       },

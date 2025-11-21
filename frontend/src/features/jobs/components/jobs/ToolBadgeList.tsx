@@ -27,19 +27,19 @@ export function ToolBadgeList({
       return null
     }
     return (
-      <span className="px-2 py-0.5 text-xs bg-gray-50 text-gray-600 rounded border border-gray-200">
+      <span className="px-2.5 py-1 text-xs font-medium bg-gray-50 text-gray-600 rounded-lg border border-gray-200/60 shadow-sm ring-1 ring-gray-100/40">
         {emptyLabel}
       </span>
     )
   }
 
   return (
-    <div className={clsx('flex flex-wrap gap-1 items-center', className)}>
+    <div className={clsx('flex flex-wrap gap-2 items-center', className)}>
       {toolNames.map((toolName) => (
         <span
           key={toolName}
           className={clsx(
-            'px-2 py-0.5 text-xs rounded border whitespace-nowrap bg-blue-50 text-blue-700 border-blue-200',
+            'px-3 py-1 text-xs font-semibold rounded-xl border whitespace-nowrap bg-gradient-to-br from-blue-50 to-blue-100/50 text-blue-700 border-blue-200/60 shadow-sm ring-1 ring-blue-100/40 transition-all duration-200 hover:shadow-md hover:border-blue-300/60',
             badgeClassName
           )}
         >
@@ -47,7 +47,7 @@ export function ToolBadgeList({
         </span>
       ))}
       {toolChoice && (
-        <span className="text-xs text-gray-500">({toolChoice})</span>
+        <span className="text-xs text-gray-500 font-medium">({toolChoice})</span>
       )}
     </div>
   )
