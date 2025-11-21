@@ -9,8 +9,7 @@ import { useFormEdit } from '@/features/forms/hooks/useFormEdit'
 import { useTemplateEdit } from '@/features/templates/hooks/useTemplateEdit'
 import { extractPlaceholders } from '@/features/templates/utils/templateUtils'
 import { FiPlus, FiTrash2, FiSave } from 'react-icons/fi'
-
-const MODELS: AIModel[] = ['gpt-5', 'gpt-4.1', 'gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo']
+import WorkflowStepEditor from '@/app/dashboard/workflows/components/WorkflowStepEditor'
 
 export default function EditWorkflowClient() {
   const router = useRouter()
@@ -31,8 +30,11 @@ export default function EditWorkflowClient() {
     formId,
     workflowForm,
     handleChange,
+    handleStepChange,
     handleAddStep,
     handleDeleteStep,
+    handleMoveStepUp,
+    handleMoveStepDown,
     router: workflowRouter,
   } = workflowEdit
 
@@ -78,9 +80,16 @@ export default function EditWorkflowClient() {
         setError(`Step ${i + 1} name is required`)
         return
       }
-      if (step.step_type !== 'webhook' && (!step.instructions || !step.instructions.trim())) {
-        setError(`Step ${i + 1} instructions are required`)
-        return
+      if (step.step_type === 'webhook') {
+        if (!step.webhook_url || !step.webhook_url.trim()) {
+          setError(`Step ${i + 1} webhook URL is required`)
+          return
+        }
+      } else {
+        if (!step.instructions || !step.instructions.trim()) {
+          setError(`Step ${i + 1} instructions are required`)
+          return
+        }
       }
     }
 
@@ -139,11 +148,6 @@ export default function EditWorkflowClient() {
     }
   }
 
-  const updateStep = (index: number, field: string, value: any) => {
-    const newSteps = [...steps]
-    newSteps[index] = { ...newSteps[index], [field]: value }
-    setSteps(newSteps)
-  }
 
   if (loading || templateLoading) {
     return (
@@ -210,59 +214,18 @@ export default function EditWorkflowClient() {
           </div>
           <div className="space-y-4">
             {steps.map((step, index) => (
-              <div key={index} className="border border-white/60 rounded-2xl p-4 space-y-3">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1 space-y-3">
-                    <div>
-                      <label className="block text-sm font-medium text-ink-700 mb-1">
-                        Step Name <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={step.step_name}
-                        onChange={(e) => updateStep(index, 'step_name', e.target.value)}
-                        className="w-full px-3 py-2 border border-white/60 rounded-2xl bg-white/90 focus:ring-2 focus:ring-brand-500"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-ink-700 mb-1">
-                        Model
-                      </label>
-                      <select
-                        value={step.model}
-                        onChange={(e) => updateStep(index, 'model', e.target.value)}
-                        className="w-full px-3 py-2 border border-white/60 rounded-2xl bg-white/90 focus:ring-2 focus:ring-brand-500"
-                      >
-                        {MODELS.map((model) => (
-                          <option key={model} value={model}>
-                            {model}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-ink-700 mb-1">
-                        Instructions <span className="text-red-500">*</span>
-                      </label>
-                      <textarea
-                        value={step.instructions}
-                        onChange={(e) => updateStep(index, 'instructions', e.target.value)}
-                        className="w-full px-3 py-2 border border-white/60 rounded-2xl bg-white/90 focus:ring-2 focus:ring-brand-500"
-                        rows={4}
-                        required
-                      />
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteStep(index)}
-                    className="ml-4 p-2 text-red-600 hover:bg-red-50 rounded-2xl"
-                  >
-                    <FiTrash2 className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
+              <WorkflowStepEditor
+                key={`step-${index}-${step.step_name}-${step.step_type || 'ai'}`}
+                step={step}
+                index={index}
+                totalSteps={steps.length}
+                allSteps={steps}
+                onChange={handleStepChange}
+                onDelete={handleDeleteStep}
+                onMoveUp={handleMoveStepUp}
+                onMoveDown={handleMoveStepDown}
+                workflowId={workflowId}
+              />
             ))}
           </div>
         </div>

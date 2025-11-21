@@ -1,0 +1,1 @@
+{"version":3,"file":"securityHeaders.d.ts","sourceRoot":"","sources":["../../src/middleware/securityHeaders.ts"],"names":[],"mappings":"AAAA;;GAEG;AAEH,OAAO,EAAE,aAAa,EAAE,MAAM,WAAW,CAAC;AAE1C;;GAEG;AACH,wBAAgB,kBAAkB,CAAC,QAAQ,EAAE,aAAa,GAAG,aAAa,CA6BzE;AAED;;GAEG;AACH,wBAAgB,yBAAyB,CAAC,CAAC,SAAS,aAAa,EAC/D,OAAO,EAAE,MAAM,OAAO,CAAC,CAAC,CAAC,GACxB,OAAO,CAAC,CAAC,CAAC,CAEZ"}

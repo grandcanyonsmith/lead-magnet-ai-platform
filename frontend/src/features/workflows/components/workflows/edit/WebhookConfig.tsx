@@ -26,12 +26,23 @@ export function WebhookConfig({
           Webhook URL *
         </label>
         <input
-          type="url"
+          type="text"
           value={step.webhook_url || ''}
-          onChange={(e) => onChange('webhook_url', e.target.value)}
+          onChange={(e) => {
+            e.stopPropagation()
+            const newValue = e.target.value
+            onChange('webhook_url', newValue)
+          }}
+          onKeyDown={(e) => {
+            e.stopPropagation()
+            // Prevent form submission on Enter
+            if (e.key === 'Enter') {
+              e.preventDefault()
+            }
+          }}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
           placeholder="https://example.com/webhook"
-          required
+          autoComplete="off"
         />
         <p className="mt-1 text-sm text-gray-500">
           The URL where the POST request will be sent with selected data.
@@ -52,25 +63,31 @@ export function WebhookConfig({
                 type="text"
                 value={key}
                 onChange={(e) => {
+                  e.stopPropagation()
                   const newHeaders = { ...webhookHeaders }
                   delete newHeaders[key]
                   newHeaders[e.target.value] = value
                   onWebhookHeadersChange(newHeaders)
                   onChange('webhook_headers', newHeaders)
                 }}
+                onKeyDown={(e) => e.stopPropagation()}
                 placeholder="Header name"
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                autoComplete="off"
               />
               <input
                 type="text"
                 value={value}
                 onChange={(e) => {
+                  e.stopPropagation()
                   const newHeaders = { ...webhookHeaders, [key]: e.target.value }
                   onWebhookHeadersChange(newHeaders)
                   onChange('webhook_headers', newHeaders)
                 }}
+                onKeyDown={(e) => e.stopPropagation()}
                 placeholder="Header value"
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                autoComplete="off"
               />
               <button
                 type="button"

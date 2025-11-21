@@ -54,19 +54,16 @@ export function StepBasicFields({ step, onChange }: StepBasicFieldsProps) {
           value={step.step_type || 'ai_generation'}
           onChange={(e) => {
             const newStepType = e.target.value as 'ai_generation' | 'webhook'
+            onChange('step_type', newStepType)
             if (newStepType === 'webhook') {
               // Initialize webhook step with defaults
-              onChange('step_type', {
-                ...step,
-                step_type: newStepType,
-                webhook_data_selection: {
-                  include_submission: true,
-                  exclude_step_indices: [],
-                  include_job_info: true
-                }
+              onChange('webhook_data_selection', {
+                include_submission: true,
+                exclude_step_indices: [],
+                include_job_info: true
               })
-            } else {
-              onChange('step_type', newStepType)
+              onChange('webhook_url', '')
+              onChange('webhook_headers', {})
             }
           }}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
