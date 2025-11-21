@@ -90,6 +90,7 @@ export function useWorkflowEdit() {
           // Webhook step fields
           webhook_url: step.webhook_url || '',
           webhook_headers: step.webhook_headers || {},
+          webhook_custom_payload: step.webhook_custom_payload,
           webhook_data_selection: step.webhook_data_selection || (stepType === 'webhook' ? {
             include_submission: true,
             exclude_step_indices: [],

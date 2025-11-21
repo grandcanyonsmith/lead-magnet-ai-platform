@@ -92,17 +92,40 @@ export function ensureStepDefaults(steps: WorkflowStep[]): WorkflowStep[] {
       }
     }
     
-    return {
+    const stepType = step.step_type || 'ai_generation'
+    const normalizedStep: any = {
       ...step,
       step_name: step.step_name || `Step ${index + 1}`,
       step_order: stepOrder,
       step_description: step.step_description || step.step_name || `Step ${index + 1}`,
       depends_on: dependsOn,
-      tools: step.tools || (index === 0 ? ['web_search_preview'] : []),
-      tool_choice: (step.tool_choice || (index === 0 ? 'auto' : 'none')) as 'auto' | 'required' | 'none',
-      model: step.model || 'gpt-4',
-      instructions: step.instructions || '',
-    } as WorkflowStep;
+      step_type: stepType,
+    }
+    
+    // Only set model and instructions for AI generation steps
+    if (stepType === 'ai_generation') {
+      normalizedStep.tools = step.tools || (index === 0 ? ['web_search_preview'] : [])
+      normalizedStep.tool_choice = (step.tool_choice || (index === 0 ? 'auto' : 'none')) as 'auto' | 'required' | 'none'
+      normalizedStep.model = step.model || 'gpt-4'
+      normalizedStep.instructions = step.instructions || ''
+    } else if (stepType === 'webhook') {
+      // For webhook steps, only set tools/tool_choice if provided, don't set defaults
+      if (step.tools !== undefined) {
+        normalizedStep.tools = step.tools
+      }
+      if (step.tool_choice !== undefined) {
+        normalizedStep.tool_choice = step.tool_choice
+      }
+      // Only include model/instructions if they were explicitly provided
+      if (step.model) {
+        normalizedStep.model = step.model
+      }
+      if (step.instructions) {
+        normalizedStep.instructions = step.instructions
+      }
+    }
+    
+    return normalizedStep as WorkflowStep;
   });
 }
 
