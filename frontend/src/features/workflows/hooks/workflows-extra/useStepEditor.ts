@@ -19,6 +19,7 @@ function areStepsEqual(step1: WorkflowStep, step2: WorkflowStep): boolean {
     step1.instructions === step2.instructions &&
     step1.webhook_url === step2.webhook_url &&
     JSON.stringify(step1.webhook_headers || {}) === JSON.stringify(step2.webhook_headers || {}) &&
+    JSON.stringify(step1.webhook_custom_payload || {}) === JSON.stringify(step2.webhook_custom_payload || {}) &&
     JSON.stringify(step1.webhook_data_selection || {}) === JSON.stringify(step2.webhook_data_selection || {}) &&
     JSON.stringify(step1.tools || []) === JSON.stringify(step2.tools || []) &&
     step1.tool_choice === step2.tool_choice &&

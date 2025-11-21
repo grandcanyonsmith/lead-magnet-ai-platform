@@ -18,7 +18,7 @@
         "validateOnSynth": false,
         "assumeRoleArn": "arn:${AWS::Partition}:iam::471112574622:role/cdk-hnb659fds-deploy-role-471112574622-us-east-1",
         "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::471112574622:role/cdk-hnb659fds-cfn-exec-role-471112574622-us-east-1",
-        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-471112574622-us-east-1/252e47e9fb60d4704243cc836b1da044ad258f94b7b6a43abd1a0bf9dce7126e.json",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-471112574622-us-east-1/3357e3d1bdb87067646f3e30f7ab264198ecabaec24b94745c5147117d77db90.json",
         "requiresBootstrapStackVersion": 6,
         "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
         "additionalDependencies": [
@@ -255,12 +255,6 @@
             "data": "CDKMetadata"
           }
         ],
-        "/LeadMagnetDatabaseStack/Exports/Output{\"Fn::GetAtt\":[\"SessionsTable7C302024\",\"Arn\"]}": [
-          {
-            "type": "aws:cdk:logicalId",
-            "data": "ExportsOutputFnGetAttSessionsTable7C302024Arn24FF8012"
-          }
-        ],
         "/LeadMagnetDatabaseStack/Exports/Output{\"Fn::GetAtt\":[\"FoldersTableD1BB987C\",\"Arn\"]}": [
           {
             "type": "aws:cdk:logicalId",
@@ -337,6 +331,12 @@
           {
             "type": "aws:cdk:logicalId",
             "data": "ExportsOutputFnGetAttImpersonationLogsTableBD29E063Arn66BDDB76"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/Exports/Output{\"Fn::GetAtt\":[\"SessionsTable7C302024\",\"Arn\"]}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputFnGetAttSessionsTable7C302024Arn24FF8012"
           }
         ],
         "/LeadMagnetDatabaseStack/Exports/Output{\"Ref\":\"WorkflowsTable4E215008\"}": [

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { WorkflowStep } from '@/features/workflows/types'
 
 interface WebhookConfigProps {
@@ -25,6 +25,18 @@ export function WebhookConfig({
     step.webhook_custom_payload ? JSON.stringify(step.webhook_custom_payload, null, 2) : ''
   )
   const [payloadError, setPayloadError] = useState<string | null>(null)
+
+  // Sync state when step prop changes
+  useEffect(() => {
+    const hasCustomPayload = !!step.webhook_custom_payload
+    setUseCustomPayload(hasCustomPayload)
+    if (hasCustomPayload) {
+      setCustomPayloadJson(JSON.stringify(step.webhook_custom_payload, null, 2))
+    } else {
+      setCustomPayloadJson('')
+    }
+    setPayloadError(null)
+  }, [step.webhook_custom_payload])
 
   const handleCustomPayloadToggle = (enabled: boolean) => {
     setUseCustomPayload(enabled)
