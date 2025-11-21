@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import axios from 'axios'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+const PUBLIC_API_URL = process.env.NEXT_PUBLIC_PUBLIC_API_URL || API_URL
 
 type FormField = {
   field_id: string
@@ -20,7 +21,7 @@ type FormField = {
 export default function PublicFormPage() {
   const params = useParams()
   // Extract slug from params or URL pathname (for static export/Vercel compatibility)
-  const getSlug = () => {
+  const getSlug = useCallback(() => {
     // First try to get from params
     const slugParam = params?.slug
     const paramSlug = Array.isArray(slugParam) ? slugParam[0] : (slugParam as string)
@@ -43,7 +44,7 @@ export default function PublicFormPage() {
     }
     
     return paramSlug || ''
-  }
+  }, [params?.slug])
   
   const [slug, setSlug] = useState<string>(getSlug())
   
@@ -53,7 +54,7 @@ export default function PublicFormPage() {
     if (newSlug && newSlug !== slug && newSlug.trim() !== '' && newSlug !== '_') {
       setSlug(newSlug)
     }
-  }, [params?.slug])
+  }, [getSlug, slug])
   
   const [form, setForm] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -65,6 +66,7 @@ export default function PublicFormPage() {
   const [jobId, setJobId] = useState<string | null>(null)
   const [jobStatus, setJobStatus] = useState<string | null>(null)
   const [outputUrl, setOutputUrl] = useState<string | null>(null)
+  const [statusUpdatesUnavailable, setStatusUpdatesUnavailable] = useState(false)
 
   useEffect(() => {
     if (slug && slug.trim() !== '' && slug !== '_') {
@@ -78,7 +80,7 @@ export default function PublicFormPage() {
 
   const loadForm = async () => {
     try {
-      const response = await axios.get(`${API_URL}/v1/forms/${slug}`)
+      const response = await axios.get(`${PUBLIC_API_URL}/v1/forms/${slug}`)
       setForm(response.data)
       
       // Initialize form data with empty values
@@ -115,9 +117,10 @@ export default function PublicFormPage() {
     setJobId(null)
     setJobStatus(null)
     setOutputUrl(null)
+    setStatusUpdatesUnavailable(false)
 
     try {
-      const response = await axios.post(`${API_URL}/v1/forms/${slug}/submit`, {
+      const response = await axios.post(`${PUBLIC_API_URL}/v1/forms/${slug}/submit`, {
         submission_data: formData,
       })
 
@@ -154,7 +157,9 @@ export default function PublicFormPage() {
         // Poll the public job status endpoint (if it exists) or use admin endpoint
         // For now, we'll try to access job status - note: this might require auth
         // We'll need to handle this properly
-        const response = await axios.get(`${API_URL}/v1/jobs/${jobIdToPoll}/status`)
+        const response = await axios.get(`${PUBLIC_API_URL}/v1/jobs/${jobIdToPoll}/status`, {
+          timeout: 10000,
+        })
         
         const status = response.data.status
         setJobStatus(status)
@@ -184,7 +189,16 @@ export default function PublicFormPage() {
       } catch (error: any) {
         // If we can't poll (e.g., no public endpoint), just show generating message
         // and let user know to check back
-        console.warn('Could not poll job status:', error)
+        const statusCode = error?.response?.status
+        if (statusCode === 401 || statusCode === 403) {
+          setStatusUpdatesUnavailable(true)
+          setGenerating(false)
+          setJobStatus('unknown')
+          return
+        }
+        if (attempts === 0) {
+          console.warn('Could not poll job status:', error)
+        }
         attempts++
         if (attempts < maxAttempts) {
           setTimeout(poll, 2000) // Poll less frequently on error
@@ -313,6 +327,11 @@ export default function PublicFormPage() {
                 </p>
               )}
               <p className="text-xs text-ink-400 px-2">This may take a minute. Please don&apos;t close this page.</p>
+              {statusUpdatesUnavailable && (
+                <p className="mt-3 text-xs text-ink-500 px-2">
+                  Live status updates are unavailable on this deployment. We&apos;ll email you when your lead magnet finishes generating.
+                </p>
+              )}
             </>
           ) : outputUrl ? (
             <>

@@ -230,13 +230,16 @@ export function useJobDetail() {
 
   // Poll for job and execution steps updates when job is processing
   // Fixed: Properly include jobId in dependencies and use useCallback for loadExecutionSteps (Bug 1.3, 4.2 fix)
+  const currentJobRecordId = job?.job_id
+  const currentJobStatus = job?.status
+
   useEffect(() => {
-    if (!job || !jobId) {
+    if (!currentJobRecordId || !jobId) {
       return
     }
 
     // Poll if job is processing OR if a step is being rerun (Bug 2.5, 3.2 fix)
-    const shouldPoll = job.status === 'processing' || rerunningStep !== null
+    const shouldPoll = currentJobStatus === 'processing' || rerunningStep !== null
     if (!shouldPoll) {
       return
     }
@@ -282,7 +285,7 @@ export function useJobDetail() {
     }, 3000)
 
     return () => clearInterval(pollInterval)
-  }, [job?.status, jobId, rerunningStep, loadExecutionSteps])
+  }, [currentJobRecordId, currentJobStatus, jobId, rerunningStep, loadExecutionSteps])
 
   /**
    * Load job data and all related resources (execution steps, workflow, submission, form)

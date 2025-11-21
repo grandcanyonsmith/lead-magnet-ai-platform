@@ -55,14 +55,15 @@ export function StepBasicFields({ step, onChange }: StepBasicFieldsProps) {
           onChange={(e) => {
             e.stopPropagation()
             const newStepType = e.target.value as 'ai_generation' | 'webhook'
-            console.log('[StepBasicFields] Changing step_type to:', newStepType, 'Current step:', step)
             
             // Update step_type first - this should trigger immediate re-render
             onChange('step_type', newStepType)
             
             // Initialize webhook fields immediately after (React will batch these)
             if (newStepType === 'webhook') {
-              console.log('[StepBasicFields] Initializing webhook fields')
+              // Clear AI generation fields that aren't needed for webhooks
+              onChange('model', '')
+              onChange('instructions', '')
               // Call all onChange handlers - React batches state updates
               onChange('webhook_data_selection', {
                 include_submission: true,
@@ -71,6 +72,12 @@ export function StepBasicFields({ step, onChange }: StepBasicFieldsProps) {
               })
               onChange('webhook_url', '')
               onChange('webhook_headers', {})
+            } else if (newStepType === 'ai_generation') {
+              // Clear webhook fields when switching back to AI generation
+              onChange('webhook_url', undefined)
+              onChange('webhook_headers', undefined)
+              onChange('webhook_custom_payload', undefined)
+              onChange('webhook_data_selection', undefined)
             }
           }}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"

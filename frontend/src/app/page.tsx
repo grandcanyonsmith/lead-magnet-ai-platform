@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { CanyonButton } from '@/shared/components/ui/CanyonButton'
 
 export default function Home() {
   const router = useRouter()
@@ -63,11 +62,6 @@ export default function Home() {
             Checking authentication...
           </p>
         )}
-        <div className="mt-8 flex justify-center">
-          <CanyonButton onClick={() => console.log('Canyon Button Clicked!')}>
-            Click Me
-          </CanyonButton>
-        </div>
       </div>
     </main>
   )
