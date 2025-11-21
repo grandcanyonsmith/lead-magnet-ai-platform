@@ -26,6 +26,7 @@ export const workflowStepSchema = z.object({
   // Webhook step fields
   webhook_url: z.string().url().optional(),
   webhook_headers: z.record(z.string()).optional(),
+  webhook_custom_payload: z.record(z.any()).optional(), // Custom static payload (overrides data_selection if provided)
   webhook_data_selection: z.object({
     include_submission: z.boolean().optional().default(true),
     exclude_step_indices: z.array(z.number().int().min(0)).optional(),

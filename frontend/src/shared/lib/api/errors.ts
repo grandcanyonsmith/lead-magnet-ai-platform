@@ -34,8 +34,11 @@ export class ApiError extends Error {
       if (typeof errorData === 'string') {
         message = errorData
       } else if (errorData && typeof errorData === 'object') {
+        // Check for 'message' field first (preferred), then fallback to 'error' field
         if ('message' in errorData && typeof errorData.message === 'string') {
           message = errorData.message
+        } else if ('error' in errorData && typeof errorData.error === 'string') {
+          message = errorData.error
         }
         if ('code' in errorData && typeof errorData.code === 'string') {
           code = errorData.code

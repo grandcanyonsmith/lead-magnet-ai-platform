@@ -66,17 +66,21 @@ class WebhookStepService:
         
         webhook_headers = step.get('webhook_headers', {})
         data_selection = step.get('webhook_data_selection', {})
+        custom_payload = step.get('webhook_custom_payload')
         
-        # Build payload based on data selection
-        payload = self._build_webhook_payload(
-            job_id=job_id,
-            job=job,
-            submission=submission,
-            step_outputs=step_outputs,
-            sorted_steps=sorted_steps,
-            step_index=step_index,
-            data_selection=data_selection
-        )
+        # Use custom payload if provided, otherwise build payload based on data selection
+        if custom_payload:
+            payload = custom_payload
+        else:
+            payload = self._build_webhook_payload(
+                job_id=job_id,
+                job=job,
+                submission=submission,
+                step_outputs=step_outputs,
+                sorted_steps=sorted_steps,
+                step_index=step_index,
+                data_selection=data_selection
+            )
         
         # Prepare headers
         headers = {

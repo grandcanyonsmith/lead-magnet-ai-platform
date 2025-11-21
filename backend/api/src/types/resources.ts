@@ -41,6 +41,7 @@ export interface WorkflowStep {
   // Webhook step fields
   webhook_url?: string;
   webhook_headers?: Record<string, string>;
+  webhook_custom_payload?: Record<string, any>; // Custom static payload (overrides data_selection if provided)
   webhook_data_selection?: {
     include_submission: boolean;
     exclude_step_indices?: number[]; // Steps to exclude (all included by default)

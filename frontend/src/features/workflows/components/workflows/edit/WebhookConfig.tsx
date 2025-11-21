@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { WorkflowStep } from '@/features/workflows/types'
 
 interface WebhookConfigProps {
@@ -19,6 +20,45 @@ export function WebhookConfig({
   onChange,
   onWebhookHeadersChange
 }: WebhookConfigProps) {
+  const [useCustomPayload, setUseCustomPayload] = useState(!!step.webhook_custom_payload)
+  const [customPayloadJson, setCustomPayloadJson] = useState(
+    step.webhook_custom_payload ? JSON.stringify(step.webhook_custom_payload, null, 2) : ''
+  )
+  const [payloadError, setPayloadError] = useState<string | null>(null)
+
+  const handleCustomPayloadToggle = (enabled: boolean) => {
+    setUseCustomPayload(enabled)
+    if (enabled) {
+      // Initialize with empty object if no custom payload exists
+      if (!step.webhook_custom_payload) {
+        setCustomPayloadJson('{\n  \n}')
+        onChange('webhook_custom_payload', {})
+      }
+    } else {
+      // Clear custom payload when disabled
+      onChange('webhook_custom_payload', undefined)
+      setCustomPayloadJson('')
+      setPayloadError(null)
+    }
+  }
+
+  const handleCustomPayloadChange = (value: string) => {
+    setCustomPayloadJson(value)
+    setPayloadError(null)
+    
+    try {
+      if (value.trim()) {
+        const parsed = JSON.parse(value)
+        onChange('webhook_custom_payload', parsed)
+      } else {
+        onChange('webhook_custom_payload', undefined)
+      }
+    } catch (e) {
+      setPayloadError('Invalid JSON format')
+      // Don't update the step if JSON is invalid
+    }
+  }
+
   return (
     <>
       <div>
@@ -117,6 +157,51 @@ export function WebhookConfig({
       </div>
 
       <div>
+        <label className="flex items-center space-x-2 cursor-pointer mb-2">
+          <input
+            type="checkbox"
+            checked={useCustomPayload}
+            onChange={(e) => handleCustomPayloadToggle(e.target.checked)}
+            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+          />
+          <span className="text-sm font-medium text-gray-700">Use custom payload</span>
+        </label>
+        <p className="text-xs text-gray-500 mb-3">
+          {useCustomPayload 
+            ? 'Enter a custom JSON payload to send. This will override the dynamic data selection.'
+            : 'Choose which data to include in the webhook payload. All step outputs are included by default.'}
+        </p>
+
+        {useCustomPayload && (
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Custom Payload (JSON) *
+            </label>
+            <textarea
+              value={customPayloadJson}
+              onChange={(e) => handleCustomPayloadChange(e.target.value)}
+              onKeyDown={(e) => e.stopPropagation()}
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 font-mono text-sm ${
+                payloadError 
+                  ? 'border-red-300 focus:ring-red-500' 
+                  : 'border-gray-300 focus:ring-primary-500'
+              }`}
+              rows={10}
+              placeholder='{\n  "key": "value"\n}'
+              autoComplete="off"
+            />
+            {payloadError && (
+              <p className="mt-1 text-sm text-red-600">{payloadError}</p>
+            )}
+            <p className="mt-1 text-xs text-gray-500">
+              Enter a valid JSON object that will be sent as the webhook payload.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {!useCustomPayload && (
+      <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Data Selection
         </label>
@@ -210,6 +295,7 @@ export function WebhookConfig({
           )}
         </div>
       </div>
+      )}
     </>
   )
 }

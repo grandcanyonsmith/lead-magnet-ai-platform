@@ -122,11 +122,27 @@ export default function EditWorkflowClient() {
       await api.updateWorkflow(workflowId, {
         workflow_name: formData.workflow_name.trim(),
         workflow_description: formData.workflow_description.trim() || undefined,
-        steps: steps.map((step, index) => ({
+        steps: steps.map((step, index) => {
+          const stepData: any = {
             ...step,
             step_order: index,
-            model: step.model as AIModel,
-        })),
+          }
+          
+          // For webhook steps, remove model and instructions if they're empty
+          if (step.step_type === 'webhook') {
+            if (!step.model || !step.model.trim()) {
+              delete stepData.model
+            }
+            if (!step.instructions || !step.instructions.trim()) {
+              delete stepData.instructions
+            }
+          } else {
+            // For AI generation steps, ensure model is set
+            stepData.model = step.model as AIModel
+          }
+          
+          return stepData
+        }),
         template_id: finalTemplateId || undefined,
         template_version: 0,
       })
@@ -142,7 +158,43 @@ export default function EditWorkflowClient() {
       router.push('/dashboard/workflows')
     } catch (error: any) {
       console.error('Failed to update:', error)
-      setError(error.response?.data?.message || error.message || 'Failed to update')
+      
+      // Extract error message from ApiError instance
+      let errorMessage = error.message || 'Failed to update'
+      
+      // If there are validation details, format them nicely
+      if (error.details && typeof error.details === 'object') {
+        const details = error.details as Record<string, unknown>
+        
+        // Check for validation errors array
+        if (Array.isArray(details.errors)) {
+          const validationErrors = details.errors
+            .map((err: any) => {
+              if (typeof err === 'object' && err.message) {
+                return err.message
+              }
+              return String(err)
+            })
+            .filter(Boolean)
+          
+          if (validationErrors.length > 0) {
+            errorMessage = `${errorMessage}\n\n${validationErrors.join('\n')}`
+          }
+        }
+        
+        // Check for dependency validation errors
+        if (details.errors && Array.isArray(details.errors)) {
+          const depErrors = details.errors
+            .filter((err: any) => typeof err === 'string' && err.includes('depends_on'))
+            .map((err: string) => err.replace(/Step \d+ \(.*?\): /g, ''))
+          
+          if (depErrors.length > 0) {
+            errorMessage = `${errorMessage}\n\nDependency errors:\n${depErrors.join('\n')}`
+          }
+        }
+      }
+      
+      setError(errorMessage)
     } finally {
       setSubmitting(false)
     }
@@ -167,7 +219,8 @@ export default function EditWorkflowClient() {
 
       {error && (
         <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl">
-          {error}
+          <div className="font-semibold mb-1">Error updating workflow:</div>
+          <div className="whitespace-pre-wrap text-sm">{error}</div>
         </div>
       )}
 
