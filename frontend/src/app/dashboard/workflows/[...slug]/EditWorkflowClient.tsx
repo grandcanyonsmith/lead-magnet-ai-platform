@@ -11,6 +11,16 @@ import { extractPlaceholders } from '@/features/templates/utils/templateUtils'
 import { FiPlus, FiTrash2, FiSave } from 'react-icons/fi'
 import WorkflowStepEditor from '@/app/dashboard/workflows/components/WorkflowStepEditor'
 
+const isValidHttpUrl = (value?: string | null) => {
+  if (!value) return false
+  try {
+    const url = new URL(value)
+    return url.protocol === 'http:' || url.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
 export default function EditWorkflowClient() {
   const router = useRouter()
   const [templateId, setTemplateId] = useState<string | null>(null)
@@ -81,8 +91,13 @@ export default function EditWorkflowClient() {
         return
       }
       if (step.step_type === 'webhook') {
-        if (!step.webhook_url || !step.webhook_url.trim()) {
+        const webhookUrl = step.webhook_url?.trim()
+        if (!webhookUrl) {
           setError(`Step ${i + 1} webhook URL is required`)
+          return
+        }
+        if (!isValidHttpUrl(webhookUrl)) {
+          setError(`Step ${i + 1} webhook URL must start with http:// or https://`)
           return
         }
       } else {
@@ -119,30 +134,33 @@ export default function EditWorkflowClient() {
         }
       }
 
+      const sanitizedSteps = steps.map((step, index) => {
+        const stepData: any = {
+          ...step,
+          step_order: index,
+        }
+
+        if (step.step_type === 'webhook') {
+          delete stepData.model
+          delete stepData.instructions
+          delete stepData.tools
+          delete stepData.tool_choice
+          stepData.webhook_url = step.webhook_url?.trim()
+        } else {
+          stepData.model = step.model as AIModel
+          delete stepData.webhook_url
+          delete stepData.webhook_headers
+          delete stepData.webhook_custom_payload
+          delete stepData.webhook_data_selection
+        }
+
+        return stepData
+      })
+
       await api.updateWorkflow(workflowId, {
         workflow_name: formData.workflow_name.trim(),
         workflow_description: formData.workflow_description.trim() || undefined,
-        steps: steps.map((step, index) => {
-          const stepData: any = {
-            ...step,
-            step_order: index,
-          }
-          
-          // For webhook steps, remove model and instructions if they're empty
-          if (step.step_type === 'webhook') {
-            if (!step.model || !step.model.trim()) {
-              delete stepData.model
-            }
-            if (!step.instructions || !step.instructions.trim()) {
-              delete stepData.instructions
-            }
-          } else {
-            // For AI generation steps, ensure model is set
-            stepData.model = step.model as AIModel
-          }
-          
-          return stepData
-        }),
+        steps: sanitizedSteps,
         template_id: finalTemplateId || undefined,
         template_version: 0,
       })

@@ -1,8 +1,7 @@
+const isStaticExport = process.env.NODE_ENV === 'production'
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Only use 'export' for production builds, not dev mode
-  // output: 'export' is disabled in dev mode to support dynamic routes
-  ...(process.env.NODE_ENV === 'production' && { output: 'export' }), // Enable static export for S3 deployment
   reactStrictMode: true,
   images: {
     unoptimized: true,
@@ -16,19 +15,24 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
-  async headers() {
-    return [
-      {
-        source: '/:path*',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'no-cache, no-store, must-revalidate',
-          },
-        ],
-      },
-    ];
-  },
+}
+
+if (isStaticExport) {
+  // Enable static export for S3 deployment – custom headers must be configured at the CDN layer.
+  nextConfig.output = 'export'
+} else {
+  // Only apply custom headers when Next can serve them (i.e., not during static export).
+  nextConfig.headers = async () => [
+    {
+      source: '/:path*',
+      headers: [
+        {
+          key: 'Cache-Control',
+          value: 'no-cache, no-store, must-revalidate',
+        },
+      ],
+    },
+  ]
 }
 
 module.exports = nextConfig

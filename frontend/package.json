@@ -8,6 +8,7 @@
     "start": "next start -p 5000 -H 0.0.0.0",
     "start:deploy": "next start -p ${PORT:-80} -H 0.0.0.0",
     "lint": "next lint",
+    "type-check": "tsc --noEmit",
     "export": "next export",
     "postinstall": "npx browserslist@latest --update-db || true",
     "test:ui": "playwright test"
