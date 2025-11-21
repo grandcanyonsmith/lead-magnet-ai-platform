@@ -7,6 +7,7 @@ import { formatRelativeTime, formatDurationSeconds } from '@/features/jobs/utils
 import { StatusBadge } from '@/shared/components/ui/StatusBadge'
 import { useJobCardData } from '@/features/jobs/hooks/useJobCardData'
 import { api } from '@/shared/lib/api'
+import { toast } from 'react-hot-toast'
 import type { Job } from '@/features/jobs/types'
 
 interface JobTableRowProps {
@@ -36,22 +37,22 @@ export function JobTableRow({ job, workflowName, onClick }: JobTableRowProps) {
       setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)
     } catch (error) {
       console.error('Failed to open document:', error)
-      alert('Failed to open document. Please try again.')
+      toast.error('Failed to open document. Please try again.')
     }
   }
 
   return (
     <React.Fragment>
       <tr
-        className="hover:bg-gray-50 cursor-pointer transition-colors"
+        className="hover:bg-surface-50 cursor-pointer transition-colors"
         onClick={onClick}
       >
         <td className="px-6 py-4 whitespace-nowrap">
-          <div className="text-sm font-medium text-gray-900">
+          <div className="text-sm font-medium text-ink-900">
             {workflowName}
           </div>
           {stepProgress && (
-            <div className="text-xs text-gray-500 mt-0.5">
+            <div className="text-xs text-ink-500 mt-0.5">
               Step {stepProgress.completed}/{stepProgress.total}
             </div>
           )}
@@ -63,14 +64,14 @@ export function JobTableRow({ job, workflowName, onClick }: JobTableRowProps) {
           </div>
         </td>
         <td className="px-6 py-4 whitespace-nowrap">
-          <div className="text-sm text-gray-900">
+          <div className="text-sm text-ink-900">
             {formatRelativeTime(job.created_at)}
           </div>
-          <div className="text-xs text-gray-500">
+          <div className="text-xs text-ink-500">
             {new Date(job.created_at).toLocaleDateString()}
           </div>
         </td>
-        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+        <td className="px-6 py-4 whitespace-nowrap text-sm text-ink-500">
           {duration !== null ? formatDurationSeconds(duration) : '-'}
         </td>
         <td className="px-6 py-4 whitespace-nowrap text-sm" onClick={(e) => e.stopPropagation()}>
@@ -80,13 +81,13 @@ export function JobTableRow({ job, workflowName, onClick }: JobTableRowProps) {
               onClick={handleDocumentClick}
               onMouseDown={(e) => e.stopPropagation()}
               onTouchStart={(e) => e.stopPropagation()}
-              className="inline-flex items-center text-primary-600 hover:text-primary-900 font-medium"
+              className="inline-flex items-center text-brand-600 hover:text-brand-800 font-medium"
             >
               View
               <FiExternalLink className="w-4 h-4 ml-1" />
             </button>
           ) : (
-            <span className="text-gray-400">-</span>
+            <span className="text-ink-300">-</span>
           )}
         </td>
       </tr>
@@ -119,4 +120,3 @@ export function JobTableRow({ job, workflowName, onClick }: JobTableRowProps) {
     </React.Fragment>
   )
 }
-

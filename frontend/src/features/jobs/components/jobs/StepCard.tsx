@@ -49,25 +49,25 @@ export function StepCard({
 
   const stepClassName = (() => {
     if (isRerunning) {
-      return 'border-blue-500 bg-blue-50/90 shadow-lg ring-1 ring-blue-200'
+      return 'border-brand-300 bg-brand-50 shadow-soft ring-2 ring-brand-200'
     }
     if (isInProgress) {
-      return 'border-blue-400 bg-blue-50/80 shadow-md ring-1 ring-blue-100'
+      return 'border-brand-200 bg-white shadow-soft ring-1 ring-brand-100'
     }
     if (isFailed) {
-      return 'border-red-300 bg-red-50/80 shadow-md'
+      return 'border-red-200 bg-red-50 shadow-soft ring-1 ring-red-100'
     }
     if (isCompleted) {
-      return 'border-green-200 bg-white shadow-sm'
+      return 'border-white/60 bg-white shadow-soft hover:shadow-md transition-shadow duration-200'
     }
-    return 'border-gray-300 bg-gray-50/50 shadow-sm'
+    return 'border-white/60 bg-surface-50 shadow-soft'
   })()
 
   const filesToShow = getStepFilePreviews(step, imageArtifacts)
 
   return (
     <div
-      className={`border-2 rounded-xl transition-all hover:shadow-md ${stepClassName}`}
+      className={`border rounded-2xl transition-all duration-200 ${stepClassName}`}
       data-step-status={status}
       data-step-order={stepOrder}
     >
@@ -96,7 +96,7 @@ export function StepCard({
       />
 
       {filesToShow.length > 0 && (
-        <div className="px-3 sm:px-4 pb-3 sm:pb-4">
+        <div className="px-4 sm:px-5 pb-4 sm:pb-5 pt-2">
           {filesToShow.map((file, idx) => {
             if (file.type === 'imageArtifact') {
               const artifact = file.data as Artifact
@@ -131,4 +131,3 @@ export function StepCard({
     </div>
   )
 }
-

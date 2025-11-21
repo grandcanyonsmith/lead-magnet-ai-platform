@@ -15,7 +15,7 @@ if (!WORKFLOWS_TABLE) {
 }
 
 class WorkflowsController {
-  async list(tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {
+  async list(_tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {
     if (!WORKFLOWS_TABLE) {
       throw new ApiError('WORKFLOWS_TABLE environment variable is not configured', 500);
     }
@@ -23,38 +23,25 @@ class WorkflowsController {
     try {
       const status = queryParams.status;
       const limit = queryParams.limit ? parseInt(queryParams.limit) : 50;
+      const offset = queryParams.offset ? parseInt(queryParams.offset) : 0;
 
-      logger.info('[Workflows List] Starting query', { tenantId, status, limit });
+      logger.info('[Workflows List] Starting query', { status, limit, offset });
 
       let workflows: any[] = [];
       try {
         if (status) {
-          const result = await db.query(
-            WORKFLOWS_TABLE!,
-            'gsi_tenant_status',
-            'tenant_id = :tenant_id AND #status = :status',
-            { ':tenant_id': tenantId, ':status': status },
-            { '#status': 'status' },
-            limit
-          );
-          workflows = result.items;
+          // Remove tenant_id filtering - show all workflows from all accounts
+          const allWorkflows = await db.scan(WORKFLOWS_TABLE!, limit * 10); // Scan more to filter by status
+          workflows = allWorkflows.filter((w: any) => w.status === status).slice(0, limit + 1);
         } else {
-          const result = await db.query(
-            WORKFLOWS_TABLE!,
-            'gsi_tenant_status',
-            'tenant_id = :tenant_id',
-            { ':tenant_id': tenantId },
-            undefined,
-            limit
-          );
-          workflows = result.items;
+          // Remove tenant_id filtering - show all workflows from all accounts
+          workflows = await db.scan(WORKFLOWS_TABLE!, limit + 1);
         }
       } catch (dbError: any) {
         logger.error('[Workflows List] Database query error', {
           error: dbError.message,
           errorName: dbError.name,
           table: WORKFLOWS_TABLE,
-          tenantId,
         });
         // Return empty array if table doesn't exist or permissions issue
         if (
@@ -77,9 +64,13 @@ class WorkflowsController {
         return dateB - dateA; // DESC order
       });
 
+      // Determine if there are more items
+      const hasMore = workflows.length > limit;
+      const workflowsToProcess = hasMore ? workflows.slice(0, limit) : workflows;
+
       // Fetch form data for each workflow, auto-create if missing
       const workflowsWithForms = await Promise.all(
-        workflows.map(async (workflow: any) => {
+        workflowsToProcess.map(async (workflow: any) => {
           try {
             let activeForm = await formService.getFormForWorkflow(workflow.workflow_id);
             
@@ -129,8 +120,10 @@ class WorkflowsController {
       );
 
       logger.info('[Workflows List] Query completed', {
-        tenantId,
         workflowsFound: workflowsWithForms.length,
+        hasMore,
+        offset,
+        limit,
       });
 
       const response = {
@@ -138,6 +131,10 @@ class WorkflowsController {
         body: {
           workflows: workflowsWithForms,
           count: workflowsWithForms.length,
+          total: workflows.length, // Total before pagination
+          limit,
+          offset,
+          has_more: hasMore,
         },
       };
 
@@ -154,13 +151,12 @@ class WorkflowsController {
         error: error.message,
         errorName: error.name,
         stack: error.stack,
-        tenantId,
       });
       throw error;
     }
   }
 
-  async get(tenantId: string, workflowId: string): Promise<RouteResponse> {
+  async get(_tenantId: string, workflowId: string): Promise<RouteResponse> {
     if (!WORKFLOWS_TABLE) {
       throw new ApiError('WORKFLOWS_TABLE environment variable is not configured', 500);
     }
@@ -171,9 +167,7 @@ class WorkflowsController {
       throw new ApiError('This lead magnet doesn\'t exist or has been removed', 404);
     }
 
-    if (workflow.tenant_id !== tenantId) {
-      throw new ApiError('You don\'t have permission to access this lead magnet', 403);
-    }
+    // Removed tenant_id check - allow access to all workflows from all accounts
 
     // Log workflow steps count for debugging
     if (workflow.steps) {
@@ -281,7 +275,7 @@ class WorkflowsController {
     };
   }
 
-  async update(tenantId: string, workflowId: string, body: any): Promise<RouteResponse> {
+  async update(_tenantId: string, workflowId: string, body: any): Promise<RouteResponse> {
     if (!WORKFLOWS_TABLE) {
       throw new ApiError('WORKFLOWS_TABLE environment variable is not configured', 500);
     }
@@ -292,9 +286,7 @@ class WorkflowsController {
       throw new ApiError('This lead magnet doesn\'t exist or has been removed', 404);
     }
 
-    if (existing.tenant_id !== tenantId) {
-      throw new ApiError('You don\'t have permission to access this lead magnet', 403);
-    }
+    // Removed tenant_id check - allow access to all workflows from all accounts
 
     // Normalize steps BEFORE validation to clean up dependencies
     // This prevents validation errors from invalid dependency indices
@@ -386,7 +378,7 @@ class WorkflowsController {
     };
   }
 
-  async delete(tenantId: string, workflowId: string): Promise<RouteResponse> {
+  async delete(_tenantId: string, workflowId: string): Promise<RouteResponse> {
     if (!WORKFLOWS_TABLE) {
       throw new ApiError('WORKFLOWS_TABLE environment variable is not configured', 500);
     }
@@ -397,9 +389,7 @@ class WorkflowsController {
       throw new ApiError('This lead magnet doesn\'t exist or has been removed', 404);
     }
 
-    if (existing.tenant_id !== tenantId) {
-      throw new ApiError('You don\'t have permission to access this lead magnet', 403);
-    }
+    // Removed tenant_id check - allow access to all workflows from all accounts
 
     // Soft delete workflow
     await db.update(WORKFLOWS_TABLE!, { workflow_id: workflowId }, {

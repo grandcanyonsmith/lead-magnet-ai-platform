@@ -67,13 +67,13 @@ export function ExecutionSteps({
   }
 
   return (
-    <div className="mt-4 sm:mt-6 bg-white rounded-lg shadow p-4 sm:p-6">
+    <div className="mt-4 sm:mt-6 bg-white rounded-2xl shadow-soft border border-white/60 p-5 sm:p-7">
       <button
         onClick={onToggleShow}
-        className="flex items-center justify-between w-full text-left mb-4 touch-target min-h-[48px] sm:min-h-0"
+        className="flex items-center justify-between w-full text-left mb-5 touch-target min-h-[48px] sm:min-h-0 hover:opacity-80 transition-opacity duration-200"
       >
-        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-          <h2 className="text-base sm:text-lg font-semibold text-gray-900">Execution Steps</h2>
+        <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+          <h2 className="text-lg sm:text-xl font-bold text-ink-900 tracking-tight">Execution Steps</h2>
           <div className="hidden sm:block">
             <StepProgressBar 
               steps={sortedSteps} 
@@ -91,15 +91,15 @@ export function ExecutionSteps({
             />
           </div>
           {showExecutionSteps ? (
-            <FiChevronUp className="w-5 h-5 text-gray-500 flex-shrink-0" />
+            <FiChevronUp className="w-5 h-5 text-ink-500 flex-shrink-0 transition-transform duration-200" />
           ) : (
-            <FiChevronDown className="w-5 h-5 text-gray-500 flex-shrink-0" />
+            <FiChevronDown className="w-5 h-5 text-ink-500 flex-shrink-0 transition-transform duration-200" />
           )}
         </div>
       </button>
 
       {showExecutionSteps && (
-        <div className="space-y-2 pt-4 border-t border-gray-200">
+        <div className="space-y-4 pt-5 border-t border-white/60">
           {sortedSteps.map((step) => {
             const stepOrder = step.step_order ?? 0
             const isExpanded = expandedSteps.has(stepOrder)

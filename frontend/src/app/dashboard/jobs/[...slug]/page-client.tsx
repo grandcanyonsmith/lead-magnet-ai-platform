@@ -159,7 +159,7 @@ export default function JobDetailClient() {
     return (
       <div>
         <JobHeader error={error} resubmitting={false} onResubmit={() => {}} />
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl">
           {error}
         </div>
       </div>
@@ -245,20 +245,20 @@ export default function JobDetailClient() {
       {/* Details and Form Submission - Collapsible sections at bottom */}
       <div className="mt-4 sm:mt-6 space-y-3 sm:space-y-4">
         {/* Job Details Section */}
-        <div className="bg-white rounded-lg shadow">
+        <div className="bg-white rounded-2xl shadow-soft border border-white/60">
           <button
             onClick={() => state.setShowDetails(!state.showDetails)}
             className="flex items-center justify-between w-full text-left p-4 sm:p-6 touch-target min-h-[48px] sm:min-h-0"
           >
-            <h2 className="text-base sm:text-lg font-semibold text-gray-900">Details</h2>
+            <h2 className="text-base sm:text-lg font-semibold text-ink-900">Details</h2>
             {state.showDetails ? (
-              <FiChevronUp className="w-5 h-5 text-gray-500 flex-shrink-0 ml-2" />
+              <FiChevronUp className="w-5 h-5 text-ink-500 flex-shrink-0 ml-2" />
             ) : (
-              <FiChevronDown className="w-5 h-5 text-gray-500 flex-shrink-0 ml-2" />
+              <FiChevronDown className="w-5 h-5 text-ink-500 flex-shrink-0 ml-2" />
             )}
           </button>
           {state.showDetails && (
-            <div className="px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-200">
+            <div className="px-4 sm:px-6 pb-4 sm:pb-6 border-t border-white/60">
               <div className="pt-4 sm:pt-6">
                 <JobDetails job={job} workflow={workflow} hideContainer={true} />
               </div>
@@ -268,17 +268,17 @@ export default function JobDetailClient() {
 
         {/* Form Submission Details Section */}
         {submission && (
-          <div className="bg-white rounded-lg shadow">
+          <div className="bg-white rounded-2xl shadow-soft border border-white/60">
             <div className="flex items-center justify-between p-4 sm:p-6">
               <button
                 onClick={() => state.setShowFormSubmission(!state.showFormSubmission)}
                 className="flex items-center justify-between flex-1 text-left touch-target min-h-[48px] sm:min-h-0"
               >
-                <h2 className="text-base sm:text-lg font-semibold text-gray-900">Form Submission Details</h2>
+                <h2 className="text-base sm:text-lg font-semibold text-ink-900">Form Submission Details</h2>
                 {state.showFormSubmission ? (
-                  <FiChevronUp className="w-5 h-5 text-gray-500 flex-shrink-0 ml-2" />
+                  <FiChevronUp className="w-5 h-5 text-ink-500 flex-shrink-0 ml-2" />
                 ) : (
-                  <FiChevronDown className="w-5 h-5 text-gray-500 flex-shrink-0 ml-2" />
+                  <FiChevronDown className="w-5 h-5 text-ink-500 flex-shrink-0 ml-2" />
                 )}
               </button>
               <button
@@ -287,7 +287,7 @@ export default function JobDetailClient() {
                   state.openResubmitModal()
                 }}
                 disabled={resubmitting}
-                className="ml-4 flex items-center gap-2 px-3 py-2 text-sm font-medium text-primary-600 hover:text-primary-800 hover:bg-primary-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-target min-h-[44px] sm:min-h-0"
+                className="ml-4 flex items-center gap-2 px-3 py-2 text-sm font-medium text-brand-600 hover:text-brand-700 hover:bg-brand-50 rounded-2xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-target min-h-[44px] sm:min-h-0"
                 title="Resubmit with same form answers"
               >
                 <FiRefreshCw className={`w-4 h-4 ${resubmitting ? 'animate-spin' : ''}`} />
@@ -295,23 +295,23 @@ export default function JobDetailClient() {
               </button>
             </div>
             {state.showFormSubmission && (
-              <div className="px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-200">
+              <div className="px-4 sm:px-6 pb-4 sm:pb-6 border-t border-white/60">
                 <div className="pt-4 sm:pt-6">
                   {submission.submission_data ? (
                     <div className="space-y-3">
                       {Object.entries(submission.submission_data).map(([key, value]: [string, any]) => (
-                        <div key={key} className="border-b border-gray-100 pb-3 last:border-b-0">
-                          <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">
+                        <div key={key} className="border-b border-white/60 pb-3 last:border-b-0">
+                          <label className="block text-sm font-medium text-ink-700 mb-1 capitalize">
                             {key.replace(/_/g, ' ')}
                           </label>
-                          <p className="text-sm text-gray-900 break-words">
+                          <p className="text-sm text-ink-900 break-words">
                             {typeof value === 'string' ? value : JSON.stringify(value)}
                           </p>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-500">No submission data available</p>
+                    <p className="text-sm text-ink-500">No submission data available</p>
                   )}
                 </div>
               </div>

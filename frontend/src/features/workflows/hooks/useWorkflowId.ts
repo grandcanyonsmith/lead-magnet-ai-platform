@@ -1,7 +1,7 @@
 'use client'
 
 import { useParams } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
 /**
  * Hook to extract workflow ID from params/URL
@@ -10,8 +10,10 @@ import { useState, useEffect } from 'react'
 export function useWorkflowId(): string {
   const params = useParams()
   
-  const getWorkflowId = () => {
-    const paramId = params?.id as string
+  const getWorkflowId = useCallback(() => {
+    const slugParam = params?.slug as string[] | string | undefined
+    const slugId = Array.isArray(slugParam) ? slugParam[0] : slugParam
+    const paramId = (slugId || (params?.id as string | undefined)) ?? ''
     if (paramId && paramId !== '_') {
       return paramId
     }
@@ -22,17 +24,17 @@ export function useWorkflowId(): string {
         return pathMatch[1]
       }
     }
-    return paramId || ''
-  }
+    return ''
+  }, [params])
   
-  const [workflowId, setWorkflowId] = useState<string>(getWorkflowId())
+  const [workflowId, setWorkflowId] = useState<string>(() => getWorkflowId())
   
   useEffect(() => {
     const newId = getWorkflowId()
     if (newId && newId !== workflowId && newId.trim() !== '' && newId !== '_') {
       setWorkflowId(newId)
     }
-  }, [params?.id, workflowId])
+  }, [getWorkflowId, workflowId])
   
   return workflowId
 }

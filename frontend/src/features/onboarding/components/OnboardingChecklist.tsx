@@ -33,7 +33,7 @@ const MinimizeIcon = ({ isMinimized }: { isMinimized: boolean }) => {
 
 const LoadingSpinner = () => (
   <svg
-    className="animate-spin h-4 w-4 text-primary-600"
+    className="animate-spin h-4 w-4 text-brand-600"
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
     viewBox="0 0 24 24"
@@ -150,21 +150,21 @@ function OnboardingChecklistComponent({ settings, onStartTour, onDismiss, onItem
       ref={widgetRef}
       role="complementary"
       aria-label="Onboarding checklist"
-      className={`fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 z-50 bg-white rounded-lg shadow-xl border border-gray-200 transition-all duration-300 ${
+      className={`fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 z-50 bg-white rounded-2xl shadow-soft border border-white/60 transition-all duration-300 ${
         isMinimized ? 'w-auto sm:w-64' : 'w-full sm:w-80'
       }`}
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-primary-50 to-white">
+      <div className="flex items-center justify-between p-4 border-b border-white/60 bg-surface-50">
         <div className="flex items-center">
-          <FiList className="w-5 h-5 text-primary-600 mr-2" aria-hidden="true" />
-          <h3 className="font-semibold text-gray-900">Getting Started</h3>
+          <FiList className="w-5 h-5 text-brand-600 mr-2" aria-hidden="true" />
+          <h3 className="font-semibold text-ink-900">Getting Started</h3>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={handleToggleMinimize}
             onKeyDown={(e) => handleKeyDown(e, handleToggleMinimize)}
-            className="text-gray-500 hover:text-gray-700 p-2 rounded hover:bg-gray-100 touch-target transition-colors"
+            className="text-ink-500 hover:text-ink-800 p-2 rounded-2xl hover:bg-surface-50 touch-target transition-colors"
             aria-label={isMinimized ? 'Expand checklist' : 'Minimize checklist'}
             aria-expanded={!isMinimized}
             type="button"
@@ -174,7 +174,7 @@ function OnboardingChecklistComponent({ settings, onStartTour, onDismiss, onItem
           <button
             onClick={onDismissHandler}
             onKeyDown={(e) => handleKeyDown(e, onDismissHandler)}
-            className="text-gray-500 hover:text-gray-700 p-2 rounded hover:bg-gray-100 touch-target transition-colors"
+            className="text-ink-500 hover:text-ink-800 p-2 rounded-2xl hover:bg-surface-50 touch-target transition-colors"
             aria-label="Dismiss checklist"
             title="Dismiss checklist"
             type="button"
@@ -190,12 +190,12 @@ function OnboardingChecklistComponent({ settings, onStartTour, onDismiss, onItem
           {/* Progress indicator */}
           <div className="mb-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-600">Progress</span>
-              <span className="text-sm font-medium text-gray-600">{progress}%</span>
+              <span className="text-sm font-medium text-ink-600">Progress</span>
+              <span className="text-sm font-medium text-ink-600">{progress}%</span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
+            <div className="w-full bg-white/60 rounded-full h-2">
               <div
-                className="bg-primary-600 h-2 rounded-full transition-all duration-300"
+                className="bg-brand-600 h-2 rounded-full transition-all duration-300"
                 style={{ width: `${progress}%` }}
                 role="progressbar"
                 aria-valuenow={progress}
@@ -207,14 +207,14 @@ function OnboardingChecklistComponent({ settings, onStartTour, onDismiss, onItem
           </div>
 
           {/* Description */}
-          <p className="text-sm text-gray-600 mb-4">
+          <p className="text-sm text-ink-600 mb-4">
             Complete these steps to get the most out of Lead Magnet AI:
           </p>
 
           {/* Error message */}
           {itemState.error && (
             <div
-              className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg"
+              className="mb-4 p-3 bg-red-50 border border-red-200 rounded-2xl shadow-soft"
               role="alert"
               aria-live="polite"
             >
@@ -222,7 +222,7 @@ function OnboardingChecklistComponent({ settings, onStartTour, onDismiss, onItem
                 <p className="text-sm text-red-700">{itemState.error}</p>
                 <button
                   onClick={clearError}
-                  className="text-red-600 hover:text-red-800 p-1 rounded"
+                  className="text-red-600 hover:text-red-800 p-1 rounded-2xl"
                   aria-label="Dismiss error"
                   type="button"
                 >
@@ -244,12 +244,12 @@ function OnboardingChecklistComponent({ settings, onStartTour, onDismiss, onItem
                     onClick={() => onItemClickHandler(item)}
                     onKeyDown={(e) => handleKeyDown(e, () => onItemClickHandler(item))}
                     disabled={completed || isUpdating}
-                    className={`w-full flex items-center justify-between p-3 rounded-lg transition-all ${
+                    className={`w-full flex items-center justify-between p-3 rounded-2xl transition-all ${
                       completed
-                        ? 'bg-green-50 text-green-700 cursor-default'
+                        ? 'bg-emerald-50 text-emerald-800 cursor-default border border-emerald-200'
                         : isUpdating
-                        ? 'bg-gray-50 text-gray-500 cursor-wait'
-                        : 'bg-gray-50 hover:bg-primary-50 text-gray-700 hover:text-primary-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2'
+                        ? 'bg-surface-50 text-ink-500 cursor-wait border border-white/60'
+                        : 'bg-white hover:bg-surface-50 text-ink-800 hover:text-brand-700 cursor-pointer border border-white/60 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 shadow-soft'
                     }`}
                     aria-label={
                       completed
@@ -260,21 +260,21 @@ function OnboardingChecklistComponent({ settings, onStartTour, onDismiss, onItem
                     }
                     aria-disabled={completed || isUpdating}
                     type="button"
-                  >
-                    <div className="flex items-center flex-1 text-left">
-                      {completed ? (
-                        <FiCheckCircle
-                          className="w-5 h-5 text-green-600 mr-3 flex-shrink-0"
-                          aria-hidden="true"
-                        />
-                      ) : (
-                        <FiCircle
-                          className="w-5 h-5 text-gray-400 mr-3 flex-shrink-0"
-                          aria-hidden="true"
-                        />
-                      )}
-                      <span className="text-sm font-medium">{item.label}</span>
-                    </div>
+                    >
+                      <div className="flex items-center flex-1 text-left">
+                        {completed ? (
+                          <FiCheckCircle
+                            className="w-5 h-5 text-green-600 mr-3 flex-shrink-0"
+                            aria-hidden="true"
+                          />
+                        ) : (
+                          <FiCircle
+                            className="w-5 h-5 text-ink-400 mr-3 flex-shrink-0"
+                            aria-hidden="true"
+                          />
+                        )}
+                        <span className="text-sm font-medium">{item.label}</span>
+                      </div>
                     {!completed && !isUpdating && (
                       <FiArrowRight
                         className="w-4 h-4 ml-2 flex-shrink-0"
@@ -290,7 +290,7 @@ function OnboardingChecklistComponent({ settings, onStartTour, onDismiss, onItem
 
           {/* Completion message */}
           {allCompleted && (
-            <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200" role="status" aria-live="polite">
+            <div className="mt-4 p-3 bg-green-50 rounded-2xl border border-green-200 shadow-soft" role="status" aria-live="polite">
               <p className="text-sm text-green-700 font-medium text-center">
                 {COMPLETION_MESSAGES.ALL_COMPLETE}
               </p>

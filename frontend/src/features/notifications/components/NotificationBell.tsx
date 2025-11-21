@@ -119,80 +119,80 @@ export const NotificationBell: React.FC = () => {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors touch-target"
+        className="relative inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/60 bg-white/80 text-ink-500 shadow-soft transition hover:text-ink-900"
         aria-label="Notifications"
       >
-        <FiBell className="w-5 h-5 sm:w-6 sm:h-6" />
+        <FiBell className="h-5 w-5" />
         {unreadCount > 0 && (
-          <span className="absolute top-0 right-0 flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full">
+          <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full border border-white/70 bg-brand-500 text-xs font-semibold text-white shadow-soft">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-[calc(100vw-1rem)] max-w-[24rem] sm:w-80 md:w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-96 overflow-hidden flex flex-col">
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
-            <div className="flex items-center space-x-2">
+        <div className="absolute right-0 z-50 mt-3 flex max-h-[26rem] w-[calc(100vw-1rem)] max-w-md flex-col overflow-hidden rounded-3xl border border-white/60 bg-white/95 shadow-soft backdrop-blur-xl">
+          <div className="flex items-center justify-between border-b border-white/60 px-4 py-3">
+            <h3 className="text-base font-semibold text-ink-900">Notifications</h3>
+            <div className="flex items-center gap-2">
               {unreadCount > 0 && (
                 <button
                   onClick={handleMarkAllAsRead}
-                  className="text-xs text-primary-600 hover:text-primary-700 font-medium py-2 px-2 touch-target"
+                  className="text-xs font-semibold text-brand-600 transition hover:text-brand-700"
                 >
                   Mark all read
                 </button>
               )}
               <button
                 onClick={() => setIsOpen(false)}
-                className="text-gray-400 hover:text-gray-600 p-2 rounded-md hover:bg-gray-100 touch-target"
+                className="rounded-2xl border border-white/60 bg-white/70 p-2 text-ink-300 transition hover:text-ink-500"
                 aria-label="Close notifications"
               >
-                <FiX className="w-4 h-4" />
+                <FiX className="h-4 w-4" />
               </button>
             </div>
           </div>
 
-          <div className="overflow-y-auto flex-1">
+          <div className="flex-1 overflow-y-auto">
             {loading ? (
-              <div className="p-4 text-center text-gray-500">Loading...</div>
+              <div className="p-6 text-center text-sm text-ink-400">Loading...</div>
             ) : notifications.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
-                <FiBell className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+              <div className="flex flex-col items-center justify-center gap-3 px-6 py-10 text-center text-ink-400">
+                <FiBell className="h-10 w-10 text-ink-200" />
                 <p>No notifications</p>
               </div>
             ) : (
-              <div className="divide-y divide-gray-100">
+              <div className="divide-y divide-white/70">
                 {notifications.map((notification) => (
                   <div
                     key={notification.notification_id}
                     onClick={() => handleNotificationClick(notification)}
-                    className={`p-4 cursor-pointer transition-colors ${
+                    className={`cursor-pointer px-4 py-3 transition ${
                       notification.read
-                        ? 'bg-white hover:bg-gray-50'
-                        : 'bg-blue-50 hover:bg-blue-100'
+                        ? 'bg-white/70 hover:bg-white/90'
+                        : 'bg-brand-50/80 hover:bg-brand-50'
                     }`}
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between mb-1">
-                          <h4 className="text-sm font-semibold text-gray-900 truncate">
+                          <h4 className="text-sm font-semibold text-ink-900 truncate">
                             {notification.title}
                           </h4>
                           {!notification.read && (
                             <button
                               onClick={(e) => handleMarkAsRead(notification.notification_id, e)}
-                              className="ml-2 p-2 text-gray-400 hover:text-gray-600 rounded-md hover:bg-gray-200 flex-shrink-0 touch-target"
+                              className="ml-2 flex-shrink-0 rounded-2xl border border-white/60 bg-white/80 p-1.5 text-ink-300 shadow-soft transition hover:text-brand-600"
                               aria-label="Mark as read"
                             >
-                              <FiCheck className="w-4 h-4" />
+                              <FiCheck className="h-4 w-4" />
                             </button>
                           )}
                         </div>
-                        <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                        <p className="mb-2 line-clamp-2 text-sm text-ink-500">
                           {notification.message}
                         </p>
-                        <p className="text-xs text-gray-400">
+                        <p className="text-xs text-ink-400">
                           {formatTimeAgo(notification.created_at)}
                         </p>
                       </div>

@@ -24,10 +24,10 @@ const AI_MODEL_OPTIONS = [
 
 export function GeneralSettings({ settings, onChange, errors }: GeneralSettingsProps) {
   return (
-    <div className="bg-white rounded-lg shadow p-6 space-y-6">
+    <div className="bg-white rounded-2xl shadow-soft border border-white/60 p-6 space-y-6">
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">General Information</h3>
-        <p className="text-sm text-gray-600 mb-6">
+        <h3 className="text-lg font-semibold text-ink-900 mb-2">General Information</h3>
+        <p className="text-sm text-ink-600 mb-4">
           Configure your organization details and default AI model preferences.
         </p>
       </div>
@@ -77,4 +77,3 @@ export function GeneralSettings({ settings, onChange, errors }: GeneralSettingsP
     </div>
   )
 }
-

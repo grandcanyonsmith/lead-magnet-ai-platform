@@ -14,6 +14,7 @@ const MAX_PREVIEW_LENGTH = 1000
 interface StepContentProps {
   formatted: { content: any, type: 'json' | 'markdown' | 'text' | 'html', structure?: 'ai_input' }
   imageUrls?: string[] // Optional array of image URLs to render inline
+  showImages?: boolean
 }
 
 /**
@@ -112,8 +113,9 @@ function ExpandableContent({
   )
 }
 
-export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
+export function StepContent({ formatted, imageUrls = [], showImages = true }: StepContentProps) {
   const [showRendered, setShowRendered] = useState(true)
+  const inlineImageUrls = showImages ? imageUrls : []
   
   const getContentString = (): string => {
     if (typeof formatted.content === 'string') {
@@ -126,14 +128,14 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
   
   // Render inline images from imageUrls prop
   const renderInlineImages = () => {
-    if (!imageUrls || !Array.isArray(imageUrls) || imageUrls.length === 0) {
+    if (!showImages || !inlineImageUrls || !Array.isArray(inlineImageUrls) || inlineImageUrls.length === 0) {
       return null
     }
     
     return (
       <div className="mt-5 md:mt-4 space-y-4 md:space-y-2">
         <div className="text-sm md:text-xs font-medium text-gray-600 mb-3 md:mb-2">Generated Images:</div>
-        {imageUrls.map((url, idx) => (
+        {inlineImageUrls.map((url, idx) => (
           <InlineImage key={`inline-image-${idx}`} url={url} alt={`Image ${idx + 1}`} />
         ))}
       </div>
@@ -177,7 +179,7 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
     const hasMetadata = formatted.structure === 'ai_input' && typeof formatted.content === 'object'
     
     // Extract image URLs from the JSON object
-    const extractedImageUrls = extractImageUrlsFromObject(formatted.content)
+    const extractedImageUrls = showImages ? extractImageUrlsFromObject(formatted.content) : []
     
     return (
       <div className="space-y-4">
@@ -301,13 +303,16 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
             />
             {/* Extract and render images from HTML source */}
             {(() => {
+              if (!showImages) {
+                return null
+              }
               const extractedUrls = extractImageUrls(htmlContent)
-              return extractedUrls.length > 0 || imageUrls.length > 0 ? (
+              return extractedUrls.length > 0 || inlineImageUrls.length > 0 ? (
                 <div className="mt-5 md:mt-4 space-y-4 md:space-y-2">
                   {extractedUrls.map((url, idx) => (
                     <InlineImage key={`html-image-${idx}`} url={url} alt={`Image from HTML ${idx + 1}`} />
                   ))}
-                  {imageUrls.map((url, idx) => (
+                  {inlineImageUrls.map((url, idx) => (
                     <InlineImage key={`html-prop-image-${idx}`} url={url} alt={`Image ${idx + 1}`} />
                   ))}
                 </div>
@@ -329,7 +334,7 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
         : formatted.content.input || JSON.stringify(formatted.content, null, 2)
     
     // Extract image URLs from markdown (ReactMarkdown handles markdown image syntax, but we also want plain URLs)
-    const extractedImageUrls = extractImageUrls(markdownText)
+    const extractedImageUrls = showImages ? extractImageUrls(markdownText) : []
     
     return (
       <div className="space-y-4">
@@ -374,9 +379,9 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
         content={contentString}
         renderContent={(displayContent) => {
           // Check if there are image URLs in the text
-          const extractedUrls = extractImageUrls(displayContent)
+          const extractedUrls = showImages ? extractImageUrls(displayContent) : []
           
-          if (extractedUrls.length === 0 && (!imageUrls || imageUrls.length === 0)) {
+          if (extractedUrls.length === 0 && (!inlineImageUrls || inlineImageUrls.length === 0)) {
             // No images in text or prop, render as plain text
             return (
               <>

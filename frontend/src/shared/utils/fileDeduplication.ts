@@ -1,6 +1,7 @@
 import { Artifact } from '@/features/artifacts/types'
 import { MergedStep } from '@/features/jobs/types'
-import { extractImageUrls } from '@/shared/utils/imageUtils'
+import { extractImageUrls, isLikelyImageUrl } from '@/shared/utils/imageUtils'
+import { isImageArtifact } from '@/features/jobs/components/jobs/step-utils'
 
 export type FileToShow = {
   type: 'imageArtifact' | 'imageUrl'
@@ -81,9 +82,9 @@ export function deduplicateStepFiles(
   imageArtifacts: Artifact[]
 ): FileToShow[] {
   const rawImageUrls = (step.image_urls && Array.isArray(step.image_urls) && step.image_urls.length > 0) 
-    ? step.image_urls 
+    ? step.image_urls.filter(isLikelyImageUrl)
     : []
-  const outputImageUrls = collectStepOutputImageUrls(step)
+  const outputImageUrls = collectStepOutputImageUrls(step).filter(isLikelyImageUrl)
   const stepImageUrls = Array.from(
     new Set(
       [...rawImageUrls, ...outputImageUrls].filter(
@@ -91,7 +92,7 @@ export function deduplicateStepFiles(
       )
     )
   )
-  const stepImageArtifacts = imageArtifacts || []
+  const stepImageArtifacts = (imageArtifacts || []).filter(isImageArtifact)
   const mainArtifactId = step.artifact_id
   
   const displayedFiles = new Set<string>()
@@ -158,4 +159,3 @@ export function deduplicateStepFiles(
   
   return filesToShow
 }
-

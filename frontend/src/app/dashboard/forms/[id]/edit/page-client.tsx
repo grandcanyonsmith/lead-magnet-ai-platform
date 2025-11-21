@@ -177,9 +177,9 @@ export default function EditFormClient() {
     return (
       <div className="max-w-7xl mx-auto">
         <div className="space-y-6">
-          <div className="h-8 bg-gray-200 rounded w-48 animate-pulse"></div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="h-64 bg-gray-200 rounded animate-pulse"></div>
+          <div className="h-8 bg-ink-200 rounded w-48 animate-pulse"></div>
+          <div className="bg-white rounded-2xl shadow-soft border border-white/60 p-6">
+            <div className="h-64 bg-ink-100 rounded-2xl animate-pulse"></div>
           </div>
         </div>
       </div>
@@ -192,13 +192,13 @@ export default function EditFormClient() {
         <div className="mb-6">
           <button
             onClick={() => router.back()}
-            className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
+            className="flex items-center text-ink-600 hover:text-ink-900 mb-4 py-2 rounded-2xl px-2"
           >
             <FiArrowLeft className="w-4 h-4 mr-2" />
             Back
           </button>
         </div>
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl shadow-soft">
           {error}
         </div>
       </div>
@@ -210,30 +210,30 @@ export default function EditFormClient() {
       <div className="mb-6">
         <button
           onClick={() => router.back()}
-          className="flex items-center text-gray-600 hover:text-gray-900 mb-4 py-2 touch-target"
+          className="flex items-center text-ink-600 hover:text-ink-900 mb-4 py-2 touch-target rounded-2xl px-2"
         >
           <FiArrowLeft className="w-4 h-4 mr-2" />
           Back
         </button>
         {error && (
-          <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl shadow-soft">
             {error}
           </div>
         )}
-        <h1 className="text-2xl font-bold text-gray-900">Edit Form</h1>
-        <p className="text-gray-600 mt-1">Update your lead capture form settings</p>
+        <h1 className="text-2xl font-bold text-ink-900">Edit Form</h1>
+        <p className="text-ink-600 mt-1">Update your lead capture form settings</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 space-y-6">
+      <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-soft border border-white/60 p-6 sm:p-8 space-y-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-semibold text-ink-800 mb-2">
             Form Name <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
             value={formFormData.form_name}
             onChange={(e) => handleFormChange('form_name', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="w-full px-4 py-3 border border-white/60 rounded-2xl bg-white/90 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-ink-900 placeholder-ink-400 shadow-soft"
             placeholder="Lead Magnet Form"
             maxLength={200}
             required
@@ -241,23 +241,23 @@ export default function EditFormClient() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-semibold text-ink-800 mb-2">
             Public URL Slug <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
             value={formFormData.public_slug}
             onChange={(e) => handleFormChange('public_slug', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono text-sm"
+            className="w-full px-4 py-3 border border-white/60 rounded-2xl bg-white/90 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-ink-900 placeholder-ink-400 shadow-soft font-mono text-sm"
             placeholder="lead-magnet-form"
             pattern="[a-z0-9-]+"
             required
           />
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="mt-1 text-xs text-ink-500">
             URL-friendly identifier. Only lowercase letters, numbers, and hyphens allowed.
           </p>
           {formFormData.public_slug && (
-            <p className="mt-1 text-xs text-primary-600">
+            <p className="mt-1 text-xs text-brand-600">
               Form URL: {typeof window !== 'undefined' ? `${window.location.origin}/v1/forms/${formFormData.public_slug}` : `/v1/forms/${formFormData.public_slug}`}
             </p>
           )}
@@ -265,27 +265,27 @@ export default function EditFormClient() {
 
         <div>
           <div className="flex justify-between items-center mb-2">
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-semibold text-ink-800">
               Form Fields
             </label>
             <button
               type="button"
               onClick={addField}
-              className="text-sm text-primary-600 hover:text-primary-900 py-2 px-2 touch-target"
+              className="text-sm text-brand-600 hover:text-brand-700 py-2 px-2 touch-target rounded-2xl"
             >
               + Add Field
             </button>
           </div>
           <div className="space-y-4">
             {formFormData.form_fields_schema.fields.map((field, index) => (
-              <div key={field.field_id || index} className="border border-gray-200 rounded-lg p-4 space-y-3">
+              <div key={field.field_id || index} className="border border-white/60 rounded-2xl p-4 space-y-3 bg-white/80 shadow-soft">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Field Type</label>
+                    <label className="block text-xs font-medium text-ink-700 mb-1">Field Type</label>
                     <select
                       value={field.field_type}
                       onChange={(e) => handleFieldChange(index, 'field_type', e.target.value)}
-                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full px-3 py-2 text-sm border border-white/60 rounded-2xl bg-white/90 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-ink-900 shadow-soft"
                     >
                       <option value="text">Text</option>
                       <option value="email">Email</option>
@@ -296,34 +296,34 @@ export default function EditFormClient() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Label</label>
+                    <label className="block text-xs font-medium text-ink-700 mb-1">Label</label>
                     <input
                       type="text"
                       value={field.label}
                       onChange={(e) => handleFieldChange(index, 'label', e.target.value)}
-                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full px-3 py-2 text-sm border border-white/60 rounded-2xl bg-white/90 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-ink-900 shadow-soft"
                       placeholder="Field Label"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Placeholder</label>
+                  <label className="block text-xs font-medium text-ink-700 mb-1">Placeholder</label>
                   <input
                     type="text"
                     value={field.placeholder || ''}
                     onChange={(e) => handleFieldChange(index, 'placeholder', e.target.value)}
-                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-3 py-2 text-sm border border-white/60 rounded-2xl bg-white/90 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-ink-900 shadow-soft"
                     placeholder="Placeholder text"
                   />
                 </div>
                 {field.field_type === 'select' && (
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Options (comma-separated)</label>
+                    <label className="block text-xs font-medium text-ink-700 mb-1">Options (comma-separated)</label>
                     <input
                       type="text"
                       value={field.options?.join(', ') || ''}
                       onChange={(e) => handleFieldChange(index, 'options', e.target.value.split(',').map(o => o.trim()).filter(o => o))}
-                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full px-3 py-2 text-sm border border-white/60 rounded-2xl bg-white/90 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-ink-900 shadow-soft"
                       placeholder="Option 1, Option 2, Option 3"
                     />
                   </div>
@@ -334,14 +334,14 @@ export default function EditFormClient() {
                       type="checkbox"
                       checked={field.required}
                       onChange={(e) => handleFieldChange(index, 'required', e.target.checked)}
-                      className="mr-2"
+                      className="mr-2 accent-brand-600"
                     />
-                    <span className="text-xs text-gray-700">Required</span>
+                    <span className="text-xs text-ink-700">Required</span>
                   </label>
                   <button
                     type="button"
                     onClick={() => removeField(index)}
-                    className="text-xs text-red-600 hover:text-red-900 py-2 px-2 touch-target"
+                    className="text-xs text-red-600 hover:text-red-700 py-2 px-2 touch-target rounded-2xl"
                   >
                     Remove
                   </button>
@@ -349,33 +349,33 @@ export default function EditFormClient() {
               </div>
             ))}
             {formFormData.form_fields_schema.fields.length === 0 && (
-              <p className="text-sm text-gray-500 text-center py-4">No custom fields. Name, email, and phone are always included.</p>
+              <p className="text-sm text-ink-500 text-center py-4">No custom fields. Name, email, and phone are always included.</p>
             )}
           </div>
         </div>
 
-        <div className="border-t pt-6 space-y-4">
+        <div className="border-t border-white/60 pt-6 space-y-4">
           <div>
             <label className="flex items-center">
               <input
                 type="checkbox"
                 checked={formFormData.rate_limit_enabled}
                 onChange={(e) => handleFormChange('rate_limit_enabled', e.target.checked)}
-                className="mr-2"
+                className="mr-2 accent-brand-600"
               />
-              <span className="text-sm font-medium text-gray-700">Enable Rate Limiting</span>
+              <span className="text-sm font-semibold text-ink-800">Enable Rate Limiting</span>
             </label>
           </div>
           {formFormData.rate_limit_enabled && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-ink-800 mb-2">
                 Submissions Per Hour
               </label>
               <input
                 type="number"
                 value={formFormData.rate_limit_per_hour}
                 onChange={(e) => handleFormChange('rate_limit_per_hour', parseInt(e.target.value) || 10)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full px-4 py-3 border border-white/60 rounded-2xl bg-white/90 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-ink-900 shadow-soft"
                 min={1}
                 max={1000}
               />
@@ -387,64 +387,64 @@ export default function EditFormClient() {
                 type="checkbox"
                 checked={formFormData.captcha_enabled}
                 onChange={(e) => handleFormChange('captcha_enabled', e.target.checked)}
-                className="mr-2"
+                className="mr-2 accent-brand-600"
               />
-              <span className="text-sm font-medium text-gray-700">Enable CAPTCHA</span>
+              <span className="text-sm font-semibold text-ink-800">Enable CAPTCHA</span>
             </label>
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-semibold text-ink-800 mb-2">
             Thank You Message
           </label>
           <textarea
             value={formFormData.thank_you_message}
             onChange={(e) => handleFormChange('thank_you_message', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="w-full px-4 py-3 border border-white/60 rounded-2xl bg-white/90 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-ink-900 shadow-soft"
             placeholder="Thank you! Your submission is being processed."
             rows={3}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-semibold text-ink-800 mb-2">
             Redirect URL (optional)
           </label>
           <input
             type="url"
             value={formFormData.redirect_url}
             onChange={(e) => handleFormChange('redirect_url', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="w-full px-4 py-3 border border-white/60 rounded-2xl bg-white/90 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-ink-900 shadow-soft"
             placeholder="https://example.com/thank-you"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-semibold text-ink-800 mb-2">
             Custom CSS (optional)
           </label>
           <textarea
             value={formFormData.custom_css}
             onChange={(e) => handleFormChange('custom_css', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono text-sm"
+            className="w-full px-4 py-3 border border-white/60 rounded-2xl bg-white/90 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-ink-900 shadow-soft font-mono text-sm"
             placeholder="/* Custom CSS styles */"
             rows={6}
           />
         </div>
 
-        <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4 pt-4 border-t">
+        <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4 pt-4 border-t border-white/60">
           <button
             type="button"
             onClick={() => router.back()}
-            className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors touch-target"
+            className="px-6 py-3 border border-white/60 rounded-2xl text-ink-700 bg-white hover:bg-surface-50 transition-colors touch-target shadow-soft"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={submitting}
-            className="flex items-center justify-center px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-target"
+            className="flex items-center justify-center px-6 py-3 bg-brand-600 text-white rounded-2xl hover:bg-brand-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-target shadow-soft"
           >
             <FiSave className="w-5 h-5 mr-2" />
             {submitting ? 'Saving...' : 'Save Changes'}
@@ -454,4 +454,3 @@ export default function EditFormClient() {
     </div>
   )
 }
-

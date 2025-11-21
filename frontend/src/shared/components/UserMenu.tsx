@@ -71,10 +71,10 @@ export const UserMenu: React.FC = () => {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors touch-target"
+        className="flex items-center gap-2 rounded-2xl border border-white/60 bg-white/80 px-2.5 py-1.5 text-sm font-medium text-ink-500 shadow-soft transition hover:text-ink-900"
         aria-label="User menu"
       >
-        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white text-sm font-semibold">
+        <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-600 text-white text-sm font-semibold shadow-soft">
           {isLoading ? (
             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
           ) : (
@@ -82,18 +82,20 @@ export const UserMenu: React.FC = () => {
           )}
         </div>
         {!isLoading && (
-          <span className="hidden sm:block text-sm font-medium text-gray-700 max-w-[120px] truncate">
+          <span className="hidden sm:block max-w-[120px] truncate text-ink-600">
             {displayName}
           </span>
         )}
-        <FiChevronDown className={`hidden sm:block w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <FiChevronDown
+          className={`hidden sm:block h-4 w-4 text-ink-300 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+        />
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-64 max-w-[calc(100vw-1rem)] bg-white rounded-lg shadow-xl border border-gray-200 z-50">
-          <div className="p-4 border-b border-gray-200">
+        <div className="absolute right-0 z-50 mt-3 w-72 max-w-[calc(100vw-1rem)] rounded-3xl border border-white/60 bg-white/95 p-1.5 shadow-soft backdrop-blur-xl">
+          <div className="rounded-2xl border border-white/60 bg-white/90 p-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white text-sm font-semibold">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-600 text-white text-sm font-semibold shadow-soft">
                 {isLoading ? (
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
@@ -123,21 +125,21 @@ export const UserMenu: React.FC = () => {
           <div className="py-2">
             {/* Mobile Filters - Only show on jobs page and mobile */}
             {isJobsPage && jobFilters && (
-              <div className="sm:hidden border-b border-gray-200 pb-2 mb-2">
+              <div className="mb-2 border-b border-white/60 pb-2 sm:hidden">
                 <div className="px-4 py-2">
                   <div className="flex items-center mb-2">
-                    <FiFilter className="w-4 h-4 mr-2 text-gray-400" />
-                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Filters</span>
+                    <FiFilter className="mr-2 h-4 w-4 text-ink-300" />
+                    <span className="text-xs font-semibold uppercase tracking-wide text-ink-400">Filters</span>
                   </div>
                   <div className="space-y-2">
                     <div>
-                      <label className="block text-xs text-gray-600 mb-1">Status</label>
+                      <label className="mb-1 block text-xs text-ink-500">Status</label>
                       <select
                         value={jobFilters.statusFilter}
                         onChange={(e) => {
                           jobFilters.setStatusFilter(e.target.value)
                         }}
-                        className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-transparent"
+                        className="w-full rounded-xl border border-white/60 bg-white/90 px-2 py-1.5 text-xs text-ink-600 shadow-soft focus:border-brand-200 focus:outline-none focus:ring-2 focus:ring-brand-100/80"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <option value="all">All Statuses</option>
@@ -148,13 +150,13 @@ export const UserMenu: React.FC = () => {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-600 mb-1">Lead Magnet</label>
+                      <label className="mb-1 block text-xs text-ink-500">Lead Magnet</label>
                       <select
                         value={jobFilters.workflowFilter}
                         onChange={(e) => {
                           jobFilters.setWorkflowFilter(e.target.value)
                         }}
-                        className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-transparent"
+                        className="w-full rounded-xl border border-white/60 bg-white/90 px-2 py-1.5 text-xs text-ink-600 shadow-soft focus:border-brand-200 focus:outline-none focus:ring-2 focus:ring-brand-100/80"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <option value="all">All Lead Magnets</option>
@@ -171,28 +173,28 @@ export const UserMenu: React.FC = () => {
             )}
             <button
               onClick={handleSettingsClick}
-              className="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+              className="flex w-full items-center rounded-2xl px-4 py-2.5 text-sm text-ink-600 transition hover:bg-white/80"
             >
-              <FiSettings className="w-4 h-4 mr-3 text-gray-400" />
+              <FiSettings className="mr-3 h-4 w-4 text-ink-400" />
               <span>Settings</span>
             </button>
             {role === 'SUPER_ADMIN' && (
               <button
                 onClick={handleAgencyUsersClick}
-                className="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                className="flex w-full items-center rounded-2xl px-4 py-2.5 text-sm text-ink-600 transition hover:bg-white/80"
               >
-                <FiUsers className="w-4 h-4 mr-3 text-gray-400" />
+                <FiUsers className="mr-3 h-4 w-4 text-ink-400" />
                 <span>Agency Users</span>
               </button>
             )}
           </div>
 
-          <div className="border-t border-gray-200 py-2">
+          <div className="border-t border-white/60 py-2">
             <button
               onClick={handleSignOut}
-              className="flex items-center w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+              className="flex w-full items-center rounded-2xl px-4 py-2.5 text-sm text-red-500 transition hover:bg-red-50/60"
             >
-              <FiLogOut className="w-4 h-4 mr-3" />
+              <FiLogOut className="mr-3 h-4 w-4" />
               <span>Sign Out</span>
             </button>
           </div>

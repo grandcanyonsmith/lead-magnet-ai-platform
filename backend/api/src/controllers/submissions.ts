@@ -6,7 +6,7 @@ import { env } from '../utils/env';
 const SUBMISSIONS_TABLE = env.submissionsTable;
 
 class SubmissionsController {
-  async list(tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {
+  async list(_tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {
     const formId = queryParams.form_id;
     const limit = queryParams.limit ? parseInt(queryParams.limit) : 50;
 
@@ -21,14 +21,8 @@ class SubmissionsController {
         limit
       );
     } else {
-      submissionsResult = await db.query(
-        SUBMISSIONS_TABLE,
-        'gsi_tenant_created',
-        'tenant_id = :tenant_id',
-        { ':tenant_id': tenantId },
-        undefined,
-        limit
-      );
+      // Remove tenant_id filtering - show all submissions from all accounts
+      submissionsResult = { items: await db.scan(SUBMISSIONS_TABLE, limit) };
     }
     const submissions = normalizeQueryResult(submissionsResult);
 
@@ -41,16 +35,14 @@ class SubmissionsController {
     };
   }
 
-  async get(tenantId: string, submissionId: string): Promise<RouteResponse> {
+  async get(_tenantId: string, submissionId: string): Promise<RouteResponse> {
     const submission = await db.get(SUBMISSIONS_TABLE, { submission_id: submissionId });
 
     if (!submission) {
       throw new ApiError('This form submission doesn\'t exist', 404);
     }
 
-    if (submission.tenant_id !== tenantId) {
-      throw new ApiError('You don\'t have permission to access this submission', 403);
-    }
+    // Removed tenant_id check - allow access to all submissions from all accounts
 
     return {
       statusCode: 200,

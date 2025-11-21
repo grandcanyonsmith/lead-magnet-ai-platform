@@ -118,8 +118,8 @@ export default function ArtifactsPage() {
     return (
       <div className="flex items-center justify-center py-24">
         <div className="text-center">
-          <div className="inline-block w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mb-4"></div>
-          <p className="text-gray-600">Loading downloads...</p>
+          <div className="inline-block w-12 h-12 border-4 border-brand-200 border-t-brand-600 rounded-full animate-spin mb-4"></div>
+          <p className="text-ink-600">Loading downloads...</p>
         </div>
       </div>
     )
@@ -129,15 +129,15 @@ export default function ArtifactsPage() {
     <div className="max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Downloads</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-3xl font-bold text-ink-900">Downloads</h1>
+          <p className="text-ink-600 mt-1">
             {filteredArtifacts.length} {filteredArtifacts.length === 1 ? 'file' : 'files'} available
           </p>
         </div>
         <button
           onClick={refresh}
           disabled={refreshing}
-          className="inline-flex items-center px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          className="inline-flex items-center px-4 py-2.5 bg-white border border-white/60 rounded-2xl text-ink-600 hover:bg-white/90 transition-all shadow-soft disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <FiRefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
           Refresh
@@ -155,14 +155,14 @@ export default function ArtifactsPage() {
       )}
 
       {filteredArtifacts.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-16 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
-            <FiInbox className="w-8 h-8 text-gray-400" />
+        <div className="bg-white rounded-2xl shadow-soft border border-white/60 p-16 text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-white/80 rounded-full mb-4">
+            <FiInbox className="w-8 h-8 text-ink-400" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          <h3 className="text-lg font-semibold text-ink-900 mb-2">
             {artifacts.length === 0 ? 'No downloads yet' : 'No matching files'}
           </h3>
-          <p className="text-gray-600">
+          <p className="text-ink-600">
             {artifacts.length === 0 
               ? 'Generated files will appear here after you run workflows' 
               : 'Try adjusting your search or filter criteria'}
@@ -173,7 +173,7 @@ export default function ArtifactsPage() {
                 setSearchQuery('')
                 setSelectedType('')
               }}
-              className="mt-4 text-primary-600 hover:text-primary-700 font-medium"
+              className="mt-4 text-brand-600 hover:text-brand-700 font-medium"
             >
               Clear filters
             </button>

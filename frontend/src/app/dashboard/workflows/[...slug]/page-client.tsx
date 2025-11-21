@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { api } from '@/shared/lib/api'
 import { FiArrowLeft, FiEdit, FiTrash2, FiClock, FiCheckCircle, FiXCircle, FiExternalLink, FiLink, FiZap, FiSettings, FiFileText, FiCalendar, FiCopy } from 'react-icons/fi'
 import { useWorkflowId } from '@/features/workflows/hooks/useWorkflowId'
+import { ConfirmDialog } from '@/shared/components/ConfirmDialog'
 
 export default function WorkflowDetailPage() {
   const router = useRouter()
@@ -16,6 +17,8 @@ export default function WorkflowDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [creatingForm, setCreatingForm] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     if (!workflowId || workflowId.trim() === '' || workflowId === '_') {
@@ -64,16 +67,16 @@ export default function WorkflowDetailPage() {
   }
 
   const handleDelete = async () => {
-    if (!confirm(`Are you sure you want to delete "${workflow?.workflow_name}"? This action cannot be undone.`)) {
-      return
-    }
-
+    setDeleting(true)
     try {
       await api.deleteWorkflow(workflowId)
       router.push('/dashboard/workflows')
     } catch (error: any) {
       console.error('Failed to delete workflow:', error)
-      alert(error.response?.data?.message || error.message || 'Failed to delete workflow')
+      setError(error.response?.data?.message || error.message || 'Failed to delete workflow')
+    } finally {
+      setDeleting(false)
+      setShowDeleteConfirm(false)
     }
   }
 
@@ -130,7 +133,7 @@ export default function WorkflowDetailPage() {
     return (
       <div className="max-w-7xl mx-auto">
         <div className="text-center py-12">
-          <p className="text-gray-600">Loading workflow...</p>
+          <p className="text-ink-600">Loading workflow...</p>
         </div>
       </div>
     )
@@ -139,59 +142,75 @@ export default function WorkflowDetailPage() {
   if (error && !workflow) {
     return (
       <div className="max-w-7xl mx-auto">
-        <div className="mb-6">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
-          >
-            <FiArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </button>
-        </div>
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-          {error}
-        </div>
+      <div className="mb-6">
+        <button
+          onClick={() => router.back()}
+          className="flex items-center text-ink-600 hover:text-ink-900 mb-4"
+        >
+          <FiArrowLeft className="w-4 h-4 mr-2" />
+          Back
+        </button>
       </div>
-    )
-  }
+      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl">
+        {error}
+      </div>
+    </div>
+  )
+}
 
   if (!workflow) {
     return null
   }
 
   return (
-    <div className="max-w-7xl mx-auto">
-      <div className="mb-4 sm:mb-6">
+    <div className="max-w-7xl mx-auto space-y-6">
+      <div className="flex items-center gap-2 text-sm text-ink-600">
         <button
           onClick={() => router.back()}
-          className="flex items-center text-gray-600 hover:text-gray-900 mb-3 sm:mb-4 text-sm sm:text-base py-2 touch-target"
+          className="inline-flex items-center gap-2 px-3 py-2 rounded-2xl bg-white border border-white/60 shadow-soft hover:bg-white/80 transition-colors touch-target"
         >
-          <FiArrowLeft className="w-4 h-4 mr-2" />
+          <FiArrowLeft className="w-4 h-4" />
           Back
         </button>
-        {error && (
-          <div className="mb-3 sm:mb-4 bg-red-50 border border-red-200 text-red-700 px-3 sm:px-4 py-2 sm:py-3 rounded-lg text-sm sm:text-base">
-            {error}
-          </div>
-        )}
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-0">
-          <div className="flex-1">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{workflow.workflow_name}</h1>
+      </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl text-sm sm:text-base">
+          {error}
+        </div>
+      )}
+
+      <div className="bg-white rounded-2xl shadow-soft border border-white/60 p-5 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+          <div className="flex-1 space-y-2">
+            <h1 className="text-xl sm:text-2xl font-bold text-ink-900">{workflow.workflow_name}</h1>
             {workflow.workflow_description && (
-              <p className="text-sm sm:text-base text-gray-600 mt-1">{workflow.workflow_description}</p>
+              <p className="text-sm sm:text-base text-ink-600">{workflow.workflow_description}</p>
             )}
+            <div className="flex flex-wrap gap-2 text-xs text-ink-600">
+              {workflow.status && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full border border-white/60 bg-surface-50 font-medium">
+                  Status: {workflow.status}
+                </span>
+              )}
+              {workflow.template_version && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full border border-white/60 bg-surface-50 font-medium">
+                  Template v{workflow.template_version}
+                </span>
+              )}
+            </div>
           </div>
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <button
               onClick={() => router.push(`/dashboard/workflows/${workflowId}/edit`)}
-              className="flex items-center justify-center px-4 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm sm:text-base touch-target"
+              className="flex items-center justify-center px-4 py-3 bg-brand-600 text-white rounded-2xl hover:bg-brand-700 transition-colors text-sm sm:text-base touch-target shadow-soft"
             >
               <FiEdit className="w-4 h-4 mr-2" />
               Edit
             </button>
             <button
-              onClick={handleDelete}
-              className="flex items-center justify-center px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm sm:text-base touch-target"
+              onClick={() => setShowDeleteConfirm(true)}
+              className="flex items-center justify-center px-4 py-3 bg-red-600 text-white rounded-2xl hover:bg-red-700 transition-colors text-sm sm:text-base touch-target"
             >
               <FiTrash2 className="w-4 h-4 mr-2" />
               Delete
@@ -202,34 +221,34 @@ export default function WorkflowDetailPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Workflow Details */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+        <div className="bg-white rounded-2xl shadow-soft border border-white/60 p-4 sm:p-6">
           <div className="flex items-center gap-2 mb-6">
-            <FiSettings className="w-5 h-5 text-gray-600" />
-            <h2 className="text-lg font-semibold text-gray-900">Workflow Details</h2>
+            <FiSettings className="w-5 h-5 text-ink-600" />
+            <h2 className="text-lg font-semibold text-ink-900">Workflow Details</h2>
           </div>
           
           <div className="space-y-5">
             <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Template ID</label>
-              <div className="bg-gray-50 rounded-lg p-2.5 border border-gray-200">
-                <p className="text-xs font-mono text-gray-900 break-all">{workflow.template_id || '-'}</p>
+              <label className="block text-xs font-semibold text-ink-500 uppercase tracking-wide mb-2">Template ID</label>
+              <div className="bg-surface-50 rounded-2xl p-3 border border-white/60">
+                <p className="text-xs font-mono text-ink-900 break-all">{workflow.template_id || '-'}</p>
                 {workflow.template_version && (
-                  <p className="text-xs text-gray-500 mt-1">Version {workflow.template_version}</p>
+                  <p className="text-xs text-ink-500 mt-1">Version {workflow.template_version}</p>
                 )}
               </div>
             </div>
 
-            <div className="pb-4 border-b border-gray-100">
-              <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+            <div className="pb-4 border-b border-white/60">
+              <label className="flex items-center gap-1.5 text-xs font-semibold text-ink-500 uppercase tracking-wide mb-3">
                 <FiFileText className="w-3.5 h-3.5" />
                 Form
               </label>
               {workflow.form ? (
                 <div className="space-y-3">
-                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                    <p className="text-sm font-semibold text-gray-900 break-words">{workflow.form.form_name || 'Form'}</p>
+                  <div className="bg-surface-50 rounded-2xl p-3 border border-white/60">
+                    <p className="text-sm font-semibold text-ink-900 break-words">{workflow.form.form_name || 'Form'}</p>
                     {workflow.form.public_slug && (
-                      <p className="text-xs text-gray-500 mt-1 font-mono break-all">/{workflow.form.public_slug}</p>
+                      <p className="text-xs text-ink-500 mt-1 font-mono break-all">/{workflow.form.public_slug}</p>
                     )}
                   </div>
                   <div className="flex flex-col sm:flex-row gap-2">
@@ -238,7 +257,7 @@ export default function WorkflowDetailPage() {
                         href={`/v1/forms/${workflow.form.public_slug}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors touch-target"
+                        className="inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium bg-brand-600 text-white rounded-2xl hover:bg-brand-700 transition-colors touch-target shadow-soft"
                       >
                         <FiExternalLink className="w-4 h-4 mr-1.5" />
                         View Form
@@ -247,7 +266,7 @@ export default function WorkflowDetailPage() {
                     {workflow.form.form_id && (
                       <button
                         onClick={() => router.push(`/dashboard/forms/${workflow.form.form_id}/edit`)}
-                        className="inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors touch-target"
+                        className="inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium border border-white/60 text-ink-700 rounded-2xl hover:bg-surface-100 transition-colors touch-target"
                       >
                         <FiEdit className="w-4 h-4 mr-1.5" />
                         Edit Form
@@ -255,14 +274,14 @@ export default function WorkflowDetailPage() {
                     )}
                   </div>
                   {workflow.form.public_slug && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                      <label className="block text-xs font-semibold text-blue-900 mb-2">Public Form URL</label>
+                    <div className="bg-brand-50/70 border border-brand-100 rounded-2xl p-3">
+                      <label className="block text-xs font-semibold text-brand-900 mb-2">Public Form URL</label>
                       <div className="flex items-center gap-2">
                         <input
                           type="text"
                           readOnly
                           value={typeof window !== 'undefined' ? `${window.location.origin}/v1/forms/${workflow.form.public_slug}` : `/v1/forms/${workflow.form.public_slug}`}
-                          className="flex-1 text-xs font-mono bg-white border border-blue-200 rounded px-3 py-2 text-gray-900 break-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="flex-1 text-xs font-mono bg-white border border-brand-200 rounded-2xl px-3 py-2 text-ink-900 break-all focus:outline-none focus:ring-2 focus:ring-brand-500"
                           onClick={(e) => (e.target as HTMLInputElement).select()}
                         />
                         <button
@@ -272,7 +291,7 @@ export default function WorkflowDetailPage() {
                               : `/v1/forms/${workflow.form.public_slug}`
                             navigator.clipboard.writeText(url)
                           }}
-                          className="p-2.5 text-blue-700 hover:text-blue-900 hover:bg-blue-100 rounded-lg transition-colors flex-shrink-0 touch-target border border-blue-200"
+                          className="p-2.5 text-brand-700 hover:text-brand-900 hover:bg-brand-100 rounded-2xl transition-colors flex-shrink-0 touch-target border border-brand-200"
                           title="Copy URL"
                         >
                           <FiCopy className="w-4 h-4" />
@@ -282,12 +301,12 @@ export default function WorkflowDetailPage() {
                   )}
                 </div>
               ) : (
-                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 text-center">
-                  <p className="text-sm text-gray-600 mb-3">No form attached to this lead magnet yet.</p>
+                <div className="bg-surface-50 rounded-2xl p-4 border border-white/60 text-center">
+                  <p className="text-sm text-ink-600 mb-3">No form attached to this lead magnet yet.</p>
                   <button
                     onClick={handleCreateForm}
                     disabled={creatingForm}
-                    className="inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-target"
+                    className="inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium bg-brand-600 text-white rounded-2xl hover:bg-brand-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-target shadow-soft"
                   >
                     {creatingForm ? (
                       <>
@@ -307,36 +326,36 @@ export default function WorkflowDetailPage() {
 
             {workflow.delivery_webhook_url && (
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Webhook URL</label>
-                <div className="bg-gray-50 rounded-lg p-2.5 border border-gray-200">
-                  <p className="text-xs font-mono text-gray-900 break-all">{workflow.delivery_webhook_url}</p>
+                <label className="block text-xs font-semibold text-ink-500 uppercase tracking-wide mb-2">Webhook URL</label>
+                <div className="bg-surface-50 rounded-2xl p-3 border border-white/60">
+                  <p className="text-xs font-mono text-ink-900 break-all">{workflow.delivery_webhook_url}</p>
                 </div>
               </div>
             )}
 
             {workflow.delivery_phone && (
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Delivery Phone</label>
-                <p className="text-sm font-medium text-gray-900 break-words">{workflow.delivery_phone}</p>
+                <label className="block text-xs font-semibold text-ink-500 uppercase tracking-wide mb-2">Delivery Phone</label>
+                <p className="text-sm font-medium text-ink-900 break-words">{workflow.delivery_phone}</p>
               </div>
             )}
 
-            <div className="pt-4 border-t border-gray-100">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+            <div className="pt-4 border-t border-white/60">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-ink-500 uppercase tracking-wide mb-3">
                 <FiCalendar className="w-3.5 h-3.5" />
                 Timeline
               </div>
               <div className="space-y-3">
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Created</label>
-                  <p className="text-sm font-medium text-gray-900">
+                  <label className="block text-xs text-ink-500 mb-1">Created</label>
+                  <p className="text-sm font-medium text-ink-900">
                     {workflow.created_at ? new Date(workflow.created_at).toLocaleString() : '-'}
                   </p>
                 </div>
                 {workflow.updated_at && (
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Last Updated</label>
-                    <p className="text-sm font-medium text-gray-900">{new Date(workflow.updated_at).toLocaleString()}</p>
+                    <label className="block text-xs text-ink-500 mb-1">Last Updated</label>
+                    <p className="text-sm font-medium text-ink-900">{new Date(workflow.updated_at).toLocaleString()}</p>
                   </div>
                 )}
               </div>
@@ -347,26 +366,26 @@ export default function WorkflowDetailPage() {
       </div>
 
       {/* Recent Jobs */}
-      <div className="mt-4 sm:mt-6 bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+      <div className="mt-4 sm:mt-6 bg-white rounded-2xl shadow-soft border border-white/60 p-4 sm:p-6">
         <div className="flex items-center gap-2 mb-6">
-          <FiClock className="w-5 h-5 text-gray-600" />
-          <h2 className="text-lg font-semibold text-gray-900">Recent Jobs</h2>
+          <FiClock className="w-5 h-5 text-ink-600" />
+          <h2 className="text-lg font-semibold text-ink-900">Recent Jobs</h2>
         </div>
         {jobs.length === 0 ? (
-          <p className="text-gray-500 text-sm">No jobs found for this workflow</p>
+          <p className="text-ink-500 text-sm">No jobs found for this workflow</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-white/60">
+              <thead className="bg-surface-50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Job ID</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Submission</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-ink-500 uppercase tracking-wider">Job ID</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-ink-500 uppercase tracking-wider">Created</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-ink-500 uppercase tracking-wider">Duration</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-ink-500 uppercase tracking-wider">Submission</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-ink-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-white/60">
                 {jobs.map((job) => {
                   const duration = job.completed_at
                     ? Math.round(
@@ -376,41 +395,41 @@ export default function WorkflowDetailPage() {
                   const submission = submissions[job.job_id]
 
                   return (
-                    <tr key={job.job_id} className="hover:bg-gray-50">
+                    <tr key={job.job_id} className="hover:bg-surface-50">
                       <td className="px-4 py-3 whitespace-nowrap">
                         <button
                           onClick={() => router.push(`/dashboard/jobs/${job.job_id}`)}
-                          className="text-xs font-mono text-gray-900 hover:text-primary-600 transition-colors text-left"
+                          className="text-xs font-mono text-ink-900 hover:text-brand-600 transition-colors text-left"
                         >
                           {job.job_id}
                         </button>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-ink-600">
                         {new Date(job.created_at).toLocaleString()}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-ink-600">
                         {duration !== null ? `${duration}s` : '-'}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
+                      <td className="px-4 py-3 text-sm text-ink-600">
                         {submission && submission.submission_data ? (
                           <div className="max-w-xs">
                             <div className="grid grid-cols-2 gap-2 text-xs">
                               {Object.entries(submission.submission_data).slice(0, 4).map(([key, value]: [string, any]) => (
                                 <div key={key} className="truncate">
-                                  <span className="font-medium text-gray-500">{key}:</span>{' '}
-                                  <span className="text-gray-900">{String(value).substring(0, 20)}{String(value).length > 20 ? '...' : ''}</span>
+                                  <span className="font-medium text-ink-500">{key}:</span>{' '}
+                                  <span className="text-ink-900">{String(value).substring(0, 20)}{String(value).length > 20 ? '...' : ''}</span>
                                 </div>
                               ))}
                             </div>
                           </div>
                         ) : (
-                          <span className="text-gray-400">-</span>
+                          <span className="text-ink-300">-</span>
                         )}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-right text-sm">
                         <button
                           onClick={() => router.push(`/dashboard/jobs/${job.job_id}`)}
-                          className="text-primary-600 hover:text-primary-700 hover:bg-primary-50 px-3 py-1.5 rounded-lg transition-colors"
+                          className="text-brand-600 hover:text-brand-700 hover:bg-brand-50 px-3 py-1.5 rounded-2xl transition-colors"
                         >
                           View
                         </button>
@@ -423,7 +442,21 @@ export default function WorkflowDetailPage() {
           </div>
         )}
       </div>
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        title="Delete lead magnet?"
+        description={
+          <span>
+            This will delete <span className="font-semibold">{workflow.workflow_name}</span> and its associated form.
+            This action cannot be undone.
+          </span>
+        }
+        confirmLabel="Delete"
+        tone="danger"
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
     </div>
   )
 }
-

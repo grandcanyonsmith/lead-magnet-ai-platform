@@ -42,29 +42,28 @@ export function JobHeader({ error, job }: JobHeaderProps) {
     <div className="mb-6">
       <button
         onClick={() => router.back()}
-        className="flex items-center text-gray-600 hover:text-gray-900 mb-4 py-2 touch-target"
+        className="flex items-center text-ink-600 hover:text-ink-900 mb-4 py-2 px-2 rounded-2xl bg-white border border-white/60 shadow-soft hover:bg-surface-50 touch-target transition-colors"
       >
         <FiArrowLeft className="w-4 h-4 mr-2" />
         Back
       </button>
       {error && (
-        <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+        <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl shadow-soft">
           {error}
         </div>
       )}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-0">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Lead Magnet Details</h1>
-          <p className="text-sm sm:text-base text-gray-600 mt-1">View details and status of your generated lead magnet</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-ink-900">Lead Magnet Details</h1>
+          <p className="text-sm sm:text-base text-ink-600 mt-1">View details and status of your generated lead magnet</p>
         </div>
         {totalCost !== null && (
           <div className="sm:text-right">
-            <div className="text-xs font-medium uppercase tracking-wide text-gray-500">Total Cost</div>
-            <div className="text-sm sm:text-base text-gray-900 mt-1">${totalCost.toFixed(2)}</div>
+            <div className="text-xs font-medium uppercase tracking-wide text-ink-500">Total Cost</div>
+            <div className="text-sm sm:text-base text-ink-900 mt-1">${totalCost.toFixed(2)}</div>
           </div>
         )}
       </div>
     </div>
   )
 }
-

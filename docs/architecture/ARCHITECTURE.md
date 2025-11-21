@@ -61,6 +61,11 @@ This platform enables businesses to create automated workflows that transform fo
 - GitHub Actions for CI/CD
 - Multi-environment support (dev, staging, prod)
 
+### Self-Hosted (In-App) Variant
+- Some teams prefer to eliminate managed AWS services and run the full workflow engine inside the application boundary.
+- See `docs/refactoring/IN_APP_INFRA_REDESIGN.md` for a complete blueprint covering Postgres + MinIO data planes, Redis/BullMQ orchestration, worker service changes, and migration strategy away from API Gateway/Lambda/Step Functions/DynamoDB/S3/Cognito.
+- The frontend and worker codebases remain the same, but deployment targets shift to Docker Compose/Kubernetes with Vault, Prometheus, and Grafana for operations.
+
 ## 📁 Project Structure
 
 ```

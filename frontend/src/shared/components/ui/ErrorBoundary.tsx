@@ -39,14 +39,14 @@ export class ErrorBoundary extends Component<Props, State> {
 
       return (
         <div className="min-h-screen flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Something went wrong</h2>
+          <div className="max-w-md w-full bg-white rounded-2xl shadow-soft border border-white/60 p-6">
+            <h2 className="text-xl font-bold text-ink-900 mb-4">Something went wrong</h2>
             {this.state.error && (
               <ErrorMessage message={this.state.error.message} />
             )}
             <button
               onClick={() => window.location.reload()}
-              className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+              className="mt-4 px-4 py-2 bg-brand-600 text-white rounded-2xl hover:bg-brand-700 shadow-soft"
             >
               Reload Page
             </button>
@@ -58,4 +58,3 @@ export class ErrorBoundary extends Component<Props, State> {
     return this.props.children
   }
 }
-

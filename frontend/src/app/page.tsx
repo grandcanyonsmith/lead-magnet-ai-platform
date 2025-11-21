@@ -64,7 +64,7 @@ export default function Home() {
           </p>
         )}
         <div className="mt-8 flex justify-center">
-          <CanyonButton onClick={() => alert('Canyon Button Clicked!')}>
+          <CanyonButton onClick={() => console.log('Canyon Button Clicked!')}>
             Click Me
           </CanyonButton>
         </div>
@@ -72,4 +72,3 @@ export default function Home() {
     </main>
   )
 }
-

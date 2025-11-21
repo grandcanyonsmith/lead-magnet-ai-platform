@@ -13,17 +13,11 @@ const FORMS_TABLE = env.formsTable;
 const USER_SETTINGS_TABLE = env.userSettingsTable;
 
 class FormsController {
-  async list(tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {
+  async list(_tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {
     const limit = queryParams.limit ? parseInt(queryParams.limit) : 50;
 
-    const formsResult = await db.query(
-      FORMS_TABLE,
-      'gsi_tenant_id',
-      'tenant_id = :tenant_id',
-      { ':tenant_id': tenantId },
-      undefined,
-      limit
-    );
+    // Remove tenant_id filtering - show all forms from all accounts
+    const formsResult = { items: await db.scan(FORMS_TABLE, limit) };
     const forms = normalizeQueryResult(formsResult);
 
     // Filter out soft-deleted items
@@ -38,16 +32,14 @@ class FormsController {
     };
   }
 
-  async get(tenantId: string, formId: string): Promise<RouteResponse> {
+  async get(_tenantId: string, formId: string): Promise<RouteResponse> {
     const form = await db.get(FORMS_TABLE, { form_id: formId });
 
     if (!form || form.deleted_at) {
       throw new ApiError('This form doesn\'t exist or has been removed', 404);
     }
 
-    if (form.tenant_id !== tenantId) {
-      throw new ApiError('You don\'t have permission to access this form', 403);
-    }
+    // Removed tenant_id check - allow access to all forms from all accounts
 
     return {
       statusCode: 200,
@@ -207,16 +199,14 @@ class FormsController {
     };
   }
 
-  async update(tenantId: string, formId: string, body: any): Promise<RouteResponse> {
+  async update(_tenantId: string, formId: string, body: any): Promise<RouteResponse> {
     const existing = await db.get(FORMS_TABLE, { form_id: formId });
 
     if (!existing || existing.deleted_at) {
       throw new ApiError('This form doesn\'t exist or has been removed', 404);
     }
 
-    if (existing.tenant_id !== tenantId) {
-      throw new ApiError('You don\'t have permission to access this form', 403);
-    }
+    // Removed tenant_id check - allow access to all forms from all accounts
 
     const data = validate(updateFormSchema, body);
 
@@ -251,16 +241,14 @@ class FormsController {
     };
   }
 
-  async delete(tenantId: string, formId: string): Promise<RouteResponse> {
+  async delete(_tenantId: string, formId: string): Promise<RouteResponse> {
     const existing = await db.get(FORMS_TABLE, { form_id: formId });
 
     if (!existing || existing.deleted_at) {
       throw new ApiError('This form doesn\'t exist or has been removed', 404);
     }
 
-    if (existing.tenant_id !== tenantId) {
-      throw new ApiError('You don\'t have permission to access this form', 403);
-    }
+    // Removed tenant_id check - allow access to all forms from all accounts
 
     // Prevent deletion if form is linked to a workflow
     // Forms should be managed through workflows

@@ -41,11 +41,11 @@ export function FormField({
 }: FormFieldProps) {
   const inputId = `field-${name}`
 
-  const baseInputClasses = `w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+  const baseInputClasses = `w-full px-4 py-3 border rounded-2xl focus:outline-none focus:ring-2 transition-colors shadow-soft ${
     error
       ? 'border-red-300 focus:ring-red-500'
-      : 'border-gray-300 focus:ring-primary-500'
-  } ${disabled || readOnly ? 'bg-gray-50 cursor-not-allowed' : 'bg-white'} ${className}`
+      : 'border-white/60 focus:ring-brand-500'
+  } ${disabled || readOnly ? 'bg-surface-100 cursor-not-allowed' : 'bg-white/90'} ${className}`
 
   const renderInput = () => {
     if (type === 'textarea') {
@@ -115,7 +115,7 @@ export function FormField({
 
   return (
     <div>
-      <label htmlFor={inputId} className="block text-sm font-medium text-gray-700 mb-2">
+      <label htmlFor={inputId} className="block text-sm font-medium text-ink-700 mb-2">
         {label}
         {required && <span className="text-red-500 ml-1" aria-label="required">*</span>}
       </label>
@@ -126,11 +126,10 @@ export function FormField({
         </p>
       )}
       {helpText && !error && (
-        <p className="mt-1 text-sm text-gray-500" id={`${inputId}-help`}>
+        <p className="mt-1 text-sm text-ink-500" id={`${inputId}-help`}>
           {helpText}
         </p>
       )}
     </div>
   )
 }
-

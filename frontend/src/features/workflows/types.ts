@@ -105,6 +105,10 @@ export interface WorkflowUpdateRequest extends Partial<WorkflowCreateRequest> {}
 export interface WorkflowListResponse {
   workflows: Workflow[]
   total?: number
+  count?: number
+  limit?: number
+  offset?: number
+  has_more?: boolean
 }
 
 export interface WorkflowGenerationRequest {

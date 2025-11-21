@@ -6,7 +6,6 @@ import { useSettings, useUpdateSettings } from '@/features/settings/hooks/useSet
 import { Settings } from '@/shared/types'
 import { LoadingState } from '@/shared/components/ui/LoadingState'
 import { ErrorState } from '@/shared/components/ui/ErrorState'
-import { SettingsTabs, SettingsTab } from '@/features/settings/components/settings/SettingsTabs'
 import { GeneralSettings } from '@/features/settings/components/settings/GeneralSettings'
 import { BrandingSettings } from '@/features/settings/components/settings/BrandingSettings'
 import { DeliverySettings } from '@/features/settings/components/settings/DeliverySettings'
@@ -14,7 +13,6 @@ import { BillingUsage } from '@/features/settings/components/settings/BillingUsa
 import { useUnsavedChanges } from '@/shared/hooks/useUnsavedChanges'
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<SettingsTab>('general')
   const [formData, setFormData] = useState<Partial<Settings>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -69,8 +67,8 @@ export default function SettingsPage() {
   }, [settings, formData])
 
   // Warn about unsaved changes
-  useUnsavedChanges({
-    hasUnsavedChanges: hasUnsavedChanges && activeTab !== 'billing',
+  const { UnsavedChangesDialog } = useUnsavedChanges({
+    hasUnsavedChanges: hasUnsavedChanges,
     message: 'You have unsaved changes. Are you sure you want to leave?',
   })
 
@@ -173,86 +171,54 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="max-w-4xl mx-auto">
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-            <p className="text-gray-600">Manage your account settings</p>
+            <h1 className="text-2xl font-bold text-ink-900">Settings</h1>
           </div>
-          {hasUnsavedChanges && activeTab !== 'billing' && (
-            <span className="px-3 py-1 text-sm font-medium text-orange-700 bg-orange-100 rounded-full">
+          {hasUnsavedChanges && (
+            <span className="px-3 py-1 text-sm font-medium text-amber-800 bg-amber-100 border border-amber-200 rounded-full">
               Unsaved changes
             </span>
           )}
         </div>
       </div>
 
-      <SettingsTabs activeTab={activeTab} onTabChange={setActiveTab}>
-        {activeTab === 'general' && (
-          <form onSubmit={handleSubmit} data-tour="settings-form">
-            <GeneralSettings
-              settings={currentSettings}
-              onChange={handleFieldChange}
-              errors={errors}
-            />
-            <div className="mt-6">
-              <button
-                type="submit"
-                disabled={saving}
-                className="flex items-center px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                data-tour="save-settings"
-              >
-                <FiSave className="w-5 h-5 mr-2" />
-                {saving ? 'Saving...' : 'Save Settings'}
-              </button>
-            </div>
-          </form>
-        )}
+      <form onSubmit={handleSubmit} className="space-y-8">
+        <GeneralSettings
+          settings={currentSettings}
+          onChange={handleFieldChange}
+          errors={errors}
+        />
+        
+        <BrandingSettings
+          settings={currentSettings}
+          onChange={handleFieldChange}
+          errors={errors}
+        />
+        
+        <DeliverySettings
+          settings={currentSettings}
+          onChange={handleFieldChange}
+          onSettingsUpdate={handleSettingsUpdate}
+          errors={errors}
+        />
+        
+        <BillingUsage />
 
-        {activeTab === 'branding' && (
-          <form onSubmit={handleSubmit}>
-            <BrandingSettings
-              settings={currentSettings}
-              onChange={handleFieldChange}
-              errors={errors}
-            />
-            <div className="mt-6">
-              <button
-                type="submit"
-                disabled={saving}
-                className="flex items-center px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <FiSave className="w-5 h-5 mr-2" />
-                {saving ? 'Saving...' : 'Save Settings'}
-              </button>
-            </div>
-          </form>
-        )}
-
-        {activeTab === 'delivery' && (
-          <form onSubmit={handleSubmit}>
-            <DeliverySettings
-              settings={currentSettings}
-              onChange={handleFieldChange}
-              onSettingsUpdate={handleSettingsUpdate}
-              errors={errors}
-            />
-            <div className="mt-6">
-              <button
-                type="submit"
-                disabled={saving}
-                className="flex items-center px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <FiSave className="w-5 h-5 mr-2" />
-                {saving ? 'Saving...' : 'Save Settings'}
-              </button>
-            </div>
-          </form>
-        )}
-
-        {activeTab === 'billing' && <BillingUsage />}
-      </SettingsTabs>
+        <div className="pt-6 border-t border-white/60">
+          <button
+            type="submit"
+            disabled={saving}
+            className="flex items-center px-6 py-2.5 bg-brand-600 text-white rounded-2xl hover:bg-brand-700 transition-colors shadow-soft disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <FiSave className="w-5 h-5 mr-2" />
+            {saving ? 'Saving...' : 'Save Settings'}
+          </button>
+        </div>
+      </form>
+      {UnsavedChangesDialog}
     </div>
   )
 }

@@ -96,13 +96,14 @@ export function StepInputOutput({
 
   const gallery = imageGallery ?? buildFallbackGallery(step)
   const showGallery =
-    gallery.imageUrls.length > 0 ||
-    gallery.artifacts.length > 0 ||
-    Boolean(gallery.loading)
+    (gallery.imageUrls.length > 0 ||
+      gallery.artifacts.length > 0 ||
+      Boolean(gallery.loading)) &&
+    Boolean(usedImageGeneration)
 
   const showContext = previousSteps.length > 0 || Boolean(formSubmission)
   const effectiveUsedImageGeneration =
-    usedImageGeneration ?? (gallery.imageUrls.length > 0 || gallery.artifacts.length > 0)
+    usedImageGeneration ?? false
   const hideOutputContent = effectiveUsedImageGeneration && showGallery
   const isInProgress = status === 'in_progress'
   const hasOutputContent = Boolean(step.output)
@@ -124,11 +125,11 @@ export function StepInputOutput({
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-3">
-      <div className="border border-blue-200 rounded-lg overflow-hidden bg-white shadow-sm">
-        <div className="bg-blue-50/60 px-3 py-2 md:px-3 md:py-1.5 border-b border-blue-200">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-4">
+      <div className="border border-blue-200/60 rounded-xl overflow-hidden bg-white shadow-sm ring-1 ring-blue-100/40">
+        <div className="bg-gradient-to-r from-blue-50/70 to-blue-50/50 px-4 py-2.5 md:px-4 md:py-2 border-b border-blue-200/60">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-sm md:text-xs font-semibold text-gray-700">Input</span>
+            <span className="text-sm md:text-xs font-bold text-gray-800 tracking-tight">Input</span>
             <div className="flex items-center gap-1.5">
               {canEditStep && onEditStep && (
                 <button
@@ -149,7 +150,7 @@ export function StepInputOutput({
         </div>
         <div
           ref={inputScrollRef}
-          className="p-3 md:p-2.5 bg-blue-50/20 max-h-[350px] md:max-h-72 overflow-y-auto scrollbar-hide-until-hover"
+          className="p-4 md:p-3 bg-blue-50/10 max-h-[350px] md:max-h-72 overflow-y-auto scrollbar-hide-until-hover"
         >
           {showContext && (
             <ContextSection
@@ -160,7 +161,6 @@ export function StepInputOutput({
           )}
 
           <StepContent formatted={formatStepInput(step)} />
-
           {showGallery && (
             <ImageGallery
               {...gallery}
@@ -170,16 +170,16 @@ export function StepInputOutput({
         </div>
       </div>
 
-      <div className="border border-green-200 rounded-lg overflow-hidden bg-white shadow-sm">
-        <div className="bg-green-50/60 px-3 py-2 md:px-3 md:py-1.5 border-b border-green-200">
+      <div className="border border-green-200/60 rounded-xl overflow-hidden bg-white shadow-sm ring-1 ring-green-100/40">
+        <div className="bg-gradient-to-r from-green-50/70 to-green-50/50 px-4 py-2.5 md:px-4 md:py-2 border-b border-green-200/60">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-sm md:text-xs font-semibold text-gray-700">Output</span>
+            <span className="text-sm md:text-xs font-bold text-gray-800 tracking-tight">Output</span>
             <CopyButton onClick={handleCopyOutput} />
           </div>
         </div>
         <div
           ref={outputScrollRef}
-          className="p-3 md:p-2.5 bg-green-50/20 max-h-[350px] md:max-h-72 overflow-y-auto scrollbar-hide-until-hover"
+          className="p-4 md:p-3 bg-green-50/10 max-h-[350px] md:max-h-72 overflow-y-auto scrollbar-hide-until-hover"
         >
           {hideOutputContent ? (
             <ImageGallery {...gallery} />
@@ -188,6 +188,7 @@ export function StepInputOutput({
               <StepContent
                 formatted={formatStepOutput(step)}
                 imageUrls={gallery.imageUrls}
+                showImages={effectiveUsedImageGeneration}
               />
               {showGallery && (
                 <ImageGallery
@@ -221,4 +222,3 @@ export function StepInputOutput({
     </div>
   )
 }
-

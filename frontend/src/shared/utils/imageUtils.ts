@@ -36,6 +36,14 @@ export function isImageUrl(url: string): boolean {
 }
 
 /**
+ * Strict image URL check for rendered assets we support in UI (png/jpg/jpeg).
+ */
+export function isLikelyImageUrl(url: string): boolean {
+  if (!url || typeof url !== 'string') return false
+  return /\.(png|jpe?g)(\?.*)?$/i.test(url)
+}
+
+/**
  * Recursively extract image URLs from an object (for JSON content)
  */
 export function extractImageUrlsFromObject(obj: any): string[] {
@@ -60,4 +68,3 @@ export function extractImageUrlsFromObject(obj: any): string[] {
   // Remove duplicates
   return Array.from(new Set(urls))
 }
-

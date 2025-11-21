@@ -9,17 +9,11 @@ import { env } from '../utils/env';
 const TEMPLATES_TABLE = env.templatesTable;
 
 class TemplatesController {
-  async list(tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {
+  async list(_tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {
     const limit = queryParams.limit ? parseInt(queryParams.limit) : 50;
 
-    const templatesResult = await db.query(
-      TEMPLATES_TABLE,
-      'gsi_tenant_id',
-      'tenant_id = :tenant_id',
-      { ':tenant_id': tenantId },
-      undefined,
-      limit
-    );
+    // Remove tenant_id filtering - show all templates from all accounts
+    const templatesResult = { items: await db.scan(TEMPLATES_TABLE, limit) };
     const templates = Array.isArray(templatesResult) ? templatesResult : templatesResult.items;
 
     return {
@@ -31,7 +25,7 @@ class TemplatesController {
     };
   }
 
-  async get(tenantId: string, templateId: string): Promise<RouteResponse> {
+  async get(_tenantId: string, templateId: string): Promise<RouteResponse> {
     // Parse template ID and version if provided as template_id:version
     const [id, versionStr] = templateId.split(':');
     const version = versionStr ? parseInt(versionStr) : undefined;
@@ -57,9 +51,7 @@ class TemplatesController {
       throw new ApiError('This template doesn\'t exist', 404);
     }
 
-    if (template.tenant_id !== tenantId) {
-      throw new ApiError('You don\'t have permission to access this template', 403);
-    }
+    // Removed tenant_id check - allow access to all templates from all accounts
 
     return {
       statusCode: 200,
@@ -92,7 +84,7 @@ class TemplatesController {
     };
   }
 
-  async update(tenantId: string, templateId: string, body: any): Promise<RouteResponse> {
+  async update(_tenantId: string, templateId: string, body: any): Promise<RouteResponse> {
     const [id] = templateId.split(':');
 
     // Get latest version
@@ -112,9 +104,7 @@ class TemplatesController {
 
     const existing = existingTemplates[0];
 
-    if (existing.tenant_id !== tenantId) {
-      throw new ApiError('You don\'t have permission to access this template', 403);
-    }
+    // Removed tenant_id check - allow access to all templates from all accounts
 
     const data = validate(updateTemplateSchema, body);
 
@@ -128,7 +118,7 @@ class TemplatesController {
     const template = {
       template_id: id,
       version: newVersion,
-      tenant_id: tenantId,
+      tenant_id: existing.tenant_id, // Keep original tenant_id for data integrity
       template_name: data.template_name || existing.template_name,
       template_description: data.template_description || existing.template_description,
       html_content: data.html_content || existing.html_content,
@@ -145,7 +135,7 @@ class TemplatesController {
     };
   }
 
-  async delete(tenantId: string, templateId: string): Promise<RouteResponse> {
+  async delete(_tenantId: string, templateId: string): Promise<RouteResponse> {
     const [id, versionStr] = templateId.split(':');
     const version = versionStr ? parseInt(versionStr) : undefined;
 
@@ -159,9 +149,7 @@ class TemplatesController {
       throw new ApiError('This template doesn\'t exist', 404);
     }
 
-    if (template.tenant_id !== tenantId) {
-      throw new ApiError('You don\'t have permission to access this template', 403);
-    }
+    // Removed tenant_id check - allow access to all templates from all accounts
 
     // Hard delete specific version
     await db.delete(TEMPLATES_TABLE, { template_id: id, version });
