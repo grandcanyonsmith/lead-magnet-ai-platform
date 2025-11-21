@@ -48,6 +48,15 @@ export function useStepEditor({ step, index, onChange }: UseStepEditorProps) {
       isInternalUpdateRef.current = false
       // Track what we just sent
       lastSentStepRef.current = step
+      // IMPORTANT: Still update localStep immediately for our own changes
+      // This ensures UI updates instantly (like step_type changes)
+      setLocalStep(step)
+      localStepRef.current = step
+      if (step.webhook_headers) {
+        setWebhookHeaders(step.webhook_headers)
+      } else {
+        setWebhookHeaders({})
+      }
       return
     }
     
@@ -73,11 +82,15 @@ export function useStepEditor({ step, index, onChange }: UseStepEditorProps) {
 
   const handleChange = (field: keyof WorkflowStep, value: any) => {
     isInternalUpdateRef.current = true
-    const updated = { ...localStep, [field]: value }
-    setLocalStep(updated)
-    localStepRef.current = updated
-    lastSentStepRef.current = updated
-    onChange(index, updated)
+    // Use functional update to always get latest state
+    setLocalStep((prev) => {
+      const updated = { ...prev, [field]: value }
+      localStepRef.current = updated
+      lastSentStepRef.current = updated
+      // Send update to parent
+      onChange(index, updated)
+      return updated
+    })
   }
 
   const handleWebhookHeadersChange = (headers: Record<string, string>) => {

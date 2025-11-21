@@ -128,16 +128,20 @@ export default function WorkflowStepEditor({
         )}
 
         {/* Webhook Step Fields */}
-        {localStep.step_type === 'webhook' && (
-          <WebhookConfig
-            step={localStep}
-            webhookHeaders={webhookHeaders}
-            allSteps={allSteps}
-            currentStepIndex={index}
-            onChange={handleChange}
-            onWebhookHeadersChange={handleWebhookHeadersChange}
-          />
-        )}
+        {(() => {
+          const isWebhook = localStep.step_type === 'webhook'
+          console.log('[WorkflowStepEditor] Rendering step', index, 'step_type:', localStep.step_type, 'isWebhook:', isWebhook)
+          return isWebhook && (
+            <WebhookConfig
+              step={localStep}
+              webhookHeaders={webhookHeaders}
+              allSteps={allSteps}
+              currentStepIndex={index}
+              onChange={handleChange}
+              onWebhookHeadersChange={handleWebhookHeadersChange}
+            />
+          )
+        })()}
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">

@@ -1,8 +1,20 @@
 {
   "/_not-found/page": "app/_not-found/page.js",
+  "/auth/login/page": "app/auth/login/page.js",
+  "/auth/signup/page": "app/auth/signup/page.js",
+  "/onboarding/survey/page": "app/onboarding/survey/page.js",
+  "/page": "app/page.js",
+  "/v1/forms/[[...slug]]/page": "app/v1/forms/[[...slug]]/page.js",
+  "/dashboard/files/page": "app/dashboard/files/page.js",
+  "/dashboard/artifacts/page": "app/dashboard/artifacts/page.js",
+  "/dashboard/agency/users/page": "app/dashboard/agency/users/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/dashboard/settings/page": "app/dashboard/settings/page.js",
+  "/dashboard/forms/new/page": "app/dashboard/forms/new/page.js",
+  "/dashboard/jobs/page": "app/dashboard/jobs/page.js",
   "/dashboard/workflows/page": "app/dashboard/workflows/page.js",
-  "/dashboard/jobs/[...slug]/page": "app/dashboard/jobs/[...slug]/page.js",
-  "/dashboard/workflows/[...slug]/page": "app/dashboard/workflows/[...slug]/page.js",
   "/dashboard/workflows/new/page": "app/dashboard/workflows/new/page.js",
-  "/dashboard/artifacts/page": "app/dashboard/artifacts/page.js"
+  "/dashboard/forms/[id]/edit/page": "app/dashboard/forms/[id]/edit/page.js",
+  "/dashboard/workflows/[...slug]/page": "app/dashboard/workflows/[...slug]/page.js",
+  "/dashboard/jobs/[...slug]/page": "app/dashboard/jobs/[...slug]/page.js"
 }
