@@ -70,7 +70,37 @@ class WebhookStepService:
         
         # Use custom payload if provided, otherwise build payload based on data selection
         if custom_payload:
-            payload = custom_payload
+            # Merge custom payload with submission data (extract first_name/last_name from name)
+            # Ensure custom_payload is a dict (handle case where it might be stored as string)
+            if isinstance(custom_payload, str):
+                try:
+                    custom_payload = json.loads(custom_payload)
+                except json.JSONDecodeError:
+                    logger.error(f"[WebhookStepService] Invalid JSON in custom_payload: {custom_payload}")
+                    custom_payload = {}
+            
+            if isinstance(custom_payload, dict):
+                payload = custom_payload.copy()
+            else:
+                logger.warning(f"[WebhookStepService] custom_payload is not a dict, using empty dict")
+                payload = {}
+            
+            # Ensure context is a string if present
+            if 'context' in payload and not isinstance(payload['context'], str):
+                payload['context'] = str(payload['context'])
+            
+            # Extract first_name and last_name from submission name field
+            submission_data = submission.get('submission_data', {})
+            name = submission_data.get('name', '')
+            if name and isinstance(name, str):
+                name_parts = name.strip().split(' ', 1)
+                payload['first_name'] = name_parts[0] if len(name_parts) > 0 else name
+                payload['last_name'] = name_parts[1] if len(name_parts) > 1 else ''
+            else:
+                payload['first_name'] = ''
+                payload['last_name'] = ''
+            
+            logger.debug(f"[WebhookStepService] Using custom payload with keys: {list(payload.keys())}")
         else:
             payload = self._build_webhook_payload(
                 job_id=job_id,
