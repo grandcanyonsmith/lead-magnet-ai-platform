@@ -1,0 +1,725 @@
+{
+ "Description": "S3 buckets and CloudFront for artifact storage",
+ "Resources": {
+  "ArtifactsBucket2AAC5544": {
+   "Type": "AWS::S3::Bucket",
+   "Properties": {
+    "BucketEncryption": {
+     "ServerSideEncryptionConfiguration": [
+      {
+       "ServerSideEncryptionByDefault": {
+        "SSEAlgorithm": "AES256"
+       }
+      }
+     ]
+    },
+    "BucketName": "leadmagnet-artifacts-471112574622",
+    "CorsConfiguration": {
+     "CorsRules": [
+      {
+       "AllowedHeaders": [
+        "*"
+       ],
+       "AllowedMethods": [
+        "GET",
+        "HEAD"
+       ],
+       "AllowedOrigins": [
+        "*"
+       ],
+       "MaxAge": 3600
+      }
+     ]
+    },
+    "LifecycleConfiguration": {
+     "Rules": [
+      {
+       "Id": "transition-to-ia",
+       "Status": "Enabled",
+       "Transitions": [
+        {
+         "StorageClass": "STANDARD_IA",
+         "TransitionInDays": 30
+        }
+       ]
+      }
+     ]
+    },
+    "PublicAccessBlockConfiguration": {
+     "BlockPublicAcls": false,
+     "BlockPublicPolicy": false,
+     "IgnorePublicAcls": false,
+     "RestrictPublicBuckets": false
+    },
+    "VersioningConfiguration": {
+     "Status": "Enabled"
+    }
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetStorageStack/ArtifactsBucket/Resource"
+   }
+  },
+  "ArtifactsBucketPolicy852CB646": {
+   "Type": "AWS::S3::BucketPolicy",
+   "Properties": {
+    "Bucket": {
+     "Ref": "ArtifactsBucket2AAC5544"
+    },
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "s3:GetBucket*",
+        "s3:GetObject*",
+        "s3:List*"
+       ],
+       "Effect": "Allow",
+       "Principal": {
+        "CanonicalUser": {
+         "Fn::GetAtt": [
+          "OAIE1EFC67F",
+          "S3CanonicalUserId"
+         ]
+        }
+       },
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "ArtifactsBucket2AAC5544",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "ArtifactsBucket2AAC5544",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": "s3:GetObject",
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "ArtifactsBucket2AAC5544",
+            "Arn"
+           ]
+          },
+          "/*.png"
+         ]
+        ]
+       },
+       "Sid": "PublicReadGetObjectForImages_png_level0"
+      },
+      {
+       "Action": "s3:GetObject",
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "ArtifactsBucket2AAC5544",
+            "Arn"
+           ]
+          },
+          "/*/*.png"
+         ]
+        ]
+       },
+       "Sid": "PublicReadGetObjectForImages_png_level1"
+      },
+      {
+       "Action": "s3:GetObject",
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "ArtifactsBucket2AAC5544",
+            "Arn"
+           ]
+          },
+          "/*/*/*.png"
+         ]
+        ]
+       },
+       "Sid": "PublicReadGetObjectForImages_png_level2"
+      },
+      {
+       "Action": "s3:GetObject",
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "ArtifactsBucket2AAC5544",
+            "Arn"
+           ]
+          },
+          "/*.jpg"
+         ]
+        ]
+       },
+       "Sid": "PublicReadGetObjectForImages_jpg_level0"
+      },
+      {
+       "Action": "s3:GetObject",
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "ArtifactsBucket2AAC5544",
+            "Arn"
+           ]
+          },
+          "/*/*.jpg"
+         ]
+        ]
+       },
+       "Sid": "PublicReadGetObjectForImages_jpg_level1"
+      },
+      {
+       "Action": "s3:GetObject",
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "ArtifactsBucket2AAC5544",
+            "Arn"
+           ]
+          },
+          "/*/*/*.jpg"
+         ]
+        ]
+       },
+       "Sid": "PublicReadGetObjectForImages_jpg_level2"
+      },
+      {
+       "Action": "s3:GetObject",
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "ArtifactsBucket2AAC5544",
+            "Arn"
+           ]
+          },
+          "/*.jpeg"
+         ]
+        ]
+       },
+       "Sid": "PublicReadGetObjectForImages_jpeg_level0"
+      },
+      {
+       "Action": "s3:GetObject",
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "ArtifactsBucket2AAC5544",
+            "Arn"
+           ]
+          },
+          "/*/*.jpeg"
+         ]
+        ]
+       },
+       "Sid": "PublicReadGetObjectForImages_jpeg_level1"
+      },
+      {
+       "Action": "s3:GetObject",
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "ArtifactsBucket2AAC5544",
+            "Arn"
+           ]
+          },
+          "/*/*/*.jpeg"
+         ]
+        ]
+       },
+       "Sid": "PublicReadGetObjectForImages_jpeg_level2"
+      },
+      {
+       "Action": "s3:GetObject",
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "ArtifactsBucket2AAC5544",
+            "Arn"
+           ]
+          },
+          "/*.gif"
+         ]
+        ]
+       },
+       "Sid": "PublicReadGetObjectForImages_gif_level0"
+      },
+      {
+       "Action": "s3:GetObject",
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "ArtifactsBucket2AAC5544",
+            "Arn"
+           ]
+          },
+          "/*/*.gif"
+         ]
+        ]
+       },
+       "Sid": "PublicReadGetObjectForImages_gif_level1"
+      },
+      {
+       "Action": "s3:GetObject",
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "ArtifactsBucket2AAC5544",
+            "Arn"
+           ]
+          },
+          "/*/*/*.gif"
+         ]
+        ]
+       },
+       "Sid": "PublicReadGetObjectForImages_gif_level2"
+      },
+      {
+       "Action": "s3:GetObject",
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "ArtifactsBucket2AAC5544",
+            "Arn"
+           ]
+          },
+          "/*.webp"
+         ]
+        ]
+       },
+       "Sid": "PublicReadGetObjectForImages_webp_level0"
+      },
+      {
+       "Action": "s3:GetObject",
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "ArtifactsBucket2AAC5544",
+            "Arn"
+           ]
+          },
+          "/*/*.webp"
+         ]
+        ]
+       },
+       "Sid": "PublicReadGetObjectForImages_webp_level1"
+      },
+      {
+       "Action": "s3:GetObject",
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "ArtifactsBucket2AAC5544",
+            "Arn"
+           ]
+          },
+          "/*/*/*.webp"
+         ]
+        ]
+       },
+       "Sid": "PublicReadGetObjectForImages_webp_level2"
+      },
+      {
+       "Action": "s3:GetObject",
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "ArtifactsBucket2AAC5544",
+            "Arn"
+           ]
+          },
+          "/*.svg"
+         ]
+        ]
+       },
+       "Sid": "PublicReadGetObjectForImages_svg_level0"
+      },
+      {
+       "Action": "s3:GetObject",
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "ArtifactsBucket2AAC5544",
+            "Arn"
+           ]
+          },
+          "/*/*.svg"
+         ]
+        ]
+       },
+       "Sid": "PublicReadGetObjectForImages_svg_level1"
+      },
+      {
+       "Action": "s3:GetObject",
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "ArtifactsBucket2AAC5544",
+            "Arn"
+           ]
+          },
+          "/*/*/*.svg"
+         ]
+        ]
+       },
+       "Sid": "PublicReadGetObjectForImages_svg_level2"
+      },
+      {
+       "Action": "s3:GetObject",
+       "Effect": "Allow",
+       "Principal": {
+        "CanonicalUser": {
+         "Fn::GetAtt": [
+          "OAIE1EFC67F",
+          "S3CanonicalUserId"
+         ]
+        }
+       },
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "ArtifactsBucket2AAC5544",
+            "Arn"
+           ]
+          },
+          "/*"
+         ]
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetStorageStack/ArtifactsBucket/Policy/Resource"
+   }
+  },
+  "OAIE1EFC67F": {
+   "Type": "AWS::CloudFront::CloudFrontOriginAccessIdentity",
+   "Properties": {
+    "CloudFrontOriginAccessIdentityConfig": {
+     "Comment": "OAI for artifacts bucket"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetStorageStack/OAI/Resource"
+   }
+  },
+  "Distribution830FAC52": {
+   "Type": "AWS::CloudFront::Distribution",
+   "Properties": {
+    "DistributionConfig": {
+     "Comment": "Lead Magnet Artifacts CDN",
+     "CustomErrorResponses": [
+      {
+       "ErrorCachingMinTTL": 600,
+       "ErrorCode": 403,
+       "ResponseCode": 200,
+       "ResponsePagePath": "/index.html"
+      },
+      {
+       "ErrorCachingMinTTL": 600,
+       "ErrorCode": 404,
+       "ResponseCode": 200,
+       "ResponsePagePath": "/index.html"
+      }
+     ],
+     "DefaultCacheBehavior": {
+      "AllowedMethods": [
+       "GET",
+       "HEAD",
+       "OPTIONS"
+      ],
+      "CachePolicyId": "658327ea-f89d-4fab-a63d-7e88639e58f6",
+      "CachedMethods": [
+       "GET",
+       "HEAD"
+      ],
+      "Compress": true,
+      "TargetOriginId": "LeadMagnetStorageStackDistributionOrigin16055552A",
+      "ViewerProtocolPolicy": "redirect-to-https"
+     },
+     "Enabled": true,
+     "HttpVersion": "http2and3",
+     "IPV6Enabled": true,
+     "Origins": [
+      {
+       "DomainName": {
+        "Fn::GetAtt": [
+         "ArtifactsBucket2AAC5544",
+         "RegionalDomainName"
+        ]
+       },
+       "Id": "LeadMagnetStorageStackDistributionOrigin16055552A",
+       "S3OriginConfig": {
+        "OriginAccessIdentity": {
+         "Fn::Join": [
+          "",
+          [
+           "origin-access-identity/cloudfront/",
+           {
+            "Ref": "OAIE1EFC67F"
+           }
+          ]
+         ]
+        }
+       }
+      }
+     ],
+     "PriceClass": "PriceClass_100"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetStorageStack/Distribution/Resource"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/22LwQrCMBBEv6X3dK3x4FkrgqeKfoC0SSrb1kSyG4uE/rvECnrwNDOPNxKkLKDI6pFypft8wAbimWvVi3qkS6QVxG1QvWFRtvbT5ji6AdXzi+c9CTW4oFvvLEOsPF7RbpQyRAdtLCO/H2Vy9sn5a+yQ2GMTGJ1N+u+epkSqwPfAk7BOG+ho8ZASlmtYZh0h5j5YxpuB05wvD7gbEOUAAAA="
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetStorageStack/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "ArtifactsBucketName": {
+   "Description": "S3 bucket name for storing artifacts",
+   "Value": {
+    "Ref": "ArtifactsBucket2AAC5544"
+   },
+   "Export": {
+    "Name": "ArtifactsBucketName"
+   }
+  },
+  "DistributionDomainName": {
+   "Description": "CloudFront distribution domain name",
+   "Value": {
+    "Fn::GetAtt": [
+     "Distribution830FAC52",
+     "DomainName"
+    ]
+   },
+   "Export": {
+    "Name": "DistributionDomainName"
+   }
+  },
+  "DistributionId": {
+   "Description": "CloudFront distribution ID",
+   "Value": {
+    "Ref": "Distribution830FAC52"
+   },
+   "Export": {
+    "Name": "DistributionId"
+   }
+  },
+  "ExportsOutputFnGetAttArtifactsBucket2AAC5544ArnD57FAE19": {
+   "Value": {
+    "Fn::GetAtt": [
+     "ArtifactsBucket2AAC5544",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "leadmagnet-storage:ExportsOutputFnGetAttArtifactsBucket2AAC5544ArnD57FAE19"
+   }
+  },
+  "ExportsOutputRefArtifactsBucket2AAC55442DB5E6C9": {
+   "Value": {
+    "Ref": "ArtifactsBucket2AAC5544"
+   },
+   "Export": {
+    "Name": "leadmagnet-storage:ExportsOutputRefArtifactsBucket2AAC55442DB5E6C9"
+   }
+  },
+  "ExportsOutputFnGetAttDistribution830FAC52DomainNameBEB09E30": {
+   "Value": {
+    "Fn::GetAtt": [
+     "Distribution830FAC52",
+     "DomainName"
+    ]
+   },
+   "Export": {
+    "Name": "leadmagnet-storage:ExportsOutputFnGetAttDistribution830FAC52DomainNameBEB09E30"
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

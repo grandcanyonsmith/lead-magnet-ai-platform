@@ -1,0 +1,1144 @@
+{
+ "Description": "DynamoDB tables for lead magnet platform",
+ "Resources": {
+  "WorkflowsTable4E215008": {
+   "Type": "AWS::DynamoDB::Table",
+   "Properties": {
+    "AttributeDefinitions": [
+     {
+      "AttributeName": "workflow_id",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "tenant_id",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "status",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "form_id",
+      "AttributeType": "S"
+     }
+    ],
+    "BillingMode": "PAY_PER_REQUEST",
+    "GlobalSecondaryIndexes": [
+     {
+      "IndexName": "gsi_tenant_status",
+      "KeySchema": [
+       {
+        "AttributeName": "tenant_id",
+        "KeyType": "HASH"
+       },
+       {
+        "AttributeName": "status",
+        "KeyType": "RANGE"
+       }
+      ],
+      "Projection": {
+       "ProjectionType": "ALL"
+      }
+     },
+     {
+      "IndexName": "gsi_form_id",
+      "KeySchema": [
+       {
+        "AttributeName": "form_id",
+        "KeyType": "HASH"
+       }
+      ],
+      "Projection": {
+       "ProjectionType": "ALL"
+      }
+     }
+    ],
+    "KeySchema": [
+     {
+      "AttributeName": "workflow_id",
+      "KeyType": "HASH"
+     }
+    ],
+    "PointInTimeRecoverySpecification": {
+     "PointInTimeRecoveryEnabled": true
+    },
+    "SSESpecification": {
+     "SSEEnabled": true
+    },
+    "TableName": "leadmagnet-workflows"
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetDatabaseStack/WorkflowsTable/Resource"
+   }
+  },
+  "FormsTable9C91E1CF": {
+   "Type": "AWS::DynamoDB::Table",
+   "Properties": {
+    "AttributeDefinitions": [
+     {
+      "AttributeName": "form_id",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "tenant_id",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "public_slug",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "workflow_id",
+      "AttributeType": "S"
+     }
+    ],
+    "BillingMode": "PAY_PER_REQUEST",
+    "GlobalSecondaryIndexes": [
+     {
+      "IndexName": "gsi_tenant_id",
+      "KeySchema": [
+       {
+        "AttributeName": "tenant_id",
+        "KeyType": "HASH"
+       }
+      ],
+      "Projection": {
+       "ProjectionType": "ALL"
+      }
+     },
+     {
+      "IndexName": "gsi_public_slug",
+      "KeySchema": [
+       {
+        "AttributeName": "public_slug",
+        "KeyType": "HASH"
+       }
+      ],
+      "Projection": {
+       "ProjectionType": "ALL"
+      }
+     },
+     {
+      "IndexName": "gsi_workflow_id",
+      "KeySchema": [
+       {
+        "AttributeName": "workflow_id",
+        "KeyType": "HASH"
+       }
+      ],
+      "Projection": {
+       "ProjectionType": "ALL"
+      }
+     }
+    ],
+    "KeySchema": [
+     {
+      "AttributeName": "form_id",
+      "KeyType": "HASH"
+     }
+    ],
+    "PointInTimeRecoverySpecification": {
+     "PointInTimeRecoveryEnabled": true
+    },
+    "SSESpecification": {
+     "SSEEnabled": true
+    },
+    "TableName": "leadmagnet-forms"
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetDatabaseStack/FormsTable/Resource"
+   }
+  },
+  "SubmissionsTable75718D3D": {
+   "Type": "AWS::DynamoDB::Table",
+   "Properties": {
+    "AttributeDefinitions": [
+     {
+      "AttributeName": "submission_id",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "form_id",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "created_at",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "tenant_id",
+      "AttributeType": "S"
+     }
+    ],
+    "BillingMode": "PAY_PER_REQUEST",
+    "GlobalSecondaryIndexes": [
+     {
+      "IndexName": "gsi_form_created",
+      "KeySchema": [
+       {
+        "AttributeName": "form_id",
+        "KeyType": "HASH"
+       },
+       {
+        "AttributeName": "created_at",
+        "KeyType": "RANGE"
+       }
+      ],
+      "Projection": {
+       "ProjectionType": "ALL"
+      }
+     },
+     {
+      "IndexName": "gsi_tenant_created",
+      "KeySchema": [
+       {
+        "AttributeName": "tenant_id",
+        "KeyType": "HASH"
+       },
+       {
+        "AttributeName": "created_at",
+        "KeyType": "RANGE"
+       }
+      ],
+      "Projection": {
+       "ProjectionType": "ALL"
+      }
+     }
+    ],
+    "KeySchema": [
+     {
+      "AttributeName": "submission_id",
+      "KeyType": "HASH"
+     }
+    ],
+    "PointInTimeRecoverySpecification": {
+     "PointInTimeRecoveryEnabled": true
+    },
+    "SSESpecification": {
+     "SSEEnabled": true
+    },
+    "TableName": "leadmagnet-submissions",
+    "TimeToLiveSpecification": {
+     "AttributeName": "ttl",
+     "Enabled": true
+    }
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetDatabaseStack/SubmissionsTable/Resource"
+   }
+  },
+  "JobsTable1970BC16": {
+   "Type": "AWS::DynamoDB::Table",
+   "Properties": {
+    "AttributeDefinitions": [
+     {
+      "AttributeName": "job_id",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "workflow_id",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "status",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "tenant_id",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "created_at",
+      "AttributeType": "S"
+     }
+    ],
+    "BillingMode": "PAY_PER_REQUEST",
+    "GlobalSecondaryIndexes": [
+     {
+      "IndexName": "gsi_workflow_status",
+      "KeySchema": [
+       {
+        "AttributeName": "workflow_id",
+        "KeyType": "HASH"
+       },
+       {
+        "AttributeName": "status",
+        "KeyType": "RANGE"
+       }
+      ],
+      "Projection": {
+       "ProjectionType": "ALL"
+      }
+     },
+     {
+      "IndexName": "gsi_tenant_created",
+      "KeySchema": [
+       {
+        "AttributeName": "tenant_id",
+        "KeyType": "HASH"
+       },
+       {
+        "AttributeName": "created_at",
+        "KeyType": "RANGE"
+       }
+      ],
+      "Projection": {
+       "ProjectionType": "ALL"
+      }
+     }
+    ],
+    "KeySchema": [
+     {
+      "AttributeName": "job_id",
+      "KeyType": "HASH"
+     }
+    ],
+    "PointInTimeRecoverySpecification": {
+     "PointInTimeRecoveryEnabled": true
+    },
+    "SSESpecification": {
+     "SSEEnabled": true
+    },
+    "TableName": "leadmagnet-jobs"
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetDatabaseStack/JobsTable/Resource"
+   }
+  },
+  "ArtifactsTable22794241": {
+   "Type": "AWS::DynamoDB::Table",
+   "Properties": {
+    "AttributeDefinitions": [
+     {
+      "AttributeName": "artifact_id",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "job_id",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "tenant_id",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "artifact_type",
+      "AttributeType": "S"
+     }
+    ],
+    "BillingMode": "PAY_PER_REQUEST",
+    "GlobalSecondaryIndexes": [
+     {
+      "IndexName": "gsi_job_id",
+      "KeySchema": [
+       {
+        "AttributeName": "job_id",
+        "KeyType": "HASH"
+       }
+      ],
+      "Projection": {
+       "ProjectionType": "ALL"
+      }
+     },
+     {
+      "IndexName": "gsi_tenant_type",
+      "KeySchema": [
+       {
+        "AttributeName": "tenant_id",
+        "KeyType": "HASH"
+       },
+       {
+        "AttributeName": "artifact_type",
+        "KeyType": "RANGE"
+       }
+      ],
+      "Projection": {
+       "ProjectionType": "ALL"
+      }
+     }
+    ],
+    "KeySchema": [
+     {
+      "AttributeName": "artifact_id",
+      "KeyType": "HASH"
+     }
+    ],
+    "PointInTimeRecoverySpecification": {
+     "PointInTimeRecoveryEnabled": true
+    },
+    "SSESpecification": {
+     "SSEEnabled": true
+    },
+    "TableName": "leadmagnet-artifacts"
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetDatabaseStack/ArtifactsTable/Resource"
+   }
+  },
+  "TemplatesTable3F253039": {
+   "Type": "AWS::DynamoDB::Table",
+   "Properties": {
+    "AttributeDefinitions": [
+     {
+      "AttributeName": "template_id",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "version",
+      "AttributeType": "N"
+     },
+     {
+      "AttributeName": "tenant_id",
+      "AttributeType": "S"
+     }
+    ],
+    "BillingMode": "PAY_PER_REQUEST",
+    "GlobalSecondaryIndexes": [
+     {
+      "IndexName": "gsi_tenant_id",
+      "KeySchema": [
+       {
+        "AttributeName": "tenant_id",
+        "KeyType": "HASH"
+       }
+      ],
+      "Projection": {
+       "ProjectionType": "ALL"
+      }
+     }
+    ],
+    "KeySchema": [
+     {
+      "AttributeName": "template_id",
+      "KeyType": "HASH"
+     },
+     {
+      "AttributeName": "version",
+      "KeyType": "RANGE"
+     }
+    ],
+    "PointInTimeRecoverySpecification": {
+     "PointInTimeRecoveryEnabled": true
+    },
+    "SSESpecification": {
+     "SSEEnabled": true
+    },
+    "TableName": "leadmagnet-templates"
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetDatabaseStack/TemplatesTable/Resource"
+   }
+  },
+  "UserSettingsTable755385E4": {
+   "Type": "AWS::DynamoDB::Table",
+   "Properties": {
+    "AttributeDefinitions": [
+     {
+      "AttributeName": "tenant_id",
+      "AttributeType": "S"
+     }
+    ],
+    "BillingMode": "PAY_PER_REQUEST",
+    "KeySchema": [
+     {
+      "AttributeName": "tenant_id",
+      "KeyType": "HASH"
+     }
+    ],
+    "PointInTimeRecoverySpecification": {
+     "PointInTimeRecoveryEnabled": true
+    },
+    "SSESpecification": {
+     "SSEEnabled": true
+    },
+    "TableName": "leadmagnet-user-settings"
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetDatabaseStack/UserSettingsTable/Resource"
+   }
+  },
+  "NotificationsTable76DCFC6C": {
+   "Type": "AWS::DynamoDB::Table",
+   "Properties": {
+    "AttributeDefinitions": [
+     {
+      "AttributeName": "notification_id",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "tenant_id",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "created_at",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "read_at",
+      "AttributeType": "S"
+     }
+    ],
+    "BillingMode": "PAY_PER_REQUEST",
+    "GlobalSecondaryIndexes": [
+     {
+      "IndexName": "gsi_tenant_created",
+      "KeySchema": [
+       {
+        "AttributeName": "tenant_id",
+        "KeyType": "HASH"
+       },
+       {
+        "AttributeName": "created_at",
+        "KeyType": "RANGE"
+       }
+      ],
+      "Projection": {
+       "ProjectionType": "ALL"
+      }
+     },
+     {
+      "IndexName": "gsi_tenant_read",
+      "KeySchema": [
+       {
+        "AttributeName": "tenant_id",
+        "KeyType": "HASH"
+       },
+       {
+        "AttributeName": "read_at",
+        "KeyType": "RANGE"
+       }
+      ],
+      "Projection": {
+       "ProjectionType": "ALL"
+      }
+     }
+    ],
+    "KeySchema": [
+     {
+      "AttributeName": "notification_id",
+      "KeyType": "HASH"
+     }
+    ],
+    "PointInTimeRecoverySpecification": {
+     "PointInTimeRecoveryEnabled": true
+    },
+    "SSESpecification": {
+     "SSEEnabled": true
+    },
+    "TableName": "leadmagnet-notifications",
+    "TimeToLiveSpecification": {
+     "AttributeName": "ttl",
+     "Enabled": true
+    }
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetDatabaseStack/NotificationsTable/Resource"
+   }
+  },
+  "UsersTable9725E9C8": {
+   "Type": "AWS::DynamoDB::Table",
+   "Properties": {
+    "AttributeDefinitions": [
+     {
+      "AttributeName": "user_id",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "customer_id",
+      "AttributeType": "S"
+     }
+    ],
+    "BillingMode": "PAY_PER_REQUEST",
+    "GlobalSecondaryIndexes": [
+     {
+      "IndexName": "gsi_customer_id",
+      "KeySchema": [
+       {
+        "AttributeName": "customer_id",
+        "KeyType": "HASH"
+       }
+      ],
+      "Projection": {
+       "ProjectionType": "ALL"
+      }
+     }
+    ],
+    "KeySchema": [
+     {
+      "AttributeName": "user_id",
+      "KeyType": "HASH"
+     }
+    ],
+    "PointInTimeRecoverySpecification": {
+     "PointInTimeRecoveryEnabled": true
+    },
+    "SSESpecification": {
+     "SSEEnabled": true
+    },
+    "TableName": "leadmagnet-users"
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetDatabaseStack/UsersTable/Resource"
+   }
+  },
+  "CustomersTableB554B793": {
+   "Type": "AWS::DynamoDB::Table",
+   "Properties": {
+    "AttributeDefinitions": [
+     {
+      "AttributeName": "customer_id",
+      "AttributeType": "S"
+     }
+    ],
+    "BillingMode": "PAY_PER_REQUEST",
+    "KeySchema": [
+     {
+      "AttributeName": "customer_id",
+      "KeyType": "HASH"
+     }
+    ],
+    "PointInTimeRecoverySpecification": {
+     "PointInTimeRecoveryEnabled": true
+    },
+    "SSESpecification": {
+     "SSEEnabled": true
+    },
+    "TableName": "leadmagnet-customers"
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetDatabaseStack/CustomersTable/Resource"
+   }
+  },
+  "FilesTable1399FAA4": {
+   "Type": "AWS::DynamoDB::Table",
+   "Properties": {
+    "AttributeDefinitions": [
+     {
+      "AttributeName": "file_id",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "customer_id",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "created_at",
+      "AttributeType": "S"
+     }
+    ],
+    "BillingMode": "PAY_PER_REQUEST",
+    "GlobalSecondaryIndexes": [
+     {
+      "IndexName": "gsi_customer_id",
+      "KeySchema": [
+       {
+        "AttributeName": "customer_id",
+        "KeyType": "HASH"
+       },
+       {
+        "AttributeName": "created_at",
+        "KeyType": "RANGE"
+       }
+      ],
+      "Projection": {
+       "ProjectionType": "ALL"
+      }
+     }
+    ],
+    "KeySchema": [
+     {
+      "AttributeName": "file_id",
+      "KeyType": "HASH"
+     }
+    ],
+    "PointInTimeRecoverySpecification": {
+     "PointInTimeRecoveryEnabled": true
+    },
+    "SSESpecification": {
+     "SSEEnabled": true
+    },
+    "TableName": "leadmagnet-files"
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetDatabaseStack/FilesTable/Resource"
+   }
+  },
+  "ImpersonationLogsTableBD29E063": {
+   "Type": "AWS::DynamoDB::Table",
+   "Properties": {
+    "AttributeDefinitions": [
+     {
+      "AttributeName": "log_id",
+      "AttributeType": "S"
+     }
+    ],
+    "BillingMode": "PAY_PER_REQUEST",
+    "KeySchema": [
+     {
+      "AttributeName": "log_id",
+      "KeyType": "HASH"
+     }
+    ],
+    "PointInTimeRecoverySpecification": {
+     "PointInTimeRecoveryEnabled": true
+    },
+    "SSESpecification": {
+     "SSEEnabled": true
+    },
+    "TableName": "leadmagnet-impersonation-logs"
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetDatabaseStack/ImpersonationLogsTable/Resource"
+   }
+  },
+  "SessionsTable7C302024": {
+   "Type": "AWS::DynamoDB::Table",
+   "Properties": {
+    "AttributeDefinitions": [
+     {
+      "AttributeName": "session_id",
+      "AttributeType": "S"
+     }
+    ],
+    "BillingMode": "PAY_PER_REQUEST",
+    "KeySchema": [
+     {
+      "AttributeName": "session_id",
+      "KeyType": "HASH"
+     }
+    ],
+    "PointInTimeRecoverySpecification": {
+     "PointInTimeRecoveryEnabled": true
+    },
+    "SSESpecification": {
+     "SSEEnabled": true
+    },
+    "TableName": "leadmagnet-sessions",
+    "TimeToLiveSpecification": {
+     "AttributeName": "expires_at",
+     "Enabled": true
+    }
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetDatabaseStack/SessionsTable/Resource"
+   }
+  },
+  "FoldersTableD1BB987C": {
+   "Type": "AWS::DynamoDB::Table",
+   "Properties": {
+    "AttributeDefinitions": [
+     {
+      "AttributeName": "folder_id",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "tenant_id",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "created_at",
+      "AttributeType": "S"
+     }
+    ],
+    "BillingMode": "PAY_PER_REQUEST",
+    "GlobalSecondaryIndexes": [
+     {
+      "IndexName": "gsi_tenant_created",
+      "KeySchema": [
+       {
+        "AttributeName": "tenant_id",
+        "KeyType": "HASH"
+       },
+       {
+        "AttributeName": "created_at",
+        "KeyType": "RANGE"
+       }
+      ],
+      "Projection": {
+       "ProjectionType": "ALL"
+      }
+     }
+    ],
+    "KeySchema": [
+     {
+      "AttributeName": "folder_id",
+      "KeyType": "HASH"
+     }
+    ],
+    "PointInTimeRecoverySpecification": {
+     "PointInTimeRecoveryEnabled": true
+    },
+    "SSESpecification": {
+     "SSEEnabled": true
+    },
+    "TableName": "leadmagnet-folders"
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetDatabaseStack/FoldersTable/Resource"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/yWJywqDMBAAv8V7stW99G4/QNDeZZOsEB9JcRNFxH8v6GVmYBAQSygL2kVbN+nZGzi7RHZStEvvjkBLdAbOL5mZ1WcIT9ysSfhSLUvMq71nk9Mvp0uF6BhGeW2IUL2hKkbxXq85JL8wtI//xMcNjHwAAAA="
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetDatabaseStack/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "WorkflowsTableName": {
+   "Value": {
+    "Ref": "WorkflowsTable4E215008"
+   },
+   "Export": {
+    "Name": "WorkflowsTableName"
+   }
+  },
+  "FormsTableName": {
+   "Value": {
+    "Ref": "FormsTable9C91E1CF"
+   },
+   "Export": {
+    "Name": "FormsTableName"
+   }
+  },
+  "JobsTableName": {
+   "Value": {
+    "Ref": "JobsTable1970BC16"
+   },
+   "Export": {
+    "Name": "JobsTableName"
+   }
+  },
+  "ExportsOutputFnGetAttSessionsTable7C302024Arn24FF8012": {
+   "Value": {
+    "Fn::GetAtt": [
+     "SessionsTable7C302024",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "leadmagnet-database:ExportsOutputFnGetAttSessionsTable7C302024Arn24FF8012"
+   }
+  },
+  "ExportsOutputFnGetAttFoldersTableD1BB987CArn1A2471F0": {
+   "Value": {
+    "Fn::GetAtt": [
+     "FoldersTableD1BB987C",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "leadmagnet-database:ExportsOutputFnGetAttFoldersTableD1BB987CArn1A2471F0"
+   }
+  },
+  "ExportsOutputFnGetAttWorkflowsTable4E215008Arn0D44497B": {
+   "Value": {
+    "Fn::GetAtt": [
+     "WorkflowsTable4E215008",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "leadmagnet-database:ExportsOutputFnGetAttWorkflowsTable4E215008Arn0D44497B"
+   }
+  },
+  "ExportsOutputFnGetAttFormsTable9C91E1CFArnD25FB1C4": {
+   "Value": {
+    "Fn::GetAtt": [
+     "FormsTable9C91E1CF",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "leadmagnet-database:ExportsOutputFnGetAttFormsTable9C91E1CFArnD25FB1C4"
+   }
+  },
+  "ExportsOutputFnGetAttSubmissionsTable75718D3DArn8D9DD8A4": {
+   "Value": {
+    "Fn::GetAtt": [
+     "SubmissionsTable75718D3D",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "leadmagnet-database:ExportsOutputFnGetAttSubmissionsTable75718D3DArn8D9DD8A4"
+   }
+  },
+  "ExportsOutputFnGetAttJobsTable1970BC16ArnC40C1624": {
+   "Value": {
+    "Fn::GetAtt": [
+     "JobsTable1970BC16",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "leadmagnet-database:ExportsOutputFnGetAttJobsTable1970BC16ArnC40C1624"
+   }
+  },
+  "ExportsOutputFnGetAttArtifactsTable22794241ArnEC6D514B": {
+   "Value": {
+    "Fn::GetAtt": [
+     "ArtifactsTable22794241",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "leadmagnet-database:ExportsOutputFnGetAttArtifactsTable22794241ArnEC6D514B"
+   }
+  },
+  "ExportsOutputFnGetAttTemplatesTable3F253039ArnF1DF357E": {
+   "Value": {
+    "Fn::GetAtt": [
+     "TemplatesTable3F253039",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "leadmagnet-database:ExportsOutputFnGetAttTemplatesTable3F253039ArnF1DF357E"
+   }
+  },
+  "ExportsOutputFnGetAttNotificationsTable76DCFC6CArn012EC0C4": {
+   "Value": {
+    "Fn::GetAtt": [
+     "NotificationsTable76DCFC6C",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "leadmagnet-database:ExportsOutputFnGetAttNotificationsTable76DCFC6CArn012EC0C4"
+   }
+  },
+  "ExportsOutputFnGetAttUsersTable9725E9C8Arn5684EF99": {
+   "Value": {
+    "Fn::GetAtt": [
+     "UsersTable9725E9C8",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "leadmagnet-database:ExportsOutputFnGetAttUsersTable9725E9C8Arn5684EF99"
+   }
+  },
+  "ExportsOutputFnGetAttFilesTable1399FAA4Arn25DD9DF2": {
+   "Value": {
+    "Fn::GetAtt": [
+     "FilesTable1399FAA4",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "leadmagnet-database:ExportsOutputFnGetAttFilesTable1399FAA4Arn25DD9DF2"
+   }
+  },
+  "ExportsOutputFnGetAttUserSettingsTable755385E4Arn2F7CD415": {
+   "Value": {
+    "Fn::GetAtt": [
+     "UserSettingsTable755385E4",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "leadmagnet-database:ExportsOutputFnGetAttUserSettingsTable755385E4Arn2F7CD415"
+   }
+  },
+  "ExportsOutputFnGetAttCustomersTableB554B793Arn983124AF": {
+   "Value": {
+    "Fn::GetAtt": [
+     "CustomersTableB554B793",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "leadmagnet-database:ExportsOutputFnGetAttCustomersTableB554B793Arn983124AF"
+   }
+  },
+  "ExportsOutputFnGetAttImpersonationLogsTableBD29E063Arn66BDDB76": {
+   "Value": {
+    "Fn::GetAtt": [
+     "ImpersonationLogsTableBD29E063",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "leadmagnet-database:ExportsOutputFnGetAttImpersonationLogsTableBD29E063Arn66BDDB76"
+   }
+  },
+  "ExportsOutputRefWorkflowsTable4E215008D0FFE690": {
+   "Value": {
+    "Ref": "WorkflowsTable4E215008"
+   },
+   "Export": {
+    "Name": "leadmagnet-database:ExportsOutputRefWorkflowsTable4E215008D0FFE690"
+   }
+  },
+  "ExportsOutputRefFormsTable9C91E1CF5414D606": {
+   "Value": {
+    "Ref": "FormsTable9C91E1CF"
+   },
+   "Export": {
+    "Name": "leadmagnet-database:ExportsOutputRefFormsTable9C91E1CF5414D606"
+   }
+  },
+  "ExportsOutputRefSubmissionsTable75718D3D178CFBFC": {
+   "Value": {
+    "Ref": "SubmissionsTable75718D3D"
+   },
+   "Export": {
+    "Name": "leadmagnet-database:ExportsOutputRefSubmissionsTable75718D3D178CFBFC"
+   }
+  },
+  "ExportsOutputRefJobsTable1970BC16EDB4A824": {
+   "Value": {
+    "Ref": "JobsTable1970BC16"
+   },
+   "Export": {
+    "Name": "leadmagnet-database:ExportsOutputRefJobsTable1970BC16EDB4A824"
+   }
+  },
+  "ExportsOutputRefArtifactsTable227942413974C39D": {
+   "Value": {
+    "Ref": "ArtifactsTable22794241"
+   },
+   "Export": {
+    "Name": "leadmagnet-database:ExportsOutputRefArtifactsTable227942413974C39D"
+   }
+  },
+  "ExportsOutputRefTemplatesTable3F2530396272C7B9": {
+   "Value": {
+    "Ref": "TemplatesTable3F253039"
+   },
+   "Export": {
+    "Name": "leadmagnet-database:ExportsOutputRefTemplatesTable3F2530396272C7B9"
+   }
+  },
+  "ExportsOutputRefUserSettingsTable755385E409BF890F": {
+   "Value": {
+    "Ref": "UserSettingsTable755385E4"
+   },
+   "Export": {
+    "Name": "leadmagnet-database:ExportsOutputRefUserSettingsTable755385E409BF890F"
+   }
+  },
+  "ExportsOutputRefNotificationsTable76DCFC6C32DE73EE": {
+   "Value": {
+    "Ref": "NotificationsTable76DCFC6C"
+   },
+   "Export": {
+    "Name": "leadmagnet-database:ExportsOutputRefNotificationsTable76DCFC6C32DE73EE"
+   }
+  },
+  "ExportsOutputRefUsersTable9725E9C857961836": {
+   "Value": {
+    "Ref": "UsersTable9725E9C8"
+   },
+   "Export": {
+    "Name": "leadmagnet-database:ExportsOutputRefUsersTable9725E9C857961836"
+   }
+  },
+  "ExportsOutputRefCustomersTableB554B793C1CB863D": {
+   "Value": {
+    "Ref": "CustomersTableB554B793"
+   },
+   "Export": {
+    "Name": "leadmagnet-database:ExportsOutputRefCustomersTableB554B793C1CB863D"
+   }
+  },
+  "ExportsOutputRefFilesTable1399FAA4592580B8": {
+   "Value": {
+    "Ref": "FilesTable1399FAA4"
+   },
+   "Export": {
+    "Name": "leadmagnet-database:ExportsOutputRefFilesTable1399FAA4592580B8"
+   }
+  },
+  "ExportsOutputRefImpersonationLogsTableBD29E063DB45D8C3": {
+   "Value": {
+    "Ref": "ImpersonationLogsTableBD29E063"
+   },
+   "Export": {
+    "Name": "leadmagnet-database:ExportsOutputRefImpersonationLogsTableBD29E063DB45D8C3"
+   }
+  },
+  "ExportsOutputRefSessionsTable7C3020246E1CCFDD": {
+   "Value": {
+    "Ref": "SessionsTable7C302024"
+   },
+   "Export": {
+    "Name": "leadmagnet-database:ExportsOutputRefSessionsTable7C3020246E1CCFDD"
+   }
+  },
+  "ExportsOutputRefFoldersTableD1BB987CD11999C6": {
+   "Value": {
+    "Ref": "FoldersTableD1BB987C"
+   },
+   "Export": {
+    "Name": "leadmagnet-database:ExportsOutputRefFoldersTableD1BB987CD11999C6"
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

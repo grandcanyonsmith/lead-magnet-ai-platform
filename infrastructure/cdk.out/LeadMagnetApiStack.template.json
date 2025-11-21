@@ -1,0 +1,1393 @@
+{
+ "Description": "API Gateway and Lambda functions",
+ "Resources": {
+  "ApiLambdaRole66D0B4CD": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     },
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/AWSXRayDaemonWriteAccess"
+       ]
+      ]
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetApiStack/ApiLambdaRole/Resource"
+   }
+  },
+  "ApiLambdaRoleDefaultPolicy84E47AF4": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "dynamodb:BatchGetItem",
+        "dynamodb:BatchWriteItem",
+        "dynamodb:ConditionCheckItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:DescribeTable",
+        "dynamodb:GetItem",
+        "dynamodb:GetRecords",
+        "dynamodb:GetShardIterator",
+        "dynamodb:PutItem",
+        "dynamodb:Query",
+        "dynamodb:Scan",
+        "dynamodb:UpdateItem"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        "arn:aws:dynamodb:us-east-1:471112574622:table/leadmagnet-usage-records",
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttArtifactsTable22794241ArnEC6D514B"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttCustomersTableB554B793Arn983124AF"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttFilesTable1399FAA4Arn25DD9DF2"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttFoldersTableD1BB987CArn1A2471F0"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttFormsTable9C91E1CFArnD25FB1C4"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttImpersonationLogsTableBD29E063Arn66BDDB76"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttJobsTable1970BC16ArnC40C1624"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttNotificationsTable76DCFC6CArn012EC0C4"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttSessionsTable7C302024Arn24FF8012"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttSubmissionsTable75718D3DArn8D9DD8A4"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttTemplatesTable3F253039ArnF1DF357E"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttUserSettingsTable755385E4Arn2F7CD415"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttUsersTable9725E9C8Arn5684EF99"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttWorkflowsTable4E215008Arn0D44497B"
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttArtifactsTable22794241ArnEC6D514B"
+           },
+           "/index/*"
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttFilesTable1399FAA4Arn25DD9DF2"
+           },
+           "/index/*"
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttFoldersTableD1BB987CArn1A2471F0"
+           },
+           "/index/*"
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttFormsTable9C91E1CFArnD25FB1C4"
+           },
+           "/index/*"
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttJobsTable1970BC16ArnC40C1624"
+           },
+           "/index/*"
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttNotificationsTable76DCFC6CArn012EC0C4"
+           },
+           "/index/*"
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttSubmissionsTable75718D3DArn8D9DD8A4"
+           },
+           "/index/*"
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttTemplatesTable3F253039ArnF1DF357E"
+           },
+           "/index/*"
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttUsersTable9725E9C8Arn5684EF99"
+           },
+           "/index/*"
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttWorkflowsTable4E215008Arn0D44497B"
+           },
+           "/index/*"
+          ]
+         ]
+        },
+        {
+         "Ref": "AWS::NoValue"
+        }
+       ]
+      },
+      {
+       "Action": [
+        "s3:Abort*",
+        "s3:DeleteObject*",
+        "s3:GetBucket*",
+        "s3:GetObject*",
+        "s3:List*",
+        "s3:PutObject",
+        "s3:PutObjectLegalHold",
+        "s3:PutObjectRetention",
+        "s3:PutObjectTagging",
+        "s3:PutObjectVersionTagging"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::ImportValue": "leadmagnet-storage:ExportsOutputFnGetAttArtifactsBucket2AAC5544ArnD57FAE19"
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "leadmagnet-storage:ExportsOutputFnGetAttArtifactsBucket2AAC5544ArnD57FAE19"
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "states:DescribeExecution",
+        "states:StartExecution"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::ImportValue": "leadmagnet-compute:ExportsOutputRefJobProcessorStateMachine3E0F55605CC28738"
+       }
+      },
+      {
+       "Action": [
+        "secretsmanager:DescribeSecret",
+        "secretsmanager:GetSecretValue"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        "arn:aws:secretsmanager:us-east-1:471112574622:secret:leadmagnet/openai-api-key-??????",
+        "arn:aws:secretsmanager:us-east-1:471112574622:secret:leadmagnet/twilio-credentials-??????"
+       ]
+      },
+      {
+       "Action": [
+        "lambda:InvokeFunction",
+        "xray:PutTelemetryRecords",
+        "xray:PutTraceSegments"
+       ],
+       "Effect": "Allow",
+       "Resource": "*"
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "ApiLambdaRoleDefaultPolicy84E47AF4",
+    "Roles": [
+     {
+      "Ref": "ApiLambdaRole66D0B4CD"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetApiStack/ApiLambdaRole/DefaultPolicy/Resource"
+   }
+  },
+  "ApiFunctionCE271BD4": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "ZipFile": "\n        exports.handler = async (event) => {\n          return {\n            statusCode: 200,\n            body: JSON.stringify({ message: 'API not yet deployed. Deploy backend/api first.' })\n          };\n        };\n      "
+    },
+    "Environment": {
+     "Variables": {
+      "WORKFLOWS_TABLE": {
+       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefWorkflowsTable4E215008D0FFE690"
+      },
+      "FORMS_TABLE": {
+       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefFormsTable9C91E1CF5414D606"
+      },
+      "SUBMISSIONS_TABLE": {
+       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefSubmissionsTable75718D3D178CFBFC"
+      },
+      "JOBS_TABLE": {
+       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefJobsTable1970BC16EDB4A824"
+      },
+      "ARTIFACTS_TABLE": {
+       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefArtifactsTable227942413974C39D"
+      },
+      "TEMPLATES_TABLE": {
+       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefTemplatesTable3F2530396272C7B9"
+      },
+      "USER_SETTINGS_TABLE": {
+       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefUserSettingsTable755385E409BF890F"
+      },
+      "USAGE_RECORDS_TABLE": "leadmagnet-usage-records",
+      "NOTIFICATIONS_TABLE": {
+       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefNotificationsTable76DCFC6C32DE73EE"
+      },
+      "USERS_TABLE": {
+       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefUsersTable9725E9C857961836"
+      },
+      "CUSTOMERS_TABLE": {
+       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefCustomersTableB554B793C1CB863D"
+      },
+      "FILES_TABLE": {
+       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefFilesTable1399FAA4592580B8"
+      },
+      "IMPERSONATION_LOGS_TABLE": {
+       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefImpersonationLogsTableBD29E063DB45D8C3"
+      },
+      "SESSIONS_TABLE": {
+       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefSessionsTable7C3020246E1CCFDD"
+      },
+      "FOLDERS_TABLE": {
+       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefFoldersTableD1BB987CD11999C6"
+      },
+      "STEP_FUNCTIONS_ARN": {
+       "Fn::ImportValue": "leadmagnet-compute:ExportsOutputRefJobProcessorStateMachine3E0F55605CC28738"
+      },
+      "ARTIFACTS_BUCKET": {
+       "Fn::ImportValue": "leadmagnet-storage:ExportsOutputRefArtifactsBucket2AAC55442DB5E6C9"
+      },
+      "CLOUDFRONT_DOMAIN": {
+       "Fn::ImportValue": "leadmagnet-storage:ExportsOutputFnGetAttDistribution830FAC52DomainNameBEB09E30"
+      },
+      "LAMBDA_FUNCTION_NAME": "leadmagnet-api-handler",
+      "LOG_LEVEL": "info"
+     }
+    },
+    "FunctionName": "leadmagnet-api-handler",
+    "Handler": "index.handler",
+    "MemorySize": 2048,
+    "Role": {
+     "Fn::GetAtt": [
+      "ApiLambdaRole66D0B4CD",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs20.x",
+    "Timeout": 900,
+    "TracingConfig": {
+     "Mode": "Active"
+    }
+   },
+   "DependsOn": [
+    "ApiLambdaRoleDefaultPolicy84E47AF4",
+    "ApiLambdaRole66D0B4CD"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetApiStack/ApiFunction/Resource"
+   }
+  },
+  "ApiFunctionLogRetentionDCC3A405": {
+   "Type": "Custom::LogRetention",
+   "Properties": {
+    "ServiceToken": {
+     "Fn::GetAtt": [
+      "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aFD4BFC8A",
+      "Arn"
+     ]
+    },
+    "LogGroupName": {
+     "Fn::Join": [
+      "",
+      [
+       "/aws/lambda/",
+       {
+        "Ref": "ApiFunctionCE271BD4"
+       }
+      ]
+     ]
+    },
+    "RetentionInDays": 7
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetApiStack/ApiFunction/LogRetention/Resource"
+   }
+  },
+  "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aServiceRole9741ECFB": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetApiStack/LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8a/ServiceRole/Resource"
+   }
+  },
+  "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aServiceRoleDefaultPolicyADDA7DEB": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "logs:DeleteRetentionPolicy",
+        "logs:PutRetentionPolicy"
+       ],
+       "Effect": "Allow",
+       "Resource": "*"
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aServiceRoleDefaultPolicyADDA7DEB",
+    "Roles": [
+     {
+      "Ref": "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aServiceRole9741ECFB"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetApiStack/LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8a/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aFD4BFC8A": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Handler": "index.handler",
+    "Runtime": "nodejs22.x",
+    "Timeout": 900,
+    "Code": {
+     "S3Bucket": "cdk-hnb659fds-assets-471112574622-us-east-1",
+     "S3Key": "2819175352ad1ce0dae768e83fc328fb70fb5f10b4a8ff0ccbcb791f02b0716d.zip"
+    },
+    "Role": {
+     "Fn::GetAtt": [
+      "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aServiceRole9741ECFB",
+      "Arn"
+     ]
+    }
+   },
+   "DependsOn": [
+    "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aServiceRoleDefaultPolicyADDA7DEB",
+    "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aServiceRole9741ECFB"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetApiStack/LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8a/Resource",
+    "aws:asset:path": "asset.2819175352ad1ce0dae768e83fc328fb70fb5f10b4a8ff0ccbcb791f02b0716d",
+    "aws:asset:is-bundled": false,
+    "aws:asset:property": "Code"
+   }
+  },
+  "HttpApiF5A9A8A7": {
+   "Type": "AWS::ApiGatewayV2::Api",
+   "Properties": {
+    "CorsConfiguration": {
+     "AllowHeaders": [
+      "content-type",
+      "authorization",
+      "x-api-key",
+      "x-session-id",
+      "x-view-mode",
+      "x-selected-customer-id"
+     ],
+     "AllowMethods": [
+      "GET",
+      "POST",
+      "PUT",
+      "DELETE",
+      "PATCH",
+      "OPTIONS"
+     ],
+     "AllowOrigins": [
+      "*"
+     ],
+     "MaxAge": 86400
+    },
+    "Description": "Lead Magnet Platform API",
+    "Name": "leadmagnet-api",
+    "ProtocolType": "HTTP"
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetApiStack/HttpApi/Resource"
+   }
+  },
+  "HttpApiDefaultStage3EEB07D6": {
+   "Type": "AWS::ApiGatewayV2::Stage",
+   "Properties": {
+    "ApiId": {
+     "Ref": "HttpApiF5A9A8A7"
+    },
+    "AutoDeploy": true,
+    "StageName": "$default"
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetApiStack/HttpApi/DefaultStage/Resource"
+   }
+  },
+  "HttpApiGETv1proxyLambdaIntegration7BEBE125": {
+   "Type": "AWS::ApiGatewayV2::Integration",
+   "Properties": {
+    "ApiId": {
+     "Ref": "HttpApiF5A9A8A7"
+    },
+    "IntegrationType": "AWS_PROXY",
+    "IntegrationUri": {
+     "Fn::GetAtt": [
+      "ApiFunctionCE271BD4",
+      "Arn"
+     ]
+    },
+    "PayloadFormatVersion": "2.0"
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetApiStack/HttpApi/GET--v1--{proxy+}/LambdaIntegration/Resource"
+   }
+  },
+  "HttpApiGETv1proxyLambdaIntegrationPermission13AFE464": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiFunctionCE271BD4",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:aws:execute-api:us-east-1:471112574622:",
+       {
+        "Ref": "HttpApiF5A9A8A7"
+       },
+       "/*/*/v1/{proxy+}"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetApiStack/HttpApi/GET--v1--{proxy+}/LambdaIntegration-Permission"
+   }
+  },
+  "HttpApiGETv1proxyC921D5BC": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "HttpApiF5A9A8A7"
+    },
+    "AuthorizationType": "NONE",
+    "RouteKey": "GET /v1/{proxy+}",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "HttpApiGETv1proxyLambdaIntegration7BEBE125"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetApiStack/HttpApi/GET--v1--{proxy+}/Resource"
+   }
+  },
+  "HttpApiPOSTv1proxyLambdaIntegrationPermission55410214": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiFunctionCE271BD4",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:aws:execute-api:us-east-1:471112574622:",
+       {
+        "Ref": "HttpApiF5A9A8A7"
+       },
+       "/*/*/v1/{proxy+}"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetApiStack/HttpApi/POST--v1--{proxy+}/LambdaIntegration-Permission"
+   }
+  },
+  "HttpApiPOSTv1proxyA172D81B": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "HttpApiF5A9A8A7"
+    },
+    "AuthorizationType": "NONE",
+    "RouteKey": "POST /v1/{proxy+}",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "HttpApiGETv1proxyLambdaIntegration7BEBE125"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetApiStack/HttpApi/POST--v1--{proxy+}/Resource"
+   }
+  },
+  "HttpApiGETfilesLambdaIntegrationPermission0EA617A6": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiFunctionCE271BD4",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:aws:execute-api:us-east-1:471112574622:",
+       {
+        "Ref": "HttpApiF5A9A8A7"
+       },
+       "/*/*/files"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetApiStack/HttpApi/GET--files/LambdaIntegration-Permission"
+   }
+  },
+  "HttpApiGETfilesB1575F69": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "HttpApiF5A9A8A7"
+    },
+    "AuthorizationType": "JWT",
+    "AuthorizerId": {
+     "Ref": "HttpApiJwtAuthorizer14F16BDB"
+    },
+    "RouteKey": "GET /files",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "HttpApiGETv1proxyLambdaIntegration7BEBE125"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetApiStack/HttpApi/GET--files/Resource"
+   }
+  },
+  "HttpApiJwtAuthorizer14F16BDB": {
+   "Type": "AWS::ApiGatewayV2::Authorizer",
+   "Properties": {
+    "ApiId": {
+     "Ref": "HttpApiF5A9A8A7"
+    },
+    "AuthorizerType": "JWT",
+    "IdentitySource": [
+     "$request.header.Authorization"
+    ],
+    "JwtConfiguration": {
+     "Audience": [
+      {
+       "Fn::ImportValue": "leadmagnet-auth:ExportsOutputRefUserPoolClient2F5918F753847A55"
+      }
+     ],
+     "Issuer": {
+      "Fn::Join": [
+       "",
+       [
+        "https://cognito-idp.us-east-1.amazonaws.com/",
+        {
+         "Fn::ImportValue": "leadmagnet-auth:ExportsOutputRefUserPool6BA7E5F296FD7236"
+        }
+       ]
+      ]
+     }
+    },
+    "Name": "JwtAuthorizer"
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetApiStack/HttpApi/JwtAuthorizer/Resource"
+   }
+  },
+  "HttpApiPOSTfilesLambdaIntegrationPermission29AF7BF5": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiFunctionCE271BD4",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:aws:execute-api:us-east-1:471112574622:",
+       {
+        "Ref": "HttpApiF5A9A8A7"
+       },
+       "/*/*/files"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetApiStack/HttpApi/POST--files/LambdaIntegration-Permission"
+   }
+  },
+  "HttpApiPOSTfilesD878802E": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "HttpApiF5A9A8A7"
+    },
+    "AuthorizationType": "JWT",
+    "AuthorizerId": {
+     "Ref": "HttpApiJwtAuthorizer14F16BDB"
+    },
+    "RouteKey": "POST /files",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "HttpApiGETv1proxyLambdaIntegration7BEBE125"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetApiStack/HttpApi/POST--files/Resource"
+   }
+  },
+  "HttpApiGETfilesproxyLambdaIntegrationPermission6FFC632C": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiFunctionCE271BD4",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:aws:execute-api:us-east-1:471112574622:",
+       {
+        "Ref": "HttpApiF5A9A8A7"
+       },
+       "/*/*/files/{proxy+}"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetApiStack/HttpApi/GET--files--{proxy+}/LambdaIntegration-Permission"
+   }
+  },
+  "HttpApiGETfilesproxy72538584": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "HttpApiF5A9A8A7"
+    },
+    "AuthorizationType": "JWT",
+    "AuthorizerId": {
+     "Ref": "HttpApiJwtAuthorizer14F16BDB"
+    },
+    "RouteKey": "GET /files/{proxy+}",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "HttpApiGETv1proxyLambdaIntegration7BEBE125"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetApiStack/HttpApi/GET--files--{proxy+}/Resource"
+   }
+  },
+  "HttpApiPOSTfilesproxyLambdaIntegrationPermissionC07BFDF3": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiFunctionCE271BD4",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:aws:execute-api:us-east-1:471112574622:",
+       {
+        "Ref": "HttpApiF5A9A8A7"
+       },
+       "/*/*/files/{proxy+}"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetApiStack/HttpApi/POST--files--{proxy+}/LambdaIntegration-Permission"
+   }
+  },
+  "HttpApiPOSTfilesproxy7FD9EEC2": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "HttpApiF5A9A8A7"
+    },
+    "AuthorizationType": "JWT",
+    "AuthorizerId": {
+     "Ref": "HttpApiJwtAuthorizer14F16BDB"
+    },
+    "RouteKey": "POST /files/{proxy+}",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "HttpApiGETv1proxyLambdaIntegration7BEBE125"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetApiStack/HttpApi/POST--files--{proxy+}/Resource"
+   }
+  },
+  "HttpApiDELETEfilesproxyLambdaIntegrationPermission17F873B8": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiFunctionCE271BD4",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:aws:execute-api:us-east-1:471112574622:",
+       {
+        "Ref": "HttpApiF5A9A8A7"
+       },
+       "/*/*/files/{proxy+}"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetApiStack/HttpApi/DELETE--files--{proxy+}/LambdaIntegration-Permission"
+   }
+  },
+  "HttpApiDELETEfilesproxy8392AE79": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "HttpApiF5A9A8A7"
+    },
+    "AuthorizationType": "JWT",
+    "AuthorizerId": {
+     "Ref": "HttpApiJwtAuthorizer14F16BDB"
+    },
+    "RouteKey": "DELETE /files/{proxy+}",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "HttpApiGETv1proxyLambdaIntegration7BEBE125"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetApiStack/HttpApi/DELETE--files--{proxy+}/Resource"
+   }
+  },
+  "HttpApiGETmeLambdaIntegrationPermission17B75DC8": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiFunctionCE271BD4",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:aws:execute-api:us-east-1:471112574622:",
+       {
+        "Ref": "HttpApiF5A9A8A7"
+       },
+       "/*/*/me"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetApiStack/HttpApi/GET--me/LambdaIntegration-Permission"
+   }
+  },
+  "HttpApiGETme466879BE": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "HttpApiF5A9A8A7"
+    },
+    "AuthorizationType": "JWT",
+    "AuthorizerId": {
+     "Ref": "HttpApiJwtAuthorizer14F16BDB"
+    },
+    "RouteKey": "GET /me",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "HttpApiGETv1proxyLambdaIntegration7BEBE125"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetApiStack/HttpApi/GET--me/Resource"
+   }
+  },
+  "HttpApiGETadminproxyLambdaIntegrationPermission1CD766D1": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiFunctionCE271BD4",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:aws:execute-api:us-east-1:471112574622:",
+       {
+        "Ref": "HttpApiF5A9A8A7"
+       },
+       "/*/*/admin/{proxy+}"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetApiStack/HttpApi/GET--admin--{proxy+}/LambdaIntegration-Permission"
+   }
+  },
+  "HttpApiGETadminproxyE408FD81": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "HttpApiF5A9A8A7"
+    },
+    "AuthorizationType": "JWT",
+    "AuthorizerId": {
+     "Ref": "HttpApiJwtAuthorizer14F16BDB"
+    },
+    "RouteKey": "GET /admin/{proxy+}",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "HttpApiGETv1proxyLambdaIntegration7BEBE125"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetApiStack/HttpApi/GET--admin--{proxy+}/Resource"
+   }
+  },
+  "HttpApiPOSTadminproxyLambdaIntegrationPermissionE8B8491D": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiFunctionCE271BD4",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:aws:execute-api:us-east-1:471112574622:",
+       {
+        "Ref": "HttpApiF5A9A8A7"
+       },
+       "/*/*/admin/{proxy+}"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetApiStack/HttpApi/POST--admin--{proxy+}/LambdaIntegration-Permission"
+   }
+  },
+  "HttpApiPOSTadminproxy89744583": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "HttpApiF5A9A8A7"
+    },
+    "AuthorizationType": "JWT",
+    "AuthorizerId": {
+     "Ref": "HttpApiJwtAuthorizer14F16BDB"
+    },
+    "RouteKey": "POST /admin/{proxy+}",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "HttpApiGETv1proxyLambdaIntegration7BEBE125"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetApiStack/HttpApi/POST--admin--{proxy+}/Resource"
+   }
+  },
+  "HttpApiPUTadminproxyLambdaIntegrationPermission4289B68E": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiFunctionCE271BD4",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:aws:execute-api:us-east-1:471112574622:",
+       {
+        "Ref": "HttpApiF5A9A8A7"
+       },
+       "/*/*/admin/{proxy+}"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetApiStack/HttpApi/PUT--admin--{proxy+}/LambdaIntegration-Permission"
+   }
+  },
+  "HttpApiPUTadminproxy49AB07F4": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "HttpApiF5A9A8A7"
+    },
+    "AuthorizationType": "JWT",
+    "AuthorizerId": {
+     "Ref": "HttpApiJwtAuthorizer14F16BDB"
+    },
+    "RouteKey": "PUT /admin/{proxy+}",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "HttpApiGETv1proxyLambdaIntegration7BEBE125"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetApiStack/HttpApi/PUT--admin--{proxy+}/Resource"
+   }
+  },
+  "HttpApiPATCHadminproxyLambdaIntegrationPermissionF5ED10B3": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiFunctionCE271BD4",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:aws:execute-api:us-east-1:471112574622:",
+       {
+        "Ref": "HttpApiF5A9A8A7"
+       },
+       "/*/*/admin/{proxy+}"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetApiStack/HttpApi/PATCH--admin--{proxy+}/LambdaIntegration-Permission"
+   }
+  },
+  "HttpApiPATCHadminproxyA1947324": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "HttpApiF5A9A8A7"
+    },
+    "AuthorizationType": "JWT",
+    "AuthorizerId": {
+     "Ref": "HttpApiJwtAuthorizer14F16BDB"
+    },
+    "RouteKey": "PATCH /admin/{proxy+}",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "HttpApiGETv1proxyLambdaIntegration7BEBE125"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetApiStack/HttpApi/PATCH--admin--{proxy+}/Resource"
+   }
+  },
+  "HttpApiDELETEadminproxyLambdaIntegrationPermission6138D0BB": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiFunctionCE271BD4",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:aws:execute-api:us-east-1:471112574622:",
+       {
+        "Ref": "HttpApiF5A9A8A7"
+       },
+       "/*/*/admin/{proxy+}"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetApiStack/HttpApi/DELETE--admin--{proxy+}/LambdaIntegration-Permission"
+   }
+  },
+  "HttpApiDELETEadminproxy25E55522": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "HttpApiF5A9A8A7"
+    },
+    "AuthorizationType": "JWT",
+    "AuthorizerId": {
+     "Ref": "HttpApiJwtAuthorizer14F16BDB"
+    },
+    "RouteKey": "DELETE /admin/{proxy+}",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "HttpApiGETv1proxyLambdaIntegration7BEBE125"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetApiStack/HttpApi/DELETE--admin--{proxy+}/Resource"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/12P0U7DMAxFv2Xvmdm6B547JAQSElP3AZOXmuC1TarYWTWq/jtKqwHi6Z5rW/Z1AUWxgc0KB1nbulm3fIbxqGgbg4OcRsYOxiq0ZJ4+/KyH0LK9ZbvQZFrszjXC+Jy8VQ4+9/7ygWLHIhz8ZNrgBN6Cq0jJzwOyO6EIqUCZxcgO9sk2pHsUMtizQ6UBb9cCxhfVvuw5L82S7VHRzeEWyKUqJF3o1Su5iPcg/+zvXJn0M0T+ojiv/nHTZCqSkKJd/r/znDQfZO9y4z1pn3QyPtQEF3m4FgVsH2G7ugjzOiav3BFUi34Dp9/lenMBAAA="
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetApiStack/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "ApiUrl": {
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "https://",
+      {
+       "Ref": "HttpApiF5A9A8A7"
+      },
+      ".execute-api.us-east-1.",
+      {
+       "Ref": "AWS::URLSuffix"
+      },
+      "/"
+     ]
+    ]
+   },
+   "Export": {
+    "Name": "ApiUrl"
+   }
+  },
+  "ApiFunctionArn": {
+   "Value": {
+    "Fn::GetAtt": [
+     "ApiFunctionCE271BD4",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "ApiFunctionArn"
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

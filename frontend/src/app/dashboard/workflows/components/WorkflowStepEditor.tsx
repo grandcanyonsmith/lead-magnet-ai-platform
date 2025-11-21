@@ -52,8 +52,19 @@ export default function WorkflowStepEditor({
     onChange(index, proposed)
   }
 
+  // Prevent form submission when pressing Enter in input fields
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && (e.target as HTMLElement).tagName !== 'TEXTAREA') {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+  }
+
   return (
-    <div className="border border-gray-300 rounded-lg p-6 bg-white shadow-sm">
+    <div 
+      className="border border-gray-300 rounded-lg p-6 bg-white shadow-sm"
+      onKeyDown={handleKeyDown}
+    >
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1 text-gray-400">
@@ -117,16 +128,20 @@ export default function WorkflowStepEditor({
         )}
 
         {/* Webhook Step Fields */}
-        {localStep.step_type === 'webhook' && (
-          <WebhookConfig
-            step={localStep}
-            webhookHeaders={webhookHeaders}
-            allSteps={allSteps}
-            currentStepIndex={index}
-            onChange={handleChange}
-            onWebhookHeadersChange={handleWebhookHeadersChange}
-          />
-        )}
+        {(() => {
+          const isWebhook = localStep.step_type === 'webhook'
+          console.log('[WorkflowStepEditor] Rendering step', index, 'step_type:', localStep.step_type, 'isWebhook:', isWebhook)
+          return isWebhook && (
+            <WebhookConfig
+              step={localStep}
+              webhookHeaders={webhookHeaders}
+              allSteps={allSteps}
+              currentStepIndex={index}
+              onChange={handleChange}
+              onWebhookHeadersChange={handleWebhookHeadersChange}
+            />
+          )
+        })()}
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">

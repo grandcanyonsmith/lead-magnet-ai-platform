@@ -1,0 +1,21 @@
+{
+  "version": "48.0.0",
+  "files": {
+    "381314ebe53717da28f7fa2563ceb7ba22fbe686d10e69b74459f64a61029bc2": {
+      "displayName": "leadmagnet-worker Template",
+      "source": {
+        "path": "LeadMagnetWorkerStack.template.json",
+        "packaging": "file"
+      },
+      "destinations": {
+        "471112574622-us-east-1-968a7fc0": {
+          "bucketName": "cdk-hnb659fds-assets-471112574622-us-east-1",
+          "objectKey": "381314ebe53717da28f7fa2563ceb7ba22fbe686d10e69b74459f64a61029bc2.json",
+          "region": "us-east-1",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::471112574622:role/cdk-hnb659fds-file-publishing-role-471112574622-us-east-1"
+        }
+      }
+    }
+  },
+  "dockerImages": {}
+}

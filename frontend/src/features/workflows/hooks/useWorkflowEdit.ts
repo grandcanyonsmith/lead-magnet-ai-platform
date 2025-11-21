@@ -75,14 +75,26 @@ export function useWorkflowEdit() {
           defaultInstructions = 'Process the input data according to the workflow requirements.'
         }
         
+        const stepType = step.step_type || 'ai_generation'
+        
         return {
           step_name: step.step_name || `Step ${index + 1}`,
           step_description: step.step_description || '',
+          step_type: stepType,
           model: step.model || 'gpt-5',
-          instructions: step.instructions?.trim() || defaultInstructions,
+          instructions: step.instructions?.trim() || (stepType === 'webhook' ? '' : defaultInstructions),
           step_order: step.step_order !== undefined ? step.step_order : index,
-          tools: step.tools || ['web_search_preview'],
+          tools: step.tools || (stepType === 'webhook' ? [] : ['web_search_preview']),
           tool_choice: step.tool_choice || 'auto',
+          depends_on: step.depends_on || [],
+          // Webhook step fields
+          webhook_url: step.webhook_url || '',
+          webhook_headers: step.webhook_headers || {},
+          webhook_data_selection: step.webhook_data_selection || (stepType === 'webhook' ? {
+            include_submission: true,
+            exclude_step_indices: [],
+            include_job_info: true
+          } : undefined),
         }
       })
       setSteps(loadedSteps)
@@ -120,11 +132,13 @@ export function useWorkflowEdit() {
       {
         step_name: `Step ${prev.length + 1}`,
         step_description: '',
+        step_type: 'ai_generation',
         model: 'gpt-5',
         instructions: '',
         step_order: prev.length,
         tools: ['web_search_preview'],
         tool_choice: 'auto',
+        depends_on: [],
       },
     ])
   }

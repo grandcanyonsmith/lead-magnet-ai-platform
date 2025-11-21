@@ -185,6 +185,54 @@ export class DynamoDBService {
     const result = await docClient.send(command);
     return result.Items || [];
   }
+
+  async scanPaginated(
+    tableName: string,
+    limit?: number,
+    exclusiveStartKey?: Record<string, any>
+  ): Promise<{ items: Record<string, any>[]; lastEvaluatedKey?: Record<string, any> }> {
+    const command = new ScanCommand({
+      TableName: tableName,
+      Limit: limit,
+      ExclusiveStartKey: exclusiveStartKey,
+    });
+
+    const result = await docClient.send(command);
+    return {
+      items: result.Items || [],
+      lastEvaluatedKey: result.LastEvaluatedKey,
+    };
+  }
+
+  /**
+   * Retrieve all items in a table by scanning until exhaustion.
+   * Accepts an optional maxItems to avoid unbounded reads in very large tables.
+   */
+  async scanAll(
+    tableName: string,
+    pageSize: number = 200,
+    maxItems?: number
+  ): Promise<Record<string, any>[]> {
+    const items: Record<string, any>[] = [];
+    let lastEvaluatedKey: Record<string, any> | undefined = undefined;
+
+    do {
+      const { items: page, lastEvaluatedKey: lek } = await this.scanPaginated(
+        tableName,
+        pageSize,
+        lastEvaluatedKey
+      );
+      items.push(...page);
+
+      if (maxItems && items.length >= maxItems) {
+        return items.slice(0, maxItems);
+      }
+
+      lastEvaluatedKey = lek;
+    } while (lastEvaluatedKey);
+
+    return items;
+  }
 }
 
 /**
@@ -198,4 +246,3 @@ export function normalizeQueryResult<T = any>(
 }
 
 export const db = new DynamoDBService();
-
