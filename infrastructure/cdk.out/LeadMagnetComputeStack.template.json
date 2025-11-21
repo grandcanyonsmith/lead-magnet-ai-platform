@@ -1,0 +1,971 @@
+{
+ "Description": "Step Functions state machine and Lambda function for job processing",
+ "Resources": {
+  "JobProcessorLogGroup4B1EA852": {
+   "Type": "AWS::Logs::LogGroup",
+   "Properties": {
+    "LogGroupName": "/aws/lambda/leadmagnet-job-processor",
+    "RetentionInDays": 7
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetComputeStack/JobProcessorLogGroup/Resource"
+   }
+  },
+  "JobProcessorLambdaRole863ED8A8": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetComputeStack/JobProcessorLambdaRole/Resource"
+   }
+  },
+  "JobProcessorLambdaRoleDefaultPolicy0CFAB750": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "dynamodb:BatchGetItem",
+        "dynamodb:BatchWriteItem",
+        "dynamodb:ConditionCheckItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:DescribeTable",
+        "dynamodb:GetItem",
+        "dynamodb:GetRecords",
+        "dynamodb:GetShardIterator",
+        "dynamodb:PutItem",
+        "dynamodb:Query",
+        "dynamodb:Scan",
+        "dynamodb:UpdateItem"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        "arn:aws:dynamodb:us-east-1:471112574622:table/leadmagnet-usage-records",
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttArtifactsTable22794241ArnEC6D514B"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttCustomersTableB554B793Arn983124AF"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttFilesTable1399FAA4Arn25DD9DF2"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttFoldersTableD1BB987CArn1A2471F0"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttFormsTable9C91E1CFArnD25FB1C4"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttImpersonationLogsTableBD29E063Arn66BDDB76"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttJobsTable1970BC16ArnC40C1624"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttNotificationsTable76DCFC6CArn012EC0C4"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttSessionsTable7C302024Arn24FF8012"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttSubmissionsTable75718D3DArn8D9DD8A4"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttTemplatesTable3F253039ArnF1DF357E"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttUserSettingsTable755385E4Arn2F7CD415"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttUsersTable9725E9C8Arn5684EF99"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttWorkflowsTable4E215008Arn0D44497B"
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttArtifactsTable22794241ArnEC6D514B"
+           },
+           "/index/*"
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttFilesTable1399FAA4Arn25DD9DF2"
+           },
+           "/index/*"
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttFoldersTableD1BB987CArn1A2471F0"
+           },
+           "/index/*"
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttFormsTable9C91E1CFArnD25FB1C4"
+           },
+           "/index/*"
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttJobsTable1970BC16ArnC40C1624"
+           },
+           "/index/*"
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttNotificationsTable76DCFC6CArn012EC0C4"
+           },
+           "/index/*"
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttSubmissionsTable75718D3DArn8D9DD8A4"
+           },
+           "/index/*"
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttTemplatesTable3F253039ArnF1DF357E"
+           },
+           "/index/*"
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttUsersTable9725E9C8Arn5684EF99"
+           },
+           "/index/*"
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttWorkflowsTable4E215008Arn0D44497B"
+           },
+           "/index/*"
+          ]
+         ]
+        },
+        {
+         "Ref": "AWS::NoValue"
+        }
+       ]
+      },
+      {
+       "Action": [
+        "s3:Abort*",
+        "s3:DeleteObject*",
+        "s3:GetBucket*",
+        "s3:GetObject*",
+        "s3:List*",
+        "s3:PutObject",
+        "s3:PutObjectLegalHold",
+        "s3:PutObjectRetention",
+        "s3:PutObjectTagging",
+        "s3:PutObjectVersionTagging"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::ImportValue": "leadmagnet-storage:ExportsOutputFnGetAttArtifactsBucket2AAC5544ArnD57FAE19"
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "leadmagnet-storage:ExportsOutputFnGetAttArtifactsBucket2AAC5544ArnD57FAE19"
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "dynamodb:BatchWriteItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:DescribeTable",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        "arn:aws:dynamodb:us-east-1:471112574622:table/leadmagnet-usage-records",
+        {
+         "Ref": "AWS::NoValue"
+        }
+       ]
+      },
+      {
+       "Action": [
+        "secretsmanager:DescribeSecret",
+        "secretsmanager:GetSecretValue"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        "arn:aws:secretsmanager:us-east-1:471112574622:secret:leadmagnet/openai-api-key-??????",
+        "arn:aws:secretsmanager:us-east-1:471112574622:secret:leadmagnet/twilio-credentials-??????"
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "JobProcessorLambdaRoleDefaultPolicy0CFAB750",
+    "Roles": [
+     {
+      "Ref": "JobProcessorLambdaRole863ED8A8"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetComputeStack/JobProcessorLambdaRole/DefaultPolicy/Resource"
+   }
+  },
+  "JobProcessorLambda4949D7F4": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "ImageUri": {
+      "Fn::Join": [
+       "",
+       [
+        {
+         "Fn::Select": [
+          4,
+          {
+           "Fn::Split": [
+            ":",
+            {
+             "Fn::ImportValue": "leadmagnet-worker:ExportsOutputFnGetAttWorkerRepository770852D6Arn0E6C90D3"
+            }
+           ]
+          }
+         ]
+        },
+        ".dkr.ecr.",
+        {
+         "Fn::Select": [
+          3,
+          {
+           "Fn::Split": [
+            ":",
+            {
+             "Fn::ImportValue": "leadmagnet-worker:ExportsOutputFnGetAttWorkerRepository770852D6Arn0E6C90D3"
+            }
+           ]
+          }
+         ]
+        },
+        ".",
+        {
+         "Ref": "AWS::URLSuffix"
+        },
+        "/",
+        {
+         "Fn::ImportValue": "leadmagnet-worker:ExportsOutputRefWorkerRepository770852D66C2AAEBD"
+        },
+        ":latest"
+       ]
+      ]
+     }
+    },
+    "Environment": {
+     "Variables": {
+      "WORKFLOWS_TABLE": {
+       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefWorkflowsTable4E215008D0FFE690"
+      },
+      "FORMS_TABLE": {
+       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefFormsTable9C91E1CF5414D606"
+      },
+      "SUBMISSIONS_TABLE": {
+       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefSubmissionsTable75718D3D178CFBFC"
+      },
+      "JOBS_TABLE": {
+       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefJobsTable1970BC16EDB4A824"
+      },
+      "ARTIFACTS_TABLE": {
+       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefArtifactsTable227942413974C39D"
+      },
+      "TEMPLATES_TABLE": {
+       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefTemplatesTable3F2530396272C7B9"
+      },
+      "USER_SETTINGS_TABLE": {
+       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefUserSettingsTable755385E409BF890F"
+      },
+      "USAGE_RECORDS_TABLE": "leadmagnet-usage-records",
+      "NOTIFICATIONS_TABLE": {
+       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefNotificationsTable76DCFC6C32DE73EE"
+      },
+      "USERS_TABLE": {
+       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefUsersTable9725E9C857961836"
+      },
+      "CUSTOMERS_TABLE": {
+       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefCustomersTableB554B793C1CB863D"
+      },
+      "FILES_TABLE": {
+       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefFilesTable1399FAA4592580B8"
+      },
+      "IMPERSONATION_LOGS_TABLE": {
+       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefImpersonationLogsTableBD29E063DB45D8C3"
+      },
+      "SESSIONS_TABLE": {
+       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefSessionsTable7C3020246E1CCFDD"
+      },
+      "FOLDERS_TABLE": {
+       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefFoldersTableD1BB987CD11999C6"
+      },
+      "ARTIFACTS_BUCKET": {
+       "Fn::ImportValue": "leadmagnet-storage:ExportsOutputRefArtifactsBucket2AAC55442DB5E6C9"
+      },
+      "CLOUDFRONT_DOMAIN": {
+       "Fn::ImportValue": "leadmagnet-storage:ExportsOutputFnGetAttDistribution830FAC52DomainNameBEB09E30"
+      },
+      "OPENAI_SECRET_NAME": "leadmagnet/openai-api-key",
+      "TWILIO_SECRET_NAME": "leadmagnet/twilio-credentials",
+      "LOG_LEVEL": "info",
+      "PLAYWRIGHT_BROWSERS_PATH": "/ms-playwright"
+     }
+    },
+    "LoggingConfig": {
+     "LogGroup": {
+      "Ref": "JobProcessorLogGroup4B1EA852"
+     }
+    },
+    "MemorySize": 3008,
+    "PackageType": "Image",
+    "Role": {
+     "Fn::GetAtt": [
+      "JobProcessorLambdaRole863ED8A8",
+      "Arn"
+     ]
+    },
+    "Timeout": 900
+   },
+   "DependsOn": [
+    "JobProcessorLambdaRoleDefaultPolicy0CFAB750",
+    "JobProcessorLambdaRole863ED8A8"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetComputeStack/JobProcessorLambda/Resource"
+   }
+  },
+  "StateMachineRole78EC082E": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "states.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetComputeStack/StateMachineRole/Resource"
+   }
+  },
+  "StateMachineRoleDefaultPolicy433448B5": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "dynamodb:BatchGetItem",
+        "dynamodb:BatchWriteItem",
+        "dynamodb:ConditionCheckItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:DescribeTable",
+        "dynamodb:GetItem",
+        "dynamodb:GetRecords",
+        "dynamodb:GetShardIterator",
+        "dynamodb:PutItem",
+        "dynamodb:Query",
+        "dynamodb:Scan",
+        "dynamodb:UpdateItem"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        "arn:aws:dynamodb:us-east-1:471112574622:table/leadmagnet-usage-records",
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttArtifactsTable22794241ArnEC6D514B"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttCustomersTableB554B793Arn983124AF"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttFilesTable1399FAA4Arn25DD9DF2"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttFoldersTableD1BB987CArn1A2471F0"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttFormsTable9C91E1CFArnD25FB1C4"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttImpersonationLogsTableBD29E063Arn66BDDB76"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttJobsTable1970BC16ArnC40C1624"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttNotificationsTable76DCFC6CArn012EC0C4"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttSessionsTable7C302024Arn24FF8012"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttSubmissionsTable75718D3DArn8D9DD8A4"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttTemplatesTable3F253039ArnF1DF357E"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttUserSettingsTable755385E4Arn2F7CD415"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttUsersTable9725E9C8Arn5684EF99"
+        },
+        {
+         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttWorkflowsTable4E215008Arn0D44497B"
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttArtifactsTable22794241ArnEC6D514B"
+           },
+           "/index/*"
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttFilesTable1399FAA4Arn25DD9DF2"
+           },
+           "/index/*"
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttFoldersTableD1BB987CArn1A2471F0"
+           },
+           "/index/*"
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttFormsTable9C91E1CFArnD25FB1C4"
+           },
+           "/index/*"
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttJobsTable1970BC16ArnC40C1624"
+           },
+           "/index/*"
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttNotificationsTable76DCFC6CArn012EC0C4"
+           },
+           "/index/*"
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttSubmissionsTable75718D3DArn8D9DD8A4"
+           },
+           "/index/*"
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttTemplatesTable3F253039ArnF1DF357E"
+           },
+           "/index/*"
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttUsersTable9725E9C8Arn5684EF99"
+           },
+           "/index/*"
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttWorkflowsTable4E215008Arn0D44497B"
+           },
+           "/index/*"
+          ]
+         ]
+        },
+        {
+         "Ref": "AWS::NoValue"
+        }
+       ]
+      },
+      {
+       "Action": [
+        "s3:Abort*",
+        "s3:DeleteObject*",
+        "s3:GetBucket*",
+        "s3:GetObject*",
+        "s3:List*",
+        "s3:PutObject",
+        "s3:PutObjectLegalHold",
+        "s3:PutObjectRetention",
+        "s3:PutObjectTagging",
+        "s3:PutObjectVersionTagging"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::ImportValue": "leadmagnet-storage:ExportsOutputFnGetAttArtifactsBucket2AAC5544ArnD57FAE19"
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "leadmagnet-storage:ExportsOutputFnGetAttArtifactsBucket2AAC5544ArnD57FAE19"
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": "lambda:InvokeFunction",
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "JobProcessorLambda4949D7F4",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "JobProcessorLambda4949D7F4",
+             "Arn"
+            ]
+           },
+           ":*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": "dynamodb:UpdateItem",
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          "arn:aws:dynamodb:us-east-1:471112574622:table/",
+          {
+           "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefJobsTable1970BC16EDB4A824"
+          }
+         ]
+        ]
+       }
+      },
+      {
+       "Action": "dynamodb:GetItem",
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          "arn:aws:dynamodb:us-east-1:471112574622:table/",
+          {
+           "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefWorkflowsTable4E215008D0FFE690"
+          }
+         ]
+        ]
+       }
+      },
+      {
+       "Action": [
+        "logs:CreateLogDelivery",
+        "logs:DeleteLogDelivery",
+        "logs:DescribeLogGroups",
+        "logs:DescribeResourcePolicies",
+        "logs:GetLogDelivery",
+        "logs:ListLogDeliveries",
+        "logs:PutResourcePolicy",
+        "logs:UpdateLogDelivery",
+        "xray:GetSamplingRules",
+        "xray:GetSamplingTargets",
+        "xray:PutTelemetryRecords",
+        "xray:PutTraceSegments"
+       ],
+       "Effect": "Allow",
+       "Resource": "*"
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "StateMachineRoleDefaultPolicy433448B5",
+    "Roles": [
+     {
+      "Ref": "StateMachineRole78EC082E"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetComputeStack/StateMachineRole/DefaultPolicy/Resource"
+   }
+  },
+  "StateMachineLogGroup15B91BCB": {
+   "Type": "AWS::Logs::LogGroup",
+   "Properties": {
+    "LogGroupName": "/aws/stepfunctions/leadmagnet-job-processor",
+    "RetentionInDays": 7
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetComputeStack/StateMachineLogGroup/Resource"
+   }
+  },
+  "JobProcessorStateMachine3E0F5560": {
+   "Type": "AWS::StepFunctions::StateMachine",
+   "Properties": {
+    "DefinitionString": {
+     "Fn::Join": [
+      "",
+      [
+       "{\"StartAt\":\"UpdateJobStatus\",\"States\":{\"UpdateJobStatus\":{\"Next\":\"InitializeSteps\",\"Type\":\"Task\",\"ResultPath\":\"$.updateResult\",\"Resource\":\"arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":states:::dynamodb:updateItem\",\"Parameters\":{\"Key\":{\"job_id\":{\"S.$\":\"$.job_id\"}},\"TableName\":\"",
+       {
+        "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefJobsTable1970BC16EDB4A824"
+       },
+       "\",\"ExpressionAttributeNames\":{\"#status\":\"status\"},\"ExpressionAttributeValues\":{\":status\":{\"S\":\"processing\"},\":updated_at\":{\"S.$\":\"$$.State.EnteredTime\"}},\"UpdateExpression\":\"SET #status = :status, updated_at = :updated_at\"}},\"InitializeSteps\":{\"Next\":\"ComputeStepsLength\",\"Type\":\"Task\",\"ResultPath\":\"$.workflowData\",\"Resource\":\"arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":states:::dynamodb:getItem\",\"Parameters\":{\"Key\":{\"workflow_id\":{\"S.$\":\"$.workflow_id\"}},\"TableName\":\"",
+       {
+        "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefWorkflowsTable4E215008D0FFE690"
+       },
+       "\",\"ConsistentRead\":false}},\"ComputeStepsLength\":{\"Type\":\"Pass\",\"ResultPath\":\"$\",\"Parameters\":{\"job_id.$\":\"$.job_id\",\"workflow_id.$\":\"$.workflow_id\",\"submission_id.$\":\"$.submission_id\",\"tenant_id.$\":\"$.tenant_id\",\"workflowData.$\":\"$.workflowData\",\"steps_length.$\":\"States.ArrayLength($.workflowData.Item.steps.L)\"},\"Next\":\"CheckTemplateExists\"},\"CheckTemplateExists\":{\"Type\":\"Choice\",\"Choices\":[{\"Variable\":\"$.workflowData.Item.template_id.S\",\"IsPresent\":true,\"Next\":\"SetHasTemplateTrue\"}],\"Default\":\"SetHasTemplateFalse\"},\"SetHasTemplateFalse\":{\"Type\":\"Pass\",\"ResultPath\":\"$\",\"Parameters\":{\"job_id.$\":\"$.job_id\",\"workflow_id.$\":\"$.workflow_id\",\"submission_id.$\":\"$.submission_id\",\"tenant_id.$\":\"$.tenant_id\",\"workflowData.$\":\"$.workflowData\",\"steps_length.$\":\"$.steps_length\",\"has_template\":false,\"template_id\":\"\"},\"Next\":\"ResolveDependencies\"},\"ResolveDependencies\":{\"Next\":\"SetupStepLoop\",\"Type\":\"Task\",\"ResultPath\":\"$.executionPlan\",\"Resource\":\"arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":states:::lambda:invoke\",\"Parameters\":{\"FunctionName\":\"",
+       {
+        "Fn::GetAtt": [
+         "JobProcessorLambda4949D7F4",
+         "Arn"
+        ]
+       },
+       "\",\"Payload\":{\"job_id.$\":\"$.job_id\",\"workflow_id.$\":\"$.workflow_id\",\"action\":\"resolve_dependencies\"}}},\"SetHasTemplateTrue\":{\"Type\":\"Pass\",\"ResultPath\":\"$\",\"Parameters\":{\"job_id.$\":\"$.job_id\",\"workflow_id.$\":\"$.workflow_id\",\"submission_id.$\":\"$.submission_id\",\"tenant_id.$\":\"$.tenant_id\",\"workflowData.$\":\"$.workflowData\",\"steps_length.$\":\"$.steps_length\",\"has_template\":true,\"template_id.$\":\"$.workflowData.Item.template_id.S\"},\"Next\":\"ResolveDependencies\"},\"SetupStepLoop\":{\"Type\":\"Pass\",\"ResultPath\":\"$\",\"Parameters\":{\"job_id.$\":\"$.job_id\",\"workflow_id.$\":\"$.workflow_id\",\"submission_id.$\":\"$.submission_id\",\"tenant_id.$\":\"$.tenant_id\",\"step_index\":0,\"total_steps.$\":\"$.steps_length\",\"has_template.$\":\"$.has_template\",\"template_id.$\":\"$.template_id\",\"execution_plan.$\":\"$.executionPlan.Payload\"},\"Next\":\"ProcessStep\"},\"ProcessStep\":{\"Next\":\"CheckStepResult\",\"Catch\":[{\"ErrorEquals\":[\"States.ALL\"],\"ResultPath\":\"$.error\",\"Next\":\"ParseErrorStepParseError\"}],\"Type\":\"Task\",\"ResultPath\":\"$.processResult\",\"Resource\":\"arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":states:::lambda:invoke\",\"Parameters\":{\"FunctionName\":\"",
+       {
+        "Fn::GetAtt": [
+         "JobProcessorLambda4949D7F4",
+         "Arn"
+        ]
+       },
+       "\",\"Payload\":{\"job_id.$\":\"$.job_id\",\"step_index.$\":\"$.step_index\",\"step_type\":\"workflow_step\"}}},\"CheckMoreSteps\":{\"Type\":\"Choice\",\"Choices\":[{\"Variable\":\"$.step_index\",\"NumericLessThanPath\":\"$.total_steps\",\"Next\":\"ProcessStep\"}],\"Default\":\"CheckIfHtmlNeeded\"},\"IncrementStep\":{\"Type\":\"Pass\",\"ResultPath\":\"$\",\"Parameters\":{\"job_id.$\":\"$.job_id\",\"workflow_id.$\":\"$.workflow_id\",\"submission_id.$\":\"$.submission_id\",\"tenant_id.$\":\"$.tenant_id\",\"step_index.$\":\"States.MathAdd($.step_index, 1)\",\"total_steps.$\":\"$.total_steps\",\"has_template.$\":\"$.has_template\",\"template_id.$\":\"$.template_id\"},\"Next\":\"CheckMoreSteps\"},\"CheckIfHtmlNeeded\":{\"Type\":\"Choice\",\"Choices\":[{\"Variable\":\"$.has_template\",\"BooleanEquals\":true,\"Next\":\"ProcessHtmlGeneration\"}],\"Default\":\"FinalizeJob\"},\"FinalizeJob\":{\"End\":true,\"Type\":\"Task\",\"Resource\":\"arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":states:::dynamodb:updateItem\",\"Parameters\":{\"Key\":{\"job_id\":{\"S.$\":\"$.job_id\"}},\"TableName\":\"",
+       {
+        "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefJobsTable1970BC16EDB4A824"
+       },
+       "\",\"ExpressionAttributeNames\":{\"#status\":\"status\"},\"ExpressionAttributeValues\":{\":status\":{\"S\":\"completed\"},\":completed_at\":{\"S.$\":\"$$.State.EnteredTime\"},\":updated_at\":{\"S.$\":\"$$.State.EnteredTime\"}},\"UpdateExpression\":\"SET #status = :status, completed_at = :completed_at, updated_at = :updated_at\"}},\"ProcessHtmlGeneration\":{\"Next\":\"CheckHtmlResult\",\"Catch\":[{\"ErrorEquals\":[\"States.ALL\"],\"ResultPath\":\"$.error\",\"Next\":\"ParseErrorHtmlGenerationParseError\"}],\"Type\":\"Task\",\"ResultPath\":\"$.htmlResult\",\"Resource\":\"arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":states:::lambda:invoke\",\"Parameters\":{\"FunctionName\":\"",
+       {
+        "Fn::GetAtt": [
+         "JobProcessorLambda4949D7F4",
+         "Arn"
+        ]
+       },
+       "\",\"Payload\":{\"job_id.$\":\"$.job_id\",\"step_type\":\"html_generation\"}}},\"CheckHtmlResult\":{\"Type\":\"Choice\",\"Choices\":[{\"Variable\":\"$.htmlResult.Payload.success\",\"BooleanEquals\":false,\"Next\":\"HandleHtmlGenerationFailure\"}],\"Default\":\"FinalizeJob\"},\"HandleHtmlGenerationFailure\":{\"End\":true,\"Type\":\"Task\",\"Resource\":\"arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":states:::dynamodb:updateItem\",\"Parameters\":{\"Key\":{\"job_id\":{\"S.$\":\"$.job_id\"}},\"TableName\":\"",
+       {
+        "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefJobsTable1970BC16EDB4A824"
+       },
+       "\",\"ExpressionAttributeNames\":{\"#status\":\"status\"},\"ExpressionAttributeValues\":{\":status\":{\"S\":\"failed\"},\":error\":{\"S.$\":\"$.htmlResult.Payload.error\"},\":updated_at\":{\"S.$\":\"$$.State.EnteredTime\"},\":error_type\":{\"S.$\":\"$.htmlResult.Payload.error_type\"}},\"UpdateExpression\":\"SET #status = :status, error_message = :error, updated_at = :updated_at, error_type = :error_type\"}},\"ParseErrorHtmlGenerationParseError\":{\"Type\":\"Pass\",\"ResultPath\":\"$.parsedError\",\"Parameters\":{\"job_id.$\":\"$.job_id\",\"error_message.$\":\"States.Format('Lambda execution failed: {} - {}', $.error.Error, $.error.Cause)\"},\"Next\":\"ParseErrorHtmlGenerationHandleException\"},\"ParseErrorHtmlGenerationHandleException\":{\"End\":true,\"Type\":\"Task\",\"Resource\":\"arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":states:::dynamodb:updateItem\",\"Parameters\":{\"Key\":{\"job_id\":{\"S.$\":\"$.parsedError.job_id\"}},\"TableName\":\"",
+       {
+        "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefJobsTable1970BC16EDB4A824"
+       },
+       "\",\"ExpressionAttributeNames\":{\"#status\":\"status\"},\"ExpressionAttributeValues\":{\":status\":{\"S\":\"failed\"},\":error\":{\"S.$\":\"$.parsedError.error_message\"},\":updated_at\":{\"S.$\":\"$$.State.EnteredTime\"}},\"UpdateExpression\":\"SET #status = :status, error_message = :error, updated_at = :updated_at\"}},\"CheckStepResult\":{\"Type\":\"Choice\",\"Choices\":[{\"Variable\":\"$.processResult.Payload.success\",\"BooleanEquals\":false,\"Next\":\"HandleStepFailure\"}],\"Default\":\"IncrementStep\"},\"HandleStepFailure\":{\"End\":true,\"Type\":\"Task\",\"Resource\":\"arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":states:::dynamodb:updateItem\",\"Parameters\":{\"Key\":{\"job_id\":{\"S.$\":\"$.job_id\"}},\"TableName\":\"",
+       {
+        "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefJobsTable1970BC16EDB4A824"
+       },
+       "\",\"ExpressionAttributeNames\":{\"#status\":\"status\"},\"ExpressionAttributeValues\":{\":status\":{\"S\":\"failed\"},\":error\":{\"S.$\":\"$.processResult.Payload.error\"},\":updated_at\":{\"S.$\":\"$$.State.EnteredTime\"},\":error_type\":{\"S.$\":\"$.processResult.Payload.error_type\"}},\"UpdateExpression\":\"SET #status = :status, error_message = :error, updated_at = :updated_at, error_type = :error_type\"}},\"ParseErrorStepParseError\":{\"Type\":\"Pass\",\"ResultPath\":\"$.parsedError\",\"Parameters\":{\"job_id.$\":\"$.job_id\",\"error_message.$\":\"States.Format('Lambda execution failed: {} - {}', $.error.Error, $.error.Cause)\",\"step_index.$\":\"$.step_index\"},\"Next\":\"ParseErrorStepHandleException\"},\"ParseErrorStepHandleException\":{\"End\":true,\"Type\":\"Task\",\"Resource\":\"arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":states:::dynamodb:updateItem\",\"Parameters\":{\"Key\":{\"job_id\":{\"S.$\":\"$.parsedError.job_id\"}},\"TableName\":\"",
+       {
+        "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefJobsTable1970BC16EDB4A824"
+       },
+       "\",\"ExpressionAttributeNames\":{\"#status\":\"status\"},\"ExpressionAttributeValues\":{\":status\":{\"S\":\"failed\"},\":error\":{\"S.$\":\"$.parsedError.error_message\"},\":updated_at\":{\"S.$\":\"$$.State.EnteredTime\"}},\"UpdateExpression\":\"SET #status = :status, error_message = :error, updated_at = :updated_at\"}}}}"
+      ]
+     ]
+    },
+    "LoggingConfiguration": {
+     "Destinations": [
+      {
+       "CloudWatchLogsLogGroup": {
+        "LogGroupArn": {
+         "Fn::GetAtt": [
+          "StateMachineLogGroup15B91BCB",
+          "Arn"
+         ]
+        }
+       }
+      }
+     ],
+     "IncludeExecutionData": true,
+     "Level": "ALL"
+    },
+    "RoleArn": {
+     "Fn::GetAtt": [
+      "StateMachineRole78EC082E",
+      "Arn"
+     ]
+    },
+    "StateMachineName": "leadmagnet-job-processor",
+    "TracingConfiguration": {
+     "Enabled": true
+    }
+   },
+   "DependsOn": [
+    "StateMachineRoleDefaultPolicy433448B5",
+    "StateMachineRole78EC082E"
+   ],
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetComputeStack/JobProcessorStateMachine/Resource"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/12OUWvCQBCEf4vvl63mpT9AqQQslUifZb2seiZ3G7J7ihz330uSCqVPM9/sMkwJZbmE5QIfUtimLTp3gnRQtK3BhxxTxxeBtOPLduDYm/U5vHw2Dj2kmjsa40n33Dn7HHF22XToTw1C2rBtaag8XugjBquOw/j28tmIUn/+JTkqSiuQNs+Anr/7BpUqJW/mYEs60W4qr8KdW/rXAGmPImZ9ZWfJHBSVPtFeXZjG/uWcTU3CcbDT6StqHzWbwA3BTd7uZQmrd1gtbuJcMcSgzhPUs/4ACUIZUz4BAAA="
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetComputeStack/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "StateMachineArn": {
+   "Value": {
+    "Ref": "JobProcessorStateMachine3E0F5560"
+   },
+   "Export": {
+    "Name": "StateMachineArn"
+   }
+  },
+  "JobProcessorLambdaArn": {
+   "Value": {
+    "Fn::GetAtt": [
+     "JobProcessorLambda4949D7F4",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "JobProcessorLambdaArn"
+   }
+  },
+  "ExportsOutputRefJobProcessorStateMachine3E0F55605CC28738": {
+   "Value": {
+    "Ref": "JobProcessorStateMachine3E0F5560"
+   },
+   "Export": {
+    "Name": "leadmagnet-compute:ExportsOutputRefJobProcessorStateMachine3E0F55605CC28738"
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

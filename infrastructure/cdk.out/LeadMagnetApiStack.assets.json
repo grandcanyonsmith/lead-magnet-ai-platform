@@ -1,0 +1,36 @@
+{
+  "version": "48.0.0",
+  "files": {
+    "2819175352ad1ce0dae768e83fc328fb70fb5f10b4a8ff0ccbcb791f02b0716d": {
+      "displayName": "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8a/Code",
+      "source": {
+        "path": "asset.2819175352ad1ce0dae768e83fc328fb70fb5f10b4a8ff0ccbcb791f02b0716d",
+        "packaging": "zip"
+      },
+      "destinations": {
+        "471112574622-us-east-1-bece1ac3": {
+          "bucketName": "cdk-hnb659fds-assets-471112574622-us-east-1",
+          "objectKey": "2819175352ad1ce0dae768e83fc328fb70fb5f10b4a8ff0ccbcb791f02b0716d.zip",
+          "region": "us-east-1",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::471112574622:role/cdk-hnb659fds-file-publishing-role-471112574622-us-east-1"
+        }
+      }
+    },
+    "f4ab9e9523578c14ab08f0ff928e8417a697ad3ee3350e36436e123ece065b77": {
+      "displayName": "leadmagnet-api Template",
+      "source": {
+        "path": "LeadMagnetApiStack.template.json",
+        "packaging": "file"
+      },
+      "destinations": {
+        "471112574622-us-east-1-ad4b98da": {
+          "bucketName": "cdk-hnb659fds-assets-471112574622-us-east-1",
+          "objectKey": "f4ab9e9523578c14ab08f0ff928e8417a697ad3ee3350e36436e123ece065b77.json",
+          "region": "us-east-1",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::471112574622:role/cdk-hnb659fds-file-publishing-role-471112574622-us-east-1"
+        }
+      }
+    }
+  },
+  "dockerImages": {}
+}

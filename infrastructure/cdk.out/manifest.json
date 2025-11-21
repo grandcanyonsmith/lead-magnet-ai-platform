@@ -1,0 +1,1672 @@
+{
+  "version": "48.0.0",
+  "artifacts": {
+    "LeadMagnetDatabaseStack.assets": {
+      "type": "cdk:asset-manifest",
+      "properties": {
+        "file": "LeadMagnetDatabaseStack.assets.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+      }
+    },
+    "LeadMagnetDatabaseStack": {
+      "type": "aws:cloudformation:stack",
+      "environment": "aws://471112574622/us-east-1",
+      "properties": {
+        "templateFile": "LeadMagnetDatabaseStack.template.json",
+        "terminationProtection": false,
+        "validateOnSynth": false,
+        "assumeRoleArn": "arn:${AWS::Partition}:iam::471112574622:role/cdk-hnb659fds-deploy-role-471112574622-us-east-1",
+        "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::471112574622:role/cdk-hnb659fds-cfn-exec-role-471112574622-us-east-1",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-471112574622-us-east-1/252e47e9fb60d4704243cc836b1da044ad258f94b7b6a43abd1a0bf9dce7126e.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
+        "additionalDependencies": [
+          "LeadMagnetDatabaseStack.assets"
+        ],
+        "lookupRole": {
+          "arn": "arn:${AWS::Partition}:iam::471112574622:role/cdk-hnb659fds-lookup-role-471112574622-us-east-1",
+          "requiresBootstrapStackVersion": 8,
+          "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+        },
+        "stackName": "leadmagnet-database"
+      },
+      "dependencies": [
+        "LeadMagnetDatabaseStack.assets"
+      ],
+      "metadata": {
+        "/LeadMagnetDatabaseStack/WorkflowsTable": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "WorkflowsTable4E215008"
+            }
+          }
+        ],
+        "/LeadMagnetDatabaseStack/WorkflowsTable/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WorkflowsTable4E215008"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/FormsTable": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "FormsTable9C91E1CF"
+            }
+          }
+        ],
+        "/LeadMagnetDatabaseStack/FormsTable/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "FormsTable9C91E1CF"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/SubmissionsTable": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "SubmissionsTable75718D3D"
+            }
+          }
+        ],
+        "/LeadMagnetDatabaseStack/SubmissionsTable/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "SubmissionsTable75718D3D"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/JobsTable": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "JobsTable1970BC16"
+            }
+          }
+        ],
+        "/LeadMagnetDatabaseStack/JobsTable/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "JobsTable1970BC16"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/ArtifactsTable": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "ArtifactsTable22794241"
+            }
+          }
+        ],
+        "/LeadMagnetDatabaseStack/ArtifactsTable/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ArtifactsTable22794241"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/TemplatesTable": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "TemplatesTable3F253039"
+            }
+          }
+        ],
+        "/LeadMagnetDatabaseStack/TemplatesTable/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "TemplatesTable3F253039"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/UserSettingsTable": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "UserSettingsTable755385E4"
+            }
+          }
+        ],
+        "/LeadMagnetDatabaseStack/UserSettingsTable/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "UserSettingsTable755385E4"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/NotificationsTable": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "NotificationsTable76DCFC6C"
+            }
+          }
+        ],
+        "/LeadMagnetDatabaseStack/NotificationsTable/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "NotificationsTable76DCFC6C"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/UsersTable": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "UsersTable9725E9C8"
+            }
+          }
+        ],
+        "/LeadMagnetDatabaseStack/UsersTable/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "UsersTable9725E9C8"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/CustomersTable": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "CustomersTableB554B793"
+            }
+          }
+        ],
+        "/LeadMagnetDatabaseStack/CustomersTable/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CustomersTableB554B793"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/FilesTable": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "FilesTable1399FAA4"
+            }
+          }
+        ],
+        "/LeadMagnetDatabaseStack/FilesTable/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "FilesTable1399FAA4"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/ImpersonationLogsTable": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "ImpersonationLogsTableBD29E063"
+            }
+          }
+        ],
+        "/LeadMagnetDatabaseStack/ImpersonationLogsTable/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ImpersonationLogsTableBD29E063"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/SessionsTable": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "SessionsTable7C302024"
+            }
+          }
+        ],
+        "/LeadMagnetDatabaseStack/SessionsTable/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "SessionsTable7C302024"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/FoldersTable": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "FoldersTableD1BB987C"
+            }
+          }
+        ],
+        "/LeadMagnetDatabaseStack/FoldersTable/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "FoldersTableD1BB987C"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/WorkflowsTableName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WorkflowsTableName"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/FormsTableName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "FormsTableName"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/JobsTableName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "JobsTableName"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/CDKMetadata/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadata"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/Exports/Output{\"Fn::GetAtt\":[\"SessionsTable7C302024\",\"Arn\"]}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputFnGetAttSessionsTable7C302024Arn24FF8012"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/Exports/Output{\"Fn::GetAtt\":[\"FoldersTableD1BB987C\",\"Arn\"]}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputFnGetAttFoldersTableD1BB987CArn1A2471F0"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/Exports/Output{\"Fn::GetAtt\":[\"WorkflowsTable4E215008\",\"Arn\"]}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputFnGetAttWorkflowsTable4E215008Arn0D44497B"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/Exports/Output{\"Fn::GetAtt\":[\"FormsTable9C91E1CF\",\"Arn\"]}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputFnGetAttFormsTable9C91E1CFArnD25FB1C4"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/Exports/Output{\"Fn::GetAtt\":[\"SubmissionsTable75718D3D\",\"Arn\"]}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputFnGetAttSubmissionsTable75718D3DArn8D9DD8A4"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/Exports/Output{\"Fn::GetAtt\":[\"JobsTable1970BC16\",\"Arn\"]}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputFnGetAttJobsTable1970BC16ArnC40C1624"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/Exports/Output{\"Fn::GetAtt\":[\"ArtifactsTable22794241\",\"Arn\"]}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputFnGetAttArtifactsTable22794241ArnEC6D514B"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/Exports/Output{\"Fn::GetAtt\":[\"TemplatesTable3F253039\",\"Arn\"]}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputFnGetAttTemplatesTable3F253039ArnF1DF357E"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/Exports/Output{\"Fn::GetAtt\":[\"NotificationsTable76DCFC6C\",\"Arn\"]}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputFnGetAttNotificationsTable76DCFC6CArn012EC0C4"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/Exports/Output{\"Fn::GetAtt\":[\"UsersTable9725E9C8\",\"Arn\"]}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputFnGetAttUsersTable9725E9C8Arn5684EF99"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/Exports/Output{\"Fn::GetAtt\":[\"FilesTable1399FAA4\",\"Arn\"]}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputFnGetAttFilesTable1399FAA4Arn25DD9DF2"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/Exports/Output{\"Fn::GetAtt\":[\"UserSettingsTable755385E4\",\"Arn\"]}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputFnGetAttUserSettingsTable755385E4Arn2F7CD415"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/Exports/Output{\"Fn::GetAtt\":[\"CustomersTableB554B793\",\"Arn\"]}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputFnGetAttCustomersTableB554B793Arn983124AF"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/Exports/Output{\"Fn::GetAtt\":[\"ImpersonationLogsTableBD29E063\",\"Arn\"]}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputFnGetAttImpersonationLogsTableBD29E063Arn66BDDB76"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/Exports/Output{\"Ref\":\"WorkflowsTable4E215008\"}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputRefWorkflowsTable4E215008D0FFE690"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/Exports/Output{\"Ref\":\"FormsTable9C91E1CF\"}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputRefFormsTable9C91E1CF5414D606"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/Exports/Output{\"Ref\":\"SubmissionsTable75718D3D\"}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputRefSubmissionsTable75718D3D178CFBFC"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/Exports/Output{\"Ref\":\"JobsTable1970BC16\"}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputRefJobsTable1970BC16EDB4A824"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/Exports/Output{\"Ref\":\"ArtifactsTable22794241\"}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputRefArtifactsTable227942413974C39D"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/Exports/Output{\"Ref\":\"TemplatesTable3F253039\"}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputRefTemplatesTable3F2530396272C7B9"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/Exports/Output{\"Ref\":\"UserSettingsTable755385E4\"}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputRefUserSettingsTable755385E409BF890F"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/Exports/Output{\"Ref\":\"NotificationsTable76DCFC6C\"}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputRefNotificationsTable76DCFC6C32DE73EE"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/Exports/Output{\"Ref\":\"UsersTable9725E9C8\"}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputRefUsersTable9725E9C857961836"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/Exports/Output{\"Ref\":\"CustomersTableB554B793\"}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputRefCustomersTableB554B793C1CB863D"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/Exports/Output{\"Ref\":\"FilesTable1399FAA4\"}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputRefFilesTable1399FAA4592580B8"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/Exports/Output{\"Ref\":\"ImpersonationLogsTableBD29E063\"}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputRefImpersonationLogsTableBD29E063DB45D8C3"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/Exports/Output{\"Ref\":\"SessionsTable7C302024\"}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputRefSessionsTable7C3020246E1CCFDD"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/Exports/Output{\"Ref\":\"FoldersTableD1BB987C\"}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputRefFoldersTableD1BB987CD11999C6"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/BootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BootstrapVersion"
+          }
+        ],
+        "/LeadMagnetDatabaseStack/CheckBootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CheckBootstrapVersion"
+          }
+        ]
+      },
+      "displayName": "LeadMagnetDatabaseStack"
+    },
+    "LeadMagnetAuthStack.assets": {
+      "type": "cdk:asset-manifest",
+      "properties": {
+        "file": "LeadMagnetAuthStack.assets.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+      }
+    },
+    "LeadMagnetAuthStack": {
+      "type": "aws:cloudformation:stack",
+      "environment": "aws://471112574622/us-east-1",
+      "properties": {
+        "templateFile": "LeadMagnetAuthStack.template.json",
+        "terminationProtection": false,
+        "validateOnSynth": false,
+        "assumeRoleArn": "arn:${AWS::Partition}:iam::471112574622:role/cdk-hnb659fds-deploy-role-471112574622-us-east-1",
+        "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::471112574622:role/cdk-hnb659fds-cfn-exec-role-471112574622-us-east-1",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-471112574622-us-east-1/e45a99cc6a3c02ccf347b1be4bce03676f71a8cb9810d4b2c14d317d15c45a0d.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
+        "additionalDependencies": [
+          "LeadMagnetAuthStack.assets"
+        ],
+        "lookupRole": {
+          "arn": "arn:${AWS::Partition}:iam::471112574622:role/cdk-hnb659fds-lookup-role-471112574622-us-east-1",
+          "requiresBootstrapStackVersion": 8,
+          "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+        },
+        "stackName": "leadmagnet-auth"
+      },
+      "dependencies": [
+        "LeadMagnetAuthStack.assets"
+      ],
+      "metadata": {
+        "/LeadMagnetAuthStack/AutoConfirmLambda/ServiceRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AutoConfirmLambdaServiceRole1FFE11EF"
+          }
+        ],
+        "/LeadMagnetAuthStack/AutoConfirmLambda/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AutoConfirmLambda3FB8DE8A"
+          }
+        ],
+        "/LeadMagnetAuthStack/PostConfirmationLambda/ServiceRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "PostConfirmationLambdaServiceRole80A1DAC4"
+          }
+        ],
+        "/LeadMagnetAuthStack/PostConfirmationLambda/ServiceRole/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "PostConfirmationLambdaServiceRoleDefaultPolicy5EC3124B"
+          }
+        ],
+        "/LeadMagnetAuthStack/PostConfirmationLambda/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "PostConfirmationLambdaC4F60401"
+          }
+        ],
+        "/LeadMagnetAuthStack/UserPool/PreSignUpCognito": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "UserPoolPreSignUpCognito3AFF8F1F"
+          }
+        ],
+        "/LeadMagnetAuthStack/UserPool/PostConfirmationCognito": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "UserPoolPostConfirmationCognito0E6001F8"
+          }
+        ],
+        "/LeadMagnetAuthStack/UserPool/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "UserPool6BA7E5F2"
+          }
+        ],
+        "/LeadMagnetAuthStack/UserPool/UserPoolDomain/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "UserPoolUserPoolDomain9F01E991"
+          }
+        ],
+        "/LeadMagnetAuthStack/UserPoolClient/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "UserPoolClient2F5918F7"
+          }
+        ],
+        "/LeadMagnetAuthStack/UserPoolId": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "UserPoolId"
+          }
+        ],
+        "/LeadMagnetAuthStack/UserPoolClientId": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "UserPoolClientId"
+          }
+        ],
+        "/LeadMagnetAuthStack/UserPoolArn": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "UserPoolArn"
+          }
+        ],
+        "/LeadMagnetAuthStack/CognitoDomain": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CognitoDomain"
+          }
+        ],
+        "/LeadMagnetAuthStack/CDKMetadata/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadata"
+          }
+        ],
+        "/LeadMagnetAuthStack/Exports/Output{\"Ref\":\"UserPoolClient2F5918F7\"}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputRefUserPoolClient2F5918F753847A55"
+          }
+        ],
+        "/LeadMagnetAuthStack/Exports/Output{\"Ref\":\"UserPool6BA7E5F2\"}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputRefUserPool6BA7E5F296FD7236"
+          }
+        ],
+        "/LeadMagnetAuthStack/BootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BootstrapVersion"
+          }
+        ],
+        "/LeadMagnetAuthStack/CheckBootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CheckBootstrapVersion"
+          }
+        ]
+      },
+      "displayName": "LeadMagnetAuthStack"
+    },
+    "LeadMagnetStorageStack.assets": {
+      "type": "cdk:asset-manifest",
+      "properties": {
+        "file": "LeadMagnetStorageStack.assets.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+      }
+    },
+    "LeadMagnetStorageStack": {
+      "type": "aws:cloudformation:stack",
+      "environment": "aws://471112574622/us-east-1",
+      "properties": {
+        "templateFile": "LeadMagnetStorageStack.template.json",
+        "terminationProtection": false,
+        "validateOnSynth": false,
+        "assumeRoleArn": "arn:${AWS::Partition}:iam::471112574622:role/cdk-hnb659fds-deploy-role-471112574622-us-east-1",
+        "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::471112574622:role/cdk-hnb659fds-cfn-exec-role-471112574622-us-east-1",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-471112574622-us-east-1/ba7e8cb5016f28b199abf8115342125dcfe9db9f66baf1ec00bc6ad189204720.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
+        "additionalDependencies": [
+          "LeadMagnetStorageStack.assets"
+        ],
+        "lookupRole": {
+          "arn": "arn:${AWS::Partition}:iam::471112574622:role/cdk-hnb659fds-lookup-role-471112574622-us-east-1",
+          "requiresBootstrapStackVersion": 8,
+          "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+        },
+        "stackName": "leadmagnet-storage"
+      },
+      "dependencies": [
+        "LeadMagnetStorageStack.assets"
+      ],
+      "metadata": {
+        "/LeadMagnetStorageStack/ArtifactsBucket/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ArtifactsBucket2AAC5544"
+          }
+        ],
+        "/LeadMagnetStorageStack/ArtifactsBucket/Policy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ArtifactsBucketPolicy852CB646"
+          }
+        ],
+        "/LeadMagnetStorageStack/OAI/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "OAIE1EFC67F"
+          }
+        ],
+        "/LeadMagnetStorageStack/Distribution/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "Distribution830FAC52"
+          }
+        ],
+        "/LeadMagnetStorageStack/ArtifactsBucketName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ArtifactsBucketName"
+          }
+        ],
+        "/LeadMagnetStorageStack/DistributionDomainName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DistributionDomainName"
+          }
+        ],
+        "/LeadMagnetStorageStack/DistributionId": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DistributionId"
+          }
+        ],
+        "/LeadMagnetStorageStack/CDKMetadata/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadata"
+          }
+        ],
+        "/LeadMagnetStorageStack/Exports/Output{\"Fn::GetAtt\":[\"ArtifactsBucket2AAC5544\",\"Arn\"]}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputFnGetAttArtifactsBucket2AAC5544ArnD57FAE19"
+          }
+        ],
+        "/LeadMagnetStorageStack/Exports/Output{\"Ref\":\"ArtifactsBucket2AAC5544\"}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputRefArtifactsBucket2AAC55442DB5E6C9"
+          }
+        ],
+        "/LeadMagnetStorageStack/Exports/Output{\"Fn::GetAtt\":[\"Distribution830FAC52\",\"DomainName\"]}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputFnGetAttDistribution830FAC52DomainNameBEB09E30"
+          }
+        ],
+        "/LeadMagnetStorageStack/BootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BootstrapVersion"
+          }
+        ],
+        "/LeadMagnetStorageStack/CheckBootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CheckBootstrapVersion"
+          }
+        ]
+      },
+      "displayName": "LeadMagnetStorageStack"
+    },
+    "LeadMagnetWorkerStack.assets": {
+      "type": "cdk:asset-manifest",
+      "properties": {
+        "file": "LeadMagnetWorkerStack.assets.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+      }
+    },
+    "LeadMagnetWorkerStack": {
+      "type": "aws:cloudformation:stack",
+      "environment": "aws://471112574622/us-east-1",
+      "properties": {
+        "templateFile": "LeadMagnetWorkerStack.template.json",
+        "terminationProtection": false,
+        "validateOnSynth": false,
+        "assumeRoleArn": "arn:${AWS::Partition}:iam::471112574622:role/cdk-hnb659fds-deploy-role-471112574622-us-east-1",
+        "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::471112574622:role/cdk-hnb659fds-cfn-exec-role-471112574622-us-east-1",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-471112574622-us-east-1/381314ebe53717da28f7fa2563ceb7ba22fbe686d10e69b74459f64a61029bc2.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
+        "additionalDependencies": [
+          "LeadMagnetWorkerStack.assets"
+        ],
+        "lookupRole": {
+          "arn": "arn:${AWS::Partition}:iam::471112574622:role/cdk-hnb659fds-lookup-role-471112574622-us-east-1",
+          "requiresBootstrapStackVersion": 8,
+          "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+        },
+        "stackName": "leadmagnet-worker"
+      },
+      "dependencies": [
+        "LeadMagnetWorkerStack.assets"
+      ],
+      "metadata": {
+        "/LeadMagnetWorkerStack/WorkerRepository/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WorkerRepository770852D6"
+          }
+        ],
+        "/LeadMagnetWorkerStack/EcrRepositoryUri": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "EcrRepositoryUri"
+          }
+        ],
+        "/LeadMagnetWorkerStack/EcrRepositoryName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "EcrRepositoryName"
+          }
+        ],
+        "/LeadMagnetWorkerStack/CDKMetadata/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadata"
+          }
+        ],
+        "/LeadMagnetWorkerStack/Exports/Output{\"Fn::GetAtt\":[\"WorkerRepository770852D6\",\"Arn\"]}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputFnGetAttWorkerRepository770852D6Arn0E6C90D3"
+          }
+        ],
+        "/LeadMagnetWorkerStack/Exports/Output{\"Ref\":\"WorkerRepository770852D6\"}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputRefWorkerRepository770852D66C2AAEBD"
+          }
+        ],
+        "/LeadMagnetWorkerStack/BootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BootstrapVersion"
+          }
+        ],
+        "/LeadMagnetWorkerStack/CheckBootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CheckBootstrapVersion"
+          }
+        ]
+      },
+      "displayName": "LeadMagnetWorkerStack"
+    },
+    "LeadMagnetComputeStack.assets": {
+      "type": "cdk:asset-manifest",
+      "properties": {
+        "file": "LeadMagnetComputeStack.assets.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+      }
+    },
+    "LeadMagnetComputeStack": {
+      "type": "aws:cloudformation:stack",
+      "environment": "aws://471112574622/us-east-1",
+      "properties": {
+        "templateFile": "LeadMagnetComputeStack.template.json",
+        "terminationProtection": false,
+        "validateOnSynth": false,
+        "assumeRoleArn": "arn:${AWS::Partition}:iam::471112574622:role/cdk-hnb659fds-deploy-role-471112574622-us-east-1",
+        "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::471112574622:role/cdk-hnb659fds-cfn-exec-role-471112574622-us-east-1",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-471112574622-us-east-1/a58ca2d18391cf4f23d12f994083a17c403a2898563c4efd86e768ab8cd37e03.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
+        "additionalDependencies": [
+          "LeadMagnetComputeStack.assets"
+        ],
+        "lookupRole": {
+          "arn": "arn:${AWS::Partition}:iam::471112574622:role/cdk-hnb659fds-lookup-role-471112574622-us-east-1",
+          "requiresBootstrapStackVersion": 8,
+          "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+        },
+        "stackName": "leadmagnet-compute"
+      },
+      "dependencies": [
+        "LeadMagnetDatabaseStack",
+        "LeadMagnetStorageStack",
+        "LeadMagnetWorkerStack",
+        "LeadMagnetComputeStack.assets"
+      ],
+      "metadata": {
+        "/LeadMagnetComputeStack/JobProcessorLogGroup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "JobProcessorLogGroup4B1EA852"
+          }
+        ],
+        "/LeadMagnetComputeStack/JobProcessorLambdaRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "JobProcessorLambdaRole863ED8A8"
+          }
+        ],
+        "/LeadMagnetComputeStack/JobProcessorLambdaRole/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "JobProcessorLambdaRoleDefaultPolicy0CFAB750"
+          }
+        ],
+        "/LeadMagnetComputeStack/JobProcessorLambda/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "JobProcessorLambda4949D7F4"
+          }
+        ],
+        "/LeadMagnetComputeStack/StateMachineRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "StateMachineRole78EC082E"
+          }
+        ],
+        "/LeadMagnetComputeStack/StateMachineRole/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "StateMachineRoleDefaultPolicy433448B5"
+          }
+        ],
+        "/LeadMagnetComputeStack/StateMachineLogGroup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "StateMachineLogGroup15B91BCB"
+          }
+        ],
+        "/LeadMagnetComputeStack/JobProcessorStateMachine/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "JobProcessorStateMachine3E0F5560"
+          }
+        ],
+        "/LeadMagnetComputeStack/StateMachineArn": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "StateMachineArn"
+          }
+        ],
+        "/LeadMagnetComputeStack/JobProcessorLambdaArn": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "JobProcessorLambdaArn"
+          }
+        ],
+        "/LeadMagnetComputeStack/CDKMetadata/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadata"
+          }
+        ],
+        "/LeadMagnetComputeStack/Exports/Output{\"Ref\":\"JobProcessorStateMachine3E0F5560\"}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputRefJobProcessorStateMachine3E0F55605CC28738"
+          }
+        ],
+        "/LeadMagnetComputeStack/BootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BootstrapVersion"
+          }
+        ],
+        "/LeadMagnetComputeStack/CheckBootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CheckBootstrapVersion"
+          }
+        ]
+      },
+      "displayName": "LeadMagnetComputeStack"
+    },
+    "LeadMagnetApiStack.assets": {
+      "type": "cdk:asset-manifest",
+      "properties": {
+        "file": "LeadMagnetApiStack.assets.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+      }
+    },
+    "LeadMagnetApiStack": {
+      "type": "aws:cloudformation:stack",
+      "environment": "aws://471112574622/us-east-1",
+      "properties": {
+        "templateFile": "LeadMagnetApiStack.template.json",
+        "terminationProtection": false,
+        "validateOnSynth": false,
+        "assumeRoleArn": "arn:${AWS::Partition}:iam::471112574622:role/cdk-hnb659fds-deploy-role-471112574622-us-east-1",
+        "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::471112574622:role/cdk-hnb659fds-cfn-exec-role-471112574622-us-east-1",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-471112574622-us-east-1/f4ab9e9523578c14ab08f0ff928e8417a697ad3ee3350e36436e123ece065b77.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
+        "additionalDependencies": [
+          "LeadMagnetApiStack.assets"
+        ],
+        "lookupRole": {
+          "arn": "arn:${AWS::Partition}:iam::471112574622:role/cdk-hnb659fds-lookup-role-471112574622-us-east-1",
+          "requiresBootstrapStackVersion": 8,
+          "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+        },
+        "stackName": "leadmagnet-api"
+      },
+      "dependencies": [
+        "LeadMagnetDatabaseStack",
+        "LeadMagnetStorageStack",
+        "LeadMagnetComputeStack",
+        "LeadMagnetAuthStack",
+        "LeadMagnetApiStack.assets"
+      ],
+      "metadata": {
+        "/LeadMagnetApiStack/ApiLambdaRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ApiLambdaRole66D0B4CD"
+          }
+        ],
+        "/LeadMagnetApiStack/ApiLambdaRole/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ApiLambdaRoleDefaultPolicy84E47AF4"
+          }
+        ],
+        "/LeadMagnetApiStack/ApiFunction/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ApiFunctionCE271BD4"
+          }
+        ],
+        "/LeadMagnetApiStack/ApiFunction/LogRetention/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ApiFunctionLogRetentionDCC3A405"
+          }
+        ],
+        "/LeadMagnetApiStack/LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8a/ServiceRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aServiceRole9741ECFB"
+          }
+        ],
+        "/LeadMagnetApiStack/LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8a/ServiceRole/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aServiceRoleDefaultPolicyADDA7DEB"
+          }
+        ],
+        "/LeadMagnetApiStack/LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8a/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aFD4BFC8A"
+          }
+        ],
+        "/LeadMagnetApiStack/HttpApi/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "HttpApiF5A9A8A7"
+          }
+        ],
+        "/LeadMagnetApiStack/HttpApi/DefaultStage/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "HttpApiDefaultStage3EEB07D6"
+          }
+        ],
+        "/LeadMagnetApiStack/HttpApi/GET--v1--{proxy+}/LambdaIntegration/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "HttpApiGETv1proxyLambdaIntegration7BEBE125"
+          }
+        ],
+        "/LeadMagnetApiStack/HttpApi/GET--v1--{proxy+}/LambdaIntegration-Permission": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "HttpApiGETv1proxyLambdaIntegrationPermission13AFE464"
+          }
+        ],
+        "/LeadMagnetApiStack/HttpApi/GET--v1--{proxy+}/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "HttpApiGETv1proxyC921D5BC"
+          }
+        ],
+        "/LeadMagnetApiStack/HttpApi/POST--v1--{proxy+}/LambdaIntegration-Permission": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "HttpApiPOSTv1proxyLambdaIntegrationPermission55410214"
+          }
+        ],
+        "/LeadMagnetApiStack/HttpApi/POST--v1--{proxy+}/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "HttpApiPOSTv1proxyA172D81B"
+          }
+        ],
+        "/LeadMagnetApiStack/HttpApi/GET--files/LambdaIntegration-Permission": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "HttpApiGETfilesLambdaIntegrationPermission0EA617A6"
+          }
+        ],
+        "/LeadMagnetApiStack/HttpApi/GET--files/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "HttpApiGETfilesB1575F69"
+          }
+        ],
+        "/LeadMagnetApiStack/HttpApi/JwtAuthorizer/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "HttpApiJwtAuthorizer14F16BDB"
+          }
+        ],
+        "/LeadMagnetApiStack/HttpApi/POST--files/LambdaIntegration-Permission": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "HttpApiPOSTfilesLambdaIntegrationPermission29AF7BF5"
+          }
+        ],
+        "/LeadMagnetApiStack/HttpApi/POST--files/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "HttpApiPOSTfilesD878802E"
+          }
+        ],
+        "/LeadMagnetApiStack/HttpApi/GET--files--{proxy+}/LambdaIntegration-Permission": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "HttpApiGETfilesproxyLambdaIntegrationPermission6FFC632C"
+          }
+        ],
+        "/LeadMagnetApiStack/HttpApi/GET--files--{proxy+}/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "HttpApiGETfilesproxy72538584"
+          }
+        ],
+        "/LeadMagnetApiStack/HttpApi/POST--files--{proxy+}/LambdaIntegration-Permission": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "HttpApiPOSTfilesproxyLambdaIntegrationPermissionC07BFDF3"
+          }
+        ],
+        "/LeadMagnetApiStack/HttpApi/POST--files--{proxy+}/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "HttpApiPOSTfilesproxy7FD9EEC2"
+          }
+        ],
+        "/LeadMagnetApiStack/HttpApi/DELETE--files--{proxy+}/LambdaIntegration-Permission": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "HttpApiDELETEfilesproxyLambdaIntegrationPermission17F873B8"
+          }
+        ],
+        "/LeadMagnetApiStack/HttpApi/DELETE--files--{proxy+}/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "HttpApiDELETEfilesproxy8392AE79"
+          }
+        ],
+        "/LeadMagnetApiStack/HttpApi/GET--me/LambdaIntegration-Permission": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "HttpApiGETmeLambdaIntegrationPermission17B75DC8"
+          }
+        ],
+        "/LeadMagnetApiStack/HttpApi/GET--me/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "HttpApiGETme466879BE"
+          }
+        ],
+        "/LeadMagnetApiStack/HttpApi/GET--admin--{proxy+}/LambdaIntegration-Permission": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "HttpApiGETadminproxyLambdaIntegrationPermission1CD766D1"
+          }
+        ],
+        "/LeadMagnetApiStack/HttpApi/GET--admin--{proxy+}/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "HttpApiGETadminproxyE408FD81"
+          }
+        ],
+        "/LeadMagnetApiStack/HttpApi/POST--admin--{proxy+}/LambdaIntegration-Permission": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "HttpApiPOSTadminproxyLambdaIntegrationPermissionE8B8491D"
+          }
+        ],
+        "/LeadMagnetApiStack/HttpApi/POST--admin--{proxy+}/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "HttpApiPOSTadminproxy89744583"
+          }
+        ],
+        "/LeadMagnetApiStack/HttpApi/PUT--admin--{proxy+}/LambdaIntegration-Permission": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "HttpApiPUTadminproxyLambdaIntegrationPermission4289B68E"
+          }
+        ],
+        "/LeadMagnetApiStack/HttpApi/PUT--admin--{proxy+}/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "HttpApiPUTadminproxy49AB07F4"
+          }
+        ],
+        "/LeadMagnetApiStack/HttpApi/PATCH--admin--{proxy+}/LambdaIntegration-Permission": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "HttpApiPATCHadminproxyLambdaIntegrationPermissionF5ED10B3"
+          }
+        ],
+        "/LeadMagnetApiStack/HttpApi/PATCH--admin--{proxy+}/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "HttpApiPATCHadminproxyA1947324"
+          }
+        ],
+        "/LeadMagnetApiStack/HttpApi/DELETE--admin--{proxy+}/LambdaIntegration-Permission": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "HttpApiDELETEadminproxyLambdaIntegrationPermission6138D0BB"
+          }
+        ],
+        "/LeadMagnetApiStack/HttpApi/DELETE--admin--{proxy+}/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "HttpApiDELETEadminproxy25E55522"
+          }
+        ],
+        "/LeadMagnetApiStack/ApiUrl": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ApiUrl"
+          }
+        ],
+        "/LeadMagnetApiStack/ApiFunctionArn": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ApiFunctionArn"
+          }
+        ],
+        "/LeadMagnetApiStack/CDKMetadata/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadata"
+          }
+        ],
+        "/LeadMagnetApiStack/BootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BootstrapVersion"
+          }
+        ],
+        "/LeadMagnetApiStack/CheckBootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CheckBootstrapVersion"
+          }
+        ]
+      },
+      "displayName": "LeadMagnetApiStack"
+    },
+    "Tree": {
+      "type": "cdk:tree",
+      "properties": {
+        "file": "tree.json"
+      }
+    },
+    "aws-cdk-lib/feature-flag-report": {
+      "type": "cdk:feature-flag-report",
+      "properties": {
+        "module": "aws-cdk-lib",
+        "flags": {
+          "@aws-cdk/aws-signer:signingProfileNamePassedToCfn": {
+            "recommendedValue": true,
+            "explanation": "Pass signingProfileName to CfnSigningProfile"
+          },
+          "@aws-cdk/core:newStyleStackSynthesis": {
+            "recommendedValue": true,
+            "explanation": "Switch to new stack synthesis method which enables CI/CD",
+            "unconfiguredBehavesLike": {
+              "v2": true
+            }
+          },
+          "@aws-cdk/core:stackRelativeExports": {
+            "recommendedValue": true,
+            "explanation": "Name exports based on the construct paths relative to the stack, rather than the global construct path",
+            "unconfiguredBehavesLike": {
+              "v2": true
+            }
+          },
+          "@aws-cdk/aws-ecs-patterns:secGroupsDisablesImplicitOpenListener": {
+            "recommendedValue": true,
+            "explanation": "Disable implicit openListener when custom security groups are provided"
+          },
+          "@aws-cdk/aws-rds:lowercaseDbIdentifier": {
+            "recommendedValue": true,
+            "explanation": "Force lowercasing of RDS Cluster names in CDK",
+            "unconfiguredBehavesLike": {
+              "v2": true
+            }
+          },
+          "@aws-cdk/aws-apigateway:usagePlanKeyOrderInsensitiveId": {
+            "recommendedValue": true,
+            "explanation": "Allow adding/removing multiple UsagePlanKeys independently",
+            "unconfiguredBehavesLike": {
+              "v2": true
+            }
+          },
+          "@aws-cdk/aws-lambda:recognizeVersionProps": {
+            "recommendedValue": true,
+            "explanation": "Enable this feature flag to opt in to the updated logical id calculation for Lambda Version created using the  `fn.currentVersion`.",
+            "unconfiguredBehavesLike": {
+              "v2": true
+            }
+          },
+          "@aws-cdk/aws-lambda:recognizeLayerVersion": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Enable this feature flag to opt in to the updated logical id calculation for Lambda Version created using the `fn.currentVersion`."
+          },
+          "@aws-cdk/aws-cloudfront:defaultSecurityPolicyTLSv1.2_2021": {
+            "recommendedValue": true,
+            "explanation": "Enable this feature flag to have cloudfront distributions use the security policy TLSv1.2_2021 by default.",
+            "unconfiguredBehavesLike": {
+              "v2": true
+            }
+          },
+          "@aws-cdk/core:checkSecretUsage": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Enable this flag to make it impossible to accidentally use SecretValues in unsafe locations"
+          },
+          "@aws-cdk/core:target-partitions": {
+            "userValue": [
+              "aws",
+              "aws-cn"
+            ],
+            "recommendedValue": [
+              "aws",
+              "aws-cn"
+            ],
+            "explanation": "What regions to include in lookup tables of environment agnostic stacks"
+          },
+          "@aws-cdk-containers/ecs-service-extensions:enableDefaultLogDriver": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "ECS extensions will automatically add an `awslogs` driver if no logging is specified"
+          },
+          "@aws-cdk/aws-ec2:uniqueImdsv2TemplateName": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Enable this feature flag to have Launch Templates generated by the `InstanceRequireImdsv2Aspect` use unique names."
+          },
+          "@aws-cdk/aws-ecs:arnFormatIncludesClusterName": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "ARN format used by ECS. In the new ARN format, the cluster name is part of the resource ID."
+          },
+          "@aws-cdk/aws-iam:minimizePolicies": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Minimize IAM policies by combining Statements"
+          },
+          "@aws-cdk/core:validateSnapshotRemovalPolicy": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Error on snapshot removal policies on resources that do not support it."
+          },
+          "@aws-cdk/aws-codepipeline:crossAccountKeyAliasStackSafeResourceName": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Generate key aliases that include the stack name"
+          },
+          "@aws-cdk/aws-s3:createDefaultLoggingPolicy": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Enable this feature flag to create an S3 bucket policy by default in cases where an AWS service would automatically create the Policy if one does not exist."
+          },
+          "@aws-cdk/aws-sns-subscriptions:restrictSqsDescryption": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Restrict KMS key policy for encrypted Queues a bit more"
+          },
+          "@aws-cdk/aws-apigateway:disableCloudWatchRole": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Make default CloudWatch Role behavior safe for multiple API Gateways in one environment"
+          },
+          "@aws-cdk/core:enablePartitionLiterals": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Make ARNs concrete if AWS partition is known"
+          },
+          "@aws-cdk/aws-events:eventsTargetQueueSameAccount": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Event Rules may only push to encrypted SQS queues in the same account"
+          },
+          "@aws-cdk/aws-ecs:disableExplicitDeploymentControllerForCircuitBreaker": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Avoid setting the \"ECS\" deployment controller when adding a circuit breaker"
+          },
+          "@aws-cdk/aws-iam:importedRoleStackSafeDefaultPolicyName": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Enable this feature to by default create default policy names for imported roles that depend on the stack the role is in."
+          },
+          "@aws-cdk/aws-s3:serverAccessLogsUseBucketPolicy": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Use S3 Bucket Policy instead of ACLs for Server Access Logging"
+          },
+          "@aws-cdk/aws-route53-patters:useCertificate": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Use the official `Certificate` resource instead of `DnsValidatedCertificate`"
+          },
+          "@aws-cdk/customresources:installLatestAwsSdkDefault": {
+            "userValue": false,
+            "recommendedValue": false,
+            "explanation": "Whether to install the latest SDK by default in AwsCustomResource"
+          },
+          "@aws-cdk/aws-rds:databaseProxyUniqueResourceName": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Use unique resource name for Database Proxy"
+          },
+          "@aws-cdk/aws-codedeploy:removeAlarmsFromDeploymentGroup": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Remove CloudWatch alarms from deployment group"
+          },
+          "@aws-cdk/aws-apigateway:authorizerChangeDeploymentLogicalId": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Include authorizer configuration in the calculation of the API deployment logical ID."
+          },
+          "@aws-cdk/aws-ec2:launchTemplateDefaultUserData": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Define user data for a launch template by default when a machine image is provided."
+          },
+          "@aws-cdk/aws-secretsmanager:useAttachedSecretResourcePolicyForSecretTargetAttachments": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "SecretTargetAttachments uses the ResourcePolicy of the attached Secret."
+          },
+          "@aws-cdk/aws-redshift:columnId": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Whether to use an ID to track Redshift column changes"
+          },
+          "@aws-cdk/aws-stepfunctions-tasks:enableEmrServicePolicyV2": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Enable AmazonEMRServicePolicy_v2 managed policies"
+          },
+          "@aws-cdk/aws-ec2:restrictDefaultSecurityGroup": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Restrict access to the VPC default security group"
+          },
+          "@aws-cdk/aws-apigateway:requestValidatorUniqueId": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Generate a unique id for each RequestValidator added to a method"
+          },
+          "@aws-cdk/aws-kms:aliasNameRef": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "KMS Alias name and keyArn will have implicit reference to KMS Key"
+          },
+          "@aws-cdk/aws-kms:applyImportedAliasPermissionsToPrincipal": {
+            "recommendedValue": true,
+            "explanation": "Enable grant methods on Aliases imported by name to use kms:ResourceAliases condition"
+          },
+          "@aws-cdk/aws-autoscaling:generateLaunchTemplateInsteadOfLaunchConfig": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Generate a launch template when creating an AutoScalingGroup"
+          },
+          "@aws-cdk/core:includePrefixInUniqueNameGeneration": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Include the stack prefix in the stack name generation process"
+          },
+          "@aws-cdk/aws-efs:denyAnonymousAccess": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "EFS denies anonymous clients accesses"
+          },
+          "@aws-cdk/aws-opensearchservice:enableOpensearchMultiAzWithStandby": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Enables support for Multi-AZ with Standby deployment for opensearch domains"
+          },
+          "@aws-cdk/aws-lambda-nodejs:useLatestRuntimeVersion": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Enables aws-lambda-nodejs.Function to use the latest available NodeJs runtime as the default"
+          },
+          "@aws-cdk/aws-efs:mountTargetOrderInsensitiveLogicalId": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "When enabled, mount targets will have a stable logicalId that is linked to the associated subnet."
+          },
+          "@aws-cdk/aws-rds:auroraClusterChangeScopeOfInstanceParameterGroupWithEachParameters": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "When enabled, a scope of InstanceParameterGroup for AuroraClusterInstance with each parameters will change."
+          },
+          "@aws-cdk/aws-appsync:useArnForSourceApiAssociationIdentifier": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "When enabled, will always use the arn for identifiers for CfnSourceApiAssociation in the GraphqlApi construct rather than id."
+          },
+          "@aws-cdk/aws-rds:preventRenderingDeprecatedCredentials": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "When enabled, creating an RDS database cluster from a snapshot will only render credentials for snapshot credentials."
+          },
+          "@aws-cdk/aws-codepipeline-actions:useNewDefaultBranchForCodeCommitSource": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "When enabled, the CodeCommit source action is using the default branch name 'main'."
+          },
+          "@aws-cdk/aws-cloudwatch-actions:changeLambdaPermissionLogicalIdForLambdaAction": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "When enabled, the logical ID of a Lambda permission for a Lambda action includes an alarm ID."
+          },
+          "@aws-cdk/aws-codepipeline:crossAccountKeysDefaultValueToFalse": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Enables Pipeline to set the default value for crossAccountKeys to false."
+          },
+          "@aws-cdk/aws-codepipeline:defaultPipelineTypeToV2": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Enables Pipeline to set the default pipeline type to V2."
+          },
+          "@aws-cdk/aws-kms:reduceCrossAccountRegionPolicyScope": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "When enabled, IAM Policy created from KMS key grant will reduce the resource scope to this key only."
+          },
+          "@aws-cdk/pipelines:reduceAssetRoleTrustScope": {
+            "recommendedValue": true,
+            "explanation": "Remove the root account principal from PipelineAssetsFileRole trust policy",
+            "unconfiguredBehavesLike": {
+              "v2": true
+            }
+          },
+          "@aws-cdk/aws-eks:nodegroupNameAttribute": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "When enabled, nodegroupName attribute of the provisioned EKS NodeGroup will not have the cluster name prefix."
+          },
+          "@aws-cdk/aws-ec2:ebsDefaultGp3Volume": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "When enabled, the default volume type of the EBS volume will be GP3"
+          },
+          "@aws-cdk/aws-ecs:removeDefaultDeploymentAlarm": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "When enabled, remove default deployment alarm settings"
+          },
+          "@aws-cdk/custom-resources:logApiResponseDataPropertyTrueDefault": {
+            "userValue": false,
+            "recommendedValue": false,
+            "explanation": "When enabled, the custom resource used for `AwsCustomResource` will configure the `logApiResponseData` property as true by default"
+          },
+          "@aws-cdk/aws-s3:keepNotificationInImportedBucket": {
+            "userValue": false,
+            "recommendedValue": false,
+            "explanation": "When enabled, Adding notifications to a bucket in the current stack will not remove notification from imported stack."
+          },
+          "@aws-cdk/aws-stepfunctions-tasks:useNewS3UriParametersForBedrockInvokeModelTask": {
+            "recommendedValue": true,
+            "explanation": "When enabled, use new props for S3 URI field in task definition of state machine for bedrock invoke model.",
+            "unconfiguredBehavesLike": {
+              "v2": true
+            }
+          },
+          "@aws-cdk/core:explicitStackTags": {
+            "recommendedValue": true,
+            "explanation": "When enabled, stack tags need to be assigned explicitly on a Stack."
+          },
+          "@aws-cdk/aws-ecs:enableImdsBlockingDeprecatedFeature": {
+            "recommendedValue": false,
+            "explanation": "When set to true along with canContainersAccessInstanceRole=false in ECS cluster, new updated commands will be added to UserData to block container accessing IMDS. **Applicable to Linux only. IMPORTANT: See [details.](#aws-cdkaws-ecsenableImdsBlockingDeprecatedFeature)**"
+          },
+          "@aws-cdk/aws-ecs:disableEcsImdsBlocking": {
+            "recommendedValue": true,
+            "explanation": "When set to true, CDK synth will throw exception if canContainersAccessInstanceRole is false. **IMPORTANT: See [details.](#aws-cdkaws-ecsdisableEcsImdsBlocking)**"
+          },
+          "@aws-cdk/aws-ecs:reduceEc2FargateCloudWatchPermissions": {
+            "recommendedValue": true,
+            "explanation": "When enabled, we will only grant the necessary permissions when users specify cloudwatch log group through logConfiguration"
+          },
+          "@aws-cdk/aws-dynamodb:resourcePolicyPerReplica": {
+            "recommendedValue": true,
+            "explanation": "When enabled will allow you to specify a resource policy per replica, and not copy the source table policy to all replicas"
+          },
+          "@aws-cdk/aws-ec2:ec2SumTImeoutEnabled": {
+            "recommendedValue": true,
+            "explanation": "When enabled, initOptions.timeout and resourceSignalTimeout values will be summed together."
+          },
+          "@aws-cdk/aws-appsync:appSyncGraphQLAPIScopeLambdaPermission": {
+            "recommendedValue": true,
+            "explanation": "When enabled, a Lambda authorizer Permission created when using GraphqlApi will be properly scoped with a SourceArn."
+          },
+          "@aws-cdk/aws-rds:setCorrectValueForDatabaseInstanceReadReplicaInstanceResourceId": {
+            "recommendedValue": true,
+            "explanation": "When enabled, the value of property `instanceResourceId` in construct `DatabaseInstanceReadReplica` will be set to the correct value which is `DbiResourceId` instead of currently `DbInstanceArn`"
+          },
+          "@aws-cdk/core:cfnIncludeRejectComplexResourceUpdateCreatePolicyIntrinsics": {
+            "recommendedValue": true,
+            "explanation": "When enabled, CFN templates added with `cfn-include` will error if the template contains Resource Update or Create policies with CFN Intrinsics that include non-primitive values."
+          },
+          "@aws-cdk/aws-lambda-nodejs:sdkV3ExcludeSmithyPackages": {
+            "recommendedValue": true,
+            "explanation": "When enabled, both `@aws-sdk` and `@smithy` packages will be excluded from the Lambda Node.js 18.x runtime to prevent version mismatches in bundled applications."
+          },
+          "@aws-cdk/aws-stepfunctions-tasks:fixRunEcsTaskPolicy": {
+            "recommendedValue": true,
+            "explanation": "When enabled, the resource of IAM Run Ecs policy generated by SFN EcsRunTask will reference the definition, instead of constructing ARN."
+          },
+          "@aws-cdk/aws-ec2:bastionHostUseAmazonLinux2023ByDefault": {
+            "recommendedValue": true,
+            "explanation": "When enabled, the BastionHost construct will use the latest Amazon Linux 2023 AMI, instead of Amazon Linux 2."
+          },
+          "@aws-cdk/core:aspectStabilization": {
+            "recommendedValue": true,
+            "explanation": "When enabled, a stabilization loop will be run when invoking Aspects during synthesis.",
+            "unconfiguredBehavesLike": {
+              "v2": true
+            }
+          },
+          "@aws-cdk/aws-route53-targets:userPoolDomainNameMethodWithoutCustomResource": {
+            "recommendedValue": true,
+            "explanation": "When enabled, use a new method for DNS Name of user pool domain target without creating a custom resource."
+          },
+          "@aws-cdk/aws-elasticloadbalancingV2:albDualstackWithoutPublicIpv4SecurityGroupRulesDefault": {
+            "recommendedValue": true,
+            "explanation": "When enabled, the default security group ingress rules will allow IPv6 ingress from anywhere"
+          },
+          "@aws-cdk/aws-iam:oidcRejectUnauthorizedConnections": {
+            "recommendedValue": true,
+            "explanation": "When enabled, the default behaviour of OIDC provider will reject unauthorized connections"
+          },
+          "@aws-cdk/core:enableAdditionalMetadataCollection": {
+            "recommendedValue": true,
+            "explanation": "When enabled, CDK will expand the scope of usage data collected to better inform CDK development and improve communication for security concerns and emerging issues."
+          },
+          "@aws-cdk/aws-lambda:createNewPoliciesWithAddToRolePolicy": {
+            "recommendedValue": false,
+            "explanation": "[Deprecated] When enabled, Lambda will create new inline policies with AddToRolePolicy instead of adding to the Default Policy Statement"
+          },
+          "@aws-cdk/aws-s3:setUniqueReplicationRoleName": {
+            "recommendedValue": true,
+            "explanation": "When enabled, CDK will automatically generate a unique role name that is used for s3 object replication."
+          },
+          "@aws-cdk/pipelines:reduceStageRoleTrustScope": {
+            "recommendedValue": true,
+            "explanation": "Remove the root account principal from Stage addActions trust policy",
+            "unconfiguredBehavesLike": {
+              "v2": true
+            }
+          },
+          "@aws-cdk/aws-events:requireEventBusPolicySid": {
+            "recommendedValue": true,
+            "explanation": "When enabled, grantPutEventsTo() will use resource policies with Statement IDs for service principals."
+          },
+          "@aws-cdk/core:aspectPrioritiesMutating": {
+            "recommendedValue": true,
+            "explanation": "When set to true, Aspects added by the construct library on your behalf will be given a priority of MUTATING."
+          },
+          "@aws-cdk/aws-dynamodb:retainTableReplica": {
+            "recommendedValue": true,
+            "explanation": "When enabled, table replica will be default to the removal policy of source table unless specified otherwise."
+          },
+          "@aws-cdk/cognito:logUserPoolClientSecretValue": {
+            "recommendedValue": false,
+            "explanation": "When disabled, the value of the user pool client secret will not be logged in the custom resource lambda function logs."
+          },
+          "@aws-cdk/pipelines:reduceCrossAccountActionRoleTrustScope": {
+            "recommendedValue": true,
+            "explanation": "When enabled, scopes down the trust policy for the cross-account action role",
+            "unconfiguredBehavesLike": {
+              "v2": true
+            }
+          },
+          "@aws-cdk/aws-stepfunctions:useDistributedMapResultWriterV2": {
+            "recommendedValue": true,
+            "explanation": "When enabled, the resultWriterV2 property of DistributedMap will be used insted of resultWriter"
+          },
+          "@aws-cdk/s3-notifications:addS3TrustKeyPolicyForSnsSubscriptions": {
+            "recommendedValue": true,
+            "explanation": "Add an S3 trust policy to a KMS key resource policy for SNS subscriptions."
+          },
+          "@aws-cdk/aws-ec2:requirePrivateSubnetsForEgressOnlyInternetGateway": {
+            "recommendedValue": true,
+            "explanation": "When enabled, the EgressOnlyGateway resource is only created if private subnets are defined in the dual-stack VPC."
+          },
+          "@aws-cdk/aws-ec2-alpha:useResourceIdForVpcV2Migration": {
+            "recommendedValue": false,
+            "explanation": "When enabled, use resource IDs for VPC V2 migration"
+          },
+          "@aws-cdk/aws-s3:publicAccessBlockedByDefault": {
+            "recommendedValue": true,
+            "explanation": "When enabled, setting any combination of options for BlockPublicAccess will automatically set true for any options not defined."
+          },
+          "@aws-cdk/aws-lambda:useCdkManagedLogGroup": {
+            "recommendedValue": true,
+            "explanation": "When enabled, CDK creates and manages loggroup for the lambda function"
+          }
+        }
+      }
+    }
+  },
+  "minimumCliVersion": "2.1030.0"
+}

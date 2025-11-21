@@ -1,0 +1,166 @@
+{
+ "Description": "ECR repository for Lambda container images",
+ "Resources": {
+  "WorkerRepository770852D6": {
+   "Type": "AWS::ECR::Repository",
+   "Properties": {
+    "ImageScanningConfiguration": {
+     "ScanOnPush": true
+    },
+    "ImageTagMutability": "MUTABLE",
+    "LifecyclePolicy": {
+     "LifecyclePolicyText": "{\"rules\":[{\"rulePriority\":1,\"description\":\"Keep last 10 images\",\"selection\":{\"tagStatus\":\"any\",\"countType\":\"imageCountMoreThan\",\"countNumber\":10},\"action\":{\"type\":\"expire\"}}]}"
+    },
+    "RepositoryName": "leadmagnet/worker",
+    "RepositoryPolicyText": {
+     "Statement": [
+      {
+       "Action": [
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:BatchGetImage",
+        "ecr:GetDownloadUrlForLayer"
+       ],
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetWorkerStack/WorkerRepository/Resource"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/zPSMzIy0DNQTCwv1k1OydbNyUzSqw4uSUzO1kksL45PTS7Sqw5KLcgvzizJL6rUcU7LQ/BqQVz/0pKC0pJanbz8lFS9rGL9MiMjPUNzPUPFrOLMTN2i0rySzNxUvSAIDQD1j3VHbgAAAA=="
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeadMagnetWorkerStack/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "EcrRepositoryUri": {
+   "Description": "ECR repository URI for pushing container images",
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      {
+       "Fn::Select": [
+        4,
+        {
+         "Fn::Split": [
+          ":",
+          {
+           "Fn::GetAtt": [
+            "WorkerRepository770852D6",
+            "Arn"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      ".dkr.ecr.",
+      {
+       "Fn::Select": [
+        3,
+        {
+         "Fn::Split": [
+          ":",
+          {
+           "Fn::GetAtt": [
+            "WorkerRepository770852D6",
+            "Arn"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      ".",
+      {
+       "Ref": "AWS::URLSuffix"
+      },
+      "/",
+      {
+       "Ref": "WorkerRepository770852D6"
+      }
+     ]
+    ]
+   },
+   "Export": {
+    "Name": "WorkerEcrRepositoryUri"
+   }
+  },
+  "EcrRepositoryName": {
+   "Description": "ECR repository name",
+   "Value": {
+    "Ref": "WorkerRepository770852D6"
+   },
+   "Export": {
+    "Name": "WorkerEcrRepositoryName"
+   }
+  },
+  "ExportsOutputFnGetAttWorkerRepository770852D6Arn0E6C90D3": {
+   "Value": {
+    "Fn::GetAtt": [
+     "WorkerRepository770852D6",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "leadmagnet-worker:ExportsOutputFnGetAttWorkerRepository770852D6Arn0E6C90D3"
+   }
+  },
+  "ExportsOutputRefWorkerRepository770852D66C2AAEBD": {
+   "Value": {
+    "Ref": "WorkerRepository770852D6"
+   },
+   "Export": {
+    "Name": "leadmagnet-worker:ExportsOutputRefWorkerRepository770852D66C2AAEBD"
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}
