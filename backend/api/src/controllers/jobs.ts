@@ -20,11 +20,12 @@ class JobsController {
   async list(_tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {
     const workflowId = queryParams.workflow_id;
     const status = queryParams.status;
-    const pageSize = queryParams.limit ? parseInt(queryParams.limit) : 20;
+    const pageSize = queryParams.limit ? parseInt(queryParams.limit) : undefined;
     const offset = queryParams.offset ? parseInt(queryParams.offset) : 0;
     
     // Fetch more items than needed to support offset-based pagination
-    const fetchLimit = pageSize + offset;
+    const fetchLimit = pageSize ? pageSize + offset : undefined;
+    const scanPageSize = 200;
 
     let jobs;
     let totalCount = 0;
@@ -54,10 +55,8 @@ class JobsController {
       totalCount = jobs.length;
     } else {
       // Remove tenant_id filtering - show all jobs from all accounts
-      jobs = await db.scan(JOBS_TABLE, fetchLimit);
-      // For global queries, try to get a better count estimate
-      const countJobs = await db.scan(JOBS_TABLE, 1000); // Sample size for count estimation
-      totalCount = countJobs.length >= 1000 ? 1000 : countJobs.length;
+      jobs = await db.scanAll(JOBS_TABLE, scanPageSize, fetchLimit);
+      totalCount = jobs.length;
     }
 
     // Ensure jobs are sorted by created_at DESC (most recent first)
@@ -69,8 +68,9 @@ class JobsController {
     });
 
     // Apply offset and limit
-    const paginatedJobs = jobs.slice(offset, offset + pageSize);
-    const hasMore = jobs.length > offset + pageSize;
+    const effectivePageSize = pageSize ?? jobs.length;
+    const paginatedJobs = jobs.slice(offset, offset + effectivePageSize);
+    const hasMore = jobs.length > offset + effectivePageSize;
 
     return {
       statusCode: 200,
@@ -79,7 +79,7 @@ class JobsController {
         count: paginatedJobs.length,
         total: totalCount,
         offset,
-        limit: pageSize,
+        limit: effectivePageSize,
         has_more: hasMore,
       },
     };

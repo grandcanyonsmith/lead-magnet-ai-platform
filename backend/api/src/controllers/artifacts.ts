@@ -28,7 +28,8 @@ class ArtifactsController {
 
     const jobId = queryParams.job_id;
     const artifactType = queryParams.artifact_type;
-    const limit = queryParams.limit ? parseInt(queryParams.limit) : 50;
+    const limit = queryParams.limit ? parseInt(queryParams.limit) : undefined;
+    const scanPageSize = 200; // Reasonable page size for full-table scans
 
     let artifactsResult;
     if (jobId) {
@@ -42,11 +43,12 @@ class ArtifactsController {
       );
     } else if (artifactType) {
       // Remove tenant_id filtering - show all artifacts from all accounts
-      const allArtifacts = await db.scan(ARTIFACTS_TABLE!, limit * 10); // Scan more to filter by type
-      artifactsResult = { items: allArtifacts.filter((a: any) => a.artifact_type === artifactType).slice(0, limit) };
+      const allArtifacts = await db.scanAll(ARTIFACTS_TABLE!, scanPageSize);
+      const filteredByType = allArtifacts.filter((a: any) => a.artifact_type === artifactType);
+      artifactsResult = { items: limit ? filteredByType.slice(0, limit) : filteredByType };
     } else {
       // Remove tenant_id filtering - show all artifacts from all accounts
-      artifactsResult = { items: await db.scan(ARTIFACTS_TABLE!, limit) };
+      artifactsResult = { items: await db.scanAll(ARTIFACTS_TABLE!, scanPageSize, limit) };
     }
     let artifacts = normalizeQueryResult(artifactsResult);
 
@@ -284,4 +286,3 @@ class ArtifactsController {
 }
 
 export const artifactsController = new ArtifactsController();
-

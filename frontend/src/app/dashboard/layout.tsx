@@ -10,6 +10,8 @@ import {
   FiList,
   FiMenu,
   FiX,
+  FiActivity,
+  FiDownload,
 } from 'react-icons/fi'
 import {
   Shell,
@@ -59,6 +61,8 @@ export default function DashboardLayout({
     () => [
       { href: '/dashboard', label: 'Dashboard', icon: FiHome },
       { href: '/dashboard/workflows', label: 'Lead Magnets', icon: FiList },
+      { href: '/dashboard/jobs', label: 'Runs', icon: FiActivity },
+      { href: '/dashboard/artifacts', label: 'Downloads', icon: FiDownload },
     ],
     []
   )
