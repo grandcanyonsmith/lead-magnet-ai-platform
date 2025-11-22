@@ -125,12 +125,16 @@ export function PreviewRenderer({ contentType, objectUrl, fileName, className = 
           setMarkdownContent(text)
           setMarkdownError(false) // Clear any previous error on success
         } catch (err: any) {
-          console.error('Failed to fetch markdown:', err)
           // If artifact not found, show a helpful message instead of error state
-          if (err?.message?.includes('404') || err?.message?.includes('not found')) {
+          const isNotFound = err?.message?.includes('404') || err?.message?.includes('not found') || err?.response?.status === 404
+          if (isNotFound) {
+            // Log 404s at debug level since they're expected for missing artifacts
+            console.debug('Artifact file not found (404):', artifactId || objectUrl)
             setMarkdownContent('**Artifact file not available**\n\nThe artifact file was not found in storage. It may have been deleted or not yet generated.')
             setMarkdownError(false)
           } else {
+            // Only log actual errors
+            console.error('Failed to fetch markdown:', err)
             setMarkdownError(true)
           }
         }
@@ -164,12 +168,16 @@ export function PreviewRenderer({ contentType, objectUrl, fileName, className = 
           setHtmlContent(extractedHtml)
           setHtmlError(false) // Clear any previous error on success
         } catch (err: any) {
-          console.error('Failed to fetch HTML:', err)
           // If artifact not found, show a helpful message instead of error state
-          if (err?.message?.includes('404') || err?.message?.includes('not found')) {
+          const isNotFound = err?.message?.includes('404') || err?.message?.includes('not found') || err?.response?.status === 404
+          if (isNotFound) {
+            // Log 404s at debug level since they're expected for missing artifacts
+            console.debug('Artifact file not found (404):', artifactId || objectUrl)
             setHtmlContent('<html><body><h1>Artifact file not available</h1><p>The artifact file was not found in storage. It may have been deleted or not yet generated.</p></body></html>')
             setHtmlError(false)
           } else {
+            // Only log actual errors
+            console.error('Failed to fetch HTML:', err)
             setHtmlError(true)
           }
         }
