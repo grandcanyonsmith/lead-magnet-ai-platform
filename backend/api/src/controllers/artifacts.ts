@@ -206,6 +206,62 @@ class ArtifactsController {
       throw new ApiError('Artifact S3 key not found', 404);
     }
 
+    // Helper function to try fetching with a specific S3 key
+    const tryFetchWithKey = async (s3Key: string): Promise<{ content: string; contentType: string } | null> => {
+      try {
+        const command = new GetObjectCommand({
+          Bucket: ARTIFACTS_BUCKET,
+          Key: s3Key,
+        });
+        
+        const response = await s3Client.send(command);
+        
+        if (!response.Body) {
+          return null;
+        }
+        
+        const content = await response.Body.transformToString();
+        const contentType = response.ContentType || artifact.mime_type || 'text/plain';
+        
+        return { content, contentType };
+      } catch (error: any) {
+        if (error.name === 'NoSuchKey' || error.$metadata?.httpStatusCode === 404) {
+          return null;
+        }
+        throw error; // Re-throw non-404 errors
+      }
+    };
+
+    // Generate alternative S3 key formats to try
+    const generateAlternativeKeys = (originalKey: string): string[] => {
+      const alternatives: string[] = [];
+      
+      // Extract the path after tenant_id (e.g., "/jobs/job_xxx/final.html")
+      const match = originalKey.match(/^(?:cust_)?([^/]+)(\/jobs\/.+)$/);
+      if (match) {
+        const [, tenantPart, restOfPath] = match;
+        
+        // Try without cust_ prefix if it has one
+        if (originalKey.startsWith('cust_')) {
+          alternatives.push(`${tenantPart}${restOfPath}`);
+        } else {
+          // Try with cust_ prefix if it doesn't have one
+          alternatives.push(`cust_${tenantPart}${restOfPath}`);
+        }
+        
+        // If tenantPart looks like a UUID, try extracting just the first part
+        // (e.g., "84c8e438-0061-70f2-2ce0-7cb44989a329" -> "84c8e438")
+        const uuidMatch = tenantPart.match(/^([a-f0-9]{8})-/i);
+        if (uuidMatch) {
+          const shortId = uuidMatch[1];
+          alternatives.push(`${shortId}${restOfPath}`);
+          alternatives.push(`cust_${shortId}${restOfPath}`);
+        }
+      }
+      
+      return alternatives;
+    };
+
     try {
       // Log the S3 key being requested for debugging
       logger.info(`Fetching artifact content from S3`, {
@@ -214,19 +270,45 @@ class ArtifactsController {
         bucket: ARTIFACTS_BUCKET,
       });
 
-      const command = new GetObjectCommand({
-        Bucket: ARTIFACTS_BUCKET,
-        Key: artifact.s3_key,
-      });
-      
-      const response = await s3Client.send(command);
-      
-      if (!response.Body) {
-        throw new ApiError(`S3 object body is empty for key: ${artifact.s3_key}`, 500);
+      // Try the stored S3 key first
+      let result = await tryFetchWithKey(artifact.s3_key);
+
+      // If that fails, try alternative key formats
+      if (!result) {
+        const alternativeKeys = generateAlternativeKeys(artifact.s3_key);
+        logger.info(`Primary S3 key not found, trying alternative formats`, {
+          artifactId,
+          originalKey: artifact.s3_key,
+          alternatives: alternativeKeys,
+        });
+
+        for (const altKey of alternativeKeys) {
+          result = await tryFetchWithKey(altKey);
+          if (result) {
+            logger.info(`Found artifact with alternative S3 key format`, {
+              artifactId,
+              originalKey: artifact.s3_key,
+              foundKey: altKey,
+            });
+            // Optionally update the database with the correct key (commented out for now)
+            // await db.update(ARTIFACTS_TABLE, { artifact_id: artifactId }, { s3_key: altKey });
+            break;
+          }
+        }
       }
-      
-      const content = await response.Body.transformToString();
-      const contentType = response.ContentType || artifact.mime_type || 'text/plain';
+
+      if (!result) {
+        // File not found with any key format
+        logger.error(`Artifact file not found in S3 with any key format`, {
+          artifactId,
+          originalKey: artifact.s3_key,
+          alternatives: generateAlternativeKeys(artifact.s3_key),
+          bucket: ARTIFACTS_BUCKET,
+        });
+        throw new ApiError(`Artifact file not found in S3. Key: ${artifact.s3_key}`, 404);
+      }
+
+      const { content, contentType } = result;
       
       // For HTML content, add CORS headers and proper content type
       const headers: Record<string, string> = {
@@ -246,32 +328,8 @@ class ArtifactsController {
         headers,
       };
     } catch (error: any) {
-      if (error.name === 'NoSuchKey' || error.$metadata?.httpStatusCode === 404) {
-        logger.error(`Artifact file not found in S3`, {
-          artifactId,
-          s3Key: artifact.s3_key,
-          bucket: ARTIFACTS_BUCKET,
-          errorName: error.name,
-          httpStatusCode: error.$metadata?.httpStatusCode,
-        });
-        
-        // Try to check if file exists with HeadObject for better error message
-        try {
-          const headCommand = new HeadObjectCommand({
-            Bucket: ARTIFACTS_BUCKET,
-            Key: artifact.s3_key,
-          });
-          await s3Client.send(headCommand);
-        } catch (headError: any) {
-          logger.error(`Confirmed file does not exist in S3`, {
-            artifactId,
-            s3Key: artifact.s3_key,
-            bucket: ARTIFACTS_BUCKET,
-            headError: headError.message,
-          });
-        }
-        
-        throw new ApiError(`Artifact file not found in S3. Key: ${artifact.s3_key}`, 404);
+      if (error instanceof ApiError) {
+        throw error;
       }
       logger.error(`Error fetching artifact content for ${artifactId}`, {
         s3Key: artifact.s3_key,

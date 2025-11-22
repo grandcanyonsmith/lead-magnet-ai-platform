@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { FiChevronDown, FiChevronUp, FiCopy, FiExternalLink } from 'react-icons/fi'
 import { useState } from 'react'
 import { copyToClipboard } from '@/shared/utils/clipboard'
+import { ArtifactPreview } from './ArtifactPreview'
 
 interface TechnicalDetailsProps {
   job: any
@@ -181,29 +182,10 @@ export function TechnicalDetails({ job, form }: TechnicalDetailsProps) {
 
           {job.artifacts && job.artifacts.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Artifacts</label>
-              <div className="space-y-2">
-                {job.artifacts.map((artifactId: string, index: number) => (
-                  <div key={artifactId} className="flex items-center space-x-2">
-                    <a
-                      href="/dashboard/artifacts"
-                      className="text-sm font-mono text-primary-600 hover:text-primary-900 hover:underline"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        router.push('/dashboard/artifacts')
-                      }}
-                    >
-                      {artifactId}
-                      <FiExternalLink className="w-3 h-3 ml-1 inline" />
-                    </a>
-                    <button
-                      onClick={() => copyToClipboard(artifactId)}
-                      className="text-gray-500 hover:text-gray-700 p-2 touch-target"
-                      title="Copy Artifact ID"
-                    >
-                      <FiCopy className="w-4 h-4" />
-                    </button>
-                  </div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">Artifacts</label>
+              <div className="space-y-6">
+                {job.artifacts.map((artifactId: string) => (
+                  <ArtifactPreview key={artifactId} artifactId={artifactId} />
                 ))}
               </div>
             </div>

@@ -23,9 +23,7 @@ export class ExecutionStepsController {
       throw new ApiError('Job not found', 404);
     }
 
-    if (job.tenant_id !== tenantId) {
-      throw new ApiError('You don\'t have permission to access this job', 403);
-    }
+    // Removed tenant_id check - allow access to all jobs from all accounts (matching jobs.get() behavior)
 
     if (!job.execution_steps_s3_key) {
       return {

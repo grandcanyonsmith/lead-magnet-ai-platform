@@ -1,5 +1,6 @@
 """OpenAI API client wrapper."""
 import logging
+import re
 import openai
 from typing import Dict, List, Optional, Tuple
 
@@ -88,6 +89,122 @@ class OpenAIClient:
                 })
         
         return valid_image_urls, filtered_urls
+    
+    @staticmethod
+    def _extract_url_from_download_error(error_message: str) -> Optional[str]:
+        """
+        Extract problematic URL from OpenAI error message.
+        
+        OpenAI errors for image download timeouts typically look like:
+        - "Timeout while downloading https://example.com/image.jpg."
+        - "Timeout while downloading https://example.com/image.jpg"
+        
+        Args:
+            error_message: Error message string from OpenAI API
+            
+        Returns:
+            URL string if found, None otherwise
+        """
+        if not error_message:
+            return None
+        
+        # Pattern to match "Timeout while downloading <url>"
+        # Also handles "error while downloading" or similar patterns
+        # Allow dots in URLs (they're part of domains and file paths)
+        patterns = [
+            r'(?:Timeout|timeout|Error|error).*?while downloading\s+(https?://[^\s\)]+)',
+            r'(?:downloading|download).*?(https?://[^\s\)]+).*?(?:timeout|time|failed|error)',
+            r'(?:invalid_value|invalid).*?url.*?(https?://[^\s\)]+)',
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, error_message, re.IGNORECASE)
+            if match:
+                url = match.group(1).rstrip('.')
+                # Basic URL validation
+                if url.startswith('http://') or url.startswith('https://'):
+                    return url
+        
+        return None
+    
+    def _rebuild_input_with_url_replacement(
+        self,
+        original_input: List[Dict],
+        old_url: str,
+        new_url: Optional[str],
+        job_id: Optional[str] = None,
+        tenant_id: Optional[str] = None
+    ) -> List[Dict]:
+        """
+        Rebuild input content with a URL replaced or removed.
+        
+        Args:
+            original_input: Original API input format
+            old_url: URL to replace/remove
+            new_url: New URL to use (None to remove)
+            job_id: Optional job ID for logging
+            tenant_id: Optional tenant ID for logging
+            
+        Returns:
+            Rebuilt API input format
+        """
+        if not original_input or len(original_input) == 0:
+            return original_input
+        
+        # Deep copy the input structure
+        new_input = []
+        for item in original_input:
+            if isinstance(item, dict) and item.get('role') == 'user':
+                # Rebuild content list
+                new_content = []
+                content_items = item.get('content', [])
+                
+                if isinstance(content_items, list):
+                    for content_item in content_items:
+                        if isinstance(content_item, dict):
+                            if content_item.get('type') == 'input_image':
+                                image_url = content_item.get('image_url', '')
+                                # Check if this is the problematic URL
+                                if image_url == old_url or old_url in image_url:
+                                    if new_url:
+                                        # Replace with new URL
+                                        new_content.append({
+                                            "type": "input_image",
+                                            "image_url": new_url
+                                        })
+                                        logger.info("[OpenAI Client] Replaced problematic image URL with base64 data URL", extra={
+                                            'job_id': job_id,
+                                            'tenant_id': tenant_id,
+                                            'old_url_preview': old_url[:100] + '...' if len(old_url) > 100 else old_url,
+                                            'new_url_type': 'base64_data_url'
+                                        })
+                                    else:
+                                        # Skip this image
+                                        logger.info("[OpenAI Client] Removed problematic image URL from input", extra={
+                                            'job_id': job_id,
+                                            'tenant_id': tenant_id,
+                                            'removed_url_preview': old_url[:100] + '...' if len(old_url) > 100 else old_url
+                                        })
+                                else:
+                                    # Keep other images unchanged
+                                    new_content.append(content_item)
+                            else:
+                                # Keep non-image content unchanged
+                                new_content.append(content_item)
+                        else:
+                            new_content.append(content_item)
+                else:
+                    new_content = content_items
+                
+                new_input.append({
+                    "role": item.get('role', 'user'),
+                    "content": new_content
+                })
+            else:
+                # Keep non-user messages unchanged
+                new_input.append(item)
+        
+        return new_input
     
     def _build_input_with_images(
         self,
@@ -287,12 +404,19 @@ class OpenAIClient:
         Create a response using OpenAI Responses API.
         Supports code_interpreter and other modern tools natively.
         
+        Handles image download timeouts by:
+        1. Attempting to download problematic URLs locally and convert to base64
+        2. If that fails, skipping the problematic image and retrying
+        
         Args:
             **params: Parameters to pass to OpenAI Responses API
             
         Returns:
             OpenAI API response
         """
+        # Track retry attempts to prevent infinite loops
+        retry_attempted = params.pop('_retry_attempted', False)
+        
         try:
             # Log the request parameters for debugging
             job_id = params.get('job_id') if 'job_id' in params else None
@@ -307,7 +431,8 @@ class OpenAIClient:
                 'tools': params.get('tools', []),
                 'tool_choice': params.get('tool_choice', 'auto'),
                 'instructions_length': len(params.get('instructions', '')),
-                'input_length': len(params.get('input', ''))
+                'input_length': len(params.get('input', '')),
+                'retry_attempted': retry_attempted
             })
             
             # ACTUAL API CALL HAPPENS HERE
@@ -353,6 +478,145 @@ class OpenAIClient:
                 })
             
             return response
+        except openai.BadRequestError as e:
+            # Check if this is an image download timeout error
+            error_message = str(e)
+            error_body = None
+            
+            # Try to extract error details from response body if available
+            if hasattr(e, 'response') and e.response is not None:
+                if hasattr(e.response, 'body'):
+                    error_body = e.response.body
+                elif hasattr(e.response, 'json') and callable(e.response.json):
+                    try:
+                        error_body = e.response.json()
+                    except Exception:
+                        pass
+            
+            # Check for image download timeout errors
+            is_download_error = (
+                'timeout' in error_message.lower() and 'downloading' in error_message.lower()
+            ) or (
+                'downloading' in error_message.lower() and ('timeout' in error_message.lower() or 'invalid_value' in error_message.lower())
+            ) or (
+                error_body and isinstance(error_body, dict) and 
+                'error' in error_body and isinstance(error_body['error'], dict) and
+                'message' in error_body['error'] and
+                ('timeout' in error_body['error']['message'].lower() and 'downloading' in error_body['error']['message'].lower())
+            )
+            
+            if is_download_error and not retry_attempted:
+                # Extract problematic URL from error message
+                problematic_url = self._extract_url_from_download_error(error_message)
+                
+                # Also try to extract from error body if available
+                if not problematic_url and error_body:
+                    if isinstance(error_body, dict):
+                        error_obj = error_body.get('error', {})
+                        if isinstance(error_obj, dict):
+                            error_msg = error_obj.get('message', '')
+                            problematic_url = self._extract_url_from_download_error(error_msg)
+                
+                if problematic_url:
+                    logger.warning("[OpenAI Client] Image download timeout detected, attempting to handle", extra={
+                        'job_id': job_id,
+                        'tenant_id': tenant_id,
+                        'problematic_url_preview': problematic_url[:100] + '...' if len(problematic_url) > 100 else problematic_url,
+                        'error_message': error_message[:200]
+                    })
+                    
+                    # Try to download locally and convert to base64
+                    from utils.image_utils import download_image_and_convert_to_data_url
+                    
+                    logger.info("[OpenAI Client] Attempting to download problematic image locally and convert to base64", extra={
+                        'job_id': job_id,
+                        'tenant_id': tenant_id,
+                        'url_preview': problematic_url[:100] + '...' if len(problematic_url) > 100 else problematic_url
+                    })
+                    
+                    data_url = download_image_and_convert_to_data_url(
+                        url=problematic_url,
+                        job_id=job_id,
+                        tenant_id=tenant_id
+                    )
+                    
+                    if data_url:
+                        # Successfully downloaded and converted to base64 - retry with base64 version
+                        logger.info("[OpenAI Client] Successfully converted problematic URL to base64, retrying API call", extra={
+                            'job_id': job_id,
+                            'tenant_id': tenant_id,
+                            'url_preview': problematic_url[:100] + '...' if len(problematic_url) > 100 else problematic_url,
+                            'data_url_length': len(data_url)
+                        })
+                        
+                        # Rebuild input with base64 URL
+                        original_input = params.get('input', [])
+                        new_input = self._rebuild_input_with_url_replacement(
+                            original_input=original_input,
+                            old_url=problematic_url,
+                            new_url=data_url,
+                            job_id=job_id,
+                            tenant_id=tenant_id
+                        )
+                        
+                        # Retry with updated params
+                        new_params = params.copy()
+                        new_params['input'] = new_input
+                        new_params['_retry_attempted'] = True
+                        
+                        return self.create_response(**new_params)
+                    else:
+                        # Failed to download locally - skip this image and retry without it
+                        logger.warning("[OpenAI Client] Failed to download problematic image locally, skipping image and retrying", extra={
+                            'job_id': job_id,
+                            'tenant_id': tenant_id,
+                            'url_preview': problematic_url[:100] + '...' if len(problematic_url) > 100 else problematic_url,
+                            'reason': 'Local download failed or timeout'
+                        })
+                        
+                        # Rebuild input without the problematic URL
+                        original_input = params.get('input', [])
+                        new_input = self._rebuild_input_with_url_replacement(
+                            original_input=original_input,
+                            old_url=problematic_url,
+                            new_url=None,  # None means remove
+                            job_id=job_id,
+                            tenant_id=tenant_id
+                        )
+                        
+                        # Retry with updated params (without problematic image)
+                        new_params = params.copy()
+                        new_params['input'] = new_input
+                        new_params['_retry_attempted'] = True
+                        
+                        logger.info("[OpenAI Client] Retrying API call without problematic image", extra={
+                            'job_id': job_id,
+                            'tenant_id': tenant_id,
+                            'skipped_url_preview': problematic_url[:100] + '...' if len(problematic_url) > 100 else problematic_url
+                        })
+                        
+                        return self.create_response(**new_params)
+                else:
+                    # Could not extract URL from error - log and re-raise
+                    logger.error("[OpenAI Client] Image download error detected but could not extract URL from error message", extra={
+                        'job_id': job_id,
+                        'tenant_id': tenant_id,
+                        'error_message': error_message[:500],
+                        'error_body': str(error_body)[:500] if error_body else None
+                    })
+            
+            # Not an image download error, or already retried, or couldn't extract URL - re-raise
+            logger.error(f"[OpenAI Client] Error calling OpenAI Responses API: {e}", exc_info=True, extra={
+                'job_id': job_id,
+                'tenant_id': tenant_id,
+                'model': params.get('model'),
+                'tools': params.get('tools', []),
+                'error_type': type(e).__name__,
+                'error_message': str(e),
+                'is_download_error': is_download_error,
+                'retry_attempted': retry_attempted
+            })
+            raise
         except Exception as e:
             logger.error(f"[OpenAI Client] Error calling OpenAI Responses API: {e}", exc_info=True, extra={
                 'job_id': params.get('job_id') if 'job_id' in params else None,
