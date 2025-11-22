@@ -1,6 +1,12 @@
 import { z } from 'zod';
 import { ValidationError } from './errors';
 
+// Helper to normalize empty strings to undefined for URL validation
+const emptyStringToUndefined = z.preprocess(
+  (val) => (typeof val === 'string' && val.trim() === '') ? undefined : val,
+  z.string().url().optional()
+);
+
 // Workflow step schema
 export const workflowStepSchema = z.object({
   step_name: z.string().min(1).max(200),
@@ -24,7 +30,7 @@ export const workflowStepSchema = z.object({
   ).optional(), // Array of tool types or tool objects with configuration
   tool_choice: z.enum(['auto', 'required', 'none']).optional().default('auto'), // How model should use tools
   // Webhook step fields
-  webhook_url: z.string().url().optional(),
+  webhook_url: emptyStringToUndefined,
   webhook_headers: z.record(z.string()).optional(),
   webhook_custom_payload: z.record(z.any()).optional(), // Custom static payload (overrides data_selection if provided)
   webhook_data_selection: z.object({
@@ -58,7 +64,7 @@ const baseWorkflowSchema = z.object({
   folder_id: z.string().optional().nullable(),
   // Delivery configuration
   delivery_method: z.enum(['webhook', 'sms', 'none']).default('none'),
-  delivery_webhook_url: z.string().url().optional(),
+  delivery_webhook_url: emptyStringToUndefined,
   delivery_webhook_headers: z.record(z.string()).optional(),
   delivery_sms_enabled: z.boolean().default(false),
   delivery_sms_message: z.string().optional(), // Manual SMS message
@@ -195,7 +201,7 @@ export const createFormSchema = z.object({
   captcha_enabled: z.boolean().default(false),
   custom_css: z.string().optional(),
   thank_you_message: z.string().optional(),
-  redirect_url: z.string().url().optional(),
+  redirect_url: emptyStringToUndefined,
 });
 
 export const updateFormSchema = createFormSchema.partial();
@@ -222,9 +228,9 @@ export const updateFolderSchema = createFolderSchema.partial();
 export const updateSettingsSchema = z.object({
   organization_name: z.string().optional(),
   contact_email: z.string().email().optional(),
-  website_url: z.string().url().optional(),
-  logo_url: z.string().url().optional(),
-  avatar_url: z.string().url().optional(),
+  website_url: emptyStringToUndefined,
+  logo_url: emptyStringToUndefined,
+  avatar_url: emptyStringToUndefined,
   branding_colors: z
     .object({
       primary: z.string(),
@@ -233,7 +239,7 @@ export const updateSettingsSchema = z.object({
     .optional(),
   default_ai_model: z.string().optional(),
   webhooks: z.array(z.string().url()).optional(),
-  ghl_webhook_url: z.string().url().optional(),
+  ghl_webhook_url: emptyStringToUndefined,
   lead_phone_field: z.string().optional(),
   // Brand information fields
   brand_description: z.string().optional(),
@@ -243,7 +249,7 @@ export const updateSettingsSchema = z.object({
   industry: z.string().optional(),
   company_size: z.string().optional(),
   brand_messaging_guidelines: z.string().optional(),
-  icp_document_url: z.string().url().optional(),
+  icp_document_url: emptyStringToUndefined,
   // Onboarding fields
   onboarding_survey_completed: z.boolean().optional(),
   onboarding_survey_responses: z.record(z.any()).optional(),
