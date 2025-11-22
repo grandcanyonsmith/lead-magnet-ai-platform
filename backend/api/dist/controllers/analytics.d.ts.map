@@ -1,1 +1,0 @@
-{"version":3,"file":"analytics.d.ts","sourceRoot":"","sources":["../../src/controllers/analytics.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,aAAa,EAAE,MAAM,WAAW,CAAC;AAmB1C,cAAM,mBAAmB;IACjB,YAAY,CAAC,QAAQ,EAAE,MAAM,EAAE,WAAW,EAAE,MAAM,CAAC,MAAM,EAAE,GAAG,CAAC,GAAG,OAAO,CAAC,aAAa,CAAC;CAuK/F;AAED,eAAO,MAAM,mBAAmB,qBAA4B,CAAC"}
