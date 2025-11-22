@@ -2,7 +2,7 @@
 import logging
 import re
 import openai
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from services.api_key_manager import APIKeyManager
 
