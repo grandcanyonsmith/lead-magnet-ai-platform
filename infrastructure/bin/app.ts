@@ -7,7 +7,7 @@ import { StorageStack } from '../lib/stacks/storage-stack';
 import { WorkerStack } from '../lib/stacks/worker-stack';
 import { ComputeStack } from '../lib/stacks/compute-stack';
 import { ApiStack } from '../lib/stacks/api-stack';
-import { STACK_NAMES, DEFAULT_REGION } from '../lib/config/constants';
+import { getStackNames, DEFAULT_REGION } from '../lib/config/constants';
 
 /**
  * Validates required environment variables
@@ -57,6 +57,9 @@ function getEnvironment(): cdk.Environment {
  * @param env - AWS environment configuration
  */
 function createStacks(app: cdk.App, env: cdk.Environment): void {
+  // Get environment-specific stack names
+  const STACK_NAMES = getStackNames();
+  
   // Stack 1: Database (DynamoDB Tables) - Foundation layer
   const databaseStack = new DatabaseStack(app, 'LeadMagnetDatabaseStack', {
     env,

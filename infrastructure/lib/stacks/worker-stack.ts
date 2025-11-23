@@ -1,7 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
 import { Construct } from 'constructs';
-import { RESOURCE_PREFIXES, ECR_CONFIG } from '../config/constants';
+import { getResourcePrefixes, ECR_CONFIG } from '../config/constants';
 
 /**
  * Props for WorkerStack
@@ -31,6 +31,8 @@ export class WorkerStack extends cdk.Stack {
 
   constructor(scope: Construct, id: string, props?: WorkerStackProps) {
     super(scope, id, props);
+
+    const RESOURCE_PREFIXES = getResourcePrefixes();
 
     /**
      * ECR Repository for Lambda container images

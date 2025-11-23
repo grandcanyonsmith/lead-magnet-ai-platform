@@ -3,7 +3,7 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import { Construct } from 'constructs';
 import { createTable, createTableWithGSI } from '../utils/dynamodb-helpers';
 import { TableMap, TableKey } from '../types';
-import { TABLE_NAMES } from '../config/constants';
+import { getTableNames } from '../config/constants';
 
 /**
  * Database Stack
@@ -16,6 +16,8 @@ export class DatabaseStack extends cdk.Stack {
 
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
+
+    const TABLE_NAMES = getTableNames();
 
     // Table 1: Workflows
     const workflowsTable = createTableWithGSI(

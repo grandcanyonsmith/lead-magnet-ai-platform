@@ -4,7 +4,7 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import { Construct } from 'constructs';
-import { RESOURCE_PREFIXES, LAMBDA_DEFAULTS, COGNITO_CONFIG, TABLE_NAMES } from '../config/constants';
+import { getResourcePrefixes, getTableNames, LAMBDA_DEFAULTS, COGNITO_CONFIG } from '../config/constants';
 
 export class AuthStack extends cdk.Stack {
   public readonly userPool: cognito.UserPool;
@@ -12,6 +12,9 @@ export class AuthStack extends cdk.Stack {
 
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
+
+    const RESOURCE_PREFIXES = getResourcePrefixes();
+    const TABLE_NAMES = getTableNames();
 
     // Create Lambda function to auto-confirm users and set tenant_id
     // Path is relative to infrastructure directory (where CDK is executed from)

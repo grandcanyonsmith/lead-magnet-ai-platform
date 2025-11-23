@@ -17,6 +17,28 @@ export const SECRET_NAMES = {
 /**
  * DynamoDB table names
  */
+export function getTableNames() {
+  const prefix = getEnvironmentPrefix();
+  return {
+    WORKFLOWS: `${prefix}leadmagnet-workflows`,
+    FORMS: `${prefix}leadmagnet-forms`,
+    SUBMISSIONS: `${prefix}leadmagnet-submissions`,
+    JOBS: `${prefix}leadmagnet-jobs`,
+    ARTIFACTS: `${prefix}leadmagnet-artifacts`,
+    TEMPLATES: `${prefix}leadmagnet-templates`,
+    USER_SETTINGS: `${prefix}leadmagnet-user-settings`,
+    USAGE_RECORDS: `${prefix}leadmagnet-usage-records`,
+    NOTIFICATIONS: `${prefix}leadmagnet-notifications`,
+    USERS: `${prefix}leadmagnet-users`,
+    CUSTOMERS: `${prefix}leadmagnet-customers`,
+    FILES: `${prefix}leadmagnet-files`,
+    IMPERSONATION_LOGS: `${prefix}leadmagnet-impersonation-logs`,
+    SESSIONS: `${prefix}leadmagnet-sessions`,
+    FOLDERS: `${prefix}leadmagnet-folders`,
+  };
+}
+
+// Legacy export for backwards compatibility (production)
 export const TABLE_NAMES = {
   WORKFLOWS: 'leadmagnet-workflows',
   FORMS: 'leadmagnet-forms',
@@ -38,14 +60,46 @@ export const TABLE_NAMES = {
 /**
  * Lambda function names
  */
+export function getFunctionNames() {
+  const prefix = getEnvironmentPrefix();
+  return {
+    API_HANDLER: `${prefix}leadmagnet-api-handler`,
+    JOB_PROCESSOR: `${prefix}leadmagnet-job-processor`,
+  };
+}
+
+// Legacy export for backwards compatibility (production)
 export const FUNCTION_NAMES = {
   API_HANDLER: 'leadmagnet-api-handler',
   JOB_PROCESSOR: 'leadmagnet-job-processor',
 } as const;
 
 /**
+ * Environment prefix (set via CDK context or environment variable)
+ * Defaults to empty string for production, 'staging-' for staging
+ */
+export function getEnvironmentPrefix(): string {
+  // Check CDK context first, then environment variable
+  const env = process.env.CDK_ENVIRONMENT || process.env.ENVIRONMENT || '';
+  return env === 'staging' ? 'staging-' : '';
+}
+
+/**
  * Stack names (used in CloudFormation)
  */
+export function getStackNames() {
+  const prefix = getEnvironmentPrefix();
+  return {
+    DATABASE: `${prefix}leadmagnet-database`,
+    AUTH: `${prefix}leadmagnet-auth`,
+    STORAGE: `${prefix}leadmagnet-storage`,
+    WORKER: `${prefix}leadmagnet-worker`,
+    COMPUTE: `${prefix}leadmagnet-compute`,
+    API: `${prefix}leadmagnet-api`,
+  };
+}
+
+// Legacy export for backwards compatibility (production)
 export const STACK_NAMES = {
   DATABASE: 'leadmagnet-database',
   AUTH: 'leadmagnet-auth',
@@ -58,6 +112,20 @@ export const STACK_NAMES = {
 /**
  * Resource prefixes and naming patterns
  */
+export function getResourcePrefixes() {
+  const prefix = getEnvironmentPrefix();
+  return {
+    BUCKET: `${prefix}leadmagnet-artifacts`,
+    USER_POOL: `${prefix}leadmagnet-users`,
+    USER_POOL_CLIENT: 'web-app',
+    STATE_MACHINE: `${prefix}leadmagnet-job-processor`,
+    API_NAME: `${prefix}leadmagnet-api`,
+    ECR_REPOSITORY: `leadmagnet/${prefix ? 'staging-' : ''}worker`,
+    COGNITO_DOMAIN: `${prefix}leadmagnet`,
+  };
+}
+
+// Legacy export for backwards compatibility (production)
 export const RESOURCE_PREFIXES = {
   BUCKET: 'leadmagnet-artifacts',
   USER_POOL: 'leadmagnet-users',

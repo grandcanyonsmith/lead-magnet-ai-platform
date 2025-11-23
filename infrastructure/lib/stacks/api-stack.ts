@@ -12,7 +12,7 @@ import { Construct } from 'constructs';
 import { TableMap } from '../types';
 import { createLambdaRole, grantDynamoDBPermissions, grantS3Permissions, grantSecretsAccess } from '../utils/lambda-helpers';
 import { createTableEnvironmentVars } from '../utils/environment-helpers';
-import { FUNCTION_NAMES, SECRET_NAMES, LAMBDA_DEFAULTS, ENV_VAR_NAMES, DEFAULT_LOG_LEVEL, RESOURCE_PREFIXES } from '../config/constants';
+import { getFunctionNames, getResourcePrefixes, SECRET_NAMES, LAMBDA_DEFAULTS, ENV_VAR_NAMES, DEFAULT_LOG_LEVEL } from '../config/constants';
 
 export interface ApiStackProps extends cdk.StackProps {
   userPool: cognito.UserPool;
@@ -29,6 +29,9 @@ export class ApiStack extends cdk.Stack {
 
   constructor(scope: Construct, id: string, props: ApiStackProps) {
     super(scope, id, props);
+
+    const FUNCTION_NAMES = getFunctionNames();
+    const RESOURCE_PREFIXES = getResourcePrefixes();
 
     // Create Lambda execution role
     const lambdaRole = createLambdaRole(this, 'ApiLambdaRole', {

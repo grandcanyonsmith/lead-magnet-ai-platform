@@ -4,7 +4,7 @@ import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
-import { RESOURCE_PREFIXES, S3_CONFIG, CLOUDFRONT_CONFIG } from '../config/constants';
+import { getResourcePrefixes, S3_CONFIG, CLOUDFRONT_CONFIG } from '../config/constants';
 
 /**
  * Creates bucket policy statements for public read access to image files
@@ -50,6 +50,8 @@ export class StorageStack extends cdk.Stack {
 
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
+
+    const RESOURCE_PREFIXES = getResourcePrefixes();
 
     // S3 Bucket for artifacts
     this.artifactsBucket = new s3.Bucket(this, 'ArtifactsBucket', {

@@ -10,7 +10,7 @@ import { Construct } from 'constructs';
 import { TableMap, TableKey } from '../types';
 import { createLambdaWithTables, grantSecretsAccess, grantDynamoDBPermissions, grantS3Permissions } from '../utils/lambda-helpers';
 import { createJobProcessorStateMachine } from '../stepfunctions/job-processor-state-machine';
-import { SECRET_NAMES, LAMBDA_DEFAULTS, ENV_VAR_NAMES, DEFAULT_LOG_LEVEL, PLAYWRIGHT_BROWSERS_PATH, RESOURCE_PREFIXES, STEP_FUNCTIONS_DEFAULTS } from '../config/constants';
+import { SECRET_NAMES, LAMBDA_DEFAULTS, ENV_VAR_NAMES, DEFAULT_LOG_LEVEL, PLAYWRIGHT_BROWSERS_PATH, getResourcePrefixes, STEP_FUNCTIONS_DEFAULTS } from '../config/constants';
 
 export interface ComputeStackProps extends cdk.StackProps {
   tablesMap: TableMap;
@@ -26,6 +26,8 @@ export class ComputeStack extends cdk.Stack {
 
   constructor(scope: Construct, id: string, props: ComputeStackProps) {
     super(scope, id, props);
+
+    const RESOURCE_PREFIXES = getResourcePrefixes();
 
     // Create Lambda function for job processing
     const logGroup = new logs.LogGroup(this, 'JobProcessorLogGroup', {
