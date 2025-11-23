@@ -88,8 +88,11 @@ export default function WorkflowsPage() {
 
   const loadWorkflows = async () => {
     try {
+      // Get all workflows including drafts - don't filter by status
       const data = await api.getWorkflows()
       const workflowsList = data.workflows || []
+      // Ensure we include all statuses: 'active', 'inactive', and 'draft'
+      // No status filtering - show all workflows regardless of status
       // Sort by created_at DESC (most recent first) as fallback
       workflowsList.sort((a: any, b: any) => {
         const dateA = new Date(a.created_at || 0).getTime()

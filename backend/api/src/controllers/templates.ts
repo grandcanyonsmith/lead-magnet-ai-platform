@@ -81,6 +81,8 @@ class TemplatesController {
       tenant_id: tenantId,
       ...data,
       placeholder_tags: data.placeholder_tags || placeholderTags,
+      // Ensure is_published is set (defaults to true from schema)
+      is_published: data.is_published !== undefined ? data.is_published : true,
       created_at: new Date().toISOString(),
     };
 

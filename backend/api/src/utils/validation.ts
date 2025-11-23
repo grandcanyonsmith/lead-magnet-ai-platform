@@ -24,7 +24,10 @@ export const workflowStepSchema = z.object({
   ).optional(), // Array of tool types or tool objects with configuration
   tool_choice: z.enum(['auto', 'required', 'none']).optional().default('auto'), // How model should use tools
   // Webhook step fields
-  webhook_url: z.string().url().optional(),
+  webhook_url: z.preprocess(
+    (val) => (val === '' || val === null || val === undefined ? undefined : val),
+    z.string().url().optional()
+  ),
   webhook_headers: z.record(z.string()).optional(),
   webhook_data_selection: z.object({
     include_submission: z.boolean().optional().default(true),
@@ -51,6 +54,8 @@ const baseWorkflowSchema = z.object({
   workflow_description: z.string().max(1000).optional(),
   // New multi-step workflow support
   steps: z.array(workflowStepSchema).optional(),
+  // Status field for workflow lifecycle
+  status: z.enum(['draft', 'active', 'inactive']).optional(),
   // Legacy fields (kept for backward compatibility in database, but not used for new workflows)
   ai_model: z.string().optional(),
   ai_instructions: z.string().optional(),
@@ -61,7 +66,10 @@ const baseWorkflowSchema = z.object({
   template_version: z.number().default(0),
   // Delivery configuration
   delivery_method: z.enum(['webhook', 'sms', 'none']).default('none'),
-  delivery_webhook_url: z.string().url().optional(),
+  delivery_webhook_url: z.preprocess(
+    (val) => (val === '' || val === null || val === undefined ? undefined : val),
+    z.string().url().optional()
+  ),
   delivery_webhook_headers: z.record(z.string()).optional(),
   delivery_sms_enabled: z.boolean().default(false),
   delivery_sms_message: z.string().optional(), // Manual SMS message
@@ -198,7 +206,10 @@ export const createFormSchema = z.object({
   captcha_enabled: z.boolean().default(false),
   custom_css: z.string().optional(),
   thank_you_message: z.string().optional(),
-  redirect_url: z.string().url().optional(),
+  redirect_url: z.preprocess(
+    (val) => (val === '' || val === null || val === undefined ? undefined : val),
+    z.string().url().optional()
+  ),
 });
 
 export const updateFormSchema = createFormSchema.partial();
@@ -209,7 +220,7 @@ export const createTemplateSchema = z.object({
   template_description: z.string().max(1000).optional(),
   html_content: z.string().min(1),
   placeholder_tags: z.array(z.string()).optional(),
-  is_published: z.boolean().default(false),
+  is_published: z.boolean().default(true), // Templates are published by default
 });
 
 export const updateTemplateSchema = createTemplateSchema.partial();
@@ -218,9 +229,18 @@ export const updateTemplateSchema = createTemplateSchema.partial();
 export const updateSettingsSchema = z.object({
   organization_name: z.string().optional(),
   contact_email: z.string().email().optional(),
-  website_url: z.string().url().optional(),
-  logo_url: z.string().url().optional(),
-  avatar_url: z.string().url().optional(),
+  website_url: z.preprocess(
+    (val) => (val === '' || val === null || val === undefined ? undefined : val),
+    z.string().url().optional()
+  ),
+  logo_url: z.preprocess(
+    (val) => (val === '' || val === null || val === undefined ? undefined : val),
+    z.string().url().optional()
+  ),
+  avatar_url: z.preprocess(
+    (val) => (val === '' || val === null || val === undefined ? undefined : val),
+    z.string().url().optional()
+  ),
   branding_colors: z
     .object({
       primary: z.string(),
@@ -229,7 +249,10 @@ export const updateSettingsSchema = z.object({
     .optional(),
   default_ai_model: z.string().optional(),
   webhooks: z.array(z.string().url()).optional(),
-  ghl_webhook_url: z.string().url().optional(),
+  ghl_webhook_url: z.preprocess(
+    (val) => (val === '' || val === null || val === undefined ? undefined : val),
+    z.string().url().optional()
+  ),
   lead_phone_field: z.string().optional(),
   // Brand information fields
   brand_description: z.string().optional(),
@@ -239,7 +262,10 @@ export const updateSettingsSchema = z.object({
   industry: z.string().optional(),
   company_size: z.string().optional(),
   brand_messaging_guidelines: z.string().optional(),
-  icp_document_url: z.string().url().optional(),
+  icp_document_url: z.preprocess(
+    (val) => (val === '' || val === null || val === undefined ? undefined : val),
+    z.string().url().optional()
+  ),
   // Onboarding fields
   onboarding_survey_completed: z.boolean().optional(),
   onboarding_survey_responses: z.record(z.any()).optional(),

@@ -261,8 +261,8 @@ export class WorkflowAIController {
         formFieldsResult.formData
       );
 
-      // Save workflow as draft
-      logger.info('[Workflow Generation] Saving workflow as draft', { jobId });
+      // Save workflow as active (AI-generated workflows are always active)
+      logger.info('[Workflow Generation] Saving workflow as active', { jobId });
       const { workflow_id, form_id } = await saveDraftWorkflow(
         tenantId,
         {
@@ -276,7 +276,7 @@ export class WorkflowAIController {
         result.template.template_description
       );
 
-      logger.info('[Workflow Generation] Draft workflow saved', {
+      logger.info('[Workflow Generation] Workflow saved as active', {
         jobId,
         workflowId: workflow_id,
         formId: form_id,

@@ -1,6 +1,6 @@
 /**
  * Draft Workflow Service
- * Handles saving AI-generated workflows as drafts
+ * Handles saving AI-generated workflows (always saved as active)
  */
 
 import { ulid } from 'ulid';
@@ -25,7 +25,7 @@ export interface DraftWorkflowData {
 }
 
 /**
- * Save a generated workflow as a draft
+ * Save a generated workflow (always saved as active)
  */
 export async function saveDraftWorkflow(
   tenantId: string,
@@ -38,7 +38,7 @@ export async function saveDraftWorkflow(
     throw new Error('WORKFLOWS_TABLE environment variable is not configured');
   }
 
-  logger.info('[Draft Workflow Service] Saving draft workflow', {
+  logger.info('[Draft Workflow Service] Saving AI-generated workflow as active', {
     tenantId,
     workflowName: draftData.workflow_name,
     stepsCount: draftData.steps?.length || 0,
@@ -59,13 +59,13 @@ export async function saveDraftWorkflow(
     steps: workflowData.steps,
     template_id: workflowData.template_id,
     template_version: workflowData.template_version || 0,
-    status: 'draft', // Save as draft
+    status: 'active', // Save as active (AI-generated workflows are always active)
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
 
   await db.put(WORKFLOWS_TABLE, workflow);
-  logger.info('[Draft Workflow Service] Draft workflow saved', { workflowId });
+  logger.info('[Draft Workflow Service] AI-generated workflow saved as active', { workflowId });
 
   // Create template if HTML content is provided
   let templateId: string | null = null;
@@ -77,6 +77,7 @@ export async function saveDraftWorkflow(
         template_description: templateDescription || '',
         html_content: templateHtml,
         workflow_id: workflowId,
+        is_published: true, // AI-generated templates are always published
       });
       
       if (templateResult.body && (templateResult.body as any).template_id) {
