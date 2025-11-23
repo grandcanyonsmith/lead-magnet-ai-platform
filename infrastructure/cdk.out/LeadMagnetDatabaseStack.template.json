@@ -840,17 +840,6 @@
     "Name": "JobsTableName"
    }
   },
-  "ExportsOutputFnGetAttSessionsTable7C302024Arn24FF8012": {
-   "Value": {
-    "Fn::GetAtt": [
-     "SessionsTable7C302024",
-     "Arn"
-    ]
-   },
-   "Export": {
-    "Name": "leadmagnet-database:ExportsOutputFnGetAttSessionsTable7C302024Arn24FF8012"
-   }
-  },
   "ExportsOutputFnGetAttFoldersTableD1BB987CArn1A2471F0": {
    "Value": {
     "Fn::GetAtt": [
@@ -992,6 +981,17 @@
    },
    "Export": {
     "Name": "leadmagnet-database:ExportsOutputFnGetAttImpersonationLogsTableBD29E063Arn66BDDB76"
+   }
+  },
+  "ExportsOutputFnGetAttSessionsTable7C302024Arn24FF8012": {
+   "Value": {
+    "Fn::GetAtt": [
+     "SessionsTable7C302024",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "leadmagnet-database:ExportsOutputFnGetAttSessionsTable7C302024Arn24FF8012"
    }
   },
   "ExportsOutputRefWorkflowsTable4E215008D0FFE690": {

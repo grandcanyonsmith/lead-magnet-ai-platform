@@ -11,7 +11,7 @@ from typing import Dict, Any, Optional
 import boto3
 import requests
 
-from ai_service import AIService
+from .ai_service import AIService
 from .db_service import DynamoDBService
 
 logger = logging.getLogger(__name__)

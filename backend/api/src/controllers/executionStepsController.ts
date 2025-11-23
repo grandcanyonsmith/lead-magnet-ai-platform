@@ -16,16 +16,14 @@ export class ExecutionStepsController {
    * Get execution steps for a job by fetching directly from S3.
    * This endpoint proxies the execution steps to avoid presigned URL expiration issues.
    */
-  async getExecutionSteps(tenantId: string, jobId: string): Promise<RouteResponse> {
+  async getExecutionSteps(_tenantId: string, jobId: string): Promise<RouteResponse> {
     const job = await db.get(JOBS_TABLE, { job_id: jobId });
 
     if (!job) {
       throw new ApiError('Job not found', 404);
     }
 
-    if (job.tenant_id !== tenantId) {
-      throw new ApiError('You don\'t have permission to access this job', 403);
-    }
+    // Removed tenant_id check - allow access to all jobs from all accounts (matching jobs.get() behavior)
 
     if (!job.execution_steps_s3_key) {
       return {
