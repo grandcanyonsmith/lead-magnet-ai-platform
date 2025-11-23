@@ -69,55 +69,55 @@
        ],
        "Effect": "Allow",
        "Resource": [
-        "arn:aws:dynamodb:us-east-1:471112574622:table/leadmagnet-usage-records",
+        "arn:aws:dynamodb:us-east-1:471112574622:table/staging-leadmagnet-usage-records",
         {
-         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttArtifactsTable22794241ArnEC6D514B"
+         "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttArtifactsTable22794241ArnEC6D514B"
         },
         {
-         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttCustomersTableB554B793Arn983124AF"
+         "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttCustomersTableB554B793Arn983124AF"
         },
         {
-         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttFilesTable1399FAA4Arn25DD9DF2"
+         "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttFilesTable1399FAA4Arn25DD9DF2"
         },
         {
-         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttFoldersTableD1BB987CArn1A2471F0"
+         "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttFoldersTableD1BB987CArn1A2471F0"
         },
         {
-         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttFormsTable9C91E1CFArnD25FB1C4"
+         "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttFormsTable9C91E1CFArnD25FB1C4"
         },
         {
-         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttImpersonationLogsTableBD29E063Arn66BDDB76"
+         "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttImpersonationLogsTableBD29E063Arn66BDDB76"
         },
         {
-         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttJobsTable1970BC16ArnC40C1624"
+         "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttJobsTable1970BC16ArnC40C1624"
         },
         {
-         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttNotificationsTable76DCFC6CArn012EC0C4"
+         "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttNotificationsTable76DCFC6CArn012EC0C4"
         },
         {
-         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttSessionsTable7C302024Arn24FF8012"
+         "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttSessionsTable7C302024Arn24FF8012"
         },
         {
-         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttSubmissionsTable75718D3DArn8D9DD8A4"
+         "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttSubmissionsTable75718D3DArn8D9DD8A4"
         },
         {
-         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttTemplatesTable3F253039ArnF1DF357E"
+         "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttTemplatesTable3F253039ArnF1DF357E"
         },
         {
-         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttUserSettingsTable755385E4Arn2F7CD415"
+         "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttUserSettingsTable755385E4Arn2F7CD415"
         },
         {
-         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttUsersTable9725E9C8Arn5684EF99"
+         "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttUsersTable9725E9C8Arn5684EF99"
         },
         {
-         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttWorkflowsTable4E215008Arn0D44497B"
+         "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttWorkflowsTable4E215008Arn0D44497B"
         },
         {
          "Fn::Join": [
           "",
           [
            {
-            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttArtifactsTable22794241ArnEC6D514B"
+            "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttArtifactsTable22794241ArnEC6D514B"
            },
            "/index/*"
           ]
@@ -128,7 +128,7 @@
           "",
           [
            {
-            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttFilesTable1399FAA4Arn25DD9DF2"
+            "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttFilesTable1399FAA4Arn25DD9DF2"
            },
            "/index/*"
           ]
@@ -139,7 +139,7 @@
           "",
           [
            {
-            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttFoldersTableD1BB987CArn1A2471F0"
+            "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttFoldersTableD1BB987CArn1A2471F0"
            },
            "/index/*"
           ]
@@ -150,7 +150,7 @@
           "",
           [
            {
-            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttFormsTable9C91E1CFArnD25FB1C4"
+            "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttFormsTable9C91E1CFArnD25FB1C4"
            },
            "/index/*"
           ]
@@ -161,7 +161,7 @@
           "",
           [
            {
-            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttJobsTable1970BC16ArnC40C1624"
+            "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttJobsTable1970BC16ArnC40C1624"
            },
            "/index/*"
           ]
@@ -172,7 +172,7 @@
           "",
           [
            {
-            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttNotificationsTable76DCFC6CArn012EC0C4"
+            "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttNotificationsTable76DCFC6CArn012EC0C4"
            },
            "/index/*"
           ]
@@ -183,7 +183,7 @@
           "",
           [
            {
-            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttSubmissionsTable75718D3DArn8D9DD8A4"
+            "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttSubmissionsTable75718D3DArn8D9DD8A4"
            },
            "/index/*"
           ]
@@ -194,7 +194,7 @@
           "",
           [
            {
-            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttTemplatesTable3F253039ArnF1DF357E"
+            "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttTemplatesTable3F253039ArnF1DF357E"
            },
            "/index/*"
           ]
@@ -205,7 +205,7 @@
           "",
           [
            {
-            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttUsersTable9725E9C8Arn5684EF99"
+            "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttUsersTable9725E9C8Arn5684EF99"
            },
            "/index/*"
           ]
@@ -216,7 +216,7 @@
           "",
           [
            {
-            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttWorkflowsTable4E215008Arn0D44497B"
+            "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttWorkflowsTable4E215008Arn0D44497B"
            },
            "/index/*"
           ]
@@ -243,14 +243,14 @@
        "Effect": "Allow",
        "Resource": [
         {
-         "Fn::ImportValue": "leadmagnet-storage:ExportsOutputFnGetAttArtifactsBucket2AAC5544ArnD57FAE19"
+         "Fn::ImportValue": "staging-leadmagnet-storage:ExportsOutputFnGetAttArtifactsBucket2AAC5544ArnD57FAE19"
         },
         {
          "Fn::Join": [
           "",
           [
            {
-            "Fn::ImportValue": "leadmagnet-storage:ExportsOutputFnGetAttArtifactsBucket2AAC5544ArnD57FAE19"
+            "Fn::ImportValue": "staging-leadmagnet-storage:ExportsOutputFnGetAttArtifactsBucket2AAC5544ArnD57FAE19"
            },
            "/*"
           ]
@@ -268,7 +268,7 @@
        ],
        "Effect": "Allow",
        "Resource": [
-        "arn:aws:dynamodb:us-east-1:471112574622:table/leadmagnet-usage-records",
+        "arn:aws:dynamodb:us-east-1:471112574622:table/staging-leadmagnet-usage-records",
         {
          "Ref": "AWS::NoValue"
         }
@@ -314,7 +314,7 @@
            "Fn::Split": [
             ":",
             {
-             "Fn::ImportValue": "leadmagnet-worker:ExportsOutputFnGetAttWorkerRepository770852D6Arn0E6C90D3"
+             "Fn::ImportValue": "staging-leadmagnet-worker:ExportsOutputFnGetAttWorkerRepository770852D6Arn0E6C90D3"
             }
            ]
           }
@@ -328,7 +328,7 @@
            "Fn::Split": [
             ":",
             {
-             "Fn::ImportValue": "leadmagnet-worker:ExportsOutputFnGetAttWorkerRepository770852D6Arn0E6C90D3"
+             "Fn::ImportValue": "staging-leadmagnet-worker:ExportsOutputFnGetAttWorkerRepository770852D6Arn0E6C90D3"
             }
            ]
           }
@@ -340,7 +340,7 @@
         },
         "/",
         {
-         "Fn::ImportValue": "leadmagnet-worker:ExportsOutputRefWorkerRepository770852D66C2AAEBD"
+         "Fn::ImportValue": "staging-leadmagnet-worker:ExportsOutputRefWorkerRepository770852D66C2AAEBD"
         },
         ":latest"
        ]
@@ -350,53 +350,53 @@
     "Environment": {
      "Variables": {
       "WORKFLOWS_TABLE": {
-       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefWorkflowsTable4E215008D0FFE690"
+       "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputRefWorkflowsTable4E215008D0FFE690"
       },
       "FORMS_TABLE": {
-       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefFormsTable9C91E1CF5414D606"
+       "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputRefFormsTable9C91E1CF5414D606"
       },
       "SUBMISSIONS_TABLE": {
-       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefSubmissionsTable75718D3D178CFBFC"
+       "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputRefSubmissionsTable75718D3D178CFBFC"
       },
       "JOBS_TABLE": {
-       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefJobsTable1970BC16EDB4A824"
+       "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputRefJobsTable1970BC16EDB4A824"
       },
       "ARTIFACTS_TABLE": {
-       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefArtifactsTable227942413974C39D"
+       "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputRefArtifactsTable227942413974C39D"
       },
       "TEMPLATES_TABLE": {
-       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefTemplatesTable3F2530396272C7B9"
+       "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputRefTemplatesTable3F2530396272C7B9"
       },
       "USER_SETTINGS_TABLE": {
-       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefUserSettingsTable755385E409BF890F"
+       "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputRefUserSettingsTable755385E409BF890F"
       },
-      "USAGE_RECORDS_TABLE": "leadmagnet-usage-records",
+      "USAGE_RECORDS_TABLE": "staging-leadmagnet-usage-records",
       "NOTIFICATIONS_TABLE": {
-       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefNotificationsTable76DCFC6C32DE73EE"
+       "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputRefNotificationsTable76DCFC6C32DE73EE"
       },
       "USERS_TABLE": {
-       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefUsersTable9725E9C857961836"
+       "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputRefUsersTable9725E9C857961836"
       },
       "CUSTOMERS_TABLE": {
-       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefCustomersTableB554B793C1CB863D"
+       "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputRefCustomersTableB554B793C1CB863D"
       },
       "FILES_TABLE": {
-       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefFilesTable1399FAA4592580B8"
+       "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputRefFilesTable1399FAA4592580B8"
       },
       "IMPERSONATION_LOGS_TABLE": {
-       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefImpersonationLogsTableBD29E063DB45D8C3"
+       "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputRefImpersonationLogsTableBD29E063DB45D8C3"
       },
       "SESSIONS_TABLE": {
-       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefSessionsTable7C3020246E1CCFDD"
+       "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputRefSessionsTable7C3020246E1CCFDD"
       },
       "FOLDERS_TABLE": {
-       "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefFoldersTableD1BB987CD11999C6"
+       "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputRefFoldersTableD1BB987CD11999C6"
       },
       "ARTIFACTS_BUCKET": {
-       "Fn::ImportValue": "leadmagnet-storage:ExportsOutputRefArtifactsBucket2AAC55442DB5E6C9"
+       "Fn::ImportValue": "staging-leadmagnet-storage:ExportsOutputRefArtifactsBucket2AAC55442DB5E6C9"
       },
       "CLOUDFRONT_DOMAIN": {
-       "Fn::ImportValue": "leadmagnet-storage:ExportsOutputFnGetAttDistribution830FAC52DomainNameBEB09E30"
+       "Fn::ImportValue": "staging-leadmagnet-storage:ExportsOutputFnGetAttDistribution830FAC52DomainNameBEB09E30"
       },
       "OPENAI_SECRET_NAME": "leadmagnet/openai-api-key",
       "TWILIO_SECRET_NAME": "leadmagnet/twilio-credentials",
@@ -469,55 +469,55 @@
        ],
        "Effect": "Allow",
        "Resource": [
-        "arn:aws:dynamodb:us-east-1:471112574622:table/leadmagnet-usage-records",
+        "arn:aws:dynamodb:us-east-1:471112574622:table/staging-leadmagnet-usage-records",
         {
-         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttArtifactsTable22794241ArnEC6D514B"
+         "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttArtifactsTable22794241ArnEC6D514B"
         },
         {
-         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttCustomersTableB554B793Arn983124AF"
+         "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttCustomersTableB554B793Arn983124AF"
         },
         {
-         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttFilesTable1399FAA4Arn25DD9DF2"
+         "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttFilesTable1399FAA4Arn25DD9DF2"
         },
         {
-         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttFoldersTableD1BB987CArn1A2471F0"
+         "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttFoldersTableD1BB987CArn1A2471F0"
         },
         {
-         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttFormsTable9C91E1CFArnD25FB1C4"
+         "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttFormsTable9C91E1CFArnD25FB1C4"
         },
         {
-         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttImpersonationLogsTableBD29E063Arn66BDDB76"
+         "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttImpersonationLogsTableBD29E063Arn66BDDB76"
         },
         {
-         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttJobsTable1970BC16ArnC40C1624"
+         "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttJobsTable1970BC16ArnC40C1624"
         },
         {
-         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttNotificationsTable76DCFC6CArn012EC0C4"
+         "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttNotificationsTable76DCFC6CArn012EC0C4"
         },
         {
-         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttSessionsTable7C302024Arn24FF8012"
+         "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttSessionsTable7C302024Arn24FF8012"
         },
         {
-         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttSubmissionsTable75718D3DArn8D9DD8A4"
+         "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttSubmissionsTable75718D3DArn8D9DD8A4"
         },
         {
-         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttTemplatesTable3F253039ArnF1DF357E"
+         "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttTemplatesTable3F253039ArnF1DF357E"
         },
         {
-         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttUserSettingsTable755385E4Arn2F7CD415"
+         "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttUserSettingsTable755385E4Arn2F7CD415"
         },
         {
-         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttUsersTable9725E9C8Arn5684EF99"
+         "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttUsersTable9725E9C8Arn5684EF99"
         },
         {
-         "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttWorkflowsTable4E215008Arn0D44497B"
+         "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttWorkflowsTable4E215008Arn0D44497B"
         },
         {
          "Fn::Join": [
           "",
           [
            {
-            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttArtifactsTable22794241ArnEC6D514B"
+            "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttArtifactsTable22794241ArnEC6D514B"
            },
            "/index/*"
           ]
@@ -528,7 +528,7 @@
           "",
           [
            {
-            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttFilesTable1399FAA4Arn25DD9DF2"
+            "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttFilesTable1399FAA4Arn25DD9DF2"
            },
            "/index/*"
           ]
@@ -539,7 +539,7 @@
           "",
           [
            {
-            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttFoldersTableD1BB987CArn1A2471F0"
+            "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttFoldersTableD1BB987CArn1A2471F0"
            },
            "/index/*"
           ]
@@ -550,7 +550,7 @@
           "",
           [
            {
-            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttFormsTable9C91E1CFArnD25FB1C4"
+            "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttFormsTable9C91E1CFArnD25FB1C4"
            },
            "/index/*"
           ]
@@ -561,7 +561,7 @@
           "",
           [
            {
-            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttJobsTable1970BC16ArnC40C1624"
+            "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttJobsTable1970BC16ArnC40C1624"
            },
            "/index/*"
           ]
@@ -572,7 +572,7 @@
           "",
           [
            {
-            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttNotificationsTable76DCFC6CArn012EC0C4"
+            "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttNotificationsTable76DCFC6CArn012EC0C4"
            },
            "/index/*"
           ]
@@ -583,7 +583,7 @@
           "",
           [
            {
-            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttSubmissionsTable75718D3DArn8D9DD8A4"
+            "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttSubmissionsTable75718D3DArn8D9DD8A4"
            },
            "/index/*"
           ]
@@ -594,7 +594,7 @@
           "",
           [
            {
-            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttTemplatesTable3F253039ArnF1DF357E"
+            "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttTemplatesTable3F253039ArnF1DF357E"
            },
            "/index/*"
           ]
@@ -605,7 +605,7 @@
           "",
           [
            {
-            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttUsersTable9725E9C8Arn5684EF99"
+            "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttUsersTable9725E9C8Arn5684EF99"
            },
            "/index/*"
           ]
@@ -616,7 +616,7 @@
           "",
           [
            {
-            "Fn::ImportValue": "leadmagnet-database:ExportsOutputFnGetAttWorkflowsTable4E215008Arn0D44497B"
+            "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputFnGetAttWorkflowsTable4E215008Arn0D44497B"
            },
            "/index/*"
           ]
@@ -643,14 +643,14 @@
        "Effect": "Allow",
        "Resource": [
         {
-         "Fn::ImportValue": "leadmagnet-storage:ExportsOutputFnGetAttArtifactsBucket2AAC5544ArnD57FAE19"
+         "Fn::ImportValue": "staging-leadmagnet-storage:ExportsOutputFnGetAttArtifactsBucket2AAC5544ArnD57FAE19"
         },
         {
          "Fn::Join": [
           "",
           [
            {
-            "Fn::ImportValue": "leadmagnet-storage:ExportsOutputFnGetAttArtifactsBucket2AAC5544ArnD57FAE19"
+            "Fn::ImportValue": "staging-leadmagnet-storage:ExportsOutputFnGetAttArtifactsBucket2AAC5544ArnD57FAE19"
            },
            "/*"
           ]
@@ -693,7 +693,7 @@
          [
           "arn:aws:dynamodb:us-east-1:471112574622:table/",
           {
-           "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefJobsTable1970BC16EDB4A824"
+           "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputRefJobsTable1970BC16EDB4A824"
           }
          ]
         ]
@@ -708,7 +708,7 @@
          [
           "arn:aws:dynamodb:us-east-1:471112574622:table/",
           {
-           "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefWorkflowsTable4E215008D0FFE690"
+           "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputRefWorkflowsTable4E215008D0FFE690"
           }
          ]
         ]
@@ -749,7 +749,7 @@
   "StateMachineLogGroup15B91BCB": {
    "Type": "AWS::Logs::LogGroup",
    "Properties": {
-    "LogGroupName": "/aws/stepfunctions/leadmagnet-job-processor",
+    "LogGroupName": "/aws/stepfunctions/staging-leadmagnet-job-processor",
     "RetentionInDays": 7
    },
    "UpdateReplacePolicy": "Delete",
@@ -771,7 +771,7 @@
        },
        ":states:::dynamodb:updateItem\",\"Parameters\":{\"Key\":{\"job_id\":{\"S.$\":\"$.job_id\"}},\"TableName\":\"",
        {
-        "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefJobsTable1970BC16EDB4A824"
+        "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputRefJobsTable1970BC16EDB4A824"
        },
        "\",\"ExpressionAttributeNames\":{\"#status\":\"status\"},\"ExpressionAttributeValues\":{\":status\":{\"S\":\"processing\"},\":updated_at\":{\"S.$\":\"$$.State.EnteredTime\"}},\"UpdateExpression\":\"SET #status = :status, updated_at = :updated_at\"}},\"InitializeSteps\":{\"Next\":\"ComputeStepsLength\",\"Type\":\"Task\",\"ResultPath\":\"$.workflowData\",\"Resource\":\"arn:",
        {
@@ -779,7 +779,7 @@
        },
        ":states:::dynamodb:getItem\",\"Parameters\":{\"Key\":{\"workflow_id\":{\"S.$\":\"$.workflow_id\"}},\"TableName\":\"",
        {
-        "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefWorkflowsTable4E215008D0FFE690"
+        "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputRefWorkflowsTable4E215008D0FFE690"
        },
        "\",\"ConsistentRead\":false}},\"ComputeStepsLength\":{\"Type\":\"Pass\",\"ResultPath\":\"$\",\"Parameters\":{\"job_id.$\":\"$.job_id\",\"workflow_id.$\":\"$.workflow_id\",\"submission_id.$\":\"$.submission_id\",\"tenant_id.$\":\"$.tenant_id\",\"workflowData.$\":\"$.workflowData\",\"steps_length.$\":\"States.ArrayLength($.workflowData.Item.steps.L)\"},\"Next\":\"CheckTemplateExists\"},\"CheckTemplateExists\":{\"Type\":\"Choice\",\"Choices\":[{\"Variable\":\"$.workflowData.Item.template_id.S\",\"IsPresent\":true,\"Next\":\"SetHasTemplateTrue\"}],\"Default\":\"SetHasTemplateFalse\"},\"SetHasTemplateFalse\":{\"Type\":\"Pass\",\"ResultPath\":\"$\",\"Parameters\":{\"job_id.$\":\"$.job_id\",\"workflow_id.$\":\"$.workflow_id\",\"submission_id.$\":\"$.submission_id\",\"tenant_id.$\":\"$.tenant_id\",\"workflowData.$\":\"$.workflowData\",\"steps_length.$\":\"$.steps_length\",\"has_template\":false,\"template_id\":\"\"},\"Next\":\"ResolveDependencies\"},\"ResolveDependencies\":{\"Next\":\"SetupStepLoop\",\"Type\":\"Task\",\"ResultPath\":\"$.executionPlan\",\"Resource\":\"arn:",
        {
@@ -809,7 +809,7 @@
        },
        ":states:::dynamodb:updateItem\",\"Parameters\":{\"Key\":{\"job_id\":{\"S.$\":\"$.job_id\"}},\"TableName\":\"",
        {
-        "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefJobsTable1970BC16EDB4A824"
+        "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputRefJobsTable1970BC16EDB4A824"
        },
        "\",\"ExpressionAttributeNames\":{\"#status\":\"status\"},\"ExpressionAttributeValues\":{\":status\":{\"S\":\"completed\"},\":completed_at\":{\"S.$\":\"$$.State.EnteredTime\"},\":updated_at\":{\"S.$\":\"$$.State.EnteredTime\"}},\"UpdateExpression\":\"SET #status = :status, completed_at = :completed_at, updated_at = :updated_at\"}},\"ProcessHtmlGeneration\":{\"Next\":\"CheckHtmlResult\",\"Catch\":[{\"ErrorEquals\":[\"States.ALL\"],\"ResultPath\":\"$.error\",\"Next\":\"ParseErrorHtmlGenerationParseError\"}],\"Type\":\"Task\",\"ResultPath\":\"$.htmlResult\",\"Resource\":\"arn:",
        {
@@ -828,7 +828,7 @@
        },
        ":states:::dynamodb:updateItem\",\"Parameters\":{\"Key\":{\"job_id\":{\"S.$\":\"$.job_id\"}},\"TableName\":\"",
        {
-        "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefJobsTable1970BC16EDB4A824"
+        "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputRefJobsTable1970BC16EDB4A824"
        },
        "\",\"ExpressionAttributeNames\":{\"#status\":\"status\"},\"ExpressionAttributeValues\":{\":status\":{\"S\":\"failed\"},\":error\":{\"S.$\":\"$.htmlResult.Payload.error\"},\":updated_at\":{\"S.$\":\"$$.State.EnteredTime\"},\":error_type\":{\"S.$\":\"$.htmlResult.Payload.error_type\"}},\"UpdateExpression\":\"SET #status = :status, error_message = :error, updated_at = :updated_at, error_type = :error_type\"}},\"ParseErrorHtmlGenerationParseError\":{\"Type\":\"Pass\",\"ResultPath\":\"$.parsedError\",\"Parameters\":{\"job_id.$\":\"$.job_id\",\"error_message.$\":\"States.Format('Lambda execution failed: {} - {}', $.error.Error, $.error.Cause)\"},\"Next\":\"ParseErrorHtmlGenerationHandleException\"},\"ParseErrorHtmlGenerationHandleException\":{\"End\":true,\"Type\":\"Task\",\"Resource\":\"arn:",
        {
@@ -836,7 +836,7 @@
        },
        ":states:::dynamodb:updateItem\",\"Parameters\":{\"Key\":{\"job_id\":{\"S.$\":\"$.parsedError.job_id\"}},\"TableName\":\"",
        {
-        "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefJobsTable1970BC16EDB4A824"
+        "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputRefJobsTable1970BC16EDB4A824"
        },
        "\",\"ExpressionAttributeNames\":{\"#status\":\"status\"},\"ExpressionAttributeValues\":{\":status\":{\"S\":\"failed\"},\":error\":{\"S.$\":\"$.parsedError.error_message\"},\":updated_at\":{\"S.$\":\"$$.State.EnteredTime\"}},\"UpdateExpression\":\"SET #status = :status, error_message = :error, updated_at = :updated_at\"}},\"CheckStepResult\":{\"Type\":\"Choice\",\"Choices\":[{\"Variable\":\"$.processResult.Payload.success\",\"BooleanEquals\":false,\"Next\":\"HandleStepFailure\"}],\"Default\":\"IncrementStep\"},\"HandleStepFailure\":{\"End\":true,\"Type\":\"Task\",\"Resource\":\"arn:",
        {
@@ -844,7 +844,7 @@
        },
        ":states:::dynamodb:updateItem\",\"Parameters\":{\"Key\":{\"job_id\":{\"S.$\":\"$.job_id\"}},\"TableName\":\"",
        {
-        "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefJobsTable1970BC16EDB4A824"
+        "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputRefJobsTable1970BC16EDB4A824"
        },
        "\",\"ExpressionAttributeNames\":{\"#status\":\"status\"},\"ExpressionAttributeValues\":{\":status\":{\"S\":\"failed\"},\":error\":{\"S.$\":\"$.processResult.Payload.error\"},\":updated_at\":{\"S.$\":\"$$.State.EnteredTime\"},\":error_type\":{\"S.$\":\"$.processResult.Payload.error_type\"}},\"UpdateExpression\":\"SET #status = :status, error_message = :error, updated_at = :updated_at, error_type = :error_type\"}},\"ParseErrorStepParseError\":{\"Type\":\"Pass\",\"ResultPath\":\"$.parsedError\",\"Parameters\":{\"job_id.$\":\"$.job_id\",\"error_message.$\":\"States.Format('Lambda execution failed: {} - {}', $.error.Error, $.error.Cause)\",\"step_index.$\":\"$.step_index\"},\"Next\":\"ParseErrorStepHandleException\"},\"ParseErrorStepHandleException\":{\"End\":true,\"Type\":\"Task\",\"Resource\":\"arn:",
        {
@@ -852,7 +852,7 @@
        },
        ":states:::dynamodb:updateItem\",\"Parameters\":{\"Key\":{\"job_id\":{\"S.$\":\"$.parsedError.job_id\"}},\"TableName\":\"",
        {
-        "Fn::ImportValue": "leadmagnet-database:ExportsOutputRefJobsTable1970BC16EDB4A824"
+        "Fn::ImportValue": "staging-leadmagnet-database:ExportsOutputRefJobsTable1970BC16EDB4A824"
        },
        "\",\"ExpressionAttributeNames\":{\"#status\":\"status\"},\"ExpressionAttributeValues\":{\":status\":{\"S\":\"failed\"},\":error\":{\"S.$\":\"$.parsedError.error_message\"},\":updated_at\":{\"S.$\":\"$$.State.EnteredTime\"}},\"UpdateExpression\":\"SET #status = :status, error_message = :error, updated_at = :updated_at\"}}}}"
       ]
@@ -880,7 +880,7 @@
       "Arn"
      ]
     },
-    "StateMachineName": "leadmagnet-job-processor",
+    "StateMachineName": "staging-leadmagnet-job-processor",
     "TracingConfiguration": {
      "Enabled": true
     }
@@ -930,7 +930,7 @@
     "Ref": "JobProcessorStateMachine3E0F5560"
    },
    "Export": {
-    "Name": "leadmagnet-compute:ExportsOutputRefJobProcessorStateMachine3E0F55605CC28738"
+    "Name": "staging-leadmagnet-compute:ExportsOutputRefJobProcessorStateMachine3E0F55605CC28738"
    }
   }
  },

@@ -4,7 +4,7 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import { Construct } from 'constructs';
-import { getResourcePrefixes, getTableNames, LAMBDA_DEFAULTS, COGNITO_CONFIG } from '../config/constants';
+import { getResourcePrefixes, getTableNames, getExportNamePrefix, LAMBDA_DEFAULTS, COGNITO_CONFIG } from '../config/constants';
 
 export class AuthStack extends cdk.Stack {
   public readonly userPool: cognito.UserPool;
@@ -15,6 +15,7 @@ export class AuthStack extends cdk.Stack {
 
     const RESOURCE_PREFIXES = getResourcePrefixes();
     const TABLE_NAMES = getTableNames();
+    const EXPORT_PREFIX = getExportNamePrefix();
 
     // Create Lambda function to auto-confirm users and set tenant_id
     // Path is relative to infrastructure directory (where CDK is executed from)
@@ -149,22 +150,22 @@ export class AuthStack extends cdk.Stack {
     // CloudFormation outputs
     new cdk.CfnOutput(this, 'UserPoolId', {
       value: this.userPool.userPoolId,
-      exportName: 'UserPoolId',
+      exportName: `${EXPORT_PREFIX}UserPoolId`,
     });
 
     new cdk.CfnOutput(this, 'UserPoolClientId', {
       value: this.userPoolClient.userPoolClientId,
-      exportName: 'UserPoolClientId',
+      exportName: `${EXPORT_PREFIX}UserPoolClientId`,
     });
 
     new cdk.CfnOutput(this, 'UserPoolArn', {
       value: this.userPool.userPoolArn,
-      exportName: 'UserPoolArn',
+      exportName: `${EXPORT_PREFIX}UserPoolArn`,
     });
 
     new cdk.CfnOutput(this, 'CognitoDomain', {
       value: `${RESOURCE_PREFIXES.COGNITO_DOMAIN}-${this.account}.auth.${this.region}.amazoncognito.com`,
-      exportName: 'CognitoDomain',
+      exportName: `${EXPORT_PREFIX}CognitoDomain`,
     });
   }
 }

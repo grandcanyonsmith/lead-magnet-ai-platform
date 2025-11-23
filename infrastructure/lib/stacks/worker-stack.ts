@@ -1,7 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
 import { Construct } from 'constructs';
-import { getResourcePrefixes, ECR_CONFIG } from '../config/constants';
+import { getResourcePrefixes, getExportNamePrefix, ECR_CONFIG } from '../config/constants';
 
 /**
  * Props for WorkerStack
@@ -33,6 +33,7 @@ export class WorkerStack extends cdk.Stack {
     super(scope, id, props);
 
     const RESOURCE_PREFIXES = getResourcePrefixes();
+    const EXPORT_PREFIX = getExportNamePrefix();
 
     /**
      * ECR Repository for Lambda container images
@@ -59,13 +60,13 @@ export class WorkerStack extends cdk.Stack {
     // CloudFormation outputs
     new cdk.CfnOutput(this, 'EcrRepositoryUri', {
       value: this.ecrRepository.repositoryUri,
-      exportName: 'WorkerEcrRepositoryUri',
+      exportName: `${EXPORT_PREFIX}WorkerEcrRepositoryUri`,
       description: 'ECR repository URI for pushing container images',
     });
 
     new cdk.CfnOutput(this, 'EcrRepositoryName', {
       value: this.ecrRepository.repositoryName,
-      exportName: 'WorkerEcrRepositoryName',
+      exportName: `${EXPORT_PREFIX}WorkerEcrRepositoryName`,
       description: 'ECR repository name',
     });
   }

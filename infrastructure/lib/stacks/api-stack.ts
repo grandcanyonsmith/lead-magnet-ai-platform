@@ -12,7 +12,7 @@ import { Construct } from 'constructs';
 import { TableMap } from '../types';
 import { createLambdaRole, grantDynamoDBPermissions, grantS3Permissions, grantSecretsAccess } from '../utils/lambda-helpers';
 import { createTableEnvironmentVars } from '../utils/environment-helpers';
-import { getFunctionNames, getResourcePrefixes, SECRET_NAMES, LAMBDA_DEFAULTS, ENV_VAR_NAMES, DEFAULT_LOG_LEVEL } from '../config/constants';
+import { getFunctionNames, getResourcePrefixes, getExportNamePrefix, SECRET_NAMES, LAMBDA_DEFAULTS, ENV_VAR_NAMES, DEFAULT_LOG_LEVEL } from '../config/constants';
 
 export interface ApiStackProps extends cdk.StackProps {
   userPool: cognito.UserPool;
@@ -32,6 +32,7 @@ export class ApiStack extends cdk.Stack {
 
     const FUNCTION_NAMES = getFunctionNames();
     const RESOURCE_PREFIXES = getResourcePrefixes();
+    const EXPORT_PREFIX = getExportNamePrefix();
 
     // Create Lambda execution role
     const lambdaRole = createLambdaRole(this, 'ApiLambdaRole', {
@@ -193,12 +194,12 @@ export class ApiStack extends cdk.Stack {
     // CloudFormation outputs
     new cdk.CfnOutput(this, 'ApiUrl', {
       value: this.api.url!,
-      exportName: 'ApiUrl',
+      exportName: `${EXPORT_PREFIX}ApiUrl`,
     });
 
     new cdk.CfnOutput(this, 'ApiFunctionArn', {
       value: this.apiFunction.functionArn,
-      exportName: 'ApiFunctionArn',
+      exportName: `${EXPORT_PREFIX}ApiFunctionArn`,
     });
   }
 }

@@ -16,16 +16,16 @@
         }
       }
     },
-    "e45a99cc6a3c02ccf347b1be4bce03676f71a8cb9810d4b2c14d317d15c45a0d": {
-      "displayName": "leadmagnet-auth Template",
+    "0f7b19a9a633950c9bb52deb672e546aa24550f0822386d0a0f4ac07c33a11f1": {
+      "displayName": "staging-leadmagnet-auth Template",
       "source": {
         "path": "LeadMagnetAuthStack.template.json",
         "packaging": "file"
       },
       "destinations": {
-        "471112574622-us-east-1-294dff32": {
+        "471112574622-us-east-1-96f5254c": {
           "bucketName": "cdk-hnb659fds-assets-471112574622-us-east-1",
-          "objectKey": "e45a99cc6a3c02ccf347b1be4bce03676f71a8cb9810d4b2c14d317d15c45a0d.json",
+          "objectKey": "0f7b19a9a633950c9bb52deb672e546aa24550f0822386d0a0f4ac07c33a11f1.json",
           "region": "us-east-1",
           "assumeRoleArn": "arn:${AWS::Partition}:iam::471112574622:role/cdk-hnb659fds-file-publishing-role-471112574622-us-east-1"
         }

@@ -18,7 +18,7 @@
         "validateOnSynth": false,
         "assumeRoleArn": "arn:${AWS::Partition}:iam::471112574622:role/cdk-hnb659fds-deploy-role-471112574622-us-east-1",
         "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::471112574622:role/cdk-hnb659fds-cfn-exec-role-471112574622-us-east-1",
-        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-471112574622-us-east-1/252e47e9fb60d4704243cc836b1da044ad258f94b7b6a43abd1a0bf9dce7126e.json",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-471112574622-us-east-1/bf171afe047d6cd28b994652e9b5714fd67c7581dccdcd97578c13dabb9fd106.json",
         "requiresBootstrapStackVersion": 6,
         "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
         "additionalDependencies": [
@@ -29,7 +29,7 @@
           "requiresBootstrapStackVersion": 8,
           "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
         },
-        "stackName": "leadmagnet-database"
+        "stackName": "staging-leadmagnet-database"
       },
       "dependencies": [
         "LeadMagnetDatabaseStack.assets"
@@ -455,7 +455,7 @@
         "validateOnSynth": false,
         "assumeRoleArn": "arn:${AWS::Partition}:iam::471112574622:role/cdk-hnb659fds-deploy-role-471112574622-us-east-1",
         "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::471112574622:role/cdk-hnb659fds-cfn-exec-role-471112574622-us-east-1",
-        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-471112574622-us-east-1/e45a99cc6a3c02ccf347b1be4bce03676f71a8cb9810d4b2c14d317d15c45a0d.json",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-471112574622-us-east-1/0f7b19a9a633950c9bb52deb672e546aa24550f0822386d0a0f4ac07c33a11f1.json",
         "requiresBootstrapStackVersion": 6,
         "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
         "additionalDependencies": [
@@ -466,7 +466,7 @@
           "requiresBootstrapStackVersion": 8,
           "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
         },
-        "stackName": "leadmagnet-auth"
+        "stackName": "staging-leadmagnet-auth"
       },
       "dependencies": [
         "LeadMagnetAuthStack.assets"
@@ -606,7 +606,7 @@
         "validateOnSynth": false,
         "assumeRoleArn": "arn:${AWS::Partition}:iam::471112574622:role/cdk-hnb659fds-deploy-role-471112574622-us-east-1",
         "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::471112574622:role/cdk-hnb659fds-cfn-exec-role-471112574622-us-east-1",
-        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-471112574622-us-east-1/ba7e8cb5016f28b199abf8115342125dcfe9db9f66baf1ec00bc6ad189204720.json",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-471112574622-us-east-1/c091dabac071883a845facbd8886b17b4650232c7d6f4f289ad8412a17618971.json",
         "requiresBootstrapStackVersion": 6,
         "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
         "additionalDependencies": [
@@ -617,7 +617,7 @@
           "requiresBootstrapStackVersion": 8,
           "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
         },
-        "stackName": "leadmagnet-storage"
+        "stackName": "staging-leadmagnet-storage"
       },
       "dependencies": [
         "LeadMagnetStorageStack.assets"
@@ -721,7 +721,7 @@
         "validateOnSynth": false,
         "assumeRoleArn": "arn:${AWS::Partition}:iam::471112574622:role/cdk-hnb659fds-deploy-role-471112574622-us-east-1",
         "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::471112574622:role/cdk-hnb659fds-cfn-exec-role-471112574622-us-east-1",
-        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-471112574622-us-east-1/381314ebe53717da28f7fa2563ceb7ba22fbe686d10e69b74459f64a61029bc2.json",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-471112574622-us-east-1/3a864e4d6131a1b7a95878ed36306945ecac4b8eb5ced2f9b4058a2cfbf2d5e9.json",
         "requiresBootstrapStackVersion": 6,
         "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
         "additionalDependencies": [
@@ -732,7 +732,7 @@
           "requiresBootstrapStackVersion": 8,
           "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
         },
-        "stackName": "leadmagnet-worker"
+        "stackName": "staging-leadmagnet-worker"
       },
       "dependencies": [
         "LeadMagnetWorkerStack.assets"
@@ -806,7 +806,7 @@
         "validateOnSynth": false,
         "assumeRoleArn": "arn:${AWS::Partition}:iam::471112574622:role/cdk-hnb659fds-deploy-role-471112574622-us-east-1",
         "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::471112574622:role/cdk-hnb659fds-cfn-exec-role-471112574622-us-east-1",
-        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-471112574622-us-east-1/a58ca2d18391cf4f23d12f994083a17c403a2898563c4efd86e768ab8cd37e03.json",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-471112574622-us-east-1/bd237f33b3eb08bb6bdb35ab16b4b0a619ac5fc2cf10a4d314bd4558c33c8dbc.json",
         "requiresBootstrapStackVersion": 6,
         "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
         "additionalDependencies": [
@@ -817,7 +817,7 @@
           "requiresBootstrapStackVersion": 8,
           "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
         },
-        "stackName": "leadmagnet-compute"
+        "stackName": "staging-leadmagnet-compute"
       },
       "dependencies": [
         "LeadMagnetDatabaseStack",
@@ -930,7 +930,7 @@
         "validateOnSynth": false,
         "assumeRoleArn": "arn:${AWS::Partition}:iam::471112574622:role/cdk-hnb659fds-deploy-role-471112574622-us-east-1",
         "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::471112574622:role/cdk-hnb659fds-cfn-exec-role-471112574622-us-east-1",
-        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-471112574622-us-east-1/f4ab9e9523578c14ab08f0ff928e8417a697ad3ee3350e36436e123ece065b77.json",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-471112574622-us-east-1/5fb97b028af9a1f801fde3fe0ab7a7ea9a3d50690710e805446a3fc31b4e2357.json",
         "requiresBootstrapStackVersion": 6,
         "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
         "additionalDependencies": [
@@ -941,7 +941,7 @@
           "requiresBootstrapStackVersion": 8,
           "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
         },
-        "stackName": "leadmagnet-api"
+        "stackName": "staging-leadmagnet-api"
       },
       "dependencies": [
         "LeadMagnetDatabaseStack",

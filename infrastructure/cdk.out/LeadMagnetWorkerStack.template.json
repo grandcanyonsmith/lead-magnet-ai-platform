@@ -11,7 +11,7 @@
     "LifecyclePolicy": {
      "LifecyclePolicyText": "{\"rules\":[{\"rulePriority\":1,\"description\":\"Keep last 10 images\",\"selection\":{\"tagStatus\":\"any\",\"countType\":\"imageCountMoreThan\",\"countNumber\":10},\"action\":{\"type\":\"expire\"}}]}"
     },
-    "RepositoryName": "leadmagnet/worker",
+    "RepositoryName": "leadmagnet/staging-worker",
     "RepositoryPolicyText": {
      "Statement": [
       {
@@ -117,7 +117,7 @@
     ]
    },
    "Export": {
-    "Name": "leadmagnet-worker:ExportsOutputFnGetAttWorkerRepository770852D6Arn0E6C90D3"
+    "Name": "staging-leadmagnet-worker:ExportsOutputFnGetAttWorkerRepository770852D6Arn0E6C90D3"
    }
   },
   "ExportsOutputRefWorkerRepository770852D66C2AAEBD": {
@@ -125,7 +125,7 @@
     "Ref": "WorkerRepository770852D6"
    },
    "Export": {
-    "Name": "leadmagnet-worker:ExportsOutputRefWorkerRepository770852D66C2AAEBD"
+    "Name": "staging-leadmagnet-worker:ExportsOutputRefWorkerRepository770852D66C2AAEBD"
    }
   }
  },

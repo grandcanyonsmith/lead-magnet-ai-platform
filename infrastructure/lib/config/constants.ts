@@ -85,6 +85,15 @@ export function getEnvironmentPrefix(): string {
 }
 
 /**
+ * Get environment-specific export name prefix
+ * Used for CloudFormation exports to avoid conflicts between environments
+ */
+export function getExportNamePrefix(): string {
+  const env = process.env.CDK_ENVIRONMENT || process.env.ENVIRONMENT || '';
+  return env === 'staging' ? 'Staging' : '';
+}
+
+/**
  * Stack names (used in CloudFormation)
  */
 export function getStackNames() {

@@ -13,7 +13,7 @@
       }
      ]
     },
-    "BucketName": "leadmagnet-artifacts-471112574622",
+    "BucketName": "staging-leadmagnet-artifacts-471112574622",
     "CorsConfiguration": {
      "CorsRules": [
       {
@@ -665,7 +665,7 @@
     ]
    },
    "Export": {
-    "Name": "leadmagnet-storage:ExportsOutputFnGetAttArtifactsBucket2AAC5544ArnD57FAE19"
+    "Name": "staging-leadmagnet-storage:ExportsOutputFnGetAttArtifactsBucket2AAC5544ArnD57FAE19"
    }
   },
   "ExportsOutputRefArtifactsBucket2AAC55442DB5E6C9": {
@@ -673,7 +673,7 @@
     "Ref": "ArtifactsBucket2AAC5544"
    },
    "Export": {
-    "Name": "leadmagnet-storage:ExportsOutputRefArtifactsBucket2AAC55442DB5E6C9"
+    "Name": "staging-leadmagnet-storage:ExportsOutputRefArtifactsBucket2AAC55442DB5E6C9"
    }
   },
   "ExportsOutputFnGetAttDistribution830FAC52DomainNameBEB09E30": {
@@ -684,7 +684,7 @@
     ]
    },
    "Export": {
-    "Name": "leadmagnet-storage:ExportsOutputFnGetAttDistribution830FAC52DomainNameBEB09E30"
+    "Name": "staging-leadmagnet-storage:ExportsOutputFnGetAttDistribution830FAC52DomainNameBEB09E30"
    }
   }
  },

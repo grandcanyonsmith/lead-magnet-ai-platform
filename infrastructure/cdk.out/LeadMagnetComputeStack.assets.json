@@ -1,16 +1,16 @@
 {
   "version": "48.0.0",
   "files": {
-    "a58ca2d18391cf4f23d12f994083a17c403a2898563c4efd86e768ab8cd37e03": {
-      "displayName": "leadmagnet-compute Template",
+    "bd237f33b3eb08bb6bdb35ab16b4b0a619ac5fc2cf10a4d314bd4558c33c8dbc": {
+      "displayName": "staging-leadmagnet-compute Template",
       "source": {
         "path": "LeadMagnetComputeStack.template.json",
         "packaging": "file"
       },
       "destinations": {
-        "471112574622-us-east-1-4ec699b5": {
+        "471112574622-us-east-1-83114aa0": {
           "bucketName": "cdk-hnb659fds-assets-471112574622-us-east-1",
-          "objectKey": "a58ca2d18391cf4f23d12f994083a17c403a2898563c4efd86e768ab8cd37e03.json",
+          "objectKey": "bd237f33b3eb08bb6bdb35ab16b4b0a619ac5fc2cf10a4d314bd4558c33c8dbc.json",
           "region": "us-east-1",
           "assumeRoleArn": "arn:${AWS::Partition}:iam::471112574622:role/cdk-hnb659fds-file-publishing-role-471112574622-us-east-1"
         }

@@ -122,8 +122,8 @@
        ],
        "Effect": "Allow",
        "Resource": [
-        "arn:aws:dynamodb:us-east-1:471112574622:table/leadmagnet-customers",
-        "arn:aws:dynamodb:us-east-1:471112574622:table/leadmagnet-users",
+        "arn:aws:dynamodb:us-east-1:471112574622:table/staging-leadmagnet-customers",
+        "arn:aws:dynamodb:us-east-1:471112574622:table/staging-leadmagnet-users",
         {
          "Ref": "AWS::NoValue"
         }
@@ -152,8 +152,8 @@
     },
     "Environment": {
      "Variables": {
-      "USERS_TABLE": "leadmagnet-users",
-      "CUSTOMERS_TABLE": "leadmagnet-customers"
+      "USERS_TABLE": "staging-leadmagnet-users",
+      "CUSTOMERS_TABLE": "staging-leadmagnet-customers"
      }
     },
     "Handler": "postConfirmation.handler",
@@ -288,7 +288,7 @@
      }
     ],
     "SmsVerificationMessage": "The verification code to your new account is {####}",
-    "UserPoolName": "leadmagnet-users",
+    "UserPoolName": "staging-leadmagnet-users",
     "UsernameAttributes": [
      "email"
     ],
@@ -308,7 +308,7 @@
   "UserPoolUserPoolDomain9F01E991": {
    "Type": "AWS::Cognito::UserPoolDomain",
    "Properties": {
-    "Domain": "leadmagnet-471112574622",
+    "Domain": "staging-leadmagnet-471112574622",
     "UserPoolId": {
      "Ref": "UserPool6BA7E5F2"
     }
@@ -403,7 +403,7 @@
    }
   },
   "CognitoDomain": {
-   "Value": "leadmagnet-471112574622.auth.us-east-1.amazoncognito.com",
+   "Value": "staging-leadmagnet-471112574622.auth.us-east-1.amazoncognito.com",
    "Export": {
     "Name": "CognitoDomain"
    }
@@ -413,7 +413,7 @@
     "Ref": "UserPoolClient2F5918F7"
    },
    "Export": {
-    "Name": "leadmagnet-auth:ExportsOutputRefUserPoolClient2F5918F753847A55"
+    "Name": "staging-leadmagnet-auth:ExportsOutputRefUserPoolClient2F5918F753847A55"
    }
   },
   "ExportsOutputRefUserPool6BA7E5F296FD7236": {
@@ -421,7 +421,7 @@
     "Ref": "UserPool6BA7E5F2"
    },
    "Export": {
-    "Name": "leadmagnet-auth:ExportsOutputRefUserPool6BA7E5F296FD7236"
+    "Name": "staging-leadmagnet-auth:ExportsOutputRefUserPool6BA7E5F296FD7236"
    }
   }
  },

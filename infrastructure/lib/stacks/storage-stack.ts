@@ -4,7 +4,7 @@ import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
-import { getResourcePrefixes, S3_CONFIG, CLOUDFRONT_CONFIG } from '../config/constants';
+import { getResourcePrefixes, getExportNamePrefix, S3_CONFIG, CLOUDFRONT_CONFIG } from '../config/constants';
 
 /**
  * Creates bucket policy statements for public read access to image files
@@ -52,6 +52,7 @@ export class StorageStack extends cdk.Stack {
     super(scope, id, props);
 
     const RESOURCE_PREFIXES = getResourcePrefixes();
+    const EXPORT_PREFIX = getExportNamePrefix();
 
     // S3 Bucket for artifacts
     this.artifactsBucket = new s3.Bucket(this, 'ArtifactsBucket', {
@@ -147,19 +148,19 @@ export class StorageStack extends cdk.Stack {
     // CloudFormation outputs
     new cdk.CfnOutput(this, 'ArtifactsBucketName', {
       value: this.artifactsBucket.bucketName,
-      exportName: 'ArtifactsBucketName',
+      exportName: `${EXPORT_PREFIX}ArtifactsBucketName`,
       description: 'S3 bucket name for storing artifacts',
     });
 
     new cdk.CfnOutput(this, 'DistributionDomainName', {
       value: this.distribution.distributionDomainName,
-      exportName: 'DistributionDomainName',
+      exportName: `${EXPORT_PREFIX}DistributionDomainName`,
       description: 'CloudFront distribution domain name',
     });
 
     new cdk.CfnOutput(this, 'DistributionId', {
       value: this.distribution.distributionId,
-      exportName: 'DistributionId',
+      exportName: `${EXPORT_PREFIX}DistributionId`,
       description: 'CloudFront distribution ID',
     });
   }

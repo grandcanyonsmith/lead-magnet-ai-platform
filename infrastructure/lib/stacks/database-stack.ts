@@ -3,7 +3,7 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import { Construct } from 'constructs';
 import { createTable, createTableWithGSI } from '../utils/dynamodb-helpers';
 import { TableMap, TableKey } from '../types';
-import { getTableNames } from '../config/constants';
+import { getTableNames, getExportNamePrefix } from '../config/constants';
 
 /**
  * Database Stack
@@ -18,6 +18,7 @@ export class DatabaseStack extends cdk.Stack {
     super(scope, id, props);
 
     const TABLE_NAMES = getTableNames();
+    const EXPORT_PREFIX = getExportNamePrefix();
 
     // Table 1: Workflows
     const workflowsTable = createTableWithGSI(
@@ -291,17 +292,17 @@ export class DatabaseStack extends cdk.Stack {
     // CloudFormation outputs
     new cdk.CfnOutput(this, 'WorkflowsTableName', {
       value: workflowsTable.tableName,
-      exportName: 'WorkflowsTableName',
+      exportName: `${EXPORT_PREFIX}WorkflowsTableName`,
     });
 
     new cdk.CfnOutput(this, 'FormsTableName', {
       value: formsTable.tableName,
-      exportName: 'FormsTableName',
+      exportName: `${EXPORT_PREFIX}FormsTableName`,
     });
 
     new cdk.CfnOutput(this, 'JobsTableName', {
       value: jobsTable.tableName,
-      exportName: 'JobsTableName',
+      exportName: `${EXPORT_PREFIX}JobsTableName`,
     });
   }
 }

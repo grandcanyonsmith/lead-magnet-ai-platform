@@ -65,7 +65,7 @@
     "SSESpecification": {
      "SSEEnabled": true
     },
-    "TableName": "leadmagnet-workflows"
+    "TableName": "staging-leadmagnet-workflows"
    },
    "UpdateReplacePolicy": "Retain",
    "DeletionPolicy": "Retain",
@@ -145,7 +145,7 @@
     "SSESpecification": {
      "SSEEnabled": true
     },
-    "TableName": "leadmagnet-forms"
+    "TableName": "staging-leadmagnet-forms"
    },
    "UpdateReplacePolicy": "Retain",
    "DeletionPolicy": "Retain",
@@ -221,7 +221,7 @@
     "SSESpecification": {
      "SSEEnabled": true
     },
-    "TableName": "leadmagnet-submissions",
+    "TableName": "staging-leadmagnet-submissions",
     "TimeToLiveSpecification": {
      "AttributeName": "ttl",
      "Enabled": true
@@ -305,7 +305,7 @@
     "SSESpecification": {
      "SSEEnabled": true
     },
-    "TableName": "leadmagnet-jobs"
+    "TableName": "staging-leadmagnet-jobs"
    },
    "UpdateReplacePolicy": "Retain",
    "DeletionPolicy": "Retain",
@@ -377,7 +377,7 @@
     "SSESpecification": {
      "SSEEnabled": true
     },
-    "TableName": "leadmagnet-artifacts"
+    "TableName": "staging-leadmagnet-artifacts"
    },
    "UpdateReplacePolicy": "Retain",
    "DeletionPolicy": "Retain",
@@ -433,7 +433,7 @@
     "SSESpecification": {
      "SSEEnabled": true
     },
-    "TableName": "leadmagnet-templates"
+    "TableName": "staging-leadmagnet-templates"
    },
    "UpdateReplacePolicy": "Retain",
    "DeletionPolicy": "Retain",
@@ -463,7 +463,7 @@
     "SSESpecification": {
      "SSEEnabled": true
     },
-    "TableName": "leadmagnet-user-settings"
+    "TableName": "staging-leadmagnet-user-settings"
    },
    "UpdateReplacePolicy": "Retain",
    "DeletionPolicy": "Retain",
@@ -539,7 +539,7 @@
     "SSESpecification": {
      "SSEEnabled": true
     },
-    "TableName": "leadmagnet-notifications",
+    "TableName": "staging-leadmagnet-notifications",
     "TimeToLiveSpecification": {
      "AttributeName": "ttl",
      "Enabled": true
@@ -591,7 +591,7 @@
     "SSESpecification": {
      "SSEEnabled": true
     },
-    "TableName": "leadmagnet-users"
+    "TableName": "staging-leadmagnet-users"
    },
    "UpdateReplacePolicy": "Retain",
    "DeletionPolicy": "Retain",
@@ -621,7 +621,7 @@
     "SSESpecification": {
      "SSEEnabled": true
     },
-    "TableName": "leadmagnet-customers"
+    "TableName": "staging-leadmagnet-customers"
    },
    "UpdateReplacePolicy": "Retain",
    "DeletionPolicy": "Retain",
@@ -677,7 +677,7 @@
     "SSESpecification": {
      "SSEEnabled": true
     },
-    "TableName": "leadmagnet-files"
+    "TableName": "staging-leadmagnet-files"
    },
    "UpdateReplacePolicy": "Retain",
    "DeletionPolicy": "Retain",
@@ -707,7 +707,7 @@
     "SSESpecification": {
      "SSEEnabled": true
     },
-    "TableName": "leadmagnet-impersonation-logs"
+    "TableName": "staging-leadmagnet-impersonation-logs"
    },
    "UpdateReplacePolicy": "Retain",
    "DeletionPolicy": "Retain",
@@ -737,7 +737,7 @@
     "SSESpecification": {
      "SSEEnabled": true
     },
-    "TableName": "leadmagnet-sessions",
+    "TableName": "staging-leadmagnet-sessions",
     "TimeToLiveSpecification": {
      "AttributeName": "expires_at",
      "Enabled": true
@@ -797,7 +797,7 @@
     "SSESpecification": {
      "SSEEnabled": true
     },
-    "TableName": "leadmagnet-folders"
+    "TableName": "staging-leadmagnet-folders"
    },
    "UpdateReplacePolicy": "Retain",
    "DeletionPolicy": "Retain",
@@ -848,7 +848,7 @@
     ]
    },
    "Export": {
-    "Name": "leadmagnet-database:ExportsOutputFnGetAttSessionsTable7C302024Arn24FF8012"
+    "Name": "staging-leadmagnet-database:ExportsOutputFnGetAttSessionsTable7C302024Arn24FF8012"
    }
   },
   "ExportsOutputFnGetAttFoldersTableD1BB987CArn1A2471F0": {
@@ -859,7 +859,7 @@
     ]
    },
    "Export": {
-    "Name": "leadmagnet-database:ExportsOutputFnGetAttFoldersTableD1BB987CArn1A2471F0"
+    "Name": "staging-leadmagnet-database:ExportsOutputFnGetAttFoldersTableD1BB987CArn1A2471F0"
    }
   },
   "ExportsOutputFnGetAttWorkflowsTable4E215008Arn0D44497B": {
@@ -870,7 +870,7 @@
     ]
    },
    "Export": {
-    "Name": "leadmagnet-database:ExportsOutputFnGetAttWorkflowsTable4E215008Arn0D44497B"
+    "Name": "staging-leadmagnet-database:ExportsOutputFnGetAttWorkflowsTable4E215008Arn0D44497B"
    }
   },
   "ExportsOutputFnGetAttFormsTable9C91E1CFArnD25FB1C4": {
@@ -881,7 +881,7 @@
     ]
    },
    "Export": {
-    "Name": "leadmagnet-database:ExportsOutputFnGetAttFormsTable9C91E1CFArnD25FB1C4"
+    "Name": "staging-leadmagnet-database:ExportsOutputFnGetAttFormsTable9C91E1CFArnD25FB1C4"
    }
   },
   "ExportsOutputFnGetAttSubmissionsTable75718D3DArn8D9DD8A4": {
@@ -892,7 +892,7 @@
     ]
    },
    "Export": {
-    "Name": "leadmagnet-database:ExportsOutputFnGetAttSubmissionsTable75718D3DArn8D9DD8A4"
+    "Name": "staging-leadmagnet-database:ExportsOutputFnGetAttSubmissionsTable75718D3DArn8D9DD8A4"
    }
   },
   "ExportsOutputFnGetAttJobsTable1970BC16ArnC40C1624": {
@@ -903,7 +903,7 @@
     ]
    },
    "Export": {
-    "Name": "leadmagnet-database:ExportsOutputFnGetAttJobsTable1970BC16ArnC40C1624"
+    "Name": "staging-leadmagnet-database:ExportsOutputFnGetAttJobsTable1970BC16ArnC40C1624"
    }
   },
   "ExportsOutputFnGetAttArtifactsTable22794241ArnEC6D514B": {
@@ -914,7 +914,7 @@
     ]
    },
    "Export": {
-    "Name": "leadmagnet-database:ExportsOutputFnGetAttArtifactsTable22794241ArnEC6D514B"
+    "Name": "staging-leadmagnet-database:ExportsOutputFnGetAttArtifactsTable22794241ArnEC6D514B"
    }
   },
   "ExportsOutputFnGetAttTemplatesTable3F253039ArnF1DF357E": {
@@ -925,7 +925,7 @@
     ]
    },
    "Export": {
-    "Name": "leadmagnet-database:ExportsOutputFnGetAttTemplatesTable3F253039ArnF1DF357E"
+    "Name": "staging-leadmagnet-database:ExportsOutputFnGetAttTemplatesTable3F253039ArnF1DF357E"
    }
   },
   "ExportsOutputFnGetAttNotificationsTable76DCFC6CArn012EC0C4": {
@@ -936,7 +936,7 @@
     ]
    },
    "Export": {
-    "Name": "leadmagnet-database:ExportsOutputFnGetAttNotificationsTable76DCFC6CArn012EC0C4"
+    "Name": "staging-leadmagnet-database:ExportsOutputFnGetAttNotificationsTable76DCFC6CArn012EC0C4"
    }
   },
   "ExportsOutputFnGetAttUsersTable9725E9C8Arn5684EF99": {
@@ -947,7 +947,7 @@
     ]
    },
    "Export": {
-    "Name": "leadmagnet-database:ExportsOutputFnGetAttUsersTable9725E9C8Arn5684EF99"
+    "Name": "staging-leadmagnet-database:ExportsOutputFnGetAttUsersTable9725E9C8Arn5684EF99"
    }
   },
   "ExportsOutputFnGetAttFilesTable1399FAA4Arn25DD9DF2": {
@@ -958,7 +958,7 @@
     ]
    },
    "Export": {
-    "Name": "leadmagnet-database:ExportsOutputFnGetAttFilesTable1399FAA4Arn25DD9DF2"
+    "Name": "staging-leadmagnet-database:ExportsOutputFnGetAttFilesTable1399FAA4Arn25DD9DF2"
    }
   },
   "ExportsOutputFnGetAttUserSettingsTable755385E4Arn2F7CD415": {
@@ -969,7 +969,7 @@
     ]
    },
    "Export": {
-    "Name": "leadmagnet-database:ExportsOutputFnGetAttUserSettingsTable755385E4Arn2F7CD415"
+    "Name": "staging-leadmagnet-database:ExportsOutputFnGetAttUserSettingsTable755385E4Arn2F7CD415"
    }
   },
   "ExportsOutputFnGetAttCustomersTableB554B793Arn983124AF": {
@@ -980,7 +980,7 @@
     ]
    },
    "Export": {
-    "Name": "leadmagnet-database:ExportsOutputFnGetAttCustomersTableB554B793Arn983124AF"
+    "Name": "staging-leadmagnet-database:ExportsOutputFnGetAttCustomersTableB554B793Arn983124AF"
    }
   },
   "ExportsOutputFnGetAttImpersonationLogsTableBD29E063Arn66BDDB76": {
@@ -991,7 +991,7 @@
     ]
    },
    "Export": {
-    "Name": "leadmagnet-database:ExportsOutputFnGetAttImpersonationLogsTableBD29E063Arn66BDDB76"
+    "Name": "staging-leadmagnet-database:ExportsOutputFnGetAttImpersonationLogsTableBD29E063Arn66BDDB76"
    }
   },
   "ExportsOutputRefWorkflowsTable4E215008D0FFE690": {
@@ -999,7 +999,7 @@
     "Ref": "WorkflowsTable4E215008"
    },
    "Export": {
-    "Name": "leadmagnet-database:ExportsOutputRefWorkflowsTable4E215008D0FFE690"
+    "Name": "staging-leadmagnet-database:ExportsOutputRefWorkflowsTable4E215008D0FFE690"
    }
   },
   "ExportsOutputRefFormsTable9C91E1CF5414D606": {
@@ -1007,7 +1007,7 @@
     "Ref": "FormsTable9C91E1CF"
    },
    "Export": {
-    "Name": "leadmagnet-database:ExportsOutputRefFormsTable9C91E1CF5414D606"
+    "Name": "staging-leadmagnet-database:ExportsOutputRefFormsTable9C91E1CF5414D606"
    }
   },
   "ExportsOutputRefSubmissionsTable75718D3D178CFBFC": {
@@ -1015,7 +1015,7 @@
     "Ref": "SubmissionsTable75718D3D"
    },
    "Export": {
-    "Name": "leadmagnet-database:ExportsOutputRefSubmissionsTable75718D3D178CFBFC"
+    "Name": "staging-leadmagnet-database:ExportsOutputRefSubmissionsTable75718D3D178CFBFC"
    }
   },
   "ExportsOutputRefJobsTable1970BC16EDB4A824": {
@@ -1023,7 +1023,7 @@
     "Ref": "JobsTable1970BC16"
    },
    "Export": {
-    "Name": "leadmagnet-database:ExportsOutputRefJobsTable1970BC16EDB4A824"
+    "Name": "staging-leadmagnet-database:ExportsOutputRefJobsTable1970BC16EDB4A824"
    }
   },
   "ExportsOutputRefArtifactsTable227942413974C39D": {
@@ -1031,7 +1031,7 @@
     "Ref": "ArtifactsTable22794241"
    },
    "Export": {
-    "Name": "leadmagnet-database:ExportsOutputRefArtifactsTable227942413974C39D"
+    "Name": "staging-leadmagnet-database:ExportsOutputRefArtifactsTable227942413974C39D"
    }
   },
   "ExportsOutputRefTemplatesTable3F2530396272C7B9": {
@@ -1039,7 +1039,7 @@
     "Ref": "TemplatesTable3F253039"
    },
    "Export": {
-    "Name": "leadmagnet-database:ExportsOutputRefTemplatesTable3F2530396272C7B9"
+    "Name": "staging-leadmagnet-database:ExportsOutputRefTemplatesTable3F2530396272C7B9"
    }
   },
   "ExportsOutputRefUserSettingsTable755385E409BF890F": {
@@ -1047,7 +1047,7 @@
     "Ref": "UserSettingsTable755385E4"
    },
    "Export": {
-    "Name": "leadmagnet-database:ExportsOutputRefUserSettingsTable755385E409BF890F"
+    "Name": "staging-leadmagnet-database:ExportsOutputRefUserSettingsTable755385E409BF890F"
    }
   },
   "ExportsOutputRefNotificationsTable76DCFC6C32DE73EE": {
@@ -1055,7 +1055,7 @@
     "Ref": "NotificationsTable76DCFC6C"
    },
    "Export": {
-    "Name": "leadmagnet-database:ExportsOutputRefNotificationsTable76DCFC6C32DE73EE"
+    "Name": "staging-leadmagnet-database:ExportsOutputRefNotificationsTable76DCFC6C32DE73EE"
    }
   },
   "ExportsOutputRefUsersTable9725E9C857961836": {
@@ -1063,7 +1063,7 @@
     "Ref": "UsersTable9725E9C8"
    },
    "Export": {
-    "Name": "leadmagnet-database:ExportsOutputRefUsersTable9725E9C857961836"
+    "Name": "staging-leadmagnet-database:ExportsOutputRefUsersTable9725E9C857961836"
    }
   },
   "ExportsOutputRefCustomersTableB554B793C1CB863D": {
@@ -1071,7 +1071,7 @@
     "Ref": "CustomersTableB554B793"
    },
    "Export": {
-    "Name": "leadmagnet-database:ExportsOutputRefCustomersTableB554B793C1CB863D"
+    "Name": "staging-leadmagnet-database:ExportsOutputRefCustomersTableB554B793C1CB863D"
    }
   },
   "ExportsOutputRefFilesTable1399FAA4592580B8": {
@@ -1079,7 +1079,7 @@
     "Ref": "FilesTable1399FAA4"
    },
    "Export": {
-    "Name": "leadmagnet-database:ExportsOutputRefFilesTable1399FAA4592580B8"
+    "Name": "staging-leadmagnet-database:ExportsOutputRefFilesTable1399FAA4592580B8"
    }
   },
   "ExportsOutputRefImpersonationLogsTableBD29E063DB45D8C3": {
@@ -1087,7 +1087,7 @@
     "Ref": "ImpersonationLogsTableBD29E063"
    },
    "Export": {
-    "Name": "leadmagnet-database:ExportsOutputRefImpersonationLogsTableBD29E063DB45D8C3"
+    "Name": "staging-leadmagnet-database:ExportsOutputRefImpersonationLogsTableBD29E063DB45D8C3"
    }
   },
   "ExportsOutputRefSessionsTable7C3020246E1CCFDD": {
@@ -1095,7 +1095,7 @@
     "Ref": "SessionsTable7C302024"
    },
    "Export": {
-    "Name": "leadmagnet-database:ExportsOutputRefSessionsTable7C3020246E1CCFDD"
+    "Name": "staging-leadmagnet-database:ExportsOutputRefSessionsTable7C3020246E1CCFDD"
    }
   },
   "ExportsOutputRefFoldersTableD1BB987CD11999C6": {
@@ -1103,7 +1103,7 @@
     "Ref": "FoldersTableD1BB987C"
    },
    "Export": {
-    "Name": "leadmagnet-database:ExportsOutputRefFoldersTableD1BB987CD11999C6"
+    "Name": "staging-leadmagnet-database:ExportsOutputRefFoldersTableD1BB987CD11999C6"
    }
   }
  },

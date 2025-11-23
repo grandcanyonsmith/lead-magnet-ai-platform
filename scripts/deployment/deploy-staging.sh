@@ -3,7 +3,7 @@ set -e
 
 # Source shared utilities
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/lib/shell_common.sh"
+source "$SCRIPT_DIR/../lib/shell_common.sh"
 
 show_header "Lead Magnet AI Platform - Staging Deployment" "Deploying staging infrastructure, worker, API, and frontend"
 
@@ -34,12 +34,12 @@ echo ""
 
 # Get stack outputs (with staging prefix)
 print_subsection "Step 2: Getting stack outputs"
-API_URL=$(get_stack_output "staging-leadmagnet-api" "ApiUrl" "$AWS_REGION")
-USER_POOL_ID=$(get_stack_output "staging-leadmagnet-auth" "UserPoolId" "$AWS_REGION")
-CLIENT_ID=$(get_stack_output "staging-leadmagnet-auth" "UserPoolClientId" "$AWS_REGION")
-ECR_REPO=$(get_stack_output "staging-leadmagnet-worker" "EcrRepositoryUri" "$AWS_REGION")
-ARTIFACTS_BUCKET=$(get_stack_output "staging-leadmagnet-storage" "ArtifactsBucketName" "$AWS_REGION")
-DISTRIBUTION_ID=$(get_stack_output "staging-leadmagnet-storage" "DistributionId" "$AWS_REGION")
+API_URL=$(get_stack_output "staging-leadmagnet-api" "StagingApiUrl" "$AWS_REGION")
+USER_POOL_ID=$(get_stack_output "staging-leadmagnet-auth" "StagingUserPoolId" "$AWS_REGION")
+CLIENT_ID=$(get_stack_output "staging-leadmagnet-auth" "StagingUserPoolClientId" "$AWS_REGION")
+ECR_REPO=$(get_stack_output "staging-leadmagnet-worker" "StagingWorkerEcrRepositoryUri" "$AWS_REGION")
+ARTIFACTS_BUCKET=$(get_stack_output "staging-leadmagnet-storage" "StagingArtifactsBucketName" "$AWS_REGION")
+DISTRIBUTION_ID=$(get_stack_output "staging-leadmagnet-storage" "StagingDistributionId" "$AWS_REGION")
 
 echo "API URL: $API_URL"
 echo "User Pool ID: $USER_POOL_ID"
@@ -90,7 +90,7 @@ print_success "Frontend deployed"
 echo ""
 
 # Get CloudFront URL
-CF_URL=$(get_stack_output "staging-leadmagnet-storage" "DistributionDomainName" "$AWS_REGION")
+CF_URL=$(get_stack_output "staging-leadmagnet-storage" "StagingDistributionDomainName" "$AWS_REGION")
 
 echo ""
 print_section "Staging Deployment Complete!"
