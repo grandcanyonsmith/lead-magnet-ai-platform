@@ -16,7 +16,7 @@ export class ExecutionStepsController {
    * Get execution steps for a job by fetching directly from S3.
    * This endpoint proxies the execution steps to avoid presigned URL expiration issues.
    */
-  async getExecutionSteps(tenantId: string, jobId: string): Promise<RouteResponse> {
+  async getExecutionSteps(_tenantId: string, jobId: string): Promise<RouteResponse> {
     const job = await db.get(JOBS_TABLE, { job_id: jobId });
 
     if (!job) {

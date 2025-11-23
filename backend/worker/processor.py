@@ -31,7 +31,7 @@ from services.workflow_orchestrator import WorkflowOrchestrator
 from services.job_completion_service import JobCompletionService
 from services.error_handler_service import ErrorHandlerService
 from services.data_loader_service import DataLoaderService
-from dependency_resolver import resolve_execution_groups, validate_dependencies
+from core.dependency_resolver import resolve_execution_groups, validate_dependencies
 
 logger = logging.getLogger(__name__)
 

@@ -3,7 +3,7 @@ import { ApiError } from '../utils/errors';
 import { RouteResponse } from '../routes';
 import { ArtifactUrlService } from '../services/artifactUrlService';
 import { logger } from '../utils/logger';
-import { GetObjectCommand, HeadObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { env } from '../utils/env';
 
 const ARTIFACTS_TABLE = env.artifactsTable;
