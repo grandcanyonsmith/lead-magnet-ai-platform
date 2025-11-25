@@ -251,21 +251,13 @@ export class DatabaseStack extends cdk.Stack {
     );
 
     // Table 15: Webhook Logs
-    // Import existing table (created manually) to avoid conflicts
-    const webhookLogsTable = dynamodb.Table.fromTableName(
+    // Create table definition - CloudFormation will reference existing table without recreating it
+    const webhookLogsTable = createTableWithGSI(
       this,
       'WebhookLogsTable',
-      TABLE_NAMES.WEBHOOK_LOGS
-    );
-
-    // Table 16: Folders (legacy table - recreate definition to maintain CloudFormation exports)
-    // This table exists in DynamoDB - CloudFormation will reference it without recreating it
-    const foldersTable = createTableWithGSI(
-      this,
-      'FoldersTable',
       {
-        tableName: 'leadmagnet-folders',
-        partitionKey: { name: 'folder_id', type: dynamodb.AttributeType.STRING },
+        tableName: TABLE_NAMES.WEBHOOK_LOGS,
+        partitionKey: { name: 'log_id', type: dynamodb.AttributeType.STRING },
       },
       [
         {
@@ -273,8 +265,36 @@ export class DatabaseStack extends cdk.Stack {
           partitionKey: { name: 'tenant_id', type: dynamodb.AttributeType.STRING },
           sortKey: { name: 'created_at', type: dynamodb.AttributeType.STRING },
         },
+        {
+          indexName: 'gsi_token_created',
+          partitionKey: { name: 'webhook_token', type: dynamodb.AttributeType.STRING },
+          sortKey: { name: 'created_at', type: dynamodb.AttributeType.STRING },
+        },
       ]
     );
+
+    // Table 16: Folders (legacy table - import to maintain existing CloudFormation exports)
+    // This table exists in DynamoDB but was not created by CloudFormation
+    // Import it and create explicit exports to match existing export names
+    // Note: Not included in tablesMap as it's legacy and not used by application code
+    const foldersTable = dynamodb.Table.fromTableName(
+      this,
+      'FoldersTable',
+      TABLE_NAMES.FOLDERS
+    );
+    
+    // Create explicit exports to match existing export names that other stacks depend on
+    // These exports must match exactly: ExportsOutputFnGetAttFoldersTableD1BB987CArn1A2471F0
+    // and ExportsOutputRefFoldersTableD1BB987CD11999C6
+    new cdk.CfnOutput(this, 'ExportsOutputFnGetAttFoldersTableD1BB987CArn1A2471F0', {
+      value: foldersTable.tableArn,
+      exportName: 'leadmagnet-database:ExportsOutputFnGetAttFoldersTableD1BB987CArn1A2471F0',
+    });
+    
+    new cdk.CfnOutput(this, 'ExportsOutputRefFoldersTableD1BB987CD11999C6', {
+      value: foldersTable.tableName,
+      exportName: 'leadmagnet-database:ExportsOutputRefFoldersTableD1BB987CD11999C6',
+    });
 
     // Export table names and references using TableKey enum for type safety
     this.tablesMap = {

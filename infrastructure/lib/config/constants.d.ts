@@ -28,6 +28,7 @@ export declare const TABLE_NAMES: {
     readonly USERS: "leadmagnet-users";
     readonly CUSTOMERS: "leadmagnet-customers";
     readonly FILES: "leadmagnet-files";
+    readonly FOLDERS: "leadmagnet-folders";
     readonly IMPERSONATION_LOGS: "leadmagnet-impersonation-logs";
     readonly SESSIONS: "leadmagnet-sessions";
     readonly WEBHOOK_LOGS: "leadmagnet-webhook-logs";

@@ -30,6 +30,7 @@ export const TABLE_NAMES = {
   USERS: 'leadmagnet-users',
   CUSTOMERS: 'leadmagnet-customers',
   FILES: 'leadmagnet-files',
+  FOLDERS: 'leadmagnet-folders',
   IMPERSONATION_LOGS: 'leadmagnet-impersonation-logs',
   SESSIONS: 'leadmagnet-sessions',
   WEBHOOK_LOGS: 'leadmagnet-webhook-logs',
