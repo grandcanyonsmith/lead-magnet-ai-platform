@@ -250,6 +250,14 @@ export class DatabaseStack extends cdk.Stack {
       }
     );
 
+    // Table 15: Webhook Logs
+    // Import existing table (created manually) to avoid conflicts
+    const webhookLogsTable = dynamodb.Table.fromTableName(
+      this,
+      'WebhookLogsTable',
+      TABLE_NAMES.WEBHOOK_LOGS
+    );
+
     // Export table names and references using TableKey enum for type safety
     this.tablesMap = {
       [TableKey.WORKFLOWS]: workflowsTable,
@@ -266,6 +274,7 @@ export class DatabaseStack extends cdk.Stack {
       [TableKey.FILES]: filesTable,
       [TableKey.IMPERSONATION_LOGS]: impersonationLogsTable,
       [TableKey.SESSIONS]: sessionsTable,
+      [TableKey.WEBHOOK_LOGS]: webhookLogsTable,
     };
 
     // CloudFormation outputs

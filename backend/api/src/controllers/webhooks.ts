@@ -7,6 +7,7 @@ import { RouteResponse } from '../routes';
 import { logger } from '../utils/logger';
 import { processJobLocally } from '../services/jobProcessor';
 import { env } from '../utils/env';
+import { webhookLogService } from '../services/webhookLogService';
 
 const USER_SETTINGS_TABLE = env.userSettingsTable;
 const WORKFLOWS_TABLE = env.workflowsTable;
@@ -21,20 +22,27 @@ class WebhooksController {
    * Handle incoming webhook POST request
    * Looks up user by token, finds workflow, creates submission/job, and triggers execution
    */
-  async handleWebhook(token: string, body: any, sourceIp: string): Promise<RouteResponse> {
+  async handleWebhook(token: string, body: any, sourceIp: string, headers?: Record<string, string | undefined>): Promise<RouteResponse> {
+    const startTime = Date.now();
+    const endpoint = '/v1/webhooks/:token';
+    let tenantId: string | null = null;
+    let response: RouteResponse | null = null;
+    let error: any = null;
+
     logger.info('[Webhooks] Handling webhook request', { token, hasBody: !!body });
 
-    // Look up user_settings by webhook_token
-    // Since we don't have a GSI on webhook_token, we'll need to scan or query
-    // For MVP, we'll scan the user_settings table (acceptable for low volume)
-    const userSettings = await this.findUserByWebhookToken(token);
+    try {
+      // Look up user_settings by webhook_token
+      // Since we don't have a GSI on webhook_token, we'll need to scan or query
+      // For MVP, we'll scan the user_settings table (acceptable for low volume)
+      const userSettings = await this.findUserByWebhookToken(token);
 
-    if (!userSettings) {
-      throw new ApiError('Invalid webhook token', 404);
-    }
+      if (!userSettings) {
+        throw new ApiError('Invalid webhook token', 404);
+      }
 
-    const tenantId = userSettings.tenant_id;
-    logger.info('[Webhooks] Found user for token', { tenantId });
+      tenantId = userSettings.tenant_id;
+      logger.info('[Webhooks] Found user for token', { tenantId });
 
     // Validate request body
     const validatedBody = validate(webhookRequestSchema, body);
@@ -132,7 +140,7 @@ class WebhooksController {
         
         setImmediate(async () => {
           try {
-            await processJobLocally(jobId, tenantId, workflow.workflow_id, submissionId);
+            await processJobLocally(jobId, tenantId || '', workflow.workflow_id, submissionId);
           } catch (error: any) {
             logger.error('[Webhooks] Error processing job in local mode', {
               jobId,
@@ -174,7 +182,7 @@ class WebhooksController {
       throw new ApiError(`Failed to start job processing: ${error.message}`, 500);
     }
 
-    return {
+    response = {
       statusCode: 202,
       body: {
         message: 'Webhook received and job processing started',
@@ -182,6 +190,45 @@ class WebhooksController {
         status: 'pending',
       },
     };
+
+    return response;
+    } catch (err: any) {
+      error = err;
+      const processingTime = Date.now() - startTime;
+
+      // Log error
+      await webhookLogService.logWebhookRequest({
+        tenant_id: tenantId,
+        webhook_token: token,
+        endpoint,
+        request_body: body,
+        request_headers: headers,
+        source_ip: sourceIp,
+        response_status: err.statusCode || 500,
+        response_body: { error: err.message },
+        error_message: err.message,
+        error_stack: err.stack,
+        processing_time_ms: processingTime,
+      });
+
+      throw err;
+    } finally {
+      // Log successful response
+      if (!error && response) {
+        const processingTime = Date.now() - startTime;
+        await webhookLogService.logWebhookRequest({
+          tenant_id: tenantId,
+          webhook_token: token,
+          endpoint,
+          request_body: body,
+          request_headers: headers,
+          source_ip: sourceIp,
+          response_status: response.statusCode,
+          response_body: response.body,
+          processing_time_ms: processingTime,
+        });
+      }
+    }
   }
 
   /**

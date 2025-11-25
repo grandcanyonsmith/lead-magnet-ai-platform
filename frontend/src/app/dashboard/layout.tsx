@@ -23,7 +23,8 @@ import {
   FiBarChart2,
   FiMenu,
   FiX,
-  FiSearch
+  FiSearch,
+  FiActivity
 } from 'react-icons/fi'
 
 export default function DashboardLayout({
@@ -116,6 +117,7 @@ export default function DashboardLayout({
     { href: '/dashboard/jobs', label: 'Generated Lead Magnets', icon: FiBarChart2 },
     { href: '/dashboard/artifacts', label: 'Downloads', icon: FiFileText },
     { href: '/dashboard/files', label: 'Files', icon: FiFileText },
+    { href: '/dashboard/webhook-logs', label: 'Webhook Logs', icon: FiActivity },
   ]
   const navItems = baseNavItems
 

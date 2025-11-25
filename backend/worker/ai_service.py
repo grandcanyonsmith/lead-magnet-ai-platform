@@ -126,7 +126,9 @@ class AIService:
                     tool_choice=normalized_tool_choice,
                     has_computer_use=has_computer_use,
                     reasoning_level=None,
-                    previous_image_urls=previous_image_urls if has_image_generation else None
+                    previous_image_urls=previous_image_urls if has_image_generation else None,
+                    job_id=job_id,
+                    tenant_id=tenant_id
                 )
                 
                 # Run CUA loop
@@ -220,7 +222,9 @@ class AIService:
                 tool_choice=normalized_tool_choice,
                 has_computer_use=has_computer_use,
                 reasoning_level=None,  # Not supported in Responses API
-                previous_image_urls=previous_image_urls if has_image_generation else None
+                previous_image_urls=previous_image_urls if has_image_generation else None,
+                job_id=job_id,
+                tenant_id=tenant_id
             )
             
             logger.debug(f"[AI Service] API params built successfully", extra={

@@ -22,6 +22,7 @@ export enum TableKey {
   FILES = 'files',
   IMPERSONATION_LOGS = 'impersonationLogs',
   SESSIONS = 'sessions',
+  WEBHOOK_LOGS = 'webhookLogs',
 }
 
 /**
@@ -43,6 +44,7 @@ export interface TableMap {
   [TableKey.FILES]: dynamodb.ITable;
   [TableKey.IMPERSONATION_LOGS]: dynamodb.ITable;
   [TableKey.SESSIONS]: dynamodb.ITable;
+  [TableKey.WEBHOOK_LOGS]: dynamodb.ITable;
 }
 
 /**

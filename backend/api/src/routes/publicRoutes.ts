@@ -31,7 +31,8 @@ export function registerPublicRoutes(): void {
   // Public webhook endpoint
   router.register('POST', '/v1/webhooks/:token', async (params, body, _query, _tenantId, context) => {
     logger.info('[Public Routes] POST /v1/webhooks/:token', { token: params.token });
-    return await webhooksController.handleWebhook(params.token, body, context?.sourceIp || '');
+    const headers = context?.event?.headers || {};
+    return await webhooksController.handleWebhook(params.token, body, context?.sourceIp || '', headers);
   }, false);
 
   // OpenAI webhook endpoint
@@ -39,7 +40,8 @@ export function registerPublicRoutes(): void {
     logger.info('[Public Routes] POST /v1/openai/webhook');
     const headers = context?.event?.headers || {};
     const rawBody = context?.event?.body;
-    return await openAIWebhookController.handleWebhook(body, headers, rawBody);
+    const sourceIp = context?.sourceIp || '';
+    return await openAIWebhookController.handleWebhook(body, headers, rawBody, sourceIp);
   }, false);
 }
 

@@ -5,6 +5,7 @@ import { billingController } from '../controllers/billing';
 import { analyticsController } from '../controllers/analytics';
 import { notificationsController } from '../controllers/notifications';
 import { adminController } from '../controllers/admin';
+import { webhookLogsController } from '../controllers/webhookLogs';
 import { router } from './router';
 import { logger } from '../utils/logger';
 
@@ -101,5 +102,18 @@ export function registerAdminRoutes(): void {
   router.register('GET', '/admin/agency/customers', async (_params, _body, query, tenantId, context) => {
     logger.info('[Admin Routes] GET /admin/agency/customers');
     return await adminController.listAgencyCustomers(_params, _body, query, tenantId, context);
+  });
+
+  // Webhook Logs
+  router.register('GET', '/admin/webhook-logs', async (_params, _body, query, tenantId) => {
+    return await webhookLogsController.list(tenantId!, query);
+  });
+
+  router.register('GET', '/admin/webhook-logs/:id', async (params, _body, _query, tenantId) => {
+    return await webhookLogsController.get(tenantId!, params.id);
+  });
+
+  router.register('POST', '/admin/webhook-logs/:id/retry', async (params, _body, _query, tenantId) => {
+    return await webhookLogsController.retry(tenantId!, params.id);
   });
 }

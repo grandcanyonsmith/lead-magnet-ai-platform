@@ -30,6 +30,7 @@ export declare const TABLE_NAMES: {
     readonly FILES: "leadmagnet-files";
     readonly IMPERSONATION_LOGS: "leadmagnet-impersonation-logs";
     readonly SESSIONS: "leadmagnet-sessions";
+    readonly WEBHOOK_LOGS: "leadmagnet-webhook-logs";
 };
 /**
  * Lambda function names

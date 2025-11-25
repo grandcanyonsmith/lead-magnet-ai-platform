@@ -9,6 +9,7 @@ import { RouteResponse } from '../routes';
 import { logger } from '../utils/logger';
 import { env } from '../utils/env';
 import { verifyOpenAIWebhookSignature, extractSignatureFromHeaders } from '../utils/webhookSignature';
+import { webhookLogService } from '../services/webhookLogService';
 
 const OPENAI_WEBHOOK_SECRET_NAME = 'leadmagnet/openai-webhook-secret';
 const secretsClient = new SecretsManagerClient({ region: env.awsRegion });
@@ -68,7 +69,12 @@ export class OpenAIWebhookController {
   /**
    * Handle incoming OpenAI webhook events
    */
-  async handleWebhook(body: any, headers: Record<string, string | undefined>, rawBody?: string): Promise<RouteResponse> {
+  async handleWebhook(body: any, headers: Record<string, string | undefined>, rawBody?: string, sourceIp?: string): Promise<RouteResponse> {
+    const startTime = Date.now();
+    const endpoint = '/v1/openai/webhook';
+    let response: RouteResponse | null = null;
+    let error: any = null;
+
     logger.info('[OpenAI Webhook] Received webhook event', {
       eventType: body?.type,
       eventId: body?.id,
@@ -124,16 +130,53 @@ export class OpenAIWebhookController {
           logger.warn('[OpenAI Webhook] Unknown event type', { type: event.type });
       }
 
-      return {
+      response = {
         statusCode: 200,
         body: { received: true },
       };
-    } catch (error: any) {
+
+      return response;
+    } catch (err: any) {
+      error = err;
+      const processingTime = Date.now() - startTime;
+
       logger.error('[OpenAI Webhook] Error processing webhook', {
-        error: error.message,
-        stack: error.stack,
+        error: err.message,
+        stack: err.stack,
       });
-      throw error;
+
+      // Log error
+      await webhookLogService.logWebhookRequest({
+        tenant_id: null,
+        webhook_token: null,
+        endpoint,
+        request_body: body,
+        request_headers: headers,
+        source_ip: sourceIp,
+        response_status: err.statusCode || 500,
+        response_body: { error: err.message },
+        error_message: err.message,
+        error_stack: err.stack,
+        processing_time_ms: processingTime,
+      });
+
+      throw err;
+    } finally {
+      // Log successful response
+      if (!error && response) {
+        const processingTime = Date.now() - startTime;
+        await webhookLogService.logWebhookRequest({
+          tenant_id: null,
+          webhook_token: null,
+          endpoint,
+          request_body: body,
+          request_headers: headers,
+          source_ip: sourceIp,
+          response_status: response.statusCode,
+          response_body: response.body,
+          processing_time_ms: processingTime,
+        });
+      }
     }
   }
 

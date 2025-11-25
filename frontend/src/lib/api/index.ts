@@ -16,6 +16,7 @@ import { NotificationsClient } from './notifications.client'
 import { SettingsClient } from './settings.client'
 import { AnalyticsClient } from './analytics.client'
 import { UsageClient } from './usage.client'
+import { WebhookLogsClient } from './webhookLogs.client'
 import { ApiClient, ArtifactListParams, ArtifactListResponse, Artifact, FormUpdateRequest, TemplateUpdateRequest, WorkflowUpdateRequest } from '@/types'
 import { AxiosRequestConfig } from 'axios'
 
@@ -30,6 +31,7 @@ class ApiClientImpl extends BaseApiClient implements ApiClient {
   public settings: SettingsClient
   public analytics: AnalyticsClient
   public usage: UsageClient
+  public webhookLogs: WebhookLogsClient
 
   constructor(tokenProvider?: TokenProvider) {
     super(tokenProvider || new LocalStorageTokenProvider())
@@ -44,6 +46,7 @@ class ApiClientImpl extends BaseApiClient implements ApiClient {
     this.settings = new SettingsClient(this.tokenProvider)
     this.analytics = new AnalyticsClient(this.tokenProvider)
     this.usage = new UsageClient(this.tokenProvider)
+    this.webhookLogs = new WebhookLogsClient(this.tokenProvider)
   }
 
   // Generic HTTP methods for direct endpoint access

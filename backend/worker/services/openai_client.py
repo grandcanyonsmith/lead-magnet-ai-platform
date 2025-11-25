@@ -42,7 +42,9 @@ class OpenAIClient:
         tool_choice: str = "auto",
         has_computer_use: bool = False,
         reasoning_level: Optional[str] = None,
-        previous_image_urls: Optional[List[str]] = None
+        previous_image_urls: Optional[List[str]] = None,
+        job_id: Optional[str] = None,
+        tenant_id: Optional[str] = None
     ) -> Dict:
         """
         Build parameters for OpenAI Responses API call.
@@ -76,22 +78,30 @@ class OpenAIClient:
                 {"type": "input_text", "text": input_text}
             ]
             
-            # Filter and add valid image URLs only
+            # Add all valid image URLs as-is - we'll handle failures in error handler
             valid_image_urls = []
+            skipped_count = 0
+            
             for image_url in previous_image_urls:
-                if image_url:  # Only add non-empty URLs
-                    # Skip URLs that might fail (cdn.openai.com URLs can be problematic)
-                    if 'cdn.openai.com' in image_url:
-                        logger.warning(f"[OpenAI Client] Skipping potentially problematic image URL: {image_url}", extra={
-                            'image_url': image_url,
-                            'reason': 'cdn.openai.com URLs may fail to download'
-                        })
-                        continue
-                    valid_image_urls.append(image_url)
-                    input_content.append({
-                        "type": "input_image",
-                        "image_url": image_url
+                if not image_url:  # Skip empty URLs
+                    skipped_count += 1
+                    continue
+                
+                # Skip cdn.openai.com URLs (they can be problematic and we can't download them)
+                if 'cdn.openai.com' in image_url:
+                    skipped_count += 1
+                    logger.warning("[OpenAI Client] Skipping potentially problematic image URL: cdn.openai.com", extra={
+                        'image_url_preview': image_url[:100] + '...' if len(image_url) > 100 else image_url,
+                        'reason': 'cdn.openai.com URLs may fail to download'
                     })
+                    continue
+                
+                # Add the image URL as-is - if OpenAI fails to download, we'll retry with base64
+                valid_image_urls.append(image_url)
+                input_content.append({
+                    "type": "input_image",
+                    "image_url": image_url
+                })
             
             # Only use list format if we have valid image URLs
             if valid_image_urls:
@@ -106,7 +116,7 @@ class OpenAIClient:
                 logger.info("[OpenAI Client] Building API params with previous image URLs", extra={
                     'previous_image_urls_count': len(previous_image_urls),
                     'valid_image_urls_count': len(valid_image_urls),
-                    'skipped_count': len(previous_image_urls) - len(valid_image_urls),
+                    'skipped_count': skipped_count,
                     'input_content_items': len(input_content),
                     'has_image_generation': has_image_generation
                 })
@@ -234,8 +244,8 @@ class OpenAIClient:
                 (isinstance(error_info, dict) and error_info.get('code') == 'invalid_value' and 'url' in str(error_info))
             )
             
-            if is_image_download_error:
-                logger.warning("[OpenAI Client] Image download failed, retrying without problematic image URL", extra={
+            if is_image_download_error and failed_image_url:
+                logger.warning("[OpenAI Client] Image download failed, retrying with base64 conversion", extra={
                     'job_id': params.get('job_id') if 'job_id' in params else None,
                     'tenant_id': params.get('tenant_id') if 'tenant_id' in params else None,
                     'model': params.get('model'),
@@ -245,53 +255,95 @@ class OpenAIClient:
                     'attempting_retry': True
                 })
                 
-                # Try to retry without the problematic image URL
-                input_data = params.get('input')
-                if isinstance(input_data, list) and len(input_data) > 0:
-                    content = input_data[0].get('content', [])
-                    if isinstance(content, list):
-                        # Filter out the problematic image(s)
-                        original_image_count = len([x for x in content if x.get('type') == 'input_image'])
-                        
-                        if failed_image_url:
-                            # Remove the specific failed image URL
+                # Try to download and convert the failed image to base64
+                from utils.image_utils import download_image_and_convert_to_data_url
+                
+                data_url = download_image_and_convert_to_data_url(
+                    url=failed_image_url,
+                    job_id=params.get('job_id') if 'job_id' in params else None,
+                    tenant_id=params.get('tenant_id') if 'tenant_id' in params else None
+                )
+                
+                if data_url:
+                    # Retry with the image converted to base64
+                    input_data = params.get('input')
+                    if isinstance(input_data, list) and len(input_data) > 0:
+                        content = input_data[0].get('content', [])
+                        if isinstance(content, list):
+                            # Replace the failed image URL with base64 data URL
+                            retry_content = []
+                            for item in content:
+                                if item.get('type') == 'input_image' and failed_image_url in str(item.get('image_url', '')):
+                                    # Replace with base64 data URL
+                                    retry_content.append({
+                                        "type": "input_image",
+                                        "image_url": data_url
+                                    })
+                                    logger.info("[OpenAI Client] Replaced failed image URL with base64 data URL", extra={
+                                        'job_id': params.get('job_id') if 'job_id' in params else None,
+                                        'original_url_preview': failed_image_url[:100] + '...' if len(failed_image_url) > 100 else failed_image_url,
+                                        'data_url_length': len(data_url)
+                                    })
+                                else:
+                                    retry_content.append(item)
+                            
+                            retry_params = params.copy()
+                            retry_params['input'] = [{
+                                "role": "user",
+                                "content": retry_content
+                            }]
+                            
+                            logger.info("[OpenAI Client] Retrying API call with image converted to base64", extra={
+                                'job_id': params.get('job_id') if 'job_id' in params else None,
+                                'failed_image_url': failed_image_url,
+                                'original_image_count': len([x for x in content if x.get('type') == 'input_image']),
+                                'retry_image_count': len([x for x in retry_content if x.get('type') == 'input_image'])
+                            })
+                            
+                            try:
+                                return self.client.responses.create(**retry_params)
+                            except Exception as retry_error:
+                                logger.error("[OpenAI Client] Retry with base64 also failed", extra={
+                                    'job_id': params.get('job_id') if 'job_id' in params else None,
+                                    'retry_error_type': type(retry_error).__name__,
+                                    'retry_error_message': str(retry_error)
+                                })
+                                raise
+                else:
+                    # Download/conversion failed - remove the problematic image and retry without it
+                    logger.warning("[OpenAI Client] Failed to download/convert image, retrying without it", extra={
+                        'job_id': params.get('job_id') if 'job_id' in params else None,
+                        'failed_image_url': failed_image_url
+                    })
+                    
+                    input_data = params.get('input')
+                    if isinstance(input_data, list) and len(input_data) > 0:
+                        content = input_data[0].get('content', [])
+                        if isinstance(content, list):
+                            # Remove the failed image
                             filtered_content = [
                                 item for item in content
                                 if not (item.get('type') == 'input_image' and 
                                        failed_image_url in str(item.get('image_url', '')))
                             ]
-                        else:
-                            # If we can't identify the specific URL, remove all images and continue with text only
-                            logger.warning("[OpenAI Client] Could not extract failed image URL, removing all images from input", extra={
-                                'job_id': params.get('job_id') if 'job_id' in params else None,
-                                'original_image_count': original_image_count
-                            })
-                            filtered_content = [
-                                item for item in content
-                                if item.get('type') != 'input_image'
-                            ]
-                        
-                        filtered_image_count = len([x for x in filtered_content if x.get('type') == 'input_image'])
-                        
-                        if filtered_image_count < original_image_count:
-                            # We filtered out at least one image, retry
+                            
                             retry_params = params.copy()
                             retry_params['input'] = [{
                                 "role": "user",
                                 "content": filtered_content
                             }]
                             
-                            logger.info("[OpenAI Client] Retrying API call without problematic image URL(s)", extra={
+                            logger.info("[OpenAI Client] Retrying API call without failed image", extra={
                                 'job_id': params.get('job_id') if 'job_id' in params else None,
                                 'failed_image_url': failed_image_url,
-                                'original_image_count': original_image_count,
-                                'filtered_image_count': filtered_image_count
+                                'original_image_count': len([x for x in content if x.get('type') == 'input_image']),
+                                'filtered_image_count': len([x for x in filtered_content if x.get('type') == 'input_image'])
                             })
                             
                             try:
                                 return self.client.responses.create(**retry_params)
                             except Exception as retry_error:
-                                logger.error("[OpenAI Client] Retry also failed", extra={
+                                logger.error("[OpenAI Client] Retry without image also failed", extra={
                                     'job_id': params.get('job_id') if 'job_id' in params else None,
                                     'retry_error_type': type(retry_error).__name__,
                                     'retry_error_message': str(retry_error)
