@@ -251,28 +251,11 @@ export class DatabaseStack extends cdk.Stack {
     );
 
     // Table 15: Webhook Logs
-    // Create table definition - CloudFormation will reference existing table without recreating it
-    // Note: Table already exists in DynamoDB. If deployment fails with ResourceExistenceCheck error,
-    // the table needs to be manually imported into CloudFormation first using resource import.
-    const webhookLogsTable = createTableWithGSI(
+    // Note: Table already exists in DynamoDB, referencing it instead of creating
+    const webhookLogsTable = dynamodb.Table.fromTableName(
       this,
       'WebhookLogsTable',
-      {
-        tableName: TABLE_NAMES.WEBHOOK_LOGS,
-        partitionKey: { name: 'log_id', type: dynamodb.AttributeType.STRING },
-      },
-      [
-        {
-          indexName: 'gsi_tenant_created',
-          partitionKey: { name: 'tenant_id', type: dynamodb.AttributeType.STRING },
-          sortKey: { name: 'created_at', type: dynamodb.AttributeType.STRING },
-        },
-        {
-          indexName: 'gsi_token_created',
-          partitionKey: { name: 'webhook_token', type: dynamodb.AttributeType.STRING },
-          sortKey: { name: 'created_at', type: dynamodb.AttributeType.STRING },
-        },
-      ]
+      TABLE_NAMES.WEBHOOK_LOGS
     );
 
     // Table 16: Folders (legacy table - keep resource definition to maintain CloudFormation exports)

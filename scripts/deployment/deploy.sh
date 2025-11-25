@@ -3,7 +3,7 @@ set -e
 
 # Source shared utilities
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/lib/shell_common.sh"
+source "$(dirname "$SCRIPT_DIR")/lib/shell_common.sh"
 
 show_header "Lead Magnet AI Platform - Deployment Script" "Deploying infrastructure, worker, API, and frontend"
 
