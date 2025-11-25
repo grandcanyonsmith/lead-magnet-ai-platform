@@ -273,19 +273,29 @@ export class DatabaseStack extends cdk.Stack {
       ]
     );
 
-    // Table 16: Folders (legacy table - import to maintain existing CloudFormation exports)
-    // This table exists in DynamoDB but was not created by CloudFormation
-    // Import it and create explicit exports to match existing export names
+    // Table 16: Folders (legacy table - keep resource definition to maintain CloudFormation exports)
+    // This table exists in DynamoDB and CloudFormation - keep the resource definition unchanged
+    // CloudFormation will reference existing table without modifications
     // Note: Not included in tablesMap as it's legacy and not used by application code
-    const foldersTable = dynamodb.Table.fromTableName(
+    const foldersTable = createTableWithGSI(
       this,
       'FoldersTable',
-      TABLE_NAMES.FOLDERS
+      {
+        tableName: TABLE_NAMES.FOLDERS,
+        partitionKey: { name: 'folder_id', type: dynamodb.AttributeType.STRING },
+      },
+      [
+        {
+          indexName: 'gsi_tenant_created',
+          partitionKey: { name: 'tenant_id', type: dynamodb.AttributeType.STRING },
+          sortKey: { name: 'created_at', type: dynamodb.AttributeType.STRING },
+        },
+      ]
     );
     
-    // Create explicit exports to match existing export names that other stacks depend on
-    // These exports must match exactly: ExportsOutputFnGetAttFoldersTableD1BB987CArn1A2471F0
-    // and ExportsOutputRefFoldersTableD1BB987CD11999C6
+    // Explicitly create exports to ensure they match existing export names
+    // These exports are referenced by leadmagnet-api and leadmagnet-compute stacks
+    // Using explicit CfnOutput to maintain exact export names
     new cdk.CfnOutput(this, 'ExportsOutputFnGetAttFoldersTableD1BB987CArn1A2471F0', {
       value: foldersTable.tableArn,
       exportName: 'leadmagnet-database:ExportsOutputFnGetAttFoldersTableD1BB987CArn1A2471F0',
