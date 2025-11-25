@@ -136,6 +136,15 @@ class DeliveryService:
             'markdown_files_count': len(markdown_files_list)
         })
         
+        # Log artifact URLs for debugging
+        if artifacts_list:
+            artifact_urls = [a.get('public_url') for a in artifacts_list if a.get('public_url')]
+            logger.info(f"[DeliveryService] Artifact URLs in payload", extra={
+                'job_id': job_id,
+                'artifact_urls_count': len(artifact_urls),
+                'artifact_urls': artifact_urls[:5]  # Log first 5 URLs
+            })
+        
         try:
             logger.debug(f"[DeliveryService] Sending POST request to webhook", extra={
                 'job_id': job_id,

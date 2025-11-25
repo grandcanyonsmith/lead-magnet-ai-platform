@@ -60,7 +60,7 @@ class StepProcessor:
         self.s3 = s3_service
         self.usage_service = usage_service
         self.image_artifact_service = image_artifact_service
-        self.webhook_step_service = WebhookStepService()
+        self.webhook_step_service = WebhookStepService(db_service=db_service)
         self.ai_step_processor = AIStepProcessor(
             ai_service=ai_service,
             artifact_service=artifact_service,

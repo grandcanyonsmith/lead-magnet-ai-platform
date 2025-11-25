@@ -15,9 +15,14 @@ logger = logging.getLogger(__name__)
 class WebhookStepService:
     """Service for executing webhook steps."""
     
-    def __init__(self):
-        """Initialize webhook step service."""
-        pass
+    def __init__(self, db_service=None):
+        """
+        Initialize webhook step service.
+        
+        Args:
+            db_service: DynamoDB service instance for querying artifacts
+        """
+        self.db = db_service
     
     def execute_webhook_step(
         self,
@@ -230,6 +235,70 @@ class WebhookStepService:
                 'created_at': job.get('created_at'),
                 'updated_at': job.get('updated_at')
             }
+        
+        # Query and include artifacts if db_service is available
+        if self.db:
+            try:
+                all_artifacts = self.db.query_artifacts_by_job_id(job_id)
+                logger.debug(f"[WebhookStepService] Queried artifacts for webhook step", extra={
+                    'job_id': job_id,
+                    'artifacts_count': len(all_artifacts)
+                })
+            except Exception as e:
+                logger.warning(f"[WebhookStepService] Failed to query artifacts for webhook step", extra={
+                    'job_id': job_id,
+                    'error_type': type(e).__name__,
+                    'error_message': str(e)
+                }, exc_info=True)
+                all_artifacts = []
+            
+            # Categorize artifacts
+            artifacts_list = []
+            images_list = []
+            html_files_list = []
+            markdown_files_list = []
+            
+            for artifact in all_artifacts:
+                # Build artifact metadata
+                artifact_metadata = {
+                    'artifact_id': artifact.get('artifact_id'),
+                    'artifact_type': artifact.get('artifact_type'),
+                    'artifact_name': artifact.get('artifact_name') or artifact.get('file_name') or '',
+                    'public_url': artifact.get('public_url'),
+                    'file_size_bytes': artifact.get('file_size_bytes'),
+                    'mime_type': artifact.get('mime_type'),
+                    'created_at': artifact.get('created_at')
+                }
+                
+                # Add to all artifacts
+                artifacts_list.append(artifact_metadata)
+                
+                # Categorize by type
+                artifact_type = artifact.get('artifact_type', '').lower()
+                artifact_name = (artifact_metadata['artifact_name'] or '').lower()
+                
+                if artifact_type == 'image' or artifact_name.endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp')):
+                    images_list.append(artifact_metadata)
+                elif artifact_type == 'html_final' or artifact_name.endswith('.html'):
+                    html_files_list.append(artifact_metadata)
+                elif artifact_type in ('markdown_final', 'step_output', 'report_markdown') or artifact_name.endswith(('.md', '.markdown')):
+                    markdown_files_list.append(artifact_metadata)
+            
+            # Include artifacts in payload
+            if artifacts_list:
+                payload['artifacts'] = artifacts_list
+                payload['images'] = images_list
+                payload['html_files'] = html_files_list
+                payload['markdown_files'] = markdown_files_list
+                
+                # Log artifact URLs for debugging
+                artifact_urls = [a.get('public_url') for a in artifacts_list if a.get('public_url')]
+                logger.info(f"[WebhookStepService] Artifact URLs in webhook step payload", extra={
+                    'job_id': job_id,
+                    'step_index': step_index,
+                    'artifact_urls_count': len(artifact_urls),
+                    'artifact_urls': artifact_urls[:5]  # Log first 5 URLs
+                })
         
         return payload
 
