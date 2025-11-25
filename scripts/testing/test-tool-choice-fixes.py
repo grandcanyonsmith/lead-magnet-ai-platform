@@ -72,8 +72,8 @@ def test_build_api_params():
                         tool_choice = "auto"
                     # Provide a safe default tool so that 'tool_choice' never goes out without 'tools'
                     if not final_tools:
-                        logger.warning("[AI Service] No tools supplied; adding default web_search_preview tool")
-                        final_tools = [{"type": "web_search_preview"}]
+                        logger.warning("[AI Service] No tools supplied; adding default web_search tool")
+                        final_tools = [{"type": "web_search"}]
                     params["tools"] = final_tools
                 
                 if has_computer_use:
@@ -85,7 +85,7 @@ def test_build_api_params():
                     if tool_choice == "required" and not tools_in_params:
                         logger.warning("[AI Service] tool_choice='required' but tools empty; downgrading to 'auto' and adding default tool")
                         params["tool_choice"] = "auto"
-                        params["tools"] = [{"type": "web_search_preview"}]
+                        params["tools"] = [{"type": "web_search"}]
                     else:
                         params["tool_choice"] = tool_choice
                 
@@ -93,7 +93,7 @@ def test_build_api_params():
                 if params.get("tool_choice") == "required" and not params.get("tools"):
                     logger.warning("[AI Service] Final clamp: switching 'required' → 'auto' and adding default tool")
                     params["tool_choice"] = "auto"
-                    params["tools"] = [{"type": "web_search_preview"}]
+                    params["tools"] = [{"type": "web_search"}]
                 
                 return params
         
@@ -110,7 +110,7 @@ def test_build_api_params():
         },
         {
             "name": "tool_choice='required' with valid tools",
-            "tools": [{"type": "web_search_preview"}],
+            "tools": [{"type": "web_search"}],
             "tool_choice": "required",
             "expected_tool_choice": "required",
             "expected_has_tools": True,
@@ -124,7 +124,7 @@ def test_build_api_params():
         },
         {
             "name": "tool_choice='none' with tools",
-            "tools": [{"type": "web_search_preview"}],
+            "tools": [{"type": "web_search"}],
             "tool_choice": "none",
             "expected_tool_choice": None,  # Should not be set
             "expected_has_tools": False,  # Should not include tools
@@ -222,7 +222,7 @@ def test_validate_and_filter_tools():
         },
         {
             "name": "tool_choice='required' with valid tools",
-            "tools": [{"type": "web_search_preview"}],
+            "tools": [{"type": "web_search"}],
             "tool_choice": "required",
             "expected_tool_choice": "required",
             "expected_has_tools": True,

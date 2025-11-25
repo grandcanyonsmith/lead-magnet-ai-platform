@@ -51,7 +51,7 @@ def create_test_workflow_with_webhook_step(tenant_id: str) -> Dict[str, Any]:
                 'model': 'gpt-5',
                 'instructions': 'Generate a brief research report about artificial intelligence. Keep it to 2-3 paragraphs.',
                 'step_order': 0,
-                'tools': ['web_search_preview'],
+                'tools': ['web_search'],
                 'tool_choice': 'auto',
             },
             {

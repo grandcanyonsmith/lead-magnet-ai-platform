@@ -21,11 +21,12 @@ const AI_MODELS: AIModel[] = [
   'gpt-4-turbo',
   'gpt-3.5-turbo',
   'computer-use-preview',
+  'o4-mini-deep-research',
 ]
 
 const TOOL_TYPES: ToolType[] = [
   'web_search',
-  'web_search_preview',
+  'web_search',
   'image_generation',
   'computer_use_preview',
   'file_search',

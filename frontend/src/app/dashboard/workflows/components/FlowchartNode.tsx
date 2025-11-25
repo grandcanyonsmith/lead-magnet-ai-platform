@@ -41,11 +41,11 @@ const MODEL_STYLES: Record<
   'gpt-4-turbo': { badge: 'bg-teal-100 text-teal-800 border-teal-300', accent: 'from-teal-100/70' },
   'gpt-3.5-turbo': { badge: 'bg-slate-100 text-slate-800 border-slate-300', accent: 'from-slate-100/70' },
   'computer-use-preview': { badge: 'bg-amber-100 text-amber-800 border-amber-300', accent: 'from-amber-100/70' },
+  'o4-mini-deep-research': { badge: 'bg-purple-100 text-purple-800 border-purple-300', accent: 'from-purple-100/70' },
 }
 
 const TOOL_ICONS: Record<string, { icon: typeof FiZap; label: string; tint: string }> = {
   web_search: { icon: FiSearch, label: 'Web Search', tint: 'bg-blue-100 text-blue-600' },
-  web_search_preview: { icon: FiSearch, label: 'Web Search Preview', tint: 'bg-blue-100 text-blue-600' },
   image_generation: { icon: FiImage, label: 'Image Generation', tint: 'bg-violet-100 text-violet-600' },
   computer_use_preview: { icon: FiMonitor, label: 'Computer Use', tint: 'bg-amber-100 text-amber-600' },
   file_search: { icon: FiFile, label: 'File Search', tint: 'bg-emerald-100 text-emerald-600' },

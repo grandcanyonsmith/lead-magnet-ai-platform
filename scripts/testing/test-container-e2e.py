@@ -37,7 +37,7 @@ def simulate_workflow_step_processing():
             "step_name": "Research Step",
             "step_order": 0,
             "model": "gpt-5",
-            "tools": ["web_search_preview"],  # String format
+            "tools": ["web_search"],  # String format
             "tool_choice": "auto",
         },
         {

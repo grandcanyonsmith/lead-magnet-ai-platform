@@ -40,11 +40,11 @@ def update_workflow_fields(workflow_id: str):
         ai_model = None
         rewrite_model = None
         
-        # Check for research (any step with web_search_preview tool)
+        # Check for research (any step with web_search tool)
         for step in steps:
             tools = step.get("tools", [])
             if isinstance(tools, list):
-                if "web_search_preview" in tools:
+                if "web_search" in tools:
                     research_enabled = True
                     # Use the model from the first research step
                     if not ai_model:

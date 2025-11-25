@@ -50,7 +50,7 @@ A step definition in a workflow configuration. Defines:
   step_order: 0,
   model: "gpt-5",
   instructions: "Research the target market...",
-  tools: ["web_search_preview"],
+  tools: ["web_search"],
   depends_on: []
 }
 ```

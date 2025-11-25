@@ -112,8 +112,8 @@ def _openai_call(model: str, dev: str, user: str, log: logging.Logger) -> str:
                 ],
                 text={"format": {"type": "text"}},
                 reasoning={"effort": "medium"},
-                # do web search preview
-                tools=[{"type": "web_search_preview"}],
+                # do web search
+                tools=[{"type": "web_search"}],
                 store=True,
             )
             return _assistant_text(resp)

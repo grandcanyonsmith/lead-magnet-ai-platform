@@ -12,7 +12,7 @@ export const workflowStepSchema = z.object({
   depends_on: z.array(z.number().int().min(0)).optional(), // Array of step indices this step depends on
   tools: z.array(
     z.union([
-      z.string(), // Simple tool type string (e.g., "web_search_preview")
+      z.string(), // Simple tool type string (e.g., "web_search")
       z.object({
         type: z.string(),
         display_width: z.number().optional(),

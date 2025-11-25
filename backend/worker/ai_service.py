@@ -48,7 +48,7 @@ class AIService:
             instructions: System instructions for the AI
             context: User context/data to generate report from
             previous_context: Optional context from previous steps (accumulated)
-            tools: List of tool dictionaries (e.g., [{"type": "web_search_preview"}])
+            tools: List of tool dictionaries (e.g., [{"type": "web_search"}])
             tool_choice: How model should use tools - "auto", "required", or "none"
             tenant_id: Optional tenant ID for image storage context
             job_id: Optional job ID for image storage context

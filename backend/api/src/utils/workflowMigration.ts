@@ -26,7 +26,7 @@ export function migrateLegacyWorkflowToSteps(workflowData: LegacyWorkflowData): 
       model: workflowData.ai_model || 'gpt-5',
       instructions: workflowData.ai_instructions,
       step_order: 0,
-      tools: ['web_search_preview'],
+      tools: ['web_search'],
       tool_choice: 'auto',
     });
   }
@@ -74,7 +74,7 @@ export function migrateLegacyWorkflowOnUpdate(
       model: updateData.ai_model || existingWorkflow.ai_model || 'gpt-5',
       instructions: aiInstructions,
       step_order: 0,
-      tools: ['web_search_preview'],
+      tools: ['web_search'],
       tool_choice: 'auto',
     });
   }
@@ -182,7 +182,7 @@ export function ensureStepDefaults(steps: WorkflowStep[]): WorkflowStep[] {
       step_order: stepOrder,
       step_description: step.step_description || step.step_name || `Step ${index + 1}`,
       depends_on: dependsOn,
-      tools: step.tools || (index === 0 ? ['web_search_preview'] : []),
+      tools: step.tools || (index === 0 ? ['web_search'] : []),
       tool_choice: (step.tool_choice || (index === 0 ? 'auto' : 'none')) as 'auto' | 'required' | 'none',
       model: step.model || 'gpt-4',
       instructions: step.instructions || '',

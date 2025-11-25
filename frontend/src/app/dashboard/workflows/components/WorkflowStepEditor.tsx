@@ -26,11 +26,11 @@ const MODEL_OPTIONS = [
   { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
   { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' },
   { value: 'computer-use-preview', label: 'Computer Use Preview' },
+  { value: 'o4-mini-deep-research', label: 'O4-Mini-Deep-Research' },
 ]
 
 const AVAILABLE_TOOLS = [
-  { value: 'web_search', label: 'Web Search', description: 'Web search capabilities (newer version)' },
-  { value: 'web_search_preview', label: 'Web Search Preview', description: 'Web search preview capabilities' },
+  { value: 'web_search', label: 'Web Search', description: 'Web search capabilities' },
   { value: 'image_generation', label: 'Image Generation', description: 'Generate images from text descriptions' },
   { value: 'computer_use_preview', label: 'Computer Use Preview', description: 'Control computer interfaces (requires configuration)' },
   { value: 'file_search', label: 'File Search', description: 'Search uploaded files for context' },

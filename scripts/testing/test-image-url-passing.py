@@ -144,7 +144,7 @@ def test_build_api_params_with_images():
         model='gpt-5',
         instructions='Test instructions',
         input_text='Test input text',
-        tools=[{'type': 'web_search_preview'}],
+        tools=[{'type': 'web_search'}],
         tool_choice='auto',
         previous_image_urls=previous_urls
     )

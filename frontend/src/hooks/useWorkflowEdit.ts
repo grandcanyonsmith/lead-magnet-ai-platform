@@ -72,7 +72,7 @@ export function useWorkflowEdit() {
           model: step.model || 'gpt-5',
           instructions: step.instructions?.trim() || defaultInstructions,
           step_order: step.step_order !== undefined ? step.step_order : index,
-          tools: step.tools || ['web_search_preview'],
+          tools: step.tools || ['web_search'],
           tool_choice: step.tool_choice || 'auto',
         }
       })
@@ -114,7 +114,7 @@ export function useWorkflowEdit() {
         model: 'gpt-5',
         instructions: '',
         step_order: prev.length,
-        tools: ['web_search_preview'],
+        tools: ['web_search'],
         tool_choice: 'auto',
       },
     ])

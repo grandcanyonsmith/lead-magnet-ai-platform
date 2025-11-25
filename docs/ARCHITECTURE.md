@@ -54,7 +54,7 @@ This platform enables businesses to create automated workflows that transform fo
 - Cost tracking
 - Multi-step workflow support with context accumulation
 - Image generation support (DALL-E integration)
-- Tool support (web_search_preview, file_search, computer_use_preview)
+- Tool support (web_search, file_search, computer_use_preview)
 
 ### Infrastructure
 - AWS CDK for Infrastructure as Code

@@ -12,12 +12,12 @@ export type AIModel =
   | 'gpt-4-turbo'
   | 'gpt-3.5-turbo'
   | 'computer-use-preview'
+  | 'o4-mini-deep-research'
 
 export type ToolChoice = 'auto' | 'required' | 'none'
 
 export type ToolType = 
   | 'web_search'
-  | 'web_search_preview'
   | 'image_generation'
   | 'computer_use_preview'
   | 'file_search'

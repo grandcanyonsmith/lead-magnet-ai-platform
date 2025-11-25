@@ -70,7 +70,7 @@ The new steps format provides full flexibility for multi-step workflows:
       step_order: 0,
       model: "gpt-5",
       instructions: "Analyze the market for...",
-      tools: ["web_search_preview"],
+      tools: ["web_search"],
       tool_choice: "auto",
       depends_on: [] // No dependencies
     },
@@ -80,7 +80,7 @@ The new steps format provides full flexibility for multi-step workflows:
       step_order: 0, // Same order = can run in parallel
       model: "gpt-5",
       instructions: "Find and analyze competitors...",
-      tools: ["web_search_preview"],
+      tools: ["web_search"],
       tool_choice: "auto",
       depends_on: [] // No dependencies
     },
@@ -109,8 +109,8 @@ Each step can have:
 - `step_order` (number, required): Execution order (steps with same order can run in parallel)
 - `model` (string, default: "gpt-5"): AI model to use
 - `instructions` (string, required): Instructions for the AI
-- `tools` (array, default: ["web_search_preview"]): Tools available to the AI
-  - `"web_search_preview"`: Web search capability
+- `tools` (array, default: ["web_search"]): Tools available to the AI
+  - `"web_search"`: Web search capability
   - `"computer_use"`: Computer use tool (for advanced workflows)
 - `tool_choice` (string, default: "auto"): How the model should use tools
   - `"auto"`: Model decides when to use tools
@@ -163,7 +163,7 @@ You can manually migrate a legacy workflow:
       step_order: 0,
       model: "gpt-5",
       instructions: "Generate report about X",
-      tools: ["web_search_preview"],
+      tools: ["web_search"],
       tool_choice: "auto"
     },
     {
@@ -226,13 +226,13 @@ The migration utility functions (`migrateLegacyWorkflowToSteps`, `migrateLegacyW
       step_name: "Market Research",
       step_order: 0,
       instructions: "Research the target market size and trends",
-      tools: ["web_search_preview"]
+      tools: ["web_search"]
     },
     {
       step_name: "Competitor Analysis",
       step_order: 0, // Parallel with Market Research
       instructions: "Identify and analyze top competitors",
-      tools: ["web_search_preview"]
+      tools: ["web_search"]
     },
     {
       step_name: "Synthesis",

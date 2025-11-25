@@ -127,7 +127,7 @@ def test_openai_client_methods():
             model="gpt-5",
             instructions="Test instructions",
             input_text="Test input",
-            tools=[{"type": "web_search_preview"}],
+            tools=[{"type": "web_search"}],
             tool_choice="auto"
         )
         assert params["model"] == "gpt-5"
@@ -161,23 +161,23 @@ def test_tool_validator():
         
         # Test validation
         tools, choice = ToolValidator.validate_and_filter_tools(
-            [{"type": "web_search_preview"}],
+            [{"type": "web_search"}],
             "auto",
             model="gpt-5"
         )
         assert len(tools) == 1
-        assert tools[0]["type"] == "web_search_preview"
+        assert tools[0]["type"] == "web_search"
         assert choice == "auto"
         logger.info("✅ Tool validation works")
         
         # Test has_image_generation
         assert ToolValidator.has_image_generation([{"type": "image_generation"}])
-        assert not ToolValidator.has_image_generation([{"type": "web_search_preview"}])
+        assert not ToolValidator.has_image_generation([{"type": "web_search"}])
         logger.info("✅ has_image_generation works")
         
         # Test has_computer_use
         assert ToolValidator.has_computer_use([{"type": "computer_use_preview"}])
-        assert not ToolValidator.has_computer_use([{"type": "web_search_preview"}])
+        assert not ToolValidator.has_computer_use([{"type": "web_search"}])
         logger.info("✅ has_computer_use works")
         
         return True
@@ -316,7 +316,7 @@ def test_responses_api_integration():
             model="gpt-5",
             instructions="Test",
             input_text="Test input",
-            tools=[{"type": "web_search_preview"}],
+            tools=[{"type": "web_search"}],
             tool_choice="auto"
         )
         

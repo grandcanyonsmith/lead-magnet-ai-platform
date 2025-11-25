@@ -53,7 +53,7 @@ def migrate_legacy_workflow_to_steps(workflow):
             'step_order': 0,
             'model': ai_model,
             'instructions': ai_instructions,
-            'tools': ['web_search_preview'],
+            'tools': ['web_search'],
             'tool_choice': 'auto',
             'depends_on': []
         })

@@ -35,7 +35,7 @@ def test_requires_container():
     test_cases = [
         {"tool_type": "code_interpreter", "expected": True},
         {"tool_type": "computer_use_preview", "expected": True},
-        {"tool_type": "web_search_preview", "expected": False},
+        {"tool_type": "web_search", "expected": False},
         {"tool_type": "image_generation", "expected": False},
         {"tool_type": "file_search", "expected": False},
         {"tool_type": "web_search", "expected": False},
@@ -102,8 +102,8 @@ def test_ensure_container_parameter():
             "expected_preserves_config": True,
         },
         {
-            "name": "web_search_preview (no container needed)",
-            "input": {"type": "web_search_preview"},
+            "name": "web_search (no container needed)",
+            "input": {"type": "web_search"},
             "expected_has_container": False,
         },
         {
@@ -223,7 +223,7 @@ def test_validate_and_filter_tools_with_container():
         {
             "name": "mixed tools (one needs container)",
             "tools": [
-                {"type": "web_search_preview"},
+                {"type": "web_search"},
                 {"type": "code_interpreter"}
             ],
             "tool_choice": "auto",
@@ -231,8 +231,8 @@ def test_validate_and_filter_tools_with_container():
             "expected_code_interpreter_has_container": True,
         },
         {
-            "name": "web_search_preview (no container needed)",
-            "tools": [{"type": "web_search_preview"}],
+            "name": "web_search (no container needed)",
+            "tools": [{"type": "web_search"}],
             "tool_choice": "auto",
             "expected_container": False,
         },

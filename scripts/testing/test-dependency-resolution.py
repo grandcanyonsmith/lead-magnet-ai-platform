@@ -50,7 +50,7 @@ def test_sequential_workflow():
             'model': 'gpt-5',
             'instructions': 'Research the topic',
             'step_order': 0,
-            'tools': ['web_search_preview'],
+            'tools': ['web_search'],
             'tool_choice': 'auto',
         },
         {
@@ -95,7 +95,7 @@ def test_parallel_workflow():
             'model': 'gpt-5',
             'instructions': 'Research topic A',
             'step_order': 0,
-            'tools': ['web_search_preview'],
+            'tools': ['web_search'],
             'tool_choice': 'auto',
         },
         {
@@ -104,7 +104,7 @@ def test_parallel_workflow():
             'model': 'gpt-5',
             'instructions': 'Research topic B',
             'step_order': 0,  # Same order - can run in parallel
-            'tools': ['web_search_preview'],
+            'tools': ['web_search'],
             'tool_choice': 'auto',
         },
         {
@@ -142,7 +142,7 @@ def test_explicit_dependencies():
             'instructions': 'Research the topic',
             'step_order': 0,
             'depends_on': [],
-            'tools': ['web_search_preview'],
+            'tools': ['web_search'],
             'tool_choice': 'auto',
         },
         {
@@ -152,7 +152,7 @@ def test_explicit_dependencies():
             'instructions': 'Analyze competitors',
             'step_order': 0,
             'depends_on': [],  # Can run in parallel with Research
-            'tools': ['web_search_preview'],
+            'tools': ['web_search'],
             'tool_choice': 'auto',
         },
         {
@@ -284,7 +284,7 @@ def test_step_readiness():
             'instructions': 'Research',
             'step_order': 0,
             'depends_on': [],
-            'tools': ['web_search_preview'],
+            'tools': ['web_search'],
             'tool_choice': 'auto',
         },
         {
@@ -342,7 +342,7 @@ def test_step_status():
             'instructions': 'Research',
             'step_order': 0,
             'depends_on': [],
-            'tools': ['web_search_preview'],
+            'tools': ['web_search'],
             'tool_choice': 'auto',
         },
         {
@@ -376,7 +376,7 @@ def test_complex_dependency_graph():
             'instructions': 'Research A',
             'step_order': 0,
             'depends_on': [],
-            'tools': ['web_search_preview'],
+            'tools': ['web_search'],
             'tool_choice': 'auto',
         },
         {
@@ -386,7 +386,7 @@ def test_complex_dependency_graph():
             'instructions': 'Research B',
             'step_order': 0,
             'depends_on': [],
-            'tools': ['web_search_preview'],
+            'tools': ['web_search'],
             'tool_choice': 'auto',
         },
         {

@@ -356,7 +356,7 @@ Generate ONLY the SMS message text, no explanations, no markdown."""
                 model=workflow.get('ai_model', 'gpt-5'),
                 instructions=prompt,
                 context="",
-                tools=[{"type": "web_search_preview"}],
+                tools=[{"type": "web_search"}],
                 tool_choice="auto"
             )
             

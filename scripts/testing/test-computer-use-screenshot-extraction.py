@@ -314,7 +314,7 @@ def test_no_images_when_computer_use_not_used():
     mock_call = MockComputerUseCall(result="https://example.com/screenshot.png")
     mock_response = MockResponse(output=[mock_call])
     
-    tools = [{"type": "web_search_preview"}]  # Different tool
+    tools = [{"type": "web_search"}]  # Different tool
     result = handler.extract_image_urls(mock_response, tools)
     
     # Should still extract if computer_use_call is in output (we check output, not just tools)

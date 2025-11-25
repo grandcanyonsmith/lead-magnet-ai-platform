@@ -25,10 +25,11 @@ const AVAILABLE_MODELS = [
   'gpt-5',
   'gpt-4o',
   'gpt-4o-mini',
+  'o4-mini-deep-research',
 ];
 
 const AVAILABLE_TOOLS = [
-  'web_search_preview',
+  'web_search',
   'code_interpreter',
   'computer_use_preview',
   'image_generation',
@@ -42,7 +43,7 @@ Available Models:
 ${AVAILABLE_MODELS.join(', ')}
 
 Available Tools:
-- web_search_preview: For web research and information gathering
+- web_search: For web research and information gathering
 - code_interpreter: For data analysis, calculations, file processing
 - computer_use_preview: For browser automation and UI interaction
 - image_generation: For generating images with DALL-E

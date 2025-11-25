@@ -11,6 +11,7 @@ export const AI_MODELS: Array<{ value: AIModel; label: string }> = [
   { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
   { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' },
   { value: 'computer-use-preview', label: 'Computer Use Preview' },
+  { value: 'o4-mini-deep-research', label: 'O4-Mini-Deep-Research' },
 ] as const
 
 export const DEFAULT_AI_MODEL: AIModel = 'gpt-5'

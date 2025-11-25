@@ -70,8 +70,8 @@ def fix_workflow_steps(workflow_id: str, tenant_id: str):
                 step["tool_choice"] = "auto"
                 # Also ensure tools has a default if empty
                 if not tools:
-                    step["tools"] = ["web_search_preview"]
-                    print(f"   Added default tool: web_search_preview")
+                    step["tools"] = ["web_search"]
+                    print(f"   Added default tool: web_search")
                 
                 issues_found = True
                 fixed_count += 1

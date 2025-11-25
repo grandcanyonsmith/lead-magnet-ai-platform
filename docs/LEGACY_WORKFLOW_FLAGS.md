@@ -25,7 +25,7 @@ This document describes the historical behavior of legacy workflow flags: `resea
 **Legacy Format Processing**:
 1. **Research Step** (if `research_enabled` is true):
    - Uses `ai_instructions` and form submission data
-   - Generates a research report using `web_search_preview` tool
+   - Generates a research report using `web_search` tool
    - Stores report as artifact
 
 2. **HTML Generation Step** (if `html_enabled` is true):
@@ -65,7 +65,7 @@ Legacy workflows (those without `steps` array) were migrated to the new steps fo
 1. **Research Step Migration**:
    - If `research_enabled` is true and `ai_instructions` exists:
      - Create a step with `step_name: "Deep Research"`
-     - Set `tools: ["web_search_preview"]`
+     - Set `tools: ["web_search"]`
      - Set `tool_choice: "auto"`
      - Use `ai_instructions` as the step's `instructions`
 

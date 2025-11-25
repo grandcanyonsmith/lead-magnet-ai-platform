@@ -10,7 +10,7 @@ const defaultSteps: WorkflowStep[] = [
     model: 'gpt-5',
     instructions: '',
     step_order: 0,
-    tools: ['web_search_preview'],
+    tools: ['web_search'],
     tool_choice: 'auto',
   },
   {

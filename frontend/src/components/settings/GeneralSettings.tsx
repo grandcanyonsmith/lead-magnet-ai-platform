@@ -20,6 +20,7 @@ const AI_MODEL_OPTIONS = [
   { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
   { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' },
   { value: 'computer-use-preview', label: 'Computer Use Preview' },
+  { value: 'o4-mini-deep-research', label: 'O4-Mini-Deep-Research' },
 ]
 
 export function GeneralSettings({ settings, onChange, errors }: GeneralSettingsProps) {

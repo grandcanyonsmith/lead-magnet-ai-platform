@@ -133,7 +133,7 @@ function getDefaultConfig(description: string): ParsedWorkflowConfig {
         instructions: 'Generate a personalized report based on form submission data. Use [field_name] to reference form fields.',
         step_order: 0,
         depends_on: [],
-        tools: ['web_search_preview'],
+        tools: ['web_search'],
         tool_choice: 'auto',
       },
       {
@@ -162,7 +162,7 @@ function normalizeStep(step: RawStep, index: number): WorkflowStep {
     ? (step.tools as unknown[]).filter((t): t is string | ToolConfig => 
         typeof t === 'string' || (typeof t === 'object' && t !== null && 'type' in t)
       )
-    : (index === 0 ? ['web_search_preview'] : []);
+    : (index === 0 ? ['web_search'] : []);
 
   const toolChoice = (step.tool_choice === 'auto' || step.tool_choice === 'required' || step.tool_choice === 'none')
     ? step.tool_choice
@@ -203,7 +203,7 @@ function createLegacySteps(researchInstructions: string): WorkflowStep[] {
       instructions: researchInstructions,
       step_order: 0,
       depends_on: [],
-      tools: ['web_search_preview'],
+      tools: ['web_search'],
       tool_choice: 'auto',
     },
     {

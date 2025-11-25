@@ -33,11 +33,10 @@ export function buildWorkflowPrompt(context: WorkflowPromptContext): string {
 
 ## Available OpenAI Tools
 
-### web_search / web_search_preview
+### web_search
 - **Use when**: Step needs current information from the web, research, or real-time data
 - **Examples**: Market research, competitor analysis, current trends, news, statistics
 - **Tool choice**: "auto" (let model decide when to search)
-- **Note**: web_search_preview is recommended for most use cases
 
 ### image_generation
 - **Use when**: Step needs to create visual content (diagrams, illustrations, graphics)
@@ -104,6 +103,13 @@ export function buildWorkflowPrompt(context: WorkflowPromptContext): string {
 - **Use when**: Cost is primary concern and basic quality is acceptable
 - **Cost**: Low
 - **Speed**: Very fast
+
+### o4-mini-deep-research
+- **Best for**: Deep research tasks requiring comprehensive web search and analysis
+- **Use when**: You need thorough research with multiple web searches and detailed analysis
+- **Cost**: Moderate
+- **Speed**: Moderate (slower due to research depth)
+- **Note**: Optimized for research-intensive workflows with web_search tool
 
 ## Writing Effective Step Instructions
 
@@ -195,7 +201,7 @@ Common patterns:
       "instructions": "Generate a comprehensive market research report for [company_name] in the [industry] industry. Research current market trends, competitor landscape, and growth opportunities. Include specific statistics, recent developments, and actionable insights. Personalize all recommendations based on [company_name]'s size and target market.",
       "step_order": 0,
       "depends_on": [],
-      "tools": ["web_search_preview"],
+      "tools": ["web_search"],
       "tool_choice": "auto"
     },
     {
@@ -205,7 +211,7 @@ Common patterns:
       "instructions": "Research and analyze top 5 competitors for [company_name] in the [industry] industry. Include their strengths, weaknesses, and market positioning.",
       "step_order": 0,
       "depends_on": [],
-      "tools": ["web_search_preview"],
+      "tools": ["web_search"],
       "tool_choice": "auto"
     },
     {
