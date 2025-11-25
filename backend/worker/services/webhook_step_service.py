@@ -260,11 +260,15 @@ class WebhookStepService:
             
             for artifact in all_artifacts:
                 # Build artifact metadata
+                public_url = artifact.get('public_url') or artifact.get('s3_url') or ''
                 artifact_metadata = {
                     'artifact_id': artifact.get('artifact_id'),
                     'artifact_type': artifact.get('artifact_type'),
                     'artifact_name': artifact.get('artifact_name') or artifact.get('file_name') or '',
-                    'public_url': artifact.get('public_url'),
+                    'public_url': public_url,
+                    'object_url': public_url,  # Alias for public_url for compatibility
+                    's3_key': artifact.get('s3_key'),
+                    's3_url': artifact.get('s3_url'),
                     'file_size_bytes': artifact.get('file_size_bytes'),
                     'mime_type': artifact.get('mime_type'),
                     'created_at': artifact.get('created_at')

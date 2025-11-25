@@ -3,6 +3,8 @@
  * Constructs prompts for workflow configuration generation.
  */
 
+import { formatAllModelDescriptionsMarkdown } from './modelDescriptions';
+
 export interface WorkflowPromptContext {
   description: string;
   brandContext?: string;
@@ -74,42 +76,7 @@ export function buildWorkflowPrompt(context: WorkflowPromptContext): string {
 
 ## Available Models
 
-### gpt-5
-- **Best for**: High-quality content generation, HTML rewriting, general-purpose tasks
-- **Use when**: You need the best quality output for content generation
-- **Cost**: Higher cost, premium quality
-- **Speed**: Moderate
-
-### gpt-4.1
-- **Best for**: High-quality content with Code Interpreter support
-- **Use when**: You need code execution capabilities with high quality
-- **Cost**: Moderate-high
-- **Speed**: Moderate
-
-### gpt-4o
-- **Best for**: General-purpose content generation, balanced quality and cost
-- **Use when**: Good quality is needed but cost is a consideration
-- **Cost**: Moderate
-- **Speed**: Fast
-
-### gpt-4-turbo
-- **Best for**: Faster content generation with good quality
-- **Use when**: Speed is important and quality is acceptable
-- **Cost**: Moderate
-- **Speed**: Very fast
-
-### gpt-3.5-turbo
-- **Best for**: Cost-effective content generation
-- **Use when**: Cost is primary concern and basic quality is acceptable
-- **Cost**: Low
-- **Speed**: Very fast
-
-### o4-mini-deep-research
-- **Best for**: Deep research tasks requiring comprehensive web search and analysis
-- **Use when**: You need thorough research with multiple web searches and detailed analysis
-- **Cost**: Moderate
-- **Speed**: Moderate (slower due to research depth)
-- **Note**: Optimized for research-intensive workflows with web_search tool
+${formatAllModelDescriptionsMarkdown()}
 
 ## Writing Effective Step Instructions
 

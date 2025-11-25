@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import { WorkflowStep } from '../utils/workflowMigration';
+import { formatShortModelDescriptionsList } from '../utils/modelDescriptions';
 
 export interface AIStepGenerationRequest {
   userPrompt: string;
@@ -74,10 +75,7 @@ You must respond with a JSON object that follows this schema:
 
 Guidelines:
 1. Choose the most appropriate model based on the task:
-   - gpt-5: For creative content, rewriting, general tasks (highest quality)
-   - gpt-4o: For balanced performance and quality
-   - gpt-4o-mini: For cost-effective tasks with good quality
-   - o4-mini-deep-research: For deep research tasks requiring comprehensive web search and analysis
+${formatShortModelDescriptionsList()}
 
 2. Select tools based on what the step needs to accomplish:
    - Research/data gathering: web_search
