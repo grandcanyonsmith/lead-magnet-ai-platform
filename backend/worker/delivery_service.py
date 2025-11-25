@@ -51,6 +51,53 @@ class DeliveryService:
             'output_url': output_url
         })
         
+        # Query all artifacts for this job
+        try:
+            all_artifacts = self.db.query_artifacts_by_job_id(job_id)
+            logger.debug(f"[DeliveryService] Queried artifacts for webhook", extra={
+                'job_id': job_id,
+                'artifacts_count': len(all_artifacts)
+            })
+        except Exception as e:
+            logger.warning(f"[DeliveryService] Failed to query artifacts for webhook", extra={
+                'job_id': job_id,
+                'error_type': type(e).__name__,
+                'error_message': str(e)
+            }, exc_info=True)
+            all_artifacts = []
+        
+        # Categorize artifacts
+        artifacts_list = []
+        images_list = []
+        html_files_list = []
+        markdown_files_list = []
+        
+        for artifact in all_artifacts:
+            # Build artifact metadata
+            artifact_metadata = {
+                'artifact_id': artifact.get('artifact_id'),
+                'artifact_type': artifact.get('artifact_type'),
+                'artifact_name': artifact.get('artifact_name') or artifact.get('file_name') or '',
+                'public_url': artifact.get('public_url'),
+                'file_size_bytes': artifact.get('file_size_bytes'),
+                'mime_type': artifact.get('mime_type'),
+                'created_at': artifact.get('created_at')
+            }
+            
+            # Add to all artifacts
+            artifacts_list.append(artifact_metadata)
+            
+            # Categorize by type
+            artifact_type = artifact.get('artifact_type', '').lower()
+            artifact_name = (artifact_metadata['artifact_name'] or '').lower()
+            
+            if artifact_type == 'image' or artifact_name.endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp')):
+                images_list.append(artifact_metadata)
+            elif artifact_type == 'html_final' or artifact_name.endswith('.html'):
+                html_files_list.append(artifact_metadata)
+            elif artifact_type in ('markdown_final', 'step_output', 'report_markdown') or artifact_name.endswith(('.md', '.markdown')):
+                markdown_files_list.append(artifact_metadata)
+        
         # Build payload with dynamic values from submission data
         submission_data = submission.get('submission_data', {})
         payload = {
@@ -63,6 +110,10 @@ class DeliveryService:
             'lead_phone': submission_data.get('phone'),
             'completed_at': datetime.utcnow().isoformat(),
             'workflow_id': job.get('workflow_id'),
+            'artifacts': artifacts_list,
+            'images': images_list,
+            'html_files': html_files_list,
+            'markdown_files': markdown_files_list,
         }
         
         # Merge with any additional dynamic values from submission
@@ -78,7 +129,11 @@ class DeliveryService:
         logger.debug(f"[DeliveryService] Webhook payload prepared", extra={
             'job_id': job_id,
             'payload_keys': list(payload.keys()),
-            'headers_count': len(headers)
+            'headers_count': len(headers),
+            'artifacts_count': len(artifacts_list),
+            'images_count': len(images_list),
+            'html_files_count': len(html_files_list),
+            'markdown_files_count': len(markdown_files_list)
         })
         
         try:

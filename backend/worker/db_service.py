@@ -6,7 +6,7 @@ Handles all DynamoDB operations for the worker.
 import os
 import logging
 import json
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import boto3
 from boto3.dynamodb.conditions import Key
 from datetime import datetime
@@ -345,6 +345,24 @@ class DynamoDBService:
             return response.get('Item')
         except Exception as e:
             logger.error(f"Error getting artifact {artifact_id}: {e}")
+            raise
+    
+    def query_artifacts_by_job_id(self, job_id: str) -> List[Dict[str, Any]]:
+        """Query artifacts by job_id using GSI."""
+        try:
+            logger.debug(f"[DynamoDB] Querying artifacts by job_id", extra={'job_id': job_id})
+            response = self.artifacts_table.query(
+                IndexName='gsi_job_id',
+                KeyConditionExpression=Key('job_id').eq(job_id)
+            )
+            artifacts = response.get('Items', [])
+            logger.debug(f"[DynamoDB] Found {len(artifacts)} artifacts for job", extra={
+                'job_id': job_id,
+                'artifacts_count': len(artifacts)
+            })
+            return artifacts
+        except Exception as e:
+            logger.error(f"Error querying artifacts for job_id {job_id}: {e}", exc_info=True)
             raise
     
     def get_settings(self, tenant_id: str) -> Optional[Dict[str, Any]]:
