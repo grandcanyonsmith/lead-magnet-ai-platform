@@ -158,11 +158,15 @@ function getDefaultConfig(description: string): ParsedWorkflowConfig {
  * @returns Normalized workflow step
  */
 function normalizeStep(step: RawStep, index: number): WorkflowStep {
+  // Do NOT auto-add web_search for o4-mini-deep-research model
+  const model = isString(step.model) && step.model.trim().length > 0 ? step.model : 'gpt-5';
+  const shouldAddDefaultWebSearch = index === 0 && model !== 'o4-mini-deep-research';
+  
   const tools: (string | ToolConfig)[] = isArray(step.tools) 
     ? (step.tools as unknown[]).filter((t): t is string | ToolConfig => 
         typeof t === 'string' || (typeof t === 'object' && t !== null && 'type' in t)
       )
-    : (index === 0 ? ['web_search'] : []);
+    : (shouldAddDefaultWebSearch ? ['web_search'] : []);
 
   const toolChoice = (step.tool_choice === 'auto' || step.tool_choice === 'required' || step.tool_choice === 'none')
     ? step.tool_choice

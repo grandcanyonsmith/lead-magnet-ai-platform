@@ -120,7 +120,9 @@ class StepProcessor:
         step_model = step.get('model', 'gpt-5')
         
         # Extract tools and tool_choice from step config
-        step_tools_raw = step.get('tools', ['web_search'])
+        # Do NOT auto-add web_search for o4-mini-deep-research model
+        default_tools = [] if step_model == 'o4-mini-deep-research' else ['web_search']
+        step_tools_raw = step.get('tools', default_tools)
         step_tools = [{"type": tool} if isinstance(tool, str) else tool for tool in step_tools_raw]
         step_tool_choice = step.get('tool_choice', 'auto')
         
@@ -655,7 +657,10 @@ class StepProcessor:
             })
         
         # Extract tools and tool_choice from step config
-        step_tools_raw = step.get('tools', ['web_search'])
+        # Do NOT auto-add web_search for o4-mini-deep-research model
+        step_model = step.get('model', 'gpt-5')
+        default_tools = [] if step_model == 'o4-mini-deep-research' else ['web_search']
+        step_tools_raw = step.get('tools', default_tools)
         step_tools = [{"type": tool} if isinstance(tool, str) else tool for tool in step_tools_raw]
         step_tool_choice = step.get('tool_choice', 'auto')
         

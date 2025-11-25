@@ -119,6 +119,8 @@ Create a personalized action plan document for [name] at [company_name]. Use ins
 - **Step 1+**: Build upon previous steps, transform or enhance content
 - **Final Step**: Often HTML generation (tool_choice: "none", tools: [])
 
+IMPORTANT: Do NOT automatically add web_search or web_search_preview tools to steps using o4-mini-deep-research model unless the user explicitly requests web search capabilities. The o4-mini-deep-research model does not require web_search tools to function effectively.
+
 **Dependencies (depends_on field) - REQUIRED:**
 - **YOU MUST include depends_on for EVERY step** - it is a required field
 - depends_on is an array of step indices (0-based) that this step depends on
@@ -163,13 +165,13 @@ Common patterns:
   "steps": [
     {
       "step_name": "Deep Research",
-      "step_description": "Conduct comprehensive market research using web search",
+      "step_description": "Conduct comprehensive market research",
       "model": "gpt-5",
       "instructions": "Generate a comprehensive market research report for [company_name] in the [industry] industry. Research current market trends, competitor landscape, and growth opportunities. Include specific statistics, recent developments, and actionable insights. Personalize all recommendations based on [company_name]'s size and target market.",
       "step_order": 0,
       "depends_on": [],
-      "tools": ["web_search"],
-      "tool_choice": "auto"
+      "tools": [],
+      "tool_choice": "none"
     },
     {
       "step_name": "Competitor Analysis",
@@ -178,8 +180,8 @@ Common patterns:
       "instructions": "Research and analyze top 5 competitors for [company_name] in the [industry] industry. Include their strengths, weaknesses, and market positioning.",
       "step_order": 0,
       "depends_on": [],
-      "tools": ["web_search"],
-      "tool_choice": "auto"
+      "tools": [],
+      "tool_choice": "none"
     },
     {
       "step_name": "SWOT Analysis",

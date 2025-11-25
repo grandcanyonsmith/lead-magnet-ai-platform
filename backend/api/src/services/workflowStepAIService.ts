@@ -83,6 +83,11 @@ ${formatShortModelDescriptionsList()}
    - Browser interaction: computer_use_preview
    - Image creation: image_generation
 
+IMPORTANT: Do NOT automatically add tools based on the model selected. Only add tools if:
+   - The user explicitly requests a specific tool
+   - The task description clearly requires a specific tool capability
+   - For o4-mini-deep-research model: Do NOT automatically add web_search or web_search_preview unless explicitly requested
+
 3. Write clear, specific instructions that tell the AI model exactly what to do
 
 4. If the user wants to modify an existing step, use action: "update"
@@ -184,7 +189,18 @@ Please generate the workflow step configuration.`;
       if (parsedResponse.step.tools) {
         parsedResponse.step.tools = parsedResponse.step.tools.filter((tool: any) => {
           const toolName = typeof tool === 'string' ? tool : tool.type;
-          return AVAILABLE_TOOLS.includes(toolName);
+          // Map web_search_preview to web_search (OpenAI sometimes returns preview variant)
+          const normalizedTool = toolName === 'web_search_preview' ? 'web_search' : toolName;
+          return AVAILABLE_TOOLS.includes(normalizedTool);
+        }).map((tool: any) => {
+          // Normalize web_search_preview to web_search
+          if (typeof tool === 'string' && tool === 'web_search_preview') {
+            return 'web_search';
+          }
+          if (typeof tool === 'object' && tool.type === 'web_search_preview') {
+            return { ...tool, type: 'web_search' };
+          }
+          return tool;
         });
       }
 

@@ -176,15 +176,20 @@ export function ensureStepDefaults(steps: WorkflowStep[]): WorkflowStep[] {
       }
     }
     
+    // Determine default tools - do NOT auto-add web_search for o4-mini-deep-research model
+    const model = step.model || 'gpt-4';
+    const shouldAddDefaultWebSearch = index === 0 && model !== 'o4-mini-deep-research';
+    const defaultTools = shouldAddDefaultWebSearch ? ['web_search'] : [];
+    
     return {
       ...step,
       step_name: step.step_name || `Step ${index + 1}`,
       step_order: stepOrder,
       step_description: step.step_description || step.step_name || `Step ${index + 1}`,
       depends_on: dependsOn,
-      tools: step.tools || (index === 0 ? ['web_search'] : []),
+      tools: step.tools || defaultTools,
       tool_choice: (step.tool_choice || (index === 0 ? 'auto' : 'none')) as 'auto' | 'required' | 'none',
-      model: step.model || 'gpt-4',
+      model: model,
       instructions: step.instructions || '',
     } as WorkflowStep;
   });
