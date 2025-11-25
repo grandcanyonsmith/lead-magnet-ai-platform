@@ -258,6 +258,24 @@ export class DatabaseStack extends cdk.Stack {
       TABLE_NAMES.WEBHOOK_LOGS
     );
 
+    // Table 16: Folders (legacy table - recreate definition to maintain CloudFormation exports)
+    // This table exists in DynamoDB - CloudFormation will reference it without recreating it
+    const foldersTable = createTableWithGSI(
+      this,
+      'FoldersTable',
+      {
+        tableName: 'leadmagnet-folders',
+        partitionKey: { name: 'folder_id', type: dynamodb.AttributeType.STRING },
+      },
+      [
+        {
+          indexName: 'gsi_tenant_created',
+          partitionKey: { name: 'tenant_id', type: dynamodb.AttributeType.STRING },
+          sortKey: { name: 'created_at', type: dynamodb.AttributeType.STRING },
+        },
+      ]
+    );
+
     // Export table names and references using TableKey enum for type safety
     this.tablesMap = {
       [TableKey.WORKFLOWS]: workflowsTable,
