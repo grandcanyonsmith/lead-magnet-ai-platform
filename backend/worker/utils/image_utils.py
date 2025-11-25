@@ -100,6 +100,10 @@ def is_problematic_url(url: str) -> bool:
     if not url or not isinstance(url, str):
         return False
     
+    # Skip data URLs (already base64 encoded)
+    if url.startswith('data:'):
+        return False
+    
     try:
         parsed = urlparse(url)
         hostname = parsed.netloc.lower()
@@ -116,6 +120,16 @@ def is_problematic_url(url: str) -> bool:
         if 'rendergfx.ai' in hostname:
             return True
         
+        # Check for cdn.openai.com URLs (OpenAI cannot download from these)
+        if 'cdn.openai.com' in hostname:
+            return True
+        
+        # Check for WordPress sites that might block OpenAI's user agent
+        # Some WordPress sites block requests without proper user agents
+        if 'wp-content' in url.lower() or 'wordpress' in hostname:
+            # Be conservative - convert WordPress URLs to base64 to avoid download failures
+            return True
+        
         # Add other problematic URL patterns here if needed
         # For example:
         # - Private storage services that require authentication
@@ -125,7 +139,8 @@ def is_problematic_url(url: str) -> bool:
         return False
     except Exception as e:
         logger.warning(f"[Image Utils] Error parsing URL for problematic check: {e}")
-        return False
+        # If we can't parse the URL, be conservative and treat it as problematic
+        return True
 
 
 def download_image_and_convert_to_data_url(
