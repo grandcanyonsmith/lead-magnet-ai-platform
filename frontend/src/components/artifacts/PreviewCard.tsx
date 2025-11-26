@@ -1,5 +1,9 @@
+'use client'
+
+import { useState } from 'react'
 import { PreviewRenderer } from './PreviewRenderer'
-import { FiDownload, FiExternalLink, FiClock, FiHardDrive } from 'react-icons/fi'
+import { FullScreenPreviewModal } from '@/components/ui/FullScreenPreviewModal'
+import { FiDownload, FiExternalLink, FiClock, FiHardDrive, FiMaximize2 } from 'react-icons/fi'
 import { Artifact } from '@/types'
 
 interface PreviewCardProps {
@@ -7,6 +11,8 @@ interface PreviewCardProps {
 }
 
 export function PreviewCard({ artifact }: PreviewCardProps) {
+  const [isFullScreenOpen, setIsFullScreenOpen] = useState(false)
+  
   const formatBytes = (bytes?: number) => {
     if (!bytes && bytes !== 0) return '-'
     if (bytes === 0) return '0 B'
@@ -57,8 +63,20 @@ export function PreviewCard({ artifact }: PreviewCardProps) {
           artifactId={artifact.artifact_id}
         />
         
-        <div className="absolute top-2 right-2 bg-primary-600 text-white text-xs font-bold px-2 py-1 rounded">
-          {getFileExtension(artifact.file_name || artifact.artifact_name, artifact.content_type || (artifact as any).mime_type)}
+        <div className="absolute top-2 right-2 flex items-center gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              setIsFullScreenOpen(true)
+            }}
+            className="p-2 bg-white/90 hover:bg-white text-gray-700 rounded-lg shadow-md transition-all hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary-500 z-10"
+            aria-label="Expand preview"
+          >
+            <FiMaximize2 className="w-4 h-4" />
+          </button>
+          <div className="bg-primary-600 text-white text-xs font-bold px-2 py-1 rounded">
+            {getFileExtension(artifact.file_name || artifact.artifact_name, artifact.content_type || (artifact as any).mime_type)}
+          </div>
         </div>
 
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-end p-4 gap-2">
@@ -127,6 +145,15 @@ export function PreviewCard({ artifact }: PreviewCardProps) {
           )}
         </div>
       </div>
+      
+      <FullScreenPreviewModal
+        isOpen={isFullScreenOpen}
+        onClose={() => setIsFullScreenOpen(false)}
+        contentType={artifact.content_type || (artifact as any).mime_type}
+        objectUrl={downloadUrl}
+        fileName={artifact.file_name || artifact.artifact_name}
+        artifactId={artifact.artifact_id}
+      />
     </div>
   )
 }
