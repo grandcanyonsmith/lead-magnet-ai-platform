@@ -4,6 +4,7 @@
 
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
 import { ApiError } from './errors'
+import { logger } from '@/utils/logger'
 
 // Default to production API URL so hosted builds work even if env vars are missing.
 // Local development overrides this via NEXT_PUBLIC_API_URL in .env.local.
@@ -85,9 +86,12 @@ export class BaseApiClient {
         ? JSON.stringify(errorData) 
         : 'Unauthorized'
 
-    console.warn('API returned 401 Unauthorized:', {
-      message: errorMessage,
-      hasToken: !!this.tokenProvider.getToken(),
+    logger.warn('API returned 401 Unauthorized', {
+      context: 'BaseApiClient',
+      data: {
+        message: errorMessage,
+        hasToken: !!this.tokenProvider.getToken(),
+      },
     })
 
     // Check if this is an API Gateway rejection
@@ -97,7 +101,9 @@ export class BaseApiClient {
       errorMessage.includes('Invalid UserPoolId')
 
     if (isApiGatewayRejection) {
-      console.warn('Authentication failed (token expired or invalid), clearing tokens and redirecting to login')
+      logger.warn('Authentication failed (token expired or invalid), clearing tokens and redirecting to login', {
+        context: 'BaseApiClient',
+      })
       this.clearAuthTokens()
       
       // Only redirect if we're not already on login page

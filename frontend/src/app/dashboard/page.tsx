@@ -1,46 +1,56 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { isAuthenticated } from '@/lib/auth'
 import { FiActivity, FiCheckCircle, FiXCircle, FiClock, FiTrendingUp, FiFileText } from 'react-icons/fi'
+import { AnalyticsResponse } from '@/types/analytics'
+import { logger } from '@/utils/logger'
+import { handleError } from '@/utils/error-handling'
 
 export default function DashboardPage() {
   const router = useRouter()
-  const [analytics, setAnalytics] = useState<any>(null)
+  const [analytics, setAnalytics] = useState<AnalyticsResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [authChecked, setAuthChecked] = useState(false)
 
-  useEffect(() => {
-    const checkAndLoad = async () => {
-      // Wait a bit for auth to be ready
-      await new Promise(resolve => setTimeout(resolve, 150))
-      
-      const authenticated = await isAuthenticated()
-      if (!authenticated) {
-        router.push('/auth/login')
-        return
-      }
-      
-      setAuthChecked(true)
-      await loadAnalytics()
-    }
-    
-    checkAndLoad()
-  }, [router])
-
-  const loadAnalytics = async () => {
+  const loadAnalytics = useCallback(async () => {
     try {
       const data = await api.getAnalytics({ days: 30 })
       setAnalytics(data)
-    } catch (error: any) {
-      console.error('Failed to load analytics:', error)
+    } catch (error) {
+      handleError(error, {
+        showToast: false,
+        logError: true,
+        context: 'DashboardPage',
+      })
+      logger.error('Failed to load analytics', { error, context: 'DashboardPage' })
       // Don't redirect on API errors - just show empty state
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    const checkAndLoad = async () => {
+      try {
+        const authenticated = await isAuthenticated()
+        if (!authenticated) {
+          router.push('/auth/login')
+          return
+        }
+        
+        setAuthChecked(true)
+        await loadAnalytics()
+      } catch (error) {
+        logger.error('Auth check failed', { error, context: 'DashboardPage' })
+        router.push('/auth/login')
+      }
+    }
+    
+    checkAndLoad()
+  }, [router, loadAnalytics])
 
   if (loading) {
     return (
@@ -105,7 +115,7 @@ export default function DashboardPage() {
 
   const overview = analytics?.overview || {}
   
-  const stats = [
+  const stats = useMemo(() => [
     {
       label: 'Lead Magnets Generated',
       value: overview.total_jobs || 0,
@@ -142,16 +152,16 @@ export default function DashboardPage() {
       icon: FiClock,
       color: 'indigo',
     },
-  ]
+  ], [overview])
 
-  const colorMap: Record<string, string> = {
+  const colorMap: Record<string, string> = useMemo(() => ({
     blue: 'bg-blue-100 text-blue-600',
     green: 'bg-green-100 text-green-600',
     red: 'bg-red-100 text-red-600',
     yellow: 'bg-yellow-100 text-yellow-600',
     purple: 'bg-purple-100 text-purple-600',
     indigo: 'bg-indigo-100 text-indigo-600',
-  }
+  }), [])
 
   return (
     <div>
@@ -185,8 +195,9 @@ export default function DashboardPage() {
           <a
             href="/dashboard/workflows/new"
             className="flex items-center justify-center px-3 sm:px-4 py-2.5 sm:py-3 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg hover:from-primary-700 hover:to-primary-800 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 text-sm sm:text-base"
+            aria-label="Create a new lead magnet workflow"
           >
-            <FiActivity className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+            <FiActivity className="w-4 h-4 sm:w-5 sm:h-5 mr-2" aria-hidden="true" />
             Create Lead Magnet
           </a>
         </div>
@@ -226,7 +237,7 @@ export default function DashboardPage() {
           <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Recent Activity</h2>
           <p className="text-gray-600 text-xs sm:text-sm leading-relaxed">
             Monitor your generated lead magnets and form submissions in the{' '}
-            <a href="/dashboard/jobs" className="text-primary-600 hover:text-primary-700 font-medium">
+            <a href="/dashboard/jobs" className="text-primary-600 hover:text-primary-700 font-medium" aria-label="View generated lead magnets">
               Generated Lead Magnets section
             </a>
             .

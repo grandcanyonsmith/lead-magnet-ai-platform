@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useCallback } from 'react'
+import React from 'react'
 import { FiX } from 'react-icons/fi'
 import { PreviewRenderer } from '@/components/artifacts/PreviewRenderer'
 
@@ -13,7 +14,7 @@ interface FullScreenPreviewModalProps {
   artifactId?: string
 }
 
-export function FullScreenPreviewModal({
+export const FullScreenPreviewModal = React.memo(function FullScreenPreviewModal({
   isOpen,
   onClose,
   contentType,
@@ -22,13 +23,13 @@ export function FullScreenPreviewModal({
   artifactId,
 }: FullScreenPreviewModalProps) {
   // Handle ESC key to close modal
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose()
-      }
+  const handleEscape = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Escape' && isOpen) {
+      onClose()
     }
+  }, [isOpen, onClose])
 
+  useEffect(() => {
     if (isOpen) {
       document.addEventListener('keydown', handleEscape)
       // Prevent body scroll when modal is open
@@ -39,7 +40,7 @@ export function FullScreenPreviewModal({
       document.removeEventListener('keydown', handleEscape)
       document.body.style.overflow = 'unset'
     }
-  }, [isOpen, onClose])
+  }, [isOpen, handleEscape])
 
   if (!isOpen) return null
 
@@ -47,6 +48,9 @@ export function FullScreenPreviewModal({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm"
       onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={fileName ? `Preview: ${fileName}` : 'Full screen preview'}
     >
       {/* Close button */}
       <button
@@ -54,7 +58,7 @@ export function FullScreenPreviewModal({
         className="absolute top-4 right-4 z-10 p-3 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-white/50"
         aria-label="Close preview"
       >
-        <FiX className="w-6 h-6" />
+        <FiX className="w-6 h-6" aria-hidden="true" />
       </button>
 
       {/* Preview container */}
@@ -74,4 +78,4 @@ export function FullScreenPreviewModal({
       </div>
     </div>
   )
-}
+})

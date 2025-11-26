@@ -6,6 +6,7 @@ import { FiRefreshCw, FiInbox } from 'react-icons/fi'
 import { PreviewCard } from '@/components/artifacts/PreviewCard'
 import { FiltersBar } from '@/components/artifacts/FiltersBar'
 import { PaginationControls } from '@/components/artifacts/PaginationControls'
+import { logger } from '@/utils/logger'
 
 type Artifact = {
   artifact_id: string
@@ -47,7 +48,7 @@ export default function ArtifactsPage() {
       // to group by workflow/job, then by created_at
       setArtifacts(artifactsList)
     } catch (error) {
-      console.error('Failed to load artifacts:', error)
+      logger.error('Failed to load artifacts', { error, context: 'ArtifactsPage' })
     } finally {
       setLoading(false)
     }

@@ -13,6 +13,7 @@ import { FullScreenPreviewModal } from '@/components/ui/FullScreenPreviewModal'
 import { Artifact } from '@/types/artifact'
 import { ApiError } from '@/lib/api/errors'
 import { getErrorMessage } from '@/utils/api-helpers'
+import { logger } from '@/utils/logger'
 
 interface ArtifactPreviewProps {
   artifactId: string
@@ -32,7 +33,7 @@ export function ArtifactPreview({ artifactId }: ArtifactPreviewProps) {
         const data = await api.getArtifact(artifactId)
         setArtifact(data)
       } catch (err) {
-        console.error('Failed to fetch artifact:', err)
+        logger.error('Failed to fetch artifact', { error: err, context: 'ArtifactPreview' })
         setError(getErrorMessage(err))
       } finally {
         setLoading(false)

@@ -63,13 +63,13 @@ export function PreviewCard({ artifact }: PreviewCardProps) {
           artifactId={artifact.artifact_id}
         />
         
-        <div className="absolute top-2 right-2 flex items-center gap-2">
+        <div className="absolute top-2 right-2 flex items-center gap-2 z-20">
           <button
             onClick={(e) => {
               e.stopPropagation()
               setIsFullScreenOpen(true)
             }}
-            className="p-2 bg-white/90 hover:bg-white text-gray-700 rounded-lg shadow-md transition-all hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary-500 z-10"
+            className="p-2 bg-white/90 hover:bg-white text-gray-700 rounded-lg shadow-md transition-all hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary-500 z-20"
             aria-label="Expand preview"
           >
             <FiMaximize2 className="w-4 h-4" />

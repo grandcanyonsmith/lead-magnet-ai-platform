@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { isAuthenticated, useAuth } from '@/lib/auth'
@@ -16,6 +16,8 @@ import { ImpersonationBanner } from '@/components/ImpersonationBanner'
 import { UserImpersonation } from '@/components/UserImpersonation'
 import { ViewSwitcher } from '@/components/ViewSwitcher'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
+import { Settings } from '@/types/settings'
+import { logger } from '@/utils/logger'
 import { 
   FiHome, 
   FiFileText, 
@@ -37,43 +39,40 @@ export default function DashboardLayout({
   const { role } = useAuth()
   const [loading, setLoading] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [settings, setSettings] = useState<any>(null)
+  const [settings, setSettings] = useState<Settings | null>(null)
   const [activeTourId, setActiveTourId] = useState<TourId | null>(null)
   const [searchOpen, setSearchOpen] = useState(false)
   const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false)
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      // Small delay to ensure localStorage and Cognito SDK are ready
-      await new Promise(resolve => setTimeout(resolve, 100))
-      
-      try {
-        const authenticated = await isAuthenticated()
-        if (!authenticated) {
-          console.log('Not authenticated, redirecting to login')
-          router.push('/auth/login')
-        } else {
-          console.log('Authenticated, showing dashboard')
-          setLoading(false)
-          // Load settings for onboarding checklist
-          loadSettings()
-        }
-      } catch (error) {
-        console.error('Auth check error:', error)
-        router.push('/auth/login')
-      }
-    }
-    checkAuth()
-  }, [router])
-
-  const loadSettings = async () => {
+  const loadSettings = useCallback(async () => {
     try {
       const data = await api.getSettings()
       setSettings(data)
     } catch (error) {
-      console.error('Failed to load settings:', error)
+      logger.error('Failed to load settings', { error, context: 'DashboardLayout' })
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const authenticated = await isAuthenticated()
+        if (!authenticated) {
+          logger.debug('Not authenticated, redirecting to login', { context: 'DashboardLayout' })
+          router.push('/auth/login')
+        } else {
+          logger.debug('Authenticated, showing dashboard', { context: 'DashboardLayout' })
+          setLoading(false)
+          // Load settings for onboarding checklist
+          await loadSettings()
+        }
+      } catch (error) {
+        logger.error('Auth check error', { error, context: 'DashboardLayout' })
+        router.push('/auth/login')
+      }
+    }
+    checkAuth()
+  }, [router, loadSettings])
 
   const handleStartTour = (tourId: TourId) => {
     setActiveTourId(tourId)
@@ -101,7 +100,7 @@ export default function DashboardLayout({
       // Reload settings to update UI
       await loadSettings()
     } catch (error) {
-      console.error('Failed to update checklist:', error)
+      logger.error('Failed to update checklist', { error, context: 'DashboardLayout' })
       // Error is already handled by the component's error handling
       // This is just for logging
     }
@@ -111,15 +110,14 @@ export default function DashboardLayout({
     setActiveTourId(null)
   }
 
-  const baseNavItems = [
+  const navItems = useMemo(() => [
     { href: '/dashboard', label: 'Dashboard', icon: FiHome },
     { href: '/dashboard/workflows', label: 'Lead Magnets', icon: FiList },
     { href: '/dashboard/jobs', label: 'Generated Lead Magnets', icon: FiBarChart2 },
     { href: '/dashboard/artifacts', label: 'Downloads', icon: FiFileText },
     { href: '/dashboard/files', label: 'Files', icon: FiFileText },
     { href: '/dashboard/webhook-logs', label: 'Webhook Logs', icon: FiActivity },
-  ]
-  const navItems = baseNavItems
+  ], [])
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
