@@ -5,8 +5,10 @@
 
 'use client'
 
-import { FiCpu } from 'react-icons/fi'
+import { useState } from 'react'
+import { FiCpu, FiMaximize2 } from 'react-icons/fi'
 import { PreviewRenderer } from '@/components/artifacts/PreviewRenderer'
+import { FullScreenPreviewModal } from '@/components/ui/FullScreenPreviewModal'
 import { Artifact } from '@/types/artifact'
 
 interface ImagePreviewProps {
@@ -27,6 +29,8 @@ function getToolName(tool: Tool): string {
 }
 
 export function ImagePreview({ imageUrl, artifact, imageIndex = 0, model, tools, toolChoice }: ImagePreviewProps) {
+  const [isFullScreenOpen, setIsFullScreenOpen] = useState(false)
+  
   // Determine the URL and display name
   const url = imageUrl || artifact?.object_url || artifact?.public_url
   const contentType = artifact?.content_type || 'image/png'
@@ -70,7 +74,14 @@ export function ImagePreview({ imageUrl, artifact, imageIndex = 0, model, tools,
       )}
       
       {url && (
-        <div className="mt-3 md:mt-2 border-2 border-gray-200 rounded-xl overflow-hidden">
+        <div className="mt-3 md:mt-2 border-2 border-gray-200 rounded-xl overflow-hidden relative">
+          <button
+            onClick={() => setIsFullScreenOpen(true)}
+            className="absolute top-2 right-2 z-10 p-2 bg-white/90 hover:bg-white text-gray-700 rounded-lg shadow-md transition-all hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            aria-label="Expand preview"
+          >
+            <FiMaximize2 className="w-4 h-4" />
+          </button>
           <div className="aspect-video bg-gray-100">
             <PreviewRenderer
               contentType={contentType}
@@ -82,6 +93,15 @@ export function ImagePreview({ imageUrl, artifact, imageIndex = 0, model, tools,
           </div>
         </div>
       )}
+      
+      <FullScreenPreviewModal
+        isOpen={isFullScreenOpen}
+        onClose={() => setIsFullScreenOpen(false)}
+        contentType={contentType}
+        objectUrl={url}
+        fileName={artifact?.file_name || artifact?.artifact_name || imageUrl || `Image ${imageIndex + 1}`}
+        artifactId={artifactId}
+      />
     </div>
   )
 }
