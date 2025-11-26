@@ -429,7 +429,7 @@ export default function JobDetailClient() {
         )}
 
         {/* Technical Details */}
-        <TechnicalDetails job={job} form={form} />
+        <TechnicalDetails job={job} form={form} submission={submission} />
       </div>
     </div>
   )

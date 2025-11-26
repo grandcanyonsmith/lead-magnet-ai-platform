@@ -10,19 +10,104 @@ import { Artifact } from '@/types/artifact'
 interface TechnicalDetailsProps {
   job: any
   form: any | null
+  submission?: any | null
 }
 
-export function TechnicalDetails({ job, form }: TechnicalDetailsProps) {
+export function TechnicalDetails({ job, form, submission }: TechnicalDetailsProps) {
   const router = useRouter()
   const [showTechnicalDetails, setShowTechnicalDetails] = useState(false)
   const [copied, setCopied] = useState(false)
   const [artifacts, setArtifacts] = useState<Artifact[]>([])
   const [loadingArtifacts, setLoadingArtifacts] = useState(false)
+  const [copyingAll, setCopyingAll] = useState(false)
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  const copyAllToClipboard = async () => {
+    try {
+      setCopyingAll(true)
+      const parts: string[] = []
+
+      // Add form submission text
+      if (submission?.form_data) {
+        parts.push('=== FORM SUBMISSION ===')
+        parts.push('')
+        Object.entries(submission.form_data).forEach(([key, value]) => {
+          const label = key.replace(/_/g, ' ')
+          const valueStr = typeof value === 'string' ? value : JSON.stringify(value, null, 2)
+          parts.push(`${label}: ${valueStr}`)
+        })
+        parts.push('')
+      }
+
+      // Collect image URLs
+      const imageUrls: string[] = []
+      artifacts.forEach((artifact) => {
+        const url = artifact.object_url || artifact.public_url
+        const contentType = artifact.content_type || ''
+        if (url && contentType.startsWith('image/')) {
+          imageUrls.push(url)
+        }
+      })
+
+      if (imageUrls.length > 0) {
+        parts.push('=== IMAGE URLs ===')
+        parts.push('')
+        imageUrls.forEach((url) => {
+          parts.push(url)
+        })
+        parts.push('')
+      }
+
+      // Fetch and add text content from all text-based artifacts
+      const textArtifacts = artifacts.filter((artifact) => {
+        const contentType = artifact.content_type || ''
+        return (
+          contentType.startsWith('text/') ||
+          contentType === 'application/json' ||
+          contentType === 'text/markdown' ||
+          contentType === 'text/html' ||
+          contentType === 'application/xhtml+xml'
+        )
+      })
+
+      if (textArtifacts.length > 0) {
+        parts.push('=== ARTIFACT TEXT CONTENT ===')
+        parts.push('')
+        for (const artifact of textArtifacts) {
+          try {
+            const fileName = artifact.file_name || artifact.artifact_name || artifact.artifact_id
+            parts.push(`--- ${fileName} (${artifact.artifact_id}) ---`)
+            const content = await api.getArtifactContent(artifact.artifact_id)
+            parts.push(content)
+            parts.push('')
+          } catch (err) {
+            console.error(`Failed to fetch content for artifact ${artifact.artifact_id}:`, err)
+            const fileName = artifact.file_name || artifact.artifact_name || artifact.artifact_id
+            parts.push(`--- ${fileName} (${artifact.artifact_id}) ---`)
+            parts.push(`[Error: Could not fetch content]`)
+            parts.push('')
+          }
+        }
+      }
+
+      // Copy all combined content
+      const allContent = parts.join('\n')
+      await navigator.clipboard.writeText(allContent)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy all content:', err)
+      // Still show copied feedback even on error (some content may have been copied)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } finally {
+      setCopyingAll(false)
+    }
   }
 
   // Fetch all artifacts for this job (including images)
@@ -50,17 +135,39 @@ export function TechnicalDetails({ job, form }: TechnicalDetailsProps) {
 
   return (
     <div className="mt-4 sm:mt-6 bg-white rounded-lg shadow p-4 sm:p-6">
-      <button
-        onClick={() => setShowTechnicalDetails(!showTechnicalDetails)}
-        className="flex items-center justify-between w-full text-left mb-4 touch-target"
-      >
-        <h2 className="text-lg font-semibold text-gray-900">Technical Details</h2>
-        {showTechnicalDetails ? (
-          <FiChevronUp className="w-5 h-5 text-gray-500 flex-shrink-0 ml-2" />
-        ) : (
-          <FiChevronDown className="w-5 h-5 text-gray-500 flex-shrink-0 ml-2" />
+      <div className="flex items-center justify-between mb-4">
+        <button
+          onClick={() => setShowTechnicalDetails(!showTechnicalDetails)}
+          className="flex items-center justify-between flex-1 text-left touch-target"
+        >
+          <h2 className="text-lg font-semibold text-gray-900">Technical Details</h2>
+          {showTechnicalDetails ? (
+            <FiChevronUp className="w-5 h-5 text-gray-500 flex-shrink-0 ml-2" />
+          ) : (
+            <FiChevronDown className="w-5 h-5 text-gray-500 flex-shrink-0 ml-2" />
+          )}
+        </button>
+        {showTechnicalDetails && (
+          <button
+            onClick={copyAllToClipboard}
+            disabled={copyingAll}
+            className="ml-4 flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-target flex-shrink-0"
+            title="Copy all artifacts text, image URLs, and form submission to clipboard"
+          >
+            {copyingAll ? (
+              <>
+                <FiLoader className="w-4 h-4 animate-spin" />
+                <span className="hidden sm:inline">Copying...</span>
+              </>
+            ) : (
+              <>
+                <FiCopy className="w-4 h-4" />
+                <span className="hidden sm:inline">Copy All</span>
+              </>
+            )}
+          </button>
         )}
-      </button>
+      </div>
 
       {showTechnicalDetails && (
         <div className="space-y-4 pt-4 border-t border-gray-200">
