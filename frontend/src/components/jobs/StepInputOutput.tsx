@@ -125,8 +125,8 @@ function renderTextWithImages(text: string): React.ReactNode {
 
     // Add the image
     parts.push(
-      <div key={`image-${idx}`} className="block my-2">
-        <InlineImage url={url} alt={`Image ${idx + 1}`} />
+      <div key={`image-${url}`} className="block my-2">
+        <InlineImage url={url} alt={`Image`} />
       </div>
     )
 
@@ -178,8 +178,8 @@ function renderPreviousStepsContext(previousSteps: ExecutionStep[], formSubmissi
             {/* Render images found in form submission */}
             {formImageUrls.length > 0 && (
               <div className="mt-4 space-y-4 md:space-y-2">
-                {formImageUrls.map((url, idx) => (
-                  <InlineImage key={`form-image-${idx}`} url={url} alt={`Form submission image ${idx + 1}`} />
+                {formImageUrls.map((url) => (
+                  <InlineImage key={`form-image-${url}`} url={url} alt={`Form submission image`} />
                 ))}
               </div>
             )}
@@ -208,8 +208,8 @@ function renderPreviousStepsContext(previousSteps: ExecutionStep[], formSubmissi
             {/* Render images found in step output */}
             {stepImageUrls.length > 0 && (
               <div className="mt-4 md:mt-2 space-y-4 md:space-y-2">
-                {stepImageUrls.map((url, idx) => (
-                  <InlineImage key={`step-output-image-${idx}`} url={url} alt={`Step ${step.step_order} output image ${idx + 1}`} />
+                {stepImageUrls.map((url) => (
+                  <InlineImage key={`step-output-image-${url}`} url={url} alt={`Step ${step.step_order} output image`} />
                 ))}
               </div>
             )}
@@ -220,8 +220,8 @@ function renderPreviousStepsContext(previousSteps: ExecutionStep[], formSubmissi
                   Generated Images:
                 </div>
                 <div className="space-y-4 md:space-y-2">
-                  {step.image_urls.map((url: string, idx: number) => (
-                    <InlineImage key={`step-image-url-${idx}`} url={url} alt={`Generated image ${idx + 1}`} />
+                  {step.image_urls.map((url: string) => (
+                    <InlineImage key={`step-image-url-${url}`} url={url} alt={`Generated image`} />
                   ))}
                 </div>
               </div>

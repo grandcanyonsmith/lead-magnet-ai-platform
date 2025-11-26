@@ -45,22 +45,8 @@ export function useUnsavedChanges({
     }
   }, [hasUnsavedChanges])
 
-  // Handle Next.js route changes
-  useEffect(() => {
-    if (!hasUnsavedChanges) return
-
-    const handleRouteChange = () => {
-      if (onBeforeUnload) {
-        onBeforeUnload()
-      }
-      if (!confirm(messageRef.current)) {
-        throw new Error('Route change cancelled by user')
-      }
-    }
-
-    // Note: Next.js 13+ App Router doesn't have a built-in way to intercept route changes
-    // This is a limitation - we'll rely on beforeunload for now
-    // For better support, we'd need to use a custom solution or wait for Next.js to add this feature
-  }, [hasUnsavedChanges, onBeforeUnload])
+  // Note: Next.js 13+ App Router doesn't have a built-in way to intercept route changes
+  // We rely on beforeunload for browser navigation (refresh/close)
+  // For programmatic navigation, components should check hasUnsavedChanges before navigating
 }
 

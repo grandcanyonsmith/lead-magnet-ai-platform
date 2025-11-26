@@ -216,22 +216,42 @@ export function StepHeader({
             </Tooltip>
           )}
 
-          {/* Rerun Step Button */}
-          {onRerunStep && step.step_order > 0 && step.step_type === 'ai_generation' && (
+          {/* Rerun Step Button - Available for all executable steps except form_submission (step 0) */}
+          {onRerunStep && step.step_order > 0 && step.step_type !== 'form_submission' && step.step_type !== 'final_output' && (
             <Tooltip
               content={
                 rerunningStep === step.step_order - 1
                   ? 'Rerunning step...'
-                  : 'Rerun this step'
+                  : status === 'pending'
+                    ? 'Step has not run yet'
+                    : status === 'in_progress'
+                    ? 'Step is currently running'
+                    : 'Rerun this step'
               }
               position="top"
             >
               <button
-                onClick={() => {
+                onClick={async (e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  if (status === 'pending' || status === 'in_progress') {
+                    console.warn(`[StepHeader] Cannot rerun step: status is ${status}`)
+                    return
+                  }
                   const stepIndex = step.step_order - 1
-                  onRerunStep(stepIndex)
+                  console.log(`[StepHeader] Rerun button clicked for step ${step.step_order} (index ${stepIndex})`)
+                  try {
+                    await onRerunStep?.(stepIndex)
+                  } catch (error) {
+                    console.error('[StepHeader] Error in rerun handler:', error)
+                  }
                 }}
-                disabled={rerunningStep === step.step_order - 1}
+                disabled={
+                  rerunningStep === step.step_order - 1 || 
+                  status === 'pending' || 
+                  status === 'in_progress' ||
+                  !onRerunStep
+                }
                 className="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-target min-h-[44px] sm:min-h-0"
                 aria-label="Rerun this step"
               >

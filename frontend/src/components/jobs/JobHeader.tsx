@@ -19,7 +19,16 @@ export function JobHeader({ error, job }: JobHeaderProps) {
       return null
     }
     
-    const sum = job.execution_steps.reduce((acc: number, step) => {
+    // Filter to only AI generation steps (which have cost)
+    const aiSteps = job.execution_steps.filter(
+      step => step.step_type === 'ai_generation' || step.step_type === 'workflow_step'
+    )
+    
+    if (aiSteps.length === 0) {
+      return null
+    }
+    
+    const sum = aiSteps.reduce((acc: number, step) => {
       const cost = step.usage_info?.cost_usd
       if (cost === undefined || cost === null) {
         return acc
@@ -34,6 +43,16 @@ export function JobHeader({ error, job }: JobHeaderProps) {
       return acc
     }, 0)
     
+    // Only show cost if at least one step has usage_info with cost_usd
+    const hasCostData = aiSteps.some(step => {
+      const cost = step.usage_info?.cost_usd
+      return cost !== undefined && cost !== null && (typeof cost === 'number' ? cost > 0 : parseFloat(String(cost)) > 0)
+    })
+    
+    // If no steps have cost data, return null to hide the display
+    if (!hasCostData) {
+      return null
+    }
     
     return sum
   })()
@@ -59,8 +78,10 @@ export function JobHeader({ error, job }: JobHeaderProps) {
         </div>
         {totalCost !== null && (
           <div className="sm:text-right">
-            <div className="text-xs font-medium uppercase tracking-wide text-gray-500">Total Cost</div>
-            <div className="text-sm sm:text-base text-gray-900 mt-1">${totalCost.toFixed(2)}</div>
+            <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 inline-block">
+              <div className="text-xs font-medium uppercase tracking-wide text-gray-500 mb-1">Total Cost</div>
+              <div className="text-lg sm:text-xl font-semibold text-gray-900">${totalCost.toFixed(2)}</div>
+            </div>
           </div>
         )}
       </div>

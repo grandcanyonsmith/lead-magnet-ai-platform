@@ -406,9 +406,9 @@ export default function JobDetailClient() {
             {showFormSubmission && (
               <div className="px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-200">
                 <div className="pt-4 sm:pt-6">
-                  {submission.submission_data ? (
+                  {submission.form_data ? (
                     <div className="space-y-3">
-                      {Object.entries(submission.submission_data).map(([key, value]: [string, any]) => (
+                      {Object.entries(submission.form_data).map(([key, value]: [string, unknown]) => (
                         <div key={key} className="border-b border-gray-100 pb-3 last:border-b-0">
                           <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">
                             {key.replace(/_/g, ' ')}

@@ -5,10 +5,46 @@
 import { ExecutionStep, MergedStep, StepStatus } from '@/types/job'
 
 /**
- * Check if a step has completed (has output)
+ * Check if a step has completed
+ * A step is considered completed if it has:
+ * - output (non-empty)
+ * - completed_at timestamp
+ * - duration_ms (indicates execution)
+ * - artifact_id (has generated artifact)
+ * - image_urls (has generated images)
  */
 function hasCompleted(step: MergedStep): boolean {
-  return step.output !== null && step.output !== undefined && step.output !== ''
+  // Check for explicit output
+  if (step.output !== null && step.output !== undefined && step.output !== '') {
+    return true
+  }
+  
+  // Check for completion timestamp
+  if (step.completed_at) {
+    return true
+  }
+  
+  // Check for duration (indicates step ran)
+  if (step.duration_ms !== undefined && step.duration_ms !== null) {
+    return true
+  }
+  
+  // Check for artifact (output artifact exists)
+  if (step.artifact_id) {
+    return true
+  }
+  
+  // Check for image URLs (images were generated)
+  if (step.image_urls && Array.isArray(step.image_urls) && step.image_urls.length > 0) {
+    return true
+  }
+  
+  // Check if step has started and completed timestamps
+  if (step.started_at && step.completed_at) {
+    return true
+  }
+  
+  return false
 }
 
 /**

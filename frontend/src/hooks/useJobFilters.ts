@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
+import { Job } from '@/types/job'
 
 export type SortField = 'date' | 'status' | 'duration'
 export type SortDirection = 'asc' | 'desc'
 
-export function useJobFilters(jobs: any[], workflowMap: Record<string, string>) {
+export function useJobFilters(jobs: Job[], workflowMap: Record<string, string>) {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [workflowFilter, setWorkflowFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
@@ -47,7 +48,7 @@ export function useJobFilters(jobs: any[], workflowMap: Record<string, string>) 
   }
 }
 
-export function useJobSorting(filteredJobs: any[]) {
+export function useJobSorting(filteredJobs: Job[]) {
   const [sortField, setSortField] = useState<SortField>('date')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
 

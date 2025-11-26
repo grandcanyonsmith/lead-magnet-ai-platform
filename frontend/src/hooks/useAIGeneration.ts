@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react'
 import { api } from '@/lib/api'
 import { AIModel } from '@/types'
 import { WorkflowStep } from '@/types/workflow'
+import { FormField } from '@/types/form'
 
 export interface AIGenerationResult {
   workflow: {
@@ -22,7 +23,7 @@ export interface AIGenerationResult {
     form_name?: string
     public_slug?: string
     form_fields_schema?: {
-      fields: any[]
+      fields: FormField[]
     }
   }
 }

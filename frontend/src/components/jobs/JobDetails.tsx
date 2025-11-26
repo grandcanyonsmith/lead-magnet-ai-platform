@@ -37,13 +37,48 @@ export function JobDetails({ job, workflow, hideContainer = false }: JobDetailsP
       ? Math.round((completedAt!.getTime() - createdAt.getTime()) / 1000)
       : null
 
-  const totalCost =
-    job.execution_steps && Array.isArray(job.execution_steps)
-      ? job.execution_steps.reduce((sum: number, step) => {
-          const cost = step.usage_info?.cost_usd
-          return sum + (typeof cost === 'number' ? cost : 0)
-        }, 0)
-      : null
+  const totalCost = (() => {
+    if (!job.execution_steps || !Array.isArray(job.execution_steps)) {
+      return null
+    }
+    
+    // Filter to only AI generation steps (which have cost)
+    const aiSteps = job.execution_steps.filter(
+      step => step.step_type === 'ai_generation' || step.step_type === 'workflow_step'
+    )
+    
+    if (aiSteps.length === 0) {
+      return null
+    }
+    
+    const sum = aiSteps.reduce((sum: number, step) => {
+      const cost = step.usage_info?.cost_usd
+      if (cost === undefined || cost === null) {
+        return sum
+      }
+      if (typeof cost === 'number') {
+        return sum + cost
+      }
+      if (typeof cost === 'string') {
+        const parsed = parseFloat(cost)
+        return sum + (isNaN(parsed) ? 0 : parsed)
+      }
+      return sum
+    }, 0)
+    
+    // Only show cost if at least one step has usage_info with cost_usd > 0
+    const hasCostData = aiSteps.some(step => {
+      const cost = step.usage_info?.cost_usd
+      return cost !== undefined && cost !== null && (typeof cost === 'number' ? cost > 0 : parseFloat(String(cost)) > 0)
+    })
+    
+    // If no steps have cost data, return null to hide the display
+    if (!hasCostData) {
+      return null
+    }
+    
+    return sum
+  })()
 
   const stepsCount =
     workflow?.steps?.length ?? job.execution_steps?.length ?? null

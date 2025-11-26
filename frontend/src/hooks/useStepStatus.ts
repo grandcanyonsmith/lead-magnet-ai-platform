@@ -13,6 +13,41 @@ interface UseStepStatusOptions {
 /**
  * Calculate step status for a given step
  */
+// Helper function to check if a step has completed (matches utils.ts logic)
+function hasCompleted(step: MergedStep): boolean {
+  // Check for explicit output
+  if (step.output !== null && step.output !== undefined && step.output !== '') {
+    return true
+  }
+  
+  // Check for completion timestamp
+  if (step.completed_at) {
+    return true
+  }
+  
+  // Check for duration (indicates step ran)
+  if (step.duration_ms !== undefined && step.duration_ms !== null) {
+    return true
+  }
+  
+  // Check for artifact (output artifact exists)
+  if (step.artifact_id) {
+    return true
+  }
+  
+  // Check for image URLs (images were generated)
+  if (step.image_urls && Array.isArray(step.image_urls) && step.image_urls.length > 0) {
+    return true
+  }
+  
+  // Check if step has started and completed timestamps
+  if (step.started_at && step.completed_at) {
+    return true
+  }
+  
+  return false
+}
+
 export function useStepStatus(step: MergedStep, options: UseStepStatusOptions): StepStatus {
   const { steps, jobStatus } = options
   
@@ -23,7 +58,7 @@ export function useStepStatus(step: MergedStep, options: UseStepStatusOptions): 
     }
     
     // Determine status from step data
-    if (step.output !== null && step.output !== undefined && step.output !== '') {
+    if (hasCompleted(step)) {
       return 'completed'
     }
     
@@ -36,10 +71,8 @@ export function useStepStatus(step: MergedStep, options: UseStepStatusOptions): 
     
     // Check if job is processing and this might be the current step
     if (jobStatus === 'processing') {
-      // Find all completed steps (have output)
-      const completedSteps = sortedSteps.filter((s) => 
-        s.output !== null && s.output !== undefined && s.output !== ''
-      )
+      // Find all completed steps
+      const completedSteps = sortedSteps.filter(hasCompleted)
       const stepIndex = sortedSteps.indexOf(step)
       // If this step comes right after the last completed step, it's in progress
       if (stepIndex === completedSteps.length && stepIndex < sortedSteps.length) {
@@ -49,9 +82,7 @@ export function useStepStatus(step: MergedStep, options: UseStepStatusOptions): 
     
     // Check if job failed and step has no output
     if (jobStatus === 'failed') {
-      const completedSteps = sortedSteps.filter((s) => 
-        s.output !== null && s.output !== undefined && s.output !== ''
-      )
+      const completedSteps = sortedSteps.filter(hasCompleted)
       const stepIndex = sortedSteps.indexOf(step)
       // If step was supposed to run but didn't complete, mark as failed
       if (stepIndex <= completedSteps.length && step.output === null) {
@@ -86,13 +117,11 @@ export function useAllStepStatuses(options: UseStepStatusOptions): Map<number, S
       // Use explicit status if provided
       if (step._status) {
         status = step._status
-      } else if (step.output !== null && step.output !== undefined && step.output !== '') {
+      } else if (hasCompleted(step)) {
         status = 'completed'
       } else if (jobStatus === 'processing') {
-        // Find all completed steps (have output)
-        const completedSteps = sortedSteps.filter((s) => 
-          s.output !== null && s.output !== undefined && s.output !== ''
-        )
+        // Find all completed steps
+        const completedSteps = sortedSteps.filter(hasCompleted)
         const stepIndex = sortedSteps.indexOf(step)
         // If this step comes right after the last completed step, it's in progress
         if (stepIndex === completedSteps.length && stepIndex < sortedSteps.length) {
@@ -101,9 +130,7 @@ export function useAllStepStatuses(options: UseStepStatusOptions): Map<number, S
           status = 'pending'
         }
       } else if (jobStatus === 'failed') {
-        const completedSteps = sortedSteps.filter((s) => 
-          s.output !== null && s.output !== undefined && s.output !== ''
-        )
+        const completedSteps = sortedSteps.filter(hasCompleted)
         const stepIndex = sortedSteps.indexOf(step)
         // If step was supposed to run but didn't complete, mark as failed
         if (stepIndex <= completedSteps.length && step.output === null) {

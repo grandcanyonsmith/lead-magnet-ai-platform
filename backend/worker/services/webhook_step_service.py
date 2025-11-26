@@ -8,6 +8,7 @@ import json
 import requests
 from datetime import datetime
 from typing import Dict, Any, List, Optional, Tuple
+from services.context_builder import ContextBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -201,11 +202,40 @@ class WebhookStepService:
         """
         payload = {}
         
+        # Build context from submission data and previous step outputs
+        # Format initial context from submission data (simple key-value format)
+        submission_data = submission.get('submission_data', {})
+        initial_context_lines = []
+        for key, value in submission_data.items():
+            initial_context_lines.append(f"{key}: {value}")
+        initial_context = "\n".join(initial_context_lines) if initial_context_lines else ""
+        
+        # Build full context including previous step outputs
+        context = ContextBuilder.build_previous_context_from_step_outputs(
+            initial_context=initial_context,
+            step_outputs=step_outputs,
+            sorted_steps=sorted_steps
+        )
+        
+        logger.info(f"[WebhookStepService] Built context for webhook step", extra={
+            'job_id': job_id,
+            'step_index': step_index,
+            'context_length': len(context),
+            'previous_steps_count': len(step_outputs),
+            'has_initial_context': bool(initial_context)
+        })
+        
+        # Add context at root level (for direct format)
+        payload['context'] = context
+        
         # Include submission data if selected (default: true)
         include_submission = data_selection.get('include_submission', True)
         if include_submission:
-            submission_data = submission.get('submission_data', {})
-            payload['submission_data'] = submission_data
+            # Create a copy of submission_data to avoid modifying the original
+            submission_data_copy = dict(submission_data)
+            # Add 'icp' field to submission_data (for webhook format)
+            submission_data_copy['icp'] = context
+            payload['submission_data'] = submission_data_copy
         
         # Include step outputs (all by default, exclude specified indices)
         exclude_step_indices = set(data_selection.get('exclude_step_indices', []))

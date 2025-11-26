@@ -1,8 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { api } from '@/lib/api'
+import { Job } from '@/types/job'
+import { Workflow } from '@/types/workflow'
+import { FormSubmission } from '@/types/form'
+import { Form } from '@/types/form'
+import toast from 'react-hot-toast'
 
 /**
  * Hook to manage job detail data loading and resubmission
@@ -34,69 +39,18 @@ export function useJobDetail() {
   }
   
   const [jobId, setJobId] = useState<string>(getJobId())
-  const [job, setJob] = useState<any>(null)
-  const [workflow, setWorkflow] = useState<any>(null)
-  const [submission, setSubmission] = useState<any>(null)
-  const [form, setForm] = useState<any>(null)
+  const [job, setJob] = useState<Job | null>(null)
+  const [workflow, setWorkflow] = useState<Workflow | null>(null)
+  const [submission, setSubmission] = useState<FormSubmission | null>(null)
+  const [form, setForm] = useState<Form | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [resubmitting, setResubmitting] = useState(false)
   const [rerunningStep, setRerunningStep] = useState<number | null>(null)
   const [executionStepsError, setExecutionStepsError] = useState<string | null>(null)
   
-  // Update jobId when params change (for client-side navigation)
-  useEffect(() => {
-    const newJobId = getJobId()
-    if (newJobId && newJobId !== jobId && newJobId.trim() !== '' && newJobId !== '_') {
-      setJobId(newJobId)
-    }
-  }, [params?.id, jobId])
-  
-  useEffect(() => {
-    if (jobId && jobId.trim() !== '' && jobId !== '_') {
-      loadJob()
-    } else if (!jobId || jobId.trim() === '' || jobId === '_') {
-      setError('Invalid job ID. Please select a job from the list.')
-      setLoading(false)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [jobId])
-
-  // Poll for job and execution steps updates when job is processing
-  useEffect(() => {
-    if (!job || job.status !== 'processing') {
-      return
-    }
-
-    // Poll every 3 seconds for updates
-    const pollInterval = setInterval(async () => {
-      try {
-        // Refresh job status and execution steps
-        const data = await api.getJob(jobId)
-        
-        // Update job status
-        setJob((prevJob: any) => ({
-          ...prevJob,
-          status: data.status,
-          updated_at: data.updated_at,
-        }))
-        
-        // Load execution steps through API
-        await loadExecutionSteps(data)
-      } catch (err) {
-        // Silently fail during polling - don't spam console
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('Polling error:', err)
-        }
-      }
-    }, 3000)
-
-    return () => clearInterval(pollInterval)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [job?.status, jobId])
-
   // Load execution steps from API (proxied from S3)
-  const loadExecutionSteps = async (jobData?: any) => {
+  const loadExecutionSteps = useCallback(async (jobData?: Job) => {
     const data = jobData || job
     if (!data) return
 
@@ -107,10 +61,13 @@ export function useJobDetail() {
       
       // Only update if we got valid data
       if (Array.isArray(executionSteps)) {
-        setJob((prevJob: any) => ({
-          ...prevJob,
-          execution_steps: executionSteps,
-        }))
+        setJob((prevJob) => {
+          if (!prevJob) return prevJob
+          return {
+            ...prevJob,
+            execution_steps: executionSteps,
+          }
+        })
         setExecutionStepsError(null) // Clear any previous errors
         if (process.env.NODE_ENV === 'development') {
           console.log(`✅ Loaded execution_steps from API for job ${jobId}`, {
@@ -124,23 +81,25 @@ export function useJobDetail() {
           setExecutionStepsError(errorMsg)
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Don't overwrite existing steps if fetch fails during polling
-      let errorMsg = `Error fetching execution steps: ${err.response?.data?.message || err.message || 'Unknown error'}`
+      const error = err as { response?: { data?: { message?: string } }; message?: string }
+      let errorMsg = `Error fetching execution steps: ${error.response?.data?.message || error.message || 'Unknown error'}`
       if (data?.execution_steps_s3_key) {
         errorMsg += ` (S3 Key: ${data.execution_steps_s3_key})`
       }
       console.error(`❌ ${errorMsg} for job ${jobId}`, {
         error: err,
-        response: err.response,
+        response: error.response,
       })
       if (!jobData) {
         setExecutionStepsError(errorMsg)
       }
     }
-  }
+  }, [jobId, job])
 
-  const loadJob = async () => {
+  // Load job data
+  const loadJob = useCallback(async () => {
     try {
       const data = await api.getJob(jobId)
       
@@ -161,9 +120,10 @@ export function useJobDetail() {
           setExecutionStepsError(errorMsg)
           data.execution_steps = []
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         // Handle errors gracefully - execution steps may not exist yet
-        if (err.response?.status === 404 || err.message?.includes('not found')) {
+        const error = err as { response?: { status?: number }; message?: string }
+        if (error.response?.status === 404 || error.message?.includes('not found')) {
           // Execution steps may not have been created yet (job still processing)
           if (process.env.NODE_ENV === 'development') {
             console.log(`ℹ️ No execution_steps for job ${jobId} - steps may not be created yet`)
@@ -171,13 +131,14 @@ export function useJobDetail() {
           setExecutionStepsError(null)
           data.execution_steps = []
         } else {
-          let errorMsg = `Error fetching execution steps: ${err.response?.data?.message || err.message || 'Unknown error'}`
+          const error = err as { response?: { data?: { message?: string } }; message?: string }
+          let errorMsg = `Error fetching execution steps: ${error.response?.data?.message || error.message || 'Unknown error'}`
           if (data?.execution_steps_s3_key) {
             errorMsg += ` (S3 Key: ${data.execution_steps_s3_key})`
           }
           console.error(`❌ ${errorMsg} for job ${jobId}`, {
             error: err,
-            response: err.response,
+            response: error.response,
           })
           setExecutionStepsError(errorMsg)
           data.execution_steps = []
@@ -220,14 +181,76 @@ export function useJobDetail() {
       }
       
       setError(null)
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } }; message?: string }
       console.error('Failed to load job:', error)
-      setError(error.response?.data?.message || error.message || 'Failed to load lead magnet')
+      setError(err.response?.data?.message || err.message || 'Failed to load lead magnet')
       setLoading(false)
     } finally {
       setLoading(false)
     }
-  }
+  }, [jobId])
+
+  // Update jobId when params change (for client-side navigation)
+  useEffect(() => {
+    const newJobId = getJobId()
+    setJobId((currentJobId) => {
+      if (newJobId && newJobId !== currentJobId && newJobId.trim() !== '' && newJobId !== '_') {
+        return newJobId
+      }
+      return currentJobId
+    })
+  }, [params?.id])
+  
+  useEffect(() => {
+    if (jobId && jobId.trim() !== '' && jobId !== '_') {
+      loadJob()
+    } else if (!jobId || jobId.trim() === '' || jobId === '_') {
+      setError('Invalid job ID. Please select a job from the list.')
+      setLoading(false)
+    }
+  }, [jobId, loadJob])
+
+  // Poll for job and execution steps updates when job is processing or when rerunning a step
+  useEffect(() => {
+    const shouldPoll = job && (job.status === 'processing' || rerunningStep !== null)
+    if (!shouldPoll) {
+      return
+    }
+
+    // Poll every 3 seconds for updates
+    const pollInterval = setInterval(async () => {
+      try {
+        // Refresh job status and execution steps
+        const data = await api.getJob(jobId)
+        
+        // Update job status
+        setJob((prevJob) => {
+          if (!prevJob) return prevJob
+          return {
+            ...prevJob,
+            status: data.status,
+            updated_at: data.updated_at,
+          }
+        })
+        
+        // Load execution steps through API
+        await loadExecutionSteps(data)
+        
+        // If we were rerunning a step and job is no longer processing, clear the rerunning state
+        if (rerunningStep !== null && data.status !== 'processing') {
+          setRerunningStep(null)
+        }
+      } catch (err) {
+        // Silently fail during polling - don't spam console
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('Polling error:', err)
+        }
+      }
+    }, 3000)
+
+    return () => clearInterval(pollInterval)
+  }, [job?.status, jobId, loadExecutionSteps, rerunningStep])
 
   const handleResubmit = async () => {
     setResubmitting(true)
@@ -241,9 +264,10 @@ export function useJobDetail() {
       } else {
         router.push(`/dashboard/jobs/${result.job_id}`)
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } }; message?: string }
       console.error('Failed to resubmit job:', error)
-      setError(error.response?.data?.message || error.message || 'Failed to resubmit job')
+      setError(err.response?.data?.message || err.message || 'Failed to resubmit job')
     } finally {
       setResubmitting(false)
     }
@@ -254,16 +278,31 @@ export function useJobDetail() {
     setError(null)
 
     try {
-      await api.rerunStep(jobId, stepIndex)
+      console.log(`[useJobDetail] Rerunning step ${stepIndex} for job ${jobId}`)
+      const result = await api.rerunStep(jobId, stepIndex)
+      console.log('[useJobDetail] Rerun step response:', result)
+      
+      toast.success(`Step ${stepIndex + 1} rerun initiated. The step will be reprocessed shortly.`)
+      
       // Reload job data after a short delay to see the update
       setTimeout(() => {
         loadJob()
       }, 2000)
-    } catch (error: any) {
-      console.error('Failed to rerun step:', error)
-      setError(error.response?.data?.message || error.message || 'Failed to rerun step')
+      
+      // Continue polling to see the step update
+      // The existing polling useEffect will handle this
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } }; message?: string }
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to rerun step'
+      console.error('[useJobDetail] Failed to rerun step:', error)
+      setError(errorMessage)
+      toast.error(`Failed to rerun step: ${errorMessage}`)
     } finally {
-      setRerunningStep(null)
+      // Don't clear rerunningStep immediately - keep it set until we see the step update
+      // This will be cleared when the step status changes
+      setTimeout(() => {
+        setRerunningStep(null)
+      }, 5000)
     }
   }
 

@@ -202,6 +202,7 @@ export function useChecklistItemHandler(
   const { navigateToRoute } = useNavigationHandler()
   const { state, setUpdating, setError, clearState } = useChecklistItemState()
   const retryCountRef = useRef<number>(0)
+  const itemRef = useRef<{ id: ChecklistItemId; route: string; tourId: string } | null>(null)
 
   const handleItemClick = useCallback(
     async (item: { id: ChecklistItemId; route: string; tourId: string }) => {
@@ -211,47 +212,57 @@ export function useChecklistItemHandler(
 
       setUpdating(item.id)
       retryCountRef.current = 0
+      itemRef.current = item
 
-      try {
-        // Navigate to the route
-        const navigationSucceeded = await navigateToRoute(item.route)
-
-        if (!navigationSucceeded) {
-          throw new Error(ERROR_MESSAGES.NAVIGATION_FAILED)
-        }
-
-        // Wait a bit for the page to render before starting tour
-        await new Promise((resolve) =>
-          setTimeout(resolve, NAVIGATION_CONFIG.INITIAL_TOUR_DELAY)
-        )
-
-        // Start the tour
+      const attemptNavigation = async (currentItem: { id: ChecklistItemId; route: string; tourId: string }) => {
         try {
-          onStartTour(item.tourId as any)
-          clearState()
-        } catch (tourError) {
-          console.error('Failed to start tour:', tourError)
-          setError(ERROR_MESSAGES.TOUR_START_FAILED)
-          onError?.(ERROR_MESSAGES.TOUR_START_FAILED)
-        }
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : ERROR_MESSAGES.GENERIC
-        console.error('Checklist item click error:', error)
-        setError(errorMessage)
-        onError?.(errorMessage)
+          // Navigate to the route
+          const navigationSucceeded = await navigateToRoute(currentItem.route)
 
-        // Retry logic with exponential backoff
-        if (retryCountRef.current < NAVIGATION_CONFIG.MAX_RETRIES) {
-          retryCountRef.current += 1
-          const delay = calculateBackoffDelay(retryCountRef.current - 1)
-          setTimeout(() => {
-            handleItemClick(item)
-          }, delay)
-        } else {
-          clearState()
+          if (!navigationSucceeded) {
+            throw new Error(ERROR_MESSAGES.NAVIGATION_FAILED)
+          }
+
+          // Wait a bit for the page to render before starting tour
+          await new Promise((resolve) =>
+            setTimeout(resolve, NAVIGATION_CONFIG.INITIAL_TOUR_DELAY)
+          )
+
+          // Start the tour
+          try {
+            onStartTour(currentItem.tourId as any)
+            clearState()
+            itemRef.current = null
+          } catch (tourError) {
+            console.error('Failed to start tour:', tourError)
+            setError(ERROR_MESSAGES.TOUR_START_FAILED)
+            onError?.(ERROR_MESSAGES.TOUR_START_FAILED)
+            itemRef.current = null
+          }
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : ERROR_MESSAGES.GENERIC
+          console.error('Checklist item click error:', error)
+          setError(errorMessage)
+          onError?.(errorMessage)
+
+          // Retry logic with exponential backoff
+          if (retryCountRef.current < NAVIGATION_CONFIG.MAX_RETRIES) {
+            retryCountRef.current += 1
+            const delay = calculateBackoffDelay(retryCountRef.current - 1)
+            setTimeout(() => {
+              if (itemRef.current) {
+                attemptNavigation(itemRef.current)
+              }
+            }, delay)
+          } else {
+            clearState()
+            itemRef.current = null
+          }
         }
       }
+
+      await attemptNavigation(item)
     },
     [state.updating, navigateToRoute, onStartTour, setUpdating, setError, clearState, onError]
   )

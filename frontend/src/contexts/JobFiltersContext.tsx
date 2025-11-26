@@ -1,13 +1,14 @@
 'use client'
 
 import React, { createContext, useContext, ReactNode } from 'react'
+import { Workflow } from '@/types/workflow'
 
 interface JobFiltersContextValue {
   statusFilter: string
   workflowFilter: string
   setStatusFilter: (value: string) => void
   setWorkflowFilter: (value: string) => void
-  workflows: any[]
+  workflows: Workflow[]
 }
 
 const JobFiltersContext = createContext<JobFiltersContextValue | null>(null)
@@ -25,7 +26,7 @@ export function JobFiltersProvider({
   workflowFilter: string
   setStatusFilter: (value: string) => void
   setWorkflowFilter: (value: string) => void
-  workflows?: any[]
+  workflows?: Workflow[]
 }) {
   return (
     <JobFiltersContext.Provider value={{

@@ -47,8 +47,8 @@ function renderTextWithImages(text: string): React.ReactNode {
 
     // Add the image
     parts.push(
-      <div key={`image-${idx}`} className="block">
-        <InlineImage url={url} alt={`Image ${idx + 1}`} />
+      <div key={`image-${url}`} className="block">
+        <InlineImage url={url} alt={`Image`} />
       </div>
     )
 
@@ -136,8 +136,8 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
     return (
       <div className="mt-5 md:mt-4 space-y-4 md:space-y-2">
         <div className="text-sm md:text-xs font-medium text-gray-600 mb-3 md:mb-2">Generated Images:</div>
-        {imageUrls.map((url, idx) => (
-          <InlineImage key={`inline-image-${idx}`} url={url} alt={`Image ${idx + 1}`} />
+        {imageUrls.map((url) => (
+          <InlineImage key={`inline-image-${url}`} url={url} alt={`Image`} />
         ))}
       </div>
     )
@@ -215,8 +215,8 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
                 {/* Render images found in JSON */}
                 {extractedImageUrls.length > 0 && (
                   <div className="mt-5 md:mt-4 space-y-4 md:space-y-2">
-                    {extractedImageUrls.map((url, idx) => (
-                      <InlineImage key={`json-image-${idx}`} url={url} alt={`Image from JSON ${idx + 1}`} />
+                    {extractedImageUrls.map((url) => (
+                      <InlineImage key={`json-image-${url}`} url={url} alt={`Image from JSON`} />
                     ))}
                   </div>
                 )}
@@ -307,11 +307,11 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
               const extractedUrls = extractImageUrls(htmlContent)
               return extractedUrls.length > 0 || imageUrls.length > 0 ? (
                 <div className="mt-5 md:mt-4 space-y-4 md:space-y-2">
-                  {extractedUrls.map((url, idx) => (
-                    <InlineImage key={`html-image-${idx}`} url={url} alt={`Image from HTML ${idx + 1}`} />
+                  {extractedUrls.map((url) => (
+                    <InlineImage key={`html-image-${url}`} url={url} alt={`Image from HTML`} />
                   ))}
-                  {imageUrls.map((url, idx) => (
-                    <InlineImage key={`html-prop-image-${idx}`} url={url} alt={`Image ${idx + 1}`} />
+                  {imageUrls.map((url) => (
+                    <InlineImage key={`html-prop-image-${url}`} url={url} alt={`Image`} />
                   ))}
                 </div>
               ) : null
@@ -355,8 +355,8 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
                 {/* Render plain image URLs that aren't in markdown format */}
                 {extractedImageUrls.length > 0 && (
                   <div className="mt-5 md:mt-4 space-y-4 md:space-y-2">
-                    {extractedImageUrls.map((url, idx) => (
-                      <InlineImage key={`md-image-${idx}`} url={url} alt={`Image from markdown ${idx + 1}`} />
+                    {extractedImageUrls.map((url) => (
+                      <InlineImage key={`md-image-${url}`} url={url} alt={`Image from markdown`} />
                     ))}
                   </div>
                 )}

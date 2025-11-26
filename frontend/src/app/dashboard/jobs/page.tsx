@@ -421,7 +421,7 @@ export default function JobsPage() {
                   : null
                 
                 const hasError = job.status === 'failed' && job.error_message
-                const errorPreview = hasError 
+                const errorPreview = hasError && job.error_message
                   ? (job.error_message.length > 60 
                       ? job.error_message.substring(0, 60) + '...' 
                       : job.error_message)
