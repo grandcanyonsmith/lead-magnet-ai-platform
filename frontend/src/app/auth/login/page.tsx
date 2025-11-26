@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, Suspense, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { signIn } from '@/lib/auth'
 import { api } from '@/lib/api'
+import { logger } from '@/utils/logger'
+import { Settings } from '@/types/settings'
 
 function LoginForm() {
   const router = useRouter()
@@ -22,49 +24,10 @@ function LoginForm() {
     }
   }, [searchParams])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
-
-    try {
-      const result = await signIn(email, password)
-      if (result.success) {
-        // Wait a bit longer to ensure tokens are stored in localStorage
-        // Cognito SDK stores tokens asynchronously
-        await new Promise(resolve => setTimeout(resolve, 300))
-        
-        // Verify tokens are stored before redirecting
-        const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID || ''
-        if (clientId) {
-          const lastAuthUser = localStorage.getItem(`CognitoIdentityServiceProvider.${clientId}.LastAuthUser`)
-          if (lastAuthUser) {
-            const idToken = localStorage.getItem(`CognitoIdentityServiceProvider.${clientId}.${lastAuthUser}.idToken`)
-            if (idToken) {
-              // Check onboarding status
-              await checkOnboardingAndRedirect()
-              return
-            }
-          }
-        }
-        
-        // If Cognito tokens aren't ready, try again after a delay
-        await new Promise(resolve => setTimeout(resolve, 200))
-        await checkOnboardingAndRedirect()
-      } else {
-        setError(result.error || 'Failed to sign in')
-        setLoading(false)
-      }
-    } catch (err: any) {
-      setError(err.message || 'An error occurred')
-      setLoading(false)
-    }
-  }
-
-  const checkOnboardingAndRedirect = async () => {
+  const checkOnboardingAndRedirect = useCallback(async () => {
     try {
       // Check if onboarding survey is completed
-      const settings = await api.getSettings()
+      const settings = await api.getSettings() as Settings
       const redirectParam = searchParams?.get('redirect')
       
       if (!settings.onboarding_survey_completed) {
@@ -78,9 +41,55 @@ function LoginForm() {
         router.push('/dashboard')
       }
     } catch (error) {
-      console.error('Failed to check onboarding status:', error)
+      logger.error('Failed to check onboarding status', { error, context: 'LoginPage' })
       // Default to dashboard on error
       router.push('/dashboard')
+    }
+  }, [router, searchParams])
+
+  const waitForCognitoTokens = useCallback(async (maxAttempts = 10, delay = 100): Promise<boolean> => {
+    const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID || ''
+    if (!clientId) return false
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const lastAuthUser = localStorage.getItem(`CognitoIdentityServiceProvider.${clientId}.LastAuthUser`)
+      if (lastAuthUser) {
+        const idToken = localStorage.getItem(`CognitoIdentityServiceProvider.${clientId}.${lastAuthUser}.idToken`)
+        if (idToken) {
+          return true
+        }
+      }
+      await new Promise(resolve => setTimeout(resolve, delay))
+    }
+    return false
+  }, [])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+
+    try {
+      const result = await signIn(email, password)
+      if (result.success) {
+        // Wait for Cognito tokens to be stored
+        const tokensReady = await waitForCognitoTokens()
+        if (tokensReady) {
+          await checkOnboardingAndRedirect()
+        } else {
+          // If tokens aren't ready after max attempts, still try to redirect
+          logger.warn('Cognito tokens not ready after max attempts', { context: 'LoginPage' })
+          await checkOnboardingAndRedirect()
+        }
+      } else {
+        setError(result.error || 'Failed to sign in')
+        setLoading(false)
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred'
+      logger.error('Login failed', { error: err, context: 'LoginPage' })
+      setError(errorMessage)
+      setLoading(false)
     }
   }
 
@@ -104,8 +113,8 @@ function LoginForm() {
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
           <form className="space-y-6" onSubmit={handleSubmit}>
             {error && (
-              <div className="bg-red-50 border-l-4 border-red-400 text-red-700 px-4 py-3 rounded-md flex items-start">
-                <svg className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <div className="bg-red-50 border-l-4 border-red-400 text-red-700 px-4 py-3 rounded-md flex items-start" role="alert" aria-live="polite">
+                <svg className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                 </svg>
                 <span className="text-sm">{error}</span>
@@ -150,6 +159,7 @@ function LoginForm() {
             <button
               type="submit"
               disabled={loading}
+              aria-label={loading ? 'Signing in...' : 'Sign in'}
               className="w-full flex justify-center items-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:transform-none"
             >
               {loading ? (
