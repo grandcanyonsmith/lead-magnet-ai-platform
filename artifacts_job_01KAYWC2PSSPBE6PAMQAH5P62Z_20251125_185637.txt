@@ -1,0 +1,1191 @@
+================================================================================
+ARTIFACTS FOR JOB: job_01KAYWC2PSSPBE6PAMQAH5P62Z
+Generated: 2025-11-25T18:56:29.977721
+Total Artifacts: 17
+================================================================================
+
+
+--------------------------------------------------------------------------------
+ARTIFACT 1/17
+--------------------------------------------------------------------------------
+ID: art_01KAYWE7EBM6D12C1F0GZWPBSF
+Name: step_1_profile_data_structuring.md
+Type: step_output
+Created: 2025-11-26T01:28:54.599879
+S3 Key: cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_1_profile_data_structuring.md
+S3 URL: s3://leadmagnet-artifacts-471112574622/cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_1_profile_data_structuring.md
+Public URL: https://dmydkyj79auy7.cloudfront.net/cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_1_profile_data_structuring.md
+
+CONTENT:
+--------------------------------------------------------------------------------
+Here’s your structured profile, organized from the form and transcript.
+
+PROFILE SUMMARY
+- Dennis helps contractors, designers, homeowners/DIYers, and aspiring inspectors understand and navigate the International Residential Code (IRC) to pass the ICC B1 Residential Inspector exam and build to code without surprises.
+
+CONTACT
+- Name: Dennis (last name appears as Cherenkov in email)
+- Phone: (801) 623-7631
+- Primary email (from transcript): dennis.cherenkov@gmail.com
+- Alternate email (from form footer): d@gmail.com
+- Website: www.cherenkovcodeconsulting.com
+- Social: LinkedIn (has certifications listed), Reddit (active in building code subreddits; starting pre-sell)
+
+BUSINESS/BRAND
+- Working name: Cherenkov Code Consulting
+- Positioning: No‑nonsense, accuracy-first code education that teaches both the letter and the intent of the IRC, with practical techniques to navigate, interpret, and apply codes in the real world.
+- Mission: Develop solution‑oriented inspectors and professionals who use the code to solve problems, not create them.
+
+IDEAL CUSTOMER PROFILE (ICP)
+- Who:
+  - Contractors (especially those transitioning to building inspector roles or consulting)
+  - Residential designers/drafters/architects
+  - Homeowners/DIY builders planning residential projects (e.g., home, greenhouse)
+  - Aspiring building inspectors preparing for ICC B1
+- Where: U.S. jurisdictions using the IRC (2024 cycle)
+- Triggers:
+  - Failed or scheduled ICC B1 exam
+  - Friction with building departments/inspections
+  - New role responsibilities requiring code fluency
+  - Desire to shift from contracting to consulting
+- Psychographics:
+  - Value clarity, accuracy, and efficiency
+  - Prefer straight talk over hype
+  - Willing to study and practice; not looking for a “magic bullet”
+
+TOP PROBLEMS/PINPOINTS
+- Treating B1 as a “how to build” test instead of a legal/code navigation exam
+- Difficulty finding, interpreting, and applying relevant IRC sections
+- Confusion about exceptions (“landmines”) that reverse or modify rules
+- Frustration with inspection processes and not understanding the “why” and intent behind requirements
+- Lack of trustworthy, on‑demand training; misinformation on YouTube
+
+PRIMARY OFFER
+- Name (working): IRC 2024 B1 Residential Inspector Prep
+- Focus: 2024 IRC Chapters 1–10 (B1 scope). “Nuts and bolts” of building planning and structural topics; excludes MEP trades.
+- Format: Comprehensive analysis of key, commonly‑tested and misunderstood sections (not a line‑by‑line read). Builds the skill of code navigation, interpretation, and application that transfers beyond covered sections.
+- Signature methods:
+  - Color‑coded bookmarking/markup system to speed lookups and flag exceptions (“landmines”)
+  - Study habits and test‑taking strategies tailored to B1
+  - Emphasis on intent/spirit of the code to handle real‑world alternatives/modifications
+  - ICC exam portal guidance (creating account, choosing/scheduling exams, reading category breakdowns, post‑exam remediation planning)
+
+WHAT’S INCLUDED (planned)
+- On‑demand video lessons on Chapters 1–10 (curated key sections)
+- Demonstrations of the bookmarking/highlighter system (with printable/reference guide)
+- Practice: guided code hunts and interpretation drills; sample questions (as available/created)
+- Exam navigation support: walkthrough of ICC portal and post‑exam performance analysis
+- Curated external resources (e.g., APA/AWC videos) for reinforcement
+- Support: Q&A office hours or discussion forum (to confirm)
+
+REQUIRED/RECOMMENDED MATERIALS
+- Required: 2024 IRC (student purchases separately)
+- Recommended: Highlighters + blue pen per bookmarking system; optional ICC Study Companion (if used)
+
+RESULTS/PROOF
+- Students report major improvements in code navigation and interpretation
+- Notable story: Company owner passed B1 using a book marked with Dennis’s system despite not attending lectures—evidence of system effectiveness
+
+PRICING
+- Competitor anchor: ~$900 (includes books, practice tests, extras)
+- Target range: $500–$600 if books/resources not included
+- Willing to price at ~$900 if value/features match or exceed competitor
+- Students purchase their own books (cost subtracted from tuition vs. competitor)
+
+KEY DIFFERENTIATORS
+- Teaches both letter and intent of the code; solution‑oriented mindset
+- Practical bookmarking system that flags exception “landmines”
+- Honest, no‑hype positioning; emphasizes required effort and self‑study
+- Clear, precise communication grounded in code language (military-influenced, no‑nonsense)
+- Hands‑on ICC exam process guidance
+
+COMMON OBJECTIONS AND RESPONSES
+- Cost: Priced below competitor when books not included; higher option possible with expanded resources
+- Time commitment: This is not a shortcut; success requires self‑study and practice—course maximizes study efficiency and exam readiness
+- “Perfect product” expectation: Presented as a reliable, accurate tool—not a magic fix
+
+VOICE AND STYLE
+- Straight to the point, clarity-first
+- Uses precise code language and cites sections
+- Demands specificity from jurisdictions and trains students to do the same
+- Respectful but candid; practical over flashy
+
+ASSET/LEAD MAGNET IDEAS (planned)
+- Color‑coded IRC bookmarking guide (PDF with example page snapshots and color key)
+- “Landmines” checklist: common exceptions that flip answers
+- Mini video: how to read IRC sections and cross‑references quickly
+- ICC Exam Navigator: step‑by‑step portal and post‑exam analysis sheet
+
+CHANNELS
+- Website: cherenkovcodeconsulting.com
+- LinkedIn: credentials and experience
+- Reddit: engagement and pre‑selling in building code communities
+- Future: email list for tips, case studies, and launch notices
+
+SUGGESTED SHORT COURSE OUTLINE (B1 scope, IRC 2024)
+- Ch. 1 Administration: scope, application, permits, inspections, alternative materials/methods
+- Ch. 2 Definitions: test‑relevant terms; how definitions control interpretation
+- Ch. 3 Building Planning: occupancy, light/ventilation, egress, safety glazing, fire protection
+- Ch. 4 Foundations: soils, footings, foundation walls, slabs, frost protection
+- Ch. 5 Floors: spans, joists, girders, decking, openings
+- Ch. 6 Wall Construction: studs, bracing, sheathing, headers
+- Ch. 7 Wall Covering: exterior and interior coverings, weather‑resistive barriers
+- Ch. 8 Roof‑Ceiling Construction: rafters, trusses, ventilation, insulation interfaces
+- Ch. 9 Roof Assemblies: roofing materials, underlayments, flashing
+- Ch. 10 Chimneys and Fireplaces: masonry/metal, clearances, hearth/venting
+- Threaded throughout: exception “landmines,” cross‑references, and intent analysis
+
+OPEN ITEMS TO CONFIRM
+- Primary email to use (two provided)
+- Delivery format and cadence (fully on‑demand, cohort live, or hybrid)
+- Course length, access duration, and start date
+- Inclusion of practice tests/question bank and community support
+- Refund/guarantee policy and payment plans
+- Target jurisdictions (any state-specific addenda?)
+- Testimonials you can publicly share (names, permission)
+
+If you want, I can turn this into a one‑page PDF brief or a landing page draft next.
+
+
+--------------------------------------------------------------------------------
+ARTIFACT 2/17
+--------------------------------------------------------------------------------
+ID: art_01KAYWF0C21V72TWTGQQF21JK2
+Name: step_2_fears,_pains_&_problems.md
+Type: step_output
+Created: 2025-11-26T01:29:20.120340
+S3 Key: cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_2_fears,_pains_&_problems.md
+S3 URL: s3://leadmagnet-artifacts-471112574622/cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_2_fears,_pains_&_problems.md
+Public URL: https://dmydkyj79auy7.cloudfront.net/cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_2_fears,_pains_&_problems.md
+
+CONTENT:
+--------------------------------------------------------------------------------
+Here are ten customer fears, pains, and problems tailored to your ICP:
+
+1) Failing or underperforming on the ICC B1 because it’s a legal/code navigation exam, not a “how to build” test. [fear/problem]
+2) Slow code lookup—can’t find the right IRC section quickly under exam or job-site time pressure. [pain/problem]
+3) Getting tripped by exceptions, definitions, and cross-references that flip the answer (“landmines”). [problem]
+4) Not grasping the intent/spirit behind requirements, making alternatives/modifications hard to justify to AHJs. [pain/problem]
+5) Conflicting or incorrect online info (YouTube/forums) leading to wasted study time and bad habits. [pain]
+6) Overwhelm with the 2024 IRC changes and uncertainty about what matters in Chapters 1–10 for B1. [fear/problem]
+7) Failed inspections, unclear correction notices, and tense interactions with building departments causing delays/rework. [pain/fear]
+8) Limited study time and no proven system for studying, marking, and test-taking. [pain/problem]
+9) Budget risk: paying for books, exam fees, retakes, and training without confidence in ROI. [fear/pain]
+10) Unclear roadmap for transitioning from contractor to inspector/consultant and how to use code knowledge for income. [fear/problem]
+
+
+--------------------------------------------------------------------------------
+ARTIFACT 3/17
+--------------------------------------------------------------------------------
+ID: art_01KAYWFZFSVAWDZ1JYE44QDBRT
+Name: step_3_dreams_&_desires.md
+Type: step_output
+Created: 2025-11-26T01:29:51.985532
+S3 Key: cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_3_dreams_&_desires.md
+S3 URL: s3://leadmagnet-artifacts-471112574622/cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_3_dreams_&_desires.md
+Public URL: https://dmydkyj79auy7.cloudfront.net/cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_3_dreams_&_desires.md
+
+CONTENT:
+--------------------------------------------------------------------------------
+Here are ten customer dreams and desires tailored to your ICP (contractors, designers, homeowners/DIYers, and aspiring inspectors):
+
+1) Pass the ICC B1 on the first attempt
+- Score comfortably above the cutoff and avoid costly retakes; walk into test day knowing exactly how to navigate the IRC.
+
+2) Code fluency on demand
+- Find, interpret, and apply the right IRC section (Ch. 1–10) in under a minute, even under exam or job-site pressure.
+
+3) Master the “landmines”
+- Spot exceptions, definitions, and cross-references that change answers; feel confident you’re not missing the one clause that flips the decision.
+
+4) First-pass approvals and cleaner inspections
+- Submit plans and meet inspectors with confidence; fewer correction notices, faster approvals, less rework.
+
+5) Career upgrade and mobility
+- Transition from contractor to building inspector or consultant; open doors to steadier income, benefits, and respected roles.
+
+6) Become the go-to “code person”
+- Earn credibility in the company or community; colleagues, clients, and AHJs trust your interpretations and ask for your input.
+
+7) Strategic use of alternatives and equivalencies
+- Argue the intent/spirit of the code effectively; craft compliant, cost-saving solutions without overbuilding.
+
+8) Efficient, predictable study system
+- A clear weekly plan (bookmarking, highlighting, drills) that fits real life—so progress is steady without burnout.
+
+9) Better project economics
+- Reduce delays, change orders, and failed inspections; protect profit on jobs and deliver predictable timelines.
+
+10) Pride, purpose, and peace of mind
+- Build safer homes, serve the public, and model solution-oriented professionalism—while enjoying a more balanced, less stressful work life.
+
+
+--------------------------------------------------------------------------------
+ARTIFACT 4/17
+--------------------------------------------------------------------------------
+ID: art_01KAYWGR7FC13CEWTVJG3PXYY6
+Name: step_4_values_&_beliefs.md
+Type: step_output
+Created: 2025-11-26T01:30:17.330680
+S3 Key: cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_4_values_&_beliefs.md
+S3 URL: s3://leadmagnet-artifacts-471112574622/cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_4_values_&_beliefs.md
+Public URL: https://dmydkyj79auy7.cloudfront.net/cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_4_values_&_beliefs.md
+
+CONTENT:
+--------------------------------------------------------------------------------
+Here are ten core values and beliefs tailored to Dennis and his code-education brand:
+
+1) Clarity and precision
+- Communicate in plain, code-accurate language; be direct, specific, and unambiguous.
+
+2) Accuracy over shortcuts
+- Teach what is correct, cite the IRC, and refuse hype or “magic bullet” promises.
+
+3) Intent-driven compliance
+- Understand and apply the spirit of the code, not just the letter, to craft defensible solutions.
+
+4) Solution-first mindset
+- Be part of the solution with AHJs and clients—propose compliant alternatives, don’t just point out problems.
+
+5) Student ownership and discipline
+- Results require effort; provide tools and systems, but learners must do the work.
+
+6) Practicality and speed
+- Prioritize on-the-job and exam-ready skills: fast lookup, clear interpretation, confident application.
+
+7) Professional respect and ethics
+- Engage without ego; uphold public safety, fairness, and integrity in every interaction.
+
+8) Transparency and fairness
+- Be upfront about scope, limits, and pricing; maximize value without hidden catches.
+
+9) Continuous improvement
+- Iterate the curriculum, bookmarking system, and examples to reflect the 2024 IRC and real-world lessons.
+
+10) Service and stewardship
+- Build safer homes and a better industry by mentoring the next generation of solution-oriented inspectors.
+
+
+--------------------------------------------------------------------------------
+ARTIFACT 5/17
+--------------------------------------------------------------------------------
+ID: art_01KAYWH3E4H0SHMW4RDXWCZS7B
+Name: step_5_authority_&_credibility.md
+Type: step_output
+Created: 2025-11-26T01:30:28.791733
+S3 Key: cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_5_authority_&_credibility.md
+S3 URL: s3://leadmagnet-artifacts-471112574622/cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_5_authority_&_credibility.md
+Public URL: https://dmydkyj79auy7.cloudfront.net/cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_5_authority_&_credibility.md
+
+CONTENT:
+--------------------------------------------------------------------------------
+It looks like you're in process of outlining a comprehensive marketing strategy for a course centered around the International Residential Code (IRC) for contractors, designers, and homeowners. This strategy includes identifying customer fears, problems, dreams, desires, and aligning them with the core values and offers of your education brand.
+
+Here's a tailored summary and additional insights based on your outline:
+
+### Key Components
+
+1. **Customer Pain Points and Fears:**
+   - Customers often struggle with the complexity of the ICC B1 exam and IRC navigation.
+   - Misinterpretations due to exceptions and conflicts in codes can lead to costly mistakes.
+   - They face a lack of reliable, accurate resources and time pressures.
+   - Budget concerns regarding training investments and ROI.
+
+2. **Customer Dreams and Desires:**
+   - Pass the ICC B1 exam confidently on the first attempt.
+   - Achieve code fluency and effective interaction with inspectors and clients.
+   - Transition careers smoothly, gaining credibility as a code expert.
+   - Reduce project delays and demonstrate professional pride and purpose.
+
+3. **Core Values and Beliefs:**
+   - Emphasize clarity, accuracy, and intent-driven compliance in teaching.
+   - Encourage student ownership of their learning journey.
+   - Promote a solution-oriented approach and continuous improvement.
+   - Prioritirze professional ethics and practical, real-world skills.
+
+4. **Unique Offer Details:**
+   - Comprehensive analysis of key IRC sections to build practical skills.
+   - A focus on understanding the "why" behind codes for better application.
+   - Tools like a color-coded bookmarking system for efficient study and code navigation.
+  
+5. **Recommended Actions:**
+   - Develop free resources like PDFs or cheat sheets to attract potential students.
+   - Consider expanding into additional offerings (e.g., coaching or consulting).
+   - Use platforms like LinkedIn and Reddit to build a presence and engage with your audience.
+   - Clearly communicate course value, time commitment, and realistic expectations.
+
+By addressing these elements, you're well-positioned to deliver a valuable and impactful learning experience that meets the needs of your target audience while staying true to your mission of building a better industry.
+
+
+--------------------------------------------------------------------------------
+ARTIFACT 6/17
+--------------------------------------------------------------------------------
+ID: art_01KAYWHA1DH5RZW1EZB3X41M41
+Name: step_6_competitors_&_influencers.md
+Type: step_output
+Created: 2025-11-26T01:30:35.471273
+S3 Key: cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_6_competitors_&_influencers.md
+S3 URL: s3://leadmagnet-artifacts-471112574622/cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_6_competitors_&_influencers.md
+Public URL: https://dmydkyj79auy7.cloudfront.net/cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_6_competitors_&_influencers.md
+
+CONTENT:
+--------------------------------------------------------------------------------
+### Competitors
+
+1. **Code Enforcement Schools**: Institutions similar to the contractor school you mentioned that offer comprehensive code training, often including books and additional resources.
+   
+2. **Online Code Courses**: Platforms offering on-demand code education, such as Udemy or Coursera, which may include generic building code courses.
+
+3. **YouTube Channels**: Creators who offer free advice or snippets on building codes, often lacking depth but appealing for accessibility and cost.
+
+4. **Industry Associations**: Organizations like the International Code Council (ICC) that may provide education resources directly or through partnerships.
+
+### Influencers
+
+1. **Building Code Specialists**: Professionals on LinkedIn or Reddit with a following for sharing code insights or advice.
+
+2. **Construction Industry Bloggers/Vloggers**: Individuals who document their work, challenges, and insights in construction, often touching on codes and regulations.
+
+3. **Educational Institutions**: Schools or educators known for their expertise in construction and building codes who have active online presences.
+
+4. **Podcasters/Hosts**: Those running podcasts related to construction or civil engineering with episodes focusing on code compliance and education.
+
+
+--------------------------------------------------------------------------------
+ARTIFACT 7/17
+--------------------------------------------------------------------------------
+ID: art_01KAYWKD34WB0F2DG5HGD1X4Q5
+Name: step_7_demographics_&_psychographics.md
+Type: step_output
+Created: 2025-11-26T01:31:44.218518
+S3 Key: cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_7_demographics_&_psychographics.md
+S3 URL: s3://leadmagnet-artifacts-471112574622/cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_7_demographics_&_psychographics.md
+Public URL: https://dmydkyj79auy7.cloudfront.net/cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_7_demographics_&_psychographics.md
+
+CONTENT:
+--------------------------------------------------------------------------------
+Below is a practical Ideal Customer Profile focused on demographics and psychographics for your four core audiences: contractors, aspiring inspectors, designers, and homeowners/DIYers. It’s written to guide positioning, offers, and messaging for your 2024 IRC (Ch. 1–10) course and related assets.
+
+WHO YOU SERVE (AT A GLANCE)
+- Geography: Primarily U.S. jurisdictions that adopt the IRC (most of the U.S.); mix of suburban/exurban and small-metro markets.
+- Roles: Working contractors, contractors transitioning to inspector/consultant, junior-to-mid designers, and serious homeowners/DIYers.
+- Work settings: Small GC firms (1–20 employees), specialty trades, municipal building departments, small design studios.
+
+CORE SEGMENTS WITH DEMOGRAPHICS + PSYCHOGRAPHICS
+
+1) Contractor → Aspiring Building Inspector (primary)
+- Demographics
+  - Age: ~28–50; male-skewed but inclusive.
+  - Education: High school + trade school or some college; numerous trade certs.
+  - Experience: 5–20 years in the field; wants steadier income/benefits or less physical strain.
+  - Firmographics: GC or specialty trade (1–20 employees) or sole proprietor.
+  - Tools/Platforms: Smartphone-first; uses LinkedIn, Reddit (construction/code subs), YouTube.
+- Psychographics
+  - Goals: Pass ICC B1 on first/next attempt; earn credibility; transition into an inspector/plan review role or code consulting.
+  - Motivations: Stability, professional respect, safer work pace, “be the solution” ethos.
+  - Frustrations: “Letter vs intent” confusion; time pressure; tripping on exceptions/definitions; poor/incorrect online info.
+  - Beliefs/Values: Clarity, accuracy, practicality; no fluff or hype; integrity and public safety.
+  - Buying Triggers: Failed or scheduled B1 exam; job posting requiring certification; recent inspection conflicts; 2024 IRC updates.
+  - Objections: Course cost vs. school bundles; time commitment; must buy own books; skepticism of “perfect” prep.
+
+2) Working Contractor (stay in role) seeking Code Fluency
+- Demographics
+  - Age: ~25–55; mix of owners/foremen/PMs.
+  - Education: High school/trade school; licenses and carded trades.
+  - Experience: 3–25 years; running crews and jobs.
+  - Firmographics: Small-to-mid GC/trade contractors; revenue sensitivity to delays/rework.
+- Psychographics
+  - Goals: Faster, cleaner inspections; fewer corrections; defend alternates confidently; protect margins.
+  - Motivations: Profit protection, time savings, fewer job-site surprises.
+  - Frustrations: Vague correction notices; inconsistent AHJ interpretations; slow code lookup.
+  - Beliefs/Values: Efficiency, clarity, fairness; respect for AHJ but expects reciprocity.
+  - Buying Triggers: Recent failed inspection; schedule slip; upcoming large project; new local adoption of 2024 IRC.
+  - Objections: “Will this be practical or academic?” “How quickly can I apply this on site?”
+
+3) Designer/Early-Career Plans Person
+- Demographics
+  - Age: ~24–40; junior architects/designers/drafters in small studios.
+  - Education: Associate’s/Bachelor’s in architecture or design; learning plan review norms.
+  - Experience: 1–8 years; growing responsibility for code compliance notes/details.
+  - Platforms: LinkedIn, YouTube; occasional Reddit; CEU-minded.
+- Psychographics
+  - Goals: Submit code-clean drawings; anticipate reviewer concerns; reduce redesign loops.
+  - Motivations: Professional credibility with clients/AHJs; faster approvals.
+  - Frustrations: Dense IRC text; cross-references/definitions; “intent” vs prescriptive choice-making.
+  - Beliefs/Values: Accuracy, documentation quality, defensibility.
+  - Buying Triggers: New role responsibilities; recurring plan check comments; firm wants fewer resubmittals.
+  - Objections: Wants examples, annotated references, and clear scope (Ch. 1–10) before buying.
+
+4) Serious Homeowner/DIY Builder
+- Demographics
+  - Age: ~28–60; mid-to-upper household income; project is personal residence/accessory structure.
+  - Education: Varied; self-educators; often tech-comfortable.
+  - Project types: New build, addition, ADU, greenhouse/outbuilding.
+- Psychographics
+  - Goals: Understand “what inspectors want”; avoid costly rework; manage GC/subs confidently.
+  - Motivations: Budget control, pride in quality, safety.
+  - Frustrations: Conflicting online advice; opaque jargon; exceptions that reverse the “obvious” answer.
+  - Beliefs/Values: Pragmatic, safety-first, wants plain-English plus exact code cites.
+  - Buying Triggers: Permit application approaching; prior failed inspection; planning an owner-builder path.
+  - Objections: Price sensitivity; “Will this be over my head?” “Is it too pro-focused?”
+
+CROSS-AUDIENCE TRAITS TO SHAPE YOUR MESSAGING
+- Mindset: No-nonsense, skeptical of hype, respect directness and precision.
+- Desired outcome style: Fast lookup + correct interpretation under time pressure; defendable decisions with AHJs.
+- Risk posture: High consequence for errors (failures, delays, liability) → favors credible, accurate training.
+- Tone preference: Straightforward, code-accurate, example-driven; minimal fluff; military-grade clarity resonates.
+
+BUYING CRITERIA (WHAT MATTERS MOST)
+- Credibility: Instructor experience, demonstrated code accuracy, alignment with 2024 IRC and B1 blueprint.
+- Practicality: On-the-job and exam-day tactics (bookmarking, “landmine” spotting, test-taking strategies).
+- Scope clarity: Exactly what’s covered (IRC Ch. 1–10), what’s not (MEP trades), and expected study time.
+- Transparency: Honest about effort required; no “magic bullet”; fair pricing since books are separate.
+- Proof: Specific success stories (e.g., bookmarking system helping pass), sample lessons, or mini-wins.
+
+PRICE SENSITIVITY BY SEGMENT (DIRECTIONAL)
+- Contractor→Inspector: Medium—willing to pay near school pricing if pass-confidence and practicality are evident.
+- Working Contractor: Medium—ties value to reduced rework/failed inspections; wants fast ROI.
+- Designer: Medium—values fewer correction cycles; may need employer reimbursement.
+- Homeowner/DIY: Higher sensitivity—prefers modular/entry-priced options or very clear, immediate utility.
+
+PRIMARY MESSAGES BY SEGMENT
+- Contractor→Inspector: “Master 2024 IRC B1 navigation. Spot exceptions fast. Argue intent with confidence. No fluff—just the exact tools to pass and perform.”
+- Working Contractor: “Fewer corrections, faster approvals. Find the right code in under a minute and avoid the exceptions that flip your answer.”
+- Designer: “Drawings that pass the first time. Translate code intent into defensible details and notes with precise citations.”
+- Homeowner/DIY: “Plain-English guidance with exact code cites so you build safely, pass inspections, and avoid costly do-overs.”
+
+RED FLAGS (POOR FIT)
+- Wants shortcuts or guarantees without study time.
+- Expects comprehensive line-by-line coverage of the entire IRC or all trades.
+- Seeks entertainment or general construction tips rather than code accuracy and application.
+
+TURN THIS INTO ASSETS (OPTIONAL, FOR FIT)
+- Lead magnets aligned to psychographics:
+  - Color-coded IRC bookmarking quick-start (with legend and sample pages).
+  - “Top 25 IRC ‘landmines’ in Ch. 1–10 that flip your answer.”
+  - 2024 IRC B1 exam blueprint navigator (what to study, what to skip).
+  - “Intent vs. Letter” one-pager: how to frame alternatives to AHJs.
+  - ICC portal mini-guide: scheduling, score breakdowns, retake strategy.
+- Proof accelerators:
+  - Short video showing the bookmarking system in action on a real code lookup.
+  - Before/after correction notice examples with the reasoning trail and citations.
+
+Use this profile to keep copy, curriculum, and offers locked to what these audiences value most: accuracy, speed, defensibility, and a candid, solution-first approach.
+
+
+--------------------------------------------------------------------------------
+ARTIFACT 8/17
+--------------------------------------------------------------------------------
+ID: art_01KAYWM3N7YJPPRQY0F15T1N92
+Name: step_8_client_transformation.md
+Type: step_output
+Created: 2025-11-26T01:32:07.321231
+S3 Key: cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_8_client_transformation.md
+S3 URL: s3://leadmagnet-artifacts-471112574622/cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_8_client_transformation.md
+Public URL: https://dmydkyj79auy7.cloudfront.net/cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_8_client_transformation.md
+
+CONTENT:
+--------------------------------------------------------------------------------
+### Client Transformation Outline
+
+**1. Core Offering Overview**
+   - **Course Name:** International Residential Code (IRC) Mastery for Contractors, Designers, and Homeowners
+   - **Focus:** Teaching IRC Chapters 1-10, emphasizing understanding and navigation of codes, preparing students for the ICC B1 exam, and providing real-world applications.
+
+---
+
+**2. Customer Pain Points & Fears**
+   - **Navigational Complexity:** Struggling with the legal nature of the ICC B1 exam and IRC sections.
+   - **Time Management:** Inability to quickly find code sections under pressure.
+   - **Knowledge Gaps:** Misunderstanding code intent, leading to compliance issues.
+   - **Resource Reliability:** Facing conflicting or incorrect information from various sources.
+   - **Budget Concerns:** Worries about the return on investment for training and exam costs.
+
+---
+
+**3. Desired Outcomes**
+   - **Exam Success:** Pass the ICC B1 on the first attempt with confidence.
+   - **Skills Mastery:** Achieve fluency in code navigation and application.
+   - **Career Advancement:** Transition from contractor roles to inspector or consulting positions.
+   - **Community Credibility:** Position themselves as reliable code experts among peers and clients.
+
+---
+
+**4. Core Values and Beliefs**
+   - **Clarity & Precision:** Commitment to clear communication using code-accurate language.
+   - **Intent-Driven Solutions:** Focus on understanding and applying the spirit of the code in practical scenarios.
+   - **Student Accountability:** Emphasis on personal effort and engagement to achieve desired results.
+
+---
+
+**5. Unique Selling Proposition (USP)**
+   - **Distinctive Teaching Methodology:** Offers a comprehensive analysis of crucial IRC sections, complemented by unique tools (e.g., color-coded bookmarking system) to enhance navigation and comprehension.
+   - **Practical Application Focus:** Lessons are tailored to ensure on-the-job readiness, emphasizing real-world application and critical thinking.
+
+---
+
+**6. Customer Journey**
+   - **Awareness Stage:** 
+     - Leverage social media platforms like LinkedIn and Reddit to raise awareness through engaging content, insights, and free resources (e.g., color-coded bookmarking guide).
+  
+   - **Consideration Stage:**
+     - Present case studies and testimonials highlighting successful transformations of past clients to build trust and showcase efficacy.
+
+   - **Decision Stage:**
+     - Provide detailed course outlines, including study schedules and expected outcomes to address potential objections about time and costs.
+
+---
+
+**7. Transformation Metrics**
+   - **Success Rate:** Percentage of students passing the ICC B1 on the first try.
+   - **Post-Course Confidence:** Survey students after the course to measure their confidence in navigating IRC and applying the codes.
+   - **Career Progression:** Track enrollment in advanced roles (e.g., inspectors, consultants) after completing the course.
+
+---
+
+**8. Continuous Improvement**
+   - **Feedback Mechanisms:** Regularly solicit feedback from students regarding course content and teaching methods to iterate and adapt.
+   - **Resource Updates:** Stay current with changes to the IRC, integrating updates into the course to ensure it remains relevant and effective.
+
+---
+
+**9. Community Building**
+   - **Alumni Network:** Establish a network for past students to foster a community of learning, sharing experiences, and continuing education.
+   - **Engagement Opportunities:** Host webinars or Q&A sessions with industry experts to keep the community engaged and informed.
+
+---
+
+**10. Long-term Vision**
+   - **Industry Influence:** Position the course as a key resource within the building code education space, influencing both contractors and regulatory bodies towards best practices in compliance and safety.
+
+By following this outline, Dennis can create a structured transformation strategy that not only enhances his course offerings but also deeply connects with his target audience, ensuring their success and satisfaction in navigating residential building codes.
+
+
+--------------------------------------------------------------------------------
+ARTIFACT 9/17
+--------------------------------------------------------------------------------
+ID: art_01KAYWSSKSEG82QCPH0GRR2WE6
+Name: step_9_media_consumption_&_influences_analysis.md
+Type: step_output
+Created: 2025-11-26T01:35:13.673364
+S3 Key: cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_9_media_consumption_&_influences_analysis.md
+S3 URL: s3://leadmagnet-artifacts-471112574622/cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_9_media_consumption_&_influences_analysis.md
+Public URL: https://dmydkyj79auy7.cloudfront.net/cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_9_media_consumption_&_influences_analysis.md
+
+CONTENT:
+--------------------------------------------------------------------------------
+=== Step 9: Media Consumption & Influences ===
+
+### Media Channels & Platforms  
+1) **Professional networks & social media (contractors/inspectors)** – Most construction pros use LinkedIn (88% of companies) and Facebook (81%) for industry news and networking ([blog.constructionmarketingassociation.org](https://blog.constructionmarketingassociation.org/social-media-in-construction-survey-results/#:~:text=The%20majority%20of%20construction%20professionals,Construction%20Brands%20Should%20Consider%20Pinterest)). Twitter (71%) is also common. By contrast, Pinterest is rarely used in construction (only 18% of firms) ([blog.constructionmarketingassociation.org](https://blog.constructionmarketingassociation.org/social-media-in-construction-survey-results/#:~:text=The%20majority%20of%20construction%20professionals,Construction%20Brands%20Should%20Consider%20Pinterest)). These professionals also browse industry forums, LinkedIn groups, and email newsletters for code updates.  
+2) **Trade publications & industry sites** – Contractors and designers regularly read trade media. For example, *Engineering News-Record* (ENR) provides in-depth analysis for contractors and engineers ([www.trytoolbox.com](https://www.trytoolbox.com/blog/11-best-construction-magazines#:~:text=Engineering%20News,government%20regulators%2C%20and%20industry%20suppliers)).  *BuilderOnline* and *Construction Executive* (among others) target home builders and architects with articles on new products, techniques, and business practices ([www.trytoolbox.com](https://www.trytoolbox.com/blog/11-best-construction-magazines#:~:text=Engineering%20News,government%20regulators%2C%20and%20industry%20suppliers)) ([www.trytoolbox.com](https://www.trytoolbox.com/blog/11-best-construction-magazines#:~:text=%E2%80%8EBuilder%20Online%20is%20an%20excellent,construction%20techniques%2C%20and%20business%20practices)). These sites (plus association websites like ICCsafe.org) are go–to resources for code changes and best practices.  
+3) **Video & online learning** – Yearly thousands of hours of how-to content are consumed on YouTube by building pros and DIYers alike ([buildbook.co](https://buildbook.co/blog/top-15-youtube-channels-for-construction-builders-remodelers-contractors#:~:text=They%20might%20already%20be%20the,for%20professional%20builders%20and%20remodelers)) ([buildbook.co](https://buildbook.co/blog/top-15-youtube-channels-for-construction-builders-remodelers-contractors#:~:text=3)).  Channels such as *Fine Homebuilding*’s and Matt Risinger’s *Build Show* deliver pro-level construction tutorials and code application tips ([buildbook.co](https://buildbook.co/blog/top-15-youtube-channels-for-construction-builders-remodelers-contractors#:~:text=They%20might%20already%20be%20the,for%20professional%20builders%20and%20remodelers)) ([buildbook.co](https://buildbook.co/blog/top-15-youtube-channels-for-construction-builders-remodelers-contractors#:~:text=3)).  Even legacy TV brands like *This Old House* (1.73 M subscribers) influence how people approach home projects ([buildbook.co](https://buildbook.co/blog/top-15-youtube-channels-for-construction-builders-remodelers-contractors#:~:text=Yes%2C%20it%E2%80%99s%20the%20same%20This,trusted%20home%20improvement%20brands%20ever)). In recent years podcasts and TikTok DIY videos have also risen in popularity for quick learning.  
+4) **Visual/design platforms** – Architects and DIY homebuilders frequently use Instagram and Pinterest for inspiration. Pinterest is primarily for browsing architecture and interior designs ([www.kontentino.com](https://www.kontentino.com/blog/social-media-statistics/#:~:text=Pinterest%20is%20primarily%20used%20to,Users%20add%2C%20or%20Pin%2C%20their)), and about 80% of US moms (a key DIY demographic) use Pinterest ([www.kontentino.com](https://www.kontentino.com/blog/social-media-statistics/#:~:text=match%20at%20L278%20%2A%2080,use%20the%20internet%20use%20Pinterest)). In one survey, ~68% of young architects said they follow design influencers on social media to stay current ([www.squad.app](https://www.squad.app/blog-posts/top-9-architecture-instagram-influencers-in-2025#:~:text=,consumed%20in%20the%20architecture%20community)). These image-driven platforms expose them to new trends, products, and informal code advice (through influencers or reformatted “code tips” posts).  
+5) **Home-improvement media** – Serious DIYers and homeowners check home-renovation sites (e.g. FamilyHandyman.com, Home Depot/Lowes “DIY” video libraries) and community forums (Reddit’s r/HomeImprovement, r/DIY, etc.) for peer advice.  Notably, 1-in-3 homeowners report spending ≥25% more on projects because of social media content ([www.hiri.org](https://www.hiri.org/blog/how-social-media-influences-home-improvement-purchases#:~:text=1%20in%203%20Homeowners%20Report,Content%20Seen%20on%20Social%20Media)), showing the strong influence of online DIY media on this group.  
+
+### Influences & Trusted Sources  
+1) **Content creators & influencers** – Many in your audience trust industry experts hosted online. Builder/builder-focused YouTube channels and blogs (e.g. the Fine Homebuilding channel or Matt Risinger) serve as de facto influencers for best practices ([buildbook.co](https://buildbook.co/blog/top-15-youtube-channels-for-construction-builders-remodelers-contractors#:~:text=They%20might%20already%20be%20the,for%20professional%20builders%20and%20remodelers)) ([buildbook.co](https://buildbook.co/blog/top-15-youtube-channels-for-construction-builders-remodelers-contractors#:~:text=3)). In the architecture/design world, firms and architects that publish visually (e.g. Zaha Hadid Architects, Snøhetta, ArchDaily accounts) carry weight with younger designers ([www.squad.app](https://www.squad.app/blog-posts/top-9-architecture-instagram-influencers-in-2025#:~:text=,consumed%20in%20the%20architecture%20community)). DIY influencers on YouTube/TikTok (with honest product demos and code hacks) guide many homeowners.  
+2) **Industry associations & code officials** – Official sources (ICC, local building departments, NFPA, AIA) remain authoritative. Your customers often turn to ICC’s own webinars, study materials, and code commentary for final answers. Building department bulletins and inspectors themselves also influence practitioners’ understanding by enforcing certain interpretations.  
+3) **Trade media & publications** – Established magazines and websites (ENR, Construction Executive, Architectural Record, etc.) influence readers by covering code changes, case studies, and expert opinions. Articles or newsletters summarizing the 2024 IRC, for example, will guide awareness. Subscribing to these (or their newsletters) helps reinforce what your course teaches.  
+4) **Peer networks & word-of-mouth** – Finally, contractors and builders heavily rely on each other. Recommendations in online forums, local builders’ roundtables, and mentorships shape which resources to trust. If someone’s colleague passed the B1 exam using a particular method or tool (like your color-coded bookmarking), word will spread. Similarly, a homeowner is influenced by friends who tackled a remodeling successfully. 
+
+The net result is that your ideal customers blend formal sources (code books, ICC) with accessible media (social/DIGITAL) and peer recommendations. Position your content to appear in their feeds (e.g. via targeted LinkedIn posts or collaboration with known influencers) and stress that it aligns with the trusted industry voices they already follow. 
+
+**Sources:** Industry surveys and marketing analyses (cited above) highlight these media patterns ([blog.constructionmarketingassociation.org](https://blog.constructionmarketingassociation.org/social-media-in-construction-survey-results/#:~:text=The%20majority%20of%20construction%20professionals,Construction%20Brands%20Should%20Consider%20Pinterest)) ([www.hiri.org](https://www.hiri.org/blog/how-social-media-influences-home-improvement-purchases#:~:text=1%20in%203%20Homeowners%20Report,Content%20Seen%20on%20Social%20Media)) ([www.kontentino.com](https://www.kontentino.com/blog/social-media-statistics/#:~:text=Pinterest%20is%20primarily%20used%20to,Users%20add%2C%20or%20Pin%2C%20their)) ([www.squad.app](https://www.squad.app/blog-posts/top-9-architecture-instagram-influencers-in-2025#:~:text=,consumed%20in%20the%20architecture%20community)) ([www.trytoolbox.com](https://www.trytoolbox.com/blog/11-best-construction-magazines#:~:text=Engineering%20News,government%20regulators%2C%20and%20industry%20suppliers)) ([buildbook.co](https://buildbook.co/blog/top-15-youtube-channels-for-construction-builders-remodelers-contractors#:~:text=They%20might%20already%20be%20the,for%20professional%20builders%20and%20remodelers)) ([buildbook.co](https://buildbook.co/blog/top-15-youtube-channels-for-construction-builders-remodelers-contractors#:~:text=3)) ([buildbook.co](https://buildbook.co/blog/top-15-youtube-channels-for-construction-builders-remodelers-contractors#:~:text=Yes%2C%20it%E2%80%99s%20the%20same%20This,trusted%20home%20improvement%20brands%20ever)), confirming where contractors, designers, and DIYers get their information.
+
+
+--------------------------------------------------------------------------------
+ARTIFACT 10/17
+--------------------------------------------------------------------------------
+ID: art_01KAYWW1EQST6QAVX87R00P2PG
+Name: step_10_common_objections_&_rebuttals.md
+Type: step_output
+Created: 2025-11-26T01:36:27.280399
+S3 Key: cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_10_common_objections_&_rebuttals.md
+S3 URL: s3://leadmagnet-artifacts-471112574622/cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_10_common_objections_&_rebuttals.md
+Public URL: https://dmydkyj79auy7.cloudfront.net/cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_10_common_objections_&_rebuttals.md
+
+CONTENT:
+--------------------------------------------------------------------------------
+Below are the most likely objections you’ll hear for your 2024 IRC (Ch.1–10) course, with crisp, no‑hype rebuttals you can use in calls, emails, or on your sales page. I grouped them as Universal, Segment‑specific, and “Landmine” objections that deserve extra care.
+
+UNIVERSAL OBJECTIONS + REBUTTALS
+1) Price: “$500–$600 is steep, especially without books included.”
+- Rebuttal: The school is ~$900 because they bundle books and generic add‑ons. I keep price lower and focus on what moves the needle: fast lookup, interpretation, and “landmine” spotting. Most students spend less overall: you buy only the books you need and avoid retake fees.
+- Close: If the delta between $600 and $900 decides your career move, the bigger cost is delaying your pass date.
+
+2) “I don’t have time.”
+- Rebuttal: The course is built for working pros. Short, focused lessons and a weekly study cadence. The bookmarking system compresses lookup time on day one. You’ll feel the time win during the very first drill.
+- Close: Give it 30–45 minutes a day for two weeks; if you don’t feel faster and clearer by then, this isn’t for you.
+
+3) “I’m worried it won’t help me pass the B1.”
+- Rebuttal: The B1 is a code navigation and interpretation exam. This course trains exactly that—Ch.1–10 navigation reps, definitions, exceptions, and cross‑references—plus test‑taking tactics. No fluff, no trades detours.
+- Proof prompt: After Lesson X, time your lookup on [common B1 topic]. You should see sub‑60‑second pulls.
+
+4) “YouTube is free.”
+- Rebuttal: Free is great for basics. The problem is inconsistency and errors. Here you get code‑accurate instruction tied to the 2024 IRC, with a repeatable system and drills. Consistency beats random tips when your money and license are on the line.
+
+5) “I’ve already failed once.”
+- Rebuttal: Good—that means you have score diagnostics. We’ll target your weak domains, rebuild your lookup flow, and drill the definitions/exceptions that probably tripped you. The goal is not more content; it’s fewer mistakes.
+
+6) “Is this too academic? I need real‑world.”
+- Rebuttal: Everything ties to job‑site decisions: prescriptive vs. alternatives, what inspectors look for, and how to cite IRC text so your correction responses stick. You’ll use the same flow on plans, inspections, and the exam.
+
+7) “Will I be lost if I’m a homeowner/DIYer?”
+- Rebuttal: I teach in plain language and show the exact code cites. You’ll know what inspectors want, what triggers exceptions, and how to avoid costly rework. No contractor jargon required.
+
+8) “Is there a guarantee?”
+- Rebuttal (honest positioning): I don’t guarantee passes; I guarantee clarity. If you put in the work and don’t feel faster, more accurate, and more confident in two weeks, tell me and we’ll make it right.
+
+9) “Why you vs. the contractor school?”
+- Rebuttal: Same instructor skill set, tighter scope to what matters for B1 and field decisions, and a no‑nonsense style. You’re paying for precision, not frills.
+
+10) “Do I need the latest 2024 books?”
+- Rebuttal: If your jurisdiction or exam uses 2024, yes. If you’re on 2018/2021 locally but testing 2024, we train on 2024 and note high‑impact deltas so you’re not mixing cycles.
+
+SEGMENT‑SPECIFIC OBJECTIONS + REBUTTALS
+Contractor → Aspiring Inspector
+11) “My city uses amendments—will this still apply?”
+- Rebuttal: The IRC is the base. I show you how to anchor to base text, then check local amendments. The system is jurisdiction‑proof: cite base, verify local, document the delta.
+
+12) “I need help with the ICC portal and retake strategy.”
+- Rebuttal: Included: quick walk‑through on accounts, scheduling, blueprint focus, and how to read score reports to target weak areas.
+
+Working Contractor (staying in role)
+13) “Will this actually reduce failed inspections?”
+- Rebuttal: Yes—because we fix the root cause: wrong/slow cites and missed exceptions. We script how to write correction responses with precise citations so you shorten the resubmittal loop.
+
+14) “How soon do I see ROI?”
+- Rebuttal: Typically immediately: faster answers on framing, foundations, fire, and means of egress. One avoided re‑inspection or day saved on a schedule covers the tuition.
+
+Designer/Early‑career Plans Person
+15) “I need examples tied to drawings, not just code text.”
+- Rebuttal: You’ll see how to convert cites into notes/details, plus what reviewers commonly red‑line and why.
+
+Homeowner/DIY
+16) “Will this be over my head?”
+- Rebuttal: We start with plain‑English explanations and then show you the exact clause. You’ll learn what’s required, what’s optional, and where people overspend from misunderstanding.
+
+“LANDMINE” OBJECTIONS (handle carefully)
+17) “Are you teaching people how to ‘get around’ the code?”
+- Rebuttal: I teach compliance and safety—letter and intent. Alternatives/modifications are expressly allowed when they meet the code’s intent and provide equivalent safety. You’ll learn how to argue those correctly, not how to dodge requirements.
+
+18) “No practice exams included?”
+- Rebuttal (current state): I focus on building the lookup and interpretation muscle and point you to reputable question banks if you want extra drills. The goal is to pass because you can find and apply answers under pressure, not because you memorized someone else’s questions.
+
+19) “Is this only Ch.1–10? What about MEP or energy?”
+- Rebuttal: B1 and residential structural/administrative mastery first. If you need MEP/energy, I’ll recommend the right resources after you’re fluent in the core.
+
+20) “I prefer live help/office hours.”
+- Rebuttal: I keep the course lean for flexibility. If you want live support, ask—when enough students request it, I open office hours or a Q&A block.
+
+21) “Employer reimbursement?”
+- Rebuttal: Yes—most GCs and design studios reimburse code training tied to job performance. I can provide a course outline and invoice with learning objectives.
+
+22) “What if my reading speed is slow?”
+- Rebuttal: That’s exactly why we use color‑coded bookmarking and definition drills. The method turns scanning into a visual map so speed isn’t about reading faster—it’s about finding faster.
+
+23) “I’m skeptical of hype.”
+- Rebuttal: Good. No hype here. Clear scope, accurate cites, and repeatable methods. If you want entertainment, YouTube is full of it. If you want to pass and perform, this is built for that.
+
+PREEMPTIVE COPY YOU CAN DROP ON YOUR PAGE
+- What this is: 2024 IRC (Ch.1–10) training to pass B1 and make better job‑site decisions—fast lookup, correct interpretation, confident application.
+- What this isn’t: A line‑by‑line reading of the entire IRC, a trade (MEP) course, or a magic bullet.
+- Who it’s for: Contractors (including aspiring inspectors/consultants), designers, and serious DIYers who value accuracy and clarity over fluff.
+- What you’ll walk away with: A color‑coded bookmarking system, a repeatable lookup flow, “landmine” awareness (definitions/exceptions/cross‑refs), and scripts for writing correction responses that get approvals.
+
+DISCOVERY QUESTIONS BEFORE REBUTTAL (to choose the right response)
+- Which IRC cycle are you testing/working under?
+- Biggest struggle: finding, interpreting, or defending the cite?
+- When is your exam date or next inspection milestone?
+- What happened the last time you tried (failed exam, correction notice, schedule slip)?
+- Who’s paying—your company or you? (If company: offer outline/invoice for reimbursement.)
+
+SHORT CLOSES YOU CAN USE
+- “If we cut your lookup time in half this month, is the course paid for?”
+- “Let’s pick an exam date. I’ll align your study plan backward from that date.”
+- “Give me two weeks. If you don’t feel faster and clearer, say the word.”
+
+OPTIONAL PROOF ASSETS TO ADD (to reduce objections further)
+- 5‑minute video: live code lookup using your bookmarking system.
+- One‑pager: Top 25 “landmines” in IRC Ch.1–10.
+- ICC portal mini‑guide: sign‑up, scheduling, score report interpretation.
+- Before/after: a vague correction vs. a code‑cited response that passed.
+
+If you want, tell me your current syllabus and lesson lengths and I’ll draft objection‑specific blurbs to insert at the exact points in your sales page and checkout flow.
+
+
+--------------------------------------------------------------------------------
+ARTIFACT 11/17
+--------------------------------------------------------------------------------
+ID: art_01KAYWXB84MJACZ6ZRYE36N4FR
+Name: step_11_competitive_advantage.md
+Type: step_output
+Created: 2025-11-26T01:37:10.007285
+S3 Key: cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_11_competitive_advantage.md
+S3 URL: s3://leadmagnet-artifacts-471112574622/cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_11_competitive_advantage.md
+Public URL: https://dmydkyj79auy7.cloudfront.net/cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_11_competitive_advantage.md
+
+CONTENT:
+--------------------------------------------------------------------------------
+Dennis, here’s a tight, ready-to-use positioning pack that highlights your unique selling propositions and turns your transcript into a clear, marketable offer.
+
+Positioning one-liner
+- I train contractors, designers, and serious DIYers to navigate and apply the 2024 IRC (Ch. 1–10) fast—so they pass the ICC B1 and make better field decisions without overbuilding.
+
+Your top unique selling propositions (USPs)
+1) Code-navigation system, not just lectures: Your color-coded bookmarking, pen, and highlight method turns the IRC into a visual map for sub‑60‑second lookups.
+2) “Landmine” spotting: You explicitly train definitions, exceptions, and cross‑references that flip answers—what most free videos skip or get wrong.
+3) Intent vs. letter mastery: Students learn how to argue the code’s purpose and craft compliant alternatives that authorities can approve.
+4) 2024 IRC focus: Up-to-date on Chapters 1–10 for B1 and day‑to‑day residential work; no distractions into MEP trades.
+5) No‑nonsense, plain-English teaching with exact cites: Military-grade clarity + code-accurate language that translates directly to plans, inspections, and exam questions.
+6) ICC portal and retake strategy help: Step-by-step on accounts, scheduling, blueprints, diagnostics, and how to adjust study after a fail.
+7) Proven practicality: Your method has helped even non-attendees using a marked book pass—proof your system improves lookup speed and accuracy.
+
+Offer name ideas
+- IRC 2024: B1 Navigation Mastery
+- Residential Code: Fast Lookup and Pass
+- IRC 2024 Pro: Chapters 1–10, No Fluff
+- Pass & Perform: 2024 IRC (Ch. 1–10)
+
+Exactly what’s included (core offer)
+- Core curriculum: Focused lessons on IRC 2024 Chapters 1–10 with examples, drills, and “landmine” callouts.
+- The Bookmarking Playbook: Color legend, markup rules, and sample pages to replicate your system.
+- Speed drills: Timed lookup reps to build sub‑60‑second retrieval on common B1 topics.
+- “Intent vs. Letter” toolkit: Templates for proposing alternatives and citing equivalency language.
+- ICC portal mini-guide: Account setup, scheduling, blueprint targeting, and how to read score diagnostics.
+- Correction-response scripts: How to write passable replies with precise cites to shorten resubmittal loops.
+
+Format
+- Short, focused video lessons + downloadable PDFs/cheat sheets.
+- Optional live Q&A blocks during launch cohorts (see tiers below).
+
+Pricing and tiers (keep transparent and value-forward)
+- Core: $597. Everything above; students buy their own books. Best for B1 candidates and working contractors.
+- Pro: $897. Core + two live group Q&A sessions + instructor-marked “code-response” assignment for feedback.
+- Homeowner/DIY Mini: $297. Plain-English essentials + bookmarking basics + top 25 landmines most relevant to residential projects.
+
+Guarantee (aligned with your values)
+- Clarity Guarantee: If, after 14 days of doing the drills, you don’t feel faster and more accurate finding and interpreting IRC cites, contact me—I'll make it right.
+
+Lead magnets (build your list fast)
+- Color-Coded IRC Bookmarking Quickstart (PDF, with sample marked pages).
+- Top 25 IRC “Landmines” in Chapters 1–10 That Flip Your Answer (checklist).
+- ICC B1 Blueprint Navigator (what to emphasize, common traps).
+- Intent vs. Letter One-Pager (how to frame alternatives the right way).
+
+Sales page skeleton (use these sections, in order)
+- Hero: “Find the right 2024 IRC cite in under a minute—and pass B1 without overbuilding.” CTA: Get the syllabus + pricing.
+- Problem: B1 is a legal navigation test; job-site delays come from missed definitions and exceptions.
+- What you’ll learn: Fast lookup, landmine spotting, intent framing, ICC portal strategy.
+- Proof and story: Your teaching since 2018 + the “boss passed using the marked book” anecdote.
+- What’s included: Bulleted modules, toolkits, drills.
+- Who it’s for/not for: Pros and serious DIYers who value accuracy; not for shortcut seekers.
+- Pricing tiers + guarantee.
+- FAQs that preempt objections (price, time, books, amendments, practice exams, live help).
+- Final CTA: Enroll now / Join the next cohort.
+
+FAQ snippets to drop in
+- Do I need 2024 books? If you’re testing 2024 or your jurisdiction adopted it, yes. We note high-impact deltas if you’re working under an older cycle.
+- Will this help with local amendments? The method is jurisdiction-proof: anchor to base IRC text, then verify local amendments; we show you the check flow.
+- Is this a line-by-line of the IRC? No. It’s the crucial 20% that solves 80% of exam/job-site problems—plus the system to handle the rest.
+- Practice exams included? We build the lookup and interpretation muscle; we’ll point you to reputable question banks if you want extra drills.
+- Live help? In Pro, yes: two live Q&As. If demand is high, office hours open monthly.
+
+90-second taxi pitch (for calls and video)
+- The B1 isn’t a “how to build” test—it’s a legal navigation exam. Most people fail because they’re slow on lookups and miss exceptions that flip answers. I teach a no-nonsense, 2024 IRC Chapters 1–10 system that turns your codebook into a visual map. You’ll learn a color-coded bookmarking method, how to spot definitions and exceptions, and how to argue the intent of the code so your alternatives stick with AHJs. We also cover ICC scheduling and retake strategy so you study the right things. It’s not hype, and it’s not a shortcut. It’s the exact skills that help you pass and perform on the job. Give it two weeks of focused practice—you’ll feel faster and clearer, or tell me and I’ll make it right.
+
+Go-to-market plan (simple and fast)
+- Week 1: Build the Bookmarking Quickstart and Top 25 Landmines lead magnets; create a 5‑minute video showing a real lookup using your method.
+- Week 2: Launch a founders cohort at $497 for first 20 seats with two live Q&As; post on LinkedIn and relevant Reddit subs with your video and lead magnet.
+- Week 3–4: Collect testimonials from the founders cohort (speed gains, clarity wins). Raise Core to $597 and open Pro at $897.
+
+Your voice and brand
+- Tone: Straight, precise, code-accurate, zero fluff.
+- Promise: Not a magic bullet—just the exact tools to pass and perform.
+- Ethos: Be part of the solution. Safety and compliance first; alternatives only when they meet intent.
+
+Want me to turn this into a full sales page draft and a 5‑email launch sequence using your voice? If you share your planned lesson list and estimated video lengths, I’ll tailor the copy and CTAs to each module and tier.
+
+
+--------------------------------------------------------------------------------
+ARTIFACT 12/17
+--------------------------------------------------------------------------------
+ID: art_01KAYWXT54VFZ07R26XXMBNZ28
+Name: step_12_communication_style.md
+Type: step_output
+Created: 2025-11-26T01:37:25.297654
+S3 Key: cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_12_communication_style.md
+S3 URL: s3://leadmagnet-artifacts-471112574622/cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_12_communication_style.md
+Public URL: https://dmydkyj79auy7.cloudfront.net/cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_12_communication_style.md
+
+CONTENT:
+--------------------------------------------------------------------------------
+It seems you're in an advanced stage of product and marketing development for your IRC (International Residential Code) course. Here’s a structured summary of your positioning and offer strategy:
+
+## Positioning Overview
+
+### Course Name: 
+**IRC Mastery for Professionals (Ch. 1–10)**
+
+### Unique Selling Propositions (USPs):
+1. **Practical Code Navigation:** Implement a color-coded bookmarking system for efficient lookup, helping students locate IRC sections quickly.
+2. **“Landmine” Awareness:** Teach students how to identify exceptions, definitions, and cross-references that could lead to errors.
+3. **Intent vs. Letter Mastery:** Emphasize understanding the rationale behind code requirements to advocate for compliant alternatives.
+4. **Up-to-Date Content:** Offer material focused on the latest IRC (2024), ensuring relevance and accuracy for exam preparation and practical application.
+5. **Clear Communication Style:** Deliver lessons in a no-nonsense, clear, and professional manner, steering clear of unnecessary jargon.
+6. **Support for Exam and Practical Strategies:** Include resources for navigating the ICC portal and strategies for retakes.
+7. **Proven Success:** Share success stories, including cases where students have benefited from the course to reinforce value.
+
+### Core Offer Details:
+- **Course Format:** Short, focused video lessons accompanied by downloadable resources (e.g., PDFs, cheat sheets).
+- **Content:** 
+  - Core curriculum covering Chapters 1–10 of the IRC.
+  - The Bookmarking Playbook.
+  - Speed drills for fast retrieval.
+  - Scripts for writing correction responses.
+  
+### Pricing:
+- **Core Tier:** $597 (students buy their own books).
+- **Pro Tier:** $897 (includes live Q&A).
+- **Mini Tier for Homeowners/DIYers:** $297.
+
+### Lead Magnets:
+1. **Color-Coded Bookmarking Quickstart**
+2. **Top 25 IRC “Landmines” Checklist**
+3. **ICC B1 Exam Blueprint Navigator**
+
+### Market Strategy:
+- **Initial Launch:** Start with a founders cohort at a discounted rate to build testimonials and demonstrate proof of concept.
+- **Content Distribution:** Utilize LinkedIn and Reddit to reach your target demographics, offering valuable content alongside promotional material.
+
+### Communication Style:
+- Maintain a straightforward, code-accurate, and respect-driven tone to ensure clarity and trust.
+
+### Customer Transformation Journey:
+1. **Awareness:** Heightened understanding of pain points (e.g., failing exams, confusion from conflicting info).
+2. **Consideration:** Engagement with success stories illustrating the potential for exam and career advancement.
+3. **Decision:** Comprehensive course outlines, including expected outcomes to alleviate concerns around time and investment.
+
+### Handling Objections:
+Be ready with clear rebuttals regarding price, effectiveness, and course structure to alleviate potential consumer hesitations.
+
+---
+
+This strategy aligns seamlessly with the target demographics you've outlined, ensuring your messaging resonates effectively with contractors, designers, and homeowners interested in understanding and navigating the IRC. 
+
+Would you like to proceed to develop a detailed sales page or an email launch sequence based on this strategically outlined positioning?
+
+
+--------------------------------------------------------------------------------
+ARTIFACT 13/17
+--------------------------------------------------------------------------------
+ID: art_01KAYX1NSB58X6SFD446DC0Z64
+Name: step_13_brand_style_guide_extraction.md
+Type: step_output
+Created: 2025-11-26T01:39:31.873957
+S3 Key: cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_13_brand_style_guide_extraction.md
+S3 URL: s3://leadmagnet-artifacts-471112574622/cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_13_brand_style_guide_extraction.md
+Public URL: https://dmydkyj79auy7.cloudfront.net/cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_13_brand_style_guide_extraction.md
+
+CONTENT:
+--------------------------------------------------------------------------------
+Dennis, here’s a tight brand style guide you can hand to anyone helping with copy, web, or design. I baked in your voice (clear, no‑nonsense, code‑accurate) and added compliance details for ICC/IRC naming and trademarks.
+
+Brand name and positioning
+- Brand: Cherenkov Code Consulting (short: CCC)
+- One‑liner: Train to find, interpret, and apply the 2024 IRC (Ch. 1–10) fast—so you pass ICC B1 and make better field decisions without overbuilding.
+- Who it’s for: Contractors (incl. aspiring inspectors/consultants), junior designers, serious DIY owner‑builders.
+
+Voice and tone
+- Core traits: direct, precise, calm under pressure; plain English plus exact code cites; zero fluff/hype.
+- Promise: clarity and speed, not shortcuts; “be part of the solution.”
+- Do:
+  - Lead with the requirement, then cite the exact section.
+  - Explain “intent vs. letter” and how to defend an alternative.
+  - State scope and limits up front (Ch. 1–10; no MEP).
+- Don’t:
+  - Oversell guarantees or call the course “perfect.”
+  - Use contractor slang without translation to code terms.
+  - Imply ICC endorsement.
+
+Terminology and mechanics (house style)
+- First use: International Residential Code® (IRC®); International Code Council® (ICC®). Subsequent uses: IRC, ICC. Include ® on first mention per trademark norms. Do not use ICC logos unless you have a license; ICC member and Preferred Provider logos have specific rules. ([huski.ai](https://huski.ai/trademark-details-mark-international-residential-code-country-us-serial-number-75474982?utm_source=openai))
+- Exam naming: “ICC B1 — Residential Building Inspector.” As of November 26, 2025, ICC’s B‑series naming remains standard; the B1 exam covers residential inspection content. ([media.iccsafe.org](https://media.iccsafe.org/news/eNews/2014v11n16/certtrain.html?utm_source=openai))
+- Code citation format: “IRC R302.1.1” (prefix with “IRC” on first cite in a section or slide). Quote the clause sparingly; paraphrase intent, then list exceptions.
+- Acronyms: Spell out on first use—Authority Having Jurisdiction (AHJ), then AHJ. ([nationaltradesman.com](https://nationaltradesman.com/building-trades/resources/glossary/ahj/?utm_source=openai))
+- APA naming when referenced in class links: “APA – The Engineered Wood Association” (full name on first mention). ([en.wikipedia.org](https://en.wikipedia.org/wiki/APA_%E2%80%93_The_Engineered_Wood_Association?utm_source=openai))
+- Dates: Use U.S. format with month spelled out (e.g., October 1, 2024 for ICC certification launch for 2024 I‑Codes). ([iccsafe.org](https://www.iccsafe.org/about/periodicals-and-newsroom/the-complete-set-of-2024-international-codes-is-now-available/?utm_source=openai))
+- Numbers: Use numerals for measurements and code numeric values; words for one–nine when not technical.
+- Jurisdiction note: Always note base IRC + local amendments check flow (base cite → local amendment verify).
+
+Compliance and IP reminders (must‑follow)
+- Trademarks: INTERNATIONAL RESIDENTIAL CODE is a registered ICC mark; include ® on first mention of IRC and ICC in each standalone document or page. ([huski.ai](https://huski.ai/trademark-details-mark-international-residential-code-country-us-serial-number-75474982?utm_source=openai))
+- Logo usage: Do not show ICC logos unless you’re explicitly licensed (media/distributor) or using the specific Member or Preferred Provider mark per ICC rules. Using ICC’s standard logo to market your course is not permitted. ([iccsafe.org](https://www.iccsafe.org/about/periodicals-and-newsroom/icc-logo-license/?utm_source=openai))
+- Copyright: Do not reproduce ICC code text beyond fair use. Link or cite section numbers; request permission for substantial excerpts. ([iccsafe.org](https://www.iccsafe.org/about/periodicals-and-newsroom/icc-logo-license/?utm_source=openai))
+- Affiliation disclaimer (place in footer): “Cherenkov Code Consulting is an independent training provider and is not affiliated with or endorsed by the International Code Council® (ICC®). ICC®, International Residential Code® (IRC®) are registered trademarks of ICC.”
+
+Message pillars (repeat everywhere)
+- Fast, correct lookup: turn codebooks into a visual map; sub‑60‑second retrieval on common B1 topics.
+- Landmine awareness: definitions, exceptions, cross‑references that flip answers.
+- Intent‑driven compliance: craft defensible alternatives to meet the code’s purpose.
+- Exam and field readiness: same lookup flow for the test, plans, and inspections.
+
+CTA library (use verb + outcome)
+- Pass B1 with a system, not guesswork
+- See the bookmarking method in action
+- Get the Top 25 IRC landmines
+- Download the B1 study blueprint (2024)
+
+Microcopy examples
+- Hero (site): Find the right 2024 IRC cite in under a minute—then pass B1 without overbuilding.
+- Subhead: Master Chapters 1–10, spot exceptions fast, and argue code intent with confidence.
+- Button: Get the syllabus and pricing
+
+Course description boilerplate (short)
+- What you’ll learn: fast IRC navigation (Ch. 1–10), “landmine” spotting, intent‑vs‑letter framing, and ICC portal strategy. As of November 26, 2025, ICC’s 2024 I‑Codes are published, and 2024 certification exams began launching October 1, 2024. ([iccsafe.org](https://www.iccsafe.org/about/periodicals-and-newsroom/the-complete-set-of-2024-international-codes-is-now-available/?utm_source=openai))
+
+Visual identity starter kit (practical and accessible)
+- Colors (accessible, construction‑credible):
+  - Navy (primary): #0B2A43 (body text on white; headings; buttons)
+  - Safety Orange (accent for warnings/landmines, sparingly): #FF7900. Note: derived from ANSI “safety orange.” Don’t rely on orange for small text; pair with navy/white for contrast. ([en.wikipedia.org](https://en.wikipedia.org/wiki/Safety_orange?utm_source=openai))
+  - Slate (UI lines/secondary text): #5A6B7A
+  - White: #FFFFFF
+- Accessibility rules:
+  - Text contrast: minimum 4.5:1 (AA). Large text 3:1. Aim for 7:1 on core copy where possible. Verify with a WCAG 2.2 contrast checker before publishing. ([wuhcag.com](https://www.wuhcag.com/contrast-minimum/?utm_source=openai))
+  - Non‑text UI (icons, input borders, focus states): ≥3:1 contrast with adjacent colors. ([wuhcag.com](https://www.wuhcag.com/non-text-contrast/?utm_source=openai))
+- Typography (free, legible):
+  - Headings: Source Sans 3 (Bold/Semibold)
+  - Body/UI: Inter (Regular/Medium)
+  - Code references/inline cites: JetBrains Mono or Menlo (monospace) for clarity in snippets
+  - Web stacks with fallbacks for performance; 16–18 px base body size; 1.5–1.6 line height.
+- Iconography: simple line icons; use orange only for warnings/landmines; never for body text.
+
+Slide and document conventions
+- Section header includes topic + code scope (e.g., “Braced Wall Lines—IRC R602.10”).
+- On each slide: requirement (plain English), base citation, key exception(s), common traps, field example.
+- “Landmine” callouts: use a consistent orange label; summarize the exception and show the trigger words.
+- AHJ notes: separate gray box “Check Local Amendments” near conclusion of each module. ([nationaltradesman.com](https://nationaltradesman.com/building-trades/resources/glossary/ahj/?utm_source=openai))
+
+Legal/ethics copy snippets you can reuse
+- Alternatives: “The IRC permits alternatives providing equivalent performance consistent with code intent. Document your rationale and obtain AHJ approval.” (Paraphrase—teach concept; don’t quote large code blocks.)
+- Not legal advice: “Training materials are educational and not legal determinations. For binding interpretations, consult your AHJ.”
+
+Website footer (example)
+- “© 2025 Cherenkov Code Consulting. Not affiliated with ICC. ICC®, International Residential Code® (IRC®) are registered trademarks of the International Code Council®. Course prepares for the ICC B1 Residential Building Inspector exam. Always verify local amendments with your AHJ.” ([media.iccsafe.org](https://media.iccsafe.org/news/eNews/2014v11n16/certtrain.html?utm_source=openai))
+
+Short content templates
+- Email subject: Pass B1 by reading less—and finding faster
+- Opening line: The B1 isn’t a “how to build” test; it’s a legal navigation exam. Here’s how we train the exact lookup flow you’ll use on test day and on site.
+- Social post: If exceptions keep flipping your answers, you’re not alone. Grab my Top 25 IRC landmines for Ch. 1–10 and see where most people slip.
+
+Optional add‑ons to your kit
+- Lead magnets: Color‑coded Bookmarking Quickstart; Top 25 Landmines (Ch. 1–10); ICC B1 Exam Blueprint Navigator.
+- Proof asset: 5‑minute video demo of a real lookup using your system (timer on screen).
+
+Notes on references and dates
+- ICC released the 2024 I‑Codes (including the 2024 IRC). ICC announced certification exams based on the 2024 I‑Codes began launching on October 1, 2024; keep the date in your copy so it reads clearly in 2025. Link to ICC when you mention the 2024 IRC or B1 study resources. ([iccsafe.org](https://www.iccsafe.org/about/periodicals-and-newsroom/the-complete-set-of-2024-international-codes-is-now-available/?utm_source=openai))
+
+Would you like me to:
+- Apply this to a one‑page brand sheet for your designer, or
+- Draft your homepage sections (hero → proof → curriculum → pricing → FAQ) using this style?
+
+
+--------------------------------------------------------------------------------
+ARTIFACT 14/17
+--------------------------------------------------------------------------------
+ID: art_01KAYX4X82R8HPY4KYXC7VJT2S
+Name: step_14_logo_recreation.md
+Type: step_output
+Created: 2025-11-26T01:41:17.809485
+S3 Key: cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_14_logo_recreation.md
+S3 URL: s3://leadmagnet-artifacts-471112574622/cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_14_logo_recreation.md
+Public URL: https://dmydkyj79auy7.cloudfront.net/cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_14_logo_recreation.md
+
+CONTENT:
+--------------------------------------------------------------------------------
+[CONTENT NOT AVAILABLE - Could not download from S3 or public URL]
+
+
+--------------------------------------------------------------------------------
+ARTIFACT 15/17
+--------------------------------------------------------------------------------
+ID: art_01KAYX4XCCHP7SN8N1M7M1ZZN6
+Name: image-1764121277-e81254e2.png
+Type: image
+Created: 2025-11-26T01:41:17.836187
+S3 Key: cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/image-1764121277-e81254e2.png
+S3 URL: s3://leadmagnet-artifacts-471112574622/cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/image-1764121277-e81254e2.png
+Public URL: https://leadmagnet-artifacts-471112574622.s3.us-east-1.amazonaws.com/cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/image-1764121277-e81254e2.png
+
+CONTENT:
+--------------------------------------------------------------------------------
+[BINARY FILE - 1471551 bytes]
+
+
+--------------------------------------------------------------------------------
+ARTIFACT 16/17
+--------------------------------------------------------------------------------
+ID: art_01KAYX7TS61S9E9BY1S659P6VK
+Name: step_15_webhook_data_submission.md
+Type: step_output
+Created: 2025-11-26T01:42:53.605603
+S3 Key: cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_15_webhook_data_submission.md
+S3 URL: s3://leadmagnet-artifacts-471112574622/cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_15_webhook_data_submission.md
+Public URL: https://dmydkyj79auy7.cloudfront.net/cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/step_15_webhook_data_submission.md
+
+CONTENT:
+--------------------------------------------------------------------------------
+{
+  "event": "profile_submitted",
+  "version": 1,
+  "source": "Form Submission",
+  "icp_flag": "all",
+  "profile": {
+    "name": "Dennis",
+    "brand": "Cherenkov Code Consulting",
+    "role": "Instructor / Code Consultant",
+    "phone": {
+      "raw": "8016237631",
+      "e164": "+18016237631"
+    },
+    "email": "d@gmail.com",
+    "emails_alt": [
+      "Dennis.cherenkov@gmail.com"
+    ],
+    "website": "https://www.cherenkovcodeconsulting.com",
+    "social": {
+      "platforms": [
+        "LinkedIn",
+        "Reddit"
+      ],
+      "profiles": []
+    },
+    "communication_style": "Direct, precise, code-accurate; plain English with exact IRC cites; no hype; military-influenced no-nonsense tone; 'be part of the solution.'",
+    "story": "Teaching IRC classes since 2018. Built a more comprehensive, solution-oriented curriculum after experiencing watered-down training. Mission to develop inspectors who focus on safety and intent, not bureaucracy. Notable success: a boss passed B1 using an employee-marked book based on Dennis’s bookmarking system.",
+    "success_story": "Employer passed the B1 using a book marked by an employee who attended Dennis’s class, demonstrating the effectiveness of the bookmarking system."
+  },
+  "icp_summary": "Helps contractors, designers, homeowners/DIYers, and contractors transitioning to inspectors/consultants master the 2024 IRC (Ch. 1–10) for ICC B1 and practical field decisions.",
+  "segments": [
+    "Contractors transitioning to building inspectors",
+    "Working contractors seeking code fluency",
+    "Designers/early-career plans reviewers",
+    "Serious homeowners/DIY owner-builders"
+  ],
+  "offer": {
+    "name_suggested": "IRC 2024: B1 Navigation Mastery",
+    "focus": "International Residential Code (2024), Chapters 1–10; navigation, interpretation, exceptions/definitions/cross-references, and intent-vs-letter application; ICC portal and retake strategy.",
+    "includes": [
+      "Focused lessons on IRC 2024 Ch.1–10",
+      "Color-coded bookmarking/highlight system",
+      "Study habits and test-taking techniques",
+      "ICC portal walkthrough and retake planning",
+      "Intent vs. letter framework for alternatives",
+      "Real-world field application and scripts for correction responses"
+    ],
+    "books_included": false,
+    "pricing_considered_usd": {
+      "target_range": [
+        500,
+        600
+      ],
+      "notes": "Open to charging up to ~$900 comparable to contractor school if value parity is clear; students purchase books separately."
+    }
+  },
+  "fears_pains": [
+    "Failing or underperforming on ICC B1 because it’s a legal/code navigation exam, not a 'how to build' test.",
+    "Slow code lookup—can’t find the right IRC section quickly under pressure.",
+    "Getting tripped by exceptions, definitions, and cross-references that flip the answer ('landmines').",
+    "Not grasping the intent/spirit behind requirements, making alternatives/modifications hard to justify to AHJs.",
+    "Conflicting or incorrect online info (YouTube/forums) leading to wasted study time and bad habits.",
+    "Overwhelm with 2024 IRC changes and what matters in Ch. 1–10 for B1.",
+    "Failed inspections, unclear correction notices, and tense interactions with building departments.",
+    "Limited study time and no proven system for studying, marking, and test-taking.",
+    "Budget risk: paying for books, exam fees, retakes, and training without confidence in ROI.",
+    "Unclear roadmap for transitioning to inspector/consultant and using code knowledge for income."
+  ],
+  "dreams_desires": [
+    "Pass the ICC B1 on the first attempt, comfortably above cutoff.",
+    "Code fluency on demand: find, interpret, and apply the right section in under a minute.",
+    "Master the 'landmines': confidently spot exceptions, definitions, cross-references.",
+    "First-pass approvals and cleaner inspections; fewer correction notices.",
+    "Career upgrade: transition to building inspector or consultant.",
+    "Become the go-to 'code person' for credibility with AHJs and peers.",
+    "Use alternatives/equivalencies strategically by arguing intent effectively.",
+    "Efficient, predictable study system that fits real life.",
+    "Better project economics: fewer delays and rework.",
+    "Pride and purpose: safer homes and professional peace of mind."
+  ],
+  "values_beliefs": [
+    "Clarity and precision; plain, code-accurate language.",
+    "Accuracy over shortcuts; cite the IRC and avoid hype.",
+    "Intent-driven compliance, not just letter-of-the-law.",
+    "Solution-first mindset with AHJs and clients.",
+    "Student ownership and discipline—results require effort.",
+    "Practicality and speed for exam and field readiness.",
+    "Professional respect and ethics; public safety first.",
+    "Transparency and fairness in scope and pricing.",
+    "Continuous improvement with 2024 updates and field lessons.",
+    "Service and stewardship—mentor solution-oriented inspectors."
+  ],
+  "competitors": [
+    "Contractor/code schools bundling books (~$900)",
+    "Generic online code courses",
+    "YouTube code content (variable accuracy)",
+    "ICC official training and materials"
+  ],
+  "influencers_channels": [
+    "LinkedIn and Reddit communities for construction/codes",
+    "YouTube creators (e.g., Build Show, Fine Homebuilding)",
+    "Trade publications and ICC resources"
+  ],
+  "common_objections": [
+    "Price vs. bundled school options",
+    "Time constraints",
+    "Doubt it will help pass B1",
+    "YouTube is free",
+    "Fear it’s too academic vs practical",
+    "Homeowner/DIY fit",
+    "Guarantee expectations",
+    "Local amendments applicability",
+    "No included practice exams",
+    "Desire for live help/office hours"
+  ],
+  "success_metrics": [
+    "B1 pass rate",
+    "Lookup speed improvements (sub-60-second retrieval)",
+    "Confidence applying and defending IRC cites",
+    "Career transitions into inspector/consultant roles"
+  ],
+  "raw_submission": {
+    "name_field": "dennis",
+    "phone_field": "8016237631",
+    "email_field": "d@gmail.com",
+    "icp_field": "all",
+    "website_field": "Www.cherenkovcodeconsulting.com",
+    "transcript_excerpt": "Agent: All righty! I'm Stockton from CC360... User: Take care. Bye.",
+    "notes": "Extended ICP steps (2–14) provided; content distilled into arrays above."
+  }
+}
+
+
+--------------------------------------------------------------------------------
+ARTIFACT 17/17
+--------------------------------------------------------------------------------
+ID: art_01KAYX7WB97JXAW9TVACS2YEJA
+Name: final.html
+Type: html_final
+Created: 2025-11-26T01:42:55.255193
+S3 Key: cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/final.html
+S3 URL: s3://leadmagnet-artifacts-471112574622/cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/final.html
+Public URL: https://dmydkyj79auy7.cloudfront.net/cust_84c8e438/jobs/job_01KAYWC2PSSPBE6PAMQAH5P62Z/final.html
+
+CONTENT:
+--------------------------------------------------------------------------------
+<html><body><p>=== Form Submission ===
+Name: dennis
+icp: all Transcript:  Agent: All righty! I'm Stockton from CC360. I'm going to ask you a bunch of questions that we... User: That's what I was going to say. I'll do that too. I'll like, wait for my phone. Hi, you there? Agent: Hello, are you there? User: Yes, hi. Agent: All righty! I’m going to ask you a few questions so we can understand who you are, who you help, and what you’re selling. The goal is to build a really strong three sixty ICP so it’s way easier to create your funnels, emails, and other marketing assets later. Most people talk for at least ten to fifteen minutes, and we can go longer if you have time. If you ever need to stop, just tell me.  First off, what’s your name so I know what to call you? User: My name is Dennis. Agent: Thanks, Dennis. Next, what’s the best email for you—ideally the same one you used to sign up for Course Creator three sixty? Instead of saying it out loud, please type your email in the box below and hit Enter. User: Dennis.cherenkov@gmail.com Agent: Perfect. And what’s your main website or domain? Again, please type it into the chat instead of saying it, then hit Enter. User: Www.cherenkovcodeconsulting.com User: It's cold, but I'm loving this one. I like it, babe. I can do it. Agent: Awesome. To start on the ICP, in one or two sentences, who do you help and what do you help them do? User: So I help people understand the building codes. I am a teacher. I teach at a contractor school, the ICCB1 residential inspector exam class. Basically, it's I teach the introductory building codes for people who want to become either building inspectors or want to become plans examiners who want to, or no, designers who want to design residential houses and understand the codes, or contractors who want to be able to do their jobs and stuff like that. So I think it's important for us all to have a good understanding of how we're doing our work and not have any surprises. So yeah, help contractors also navigate codes and navigate with the building department and communicate with the building department and stuff like that. Or DIYers, homeowners who want to build a home or let's say build their own greenhouse and stuff like that. Help them understand the residential building codes. Agent: That's a great overview. So, to distill it down, would you say you primarily help contractors, designers, and homeowners understand and navigate residential building codes to avoid surprises and ensure compliance? User: Yes, and also help contractors become building inspectors. Agent: Got it. So, you also help contractors transition into becoming building inspectors. When these individuals—contractors, designers, homeowners, or aspiring inspectors—come to you, what is life or business usually like for them right before they work with you? What are they typically struggling with or frustrated by? User: Well, for the contractors who want to become building inspectors, they oftentimes they have tried to take the exam on their own and have failed miserably because the exam is not a how to build exam. It's not a how to be an inspector exam. It is essentially a legal exam on building codes. And so they need to learn how to navigate the codes and need to understand how to interpret the codes and so forth. And basically, yeah, all the other trades, they just need to also learn how to read the code, interpret the code, find the various applicable codes and so forth. And my job is to kind of open their eyes to the world of building codes and how they're written and how to navigate them. Agent: That makes perfect sense. So, they're often frustrated by the complexity of the building code exam or the codes themselves, and they need guidance on interpretation and navigation.  What is the main thing you want to sell to them? If you have a name for it, share that too. If not, just tell me what it does for them. User: Basically, is to my job, what I want to do in this class is review and teach the International Residential Code, the IRC, the 2024 code cycle. And basically explain various aspects of the building code, chapters 1 through chapter 10, which is the B1 exam portion of the IRC. So basically, the nuts and bolts of how to build a house without getting into the various trades like mechanical, plumbing, or electrical. Agent: Perfect. So your main offer is a course that reviews and teaches the International Residential Code, specifically chapters one through ten, focusing on the nuts and bolts of building a house for the B one exam.  Is the pricing for this main offer already decided, or are you still figuring it out? User: It is to some degree decided. I would like to be more competitive than the school. So I teach at a contractor school and they charge around $900 for the course, but they also provide the books. They provide exam questions. They provide practice tests. They provide all sorts of solutions that I'm not yet equipped to provide yet as far as I know. So because the students will have to buy their own books online on Amazon, so I think in order to be competitive, I need to subtract that from the cost of the class. Agent: Got it. So the school charges around nine hundred dollars, but includes books and other resources. You're looking to be more competitive, so you're thinking of a price point that accounts for students needing to purchase their own materials. What kind of price range are you currently considering for your course? User: Somewhere around 500 to 600 dollars. Agent: Okay, so a... User: But then again, Agent: Go ahead. User: this course I think will be more comprehensive and to some degree more valuable. So I am open to charging the same amount too as long as the customers are perfectly happy and they feel like they're getting a really good deal. So I'm usually pretty good about providing max value in the course even when I'm teaching at the contractor school even though I'm not really compensated for it to go above and beyond. Normally I try to go above and beyond and give them as much value as possible. Agent: That's great that you focus on providing maximum value. So you're thinking a range of five hundred to six hundred dollars, but you're open to charging more if you can ensure the value matches or exceeds the school's offering.  Since you started helping these people, what results are you most proud of—for yourself or for them? User: I'm very proud of the fact that I am able to really open up to people's eyes on how to navigate and interpret the codes, even if they can find the right code section, but it's up to the interpretation. And I provide value is just not teaching the code, but sometimes how to avoid the code or going around it and not having to abide by certain nonsensical codes and stuff like that, nonsensical parts of the code. So I try to teach them to navigate through it, around it, and so forth. Also, I am very proud of, I teach a bookmarking system how to navigate, how to do things in the classroom. And then we have a bookmarking system that teaches you how to market the books and stuff like that. It's the various study habits and study techniques and test-taking techniques in order to maximize their chances of passing the exam. Agent: That's awesome. So you're proud of teaching them not just how to interpret and navigate the codes, but also how to strategically work with them, and you provide valuable study and test-taking techniques.  Cool, I’ve got the core pieces I need. If you’re okay on time, I’d like to go a bit deeper into your customers, your offer details, and your story so your three sixty ICP is much stronger. Is that okay? User: Yeah, that's fine. Agent: Perfect. What do you find are the top one to three complaints or problems your best-fit customers are always talking about? User: Good question. They're complaining about various inspectors and inspection processes that they don't understand why things are important or why certain code sections are there. And so throughout the course, I also try to explain sometimes the history of certain sections or of why they're important. And so when I'm also teaching code, I try to explain the why. Why is it there? Because oftentimes when you're applying the codes, sometimes the letter of the law cannot be attained. But then we have to enforce at least the spirit of the law, the intent of the code. So if we're going to do a modification, if we're going to do an alternative design, well, we've got to abide by the intent of the code. And so I try to teach that as well. And a lot of times students do not understand the intent of the code of why it's there. Why do they have to do certain things? Because it might seem stupid to be required to do certain things. But oftentimes it is not. Agent: That's a really insightful point. So a big complaint is not understanding the "why" behind certain codes or inspection processes, which can lead to frustration. You help them understand the intent, which allows them to navigate situations where the letter of the law might not be attainable.  Given that your people struggle with things like not understanding the "why" behind codes and navigating complex interpretations, how do you see your product solving those for them? Imagine I’m your ideal customer and we’re stuck in a taxi together for ten minutes—how would you explain why your product is perfect for me? User: Well, I'm not sure the product is perfect for anyone, but it is a good value out there in the market. There's not a lot of training out there that is on demand, and some of the training out there on the demand and on YouTube is actually wrong, straight up wrong. And so my product is a good product. I want my product to be a good product. I don't expect it to be a perfect product. And one thing I don't want to do is sell it like a perfect product. I want to sell a product that is a good value and a tool, but not the tool, not some sort of magic solution to whatever problems they have. Agent: I appreciate that honest approach. So you'd emphasize that your course is a valuable and accurate tool, especially compared to potentially incorrect information found elsewhere, and it provides a solid foundation for understanding and navigating the codes. It's not a magic bullet, but a reliable resource.  Let’s get really specific for a minute. If I’m ready to buy but I’m confused about what I actually get, how would you explain what’s included? What exactly do people get access to when they join? User: It is a the the course that I'm offering is a it is a comprehensive analysis code section by code section not not the whole chapter for example but it is a good sampling of very key information that I feel is around good information good stuff to know for the all around contractor all around inspector and a homeowner who's trying to build a house it is not the course is not going to be a comprehensive go line by line with the fine tooth comb with a fine tooth comb through the whole course but it is a very very solid sampling of very important sections that need to be addressed and sections that are somewhat sometimes the most misunderstood so it is a good it's a good sampling of section of sections of code where my methods of teaching it will build up their muscle of course but also I think we're going to have to properly reading applying and interpreting the code in other sections as well so I'm not sure if you can see this but I'm going to go ahead and Agent: I can't see it, but I understand. So it's a comprehensive analysis of key code sections, not a line-by-line review of the entire code, but a solid sampling of important and often misunderstood sections. The goal is to build their muscle for properly reading, applying, and interpreting the code, which they can then apply to other sections as well.  What made you want to create this in the first place? Was there a specific need you had yourself, or something you kept seeing in your people, that pushed you to build it? User: So I've been teaching these code classes since 2018 at a contractor school, and I took these classes at a contractor school that I teach at myself from an inspector who was coming out of retirement. Anyways, so when I took the course there, it was very basic, it was very watered down, and I have built up the course over the years, and I covered more and more, and then COVID happened. I used to teach in the live classes, we would cover the ICC Study Companion book as the basis for the lectures, and it was a very watered-down course. So I built upon it, and then the COVID happened, and we started teaching online. But from the very beginning, since I took the course myself, I was like, dude, I could teach this. This is easy stuff, and it is kind of something that is really interesting to me as a topic. So I like to make sure that the houses are being built to code, they're being built safe and efficient and everything like that. And yeah, I like to be a part of the solutions for this because you know what? You're not the problem. And that's what I teach to my students to be, is be a part of the solution, not the problem. A lot of building departments out there, a lot of building inspectors, they just create problems. They don't know how to solve it. They don't help people solve it. And in a way, I'm on a personal mission to change the building code world to be more of part of the solution, not the problem. And so I want to encourage the newer generation of building inspectors to be solution-oriented, not just be bureaucrat assholes who just shut down projects and love to have a power trip on the job site. Agent: That's a powerful origin story. You saw a need for a more comprehensive and solution-oriented approach to building code education, driven by your own experience and a desire to improve the industry. You're on a mission to foster a new generation of building inspectors who are part of the solution, not the problem.  Apart from your main offer, do you already have any free resources you give away—like PDFs, cheat sheets, downloadables, or trainings? User: No, but I'm going to need to create some stuff. Like for example I teach a bookmarking system that I have come up with organically with color-coded highlighters and blue pen strategies how to mark up the book in order to have more like pictures jump out at you as people are looking for code answers and so therefore a few highlighter colors will trigger them to double check certain answers what I call landmines and stuff because there are exceptions in the codes that trigger other that change the answer completely and so basically the code is written in such a way in such a way that there's a rule and then often times there's the list of inspections exceptions that are longer than the rule and any one word can trigger those exceptions and so just because somebody has an issue memorized a few rules, that doesn't mean the rule applies because there's a slew of exceptions that might be triggered by a scenario and thus the answer, the original answer does not apply. And so, yeah, I do need to create some pre-Bs and stuff like that. I'm open to doing that. And yeah, it's a great way of getting people involved with the game and making sure they're not just playing around with the game itself. And yeah, throughout the course I have also referenced and showed people pointed people in the direction of some other YouTube videos and stuff like that, like from various organizations like the American Plywood Association or the American Engineering Award Association, that is. That's what they changed their name to. And yeah, so various helpful YouTube videos that will also help people's careers. And so I have people, I have pointed students in very different directions and I've been able to get them to come up with a lot of different things and get them to come up with a lot of different things. And then there are other ways that you can get some of the information from other sources. Agent: That's a fantastic idea for a freebie, especially the color-coded bookmarking system and the "landmines" concept. It sounds like a unique and highly valuable tool that would definitely attract your ideal students. You're also pointing them to other helpful resources, which shows your commitment to their learning.  Beyond your main offer, do you already have, or definitely want to build, any other offers—like a cheaper starter thing, a higher-ticket coaching program, or anything else on the back end? User: Not really. I'm open to the ideas, any ideas. But for example, one of the things that I do throughout my course, my classes that I don't have to do but I still do it is help people navigate the ICC website, for example, on how to show them where to create an account, then how to navigate the portal, how to look up various exams, how to look up the breakdowns of exams, how to schedule an exam. pay for an exam, schedule the exam, and so forth, and then explain, this is how you look up information. Should you have failed an exam, look up which categories they were weaker in, strong in, weak in, so that they can adjust their study techniques. Agent: That's a valuable service you're already providing, guiding them through the ICC website and exam process. It sounds like a natural extension of your teaching.  When we write or speak for you later, how do you naturally talk to your people? For example, if I was reading an email from you to your ideal customer, how would it sound? User: Normally, straight and to the point. I try to be as clear as possible. I value clarity. And matter of fact, when dealing with building departments, I try to instruct my students to be as clear and precise as possible and try to use code language that is acceptable in the actual building codes, not contractor jargon, not contractor string lingo and stuff like that. But be very straight to the point and address a code section by code sections, items by items, and demand from the jurisdiction as well to be very specific of what the actual issue is and not have a pie-in-the-sky type of problem so that nobody is trying to shadow box against unclear vapor. So I try to be clear to the point myself because report writing is one of my strong suits. I do have a military background, by the way. I am a U.S. Army National Guard veteran. And yeah, that is also part of my mental structure is of an outlook on life is somewhat no-nonsense type of mentality. Agent: That's very clear. So your communication style is straight to the point, precise, and values clarity above all else, often using code-specific language. You encourage your students to adopt a similar approach when dealing with building departments, demanding specificity and avoiding vague issues. Your military background has instilled a no-nonsense mentality that comes through in your teaching and communication.  Do you have any social media profiles where your ideal people already follow you—like YouTube, Instagram, Facebook, TikTok, LinkedIn, Pinterest, or Snapchat? User: Not really. I'm not a wildly popular anything guy. I don't have much of a following. But yes, I do have a LinkedIn account where all my certifications are listed and some of my experience. So yes, LinkedIn. Also on Reddit, that's where I'm starting to do some pre-selling. And I have answered some posts. And actually some people, even though they don't see my name, they've recognized me for being an instructor, which is kind of funny. Because I didn't even say where I'm at and they're like, interesting, I think I know you. In some of these building code Reddit posts or Reddit groups. Awesome. Agent: That's interesting that people recognize you on Reddit even without your name. So LinkedIn and Reddit are your primary social presences right now.  Can you tell me about one client story you love to share—the kind of story that really shows what you do and why it matters? User: A client story that I'd love to share. Let's see. Not really of a client story, I guess, but I mean, I did have, I do have one interesting story. So for example, there was a small little company with a boss and two of his employees who took one of my classes. The boss never showed up to any of my lectures, any of my classes. And his employee, one of his employees, he was marking his book and his boss's book throughout the lectures, throughout the course. The boss never showed up. And then the boss took the employees, his book that the employee marked up for him with the color codings and everything like that. And when it took the exam, he passed the exam having never been to a place where he had not been to before. So I think it's really important to be able to see what you're doing. But he just passed the exam with a book that was marked by someone else, which was really weird because it was surprising. So the bookmarking system really worked for him. Agent: That's a fantastic story! It really highlights the effectiveness of your bookmarking system, even for someone who didn't attend the lectures. It shows the power of your method in helping people navigate the codes efficiently.  What do you believe about getting results for your clients that most people in your space don’t really get yet? User: Not sure. Agent: No worries at all. We can skip that one.  What’s the main doubt or worry your best-fit people usually have before they decide to work with you? User: Not sure, maybe the cost, maybe it is a time commitment. So if people don't commit to time, I mean chances are they're not going to get much results. The course in a way that I teach at the school, it's a crash course. If they just depend on the course, I'm sorry, I can't guarantee anything one way or the other. Even if they remembered every word that I said and every word on the slides. So to some degree, they still have to produce, provide effort and produce effort and do some self-study. They do have to understand it, how to navigate it and everything. And to some degree, even my course is going to be somewhat of a crash course. And so when I make that absolutely clear at the beginning, and matter of fact, I want to make that very clear in the marketing side of things. So if you're looking for something like this or you're looking for something like this or you're looking for something like this, it's not a shortcut. This is going to require some studying if you want this to be your career. But one other thing, a target market for my courses, contractors who want to become more consultants versus contracting. So I'm going to have them do that and then I'll have them do that as well. And then they just want to do more consulting work for DIYers, for architects, for designers. Also, them knowing the codes as well can help them be consultants and provide value as well. Agent: That's a very honest and important point. So a main doubt or worry might be the time commitment and the understanding that your course, while valuable, isn't a shortcut and still requires self-study and effort. You want to make that clear upfront in your marketing.  You also mentioned a target market of contractors who want to transition into consulting roles, using their code knowledge to advise DIYers, architects, and designers. That's a great niche.  We’re getting close to the one-hour mark, so I’ll start to wrap us up. Is there anything else important you wanted to add that we haven't covered yet? User: Yeah, I think this has actually been a really good process. I'm really impressed with Course Creator 360 and you as the AI. Good job, buddy. Agent: Thank you, Dennis. I appreciate that.  So, to briefly summarize, you help contractors, designers, and homeowners understand and navigate residential building codes, and you also help contractors become building inspectors. Your main offer is a course that teaches the International Residential Code, focusing on key sections and interpretation, with a strong emphasis on understanding the "why" behind the codes.  Thank you so much for your time and all this valuable information, Dennis. This will be incredibly helpful for building your three sixty ICP. User: All right. Thank you. Agent: You're welcome. Have a great day! User: Take care. Bye.
+Phone: 8016237631
+Email: d@gmail.com
+
+</p></body></html>
