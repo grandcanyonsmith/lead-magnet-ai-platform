@@ -29,14 +29,6 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
   const inputRef = useRef<HTMLInputElement>(null)
   const resultsRef = useRef<HTMLDivElement>(null)
 
-  // Navigation items for quick access
-  const navItems: SearchResult[] = [
-    { id: 'nav-dashboard', type: 'page', title: 'Dashboard', href: '/dashboard', subtitle: 'Overview' },
-    { id: 'nav-workflows', type: 'page', title: 'Lead Magnets', href: '/dashboard/workflows', subtitle: 'Manage workflows' },
-    { id: 'nav-jobs', type: 'page', title: 'Generated Lead Magnets', href: '/dashboard/jobs', subtitle: 'View jobs' },
-    { id: 'nav-artifacts', type: 'page', title: 'Downloads', href: '/dashboard/artifacts', subtitle: 'Downloaded files' },
-    { id: 'nav-settings', type: 'page', title: 'Settings', href: '/dashboard/settings', subtitle: 'Account settings' },
-  ]
 
   // Load workflows and jobs for search
   useEffect(() => {
@@ -74,6 +66,15 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
   }
 
   const searchResults = useMemo(() => {
+    // Navigation items for quick access
+    const navItems: SearchResult[] = [
+      { id: 'nav-dashboard', type: 'page', title: 'Dashboard', href: '/dashboard', subtitle: 'Overview' },
+      { id: 'nav-workflows', type: 'page', title: 'Lead Magnets', href: '/dashboard/workflows', subtitle: 'Manage workflows' },
+      { id: 'nav-jobs', type: 'page', title: 'Generated Lead Magnets', href: '/dashboard/jobs', subtitle: 'View jobs' },
+      { id: 'nav-artifacts', type: 'page', title: 'Downloads', href: '/dashboard/artifacts', subtitle: 'Downloaded files' },
+      { id: 'nav-settings', type: 'page', title: 'Settings', href: '/dashboard/settings', subtitle: 'Account settings' },
+    ]
+
     if (!query.trim()) {
       return navItems
     }
@@ -122,7 +123,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
     })
 
     return results.slice(0, 10) // Limit to 10 results
-  }, [query, workflows, jobs, navItems])
+  }, [query, workflows, jobs])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {

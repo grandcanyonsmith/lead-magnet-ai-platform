@@ -17,7 +17,7 @@ export function useJobDetail() {
   const params = useParams()
   
   // Extract job ID from params, or fallback to URL pathname if param is '_' (Vercel rewrite)
-  const getJobId = () => {
+  const getJobId = useCallback(() => {
     // First try to get from params
     const paramId = params?.id as string
     if (paramId && paramId !== '_' && paramId.trim() !== '') {
@@ -36,9 +36,25 @@ export function useJobDetail() {
       }
     }
     return paramId || ''
-  }
+  }, [params?.id])
   
-  const [jobId, setJobId] = useState<string>(getJobId())
+  const [jobId, setJobId] = useState<string>(() => {
+    const paramId = params?.id as string
+    if (paramId && paramId !== '_' && paramId.trim() !== '') {
+      return paramId
+    }
+    if (typeof window !== 'undefined') {
+      const pathMatch = window.location.pathname.match(/\/dashboard\/jobs\/([^/?#]+)/)
+      if (pathMatch && pathMatch[1] && pathMatch[1] !== '_' && pathMatch[1].trim() !== '') {
+        return pathMatch[1]
+      }
+      const hashMatch = window.location.hash.match(/\/dashboard\/jobs\/([^/?#]+)/)
+      if (hashMatch && hashMatch[1] && hashMatch[1] !== '_' && hashMatch[1].trim() !== '') {
+        return hashMatch[1]
+      }
+    }
+    return paramId || ''
+  })
   const [job, setJob] = useState<Job | null>(null)
   const [workflow, setWorkflow] = useState<Workflow | null>(null)
   const [submission, setSubmission] = useState<FormSubmission | null>(null)
@@ -200,7 +216,7 @@ export function useJobDetail() {
       }
       return currentJobId
     })
-  }, [params?.id])
+  }, [params?.id, getJobId])
   
   useEffect(() => {
     if (jobId && jobId.trim() !== '' && jobId !== '_') {
@@ -250,7 +266,7 @@ export function useJobDetail() {
     }, 3000)
 
     return () => clearInterval(pollInterval)
-  }, [job?.status, jobId, loadExecutionSteps, rerunningStep])
+  }, [job?.status, jobId, loadExecutionSteps, rerunningStep, job])
 
   const handleResubmit = async () => {
     setResubmitting(true)

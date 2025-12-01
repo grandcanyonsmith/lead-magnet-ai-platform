@@ -42,7 +42,7 @@ export function useWorkflowValidation(
       valid: errors.length === 0,
       errors,
     }
-  }, [formData, steps, templateData])
+  }, [formData, steps])
 
   return validate
 }

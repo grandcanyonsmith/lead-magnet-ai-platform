@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import Image from 'next/image'
 import { FiFile, FiImage, FiFileText, FiCode } from 'react-icons/fi'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -201,13 +202,14 @@ export function PreviewRenderer({ contentType, objectUrl, fileName, className = 
             </div>
           )}
           {isInView && (
-            <img
+            <Image
               src={objectUrl}
               alt={fileName || 'Preview'}
-              className={`w-full h-full object-cover ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+              fill
+              className={`object-cover ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
               onLoad={() => setImageLoaded(true)}
               onError={() => setImageError(true)}
-              loading="lazy"
+              unoptimized
             />
           )}
         </div>
