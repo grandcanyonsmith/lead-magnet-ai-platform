@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { isAuthenticated } from '@/lib/auth'
 import { FiActivity, FiCheckCircle, FiXCircle, FiClock, FiTrendingUp, FiFileText } from 'react-icons/fi'
-import { AnalyticsResponse } from '@/types/analytics'
+import { AnalyticsResponse, AnalyticsOverview } from '@/types/analytics'
 import { logger } from '@/utils/logger'
 import { handleError } from '@/utils/error-handling'
 
@@ -23,7 +23,6 @@ export default function DashboardPage() {
       handleError(error, {
         showToast: false,
         logError: true,
-        context: 'DashboardPage',
       })
       logger.error('Failed to load analytics', { error, context: 'DashboardPage' })
       // Don't redirect on API errors - just show empty state
@@ -51,6 +50,67 @@ export default function DashboardPage() {
     
     checkAndLoad()
   }, [router, loadAnalytics])
+
+  // Move all hooks before any early returns
+  const overview: AnalyticsOverview = useMemo(() => analytics?.overview || {
+    total_jobs: 0,
+    completed_jobs: 0,
+    failed_jobs: 0,
+    pending_jobs: 0,
+    success_rate: 0,
+    avg_processing_time_seconds: 0,
+    total_submissions: 0,
+    total_workflows: 0,
+    active_workflows: 0,
+  }, [analytics?.overview])
+  
+  const stats = useMemo(() => [
+    {
+      label: 'Lead Magnets Generated',
+      value: overview.total_jobs || 0,
+      icon: FiActivity,
+      color: 'blue',
+    },
+    {
+      label: 'Completed Lead Magnets',
+      value: overview.completed_jobs || 0,
+      icon: FiCheckCircle,
+      color: 'green',
+    },
+    {
+      label: 'Failed Lead Magnets',
+      value: overview.failed_jobs || 0,
+      icon: FiXCircle,
+      color: 'red',
+    },
+    {
+      label: 'Pending Lead Magnets',
+      value: overview.pending_jobs || 0,
+      icon: FiClock,
+      color: 'yellow',
+    },
+    {
+      label: 'Success Rate',
+      value: `${overview.success_rate || 0}%`,
+      icon: FiTrendingUp,
+      color: 'purple',
+    },
+    {
+      label: 'Avg Processing Time',
+      value: `${overview.avg_processing_time_seconds || 0}s`,
+      icon: FiClock,
+      color: 'indigo',
+    },
+  ], [overview])
+
+  const colorMap: Record<string, string> = useMemo(() => ({
+    blue: 'bg-blue-100 text-blue-600',
+    green: 'bg-green-100 text-green-600',
+    red: 'bg-red-100 text-red-600',
+    yellow: 'bg-yellow-100 text-yellow-600',
+    purple: 'bg-purple-100 text-purple-600',
+    indigo: 'bg-indigo-100 text-indigo-600',
+  }), [])
 
   if (loading) {
     return (
@@ -112,56 +172,6 @@ export default function DashboardPage() {
       </div>
     )
   }
-
-  const overview = analytics?.overview || {}
-  
-  const stats = useMemo(() => [
-    {
-      label: 'Lead Magnets Generated',
-      value: overview.total_jobs || 0,
-      icon: FiActivity,
-      color: 'blue',
-    },
-    {
-      label: 'Completed Lead Magnets',
-      value: overview.completed_jobs || 0,
-      icon: FiCheckCircle,
-      color: 'green',
-    },
-    {
-      label: 'Failed Lead Magnets',
-      value: overview.failed_jobs || 0,
-      icon: FiXCircle,
-      color: 'red',
-    },
-    {
-      label: 'Pending Lead Magnets',
-      value: overview.pending_jobs || 0,
-      icon: FiClock,
-      color: 'yellow',
-    },
-    {
-      label: 'Success Rate',
-      value: `${overview.success_rate || 0}%`,
-      icon: FiTrendingUp,
-      color: 'purple',
-    },
-    {
-      label: 'Avg Processing Time',
-      value: `${overview.avg_processing_time_seconds || 0}s`,
-      icon: FiClock,
-      color: 'indigo',
-    },
-  ], [overview])
-
-  const colorMap: Record<string, string> = useMemo(() => ({
-    blue: 'bg-blue-100 text-blue-600',
-    green: 'bg-green-100 text-green-600',
-    red: 'bg-red-100 text-red-600',
-    yellow: 'bg-yellow-100 text-yellow-600',
-    purple: 'bg-purple-100 text-purple-600',
-    indigo: 'bg-indigo-100 text-indigo-600',
-  }), [])
 
   return (
     <div>

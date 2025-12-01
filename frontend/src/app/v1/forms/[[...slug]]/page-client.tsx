@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
+import Image from 'next/image'
 import axios from 'axios'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
@@ -20,7 +21,7 @@ type FormField = {
 export default function PublicFormPage() {
   const params = useParams()
   // Extract slug from params or URL pathname (for static export/Vercel compatibility)
-  const getSlug = () => {
+  const getSlug = useCallback(() => {
     // First try to get from params
     const slugParam = params?.slug
     const paramSlug = Array.isArray(slugParam) ? slugParam[0] : (slugParam as string)
@@ -43,7 +44,7 @@ export default function PublicFormPage() {
     }
     
     return paramSlug || ''
-  }
+  }, [params?.slug])
   
   const [slug, setSlug] = useState<string>(getSlug())
   
@@ -53,7 +54,7 @@ export default function PublicFormPage() {
     if (newSlug && newSlug !== slug && newSlug.trim() !== '' && newSlug !== '_') {
       setSlug(newSlug)
     }
-  }, [params?.slug])
+  }, [getSlug, slug])
   
   const [form, setForm] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -65,6 +66,7 @@ export default function PublicFormPage() {
   const [jobId, setJobId] = useState<string | null>(null)
   const [jobStatus, setJobStatus] = useState<string | null>(null)
   const [outputUrl, setOutputUrl] = useState<string | null>(null)
+  const [logoError, setLogoError] = useState(false)
 
   useEffect(() => {
     if (slug && slug.trim() !== '' && slug !== '_') {
@@ -374,15 +376,16 @@ export default function PublicFormPage() {
       <div className="max-w-2xl mx-auto">
         <div className="bg-white rounded-lg shadow p-4 sm:p-6 lg:p-8">
           {/* Logo */}
-          {form.logo_url && (
+          {form.logo_url && !logoError && (
             <div className="mb-4 sm:mb-6 text-center">
-              <img
+              <Image
                 src={form.logo_url}
                 alt="Logo"
+                width={80}
+                height={80}
                 className="max-h-16 sm:max-h-20 mx-auto"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none'
-                }}
+                onError={() => setLogoError(true)}
+                unoptimized
               />
             </div>
           )}
