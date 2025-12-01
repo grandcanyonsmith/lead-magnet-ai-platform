@@ -54,7 +54,7 @@ class JobProcessor:
         
         # Initialize core services
         self.artifact_service = ArtifactService(db_service, s3_service)
-        self.delivery_service = DeliveryService(db_service, self.ai_service)
+        self.delivery_service = DeliveryService(db_service, self.ai_service, s3_service)
         self.usage_service = UsageService(db_service)
         
         # Initialize image artifact service

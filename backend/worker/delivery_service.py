@@ -6,8 +6,9 @@ Handles webhook and SMS delivery notifications.
 import logging
 import json
 import os
+import re
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import boto3
 import requests
 
@@ -20,9 +21,10 @@ logger = logging.getLogger(__name__)
 class DeliveryService:
     """Service for delivering notifications via webhooks and SMS."""
     
-    def __init__(self, db_service: DynamoDBService, ai_service: AIService):
+    def __init__(self, db_service: DynamoDBService, ai_service: AIService, s3_service=None):
         self.db = db_service
         self.ai_service = ai_service
+        self.s3_service = s3_service
     
     def send_webhook_notification(
         self,
@@ -102,6 +104,9 @@ class DeliveryService:
             elif artifact_type in ('markdown_final', 'step_output', 'report_markdown') or artifact_name.endswith(('.md', '.markdown')):
                 markdown_files_list.append(artifact_metadata)
         
+        # Extract artifact content for context
+        artifact_content = self._extract_artifact_content(all_artifacts, job_id)
+        
         # Build payload with dynamic values from submission data
         submission_data = submission.get('submission_data', {})
         payload = {
@@ -119,6 +124,10 @@ class DeliveryService:
             'html_files': html_files_list,
             'markdown_files': markdown_files_list,
         }
+        
+        # Add artifact content to context if available
+        if artifact_content:
+            payload['context'] = artifact_content
         
         # Merge with any additional dynamic values from submission
         for key, value in submission_data.items():
@@ -176,6 +185,141 @@ class DeliveryService:
                 'error_message': str(e),
                 'response_status': getattr(e.response, 'status_code', None) if hasattr(e, 'response') else None
             }, exc_info=True)
+    
+    def _extract_text_from_html(self, html_content: str) -> str:
+        """
+        Extract text content from HTML by stripping tags.
+        
+        Args:
+            html_content: HTML content as string
+            
+        Returns:
+            Extracted text content
+        """
+        if not html_content:
+            return ""
+        
+        # Remove script and style elements and their content
+        html_content = re.sub(r'<script[^>]*>.*?</script>', '', html_content, flags=re.DOTALL | re.IGNORECASE)
+        html_content = re.sub(r'<style[^>]*>.*?</style>', '', html_content, flags=re.DOTALL | re.IGNORECASE)
+        
+        # Remove HTML tags
+        text = re.sub(r'<[^>]+>', '', html_content)
+        
+        # Decode HTML entities (basic ones)
+        text = text.replace('&nbsp;', ' ')
+        text = text.replace('&amp;', '&')
+        text = text.replace('&lt;', '<')
+        text = text.replace('&gt;', '>')
+        text = text.replace('&quot;', '"')
+        text = text.replace('&#39;', "'")
+        
+        # Clean up whitespace
+        text = re.sub(r'\s+', ' ', text)
+        text = text.strip()
+        
+        return text
+    
+    def _extract_artifact_content(self, all_artifacts: List[Dict[str, Any]], job_id: str) -> str:
+        """
+        Extract text content from .md and .html artifacts and collect image URLs.
+        
+        Args:
+            all_artifacts: List of artifact dictionaries
+            job_id: Job ID for logging
+            
+        Returns:
+            Formatted string containing all artifact text content and image URLs
+        """
+        if not self.s3_service:
+            logger.warning(f"[DeliveryService] S3 service not available, skipping artifact content extraction", extra={
+                'job_id': job_id
+            })
+            return ""
+        
+        content_parts = []
+        image_urls = []
+        
+        # Filter and process markdown and HTML files
+        markdown_artifacts = []
+        html_artifacts = []
+        
+        for artifact in all_artifacts:
+            artifact_type = artifact.get('artifact_type', '').lower()
+            artifact_name = (artifact.get('artifact_name') or artifact.get('file_name') or '').lower()
+            s3_key = artifact.get('s3_key')
+            public_url = artifact.get('public_url') or artifact.get('s3_url') or ''
+            
+            # Collect image URLs
+            if artifact_type == 'image' or artifact_name.endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp')):
+                if public_url:
+                    image_urls.append(public_url)
+            
+            # Categorize text artifacts
+            elif artifact_type in ('markdown_final', 'step_output', 'report_markdown') or artifact_name.endswith(('.md', '.markdown')):
+                if s3_key:
+                    markdown_artifacts.append((artifact, s3_key))
+            elif artifact_type == 'html_final' or artifact_name.endswith('.html'):
+                if s3_key:
+                    html_artifacts.append((artifact, s3_key))
+        
+        # Download and extract content from markdown files
+        for artifact, s3_key in markdown_artifacts:
+            artifact_name = artifact.get('artifact_name') or artifact.get('file_name') or 'unknown.md'
+            try:
+                content = self.s3_service.download_artifact(s3_key)
+                if content:
+                    content_parts.append(f"[Markdown File: {artifact_name}]\n{content}\n")
+                    logger.debug(f"[DeliveryService] Extracted markdown content", extra={
+                        'job_id': job_id,
+                        'artifact_name': artifact_name,
+                        'content_length': len(content)
+                    })
+            except Exception as e:
+                logger.warning(f"[DeliveryService] Failed to download markdown artifact", extra={
+                    'job_id': job_id,
+                    'artifact_name': artifact_name,
+                    's3_key': s3_key,
+                    'error_type': type(e).__name__,
+                    'error_message': str(e)
+                }, exc_info=True)
+        
+        # Download and extract content from HTML files
+        for artifact, s3_key in html_artifacts:
+            artifact_name = artifact.get('artifact_name') or artifact.get('file_name') or 'unknown.html'
+            try:
+                html_content = self.s3_service.download_artifact(s3_key)
+                if html_content:
+                    # Extract text from HTML
+                    text_content = self._extract_text_from_html(html_content)
+                    if text_content:
+                        content_parts.append(f"[HTML File: {artifact_name}]\n{text_content}\n")
+                        logger.debug(f"[DeliveryService] Extracted HTML content", extra={
+                            'job_id': job_id,
+                            'artifact_name': artifact_name,
+                            'text_length': len(text_content)
+                        })
+            except Exception as e:
+                logger.warning(f"[DeliveryService] Failed to download HTML artifact", extra={
+                    'job_id': job_id,
+                    'artifact_name': artifact_name,
+                    's3_key': s3_key,
+                    'error_type': type(e).__name__,
+                    'error_message': str(e)
+                }, exc_info=True)
+        
+        # Build final content string
+        result_parts = []
+        if content_parts:
+            result_parts.append("=== ARTIFACT CONTENT ===\n")
+            result_parts.extend(content_parts)
+        
+        if image_urls:
+            result_parts.append("\n=== IMAGE LINKS ===\n")
+            for url in image_urls:
+                result_parts.append(f"- {url}\n")
+        
+        return "\n".join(result_parts)
     
     def _get_twilio_credentials(self) -> Dict[str, str]:
         """
