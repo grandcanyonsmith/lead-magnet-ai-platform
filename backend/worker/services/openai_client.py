@@ -1,8 +1,10 @@
 """OpenAI API client wrapper."""
 import logging
 import openai
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 import re
+import json
+import copy
 
 from services.api_key_manager import APIKeyManager
 
@@ -794,6 +796,66 @@ class OpenAIClient:
             # Return original content on error
             return content, []
     
+    def _serialize_response(self, response: Any) -> Dict[str, Any]:
+        """
+        Serialize OpenAI API response object to a dictionary.
+        Handles complex objects and converts them to JSON-serializable format.
+        
+        Args:
+            response: OpenAI API response object
+            
+        Returns:
+            Dictionary representation of the response
+        """
+        try:
+            # Convert response object to dict using model_dump if available (Pydantic v2)
+            if hasattr(response, 'model_dump'):
+                return response.model_dump(mode='json')
+            # Fallback to dict() if available (Pydantic v1 or simple objects)
+            elif hasattr(response, 'dict'):
+                return response.dict()
+            # Try to convert attributes to dict
+            else:
+                result = {}
+                # Get all non-private attributes
+                for attr in dir(response):
+                    if not attr.startswith('_'):
+                        try:
+                            value = getattr(response, attr)
+                            # Skip methods
+                            if not callable(value):
+                                # Try to serialize the value
+                                if hasattr(value, 'model_dump'):
+                                    result[attr] = value.model_dump(mode='json')
+                                elif hasattr(value, 'dict'):
+                                    result[attr] = value.dict()
+                                elif isinstance(value, (str, int, float, bool, type(None))):
+                                    result[attr] = value
+                                elif isinstance(value, list):
+                                    result[attr] = [
+                                        item.model_dump(mode='json') if hasattr(item, 'model_dump') 
+                                        else item.dict() if hasattr(item, 'dict')
+                                        else str(item) if not isinstance(item, (str, int, float, bool, type(None)))
+                                        else item
+                                        for item in value
+                                    ]
+                                else:
+                                    # For complex objects, try to convert to string
+                                    result[attr] = str(value)
+                        except Exception as e:
+                            logger.debug(f"[OpenAI Client] Could not serialize response attribute {attr}: {e}")
+                            result[attr] = f"<unserializable: {type(value).__name__}>"
+                return result
+        except Exception as e:
+            logger.warning(f"[OpenAI Client] Error serializing response: {e}", exc_info=True)
+            # Fallback: return basic info
+            return {
+                "error": "Failed to serialize response",
+                "error_message": str(e),
+                "response_type": type(response).__name__,
+                "response_str": str(response)
+            }
+    
     def process_api_response(
         self,
         response,
@@ -955,6 +1017,12 @@ class OpenAIClient:
             "service_type": "openai_worker_report"
         }
         
+        # Store full raw API request params (exact what was sent to OpenAI)
+        raw_api_request = copy.deepcopy(params)
+        # Remove job_id and tenant_id from raw request (these are internal tracking, not sent to OpenAI)
+        raw_api_request.pop('job_id', None)
+        raw_api_request.pop('tenant_id', None)
+        
         request_details = {
             "model": model,
             "instructions": instructions,
@@ -962,7 +1030,9 @@ class OpenAIClient:
             "previous_context": previous_context,
             "context": context,
             "tools": tools,
-            "tool_choice": tool_choice
+            "tool_choice": tool_choice,
+            # Store full raw API request body (exact what was sent to OpenAI)
+            "raw_api_request": raw_api_request
         }
         
         # Extract image URLs from response when image_generation tool is used
@@ -978,6 +1048,9 @@ class OpenAIClient:
         # Image URL extraction is now handled by ResponseParser
         # The complex extraction logic has been moved to response_parser.py
         
+        # Serialize full raw API response object
+        raw_api_response = self._serialize_response(response)
+        
         response_details = {
             "output_text": content,
             "image_urls": image_urls,
@@ -986,7 +1059,9 @@ class OpenAIClient:
                 "output_tokens": output_tokens,
                 "total_tokens": total_tokens
             },
-            "model": model
+            "model": model,
+            # Store full raw API response (exact what was received from OpenAI)
+            "raw_api_response": raw_api_response
         }
         
         logger.info("[OpenAI Client] Final response_details prepared", extra={
