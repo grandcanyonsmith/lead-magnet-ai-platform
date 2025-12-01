@@ -4,6 +4,7 @@
  */
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { FiImage, FiAlertCircle } from 'react-icons/fi'
 
 interface InlineImageProps {
@@ -57,18 +58,19 @@ export function InlineImage({ url, alt, className = '' }: InlineImageProps) {
               </div>
             </div>
           )}
-          <img
+          <Image
             src={url}
             alt={alt || 'Inline image'}
+            fill
             onLoad={handleLoad}
             onError={handleError}
-            className={`w-full h-full object-contain rounded-lg transition-opacity duration-200 ${
+            className={`object-contain rounded-lg transition-opacity duration-200 ${
               loading ? 'opacity-0 absolute' : 'opacity-100'
             }`}
             style={{
               maxHeight: '600px',
             }}
-            loading="lazy"
+            unoptimized
           />
         </div>
       </div>

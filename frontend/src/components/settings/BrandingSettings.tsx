@@ -5,6 +5,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { Settings } from '@/types'
 import { FormField } from './FormField'
 
@@ -56,13 +57,18 @@ export function BrandingSettings({ settings, onChange, errors }: BrandingSetting
         {settings.logo_url && !imageError && (
           <div className="mt-3">
             <p className="text-sm text-gray-600 mb-2">Preview:</p>
-            <img
-              src={settings.logo_url}
-              alt="Logo preview"
-              className="max-h-20 max-w-xs border border-gray-200 rounded"
-              onError={handleImageError}
-              onLoad={handleImageLoad}
-            />
+            <div className="relative max-h-20 max-w-xs border border-gray-200 rounded overflow-hidden">
+              <Image
+                src={settings.logo_url}
+                alt="Logo preview"
+                width={320}
+                height={80}
+                className="object-contain"
+                onError={handleImageError}
+                onLoad={handleImageLoad}
+                unoptimized
+              />
+            </div>
           </div>
         )}
 
