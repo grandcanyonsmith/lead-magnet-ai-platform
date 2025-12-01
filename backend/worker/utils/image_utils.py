@@ -12,17 +12,56 @@ from urllib.parse import urlparse
 logger = logging.getLogger(__name__)
 
 
+def clean_image_url(url: str) -> str:
+    """
+    Clean an image URL by removing trailing punctuation that shouldn't be part of the URL.
+    
+    This handles cases where URLs are extracted from text that includes trailing punctuation
+    like closing parentheses, periods, commas, etc.
+    
+    Args:
+        url: Raw URL that may have trailing punctuation
+        
+    Returns:
+        Cleaned URL with trailing punctuation removed
+    """
+    if not url or not isinstance(url, str):
+        return url
+    
+    # Remove trailing punctuation that's commonly found after URLs in text
+    # This includes: ), ), ), ., ,, ;, :, !, ?, etc.
+    # But preserve query parameters and fragments
+    cleaned = url.rstrip('.,!?;:')
+    
+    # Handle multiple closing parentheses (common in markdown or formatted text)
+    # e.g., "https://example.com/image.jpg))" -> "https://example.com/image.jpg"
+    while cleaned.endswith(')'):
+        # Check if the parenthesis is part of a query parameter or fragment
+        # If there's a '?' or '#' before the last '(', it might be part of the URL
+        last_open = cleaned.rfind('(')
+        last_qmark = cleaned.rfind('?')
+        last_hash = cleaned.rfind('#')
+        
+        # If there's no matching '(' or if the '(' is before '?' or '#', remove trailing ')'
+        if last_open == -1 or (last_qmark != -1 and last_open < last_qmark) or (last_hash != -1 and last_open < last_hash):
+            cleaned = cleaned[:-1]
+        else:
+            break
+    
+    return cleaned
+
+
 def extract_image_urls(text: str) -> List[str]:
     """
     Extract image URLs from text content.
     Supports: png, jpg, jpeg, gif, webp, svg, bmp, ico
-    Handles URLs with query parameters.
+    Handles URLs with query parameters and cleans trailing punctuation.
     
     Args:
         text: Text content to search for image URLs
         
     Returns:
-        List of unique image URLs found in the text
+        List of unique, cleaned image URLs found in the text
     """
     if not text or not isinstance(text, str):
         return []
@@ -30,14 +69,23 @@ def extract_image_urls(text: str) -> List[str]:
     # Regex pattern to match image URLs
     # Matches URLs ending with image extensions, optionally followed by query parameters
     # Using non-capturing groups to get full URLs
-    image_url_pattern = r'https?://[^\s<>"{}|\\^`\[\]]+\.(?:png|jpg|jpeg|gif|webp|svg|bmp|ico)(?:\?[^\s<>"{}|\\^`\[\]]*)?'
+    # Updated to be more permissive to catch URLs with trailing punctuation
+    image_url_pattern = r'https?://[^\s<>"{}|\\^`\[\]]+\.(?:png|jpg|jpeg|gif|webp|svg|bmp|ico)(?:\?[^\s<>"{}|\\^`\[\]]*)?[^\s<>"{}|\\^`\[\]]*'
     
     matches = re.findall(image_url_pattern, text, re.IGNORECASE)
     if not matches:
         return []
     
+    # Clean each URL to remove trailing punctuation
+    cleaned_urls = []
+    for url in matches:
+        cleaned = clean_image_url(url)
+        # Validate that the cleaned URL is still a valid image URL
+        if cleaned and is_image_url(cleaned):
+            cleaned_urls.append(cleaned)
+    
     # Remove duplicates and return
-    return list(set(matches))
+    return list(set(cleaned_urls))
 
 
 def is_image_url(url: str) -> bool:
