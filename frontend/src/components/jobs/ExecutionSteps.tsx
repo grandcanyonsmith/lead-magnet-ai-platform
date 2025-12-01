@@ -3,7 +3,6 @@
 import { useMemo } from 'react'
 import { FiChevronDown, FiChevronUp } from 'react-icons/fi'
 import { MergedStep } from '@/types/job'
-import { useImageArtifacts } from '@/hooks/useImageArtifacts'
 import { StepHeader } from './StepHeader'
 import { StepInputOutput } from './StepInputOutput'
 import { StepProgressBar } from './StepProgressBar'
@@ -23,7 +22,8 @@ interface ExecutionStepsProps {
   rerunningStep?: number | null
   onEditStep?: (stepIndex: number) => void
   canEdit?: boolean
-  jobId?: string
+  imageArtifactsByStep?: Map<number, Artifact[]>
+  loadingImageArtifacts?: boolean
 }
 
 export function ExecutionSteps({
@@ -38,14 +38,9 @@ export function ExecutionSteps({
   rerunningStep,
   onEditStep,
   canEdit = false,
-  jobId,
+  imageArtifactsByStep = new Map(),
+  loadingImageArtifacts = false,
 }: ExecutionStepsProps) {
-  // Fetch image artifacts using custom hook
-  const { imageArtifactsByStep, loading: loadingImageArtifacts } = useImageArtifacts({
-    jobId,
-    steps,
-  })
-
   // Sort steps by step_order once (must be before early return)
   const sortedSteps = useMemo(() => {
     if (!steps || steps.length === 0) {
