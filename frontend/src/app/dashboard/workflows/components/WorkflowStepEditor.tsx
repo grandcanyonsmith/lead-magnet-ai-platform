@@ -107,16 +107,61 @@ export default function WorkflowStepEditor({
         background: config.background || 'auto',
         input_fidelity: config.input_fidelity,
       })
-    } else if (isToolSelected('image_generation')) {
-      // Tool is selected but no config - use defaults
-      setImageGenerationConfig({
-        size: 'auto',
-        quality: 'auto',
-        format: undefined,
-        compression: undefined,
-        background: 'auto',
-        input_fidelity: undefined,
+    } else {
+      // Check if image_generation tool is selected (as string)
+      const hasImageGenTool = (step.tools || []).some(t => {
+        if (typeof t === 'string') return t === 'image_generation'
+        return t.type === 'image_generation'
       })
+      if (hasImageGenTool) {
+        // Tool is selected but no config - use defaults
+        const defaultConfig = {
+          size: 'auto' as const,
+          quality: 'auto' as const,
+          format: undefined as 'png' | 'jpeg' | 'webp' | undefined,
+          compression: undefined as number | undefined,
+          background: 'auto' as const,
+          input_fidelity: undefined as 'low' | 'high' | undefined,
+        }
+        setImageGenerationConfig(defaultConfig)
+        
+        // Convert string tool to object immediately if needed (only if not already converted)
+        const tools = step.tools || []
+        const hasStringTool = tools.some(t => t === 'image_generation')
+        const hasObjectTool = tools.some(t => typeof t === 'object' && t.type === 'image_generation')
+        
+        if (hasStringTool && !hasObjectTool && localStep.tools === step.tools) {
+          // Only convert if this is the initial load (localStep hasn't been modified yet)
+          // Convert string to object with defaults
+          const updatedTools = tools.map(t => {
+            if (t === 'image_generation') {
+              const config: ImageGenerationToolConfig = {
+                type: 'image_generation',
+                size: defaultConfig.size,
+                quality: defaultConfig.quality,
+                background: defaultConfig.background,
+              }
+              return config
+            }
+            return t
+          }) as typeof step.tools
+          // Update local step immediately
+          const updatedStep = { ...step, tools: updatedTools }
+          setLocalStep(updatedStep)
+          // Notify parent of the conversion (this will update the step prop, but only once)
+          onChange(index, updatedStep)
+        }
+      } else {
+        // Tool not selected - reset to defaults
+        setImageGenerationConfig({
+          size: 'auto',
+          quality: 'auto',
+          format: undefined,
+          compression: undefined,
+          background: 'auto',
+          input_fidelity: undefined,
+        })
+      }
     }
     // Sync webhook headers
     if (step.webhook_headers) {
@@ -126,6 +171,24 @@ export default function WorkflowStepEditor({
     }
   }, [step])
 
+  // Ensure image generation config is initialized when tool is selected
+  useEffect(() => {
+    if (isToolSelected('image_generation')) {
+      // Check if config needs initialization (only if size is not set or is undefined)
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      if (!imageGenerationConfig.size || imageGenerationConfig.size === undefined) {
+        setImageGenerationConfig({
+          size: 'auto',
+          quality: 'auto',
+          format: undefined,
+          compression: undefined,
+          background: 'auto',
+          input_fidelity: undefined,
+        })
+      }
+    }
+  }, [localStep.tools]) // Only depend on tools, not config to avoid loops
+
   const handleChange = (field: keyof WorkflowStep, value: any) => {
     const updated = { ...localStep, [field]: value }
     setLocalStep(updated)
@@ -134,10 +197,11 @@ export default function WorkflowStepEditor({
 
   const isToolSelected = (toolValue: string): boolean => {
     const currentTools = localStep.tools || []
-    return currentTools.some(t => {
+    const isSelected = currentTools.some(t => {
       if (typeof t === 'string') return t === toolValue
       return t.type === toolValue
     })
+    return isSelected
   }
 
   const handleToolToggle = (toolValue: string) => {
@@ -163,23 +227,38 @@ export default function WorkflowStepEditor({
           environment: computerUseConfig.environment,
         }]
       } else if (toolValue === 'image_generation') {
+        // Ensure config is initialized with defaults if not already set
+        const currentConfig = imageGenerationConfig.size ? imageGenerationConfig : {
+          size: 'auto' as const,
+          quality: 'auto' as const,
+          format: undefined as 'png' | 'jpeg' | 'webp' | undefined,
+          compression: undefined as number | undefined,
+          background: 'auto' as const,
+          input_fidelity: undefined as 'low' | 'high' | undefined,
+        }
+        
         // Add as object with config
         const config: any = {
           type: 'image_generation',
-          size: imageGenerationConfig.size,
-          quality: imageGenerationConfig.quality,
-          background: imageGenerationConfig.background,
+          size: currentConfig.size,
+          quality: currentConfig.quality,
+          background: currentConfig.background,
         }
-        if (imageGenerationConfig.format) {
-          config.format = imageGenerationConfig.format
+        if (currentConfig.format) {
+          config.format = currentConfig.format
         }
-        if (imageGenerationConfig.compression !== undefined) {
-          config.compression = imageGenerationConfig.compression
+        if (currentConfig.compression !== undefined) {
+          config.compression = currentConfig.compression
         }
-        if (imageGenerationConfig.input_fidelity) {
-          config.input_fidelity = imageGenerationConfig.input_fidelity
+        if (currentConfig.input_fidelity) {
+          config.input_fidelity = currentConfig.input_fidelity
         }
         updatedTools = [...currentTools, config]
+        
+        // Initialize state immediately if not already initialized
+        if (!imageGenerationConfig.size) {
+          setImageGenerationConfig(currentConfig)
+        }
       } else {
         // Add as string
         updatedTools = [...currentTools, toolValue]
@@ -227,6 +306,26 @@ export default function WorkflowStepEditor({
     // Update the tool object in tools array
     const currentTools = localStep.tools || []
     const updatedTools = currentTools.map(t => {
+      // Convert string tool to object if needed
+      if (t === 'image_generation') {
+        const config: any = {
+          type: 'image_generation',
+          size: newConfig.size,
+          quality: newConfig.quality,
+          background: newConfig.background,
+        }
+        if (newConfig.format) {
+          config.format = newConfig.format
+        }
+        if (newConfig.compression !== undefined) {
+          config.compression = newConfig.compression
+        }
+        if (newConfig.input_fidelity) {
+          config.input_fidelity = newConfig.input_fidelity
+        }
+        return config
+      }
+      // Update existing object tool
       if (typeof t === 'object' && t.type === 'image_generation') {
         const updated: any = {
           ...t,
@@ -614,7 +713,7 @@ export default function WorkflowStepEditor({
                   <label className="block text-sm font-medium text-gray-700 mb-3">
                     Image Generation Configuration
                   </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">
                         Size
