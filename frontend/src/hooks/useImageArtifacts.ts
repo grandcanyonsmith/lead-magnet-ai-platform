@@ -18,6 +18,7 @@ interface UseImageArtifactsOptions {
 export function useImageArtifacts(options: UseImageArtifactsOptions) {
   const { jobId, steps } = options
   const [imageArtifactsByStep, setImageArtifactsByStep] = useState<Map<number, Artifact[]>>(new Map())
+  const [artifacts, setArtifacts] = useState<Artifact[]>([])
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -27,12 +28,17 @@ export function useImageArtifacts(options: UseImageArtifactsOptions) {
       try {
         setLoading(true)
         const response = await api.getArtifacts({ 
-          job_id: jobId, 
-          artifact_type: 'image',
-          limit: 100 
+          job_id: jobId,
+          limit: 200 
         })
         
-        const imageArtifacts = response.artifacts || []
+        const allArtifacts = response.artifacts || []
+        setArtifacts(allArtifacts)
+        
+        const imageArtifacts = allArtifacts.filter((artifact) => {
+          const type = artifact.artifact_type?.toLowerCase() || artifact.content_type?.toLowerCase() || ''
+          return type.includes('image')
+        })
         
         // Group artifacts by step order based on filename pattern or created_at timestamp
         const artifactsByStep = new Map<number, Artifact[]>()
@@ -94,6 +100,7 @@ export function useImageArtifacts(options: UseImageArtifactsOptions) {
 
   return {
     imageArtifactsByStep,
+    artifacts,
     loading,
   }
 }
