@@ -60,6 +60,16 @@ export interface ToolConfig {
   [key: string]: any;
 }
 
+export interface ImageGenerationToolConfig {
+  type: 'image_generation';
+  size?: '1024x1024' | '1024x1536' | '1536x1024' | 'auto';
+  quality?: 'low' | 'medium' | 'high' | 'auto';
+  format?: 'png' | 'jpeg' | 'webp';
+  compression?: number; // 0-100
+  background?: 'transparent' | 'opaque' | 'auto';
+  input_fidelity?: 'low' | 'high';
+}
+
 export interface Form {
   form_id: string;
   tenant_id: string;

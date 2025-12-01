@@ -18,6 +18,19 @@ export const workflowStepSchema = z.object({
         display_width: z.number().optional(),
         display_height: z.number().optional(),
         environment: z.enum(['browser', 'mac', 'windows', 'ubuntu']).optional(),
+        // Image generation tool specific fields
+        size: z.union([
+          z.enum(['1024x1024', '1024x1536', '1536x1024', 'auto']),
+          z.string()
+        ]).optional(),
+        quality: z.enum(['low', 'medium', 'high', 'auto']).optional(),
+        format: z.enum(['png', 'jpeg', 'webp']).optional(),
+        compression: z.number().int().min(0).max(100).optional(),
+        background: z.union([
+          z.enum(['transparent', 'opaque', 'auto']),
+          z.string()
+        ]).optional(),
+        input_fidelity: z.enum(['low', 'high']).optional(),
         // Allow other config fields for future tools
       }).passthrough(),
     ])

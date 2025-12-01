@@ -123,7 +123,22 @@ class StepProcessor:
         # Do NOT auto-add web_search for o4-mini-deep-research model
         default_tools = [] if step_model == 'o4-mini-deep-research' else ['web_search']
         step_tools_raw = step.get('tools', default_tools)
-        step_tools = [{"type": tool} if isinstance(tool, str) else tool for tool in step_tools_raw]
+        # Convert string tools to objects, with special handling for image_generation
+        step_tools = []
+        for tool in step_tools_raw:
+            if isinstance(tool, str):
+                if tool == 'image_generation':
+                    # Convert image_generation string to object with defaults
+                    step_tools.append({
+                        "type": "image_generation",
+                        "size": "auto",
+                        "quality": "auto",
+                        "background": "auto"
+                    })
+                else:
+                    step_tools.append({"type": tool})
+            else:
+                step_tools.append(tool)
         step_tool_choice = step.get('tool_choice', 'auto')
         
         logger.info(f"[StepProcessor] Processing step {step_index + 1}/{len(sorted_steps)}", extra={
@@ -661,7 +676,22 @@ class StepProcessor:
         step_model = step.get('model', 'gpt-5')
         default_tools = [] if step_model == 'o4-mini-deep-research' else ['web_search']
         step_tools_raw = step.get('tools', default_tools)
-        step_tools = [{"type": tool} if isinstance(tool, str) else tool for tool in step_tools_raw]
+        # Convert string tools to objects, with special handling for image_generation
+        step_tools = []
+        for tool in step_tools_raw:
+            if isinstance(tool, str):
+                if tool == 'image_generation':
+                    # Convert image_generation string to object with defaults
+                    step_tools.append({
+                        "type": "image_generation",
+                        "size": "auto",
+                        "quality": "auto",
+                        "background": "auto"
+                    })
+                else:
+                    step_tools.append({"type": tool})
+            else:
+                step_tools.append(tool)
         step_tool_choice = step.get('tool_choice', 'auto')
         
         logger.info(f"Processing step {step_index + 1}/{len(steps)}: {step_name}", extra={

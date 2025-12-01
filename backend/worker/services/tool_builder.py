@@ -28,6 +28,19 @@ class ToolBuilder:
         cleaned_tools = []
         
         for idx, tool in enumerate(tools):
+            # Convert string tools to dict format first
+            if isinstance(tool, str):
+                if tool == 'image_generation':
+                    # Convert image_generation string to object with defaults
+                    tool = {
+                        "type": "image_generation",
+                        "size": "auto",
+                        "quality": "auto",
+                        "background": "auto"
+                    }
+                else:
+                    tool = {"type": tool}
+            
             if isinstance(tool, dict):
                 cleaned_tool = tool.copy()
                 
@@ -58,6 +71,52 @@ class ToolBuilder:
                             "re-adding it."
                         )
                         cleaned_tool["container"] = {"type": "auto"}
+                
+                # Validate and preserve image_generation tool parameters
+                if tool_type == "image_generation":
+                    # Set defaults for image_generation if not provided
+                    if "size" not in cleaned_tool:
+                        cleaned_tool["size"] = "auto"
+                    if "quality" not in cleaned_tool:
+                        cleaned_tool["quality"] = "auto"
+                    if "background" not in cleaned_tool:
+                        cleaned_tool["background"] = "auto"
+                    
+                    # Validate parameter values
+                    valid_sizes = ["1024x1024", "1024x1536", "1536x1024", "auto"]
+                    if cleaned_tool.get("size") not in valid_sizes:
+                        logger.warning(f"Invalid size '{cleaned_tool.get('size')}' for image_generation tool, using 'auto'")
+                        cleaned_tool["size"] = "auto"
+                    
+                    valid_qualities = ["low", "medium", "high", "auto"]
+                    if cleaned_tool.get("quality") not in valid_qualities:
+                        logger.warning(f"Invalid quality '{cleaned_tool.get('quality')}' for image_generation tool, using 'auto'")
+                        cleaned_tool["quality"] = "auto"
+                    
+                    valid_backgrounds = ["transparent", "opaque", "auto"]
+                    if cleaned_tool.get("background") not in valid_backgrounds:
+                        logger.warning(f"Invalid background '{cleaned_tool.get('background')}' for image_generation tool, using 'auto'")
+                        cleaned_tool["background"] = "auto"
+                    
+                    valid_formats = ["png", "jpeg", "webp"]
+                    if "format" in cleaned_tool and cleaned_tool.get("format") not in valid_formats:
+                        logger.warning(f"Invalid format '{cleaned_tool.get('format')}' for image_generation tool, removing")
+                        del cleaned_tool["format"]
+                    
+                    if "compression" in cleaned_tool:
+                        compression = cleaned_tool.get("compression")
+                        if not isinstance(compression, (int, float)) or compression < 0 or compression > 100:
+                            logger.warning(f"Invalid compression '{compression}' for image_generation tool (must be 0-100), removing")
+                            del cleaned_tool["compression"]
+                    
+                    valid_fidelities = ["low", "high"]
+                    if "input_fidelity" in cleaned_tool and cleaned_tool.get("input_fidelity") not in valid_fidelities:
+                        logger.warning(f"Invalid input_fidelity '{cleaned_tool.get('input_fidelity')}' for image_generation tool, removing")
+                        del cleaned_tool["input_fidelity"]
+                    
+                    logger.debug(f"[Tool Builder] Preserved image_generation tool config", extra={
+                        'tool_config': cleaned_tool
+                    })
                 
                 cleaned_tools.append(cleaned_tool)
             else:

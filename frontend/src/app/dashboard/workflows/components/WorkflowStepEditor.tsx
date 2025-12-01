@@ -5,7 +5,7 @@ import { FiTrash2, FiChevronUp, FiChevronDown, FiZap, FiChevronDown as FiChevron
 import { useWorkflowStepAI } from '@/hooks/useWorkflowStepAI'
 import StepDiffPreview from '@/components/workflows/edit/StepDiffPreview'
 import toast from 'react-hot-toast'
-import { WorkflowStep, AIModel } from '@/types/workflow'
+import { WorkflowStep, AIModel, ComputerUseToolConfig, ImageGenerationToolConfig } from '@/types/workflow'
 
 interface WorkflowStepEditorProps {
   step: WorkflowStep
@@ -60,6 +60,14 @@ export default function WorkflowStepEditor({
     display_height: 768,
     environment: 'browser' as 'browser' | 'mac' | 'windows' | 'ubuntu',
   })
+  const [imageGenerationConfig, setImageGenerationConfig] = useState({
+    size: 'auto' as '1024x1024' | '1024x1536' | '1536x1024' | 'auto',
+    quality: 'auto' as 'low' | 'medium' | 'high' | 'auto',
+    format: undefined as 'png' | 'jpeg' | 'webp' | undefined,
+    compression: undefined as number | undefined,
+    background: 'auto' as 'transparent' | 'opaque' | 'auto',
+    input_fidelity: undefined as 'low' | 'high' | undefined,
+  })
   const [aiPrompt, setAiPrompt] = useState('')
   const [showAIAssist, setShowAIAssist] = useState(false)
   const [webhookHeaders, setWebhookHeaders] = useState<Record<string, string>>(
@@ -76,11 +84,38 @@ export default function WorkflowStepEditor({
     const computerUseTool = (step.tools || []).find(
       (t) => (typeof t === 'object' && t.type === 'computer_use_preview') || t === 'computer_use_preview'
     )
-    if (computerUseTool && typeof computerUseTool === 'object') {
+    if (computerUseTool && typeof computerUseTool === 'object' && (computerUseTool as ComputerUseToolConfig).type === 'computer_use_preview') {
+      const config = computerUseTool as ComputerUseToolConfig
       setComputerUseConfig({
-        display_width: computerUseTool.display_width || 1024,
-        display_height: computerUseTool.display_height || 768,
-        environment: computerUseTool.environment || 'browser',
+        display_width: config.display_width || 1024,
+        display_height: config.display_height || 768,
+        environment: config.environment || 'browser',
+      })
+    }
+    
+    // Extract image_generation config if present
+    const imageGenTool = (step.tools || []).find(
+      (t) => (typeof t === 'object' && t.type === 'image_generation') || t === 'image_generation'
+    )
+    if (imageGenTool && typeof imageGenTool === 'object' && (imageGenTool as ImageGenerationToolConfig).type === 'image_generation') {
+      const config = imageGenTool as ImageGenerationToolConfig
+      setImageGenerationConfig({
+        size: config.size || 'auto',
+        quality: config.quality || 'auto',
+        format: config.format,
+        compression: config.compression,
+        background: config.background || 'auto',
+        input_fidelity: config.input_fidelity,
+      })
+    } else if (isToolSelected('image_generation')) {
+      // Tool is selected but no config - use defaults
+      setImageGenerationConfig({
+        size: 'auto',
+        quality: 'auto',
+        format: undefined,
+        compression: undefined,
+        background: 'auto',
+        input_fidelity: undefined,
       })
     }
     // Sync webhook headers
@@ -127,6 +162,24 @@ export default function WorkflowStepEditor({
           display_height: computerUseConfig.display_height,
           environment: computerUseConfig.environment,
         }]
+      } else if (toolValue === 'image_generation') {
+        // Add as object with config
+        const config: any = {
+          type: 'image_generation',
+          size: imageGenerationConfig.size,
+          quality: imageGenerationConfig.quality,
+          background: imageGenerationConfig.background,
+        }
+        if (imageGenerationConfig.format) {
+          config.format = imageGenerationConfig.format
+        }
+        if (imageGenerationConfig.compression !== undefined) {
+          config.compression = imageGenerationConfig.compression
+        }
+        if (imageGenerationConfig.input_fidelity) {
+          config.input_fidelity = imageGenerationConfig.input_fidelity
+        }
+        updatedTools = [...currentTools, config]
       } else {
         // Add as string
         updatedTools = [...currentTools, toolValue]
@@ -162,6 +215,63 @@ export default function WorkflowStepEditor({
         display_height: newConfig.display_height,
         environment: newConfig.environment,
       })
+    }
+    
+    handleChange('tools', updatedTools)
+  }
+
+  const handleImageGenerationConfigChange = (field: keyof typeof imageGenerationConfig, value: any) => {
+    const newConfig = { ...imageGenerationConfig, [field]: value }
+    setImageGenerationConfig(newConfig)
+    
+    // Update the tool object in tools array
+    const currentTools = localStep.tools || []
+    const updatedTools = currentTools.map(t => {
+      if (typeof t === 'object' && t.type === 'image_generation') {
+        const updated: any = {
+          ...t,
+          size: newConfig.size,
+          quality: newConfig.quality,
+          background: newConfig.background,
+        }
+        if (newConfig.format) {
+          updated.format = newConfig.format
+        } else {
+          delete updated.format
+        }
+        if (newConfig.compression !== undefined) {
+          updated.compression = newConfig.compression
+        } else {
+          delete updated.compression
+        }
+        if (newConfig.input_fidelity) {
+          updated.input_fidelity = newConfig.input_fidelity
+        } else {
+          delete updated.input_fidelity
+        }
+        return updated
+      }
+      return t
+    })
+    
+    // If image_generation is selected but not in tools array, add it
+    if (isToolSelected('image_generation') && !updatedTools.some(t => typeof t === 'object' && t.type === 'image_generation')) {
+      const config: any = {
+        type: 'image_generation',
+        size: newConfig.size,
+        quality: newConfig.quality,
+        background: newConfig.background,
+      }
+      if (newConfig.format) {
+        config.format = newConfig.format
+      }
+      if (newConfig.compression !== undefined) {
+        config.compression = newConfig.compression
+      }
+      if (newConfig.input_fidelity) {
+        config.input_fidelity = newConfig.input_fidelity
+      }
+      updatedTools.push(config)
     }
     
     handleChange('tools', updatedTools)
@@ -494,6 +604,109 @@ export default function WorkflowStepEditor({
                       <option value="windows">Windows</option>
                       <option value="ubuntu">Ubuntu</option>
                     </select>
+                  </div>
+                </div>
+              )}
+              
+              {/* Image Generation Configuration */}
+              {isToolSelected('image_generation') && (
+                <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Image Generation Configuration
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Size
+                      </label>
+                      <select
+                        value={imageGenerationConfig.size}
+                        onChange={(e) => handleImageGenerationConfigChange('size', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                      >
+                        <option value="auto">Auto (default)</option>
+                        <option value="1024x1024">1024x1024 (Square)</option>
+                        <option value="1024x1536">1024x1536 (Portrait)</option>
+                        <option value="1536x1024">1536x1024 (Landscape)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Quality
+                      </label>
+                      <select
+                        value={imageGenerationConfig.quality}
+                        onChange={(e) => handleImageGenerationConfigChange('quality', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                      >
+                        <option value="auto">Auto (default)</option>
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Format
+                      </label>
+                      <select
+                        value={imageGenerationConfig.format || ''}
+                        onChange={(e) => handleImageGenerationConfigChange('format', e.target.value || undefined)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                      >
+                        <option value="">Default (PNG)</option>
+                        <option value="png">PNG</option>
+                        <option value="jpeg">JPEG</option>
+                        <option value="webp">WebP</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Background
+                      </label>
+                      <select
+                        value={imageGenerationConfig.background}
+                        onChange={(e) => handleImageGenerationConfigChange('background', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                      >
+                        <option value="auto">Auto (default)</option>
+                        <option value="transparent">Transparent</option>
+                        <option value="opaque">Opaque</option>
+                      </select>
+                    </div>
+                    {(imageGenerationConfig.format === 'jpeg' || imageGenerationConfig.format === 'webp') && (
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Compression ({imageGenerationConfig.compression ?? 85}%)
+                        </label>
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={imageGenerationConfig.compression ?? 85}
+                          onChange={(e) => handleImageGenerationConfigChange('compression', parseInt(e.target.value))}
+                          className="w-full"
+                        />
+                        <div className="flex justify-between text-xs text-gray-500 mt-1">
+                          <span>0%</span>
+                          <span>100%</span>
+                        </div>
+                      </div>
+                    )}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Input Fidelity
+                      </label>
+                      <select
+                        value={imageGenerationConfig.input_fidelity || ''}
+                        onChange={(e) => handleImageGenerationConfigChange('input_fidelity', e.target.value || undefined)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                      >
+                        <option value="">Default</option>
+                        <option value="low">Low</option>
+                        <option value="high">High</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
               )}

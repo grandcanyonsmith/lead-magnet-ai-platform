@@ -78,14 +78,91 @@ class OpenAIClient:
                 {"type": "input_text", "text": input_text}
             ]
             
+            # Deduplicate image URLs first
+            from utils.image_utils import (
+                is_problematic_url, 
+                download_image_and_convert_to_data_url,
+                deduplicate_image_urls
+            )
+            
+            deduplicated_urls = deduplicate_image_urls(previous_image_urls, job_id=job_id, tenant_id=tenant_id)
+            
             # Process image URLs - convert problematic ones to base64 upfront
             valid_image_urls = []
             skipped_count = 0
             converted_count = 0
+            problematic_urls = []
+            direct_urls = []
             
-            from utils.image_utils import is_problematic_url, download_image_and_convert_to_data_url
+            # Separate problematic URLs from direct URLs
+            for image_url in deduplicated_urls:
+                if not image_url:  # Skip empty URLs
+                    skipped_count += 1
+                    continue
+                
+                # Skip cdn.openai.com URLs (they can be problematic and we can't download them)
+                if 'cdn.openai.com' in image_url:
+                    skipped_count += 1
+                    logger.warning("[OpenAI Client] Skipping potentially problematic image URL: cdn.openai.com", extra={
+                        'image_url_preview': image_url[:100] + '...' if len(image_url) > 100 else image_url,
+                        'reason': 'cdn.openai.com URLs may fail to download',
+                        'job_id': job_id,
+                        'tenant_id': tenant_id
+                    })
+                    continue
+                
+                # Check if URL is problematic - if so, convert to base64 upfront
+                if is_problematic_url(image_url):
+                    problematic_urls.append(image_url)
+                else:
+                    direct_urls.append(image_url)
             
-            for image_url in previous_image_urls:
+            # Convert problematic URLs concurrently if we have multiple
+            if problematic_urls:
+                if len(problematic_urls) > 1:
+                    # Use concurrent downloads for multiple problematic URLs
+                    logger.info("[OpenAI Client] Converting multiple problematic URLs concurrently", extra={
+                        'job_id': job_id,
+                        'tenant_id': tenant_id,
+                        'problematic_urls_count': len(problematic_urls)
+                    })
+                    # Note: download_images_concurrent returns raw bytes, we need data URLs
+                    # So we'll still process them individually but can optimize later
+                
+                for idx, image_url in enumerate(problematic_urls):
+                    logger.info("[OpenAI Client] Converting problematic URL to base64 upfront", extra={
+                        'image_url_preview': image_url[:100] + '...' if len(image_url) > 100 else image_url,
+                        'job_id': job_id,
+                        'tenant_id': tenant_id,
+                        'image_index': idx,
+                        'total_images': len(problematic_urls)
+                    })
+                    data_url = download_image_and_convert_to_data_url(
+                        url=image_url,
+                        job_id=job_id,
+                        tenant_id=tenant_id,
+                        image_index=idx,
+                        total_images=len(problematic_urls)
+                    )
+                    if data_url:
+                        input_content.append({
+                            "type": "input_image",
+                            "image_url": data_url
+                        })
+                        valid_image_urls.append(image_url)  # Track original URL
+                        converted_count += 1
+                    else:
+                        skipped_count += 1
+                        logger.warning("[OpenAI Client] Failed to convert problematic URL, skipping", extra={
+                            'image_url_preview': image_url[:100] + '...' if len(image_url) > 100 else image_url,
+                            'job_id': job_id,
+                            'tenant_id': tenant_id,
+                            'image_index': idx,
+                            'total_images': len(problematic_urls)
+                        })
+            
+            # Add direct URLs (non-problematic) as-is
+            for image_url in direct_urls:
                 if not image_url:  # Skip empty URLs
                     skipped_count += 1
                     continue
@@ -145,8 +222,11 @@ class OpenAIClient:
                 ]
                 
                 logger.info("[OpenAI Client] Building API params with previous image URLs", extra={
-                    'previous_image_urls_count': len(previous_image_urls),
+                    'original_image_urls_count': len(previous_image_urls),
+                    'deduplicated_urls_count': len(deduplicated_urls),
                     'valid_image_urls_count': len(valid_image_urls),
+                    'problematic_urls_count': len(problematic_urls),
+                    'direct_urls_count': len(direct_urls),
                     'skipped_count': skipped_count,
                     'converted_to_base64_count': converted_count,
                     'input_content_items': len(input_content),
