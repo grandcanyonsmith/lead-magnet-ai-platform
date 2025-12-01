@@ -30,7 +30,17 @@ export interface ComputerUseToolConfig {
   environment: 'browser' | 'mac' | 'windows' | 'ubuntu'
 }
 
-export type Tool = ToolType | ComputerUseToolConfig
+export interface ImageGenerationToolConfig {
+  type: 'image_generation'
+  size?: '1024x1024' | '1024x1536' | '1536x1024' | 'auto'
+  quality?: 'low' | 'medium' | 'high' | 'auto'
+  format?: 'png' | 'jpeg' | 'webp'
+  compression?: number // 0-100
+  background?: 'transparent' | 'opaque' | 'auto'
+  input_fidelity?: 'low' | 'high'
+}
+
+export type Tool = ToolType | ComputerUseToolConfig | ImageGenerationToolConfig
 
 export interface WorkflowStep {
   step_name: string
