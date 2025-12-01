@@ -201,7 +201,7 @@ export function PreviewRenderer({ contentType, objectUrl, fileName, className = 
               <FiImage className="w-12 h-12 text-gray-400" />
             </div>
           )}
-          {isInView && (
+          {isInView && objectUrl && (
             <Image
               src={objectUrl}
               alt={fileName || 'Preview'}
