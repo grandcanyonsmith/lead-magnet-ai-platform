@@ -3,6 +3,7 @@ import { workflowAIController } from '../controllers/workflowAIController';
 import { workflowValidationController } from '../controllers/workflowValidationController';
 import { router } from './router';
 import { logger } from '../utils/logger';
+import { workflowGenerationJobService } from '../services/workflowGenerationJobService';
 
 /**
  * Workflow-related admin routes.
@@ -40,7 +41,7 @@ export function registerWorkflowRoutes(): void {
   // Manual job processing (local dev)
   router.register('POST', '/admin/workflows/process-job/:jobId', async (params, _body, _query, tenantId) => {
     logger.info('[Router] Matched /admin/workflows/process-job/:jobId route', { jobId: params.jobId });
-    await workflowAIController.processWorkflowGenerationJob(
+    await workflowGenerationJobService.processWorkflowGenerationJob(
       params.jobId,
       tenantId!,
       '', // Will be loaded from job
