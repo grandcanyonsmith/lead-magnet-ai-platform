@@ -1,8 +1,3 @@
-/**
- * Workflow Prompt Builder
- * Constructs prompts for workflow configuration generation.
- */
-
 import { formatAllModelDescriptionsMarkdown } from './modelDescriptions';
 
 export interface WorkflowPromptContext {
@@ -11,12 +6,9 @@ export interface WorkflowPromptContext {
   icpContext?: string;
 }
 
-/**
- * Build the workflow generation prompt with comprehensive guidance.
- */
 export function buildWorkflowPrompt(context: WorkflowPromptContext): string {
   const { description, brandContext, icpContext } = context;
-  
+
   let contextSection = '';
   if (brandContext) {
     contextSection += `\n\n## Brand Context\n${brandContext}`;
@@ -24,7 +16,7 @@ export function buildWorkflowPrompt(context: WorkflowPromptContext): string {
   if (icpContext) {
     contextSection += `\n\n## Ideal Customer Profile (ICP) Document\n${icpContext}`;
   }
-  
+
   return `You are an expert at creating AI-powered lead magnets. Based on this description: "${description}", generate a complete lead magnet configuration with workflow steps.${contextSection}
 
 ## What to Generate
@@ -83,19 +75,19 @@ ${formatAllModelDescriptionsMarkdown()}
 ### Good Instruction Examples:
 
 **Example 1 - Research Step:**
-\`\`\`
+```
 Generate a comprehensive market research report for [company_name] in the [industry] industry. Research current market trends, competitor landscape, and growth opportunities. Include specific statistics, recent developments, and actionable insights. Personalize all recommendations based on [company_name]'s size ([company_size]) and target market ([target_market]).
-\`\`\`
+```
 
 **Example 2 - Analysis Step:**
-\`\`\`
+```
 Analyze the research findings from Step 1 and create a personalized SWOT analysis for [company_name]. Focus on opportunities and threats specific to the [industry] industry. Include actionable recommendations based on [company_name]'s current situation ([current_challenges]).
-\`\`\`
+```
 
 **Example 3 - Content Generation Step:**
-\`\`\`
+```
 Create a personalized action plan document for [name] at [company_name]. Use insights from previous steps to create 5-7 specific, actionable recommendations. Format as a clear, professional document with sections for each recommendation. Include timelines and expected outcomes where relevant.
-\`\`\`
+```
 
 ### Bad Instruction Examples (Avoid These):
 
@@ -158,7 +150,7 @@ Common patterns:
 
 ## Example Workflow Structure
 
-\`\`\`json
+```json
 {
   "workflow_name": "Personalized Market Analysis",
   "workflow_description": "Generates a comprehensive market analysis report personalized to the user's company and industry.",
@@ -205,12 +197,12 @@ Common patterns:
     }
   ]
 }
-\`\`\`
+```
 
 ## Return Format
 
 Return ONLY valid JSON matching this structure:
-\`\`\`json
+```json
 {
   "workflow_name": "...",
   "workflow_description": "...",
@@ -227,9 +219,13 @@ Return ONLY valid JSON matching this structure:
     }
   ]
 }
-\`\`\`
+```
 
 Important: Return ONLY the JSON, no markdown formatting, no explanations.`;
-
 }
 
+export const workflowPromptService = {
+  buildWorkflowPrompt,
+};
+
+export type WorkflowPromptService = typeof workflowPromptService;

@@ -1,18 +1,7 @@
 /**
- * Model Descriptions
- * 
- * Shared constants for AI model descriptions used across workflow generation prompts.
- * This ensures consistency and makes it easier to maintain model descriptions in one place.
- * 
- * IMPORTANT: Model descriptions should NOT automatically associate models with specific tools.
- * For example, o4-mini-deep-research should not be described as requiring web_search,
- * as this causes the AI to automatically add web_search tool when the model is selected.
+ * Model descriptions for workflow-related AI guidance.
  */
 
-/**
- * Short model descriptions for step-level AI generation.
- * Used in workflowStepAIService.ts for concise model selection guidance.
- */
 export const MODEL_DESCRIPTIONS_SHORT: Record<string, string> = {
   'gpt-5': 'For creative content, rewriting, general tasks (highest quality)',
   'gpt-4o': 'For balanced performance and quality',
@@ -20,10 +9,6 @@ export const MODEL_DESCRIPTIONS_SHORT: Record<string, string> = {
   'o4-mini-deep-research': 'For deep research tasks requiring comprehensive analysis',
 };
 
-/**
- * Detailed model descriptions for workflow-level AI generation.
- * Used in workflowPromptBuilder.ts for comprehensive model selection guidance.
- */
 export interface ModelDescription {
   bestFor: string;
   useWhen: string;
@@ -70,9 +55,6 @@ export const MODEL_DESCRIPTIONS_DETAILED: Record<string, ModelDescription> = {
   },
 };
 
-/**
- * Format a detailed model description as markdown for use in prompts.
- */
 export function formatModelDescriptionMarkdown(model: string, description: ModelDescription): string {
   return `### ${model}
 - **Best for**: ${description.bestFor}
@@ -81,21 +63,14 @@ export function formatModelDescriptionMarkdown(model: string, description: Model
 - **Speed**: ${description.speed}`;
 }
 
-/**
- * Format all model descriptions as markdown for use in prompts.
- */
 export function formatAllModelDescriptionsMarkdown(): string {
   return Object.entries(MODEL_DESCRIPTIONS_DETAILED)
     .map(([model, description]) => formatModelDescriptionMarkdown(model, description))
     .join('\n\n');
 }
 
-/**
- * Format short model descriptions as a bulleted list for use in prompts.
- */
 export function formatShortModelDescriptionsList(): string {
   return Object.entries(MODEL_DESCRIPTIONS_SHORT)
     .map(([model, description]) => `   - ${model}: ${description}`)
     .join('\n');
 }
-

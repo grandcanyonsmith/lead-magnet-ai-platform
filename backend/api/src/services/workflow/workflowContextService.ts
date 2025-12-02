@@ -1,44 +1,13 @@
-/**
- * Utility functions for fetching ICP (Ideal Customer Profile) document content.
- * 
- * Provides functions to fetch and process ICP documents from URLs with:
- * - Timeout handling
- * - Retry logic for transient failures
- * - Content type detection and processing
- * - Content length limits
- * - Brand context building from settings
- * 
- * @module icpFetcher
- */
-
-import { logger } from './logger';
-import { retryWithBackoff } from './retry';
-import { withTimeout } from './timeout';
-import { validateUrl } from './validators';
-import { BrandSettings } from './types';
+import { logger } from '../../utils/logger';
+import { retryWithBackoff } from '../../utils/retry';
+import { withTimeout } from '../../utils/timeout';
+import { validateUrl } from '../../utils/validators';
+import { BrandSettings } from '../../utils/types';
 
 const MAX_CONTENT_LENGTH = 50000; // Limit to ~50k characters to avoid token limits
 const FETCH_TIMEOUT = 10000; // 10 seconds timeout
 const MAX_RETRY_ATTEMPTS = 3;
 
-/**
- * Fetch content from an ICP document URL with retry logic and timeout handling.
- * 
- * Automatically retries on transient failures (network errors, timeouts, 5xx errors)
- * and handles various content types (JSON, text, HTML). PDFs are not supported.
- * 
- * @param url - The URL to fetch the ICP document from
- * @returns The fetched content, or null if fetch fails after retries
- * @throws {Error} If URL is invalid
- * 
- * @example
- * ```typescript
- * const content = await fetchICPContent('https://example.com/icp.json');
- * if (content) {
- *   console.log('ICP content:', content);
- * }
- * ```
- */
 export async function fetchICPContent(url: string): Promise<string | null> {
   if (!url || typeof url !== 'string' || url.trim().length === 0) {
     logger.warn('[ICP Fetcher] Empty or invalid URL provided');
@@ -62,7 +31,7 @@ export async function fetchICPContent(url: string): Promise<string | null> {
       const fetchPromise = fetch(url, {
         headers: {
           'User-Agent': 'LeadMagnet-AI/1.0',
-          'Accept': 'text/html,text/plain,application/json,application/pdf',
+          Accept: 'text/html,text/plain,application/json,application/pdf',
         },
       });
 
@@ -84,7 +53,6 @@ export async function fetchICPContent(url: string): Promise<string | null> {
         return null;
       }
 
-      // Truncate if too long
       if (content.length > MAX_CONTENT_LENGTH) {
         logger.warn('[ICP Fetcher] ICP content truncated', {
           url,
@@ -122,14 +90,6 @@ export async function fetchICPContent(url: string): Promise<string | null> {
   });
 }
 
-/**
- * Process response content based on content type.
- * 
- * @param response - Fetch response object
- * @param contentType - Content type header value
- * @param url - URL for logging
- * @returns Processed content string or null if unsupported
- */
 async function processContent(response: Response, contentType: string, url: string): Promise<string | null> {
   if (contentType.includes('application/json')) {
     try {
@@ -153,7 +113,6 @@ async function processContent(response: Response, contentType: string, url: stri
     return null;
   }
 
-  // Try to get as text for other types
   try {
     return await response.text();
   } catch (error) {
@@ -166,25 +125,6 @@ async function processContent(response: Response, contentType: string, url: stri
   }
 }
 
-/**
- * Build brand context string from settings.
- * 
- * Extracts brand-related fields from user settings and formats them into
- * a readable context string for use in AI prompts.
- * 
- * @param settings - User settings object with brand information
- * @returns Formatted brand context string, or empty string if no brand info
- * 
- * @example
- * ```typescript
- * const context = buildBrandContext({
- *   organization_name: 'Acme Corp',
- *   industry: 'Technology',
- *   brand_description: 'Innovative solutions'
- * });
- * // Returns: "Organization: Acme Corp\nIndustry: Technology\nBrand Description: Innovative solutions"
- * ```
- */
 export function buildBrandContext(settings: BrandSettings | Record<string, unknown>): string {
   if (!settings || typeof settings !== 'object') {
     return '';
@@ -230,3 +170,9 @@ export function buildBrandContext(settings: BrandSettings | Record<string, unkno
   return contextParts.length > 0 ? contextParts.join('\n') : '';
 }
 
+export const workflowContextService = {
+  fetchICPContent,
+  buildBrandContext,
+};
+
+export type WorkflowContextService = typeof workflowContextService;

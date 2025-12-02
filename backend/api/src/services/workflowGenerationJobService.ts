@@ -1,12 +1,12 @@
 import { ulid } from 'ulid';
 import { db } from '../utils/db';
 import { logger } from '../utils/logger';
-import { JobProcessingUtils } from '../utils/jobProcessingUtils';
+import { JobProcessingUtils } from './workflow/workflowJobProcessingService';
 import { env } from '../utils/env';
 import { getOpenAIClient } from './openaiService';
 import { WorkflowGenerationService } from './workflowGenerationService';
 import { usageTrackingService } from './usageTrackingService';
-import { fetchICPContent, buildBrandContext } from '../utils/icpFetcher';
+import { fetchICPContent, buildBrandContext } from './workflow/workflowContextService';
 import { sendWorkflowGenerationWebhook } from './webhookService';
 import { saveDraftWorkflow } from './draftWorkflowService';
 

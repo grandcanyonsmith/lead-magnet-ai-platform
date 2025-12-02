@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import { WorkflowStep, ensureStepDefaults } from '../utils/workflowMigration';
+import { WorkflowStep, ensureStepDefaults } from './workflow/workflowConfigSupport';
 import { validateDependencies } from '../utils/dependencyResolver';
 import { logger } from '../utils/logger';
 

@@ -8,7 +8,7 @@ import { db } from '../utils/db';
 import { logger } from '../utils/logger';
 import { env } from '../utils/env';
 import { FormService } from './formService';
-import { ensureStepDefaults, WorkflowStep } from '../utils/workflowMigration';
+import { ensureStepDefaults, WorkflowStep } from './workflow/workflowConfigSupport';
 
 const WORKFLOWS_TABLE = env.workflowsTable;
 const formService = new FormService();

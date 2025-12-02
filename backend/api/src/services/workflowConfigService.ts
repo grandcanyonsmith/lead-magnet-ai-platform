@@ -1,8 +1,8 @@
 import OpenAI from 'openai';
 import { calculateOpenAICost } from './costService';
 import { callResponsesWithTimeout } from '../utils/openaiHelpers';
-import { buildWorkflowPrompt } from '../utils/workflowPromptBuilder';
-import { parseWorkflowConfig } from '../utils/workflowConfigParser';
+import { buildWorkflowPrompt } from './workflow/workflowPromptService';
+import { parseWorkflowConfig } from './workflow/workflowConfigSupport';
 
 export interface UsageInfo {
   service_type: string;

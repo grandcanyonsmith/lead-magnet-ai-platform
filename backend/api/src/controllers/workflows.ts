@@ -4,7 +4,7 @@ import { validate, createWorkflowSchema, updateWorkflowSchema } from '../utils/v
 import { ApiError } from '../utils/errors';
 import { RouteResponse } from '../routes';
 import { formService } from '../services/formService';
-import { ensureStepDefaults, WorkflowStep } from '../utils/workflowMigration';
+import { ensureStepDefaults, WorkflowStep } from '../services/workflow/workflowConfigSupport';
 import { logger } from '../utils/logger';
 import { env } from '../utils/env';
 
