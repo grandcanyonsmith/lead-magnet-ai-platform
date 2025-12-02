@@ -1,7 +1,7 @@
 import { APIGatewayProxyResultV2 } from 'aws-lambda';
-import { workflowAIController } from '../controllers/workflowAIController';
 import { db } from '../utils/db';
 import { env } from '../utils/env';
+import { workflowGenerationJobService } from '../services/workflowGenerationJobService';
 
 const JOBS_TABLE = env.jobsTable;
 
@@ -27,7 +27,7 @@ export async function handleWorkflowGenerationJob(event: any): Promise<APIGatewa
     finalTenantId = finalTenantId || job.tenant_id;
   }
 
-  await workflowAIController.processWorkflowGenerationJob(
+  await workflowGenerationJobService.processWorkflowGenerationJob(
     job_id,
     finalTenantId,
     finalDescription,
