@@ -238,6 +238,11 @@ interface UseJobExecutionResult {
 export function useJobExecution({ jobId, job, setJob, loadJob }: UseJobExecutionArgs): UseJobExecutionResult {
   const [executionStepsError, setExecutionStepsError] = useState<string | null>(null)
   const [rerunningStep, setRerunningStep] = useState<number | null>(null)
+  const [hasLoadedExecutionSteps, setHasLoadedExecutionSteps] = useState(false)
+
+  useEffect(() => {
+    setHasLoadedExecutionSteps(false)
+  }, [jobId])
 
   const loadExecutionSteps = useCallback(
     async (jobSnapshot?: Job | null) => {
@@ -250,6 +255,7 @@ export function useJobExecution({ jobId, job, setJob, loadJob }: UseJobExecution
         if (Array.isArray(executionSteps)) {
           setJob((prevJob) => (prevJob ? { ...prevJob, execution_steps: executionSteps } : prevJob))
           setExecutionStepsError(null)
+          setHasLoadedExecutionSteps(true)
         } else {
           const errorMsg = `Invalid execution steps data format: expected array, got ${typeof executionSteps}`
           console.error(`❌ ${errorMsg} for job ${jobId}`)
@@ -275,10 +281,16 @@ export function useJobExecution({ jobId, job, setJob, loadJob }: UseJobExecution
     if (!jobId || !job) {
       return
     }
-    if (!job.execution_steps || job.execution_steps.length === 0) {
+
+    const hasExecutionSteps = Array.isArray(job.execution_steps) && job.execution_steps.length > 0
+    const shouldLoadFromApi =
+      !hasExecutionSteps ||
+      (job.execution_steps_s3_key && !hasLoadedExecutionSteps)
+
+    if (shouldLoadFromApi) {
       loadExecutionSteps(job)
     }
-  }, [jobId, job, loadExecutionSteps])
+  }, [jobId, job, loadExecutionSteps, hasLoadedExecutionSteps])
 
   useEffect(() => {
     if (!job || !jobId) {
