@@ -207,10 +207,21 @@ class WebhookStepService:
         
         # Build context from submission data and previous step outputs
         # Format initial context from submission data (simple key-value format)
+        # Exclude 'context' and 'icp' fields from submission_data since we build a new context
         submission_data = submission.get('submission_data', {})
         initial_context_lines = []
         for key, value in submission_data.items():
-            initial_context_lines.append(f"{key}: {value}")
+            # Skip 'context' and 'icp' fields - we'll build a comprehensive context separately
+            if key.lower() in ('context', 'icp'):
+                continue
+            # Format value as string, handling None and complex types
+            if value is None:
+                value_str = 'null'
+            elif isinstance(value, (dict, list)):
+                value_str = json.dumps(value, default=str)
+            else:
+                value_str = str(value)
+            initial_context_lines.append(f"{key}: {value_str}")
         initial_context = "\n".join(initial_context_lines) if initial_context_lines else ""
         
         # Build full context including previous step outputs
@@ -268,6 +279,27 @@ class WebhookStepService:
                 'created_at': job.get('created_at'),
                 'updated_at': job.get('updated_at')
             }
+        
+        # Load execution_steps from S3 if not already in job
+        execution_steps = job.get('execution_steps', [])
+        if not execution_steps and job.get('execution_steps_s3_key') and self.s3_service:
+            try:
+                s3_key = job['execution_steps_s3_key']
+                execution_steps_json = self.s3_service.download_artifact(s3_key)
+                execution_steps = json.loads(execution_steps_json)
+                job['execution_steps'] = execution_steps
+                logger.debug(f"[WebhookStepService] Loaded execution_steps from S3 for webhook step", extra={
+                    'job_id': job_id,
+                    'steps_count': len(execution_steps)
+                })
+            except Exception as e:
+                logger.warning(f"[WebhookStepService] Failed to load execution_steps from S3", extra={
+                    'job_id': job_id,
+                    's3_key': job.get('execution_steps_s3_key'),
+                    'error_type': type(e).__name__,
+                    'error_message': str(e)
+                }, exc_info=True)
+                execution_steps = []
         
         # Query and include artifacts if db_service is available
         if self.db:
@@ -338,20 +370,34 @@ class WebhookStepService:
                 })
             
             # Extract artifact content and append to context
-            artifact_content = self._extract_artifact_content(all_artifacts, job_id)
+            # Also collect image URLs from execution steps (already loaded above)
+            artifact_content = self._extract_artifact_content(all_artifacts, job_id, execution_steps)
             if artifact_content:
-                # Append artifact content to existing context
+                # Append artifact content to existing context (no truncation - include everything)
                 if context:
                     context = f"{context}\n\n{artifact_content}"
                 else:
                     context = artifact_content
                 
-                # Update context in payload
+                logger.info(f"[WebhookStepService] Final context built with artifact content", extra={
+                    'job_id': job_id,
+                    'step_index': step_index,
+                    'context_length': len(context),
+                    'artifact_content_length': len(artifact_content),
+                    'has_artifact_content': bool(artifact_content)
+                })
+                
+                # Update context in payload (ensure full context is included)
                 payload['context'] = context
                 
-                # Update icp in submission_data if it exists
+                # Update icp in submission_data if it exists (ensure full context is included)
                 if 'submission_data' in payload and 'icp' in payload['submission_data']:
                     payload['submission_data']['icp'] = context
+                    logger.debug(f"[WebhookStepService] Updated submission_data['icp'] with full context", extra={
+                        'job_id': job_id,
+                        'step_index': step_index,
+                        'icp_length': len(context)
+                    })
         
         return payload
     
@@ -389,13 +435,14 @@ class WebhookStepService:
         
         return text
     
-    def _extract_artifact_content(self, all_artifacts: List[Dict[str, Any]], job_id: str) -> str:
+    def _extract_artifact_content(self, all_artifacts: List[Dict[str, Any]], job_id: str, execution_steps: List[Dict[str, Any]] = None) -> str:
         """
-        Extract text content from .md and .html artifacts and collect image URLs.
+        Extract text content from .md and .html artifacts and collect image URLs from both artifacts and execution steps.
         
         Args:
             all_artifacts: List of artifact dictionaries
             job_id: Job ID for logging
+            execution_steps: Optional list of execution steps to extract image URLs from
             
         Returns:
             Formatted string containing all artifact text content and image URLs
@@ -407,7 +454,7 @@ class WebhookStepService:
             return ""
         
         content_parts = []
-        image_urls = []
+        image_urls_set = set()  # Use set to avoid duplicates
         
         # Filter and process markdown and HTML files
         markdown_artifacts = []
@@ -419,10 +466,10 @@ class WebhookStepService:
             s3_key = artifact.get('s3_key')
             public_url = artifact.get('public_url') or artifact.get('s3_url') or ''
             
-            # Collect image URLs
+            # Collect image URLs from artifacts
             if artifact_type == 'image' or artifact_name.endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp')):
                 if public_url:
-                    image_urls.append(public_url)
+                    image_urls_set.add(public_url)
             
             # Categorize text artifacts
             elif artifact_type in ('markdown_final', 'step_output', 'report_markdown') or artifact_name.endswith(('.md', '.markdown')):
@@ -432,12 +479,25 @@ class WebhookStepService:
                 if s3_key:
                     html_artifacts.append((artifact, s3_key))
         
+        # Collect image URLs from execution steps
+        if execution_steps:
+            for step in execution_steps:
+                step_image_urls = step.get('image_urls', [])
+                if step_image_urls:
+                    if isinstance(step_image_urls, list):
+                        for url in step_image_urls:
+                            if url and isinstance(url, str):
+                                image_urls_set.add(url)
+                    elif isinstance(step_image_urls, str):
+                        image_urls_set.add(step_image_urls)
+        
         # Download and extract content from markdown files
         for artifact, s3_key in markdown_artifacts:
             artifact_name = artifact.get('artifact_name') or artifact.get('file_name') or 'unknown.md'
             try:
                 content = self.s3_service.download_artifact(s3_key)
                 if content:
+                    # Include full content without truncation
                     content_parts.append(f"[Markdown File: {artifact_name}]\n{content}\n")
                     logger.debug(f"[WebhookStepService] Extracted markdown content", extra={
                         'job_id': job_id,
@@ -459,7 +519,7 @@ class WebhookStepService:
             try:
                 html_content = self.s3_service.download_artifact(s3_key)
                 if html_content:
-                    # Extract text from HTML
+                    # Extract text from HTML - include full extracted text without truncation
                     text_content = self._extract_text_from_html(html_content)
                     if text_content:
                         content_parts.append(f"[HTML File: {artifact_name}]\n{text_content}\n")
@@ -477,16 +537,27 @@ class WebhookStepService:
                     'error_message': str(e)
                 }, exc_info=True)
         
-        # Build final content string
+        # Build final content string - ensure no truncation
         result_parts = []
         if content_parts:
             result_parts.append("=== ARTIFACT CONTENT ===\n")
             result_parts.extend(content_parts)
         
-        if image_urls:
+        # Sort image URLs for consistent output
+        image_urls_sorted = sorted(list(image_urls_set))
+        if image_urls_sorted:
             result_parts.append("\n=== IMAGE LINKS ===\n")
-            for url in image_urls:
+            for url in image_urls_sorted:
                 result_parts.append(f"- {url}\n")
         
-        return "\n".join(result_parts)
+        final_content = "\n".join(result_parts)
+        
+        logger.info(f"[WebhookStepService] Extracted artifact content for webhook", extra={
+            'job_id': job_id,
+            'content_parts_count': len(content_parts),
+            'image_urls_count': len(image_urls_sorted),
+            'total_content_length': len(final_content)
+        })
+        
+        return final_content
 
