@@ -82,7 +82,7 @@ export default function JobDetailClient() {
 
   const stepsSummary = useMemo<JobStepSummary>(() => summarizeStepProgress(mergedSteps), [mergedSteps])
 
-  const jobDuration = useMemo(() => getJobDuration(job), [job?.started_at, job?.completed_at, job?.failed_at, job?.status])
+  const jobDuration = useMemo(() => getJobDuration(job), [job])
   const lastUpdatedLabel = useMemo(() => (job?.updated_at ? formatRelativeTime(job.updated_at) : null), [job?.updated_at])
   const lastRefreshedLabel = useMemo(
     () => (lastLoadedAt ? formatRelativeTime(lastLoadedAt.toISOString()) : null),
@@ -569,25 +569,6 @@ function getJobDuration(job?: Job | null): JobDurationInfo | null {
 
 
 type TabKey = 'execution' | 'artifacts' | 'raw'
-
-interface StepMeta {
-  stepOrder?: number
-  stepName?: string
-  stepType?: string
-}
-
-interface ArtifactGalleryItem {
-  id: string
-  kind: 'jobOutput' | 'artifact' | 'imageArtifact' | 'imageUrl'
-  artifact?: Artifact
-  url?: string
-  stepOrder?: number
-  stepName?: string
-  stepType?: string
-  label: string
-  description?: string
-  sortOrder: number
-}
 
 
 function RawJsonPanel({ data }: { data: unknown }) {
