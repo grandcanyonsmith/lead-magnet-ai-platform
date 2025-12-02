@@ -108,11 +108,42 @@ const getStepProgress = (job: any) => {
   return { completed: completedSteps, total: steps.length }
 }
 
+const getStepDisplayMeta = (
+  job: any,
+  workflowStepCounts: Record<string, number>
+): { label: string | null; isActive: boolean } => {
+  const progress = getStepProgress(job)
+  const workflowTotal = workflowStepCounts[job.workflow_id]
+  const progressTotal = progress?.total && progress.total > 0 ? progress.total : 0
+  const totalSteps = workflowTotal || progressTotal || 0
+  const isActive = job.status === 'processing' || job.status === 'pending'
+
+  if (totalSteps > 0) {
+    if (isActive) {
+      const completed = progress?.completed ?? 0
+      const current = Math.min(Math.max(completed + 1, 1), totalSteps)
+      return { label: `Step ${current}/${totalSteps}`, isActive }
+    }
+    if (progress) {
+      const safeCompleted = Math.min(progress.completed, totalSteps)
+      return { label: `Step ${safeCompleted}/${totalSteps}`, isActive }
+    }
+    return { label: `Step ${totalSteps}/${totalSteps}`, isActive }
+  }
+
+  if (progress && progress.total > 0) {
+    return { label: `Step ${progress.completed}/${progress.total}`, isActive }
+  }
+
+  return { label: null, isActive }
+}
+
 export default function JobsPage() {
   const router = useRouter()
   const [jobs, setJobs] = useState<any[]>([])
   const [workflows, setWorkflows] = useState<any[]>([])
   const [workflowMap, setWorkflowMap] = useState<Record<string, string>>({})
+  const [workflowStepCounts, setWorkflowStepCounts] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
@@ -248,10 +279,17 @@ export default function JobsPage() {
         const data = await api.getWorkflows()
         setWorkflows(data.workflows || [])
         const map: Record<string, string> = {}
+        const counts: Record<string, number> = {}
         data.workflows?.forEach((wf: any) => {
           map[wf.workflow_id] = wf.workflow_name || wf.workflow_id
+          if (Array.isArray(wf.steps)) {
+            counts[wf.workflow_id] = wf.steps.length
+          } else if (typeof wf.total_steps === 'number') {
+            counts[wf.workflow_id] = wf.total_steps
+          }
         })
         setWorkflowMap(map)
+        setWorkflowStepCounts(counts)
       } catch (error) {
         console.error('Failed to load workflows:', error)
       }
@@ -507,6 +545,7 @@ export default function JobsPage() {
                 : null
               
               const hasError = job.status === 'failed' && job.error_message
+              const stepMeta = getStepDisplayMeta(job, workflowStepCounts)
               
               return (
                 <div
@@ -526,17 +565,19 @@ export default function JobsPage() {
                       <h3 className="text-sm font-semibold text-gray-900 truncate">
                         {workflowMap[job.workflow_id] || job.workflow_id || '-'}
                       </h3>
-                      {(() => {
-                        const progress = getStepProgress(job)
-                        return progress && (
-                          <div className="text-xs text-gray-500 mt-0.5">
-                            Step {progress.completed}/{progress.total}
-                          </div>
-                        )
-                      })()}
+                      {stepMeta.label && (
+                        <div className="text-xs text-gray-500 mt-0.5">
+                          {stepMeta.label}
+                        </div>
+                      )}
                     </div>
-                    <div className="ml-2 flex-shrink-0" data-tour="job-status">
-                      {getStatusIcon(job.status)}
+                    <div className="ml-2 flex-shrink-0 text-right" data-tour="job-status">
+                      <div className="inline-flex justify-end">{getStatusIcon(job.status)}</div>
+                      {stepMeta.isActive && stepMeta.label && (
+                        <div className="text-[11px] font-medium text-amber-600 mt-1">
+                          {stepMeta.label}
+                        </div>
+                      )}
                     </div>
                   </div>
                   
@@ -630,6 +671,7 @@ export default function JobsPage() {
                       ? job.error_message.substring(0, 60) + '...' 
                       : job.error_message)
                   : null
+              const stepMeta = getStepDisplayMeta(job, workflowStepCounts)
 
                 return (
                   <React.Fragment key={job.job_id}>
@@ -648,19 +690,23 @@ export default function JobsPage() {
                         <div className="text-sm font-medium text-gray-900">
                           {workflowMap[job.workflow_id] || job.workflow_id || '-'}
                         </div>
-                        {(() => {
-                          const progress = getStepProgress(job)
-                          return progress && (
-                            <div className="text-xs text-gray-500 mt-0.5">
-                              Step {progress.completed}/{progress.total}
-                            </div>
-                          )
-                        })()}
+                        {stepMeta.label && (
+                          <div className="text-xs text-gray-500 mt-0.5">
+                            {stepMeta.label}
+                          </div>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap" data-tour="job-status">
-                        <div className="flex items-center gap-2">
-                          {getStatusIcon(job.status)}
-                          {getStatusBadge(job.status)}
+                        <div className="flex flex-col gap-1 text-left">
+                          <div className="flex items-center gap-2">
+                            {getStatusIcon(job.status)}
+                            {getStatusBadge(job.status)}
+                          </div>
+                          {stepMeta.isActive && stepMeta.label ? (
+                            <div className="pl-6 text-xs font-medium text-amber-600">
+                              {stepMeta.label}
+                            </div>
+                          ) : null}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
