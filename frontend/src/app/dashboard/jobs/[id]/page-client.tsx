@@ -12,6 +12,7 @@ import { JobDetails } from '@/components/jobs/JobDetails'
 import { ExecutionSteps } from '@/components/jobs/ExecutionSteps'
 import { TechnicalDetails } from '@/components/jobs/TechnicalDetails'
 import { ResubmitModal } from '@/components/jobs/ResubmitModal'
+import { RerunStepDialog } from '@/components/jobs/RerunStepDialog'
 import FlowchartSidePanel from '@/app/dashboard/workflows/components/FlowchartSidePanel'
 import { useImageArtifacts } from '@/hooks/useImageArtifacts'
 import { api } from '@/lib/api'
@@ -35,7 +36,7 @@ export default function JobDetailClient() {
   const [showResubmitModal, setShowResubmitModal] = useState(false)
   const [editingStepIndex, setEditingStepIndex] = useState<number | null>(null)
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false)
-  const [showRerunConfirm, setShowRerunConfirm] = useState(false)
+  const [showRerunDialog, setShowRerunDialog] = useState(false)
   const [stepIndexForRerun, setStepIndexForRerun] = useState<number | null>(null)
   const [showDetails, setShowDetails] = useState(false)
   const latestStepUpdateRef = useRef<WorkflowStep | null>(null)
@@ -140,15 +141,15 @@ export default function JobDetailClient() {
       // Show success toast
       toast.success('Step updated successfully')
 
-      // Store the step index for rerun confirmation
+      // Store the step index for rerun dialog
       setStepIndexForRerun(editingStepIndex)
 
       // Close the side panel
       setEditingStepIndex(null)
       setIsSidePanelOpen(false)
 
-      // Show confirmation dialog for rerun
-      setShowRerunConfirm(true)
+      // Show rerun choice dialog
+      setShowRerunDialog(true)
 
       // Refresh the page to show updated data
       router.refresh()
@@ -176,16 +177,29 @@ export default function JobDetailClient() {
     setIsSidePanelOpen(false)
   }
 
-  const handleConfirmRerun = async () => {
+  const handleRerunStepClick = (stepIndex: number) => {
+    setStepIndexForRerun(stepIndex)
+    setShowRerunDialog(true)
+  }
+
+  const handleRerunOnly = async () => {
     if (stepIndexForRerun !== null && handleRerunStep) {
-      setShowRerunConfirm(false)
-      await handleRerunStep(stepIndexForRerun)
+      setShowRerunDialog(false)
+      await handleRerunStep(stepIndexForRerun, false)
       setStepIndexForRerun(null)
     }
   }
 
-  const handleCancelRerun = () => {
-    setShowRerunConfirm(false)
+  const handleRerunAndContinue = async () => {
+    if (stepIndexForRerun !== null && handleRerunStep) {
+      setShowRerunDialog(false)
+      await handleRerunStep(stepIndexForRerun, true)
+      setStepIndexForRerun(null)
+    }
+  }
+
+  const handleCloseRerunDialog = () => {
+    setShowRerunDialog(false)
     setStepIndexForRerun(null)
   }
 
@@ -314,44 +328,16 @@ export default function JobDetailClient() {
         />
       )}
 
-      {/* Rerun Confirmation Dialog */}
-      {showRerunConfirm && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex min-h-screen items-center justify-center p-4">
-            {/* Backdrop */}
-            <div
-              className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
-              onClick={handleCancelRerun}
-            />
-
-            {/* Modal */}
-            <div className="relative z-50 w-full max-w-md bg-white rounded-lg shadow-xl mx-4">
-              <div className="p-4 sm:p-6">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">
-                  Step Updated Successfully
-                </h3>
-                <p className="text-sm text-gray-600 mb-4 sm:mb-6">
-                  Would you like to rerun this step with the updated configuration?
-                </p>
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3">
-                  <button
-                    onClick={handleCancelRerun}
-                    className="px-4 py-2.5 sm:py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors touch-target min-h-[44px] sm:min-h-0"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleConfirmRerun}
-                    className="px-4 py-2.5 sm:py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors touch-target min-h-[44px] sm:min-h-0"
-                  >
-                    Rerun Step
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Rerun Step Dialog */}
+      <RerunStepDialog
+        isOpen={showRerunDialog}
+        onClose={handleCloseRerunDialog}
+        onRerunOnly={handleRerunOnly}
+        onRerunAndContinue={handleRerunAndContinue}
+        stepNumber={stepIndexForRerun !== null ? stepIndexForRerun + 1 : 0}
+        stepName={stepIndexForRerun !== null && mergedSteps[stepIndexForRerun] ? mergedSteps[stepIndexForRerun].step_name : undefined}
+        isRerunning={rerunningStep !== null}
+      />
 
       {/* Execution / Artifact / JSON Tabs */}
       {(() => {
@@ -472,6 +458,7 @@ export default function JobDetailClient() {
                         canEdit={!!workflow}
                         imageArtifactsByStep={imageArtifactsByStep}
                         loadingImageArtifacts={loadingArtifacts}
+                        onRerunStepClick={handleRerunStepClick}
                       />
                     ) : (
                       <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50/60 p-4 text-sm text-gray-600">

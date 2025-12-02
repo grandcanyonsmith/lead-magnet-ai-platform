@@ -24,6 +24,7 @@ interface ExecutionStepsProps {
   canEdit?: boolean
   imageArtifactsByStep?: Map<number, Artifact[]>
   loadingImageArtifacts?: boolean
+  onRerunStepClick?: (stepIndex: number) => void
 }
 
 export function ExecutionSteps({
@@ -40,6 +41,7 @@ export function ExecutionSteps({
   canEdit = false,
   imageArtifactsByStep = new Map(),
   loadingImageArtifacts = false,
+  onRerunStepClick,
 }: ExecutionStepsProps) {
   // Sort steps by step_order once (must be before early return)
   const sortedSteps = useMemo(() => {
@@ -125,6 +127,7 @@ export function ExecutionSteps({
                   rerunningStep={rerunningStep}
                   onEditStep={onEditStep}
                   onRerunStep={onRerunStep}
+                  onRerunStepClick={onRerunStepClick}
                 />
 
                 <StepInputOutput

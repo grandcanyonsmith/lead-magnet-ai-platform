@@ -142,8 +142,8 @@ class ApiClientImpl extends BaseApiClient implements ApiClient {
     return this.jobs.resubmitJob(jobId)
   }
 
-  async rerunStep(jobId: string, stepIndex: number) {
-    return this.jobs.rerunStep(jobId, stepIndex)
+  async rerunStep(jobId: string, stepIndex: number, continueAfter: boolean = false) {
+    return this.jobs.rerunStep(jobId, stepIndex, continueAfter)
   }
 
   async quickEditStep(jobId: string, stepOrder: number, userPrompt: string, save?: boolean) {

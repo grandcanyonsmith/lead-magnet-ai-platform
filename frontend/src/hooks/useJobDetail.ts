@@ -232,7 +232,7 @@ interface UseJobExecutionArgs {
 interface UseJobExecutionResult {
   executionStepsError: string | null
   rerunningStep: number | null
-  handleRerunStep: (stepIndex: number) => Promise<void>
+  handleRerunStep: (stepIndex: number, continueAfter?: boolean) => Promise<void>
 }
 
 export function useJobExecution({ jobId, job, setJob, loadJob }: UseJobExecutionArgs): UseJobExecutionResult {
@@ -310,7 +310,7 @@ export function useJobExecution({ jobId, job, setJob, loadJob }: UseJobExecution
   }, [job, jobId, loadExecutionSteps, rerunningStep, setJob])
 
   const handleRerunStep = useCallback(
-    async (stepIndex: number) => {
+    async (stepIndex: number, continueAfter: boolean = false) => {
       if (!jobId) {
         toast.error('Job ID is missing')
         return
@@ -320,9 +320,10 @@ export function useJobExecution({ jobId, job, setJob, loadJob }: UseJobExecution
       setExecutionStepsError(null)
 
       try {
-        const result = await api.rerunStep(jobId, stepIndex)
+        const result = await api.rerunStep(jobId, stepIndex, continueAfter)
         console.log('[useJobExecution] Rerun step response:', result)
-        toast.success(`Step ${stepIndex + 1} rerun initiated. The step will be reprocessed shortly.`)
+        const actionText = continueAfter ? 'rerun and continue' : 'rerun'
+        toast.success(`Step ${stepIndex + 1} ${actionText} initiated. The step will be reprocessed shortly.`)
 
         setTimeout(() => {
           loadJob()

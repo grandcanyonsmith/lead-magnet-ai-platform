@@ -190,7 +190,7 @@ export function PreviewRenderer({ contentType, objectUrl, fileName, className = 
   const renderPreview = () => {
     if (effectiveContentType.startsWith('image/')) {
       return (
-        <div className="relative w-full h-full">
+        <div className="relative w-full h-full flex items-center justify-center min-h-0">
           {!imageLoaded && !imageError && (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
               <FiImage className="w-12 h-12 text-gray-400 animate-pulse" />
@@ -202,15 +202,18 @@ export function PreviewRenderer({ contentType, objectUrl, fileName, className = 
             </div>
           )}
           {isInView && objectUrl && (
-            <Image
-              src={objectUrl}
-              alt={fileName || 'Preview'}
-              fill
-              className={`object-cover ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
-              onLoad={() => setImageLoaded(true)}
-              onError={() => setImageError(true)}
-              unoptimized
-            />
+            <div className="relative w-full h-full flex items-center justify-center p-4">
+              <Image
+                src={objectUrl}
+                alt={fileName || 'Preview'}
+                fill
+                className={`object-contain ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+                onLoad={() => setImageLoaded(true)}
+                onError={() => setImageError(true)}
+                unoptimized
+                sizes="(max-width: 768px) 100vw, 95vw"
+              />
+            </div>
           )}
         </div>
       )

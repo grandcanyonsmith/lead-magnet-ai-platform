@@ -63,15 +63,15 @@ export const FullScreenPreviewModal = React.memo(function FullScreenPreviewModal
 
       {/* Preview container */}
       <div
-        className="relative w-[95vw] h-[95vh] bg-white rounded-lg overflow-hidden shadow-2xl"
+        className="relative max-w-[95vw] max-h-[95vh] w-auto h-auto bg-white rounded-lg overflow-hidden shadow-2xl m-4 flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="w-full h-full">
+        <div className="flex-1 min-w-0 min-h-0 flex items-center justify-center p-4">
           <PreviewRenderer
             contentType={contentType}
             objectUrl={objectUrl}
             fileName={fileName}
-            className="w-full h-full"
+            className="w-full h-full max-w-full max-h-full"
             artifactId={artifactId}
           />
         </div>
