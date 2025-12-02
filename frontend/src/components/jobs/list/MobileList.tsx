@@ -1,0 +1,78 @@
+import { getStatusIcon, getStatusBadge, getStepDisplayMeta } from '@/utils/jobs/listHelpers'
+import { formatRelativeTime, formatDuration } from '@/utils/date'
+import { FiExternalLink } from 'react-icons/fi'
+
+interface JobsMobileListProps {
+  jobs: any[]
+  workflowMap: Record<string, string>
+  workflowStepCounts: Record<string, number>
+  onNavigate: (jobId: string) => void
+}
+
+export function JobsMobileList({ jobs, workflowMap, workflowStepCounts, onNavigate }: JobsMobileListProps) {
+  if (!jobs.length) {
+    return null
+  }
+
+  return (
+    <div className="block md:hidden space-y-3" data-tour="jobs-list">
+      {jobs.map((job) => {
+        const duration = job.completed_at && job.created_at
+          ? Math.round((new Date(job.completed_at).getTime() - new Date(job.created_at).getTime()) / 1000)
+          : null
+        const hasError = job.status === 'failed' && job.error_message
+        const stepMeta = getStepDisplayMeta(job, workflowStepCounts)
+
+        return (
+          <div
+            key={job.job_id}
+            onClick={() => onNavigate(job.job_id)}
+            className="bg-white rounded-lg shadow-sm border border-gray-100 p-3 cursor-pointer hover:shadow transition-shadow"
+          >
+            <div className="flex items-start justify-between mb-2">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-semibold text-gray-900 truncate">
+                  {workflowMap[job.workflow_id] || job.workflow_id || '-'}
+                </h3>
+                {stepMeta.label && <div className="text-xs text-gray-500 mt-0.5">{stepMeta.label}</div>}
+              </div>
+              <div className="ml-2 flex-shrink-0 text-right" data-tour="job-status">
+                <div className="inline-flex justify-end">{getStatusIcon(job.status)}</div>
+                {stepMeta.isActive && stepMeta.label && (
+                  <div className="text-[11px] font-medium text-amber-600 mt-1">{stepMeta.label}</div>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-1 text-xs">
+              <div className="flex items-center justify-between text-gray-600">
+                <span>{formatRelativeTime(job.created_at)}</span>
+                {duration !== null && <span>{formatDuration(duration)}</span>}
+              </div>
+
+              {job.output_url && (
+                <div className="pt-1" data-tour="view-artifacts" onClick={(e) => e.stopPropagation()}>
+                  <a
+                    href={job.output_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center text-primary-600 hover:text-primary-900 text-xs"
+                  >
+                    <FiExternalLink className="w-3 h-3 mr-1" />
+                    View
+                  </a>
+                </div>
+              )}
+
+              {hasError && (
+                <div className="pt-1">
+                  <p className="text-red-600 text-xs line-clamp-1">{job.error_message}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
