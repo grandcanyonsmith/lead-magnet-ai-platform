@@ -82,6 +82,7 @@ export default function JobDetailClient() {
     steps: mergedSteps,
   })
   const [activeTab, setActiveTab] = useState<TabKey>('execution')
+  const [previewItem, setPreviewItem] = useState<ArtifactGalleryItem | null>(null)
   const artifactGalleryItems = useMemo<ArtifactGalleryItem[]>(() => {
     const items: ArtifactGalleryItem[] = []
     const seen = new Set<string>()
@@ -217,6 +218,12 @@ export default function JobDetailClient() {
     () => (lastLoadedAt ? formatRelativeTime(lastLoadedAt.toISOString()) : null),
     [lastLoadedAt]
   )
+  const previewObjectUrl =
+    previewItem?.artifact?.object_url || previewItem?.artifact?.public_url || previewItem?.url
+  const previewContentType =
+    previewItem?.artifact?.content_type || (previewItem?.kind === 'imageUrl' ? 'image/png' : undefined)
+  const previewFileName =
+    previewItem?.artifact?.file_name || previewItem?.artifact?.artifact_name || previewItem?.label
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)
@@ -615,8 +622,12 @@ export default function JobDetailClient() {
                 aria-labelledby="job-tab-artifacts"
                 hidden={activeTab !== 'artifacts'}
               >
-                {activeTab === 'artifacts' && (
-                  <ArtifactsPanel items={artifactGalleryItems} loading={loadingArtifacts} />
+        {activeTab === 'artifacts' && (
+                  <ArtifactsPanel
+                    items={artifactGalleryItems}
+                    loading={loadingArtifacts}
+                    onPreview={(item) => setPreviewItem(item)}
+                  />
                 )}
               </section>
 
@@ -662,6 +673,17 @@ export default function JobDetailClient() {
         {/* Technical Details */}
         <TechnicalDetails job={job} form={form} submission={submission} />
       </div>
+
+      {previewItem && previewObjectUrl && (
+        <FullScreenPreviewModal
+          isOpen={!!previewItem}
+          onClose={() => setPreviewItem(null)}
+          contentType={previewContentType}
+          objectUrl={previewObjectUrl}
+          fileName={previewFileName}
+          artifactId={previewItem?.artifact?.artifact_id}
+        />
+      )}
     </div>
   )
 }
@@ -1023,9 +1045,10 @@ interface ArtifactGalleryItem {
 interface ArtifactsPanelProps {
   items: ArtifactGalleryItem[]
   loading: boolean
+  onPreview: (item: ArtifactGalleryItem) => void
 }
 
-function ArtifactsPanel({ items, loading }: ArtifactsPanelProps) {
+function ArtifactsPanel({ items, loading, onPreview }: ArtifactsPanelProps) {
   if (loading && items.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50/80 p-4 text-sm text-gray-600">
@@ -1045,7 +1068,7 @@ function ArtifactsPanel({ items, loading }: ArtifactsPanelProps) {
   return (
     <div className="grid gap-4 md:grid-cols-2">
       {items.map((item) => (
-        <ArtifactCard key={item.id} item={item} />
+        <ArtifactCard key={item.id} item={item} onPreview={onPreview} />
       ))}
     </div>
   )
@@ -1053,6 +1076,7 @@ function ArtifactsPanel({ items, loading }: ArtifactsPanelProps) {
 
 interface ArtifactCardProps {
   item: ArtifactGalleryItem
+  onPreview: (item: ArtifactGalleryItem) => void
 }
 
 const BADGE_CLASS_MAP: Record<ArtifactGalleryItem['kind'], string> = {
@@ -1062,7 +1086,7 @@ const BADGE_CLASS_MAP: Record<ArtifactGalleryItem['kind'], string> = {
   jobOutput: 'bg-emerald-100 text-emerald-800 border border-emerald-200',
 }
 
-function ArtifactCard({ item }: ArtifactCardProps) {
+function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
   const artifactUrl = item.artifact?.object_url || item.artifact?.public_url || item.url
   const fileName =
     item.artifact?.file_name ||
@@ -1161,17 +1185,17 @@ function ArtifactCard({ item }: ArtifactCardProps) {
             Download
           </a>
         )}
-        {item.artifact?.artifact_id && (
+        {artifactUrl && item.kind !== 'jobOutput' && (
           <button
             type="button"
-            onClick={() => handleCopy(item.artifact!.artifact_id!, 'Artifact ID copied')}
+            onClick={() => onPreview(item)}
             className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
           >
-            <FiCopy className="h-4 w-4" aria-hidden="true" />
-            Copy ID
+            <FiMaximize2 className="h-4 w-4" aria-hidden="true" />
+            Expand
           </button>
         )}
-        {!item.artifact?.artifact_id && artifactUrl && (
+        {artifactUrl && (
           <button
             type="button"
             onClick={() => handleCopy(artifactUrl, 'Link copied')}
