@@ -3,6 +3,7 @@
  */
 
 import { BaseEntity, Status } from './common'
+import type { Artifact } from './artifact'
 
 export type StepStatus = 'pending' | 'in_progress' | 'completed' | 'failed'
 
@@ -82,5 +83,28 @@ export interface JobListParams {
 export interface JobResubmitResponse {
   job_id: string
   status: Status
+}
+
+export interface JobStepSummary {
+  total: number
+  completed: number
+  failed: number
+  running: number
+  pending: number
+}
+
+export type ArtifactGalleryItemKind = 'jobOutput' | 'artifact' | 'imageArtifact' | 'imageUrl'
+
+export interface ArtifactGalleryItem {
+  id: string
+  kind: ArtifactGalleryItemKind
+  artifact?: Artifact
+  url?: string
+  stepOrder?: number
+  stepName?: string
+  stepType?: string
+  label: string
+  description?: string
+  sortOrder: number
 }
 
