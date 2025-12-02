@@ -82,6 +82,24 @@ export function createJobProcessorStateMachine(
     errors: ['States.ALL'],
   });
 
+  // Process a single step for rerun (separate state to avoid "already has next" error)
+  const processStepSingle = new tasks.LambdaInvoke(scope, 'ProcessStepSingle', {
+    lambdaFunction: jobProcessorLambda,
+    payload: sfn.TaskInput.fromObject({
+      'job_id': sfn.JsonPath.stringAt('$.job_id'),
+      'step_index': sfn.JsonPath.numberAt('$.step_index'),
+      'step_type': 'workflow_step',
+    }),
+    resultPath: '$.processResult',
+    retryOnServiceExceptions: false,
+  });
+
+  // Add error handling for Lambda failures
+  processStepSingle.addCatch(parseErrorStep, {
+    resultPath: '$.error',
+    errors: ['States.ALL'],
+  });
+
   // Process HTML generation step
   const processHtmlGeneration = new tasks.LambdaInvoke(scope, 'ProcessHtmlGeneration', {
     lambdaFunction: jobProcessorLambda,
@@ -243,13 +261,13 @@ export function createJobProcessorStateMachine(
   }).next(checkTemplateExists);
 
   // Check if this is a single-step rerun (action === 'process_single_step')
-  // If yes, route directly to processStep with the provided step_index, then finalize
+  // If yes, route directly to processStepSingle with the provided step_index, then finalize
   // If no, continue with normal workflow initialization flow
   const checkAction = new sfn.Choice(scope, 'CheckAction')
     .when(
       sfn.Condition.stringEquals('$.action', 'process_single_step'),
-      // Single-step rerun path: processStep -> checkStepResultSingleStep -> finalizeJob
-      processStep.next(checkStepResultSingleStep)
+      // Single-step rerun path: processStepSingle -> checkStepResultSingleStep -> finalizeJob
+      processStepSingle.next(checkStepResultSingleStep)
     )
     .otherwise(
       // Normal workflow path: initializeSteps -> computeStepsLength -> ...
