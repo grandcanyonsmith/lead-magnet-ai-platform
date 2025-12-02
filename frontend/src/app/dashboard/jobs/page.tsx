@@ -1,9 +1,21 @@
 'use client'
 
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
-import { FiCheckCircle, FiXCircle, FiClock, FiLoader, FiRefreshCw, FiExternalLink, FiChevronDown, FiChevronUp } from 'react-icons/fi'
+import {
+  FiCheckCircle,
+  FiXCircle,
+  FiClock,
+  FiLoader,
+  FiRefreshCw,
+  FiExternalLink,
+  FiChevronDown,
+  FiChevronUp,
+  FiAlertTriangle,
+  FiTrendingUp,
+  FiBarChart2,
+} from 'react-icons/fi'
 import { useJobFilters, useJobSorting } from '@/hooks/useJobFilters'
 import { JobFiltersProvider } from '@/contexts/JobFiltersContext'
 
@@ -107,10 +119,127 @@ export default function JobsPage() {
   const [pageSize] = useState(20)
   const [totalJobs, setTotalJobs] = useState(0)
   const [hasMore, setHasMore] = useState(false)
+  const [lastLoadedAt, setLastLoadedAt] = useState<Date | null>(null)
   
   // Use extracted hooks for filtering and sorting
   const filters = useJobFilters(jobs, workflowMap)
   const sorting = useJobSorting(filters.filteredJobs)
+
+  const statusCounts = useMemo(() => {
+    return jobs.reduce(
+      (acc, job) => {
+        if (job.status in acc) {
+          acc[job.status as keyof typeof acc] += 1
+        }
+        return acc
+      },
+      { pending: 0, processing: 0, completed: 0, failed: 0 }
+    )
+  }, [jobs])
+
+  const summaryStats = useMemo(() => {
+    const now = Date.now()
+    const oneDayMs = 24 * 60 * 60 * 1000
+    let completedLastDay = 0
+    let totalDuration = 0
+    let durationSamples = 0
+    let latestJobCreatedAt: string | null = null
+
+    jobs.forEach((job) => {
+      const createdAt = job.created_at ? new Date(job.created_at).getTime() : null
+      if (createdAt && (!latestJobCreatedAt || createdAt > new Date(latestJobCreatedAt).getTime())) {
+        latestJobCreatedAt = job.created_at
+      }
+
+      if (job.status === 'completed' && createdAt && now - createdAt <= oneDayMs) {
+        completedLastDay += 1
+      }
+
+      if (job.completed_at && job.created_at) {
+        const durationSeconds = Math.max(
+          0,
+          Math.round((new Date(job.completed_at).getTime() - new Date(job.created_at).getTime()) / 1000)
+        )
+        totalDuration += durationSeconds
+        durationSamples += 1
+      }
+    })
+
+    const avgDurationSeconds = durationSamples ? Math.round(totalDuration / durationSamples) : 0
+
+    return {
+      activeJobs: statusCounts.processing + statusCounts.pending,
+      completedLastDay,
+      avgDurationSeconds,
+      failedCount: statusCounts.failed,
+      latestJobCreatedAt,
+    }
+  }, [jobs, statusCounts])
+
+  const lastRefreshedLabel = useMemo(
+    () => (lastLoadedAt ? formatRelativeTime(lastLoadedAt.toISOString()) : null),
+    [lastLoadedAt]
+  )
+
+  const statusQuickFilters = useMemo<StatusQuickFilter[]>(
+    () => [
+      { label: 'All jobs', value: 'all', count: jobs.length, description: 'Show every run' },
+      { label: 'Queued', value: 'pending', count: statusCounts.pending, description: 'Waiting to process' },
+      { label: 'Generating', value: 'processing', count: statusCounts.processing, description: 'In progress' },
+      { label: 'Ready', value: 'completed', count: statusCounts.completed, description: 'Completed runs' },
+      { label: 'Errors', value: 'failed', count: statusCounts.failed, description: 'Failed runs' },
+    ],
+    [jobs.length, statusCounts]
+  )
+
+  const summaryCards = useMemo<SummaryCard[]>(
+    () => [
+      {
+        label: 'Active jobs',
+        value: summaryStats.activeJobs.toString(),
+        subtext: `${statusCounts.processing} running · ${statusCounts.pending} queued`,
+        icon: <FiLoader className="h-5 w-5 text-primary-600" />,
+        accentClass: 'border-primary-100 bg-primary-50/70',
+      },
+      {
+        label: 'Completed (24h)',
+        value: summaryStats.completedLastDay.toString(),
+        subtext: summaryStats.latestJobCreatedAt ? `Last job ${formatRelativeTime(summaryStats.latestJobCreatedAt)}` : 'No jobs yet',
+        icon: <FiTrendingUp className="h-5 w-5 text-emerald-600" />,
+        accentClass: 'border-emerald-100 bg-emerald-50/80',
+      },
+      {
+        label: 'Avg processing time',
+        value: summaryStats.avgDurationSeconds ? formatDuration(summaryStats.avgDurationSeconds) : '—',
+        subtext: summaryStats.avgDurationSeconds ? 'Across completed jobs' : 'No completed jobs yet',
+        icon: <FiClock className="h-5 w-5 text-blue-600" />,
+        accentClass: 'border-blue-100 bg-blue-50/80',
+      },
+      {
+        label: 'Failures',
+        value: summaryStats.failedCount.toString(),
+        subtext: jobs.length ? `${Math.round((summaryStats.failedCount / jobs.length) * 100)}% of this page` : 'No jobs yet',
+        icon: <FiAlertTriangle className="h-5 w-5 text-red-600" />,
+        accentClass: 'border-red-100 bg-red-50/80',
+      },
+    ],
+    [summaryStats, statusCounts, jobs.length]
+  )
+
+  const handleQuickFilter = useCallback(
+    (value: string) => {
+      filters.setStatusFilter(value)
+      setCurrentPage(1)
+    },
+    [filters.setStatusFilter]
+  )
+
+  const handleClearFilters = useCallback(() => {
+    filters.setStatusFilter('all')
+    filters.setWorkflowFilter('all')
+    filters.setSearchQuery('')
+    setCurrentPage(1)
+  }, [filters.setStatusFilter, filters.setWorkflowFilter, filters.setSearchQuery])
 
   // Load workflows for filter dropdown
   useEffect(() => {
@@ -149,6 +278,7 @@ export default function JobsPage() {
       setJobs(data.jobs || [])
       setTotalJobs(data.total || 0)
       setHasMore(data.has_more || false)
+      setLastLoadedAt(new Date())
     } catch (error) {
       console.error('Failed to load jobs:', error)
     } finally {
@@ -160,6 +290,10 @@ export default function JobsPage() {
   useEffect(() => {
     setCurrentPage(1) // Reset to first page when filters change
   }, [filters.statusFilter, filters.workflowFilter])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [filters.searchQuery])
 
   useEffect(() => {
     loadJobs(false, currentPage)
@@ -205,23 +339,93 @@ export default function JobsPage() {
       workflows={workflows}
     >
       <div>
-        <div className="mb-4 sm:mb-6">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-0">
+        <div className="mb-4 sm:mb-6 space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start">
             <div>
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Generated Lead Magnets</h1>
-              <p className="text-sm sm:text-base text-gray-600 mt-1">Your generated lead magnets and documents</p>
+              <p className="text-sm sm:text-base text-gray-600 mt-1">Track generation progress, errors, and delivery status.</p>
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs sm:text-sm text-gray-500">
+                <span>
+                  {lastRefreshedLabel ? `Last refreshed ${lastRefreshedLabel}` : 'Waiting for first refresh'}
+                </span>
+                <span className="hidden sm:inline text-gray-300">•</span>
+                <span>{jobs.length} total jobs on this page</span>
+                {hasProcessingJobs && (
+                  <>
+                    <span className="hidden sm:inline text-gray-300">•</span>
+                    <span className="inline-flex items-center gap-1 text-primary-700 font-medium">
+                      <span className="h-2 w-2 rounded-full bg-primary-500 animate-pulse" />
+                      Live auto-refresh enabled
+                    </span>
+                  </>
+                )}
+              </div>
             </div>
-            <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
-              <span className="text-xs sm:text-sm text-gray-600 whitespace-nowrap">
-                {jobs.length} {jobs.length === 1 ? 'lead magnet' : 'lead magnets'}
-              </span>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+              <div className="text-xs sm:text-sm text-gray-600">
+                <p className="font-semibold text-gray-900">{filters.filteredJobs.length} visible</p>
+                <p>Sorted by {sorting.sortField}</p>
+              </div>
               <button
                 onClick={() => loadJobs(true)}
                 disabled={refreshing}
-                className="flex items-center px-3 sm:px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 text-sm sm:text-base"
+                className="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <FiRefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">Refresh</span>
+                <FiRefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin text-primary-600' : ''}`} />
+                Refresh data
+              </button>
+            </div>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {summaryCards.map((card) => (
+              <div
+                key={card.label}
+                className={`rounded-2xl border ${card.accentClass} p-4 shadow-sm`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{card.label}</p>
+                    <p className="mt-1 text-2xl font-semibold text-gray-900">{card.value}</p>
+                    {card.subtext && <p className="mt-1 text-sm text-gray-600">{card.subtext}</p>}
+                  </div>
+                  <span className="rounded-full bg-white/80 p-3 shadow-sm">{card.icon}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Quick status filters">
+              {statusQuickFilters.map((filter) => {
+                const isActive = filters.statusFilter === filter.value
+                return (
+                  <button
+                    key={filter.value}
+                    onClick={() => handleQuickFilter(filter.value)}
+                    className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                      isActive
+                        ? 'border-primary-600 bg-primary-600 text-white shadow-sm'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-primary-200 hover:text-primary-700'
+                    }`}
+                    title={filter.description}
+                  >
+                    <span>{filter.label}</span>
+                    <span
+                      className={`text-xs font-semibold ${
+                        isActive ? 'text-white/80' : 'text-gray-500'
+                      }`}
+                    >
+                      {filter.count}
+                    </span>
+                  </button>
+                )
+              })}
+              <button
+                onClick={handleClearFilters}
+                className="inline-flex items-center gap-2 rounded-full border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 hover:border-gray-300 hover:text-gray-900"
+              >
+                Clear filters
               </button>
             </div>
           </div>
@@ -628,4 +832,19 @@ export default function JobsPage() {
       </div>
     </JobFiltersProvider>
   )
+}
+
+interface StatusQuickFilter {
+  label: string
+  value: string
+  count: number
+  description: string
+}
+
+interface SummaryCard {
+  label: string
+  value: string
+  subtext?: string
+  icon: React.ReactNode
+  accentClass: string
 }

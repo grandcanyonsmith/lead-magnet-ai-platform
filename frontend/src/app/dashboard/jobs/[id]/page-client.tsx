@@ -34,6 +34,7 @@ import { Artifact } from '@/types/artifact'
 import { formatRelativeTime, formatDuration } from '@/utils/date'
 import type { Job } from '@/types/job'
 import type { Workflow } from '@/types/workflow'
+import type { FormSubmission } from '@/types/form'
 
 export default function JobDetailClient() {
   const router = useRouter()
@@ -43,7 +44,6 @@ export default function JobDetailClient() {
   const [showRerunConfirm, setShowRerunConfirm] = useState(false)
   const [stepIndexForRerun, setStepIndexForRerun] = useState<number | null>(null)
   const [showDetails, setShowDetails] = useState(false)
-  const [showFormSubmission, setShowFormSubmission] = useState(false)
   const latestStepUpdateRef = useRef<WorkflowStep | null>(null)
   const {
     job,
@@ -123,6 +123,10 @@ export default function JobDetailClient() {
         seen.add(urlKey)
       }
 
+      const createdTimestamp = artifact.created_at ? new Date(artifact.created_at).getTime() : undefined
+      const fallbackOrder =
+        (meta?.stepOrder !== undefined ? meta.stepOrder * 1000 : (index + 1) * 1000) + index
+
       items.push({
         id: uniqueKey,
         kind: isImage ? 'imageArtifact' : 'artifact',
@@ -132,6 +136,7 @@ export default function JobDetailClient() {
         stepType: meta?.stepType,
         label,
         description: artifact.artifact_type?.replace(/_/g, ' ') || artifact.file_name || artifact.artifact_name,
+        sortOrder: createdTimestamp ?? fallbackOrder,
       })
     })
 
@@ -145,6 +150,8 @@ export default function JobDetailClient() {
           return
         }
         seen.add(url)
+        const sortOrder =
+          (step.step_order ?? 0) * 1000 + idx + 0.5
         items.push({
           id: `image-url-${step.step_order ?? 0}-${idx}`,
           kind: 'imageUrl',
@@ -154,23 +161,26 @@ export default function JobDetailClient() {
           stepType: step.step_type,
           label,
           description: 'Generated image URL',
+          sortOrder,
         })
       })
     })
 
     if (job?.output_url && !seen.has(job.output_url)) {
-      items.unshift({
+      const completionTimestamp = job.completed_at ? new Date(job.completed_at).getTime() : Number.MAX_SAFE_INTEGER - 1
+      items.push({
         id: 'job-output-url',
         kind: 'jobOutput',
         url: job.output_url,
         label: 'Final Deliverable',
         description: 'Download the generated lead magnet document.',
+        sortOrder: completionTimestamp,
       })
       seen.add(job.output_url)
     }
 
-    return items
-  }, [job?.output_url, jobArtifacts, mergedSteps])
+    return items.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+  }, [job?.completed_at, job?.output_url, jobArtifacts, mergedSteps])
 
   const stepsSummary = useMemo<StepsSummary>(() => {
     if (!mergedSteps || mergedSteps.length === 0) {
@@ -383,6 +393,14 @@ export default function JobDetailClient() {
         refreshing={refreshing}
         onSelectArtifacts={() => setActiveTab('artifacts')}
       />
+      
+      {submission?.form_data && (
+        <FormSubmissionSummary
+          submission={submission}
+          onResubmit={handleResubmitClick}
+          resubmitting={resubmitting}
+        />
+      )}
       
       <ResubmitModal
         isOpen={showResubmitModal}
@@ -638,59 +656,6 @@ export default function JobDetailClient() {
             </div>
           )}
         </div>
-
-        {/* Form Submission Details Section */}
-        {submission && (
-          <div className="bg-white rounded-lg shadow">
-            <div className="flex items-center justify-between p-4 sm:p-6">
-              <button
-                onClick={() => setShowFormSubmission(!showFormSubmission)}
-                className="flex items-center justify-between flex-1 text-left touch-target min-h-[48px] sm:min-h-0"
-              >
-                <h2 className="text-base sm:text-lg font-semibold text-gray-900">Form Submission Details</h2>
-                {showFormSubmission ? (
-                  <FiChevronUp className="w-5 h-5 text-gray-500 flex-shrink-0 ml-2" />
-                ) : (
-                  <FiChevronDown className="w-5 h-5 text-gray-500 flex-shrink-0 ml-2" />
-                )}
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  handleResubmitClick()
-                }}
-                disabled={resubmitting}
-                className="ml-4 flex items-center gap-2 px-3 py-2 text-sm font-medium text-primary-600 hover:text-primary-800 hover:bg-primary-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-target min-h-[44px] sm:min-h-0"
-                title="Resubmit with same form answers"
-              >
-                <FiRefreshCw className={`w-4 h-4 ${resubmitting ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">Resubmit</span>
-              </button>
-            </div>
-            {showFormSubmission && (
-              <div className="px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-200">
-                <div className="pt-4 sm:pt-6">
-                  {submission.form_data ? (
-                    <div className="space-y-3">
-                      {Object.entries(submission.form_data).map(([key, value]: [string, unknown]) => (
-                        <div key={key} className="border-b border-gray-100 pb-3 last:border-b-0">
-                          <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">
-                            {key.replace(/_/g, ' ')}
-                          </label>
-                          <p className="text-sm text-gray-900 break-words">
-                            {typeof value === 'string' ? value : JSON.stringify(value)}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-gray-500">No submission data available</p>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
 
         {/* Technical Details */}
         <TechnicalDetails job={job} form={form} submission={submission} />
@@ -956,6 +921,82 @@ function getJobDuration(job?: Job | null): JobDurationInfo | null {
   }
 }
 
+interface FormSubmissionSummaryProps {
+  submission: FormSubmission
+  onResubmit: () => void
+  resubmitting: boolean
+}
+
+function FormSubmissionSummary({ submission, onResubmit, resubmitting }: FormSubmissionSummaryProps) {
+  const submittedLabel = submission.created_at ? formatRelativeTime(submission.created_at) : null
+  const entries = Object.entries(submission.form_data || {})
+
+  const handleCopyAll = async () => {
+    try {
+      const text = entries
+        .map(([key, value]) => `${key}: ${typeof value === 'string' ? value : JSON.stringify(value)}`)
+        .join('\n')
+      if (navigator?.clipboard) {
+        await navigator.clipboard.writeText(text)
+        toast.success('Submission copied')
+      } else {
+        throw new Error('Clipboard not available')
+      }
+    } catch {
+      toast.error('Unable to copy submission')
+    }
+  }
+
+  return (
+    <section className="mb-4 sm:mb-6">
+      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
+        <div className="flex flex-col gap-3 p-4 sm:p-6 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Submitted Answers</p>
+            <h2 className="text-lg font-semibold text-gray-900">Form submission</h2>
+            {submittedLabel && <p className="text-sm text-gray-500">Submitted {submittedLabel}</p>}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={handleCopyAll}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
+            >
+              <FiCopy className="h-4 w-4" />
+              Copy all
+            </button>
+            <button
+              type="button"
+              onClick={onResubmit}
+              disabled={resubmitting}
+              className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <FiRefreshCw className={`h-4 w-4 ${resubmitting ? 'animate-spin text-white/80' : ''}`} />
+              Resubmit
+            </button>
+          </div>
+        </div>
+        <div className="border-t border-gray-100">
+          {entries.length === 0 ? (
+            <p className="px-4 py-6 text-sm text-gray-500">No submission data available</p>
+          ) : (
+            <dl className="divide-y divide-gray-100">
+              {entries.map(([key, value]) => (
+                <div key={key} className="px-4 py-3 sm:px-6 sm:py-4">
+                  <dt className="text-sm font-medium text-gray-700">{key.replace(/_/g, ' ')}</dt>
+                  <dd className="mt-1 text-sm text-gray-900 break-words">
+                    {typeof value === 'string' ? value : JSON.stringify(value)}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          )}
+        </div>
+      </div>
+    </section>
+  )
+}
+
 type TabKey = 'execution' | 'artifacts' | 'raw'
 
 interface StepMeta {
@@ -974,6 +1015,7 @@ interface ArtifactGalleryItem {
   stepType?: string
   label: string
   description?: string
+  sortOrder: number
 }
 
 interface ArtifactsPanelProps {
