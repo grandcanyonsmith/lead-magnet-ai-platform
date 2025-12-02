@@ -22,12 +22,13 @@ export function registerJobRoutes(): void {
 
   // Rerun step
   router.register('POST', '/admin/jobs/:id/rerun-step', async (params, body, _query, tenantId) => {
-    logger.info('[Router] Matched /admin/jobs/:id/rerun-step route', { id: params.id, stepIndex: body?.step_index });
+    logger.info('[Router] Matched /admin/jobs/:id/rerun-step route', { id: params.id, stepIndex: body?.step_index, continueAfter: body?.continue_after });
     const stepIndex = body?.step_index;
     if (stepIndex === undefined || stepIndex === null) {
       throw new ApiError('step_index is required in request body', 400);
     }
-    return await jobRerunController.rerunStep(tenantId!, params.id, stepIndex);
+    const continueAfter = body?.continue_after === true;
+    return await jobRerunController.rerunStep(tenantId!, params.id, stepIndex, continueAfter);
   });
 
   // Quick edit step

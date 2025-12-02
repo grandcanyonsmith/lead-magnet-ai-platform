@@ -38,6 +38,7 @@ interface StepHeaderProps {
   rerunningStep?: number | null
   onEditStep?: (stepIndex: number) => void
   onRerunStep?: (stepIndex: number) => Promise<void>
+  onRerunStepClick?: (stepIndex: number) => void
 }
 
 // Type for tool - can be a string or an object with a type property
@@ -104,6 +105,7 @@ export function StepHeader({
   rerunningStep,
   onEditStep,
   onRerunStep,
+  onRerunStepClick,
 }: StepHeaderProps) {
   const isPending = status === 'pending'
   const isCompleted = status === 'completed'
@@ -260,7 +262,7 @@ export function StepHeader({
                   position="top"
                 >
                   <button
-                    onClick={async (e) => {
+                    onClick={(e) => {
                       e.preventDefault()
                       e.stopPropagation()
                       if (status === 'pending' || status === 'in_progress') {
@@ -271,17 +273,21 @@ export function StepHeader({
                       console.log(
                         `[StepHeader] Rerun button clicked for step ${step.step_order} (index ${stepIndex})`
                       )
-                      try {
-                        await onRerunStep?.(stepIndex)
-                      } catch (error) {
-                        console.error('[StepHeader] Error in rerun handler:', error)
+                      // Use dialog callback if provided, otherwise fall back to direct rerun
+                      if (onRerunStepClick) {
+                        onRerunStepClick(stepIndex)
+                      } else if (onRerunStep) {
+                        // Fallback to direct rerun for backward compatibility
+                        onRerunStep(stepIndex).catch((error) => {
+                          console.error('[StepHeader] Error in rerun handler:', error)
+                        })
                       }
                     }}
                     disabled={
                       rerunningStep === step.step_order - 1 ||
                       status === 'pending' ||
                       status === 'in_progress' ||
-                      !onRerunStep
+                      (!onRerunStep && !onRerunStepClick)
                     }
                     className="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-target min-h-[44px] sm:min-h-0"
                     aria-label="Rerun this step"
