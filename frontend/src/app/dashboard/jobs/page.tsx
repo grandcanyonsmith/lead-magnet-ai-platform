@@ -26,7 +26,16 @@ export default function JobsPage() {
   const [lastLoadedAt, setLastLoadedAt] = useState<Date | null>(null)
 
   const filters = useJobFilters(jobs, workflowMap)
-  const sorting = useJobSorting(filters.filteredJobs)
+  const {
+    statusFilter,
+    workflowFilter,
+    searchQuery,
+    setStatusFilter,
+    setWorkflowFilter,
+    setSearchQuery,
+    filteredJobs,
+  } = filters
+  const sorting = useJobSorting(filteredJobs)
 
   const handleNavigate = useCallback(
     (jobId: string) => {
@@ -142,18 +151,18 @@ export default function JobsPage() {
 
   const handleQuickFilter = useCallback(
     (value: string) => {
-      filters.setStatusFilter(value)
+      setStatusFilter(value)
       setCurrentPage(1)
     },
-    [filters.setStatusFilter]
+    [setStatusFilter]
   )
 
   const handleClearFilters = useCallback(() => {
-    filters.setStatusFilter('all')
-    filters.setWorkflowFilter('all')
-    filters.setSearchQuery('')
+    setStatusFilter('all')
+    setWorkflowFilter('all')
+    setSearchQuery('')
     setCurrentPage(1)
-  }, [filters.setStatusFilter, filters.setWorkflowFilter, filters.setSearchQuery])
+  }, [setStatusFilter, setWorkflowFilter, setSearchQuery])
 
   useEffect(() => {
     const loadWorkflows = async () => {
@@ -188,11 +197,11 @@ export default function JobsPage() {
           limit: pageSize,
           offset: (page - 1) * pageSize,
         }
-        if (filters.statusFilter !== 'all') {
-          params.status = filters.statusFilter
+        if (statusFilter !== 'all') {
+          params.status = statusFilter
         }
-        if (filters.workflowFilter !== 'all') {
-          params.workflow_id = filters.workflowFilter
+        if (workflowFilter !== 'all') {
+          params.workflow_id = workflowFilter
         }
 
         const data = await api.getJobs(params)
@@ -207,12 +216,12 @@ export default function JobsPage() {
         setRefreshing(false)
       }
     },
-    [filters.statusFilter, filters.workflowFilter, currentPage, pageSize]
+    [statusFilter, workflowFilter, currentPage, pageSize]
   )
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [filters.statusFilter, filters.workflowFilter, filters.searchQuery])
+  }, [statusFilter, workflowFilter, searchQuery])
 
   useEffect(() => {
     loadJobs(false, currentPage)
@@ -248,10 +257,10 @@ export default function JobsPage() {
 
   return (
     <JobFiltersProvider
-      statusFilter={filters.statusFilter}
-      workflowFilter={filters.workflowFilter}
-      setStatusFilter={filters.setStatusFilter}
-      setWorkflowFilter={filters.setWorkflowFilter}
+      statusFilter={statusFilter}
+      workflowFilter={workflowFilter}
+      setStatusFilter={setStatusFilter}
+      setWorkflowFilter={setWorkflowFilter}
       workflows={workflows}
     >
       <div>
@@ -263,7 +272,7 @@ export default function JobsPage() {
           onRefresh={() => loadJobs(true)}
           summaryCards={summaryCards}
           quickFilters={statusQuickFilters}
-          activeFilter={filters.statusFilter}
+          activeFilter={statusFilter}
           onQuickFilterChange={handleQuickFilter}
           onClearFilters={handleClearFilters}
         />
@@ -274,8 +283,8 @@ export default function JobsPage() {
               <div className="relative">
                 <input
                   type="text"
-                  value={filters.searchQuery}
-                  onChange={(e) => filters.setSearchQuery(e.target.value)}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search by lead magnet name..."
                   className="w-full px-4 py-2.5 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
                 />
@@ -296,8 +305,8 @@ export default function JobsPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Status</label>
                 <select
-                  value={filters.statusFilter}
-                  onChange={(e) => filters.setStatusFilter(e.target.value)}
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 >
                   <option value="all">All Statuses</option>
@@ -310,8 +319,8 @@ export default function JobsPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Lead Magnet</label>
                 <select
-                  value={filters.workflowFilter}
-                  onChange={(e) => filters.setWorkflowFilter(e.target.value)}
+                  value={workflowFilter}
+                  onChange={(e) => setWorkflowFilter(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 >
                   <option value="all">All Lead Magnets</option>

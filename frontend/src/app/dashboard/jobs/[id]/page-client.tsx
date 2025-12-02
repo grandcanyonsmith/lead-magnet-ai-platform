@@ -28,6 +28,7 @@ import { FullScreenPreviewModal } from '@/components/ui/FullScreenPreviewModal'
 import { JobOverviewSection, JobDurationInfo } from '@/components/jobs/detail/JobOverviewSection'
 import { SubmissionSummary } from '@/components/jobs/detail/SubmissionSummary'
 import { ArtifactGallery } from '@/components/jobs/detail/ArtifactGallery'
+import { usePreviewModal } from '@/hooks/usePreviewModal'
 
 export default function JobDetailClient() {
   const router = useRouter()
@@ -73,7 +74,7 @@ export default function JobDetailClient() {
     steps: mergedSteps,
   })
   const [activeTab, setActiveTab] = useState<TabKey>('execution')
-  const [previewItem, setPreviewItem] = useState<ArtifactGalleryItem | null>(null)
+  const { previewItem, openPreview, closePreview } = usePreviewModal<ArtifactGalleryItem>()
   const artifactGalleryItems = useMemo<ArtifactGalleryItem[]>(
     () => buildArtifactGalleryItems({ job, artifacts: jobArtifacts, steps: mergedSteps }),
     [job, jobArtifacts, mergedSteps]
@@ -488,11 +489,7 @@ export default function JobDetailClient() {
                 hidden={activeTab !== 'artifacts'}
               >
         {activeTab === 'artifacts' && (
-                  <ArtifactGallery
-                    items={artifactGalleryItems}
-                    loading={loadingArtifacts}
-                    onPreview={(item) => setPreviewItem(item)}
-                  />
+                  <ArtifactGallery items={artifactGalleryItems} loading={loadingArtifacts} onPreview={openPreview} />
                 )}
               </section>
 
@@ -542,7 +539,7 @@ export default function JobDetailClient() {
       {previewItem && previewObjectUrl && (
         <FullScreenPreviewModal
           isOpen={!!previewItem}
-          onClose={() => setPreviewItem(null)}
+          onClose={closePreview}
           contentType={previewContentType}
           objectUrl={previewObjectUrl}
           fileName={previewFileName}
