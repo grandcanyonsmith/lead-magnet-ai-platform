@@ -150,6 +150,14 @@ export function createJobProcessorStateMachine(
     )
     .otherwise(incrementStep);
 
+  // Check step result for single-step rerun (goes directly to finalizeJob instead of incrementing)
+  const checkStepResultSingleStep = new sfn.Choice(scope, 'CheckStepResultSingleStep')
+    .when(
+      sfn.Condition.booleanEquals('$.processResult.Payload.success', false),
+      handleStepFailure
+    )
+    .otherwise(finalizeJob);
+
   // Resolve step dependencies - calls Lambda to build execution plan
   const resolveDependencies = new tasks.LambdaInvoke(scope, 'ResolveDependencies', {
     lambdaFunction: jobProcessorLambda,
@@ -234,10 +242,22 @@ export function createJobProcessorStateMachine(
     resultPath: '$',
   }).next(checkTemplateExists);
 
-  // Define workflow: Update status -> Initialize steps -> Compute steps length -> Check template -> Process steps
+  // Check if this is a single-step rerun (action === 'process_single_step')
+  // If yes, route directly to processStep with the provided step_index, then finalize
+  // If no, continue with normal workflow initialization flow
+  const checkAction = new sfn.Choice(scope, 'CheckAction')
+    .when(
+      sfn.Condition.stringEquals('$.action', 'process_single_step'),
+      // Single-step rerun path: processStep -> checkStepResultSingleStep -> finalizeJob
+      processStep.next(checkStepResultSingleStep)
+    )
+    .otherwise(
+      // Normal workflow path: initializeSteps -> computeStepsLength -> ...
+      initializeSteps.next(computeStepsLength)
+    );
+
+  // Define workflow: Update status -> Check action -> Route accordingly
   // All workflows must use steps format - legacy format is no longer supported
-  return updateJobStatus
-    .next(initializeSteps)
-    .next(computeStepsLength);
+  return updateJobStatus.next(checkAction);
 }
 
