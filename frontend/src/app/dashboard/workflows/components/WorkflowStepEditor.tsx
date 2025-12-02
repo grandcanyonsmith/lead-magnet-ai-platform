@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { FiTrash2, FiChevronUp, FiChevronDown, FiZap, FiChevronDown as FiChevronCollapse, FiChevronUp as FiChevronExpand } from 'react-icons/fi'
 import { useWorkflowStepAI } from '@/hooks/useWorkflowStepAI'
 import StepDiffPreview from '@/components/workflows/edit/StepDiffPreview'
@@ -74,11 +74,16 @@ export default function WorkflowStepEditor({
     step.webhook_headers || {}
   )
 
+  // Track if we've already converted string tools to objects to prevent infinite loops
+  const hasConvertedToolsRef = useRef<boolean>(false)
+
   // Always call hook unconditionally to comply with Rules of Hooks
   const { isGenerating, error: aiError, proposal, generateStep, acceptProposal, rejectProposal } = useWorkflowStepAI(workflowId)
 
   // Sync localStep when step prop changes
   useEffect(() => {
+    // Reset conversion tracking when step prop changes (new step or step updated externally)
+    hasConvertedToolsRef.current = false
     setLocalStep(step)
     // Extract computer_use_preview config if present
     const computerUseTool = (step.tools || []).find(
@@ -130,8 +135,10 @@ export default function WorkflowStepEditor({
         const hasStringTool = tools.some(t => t === 'image_generation')
         const hasObjectTool = tools.some(t => typeof t === 'object' && t.type === 'image_generation')
         
-        if (hasStringTool && !hasObjectTool && localStep.tools === step.tools) {
-          // Only convert if this is the initial load (localStep hasn't been modified yet)
+        // Use ref to track conversion instead of comparing localStep (which hasn't updated yet due to React batching)
+        if (hasStringTool && !hasObjectTool && !hasConvertedToolsRef.current) {
+          // Mark as converted to prevent infinite loops
+          hasConvertedToolsRef.current = true
           // Convert string to object with defaults
           const updatedTools = tools.map(t => {
             if (t === 'image_generation') {
@@ -150,6 +157,9 @@ export default function WorkflowStepEditor({
           setLocalStep(updatedStep)
           // Notify parent of the conversion (this will update the step prop, but only once)
           onChange(index, updatedStep)
+        } else if (!hasStringTool && hasObjectTool) {
+          // Reset ref if tool is removed or already converted
+          hasConvertedToolsRef.current = false
         }
       } else {
         // Tool not selected - reset to defaults
@@ -314,15 +324,19 @@ export default function WorkflowStepEditor({
           quality: newConfig.quality,
           background: newConfig.background,
         }
+        // Add optional fields only if set, otherwise explicitly omit them (consistent with object tool update logic)
         if (newConfig.format) {
           config.format = newConfig.format
         }
+        // Note: format is omitted if not set (don't add undefined)
         if (newConfig.compression !== undefined) {
           config.compression = newConfig.compression
         }
+        // Note: compression is omitted if undefined (don't add undefined)
         if (newConfig.input_fidelity) {
           config.input_fidelity = newConfig.input_fidelity
         }
+        // Note: input_fidelity is omitted if not set (don't add undefined)
         return config
       }
       // Update existing object tool
