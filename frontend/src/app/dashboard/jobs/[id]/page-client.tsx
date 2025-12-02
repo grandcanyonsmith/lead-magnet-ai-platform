@@ -14,6 +14,7 @@ import {
   FiActivity,
   FiImage,
   FiLayers,
+  FiMaximize2,
 } from 'react-icons/fi'
 import { useJobDetail } from '@/hooks/useJobDetail'
 import { useJobExecutionSteps } from '@/hooks/useJobExecutionSteps'
@@ -35,6 +36,7 @@ import { formatRelativeTime, formatDuration } from '@/utils/date'
 import type { Job } from '@/types/job'
 import type { Workflow } from '@/types/workflow'
 import type { FormSubmission } from '@/types/form'
+import { FullScreenPreviewModal } from '@/components/ui/FullScreenPreviewModal'
 
 export default function JobDetailClient() {
   const router = useRouter()
