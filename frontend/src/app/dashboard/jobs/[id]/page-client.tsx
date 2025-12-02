@@ -1,8 +1,20 @@
 'use client'
 
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState, useRef, useMemo } from 'react'
-import { FiChevronDown, FiChevronUp, FiExternalLink, FiRefreshCw, FiCopy, FiFileText } from 'react-icons/fi'
+import {
+  FiChevronDown,
+  FiChevronUp,
+  FiExternalLink,
+  FiRefreshCw,
+  FiCopy,
+  FiFileText,
+  FiClock,
+  FiActivity,
+  FiImage,
+  FiLayers,
+} from 'react-icons/fi'
 import { useJobDetail } from '@/hooks/useJobDetail'
 import { useJobExecutionSteps } from '@/hooks/useJobExecutionSteps'
 import { useMergedSteps } from '@/hooks/useMergedSteps'
@@ -14,10 +26,14 @@ import { ResubmitModal } from '@/components/jobs/ResubmitModal'
 import FlowchartSidePanel from '@/app/dashboard/workflows/components/FlowchartSidePanel'
 import { useImageArtifacts } from '@/hooks/useImageArtifacts'
 import { api } from '@/lib/api'
+import { StatusBadge } from '@/components/ui/StatusBadge'
 import { WorkflowStep } from '@/types'
 import { toast } from 'react-hot-toast'
 import { PreviewRenderer } from '@/components/artifacts/PreviewRenderer'
 import { Artifact } from '@/types/artifact'
+import { formatRelativeTime, formatDuration } from '@/utils/date'
+import type { Job } from '@/types/job'
+import type { Workflow } from '@/types/workflow'
 
 export default function JobDetailClient() {
   const router = useRouter()
@@ -41,6 +57,9 @@ export default function JobDetailClient() {
     rerunningStep,
     handleRerunStep,
     executionStepsError,
+    refreshJob,
+    refreshing,
+    lastLoadedAt,
   } = useJobDetail()
   
   const {
@@ -152,6 +171,40 @@ export default function JobDetailClient() {
 
     return items
   }, [job?.output_url, jobArtifacts, mergedSteps])
+
+  const stepsSummary = useMemo<StepsSummary>(() => {
+    if (!mergedSteps || mergedSteps.length === 0) {
+      return { total: 0, completed: 0, failed: 0, running: 0, pending: 0 }
+    }
+    return mergedSteps.reduce(
+      (acc, step) => {
+        acc.total += 1
+        switch (step._status) {
+          case 'completed':
+            acc.completed += 1
+            break
+          case 'failed':
+            acc.failed += 1
+            break
+          case 'in_progress':
+            acc.running += 1
+            break
+          default:
+            acc.pending += 1
+            break
+        }
+        return acc
+      },
+      { total: 0, completed: 0, failed: 0, running: 0, pending: 0 }
+    )
+  }, [mergedSteps])
+
+  const jobDuration = useMemo(() => getJobDuration(job), [job?.started_at, job?.completed_at, job?.failed_at, job?.status])
+  const lastUpdatedLabel = useMemo(() => (job?.updated_at ? formatRelativeTime(job.updated_at) : null), [job?.updated_at])
+  const lastRefreshedLabel = useMemo(
+    () => (lastLoadedAt ? formatRelativeTime(lastLoadedAt.toISOString()) : null),
+    [lastLoadedAt]
+  )
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)
@@ -317,6 +370,19 @@ export default function JobDetailClient() {
   return (
     <div>
       <JobHeader error={error} resubmitting={resubmitting} onResubmit={handleResubmitClick} job={job} />
+      
+      <JobOverview
+        job={job}
+        workflow={workflow}
+        stepsSummary={stepsSummary}
+        artifactCount={artifactGalleryItems.length}
+        jobDuration={jobDuration}
+        lastUpdatedLabel={lastUpdatedLabel}
+        lastRefreshedLabel={lastRefreshedLabel}
+        onRefresh={refreshJob}
+        refreshing={refreshing}
+        onSelectArtifacts={() => setActiveTab('artifacts')}
+      />
       
       <ResubmitModal
         isOpen={showResubmitModal}
@@ -631,6 +697,263 @@ export default function JobDetailClient() {
       </div>
     </div>
   )
+}
+
+interface JobOverviewProps {
+  job: Job
+  workflow?: Workflow | null
+  stepsSummary: StepsSummary
+  artifactCount: number
+  jobDuration?: JobDurationInfo | null
+  lastUpdatedLabel?: string | null
+  lastRefreshedLabel?: string | null
+  onRefresh?: () => void | Promise<void>
+  refreshing?: boolean
+  onSelectArtifacts?: () => void
+}
+
+interface StepsSummary {
+  total: number
+  completed: number
+  failed: number
+  running: number
+  pending: number
+}
+
+interface JobDurationInfo {
+  seconds: number
+  label: string
+  isLive: boolean
+}
+
+function JobOverview({
+  job,
+  workflow,
+  stepsSummary,
+  artifactCount,
+  jobDuration,
+  lastUpdatedLabel,
+  lastRefreshedLabel,
+  onRefresh,
+  refreshing,
+  onSelectArtifacts,
+}: JobOverviewProps) {
+  const progressPercent = stepsSummary.total ? Math.round((stepsSummary.completed / stepsSummary.total) * 100) : 0
+  const stepStatusCopy = (() => {
+    if (stepsSummary.failed > 0) return `${stepsSummary.failed} failed`
+    if (stepsSummary.running > 0) return `${stepsSummary.running} running`
+    if (stepsSummary.pending > 0) return `${stepsSummary.pending} queued`
+    if (stepsSummary.total === 0) return 'No workflow steps'
+    return 'All steps completed'
+  })()
+
+  const updatedDisplay = lastUpdatedLabel ?? (job.created_at ? formatRelativeTime(job.created_at) : null)
+  const startLabel = job.started_at ? formatRelativeTime(job.started_at) : null
+  const completedLabel = job.completed_at ? formatRelativeTime(job.completed_at) : null
+  const isAutoUpdating = job.status === 'processing'
+
+  const handleCopyJobId = async () => {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(job.job_id)
+        toast.success('Job ID copied')
+      } else {
+        throw new Error('Clipboard API not available')
+      }
+    } catch {
+      toast.error('Unable to copy job ID')
+    }
+  }
+
+  const handleRefresh = () => {
+    onRefresh?.()
+  }
+
+  const handleViewArtifacts = () => {
+    if (artifactCount === 0) {
+      return
+    }
+    onSelectArtifacts?.()
+    if (typeof window !== 'undefined') {
+      window.requestAnimationFrame(() => {
+        document.getElementById('job-tab-panel-artifacts')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      })
+    }
+  }
+
+  return (
+    <section className="mb-4 sm:mb-6">
+      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6 space-y-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 flex-wrap text-xs font-medium uppercase tracking-wide text-gray-600">
+              <StatusBadge status={job.status} />
+              {isAutoUpdating && (
+                <span className="rounded-full bg-primary-50 px-2 py-0.5 text-primary-700">Live updating</span>
+              )}
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Job ID</p>
+              <div className="mt-1 flex items-center gap-2 flex-wrap">
+                <span className="text-2xl font-semibold text-gray-900 break-all">{job.job_id}</span>
+                <button
+                  type="button"
+                  onClick={handleCopyJobId}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50"
+                >
+                  <FiCopy className="h-3.5 w-3.5" />
+                  Copy ID
+                </button>
+              </div>
+            </div>
+            <div className="text-sm text-gray-500">
+              {updatedDisplay ? (
+                <span>Updated {updatedDisplay}</span>
+              ) : (
+                <span>Waiting for first update</span>
+              )}
+              {lastRefreshedLabel && (
+                <>
+                  <span className="mx-2 text-gray-300">•</span>
+                  <span>Viewed {lastRefreshedLabel}</span>
+                </>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <FiRefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin text-primary-600' : ''}`} />
+              {refreshing ? 'Refreshing...' : 'Refresh data'}
+            </button>
+          </div>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-4 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Step Progress</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {stepsSummary.completed}/{stepsSummary.total || '--'}
+                </p>
+                <p className="text-sm text-gray-600">{stepStatusCopy}</p>
+              </div>
+              <span className="inline-flex rounded-full bg-blue-100 p-3 text-blue-700">
+                <FiActivity className="h-5 w-5" aria-hidden="true" />
+              </span>
+            </div>
+            <div className="mt-3 h-2 w-full rounded-full bg-white">
+              <span
+                className="block h-full rounded-full bg-primary-500 transition-all"
+                style={{ width: `${progressPercent}%` }}
+                aria-label={`Step progress ${progressPercent}%`}
+              />
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Runtime</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {jobDuration?.label || (job.started_at ? 'Initializing...' : 'Not started')}
+                </p>
+                <p className="text-sm text-gray-600">
+                  {completedLabel
+                    ? `Completed ${completedLabel}`
+                    : startLabel
+                      ? `Started ${startLabel}`
+                      : 'Waiting for worker'}
+                </p>
+              </div>
+              <span className="inline-flex rounded-full bg-orange-100 p-3 text-orange-700">
+                <FiClock className="h-5 w-5" aria-hidden="true" />
+              </span>
+            </div>
+            {jobDuration?.isLive && (
+              <span className="mt-3 inline-flex items-center gap-1 rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">
+                <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                Live
+              </span>
+            )}
+          </div>
+
+          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Artifacts</p>
+                <p className="text-lg font-semibold text-gray-900">{artifactCount}</p>
+                <p className="text-sm text-gray-600">
+                  {artifactCount ? 'Artifacts ready to review' : 'Generated assets will appear here'}
+                </p>
+              </div>
+              <span className="inline-flex rounded-full bg-purple-100 p-3 text-purple-700">
+                <FiImage className="h-5 w-5" aria-hidden="true" />
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleViewArtifacts}
+              disabled={artifactCount === 0}
+              className="mt-3 inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <FiExternalLink className="h-4 w-4" aria-hidden="true" />
+              Open gallery
+            </button>
+          </div>
+
+          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Workflow</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {workflow?.workflow_name || 'Workflow template'}
+                </p>
+                <p className="text-sm text-gray-600">
+                  {workflow?.steps?.length ? `${workflow.steps.length} configured steps` : 'Workflow metadata unavailable'}
+                </p>
+              </div>
+              <span className="inline-flex rounded-full bg-indigo-100 p-3 text-indigo-700">
+                <FiLayers className="h-5 w-5" aria-hidden="true" />
+              </span>
+            </div>
+            {workflow?.workflow_id ? (
+              <Link
+                href={`/dashboard/workflows/${workflow.workflow_id}`}
+                className="mt-3 inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
+              >
+                <FiExternalLink className="h-4 w-4" aria-hidden="true" />
+                View template
+              </Link>
+            ) : (
+              <p className="mt-3 text-sm text-gray-500">Workflow details not available for this job</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function getJobDuration(job?: Job | null): JobDurationInfo | null {
+  if (!job?.started_at) {
+    return null
+  }
+
+  const start = new Date(job.started_at).getTime()
+  const endTimestamp = job.completed_at || job.failed_at ? new Date(job.completed_at || job.failed_at || '').getTime() : Date.now()
+  const seconds = Math.max(0, Math.round((endTimestamp - start) / 1000))
+
+  return {
+    seconds,
+    label: formatDuration(seconds),
+    isLive: !job.completed_at && !job.failed_at && job.status === 'processing',
+  }
 }
 
 type TabKey = 'execution' | 'artifacts' | 'raw'

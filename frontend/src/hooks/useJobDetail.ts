@@ -60,10 +60,12 @@ export function useJobDetail() {
   const [submission, setSubmission] = useState<FormSubmission | null>(null)
   const [form, setForm] = useState<Form | null>(null)
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [resubmitting, setResubmitting] = useState(false)
   const [rerunningStep, setRerunningStep] = useState<number | null>(null)
   const [executionStepsError, setExecutionStepsError] = useState<string | null>(null)
+  const [lastLoadedAt, setLastLoadedAt] = useState<Date | null>(null)
   
   // Load execution steps from API (proxied from S3)
   const loadExecutionSteps = useCallback(async (jobData?: Job) => {
@@ -162,6 +164,7 @@ export function useJobDetail() {
       }
       
       setJob(data)
+      setLastLoadedAt(new Date())
       
       // Load workflow details if workflow_id exists
       if (data.workflow_id) {
@@ -206,6 +209,15 @@ export function useJobDetail() {
       setLoading(false)
     }
   }, [jobId])
+
+  const refreshJob = useCallback(async () => {
+    setRefreshing(true)
+    try {
+      await loadJob()
+    } finally {
+      setRefreshing(false)
+    }
+  }, [loadJob])
 
   // Update jobId when params change (for client-side navigation)
   useEffect(() => {
@@ -335,6 +347,9 @@ export function useJobDetail() {
     rerunningStep,
     handleRerunStep,
     executionStepsError,
+    refreshJob,
+    refreshing,
+    lastLoadedAt,
   }
 }
 
