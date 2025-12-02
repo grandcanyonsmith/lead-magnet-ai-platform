@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
-import { WorkflowStep } from '../utils/workflowMigration';
-import { formatShortModelDescriptionsList } from '../utils/modelDescriptions';
+import { WorkflowStep } from './workflow/workflowConfigSupport';
+import { formatShortModelDescriptionsList } from './workflow/modelDescriptions';
 
 export interface AIStepGenerationRequest {
   userPrompt: string;

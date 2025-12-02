@@ -27,11 +27,9 @@ This directory contains utility functions and helpers used throughout the API co
 
 ### Workflow Utilities
 
-- **`workflowPromptBuilder.ts`** - Builds prompts for workflow generation
-- **`workflowConfigParser.ts`** - Parses AI-generated workflow configurations
-- **`workflowMigration.ts`** - Legacy workflow format migration utilities
 - **`dependencyResolver.ts`** - Dependency graph resolution for workflow steps
 - **`executionStepsUtils.ts`** - Execution steps URL generation
+- _Workflow prompt, ICP, and configuration helpers now live under `../services/workflow/` to stay closer to the domain services._
 
 ### Form Utilities
 
@@ -48,8 +46,7 @@ This directory contains utility functions and helpers used throughout the API co
 
 ### External Data
 
-- **`icpFetcher.ts`** - ICP (Ideal Customer Profile) document fetching
-- **`jobProcessingUtils.ts`** - Job processing utilities
+- _Job processing utilities moved to `../services/workflow/workflowJobProcessingService.ts`._
 
 ## Usage Patterns
 
