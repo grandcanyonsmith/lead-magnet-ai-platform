@@ -21,12 +21,15 @@ function resolveWorkerPath(workerPath: string): string {
   
   // Get the project root (where backend/ folder is)
   // __dirname in compiled JS will be backend/api/dist/services
-  // So we need to go up: dist -> services -> api -> backend -> root
-  const apiDistDir = dirname(__dirname); // backend/api/dist
-  const apiDir = dirname(apiDistDir); // backend/api
-  const projectRoot = dirname(apiDir); // backend -> project root
+  // So we need to go up: services -> dist -> api -> backend -> project root
+  const servicesDir = __dirname; // backend/api/dist/services
+  const distDir = dirname(servicesDir); // backend/api/dist
+  const apiDir = dirname(distDir); // backend/api
+  const backendDir = dirname(apiDir); // backend
+  const projectRoot = dirname(backendDir); // project root (where backend/ folder is)
   
   // Resolve worker path relative to project root
+  // workerPath is like './backend/worker/worker.py'
   return resolve(projectRoot, workerPath);
 }
 
