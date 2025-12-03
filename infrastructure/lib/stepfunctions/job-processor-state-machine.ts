@@ -360,11 +360,15 @@ export function createJobProcessorStateMachine(
   // Check if this is a single-step rerun (action === 'process_single_step' or 'process_single_step_and_continue')
   // If yes, route directly to processStepSingle with the provided step_index
   // If no, continue with normal workflow initialization flow
+  // Note: We check if action exists and equals the rerun values, otherwise default to normal flow
   const checkAction = new sfn.Choice(scope, 'CheckAction')
     .when(
-      sfn.Condition.or(
-        sfn.Condition.stringEquals('$.action', 'process_single_step'),
-        sfn.Condition.stringEquals('$.action', 'process_single_step_and_continue')
+      sfn.Condition.and(
+        sfn.Condition.isPresent('$.action'),
+        sfn.Condition.or(
+          sfn.Condition.stringEquals('$.action', 'process_single_step'),
+          sfn.Condition.stringEquals('$.action', 'process_single_step_and_continue')
+        )
       ),
       // Single-step rerun path: processStepSingle -> checkStepResultSingleStepContinue
       processStepSingle.next(checkStepResultSingleStepContinue)
