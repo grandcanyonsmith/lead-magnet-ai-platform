@@ -2,7 +2,7 @@ import { APIGatewayProxyEventV2, APIGatewayProxyResultV2, Context } from 'aws-la
 import { routerHandler } from './routes/index';
 import { handleError } from './utils/errors';
 import { logger } from './utils/logger';
-import { handleWorkflowGenerationJob } from './handlers/workflowGenerationHandler';
+import { handleWorkflowGenerationJob } from '@domains/workflows/handlers/workflowGenerationHandler';
 import { handleCORS } from './cors-handler';
 import { addSecurityHeaders } from './middleware/securityHeaders';
 

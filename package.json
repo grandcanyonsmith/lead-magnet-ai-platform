@@ -19,7 +19,11 @@
     "start": "npm run start:deploy --workspace frontend",
     "deploy:infra": "cd infrastructure && npm run deploy",
     "test:all": "npm run test --workspaces",
-    "lint:all": "npm run lint --workspaces"
+    "lint:all": "npm run lint --workspaces",
+    "lint": "npm run lint --workspaces",
+    "test": "npm run test --workspaces && cd backend/worker && pytest",
+    "format": "npm run format --workspace backend/api && npx prettier --write \"frontend/src/**/*.{ts,tsx,js,jsx,json,md}\"",
+    "build:context": "node scripts/build-context.js"
   },
   "keywords": [
     "lead-magnet",

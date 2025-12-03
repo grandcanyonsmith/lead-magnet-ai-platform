@@ -46,6 +46,17 @@ This platform enables business owners to create and manage AI-powered lead magne
 - 🤖 **AI SMS Generation** - Optionally have AI generate SMS content based on lead magnet context
 - 🔄 **CI/CD Ready** - GitHub Actions workflows included
 
+## 🧭 Architecture at a Glance
+
+| Pillar | What to read first | Context Pack |
+| --- | --- | --- |
+| Backend API | `backend/api` TypeScript Lambda powering `/admin/*` and `/v1/forms/*`. | [`docs/context-packs/backend/CONTEXT.md`](docs/context-packs/backend/CONTEXT.md) |
+| Worker | Python workflow runner invoked by Step Functions. | [`docs/context-packs/worker/CONTEXT.md`](docs/context-packs/worker/CONTEXT.md) |
+| Infrastructure | AWS CDK definitions for API Gateway, DynamoDB, Step Functions, buckets, alarms. | [`docs/context-packs/infrastructure/CONTEXT.md`](docs/context-packs/infrastructure/CONTEXT.md) |
+| Workflow Automation | Cross-layer guidance for workflow CRUD + generation flows. | [`docs/context-packs/workflows/CONTEXT.md`](docs/context-packs/workflows/CONTEXT.md) |
+
+For endpoint specifics, see [`docs/contracts/README.md`](docs/contracts/README.md); for typed HTTP mappings, see `frontend/src/lib/api/contracts.ts`. Testing playbooks now live under [`docs/testing/`](docs/testing/README.md).
+
 ## 🚀 How It Works
 
 ### Complete Flow
@@ -240,7 +251,7 @@ lead-magnent-ai/
 
 **Additional Guides:**
 - **[Local Development](./LOCAL_DEVELOPMENT.md)** - Local development setup
-- **[Frontend Test Guide](./FRONTEND_TEST_GUIDE.md)** - Frontend testing guide
+- **[Frontend Test Guide](./docs/testing/FRONTEND_TEST_GUIDE.md)** - Frontend testing guide
 - **[GitHub Secrets Setup](./GITHUB_SECRETS_SETUP.md)** - GitHub Actions secrets configuration
 - **[Quick GitHub Setup](./QUICK_GITHUB_SETUP.md)** - Quick GitHub repository setup
 - **[Lambda Build Options](./LAMBDA_BUILD_OPTIONS.md)** - Lambda build and deployment options
