@@ -138,6 +138,23 @@ export function createJobProcessorStateMachine(
     errors: ['States.ALL'],
   });
 
+  // Process HTML generation step for continue-after-rerun path (separate state to avoid "already has next" error)
+  const processHtmlGenerationContinue = new tasks.LambdaInvoke(scope, 'ProcessHtmlGenerationContinue', {
+    lambdaFunction: jobProcessorLambda,
+    payload: sfn.TaskInput.fromObject({
+      'job_id': sfn.JsonPath.stringAt('$.job_id'),
+      'step_type': 'html_generation',
+    }),
+    resultPath: '$.htmlResult',
+    retryOnServiceExceptions: false,
+  });
+
+  // Add error handling for HTML generation failures
+  processHtmlGenerationContinue.addCatch(parseErrorLegacy, {
+    resultPath: '$.error',
+    errors: ['States.ALL'],
+  });
+
   // Create reusable finalize job task using helper
   const finalizeJob = createJobFinalizer(scope, 'FinalizeJob', jobsTable);
 
@@ -288,6 +305,24 @@ export function createJobProcessorStateMachine(
     resultPath: '$.workflowData',
   });
 
+  // Check if more steps remain after rerun (for continue path)
+  // After setupContinuePath, we route to incrementStep which will handle the normal workflow loop
+  // Defined before setHasTemplateTrueContinue/setHasTemplateFalseContinue because it's referenced there
+  const checkMoreStepsAfterRerun = new sfn.Choice(scope, 'CheckMoreStepsAfterRerun')
+    .when(
+      sfn.Condition.numberLessThanJsonPath('$.step_index', '$.total_steps'),
+      processStepContinue.next(checkStepResult)  // Continue with next step, then incrementStep will handle the loop
+    )
+    .otherwise(
+      // All steps complete - check if HTML generation is needed
+      new sfn.Choice(scope, 'CheckIfHtmlNeededAfterRerun')
+        .when(
+          sfn.Condition.booleanEquals('$.has_template', true),
+          processHtmlGenerationContinue.next(checkHtmlResult)
+        )
+        .otherwise(finalizeJob)
+    );
+
   // Set has_template for continue path when template exists
   const setHasTemplateTrueContinue = new sfn.Pass(scope, 'SetHasTemplateTrueContinue', {
     parameters: {
@@ -302,7 +337,7 @@ export function createJobProcessorStateMachine(
       'workflowData.$': '$.workflowData',
     },
     resultPath: '$',
-  });
+  }).next(checkMoreStepsAfterRerun);
 
   // Set has_template for continue path when template doesn't exist
   const setHasTemplateFalseContinue = new sfn.Pass(scope, 'SetHasTemplateFalseContinue', {
@@ -318,7 +353,7 @@ export function createJobProcessorStateMachine(
       'workflowData.$': '$.workflowData',
     },
     resultPath: '$',
-  });
+  }).next(checkMoreStepsAfterRerun);
 
   // Check if template exists for continue path
   const checkTemplateExistsContinue = new sfn.Choice(scope, 'CheckTemplateExistsContinue')
@@ -342,24 +377,6 @@ export function createJobProcessorStateMachine(
     resultPath: '$',
   }).next(checkTemplateExistsContinue);
 
-  // Check if more steps remain after rerun (for continue path)
-  // Use processStepContinue (separate state) to avoid "already has next" error with processStep
-  // Defined before checkStepResultSingleStepContinue because it's referenced there
-  const checkMoreStepsAfterRerun = new sfn.Choice(scope, 'CheckMoreStepsAfterRerun')
-    .when(
-      sfn.Condition.numberLessThanJsonPath('$.step_index', '$.total_steps'),
-      processStepContinue.next(checkStepResult)  // Use separate state for continue path
-    )
-    .otherwise(
-      // All steps complete - check if HTML generation is needed
-      new sfn.Choice(scope, 'CheckIfHtmlNeededAfterRerun')
-        .when(
-          sfn.Condition.booleanEquals('$.has_template', true),
-          processHtmlGeneration.next(checkHtmlResult)
-        )
-        .otherwise(finalizeJob)
-    );
-
   // Check step result for single-step rerun with continue option
   const checkStepResultSingleStepContinue = new sfn.Choice(scope, 'CheckStepResultSingleStepContinue')
     .when(
@@ -372,7 +389,7 @@ export function createJobProcessorStateMachine(
         .when(
           sfn.Condition.booleanEquals('$.continue_after', true),
           // Load workflow data and continue with remaining steps
-          loadWorkflowForContinue.next(setupContinuePath).next(checkMoreStepsAfterRerun)
+          loadWorkflowForContinue.next(setupContinuePath)
         )
         .otherwise(finalizeJob)  // Just finalize if not continuing
     );
@@ -380,15 +397,11 @@ export function createJobProcessorStateMachine(
   // Check if this is a single-step rerun (action === 'process_single_step' or 'process_single_step_and_continue')
   // If yes, route directly to processStepSingle with the provided step_index
   // If no, continue with normal workflow initialization flow
-  // Note: We check if action exists and equals the rerun values, otherwise default to normal flow
   const checkAction = new sfn.Choice(scope, 'CheckAction')
     .when(
-      sfn.Condition.and(
-        sfn.Condition.isPresent('$.action'),
-        sfn.Condition.or(
-          sfn.Condition.stringEquals('$.action', 'process_single_step'),
-          sfn.Condition.stringEquals('$.action', 'process_single_step_and_continue')
-        )
+      sfn.Condition.or(
+        sfn.Condition.stringEquals('$.action', 'process_single_step'),
+        sfn.Condition.stringEquals('$.action', 'process_single_step_and_continue')
       ),
       // Single-step rerun path: processStepSingle -> checkStepResultSingleStepContinue
       processStepSingle.next(checkStepResultSingleStepContinue)
