@@ -126,7 +126,7 @@ See [Contributing Guide](./CONTRIBUTING.md) for documentation contribution guide
 
 - [Root README](../readme.md) - Project overview
 - [Local Development Guide](../LOCAL_DEVELOPMENT.md) - Local setup
-- [Frontend Test Guide](../FRONTEND_TEST_GUIDE.md) - Frontend testing
+- [Frontend Test Guide](./testing/FRONTEND_TEST_GUIDE.md) - Frontend testing
 
 ---
 

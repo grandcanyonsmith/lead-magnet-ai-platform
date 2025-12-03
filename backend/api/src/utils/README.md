@@ -29,7 +29,7 @@ This directory contains utility functions and helpers used throughout the API co
 
 - **`dependencyResolver.ts`** - Dependency graph resolution for workflow steps
 - **`executionStepsUtils.ts`** - Execution steps URL generation
-- _Workflow prompt, ICP, and configuration helpers now live under `../services/workflow/` to stay closer to the domain services._
+- _Workflow prompt, ICP, and configuration helpers now live under `../domains/workflows/services/workflow/` to stay closer to the domain services._
 
 ### Form Utilities
 
@@ -46,7 +46,7 @@ This directory contains utility functions and helpers used throughout the API co
 
 ### External Data
 
-- _Job processing utilities moved to `../services/workflow/workflowJobProcessingService.ts`._
+- _Job processing utilities moved to `../domains/workflows/services/workflow/workflowJobProcessingService.ts`._
 
 ## Usage Patterns
 

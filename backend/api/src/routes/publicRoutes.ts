@@ -1,4 +1,4 @@
-import { formsController } from '../controllers/forms';
+import { formsController } from '@domains/forms';
 import { jobsController } from '../controllers/jobs';
 import { webhooksController } from '../controllers/webhooks';
 import { openAIWebhookController } from '../controllers/openaiWebhookController';
