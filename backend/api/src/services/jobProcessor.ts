@@ -1,5 +1,6 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { resolve, dirname, isAbsolute } from 'path';
 import { db } from '../utils/db';
 import { logger } from '../utils/logger';
 import { env } from '../utils/env';
@@ -7,6 +8,27 @@ import { env } from '../utils/env';
 const execAsync = promisify(exec);
 
 const JOBS_TABLE = env.jobsTable;
+
+/**
+ * Resolve worker script path relative to project root.
+ * Works whether running from root or backend/api directory.
+ */
+function resolveWorkerPath(workerPath: string): string {
+  // If path is absolute, use as-is
+  if (isAbsolute(workerPath)) {
+    return workerPath;
+  }
+  
+  // Get the project root (where backend/ folder is)
+  // __dirname in compiled JS will be backend/api/dist/services
+  // So we need to go up: dist -> services -> api -> backend -> root
+  const apiDistDir = dirname(__dirname); // backend/api/dist
+  const apiDir = dirname(apiDistDir); // backend/api
+  const projectRoot = dirname(apiDir); // backend -> project root
+  
+  // Resolve worker path relative to project root
+  return resolve(projectRoot, workerPath);
+}
 
 /**
  * Process a job locally by calling the Python worker script
@@ -27,13 +49,22 @@ export async function processJobLocally(
       updated_at: new Date().toISOString(),
     });
 
-    // Try to call Python worker script if it exists
-    const workerPath = env.workerScriptPath;
+    // Resolve worker script path relative to project root
+    const workerPath = resolveWorkerPath(env.workerScriptPath);
+    const workerDir = dirname(workerPath);
+    
+    logger.info('[Local Job Processor] Resolved worker path', { 
+      jobId, 
+      workerPath,
+      workerDir,
+      cwd: process.cwd()
+    });
     
     try {
       // Set JOB_ID environment variable and run worker
-      const { stdout, stderr } = await execAsync(`JOB_ID=${jobId} python3 ${workerPath}`, {
-        cwd: process.cwd(),
+      // Run from worker directory so Python imports work correctly
+      const { stdout, stderr } = await execAsync(`python3 ${workerPath}`, {
+        cwd: workerDir,
         env: { ...process.env, JOB_ID: jobId },
         timeout: 300000, // 5 minute timeout
       });

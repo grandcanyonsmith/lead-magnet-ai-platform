@@ -23,6 +23,8 @@ process.env.LAMBDA_FUNCTION_NAME = process.env.LAMBDA_FUNCTION_NAME || 'leadmagn
 process.env.AWS_ACCOUNT_ID = process.env.AWS_ACCOUNT_ID || '471112574622';
 process.env.STEP_FUNCTIONS_ARN = process.env.STEP_FUNCTIONS_ARN || 'arn:aws:states:us-east-1:471112574622:stateMachine:leadmagnet-job-processor';
 process.env.ARTIFACTS_BUCKET = process.env.ARTIFACTS_BUCKET || 'leadmagnet-artifacts-471112574622';
+process.env.IS_LOCAL = process.env.IS_LOCAL || 'true';
+process.env.NODE_ENV = process.env.NODE_ENV || 'development';
 
 // Now import modules after environment variables are set
 const express = require('express');
