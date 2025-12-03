@@ -38,7 +38,7 @@ export default function JobDetailClient() {
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false)
   const [showRerunDialog, setShowRerunDialog] = useState(false)
   const [stepIndexForRerun, setStepIndexForRerun] = useState<number | null>(null)
-  const [showDetails, setShowDetails] = useState(false)
+  const [showDetails, setShowDetails] = useState(true)
   const latestStepUpdateRef = useRef<WorkflowStep | null>(null)
   const {
     job,
@@ -513,7 +513,14 @@ export default function JobDetailClient() {
           {showDetails && (
             <div className="px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-200">
               <div className="pt-4 sm:pt-6">
-                <JobDetails job={job} workflow={workflow} hideContainer={true} />
+                <JobDetails 
+                  job={job} 
+                  workflow={workflow} 
+                  hideContainer={true}
+                  submission={submission}
+                  onRerun={handleResubmitClick}
+                  rerunning={resubmitting}
+                />
               </div>
             </div>
           )}

@@ -15,7 +15,12 @@ export class SubmissionsClient extends BaseApiClient {
   }
 
   async getSubmission(id: string): Promise<FormSubmission> {
-    return this.get<FormSubmission>(`/admin/submissions/${id}`)
+    const data = await this.get<any>(`/admin/submissions/${id}`)
+    // Map submission_data to form_data for frontend compatibility
+    return {
+      ...data,
+      form_data: data.submission_data || data.form_data || {},
+    } as FormSubmission
   }
 }
 

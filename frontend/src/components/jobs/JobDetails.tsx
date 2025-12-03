@@ -9,6 +9,7 @@ import {
   FiFileText,
   FiLayers,
   FiLoader,
+  FiRefreshCw,
 } from 'react-icons/fi'
 import { toast } from 'react-hot-toast'
 import { formatDurationSeconds, formatRelativeTime } from '@/utils/jobFormatting'
@@ -19,14 +20,18 @@ import { KeyValueItem, KeyValueList } from '@/components/ui/KeyValueList'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import type { Job } from '@/types/job'
 import type { Workflow } from '@/types/workflow'
+import type { FormSubmission } from '@/types/form'
 
 interface JobDetailsProps {
   job: Job
   workflow: Workflow | null
   hideContainer?: boolean
+  submission?: FormSubmission | null
+  onRerun?: () => void
+  rerunning?: boolean
 }
 
-export function JobDetails({ job, workflow, hideContainer = false }: JobDetailsProps) {
+export function JobDetails({ job, workflow, hideContainer = false, submission, onRerun, rerunning = false }: JobDetailsProps) {
   const router = useRouter()
   const [loadingDocument, setLoadingDocument] = useState(false)
 
@@ -197,12 +202,6 @@ export function JobDetails({ job, workflow, hideContainer = false }: JobDetailsP
   }>
 
   const infoItems: KeyValueItem[] = [
-    {
-      label: 'Job ID',
-      value: <code className="text-sm font-semibold text-gray-900">{job.job_id}</code>,
-      helperText: 'Reference this when reaching out to support.',
-      copyValue: job.job_id,
-    },
     job.workflow_id
       ? {
           label: 'Workflow',
@@ -303,9 +302,23 @@ export function JobDetails({ job, workflow, hideContainer = false }: JobDetailsP
             )}
           </div>
         </div>
-        <div className="text-xs text-gray-500">
-          Started {formatRelativeTime(job.created_at)}
-          <span className="ml-1 text-gray-400">({createdAt.toLocaleString()})</span>
+        <div className="flex items-center gap-3">
+          {onRerun && job.submission_id && (
+            <button
+              type="button"
+              onClick={onRerun}
+              disabled={rerunning}
+              className="inline-flex items-center gap-2 rounded-lg border border-primary-600 bg-white px-3 py-2 text-sm font-semibold text-primary-700 transition-colors hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-60"
+              title="Rerun this job with the same form submission data"
+            >
+              <FiRefreshCw className={`h-4 w-4 ${rerunning ? 'animate-spin' : ''}`} />
+              {rerunning ? 'Rerunning...' : 'Rerun'}
+            </button>
+          )}
+          <div className="text-xs text-gray-500">
+            Started {formatRelativeTime(job.created_at)}
+            <span className="ml-1 text-gray-400">({createdAt.toLocaleString()})</span>
+          </div>
         </div>
       </div>
 
@@ -328,6 +341,50 @@ export function JobDetails({ job, workflow, hideContainer = false }: JobDetailsP
 
       {infoItems.length > 0 && (
         <KeyValueList items={infoItems} columns={2} onCopy={handleCopyValue} />
+      )}
+
+      {submission?.form_data && Object.keys(submission.form_data).length > 0 && (
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
+          <div className="flex flex-col gap-3 p-4 sm:p-6 md:flex-row md:items-center md:justify-between border-b border-gray-100">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Form Submission</p>
+              <h3 className="text-lg font-semibold text-gray-900 mt-1">Submitted Answers</h3>
+              {submission.created_at && (
+                <p className="text-sm text-gray-500 mt-1">Submitted {formatRelativeTime(submission.created_at)}</p>
+              )}
+            </div>
+            {onRerun && (
+              <button
+                type="button"
+                onClick={onRerun}
+                disabled={rerunning}
+                className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
+                title="Rerun this job with the same form submission data"
+              >
+                <FiRefreshCw className={`h-4 w-4 ${rerunning ? 'animate-spin' : ''}`} />
+                {rerunning ? 'Rerunning...' : 'Rerun Job'}
+              </button>
+            )}
+          </div>
+          <dl className="divide-y divide-gray-100">
+            {Object.entries(submission.form_data).map(([key, value]) => (
+              <div key={key} className="px-4 py-3 sm:px-6 sm:py-4">
+                <dt className="text-sm font-medium text-gray-700 capitalize">
+                  {key.replace(/_/g, ' ')}
+                </dt>
+                <dd className="mt-1 text-sm text-gray-900 break-words">
+                  {typeof value === 'string' ? value : JSON.stringify(value, null, 2)}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      )}
+      
+      {submission && (!submission.form_data || Object.keys(submission.form_data).length === 0) && (
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
+          <p className="text-sm text-gray-500">No form submission data available for this job.</p>
+        </div>
       )}
 
       {job.status === 'failed' && job.error_message && (
