@@ -204,14 +204,6 @@ export function createJobProcessorStateMachine(
     )
     .otherwise(incrementStep);
 
-  // Check step result for single-step rerun (goes directly to finalizeJob instead of incrementing)
-  const checkStepResultSingleStep = new sfn.Choice(scope, 'CheckStepResultSingleStep')
-    .when(
-      sfn.Condition.booleanEquals('$.processResult.Payload.success', false),
-      handleStepFailure
-    )
-    .otherwise(finalizeJob);
-
   // Resolve step dependencies - calls Lambda to build execution plan
   const resolveDependencies = new tasks.LambdaInvoke(scope, 'ResolveDependencies', {
     lambdaFunction: jobProcessorLambda,
