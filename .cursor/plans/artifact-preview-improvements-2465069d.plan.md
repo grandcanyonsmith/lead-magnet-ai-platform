@@ -1,4 +1,18 @@
-<!-- 2465069d-b8e4-4a02-bc42-bb3810d9cbd9 00d331b9-03b6-4b18-9832-b9dd13678403 -->
+---
+name: Artifact Preview Improvements
+overview: ""
+todos:
+  - id: 51d38421-4127-4bfb-8292-cabd04210e51
+    content: Add HTML extraction logic in PreviewRenderer.tsx to extract content from ```html ``` code blocks
+    status: pending
+  - id: c293740c-7412-4815-8b12-5a6a52f1009f
+    content: Change ArtifactPreview.tsx to default showPreview to true instead of false
+    status: pending
+  - id: 4aa57f63-99c4-4f9c-b158-36c946a4079a
+    content: Truncate long URLs in StepInputOutput.tsx for both image URLs and artifact URLs
+    status: pending
+---
+
 # Artifact Preview Improvements
 
 ## Changes
@@ -26,9 +40,3 @@
 - Show generated images (from `image_urls` or `imageArtifacts`) in the same area as artifacts, outside the Input & Output section
 - Display images in a preview format that's visible by default, similar to how artifacts are now shown
 - This allows users to quickly see generated images without expanding the Input & Output section
-
-### To-dos
-
-- [ ] Add HTML extraction logic in PreviewRenderer.tsx to extract content from ```html ``` code blocks
-- [ ] Change ArtifactPreview.tsx to default showPreview to true instead of false
-- [ ] Truncate long URLs in StepInputOutput.tsx for both image URLs and artifact URLs

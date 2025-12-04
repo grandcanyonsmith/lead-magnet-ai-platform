@@ -66,7 +66,6 @@ function createJobProcessorStateMachine(scope, props) {
         resultPath: '$.updateResult',
     });
     // Create error handlers using helper functions
-    const handleStepFailure = (0, error_handlers_1.createStepFailureHandler)(scope, jobsTable);
     const handleHtmlGenerationFailure = (0, error_handlers_1.createHtmlGenerationFailureHandler)(scope, jobsTable);
     const parseErrorLegacy = (0, error_handlers_1.createExceptionHandlerChain)(scope, 'ParseErrorLegacy', jobsTable, false);
     const parseErrorStep = (0, error_handlers_1.createExceptionHandlerChain)(scope, 'ParseErrorStep', jobsTable, true);
@@ -157,11 +156,11 @@ function createJobProcessorStateMachine(scope, props) {
         resultPath: '$',
     }).next(checkMoreSteps);
     const checkStepResult = new sfn.Choice(scope, 'CheckStepResult')
-        .when(sfn.Condition.booleanEquals('$.processResult.Payload.success', false), handleStepFailure)
+        .when(sfn.Condition.booleanEquals('$.processResult.Payload.success', false), incrementStep)
         .otherwise(incrementStep);
-    // Check step result for single-step rerun (goes directly to finalizeJob instead of incrementing)
+    // Check step result for single-step rerun (kept for backward compatibility; always finalize)
     const checkStepResultSingleStep = new sfn.Choice(scope, 'CheckStepResultSingleStep')
-        .when(sfn.Condition.booleanEquals('$.processResult.Payload.success', false), handleStepFailure)
+        .when(sfn.Condition.booleanEquals('$.processResult.Payload.success', false), finalizeJob)
         .otherwise(finalizeJob);
     // Resolve step dependencies - calls Lambda to build execution plan
     const resolveDependencies = new tasks.LambdaInvoke(scope, 'ResolveDependencies', {
@@ -302,17 +301,14 @@ function createJobProcessorStateMachine(scope, props) {
     new sfn.Choice(scope, 'CheckIfHtmlNeededAfterRerun')
         .when(sfn.Condition.booleanEquals('$.has_template', true), processHtmlGeneration.next(checkHtmlResult))
         .otherwise(finalizeJob));
-    // Check step result for single-step rerun with continue option
-    const checkStepResultSingleStepContinue = new sfn.Choice(scope, 'CheckStepResultSingleStepContinue')
-        .when(sfn.Condition.booleanEquals('$.processResult.Payload.success', false), handleStepFailure)
-        .otherwise(
-    // Step succeeded - check if we should continue
-    new sfn.Choice(scope, 'CheckContinueAfterRerun')
+    // Decide whether to continue after single-step rerun, regardless of step success
+    const checkContinueAfterRerun = new sfn.Choice(scope, 'CheckContinueAfterRerun')
         .when(sfn.Condition.booleanEquals('$.continue_after', true), 
     // Load workflow data and continue with remaining steps
     loadWorkflowForContinue.next(setupContinuePath).next(checkMoreStepsAfterRerun))
-        .otherwise(finalizeJob) // Just finalize if not continuing
-    );
+        .otherwise(finalizeJob); // Just finalize if not continuing
+    const checkStepResultSingleStepContinue = new sfn.Pass(scope, 'CheckStepResultSingleStepContinue')
+        .next(checkContinueAfterRerun);
     // Check if this is a single-step rerun (action === 'process_single_step' or 'process_single_step_and_continue')
     // If yes, route directly to processStepSingle with the provided step_index
     // If no, continue with normal workflow initialization flow
