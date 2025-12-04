@@ -108,7 +108,7 @@ class DeliveryService:
         artifact_content = self._extract_artifact_content(all_artifacts, job_id)
         
         # Build payload with dynamic values from submission data
-        submission_data = submission.get('submission_data', {})
+        submission_data = dict(submission.get('submission_data', {}) or {})
         payload = {
             'job_id': job_id,
             'status': 'completed',
@@ -125,9 +125,35 @@ class DeliveryService:
             'markdown_files': markdown_files_list,
         }
         
-        # Add artifact content to context if available
+        # Build full context including submission data and artifact text
+        submission_context_lines = []
+        for key, value in submission_data.items():
+            if isinstance(key, str) and key.lower() in ('context', 'icp'):
+                continue  # Avoid recursive context nesting
+            if value is None:
+                value_str = 'null'
+            elif isinstance(value, (dict, list)):
+                try:
+                    value_str = json.dumps(value, default=str)
+                except Exception:
+                    value_str = str(value)
+            else:
+                value_str = str(value)
+            submission_context_lines.append(f"{key}: {value_str}")
+        
+        context_sections = []
+        if submission_context_lines:
+            submission_context = "\n".join(submission_context_lines)
+            context_sections.append(f"=== Form Submission ===\n{submission_context}")
+        
         if artifact_content:
-            payload['context'] = artifact_content
+            context_sections.append(artifact_content)
+        
+        if context_sections:
+            combined_context = "\n\n".join(context_sections)
+            payload['context'] = combined_context
+            # Surface the same context inside submission_data for downstream consumers
+            payload['submission_data']['icp'] = combined_context
         
         # Merge with any additional dynamic values from submission
         for key, value in submission_data.items():

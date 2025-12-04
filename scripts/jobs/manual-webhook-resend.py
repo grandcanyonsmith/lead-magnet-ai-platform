@@ -27,13 +27,18 @@ from lib.common import (
 )
 from db_service import DynamoDBService
 from s3_service import S3Service
-from services.context_builder import ContextBuilder
+from services.webhook_step_service import WebhookStepService
 
 
-def get_job_data(job_id: str, tenant_id: str) -> Dict[str, Any]:
+def get_job_data(
+    job_id: str,
+    tenant_id: str,
+    db_service: Optional[DynamoDBService] = None,
+    s3_service: Optional[S3Service] = None,
+) -> Dict[str, Any]:
     """Get all job-related data."""
-    db_service = DynamoDBService()
-    s3_service = S3Service()
+    db_service = db_service or DynamoDBService()
+    s3_service = s3_service or S3Service()
     
     # Get job (with execution_steps from S3)
     job = db_service.get_job(job_id, s3_service=s3_service)
@@ -110,115 +115,35 @@ def build_webhook_payload(
     sorted_steps: List[Dict[str, Any]],
     step_index: int,
     data_selection: Dict[str, Any],
-    db_service: DynamoDBService
+    db_service: DynamoDBService,
+    s3_service: S3Service,
 ) -> Dict[str, Any]:
-    """Build webhook payload with proper context."""
-    payload = {}
-    
-    # Build context from submission data and previous step outputs
+    """Build webhook payload with proper context (matches production logic)."""
     submission_data = submission.get('submission_data', {})
-    initial_context_lines = []
-    for key, value in submission_data.items():
-        initial_context_lines.append(f"{key}: {value}")
+    initial_context_lines = [f"{key}: {value}" for key, value in submission_data.items()]
     initial_context = "\n".join(initial_context_lines) if initial_context_lines else ""
-    
-    # Build full context including previous step outputs
-    context = ContextBuilder.build_previous_context_from_step_outputs(
-        initial_context=initial_context,
+
+    webhook_service = WebhookStepService(db_service=db_service, s3_service=s3_service)
+    payload = webhook_service._build_webhook_payload(
+        job_id=job_id,
+        job=job,
+        submission=submission,
         step_outputs=step_outputs,
-        sorted_steps=sorted_steps
+        sorted_steps=sorted_steps,
+        step_index=step_index,
+        data_selection=data_selection,
     )
-    
+
+    context = payload.get('context') or ""
+    artifacts_count = len(payload.get('artifacts', []))
+
     print(f"✓ Built context ({len(context)} characters)")
-    print(f"  - Initial context: {len(initial_context)} characters")
+    print(f"  - Initial submission context: {len(initial_context)} characters")
     print(f"  - Previous steps: {len(step_outputs)} steps")
-    
-    # Add context at root level (for direct format)
-    payload['context'] = context
-    
-    # Include submission data if selected (default: true)
-    include_submission = data_selection.get('include_submission', True)
-    if include_submission:
-        # Create a copy of submission_data to avoid modifying the original
-        submission_data_copy = dict(submission_data)
-        # Add 'icp' field to submission_data (for webhook format)
-        submission_data_copy['icp'] = context
-        payload['submission_data'] = submission_data_copy
-    
-    # Include step outputs
-    exclude_step_indices = set(data_selection.get('exclude_step_indices', []))
-    step_outputs_dict = {}
-    
-    for i, step_output in enumerate(step_outputs):
-        if i not in exclude_step_indices and i < step_index:
-            step_name = sorted_steps[i].get('step_name', f'Step {i}') if i < len(sorted_steps) else f'Step {i}'
-            step_outputs_dict[f'step_{i}'] = {
-                'step_name': step_name,
-                'step_index': i,
-                'output': step_output.get('output', ''),
-                'artifact_id': step_output.get('artifact_id'),
-                'image_urls': step_output.get('image_urls', [])
-            }
-    
-    if step_outputs_dict:
-        payload['step_outputs'] = step_outputs_dict
-    
-    # Include job info if selected (default: true)
-    include_job_info = data_selection.get('include_job_info', True)
-    if include_job_info:
-        payload['job_info'] = {
-            'job_id': job_id,
-            'workflow_id': job.get('workflow_id'),
-            'status': job.get('status'),
-            'created_at': job.get('created_at'),
-            'updated_at': job.get('updated_at')
-        }
-    
-    # Query and include artifacts if db_service is available
-    try:
-        all_artifacts = db_service.query_artifacts_by_job_id(job_id)
-        
-        artifacts_list = []
-        images_list = []
-        html_files_list = []
-        markdown_files_list = []
-        
-        for artifact in all_artifacts:
-            public_url = artifact.get('public_url') or artifact.get('s3_url') or ''
-            artifact_metadata = {
-                'artifact_id': artifact.get('artifact_id'),
-                'artifact_type': artifact.get('artifact_type'),
-                'artifact_name': artifact.get('artifact_name') or artifact.get('file_name') or '',
-                'public_url': public_url,
-                'object_url': public_url,
-                's3_key': artifact.get('s3_key'),
-                's3_url': artifact.get('s3_url'),
-                'file_size_bytes': artifact.get('file_size_bytes'),
-                'mime_type': artifact.get('mime_type'),
-                'created_at': artifact.get('created_at')
-            }
-            
-            artifacts_list.append(artifact_metadata)
-            
-            artifact_type = artifact.get('artifact_type', '').lower()
-            artifact_name = (artifact_metadata['artifact_name'] or '').lower()
-            
-            if artifact_type == 'image' or artifact_name.endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp')):
-                images_list.append(artifact_metadata)
-            elif artifact_type == 'html_final' or artifact_name.endswith('.html'):
-                html_files_list.append(artifact_metadata)
-            elif artifact_type in ('markdown_final', 'step_output', 'report_markdown') or artifact_name.endswith(('.md', '.markdown')):
-                markdown_files_list.append(artifact_metadata)
-        
-        if artifacts_list:
-            payload['artifacts'] = artifacts_list
-            payload['images'] = images_list
-            payload['html_files'] = html_files_list
-            payload['markdown_files'] = markdown_files_list
-    
-    except Exception as e:
-        print(f"⚠ Warning: Could not query artifacts: {e}")
-    
+    print(f"  - Artifact entries: {artifacts_count}")
+    if artifacts_count:
+        print("  - Artifact content appended to context")
+
     return payload
 
 
@@ -231,9 +156,12 @@ def resend_webhook(job_id: str, step_index: int, tenant_id: str, dry_run: bool =
     print(f"Dry Run: {dry_run}")
     print_section("")
     
+    db_service = DynamoDBService()
+    s3_service = S3Service()
+    
     # Get job data
     print("Fetching job data...")
-    data = get_job_data(job_id, tenant_id)
+    data = get_job_data(job_id, tenant_id, db_service=db_service, s3_service=s3_service)
     job = data["job"]
     workflow = data["workflow"]
     submission = data["submission"]
@@ -275,8 +203,6 @@ def resend_webhook(job_id: str, step_index: int, tenant_id: str, dry_run: bool =
     
     # Build payload
     print("\nBuilding webhook payload...")
-    db_service = DynamoDBService()
-    
     payload = build_webhook_payload(
         job_id=job_id,
         job=job,
@@ -285,7 +211,8 @@ def resend_webhook(job_id: str, step_index: int, tenant_id: str, dry_run: bool =
         sorted_steps=sorted_steps,
         step_index=step_index,
         data_selection=data_selection,
-        db_service=db_service
+        db_service=db_service,
+        s3_service=s3_service,
     )
     
     # Verify context is present
