@@ -82,6 +82,7 @@ class ExecutionStepManager:
             'step_name': step_name,
             'step_order': step_order,
             'step_type': 'ai_generation',
+            'success': True,
             'model': step_model,
             'input': request_details,
             'output': response_details.get('output_text', ''),
@@ -91,6 +92,34 @@ class ExecutionStepManager:
             'timestamp': step_start_time.isoformat(),
             'duration_ms': int(step_duration),
             'artifact_id': artifact_id,
+        }
+    
+    @staticmethod
+    def create_failed_ai_generation_step(
+        step_name: str,
+        step_order: int,
+        step_model: str,
+        error_message: str,
+        step_start_time: datetime,
+        duration_ms: float
+    ) -> Dict[str, Any]:
+        """
+        Create execution step for failed AI generation while keeping the workflow progressing.
+        """
+        return {
+            'step_name': step_name,
+            'step_order': step_order,
+            'step_type': 'ai_generation',
+            'success': False,
+            'model': step_model,
+            'input': {},
+            'output': error_message,
+            'image_urls': [],
+            'response_details': {'error': error_message},
+            'usage_info': {},
+            'timestamp': step_start_time.isoformat(),
+            'duration_ms': int(duration_ms),
+            'artifact_id': None,
         }
     
     @staticmethod

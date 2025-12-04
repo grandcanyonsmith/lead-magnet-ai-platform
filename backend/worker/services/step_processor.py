@@ -193,50 +193,87 @@ class StepProcessor:
                 'previous_image_urls': previous_image_urls
             })
         
-        # Process AI step using AI step processor
-        step_output, usage_info, request_details, response_details, image_artifact_ids, step_artifact_id = self.ai_step_processor.process_ai_step(
-            step=step,
-            step_index=step_index,
-            job_id=job_id,
-            tenant_id=tenant_id,
-            initial_context=initial_context,
-            previous_context=all_previous_context,
-            current_step_context=current_step_context,
-            step_tools=step_tools,
-            step_tool_choice=step_tool_choice,
-            previous_image_urls=previous_image_urls
-        )
-        
-        all_image_artifact_ids.extend(image_artifact_ids)
-        
-        # Extract image URLs from response
-        image_urls = response_details.get('image_urls', [])
-        
-        # Create step output dict
-        step_output_dict = {
-            'step_name': step_name,
-            'step_index': step_index,
-            'output': step_output,
-            'artifact_id': step_artifact_id,
-            'image_urls': image_urls
-        }
-        
-        # Add execution step
-        step_data = ExecutionStepManager.create_ai_generation_step(
-            step_name=step_name,
-            step_order=step_index + 1,
-            step_model=step_model,
-            request_details=request_details,
-            response_details=response_details,
-            usage_info=usage_info,
-            step_start_time=step_start_time,
-            step_duration=(datetime.utcnow() - step_start_time).total_seconds() * 1000,
-            artifact_id=step_output_dict['artifact_id']
-        )
-        execution_steps.append(step_data)
-        self.db.update_job(job_id, {'execution_steps': execution_steps}, s3_service=self.s3)
-        
-        return step_output_dict, image_artifact_ids
+        try:
+            # Process AI step using AI step processor
+            step_output, usage_info, request_details, response_details, image_artifact_ids, step_artifact_id = self.ai_step_processor.process_ai_step(
+                step=step,
+                step_index=step_index,
+                job_id=job_id,
+                tenant_id=tenant_id,
+                initial_context=initial_context,
+                previous_context=all_previous_context,
+                current_step_context=current_step_context,
+                step_tools=step_tools,
+                step_tool_choice=step_tool_choice,
+                previous_image_urls=previous_image_urls
+            )
+            
+            all_image_artifact_ids.extend(image_artifact_ids)
+            
+            # Extract image URLs from response
+            image_urls = response_details.get('image_urls', [])
+            
+            # Create step output dict
+            step_output_dict = {
+                'step_name': step_name,
+                'step_index': step_index,
+                'output': step_output,
+                'artifact_id': step_artifact_id,
+                'image_urls': image_urls,
+                'success': True
+            }
+            
+            # Add execution step
+            step_data = ExecutionStepManager.create_ai_generation_step(
+                step_name=step_name,
+                step_order=step_index + 1,
+                step_model=step_model,
+                request_details=request_details,
+                response_details=response_details,
+                usage_info=usage_info,
+                step_start_time=step_start_time,
+                step_duration=(datetime.utcnow() - step_start_time).total_seconds() * 1000,
+                artifact_id=step_output_dict['artifact_id']
+            )
+            execution_steps.append(step_data)
+            self.db.update_job(job_id, {'execution_steps': execution_steps}, s3_service=self.s3)
+            
+            return step_output_dict, image_artifact_ids
+        except Exception as step_error:
+            step_duration = (datetime.utcnow() - step_start_time).total_seconds() * 1000
+            error_message = f"Step {step_index + 1} ({step_name}) failed: {step_error}"
+            
+            logger.error(f"[StepProcessor] AI step failed but continuing workflow", extra={
+                'job_id': job_id,
+                'step_index': step_index,
+                'step_name': step_name,
+                'error_type': type(step_error).__name__,
+                'error_message': str(step_error),
+                'duration_ms': step_duration
+            }, exc_info=True)
+            
+            failed_step_data = ExecutionStepManager.create_failed_ai_generation_step(
+                step_name=step_name,
+                step_order=step_index + 1,
+                step_model=step_model,
+                error_message=error_message,
+                step_start_time=step_start_time,
+                duration_ms=step_duration
+            )
+            execution_steps.append(failed_step_data)
+            self.db.update_job(job_id, {'execution_steps': execution_steps}, s3_service=self.s3)
+            
+            failed_step_output = {
+                'step_name': step_name,
+                'step_index': step_index,
+                'output': error_message,
+                'artifact_id': None,
+                'image_urls': [],
+                'success': False,
+                'error': str(step_error)
+            }
+            
+            return failed_step_output, []
     
     def _execute_webhook_step_core(
         self,
@@ -797,7 +834,9 @@ class StepProcessor:
                 'image_urls': response_details.get('image_urls', []) if isinstance(response_details, dict) else []
             })
         except Exception as step_error:
-            logger.error(f"[StepProcessor] Error generating report for step {step_index + 1}", extra={
+            step_duration = (datetime.utcnow() - step_start_time).total_seconds() * 1000
+            error_message = f"Step {step_index + 1} ({step_name}) failed: {step_error}"
+            logger.error(f"[StepProcessor] Error generating report for step {step_index + 1} (continuing workflow)", extra={
                 'job_id': job_id,
                 'step_index': step_index,
                 'step_name': step_name,
@@ -806,9 +845,42 @@ class StepProcessor:
                 'step_tools_count': len(step_tools) if step_tools else 0,
                 'step_tools': [t.get('type') if isinstance(t, dict) else t for t in step_tools] if step_tools else [],
                 'error_type': type(step_error).__name__,
-                'error_message': str(step_error)
+                'error_message': str(step_error),
+                'duration_ms': step_duration
             }, exc_info=True)
-            raise
+            
+            failed_step_data = ExecutionStepManager.create_failed_ai_generation_step(
+                step_name=step_name,
+                step_order=step_index + 1,
+                step_model=step_model,
+                error_message=error_message,
+                step_start_time=step_start_time,
+                duration_ms=step_duration
+            )
+            
+            self._update_execution_steps_with_rerun_support(
+                execution_steps=execution_steps,
+                step_data=failed_step_data,
+                step_order=step_index + 1,
+                step_type='ai_generation'
+            )
+            
+            self.db.update_job(job_id, {
+                'execution_steps': execution_steps
+            }, s3_service=self.s3)
+            
+            return {
+                'success': False,
+                'step_index': step_index,
+                'step_name': step_name,
+                'step_output': error_message,
+                'artifact_id': None,
+                'image_urls': [],
+                'image_artifact_ids': [],
+                'usage_info': {},
+                'error': str(step_error),
+                'duration_ms': int(step_duration)
+            }
         
         step_duration = (datetime.utcnow() - step_start_time).total_seconds() * 1000
         

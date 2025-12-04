@@ -4,7 +4,6 @@ import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as tasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
 import { Construct } from 'constructs';
 import {
-  createStepFailureHandler,
   createHtmlGenerationFailureHandler,
   createExceptionHandlerChain,
   createJobFinalizer,
@@ -50,7 +49,6 @@ export function createJobProcessorStateMachine(
   });
 
   // Create error handlers using helper functions
-  const handleStepFailure = createStepFailureHandler(scope, jobsTable);
   const handleHtmlGenerationFailure = createHtmlGenerationFailureHandler(scope, jobsTable);
   const parseErrorLegacy = createExceptionHandlerChain(scope, 'ParseErrorLegacy', jobsTable, false);
   const parseErrorStep = createExceptionHandlerChain(scope, 'ParseErrorStep', jobsTable, true);
@@ -200,7 +198,7 @@ export function createJobProcessorStateMachine(
   const checkStepResult = new sfn.Choice(scope, 'CheckStepResult')
     .when(
       sfn.Condition.booleanEquals('$.processResult.Payload.success', false),
-      handleStepFailure
+      incrementStep
     )
     .otherwise(incrementStep);
 
@@ -369,22 +367,17 @@ export function createJobProcessorStateMachine(
     resultPath: '$',
   }).next(checkTemplateExistsContinue);
 
-  // Check step result for single-step rerun with continue option
-  const checkStepResultSingleStepContinue = new sfn.Choice(scope, 'CheckStepResultSingleStepContinue')
+  // Decide whether to continue after single-step rerun, regardless of step success
+  const checkContinueAfterRerun = new sfn.Choice(scope, 'CheckContinueAfterRerun')
     .when(
-      sfn.Condition.booleanEquals('$.processResult.Payload.success', false),
-      handleStepFailure
+      sfn.Condition.booleanEquals('$.continue_after', true),
+      // Load workflow data and continue with remaining steps
+      loadWorkflowForContinue.next(setupContinuePath)
     )
-    .otherwise(
-      // Step succeeded - check if we should continue
-      new sfn.Choice(scope, 'CheckContinueAfterRerun')
-        .when(
-          sfn.Condition.booleanEquals('$.continue_after', true),
-          // Load workflow data and continue with remaining steps
-          loadWorkflowForContinue.next(setupContinuePath)
-        )
-        .otherwise(finalizeJob)  // Just finalize if not continuing
-    );
+    .otherwise(finalizeJob);  // Just finalize if not continuing
+
+  const checkStepResultSingleStepContinue = new sfn.Pass(scope, 'CheckStepResultSingleStepContinue')
+    .next(checkContinueAfterRerun);
 
   // Check if this is a single-step rerun (action === 'process_single_step' or 'process_single_step_and_continue')
   // If yes, route directly to processStepSingle with the provided step_index
