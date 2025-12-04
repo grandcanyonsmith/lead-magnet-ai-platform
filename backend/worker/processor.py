@@ -29,7 +29,7 @@ from services.field_label_service import FieldLabelService
 from services.step_processor import StepProcessor
 from services.workflow_orchestrator import WorkflowOrchestrator
 from services.job_completion_service import JobCompletionService
-from services.error_handler_service import ErrorHandlerService
+from services.job_error_handler import JobErrorHandler
 from services.data_loader_service import DataLoaderService
 from dependency_resolver import resolve_execution_groups, validate_dependencies
 
@@ -293,7 +293,7 @@ class JobProcessor:
             logger.exception(f"Error processing job {job_id}")
             
             # Use error handler service for consistent error handling
-            error_handler = ErrorHandlerService(self.db)
+            error_handler = JobErrorHandler(self.db)
             return error_handler.handle_job_error(
                 job_id=job_id,
                 error=e,
@@ -425,7 +425,7 @@ class JobProcessor:
             logger.exception(f"Error processing step {step_index} for job {job_id}")
             
             # Use error handler service for consistent error handling
-            error_handler = ErrorHandlerService(self.db)
+            error_handler = JobErrorHandler(self.db)
             return error_handler.handle_job_error(
                 job_id=job_id,
                 error=e,

@@ -2,7 +2,7 @@
  * Example test for BaseController
  */
 
-import { BaseController } from '../../controllers/baseController';
+import { BaseController } from '../../controllers/base.controller';
 import { ApiError } from '../../utils/errors';
 import { setupDynamoDBItem, resetMocks } from '../utils/awsMocks';
 import { db } from '../../utils/db';

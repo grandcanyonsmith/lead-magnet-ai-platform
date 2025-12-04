@@ -4,7 +4,7 @@
  */
 
 import { TokenProvider } from './base.client'
-import { LocalStorageTokenProvider } from './token-provider'
+import { LocalStorageTokenProvider } from './tokenProvider.client'
 import { BaseApiClient } from './base.client'
 import { WorkflowsClient } from './workflows.client'
 import { FormsClient } from './forms.client'

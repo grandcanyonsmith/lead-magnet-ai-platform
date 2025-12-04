@@ -1,4 +1,4 @@
-import EditFormClient from './page-client'
+import EditFormClient from './client'
 
 export async function generateStaticParams(): Promise<{ id: string }[]> {
   // Return at least one placeholder route to satisfy Next.js static export requirements

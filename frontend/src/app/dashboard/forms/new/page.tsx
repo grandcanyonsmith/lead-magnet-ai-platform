@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import NewFormClient from './page-client'
+import NewFormClient from './client'
 
 export default function NewFormPage() {
   return (
