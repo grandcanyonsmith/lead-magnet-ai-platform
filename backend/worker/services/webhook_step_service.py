@@ -342,18 +342,14 @@ class WebhookStepService:
             'artifacts_included': len(all_artifacts) if all_artifacts else 0
         })
 
-        # Add context at root level (for direct format)
-        payload['context'] = context
-
         # Include submission data if selected (default: true)
         include_submission = data_selection.get('include_submission', True)
         if include_submission:
             # Create a copy of submission_data to avoid modifying the original
             # IMPORTANT: Remove 'context' and 'icp' keys first, then add our formatted context
             submission_data_copy = {k: v for k, v in submission_data.items() if k.lower() not in ('context', 'icp')}
-            # Add our formatted context/icp field to submission_data (for webhook format)
+            # Add our formatted context field to submission_data (for webhook format)
             submission_data_copy['context'] = context
-            submission_data_copy['icp'] = context
             payload['submission_data'] = submission_data_copy
         
         return payload
