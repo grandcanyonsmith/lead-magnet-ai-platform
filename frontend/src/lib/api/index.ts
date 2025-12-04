@@ -5,7 +5,6 @@
 
 import { TokenProvider } from './base.client'
 import { LocalStorageTokenProvider } from './token-provider'
-import { BaseApiClient } from './base.client'
 import { WorkflowsClient } from './workflows.client'
 import { FormsClient } from './forms.client'
 import { TemplatesClient } from './templates.client'
@@ -16,11 +15,9 @@ import { NotificationsClient } from './notifications.client'
 import { SettingsClient } from './settings.client'
 import { AnalyticsClient } from './analytics.client'
 import { UsageClient } from './usage.client'
-import { WebhookLogsClient } from './webhookLogs.client'
 import { ApiClient, ArtifactListParams, ArtifactListResponse, Artifact, FormUpdateRequest, TemplateUpdateRequest, WorkflowUpdateRequest } from '@/types'
-import { AxiosRequestConfig } from 'axios'
 
-class ApiClientImpl extends BaseApiClient implements ApiClient {
+class ApiClientImpl implements ApiClient {
   public workflows: WorkflowsClient
   public forms: FormsClient
   public templates: TemplatesClient
@@ -31,10 +28,11 @@ class ApiClientImpl extends BaseApiClient implements ApiClient {
   public settings: SettingsClient
   public analytics: AnalyticsClient
   public usage: UsageClient
-  public webhookLogs: WebhookLogsClient
+
+  private tokenProvider: TokenProvider
 
   constructor(tokenProvider?: TokenProvider) {
-    super(tokenProvider || new LocalStorageTokenProvider())
+    this.tokenProvider = tokenProvider || new LocalStorageTokenProvider()
     
     this.workflows = new WorkflowsClient(this.tokenProvider)
     this.forms = new FormsClient(this.tokenProvider)
@@ -46,24 +44,6 @@ class ApiClientImpl extends BaseApiClient implements ApiClient {
     this.settings = new SettingsClient(this.tokenProvider)
     this.analytics = new AnalyticsClient(this.tokenProvider)
     this.usage = new UsageClient(this.tokenProvider)
-    this.webhookLogs = new WebhookLogsClient(this.tokenProvider)
-  }
-
-  // Generic HTTP methods for direct endpoint access
-  async get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
-    return super.get<T>(url, config)
-  }
-
-  async post<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
-    return super.post<T>(url, data, config)
-  }
-
-  async put<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
-    return super.put<T>(url, data, config)
-  }
-
-  async delete<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
-    return super.delete<T>(url, config)
   }
 
   // Workflows - delegate to workflows client
@@ -142,24 +122,8 @@ class ApiClientImpl extends BaseApiClient implements ApiClient {
     return this.jobs.resubmitJob(jobId)
   }
 
-  async rerunStep(jobId: string, stepIndex: number, continueAfter: boolean = false) {
-    return this.jobs.rerunStep(jobId, stepIndex, continueAfter)
-  }
-
-  async quickEditStep(jobId: string, stepOrder: number, userPrompt: string, save?: boolean) {
-    return this.jobs.quickEditStep(jobId, stepOrder, userPrompt, save)
-  }
-
-  async getExecutionSteps(jobId: string) {
-    return this.jobs.getExecutionSteps(jobId)
-  }
-
-  async getJobDocument(jobId: string): Promise<string> {
-    return this.jobs.getJobDocument(jobId)
-  }
-
-  async getJobDocumentBlobUrl(jobId: string): Promise<string> {
-    return this.jobs.getJobDocumentBlobUrl(jobId)
+  async rerunStep(jobId: string, stepIndex: number) {
+    return this.jobs.rerunStep(jobId, stepIndex)
   }
 
   // Artifacts - delegate to artifacts client
@@ -169,10 +133,6 @@ class ApiClientImpl extends BaseApiClient implements ApiClient {
 
   async getArtifact(id: string): Promise<Artifact> {
     return this.artifacts.getArtifact(id)
-  }
-
-  async getArtifactContent(id: string): Promise<string> {
-    return this.artifacts.getArtifactContent(id)
   }
 
   // Submissions - delegate to submissions client

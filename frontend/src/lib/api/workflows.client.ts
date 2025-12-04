@@ -43,7 +43,6 @@ export class WorkflowsClient extends BaseApiClient {
     return this.post<WorkflowGenerationResponse>('/admin/workflows/generate-with-ai', {
       description: request.description,
       model: request.model || 'gpt-4o',
-      webhook_url: request.webhook_url,
     })
   }
 

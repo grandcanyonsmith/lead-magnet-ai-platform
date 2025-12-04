@@ -1,0 +1,58 @@
+
+Delta compression using up to 8 threads
+Compressing objects: 100% (9/9), done.
+Writing objects: 100% (10/10), 2.02 KiB | 2.02 MiB/s, done.
+Total 10 (delta 7), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (7/7), completed with 5 local objects.
+To https://github.com/grandcanyonsmith/lead-magnet-ai-platform
+ ! [remote rejected] main -> main (refusing to allow an OAuth App to create or update workflow `.github/workflows/frontend-deploy.yml` without `workflow` scope)
+error: failed to push some refs to 'https://github.com/grandcanyonsmith/lead-magnet-ai-platform'
+~/workspace$ git push origin
+Enumerating objects: 48, done.
+Counting objects: 100% (35/35), done.
+Delta compression using up to 8 threads
+Compressing objects: 100% (9/9), done.
+Writing objects: 100% (10/10), 2.02 KiB | 2.02 MiB/s, done.
+Total 10 (delta 7), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (7/7), completed with 5 local objects.
+To https://github.com/grandcanyonsmith/lead-magnet-ai-platform
+ ! [remote rejected] main -> main (refusing to allow an OAuth App to create or update workflow `.github/workflows/frontend-deploy.yml` without `workflow` scope)
+error: failed to push some refs to 'https://github.com/grandcanyonsmith/lead-magnet-ai-platform'
+~/workspace$ # Step 1: Reset to match origin (removes the 2 problematic commits)
+git reset --soft origin/main
+
+# Step 2: Now stage ONLY the feature files (not the workflow)
+git add backend/api/src/services/workflowAIService.ts
+git add backend/api/src/controllers/workflows.ts
+git add backend/api/src/routes.ts
+git add frontend/src/hooks/useWorkflowAI.ts
+git add frontend/src/components/workflows/edit/WorkflowDiffPreview.tsx
+git add frontend/src/components/workflows/edit/WorkflowTab.tsx
+git add frontend/src/app/dashboard/workflows/[id]/edit/page-client.tsx
+git add frontend/src/lib/api/workflows.client.ts
+git add frontend/src/lib/api/index.ts
+git add replit.md
+
+# Step 3: Make sure the workflow file is NOT staged
+git reset .github/workflows/frontend-deploy.yml
+
+# Step 4: Commit only the feature code
+git commit -m "Add workflow-level AI editing feature"
+
+# Step 5: Push to GitHub
+git push origin main
+Unstaged changes after reset:
+M   .github/workflows/frontend-deploy.yml
+[main 2f1e763] Add workflow-level AI editing feature
+ 2 files changed, 63 insertions(+), 4 deletions(-)
+ create mode 100644 attached_assets/Pasted--use-git-push-to-publish-your-local-commits-nothing-to-commit-working-tree-clean-Enumerating-1762838883012_1762838883013.txt
+Enumerating objects: 16, done.
+Counting objects: 100% (16/16), done.
+Delta compression using up to 8 threads
+Compressing objects: 100% (5/5), done.
+Writing objects: 100% (5/5), 1.17 KiB | 1.17 MiB/s, done.
+Total 5 (delta 3), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (3/3), completed with 3 local objects.
+To https://github.com/grandcanyonsmith/lead-magnet-ai-platform
+   e85d05f..2f1e763  main -> main
+~/workspace$ 

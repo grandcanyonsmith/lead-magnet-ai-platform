@@ -3,48 +3,6 @@
  */
 
 import { BaseEntity, Status } from './common'
-import type { Artifact } from './artifact'
-
-export type StepStatus = 'pending' | 'in_progress' | 'completed' | 'failed'
-
-export type StepType = 'workflow_step' | 'ai_generation' | 'form_submission' | 'html_generation' | 'final_output' | 'webhook'
-
-export interface ExecutionStepUsageInfo {
-  prompt_tokens?: number
-  completion_tokens?: number
-  total_tokens?: number
-  cost_usd?: number
-}
-
-export interface ExecutionStepInput {
-  tools?: string[] | unknown[]
-  tool_choice?: string
-  [key: string]: unknown
-}
-
-export interface ExecutionStep {
-  step_order: number
-  step_type: StepType
-  step_name?: string
-  model?: string
-  tools?: string[] | unknown[]
-  tool_choice?: string
-  instructions?: string
-  input?: ExecutionStepInput
-  output?: string | null
-  error?: string
-  started_at?: string
-  completed_at?: string
-  duration_ms?: number
-  usage_info?: ExecutionStepUsageInfo
-  _status?: StepStatus
-  artifact_id?: string
-  image_urls?: string[]
-}
-
-export interface MergedStep extends ExecutionStep {
-  _status: StepStatus
-}
 
 export interface Job extends BaseEntity {
   job_id: string
@@ -59,9 +17,6 @@ export interface Job extends BaseEntity {
   output_url?: string
   output_s3_key?: string
   submission_id?: string
-  execution_steps_s3_key?: string
-  execution_steps_s3_url?: string
-  execution_steps?: ExecutionStep[]
 }
 
 export interface JobListResponse {
@@ -83,28 +38,5 @@ export interface JobListParams {
 export interface JobResubmitResponse {
   job_id: string
   status: Status
-}
-
-export interface JobStepSummary {
-  total: number
-  completed: number
-  failed: number
-  running: number
-  pending: number
-}
-
-export type ArtifactGalleryItemKind = 'jobOutput' | 'artifact' | 'imageArtifact' | 'imageUrl'
-
-export interface ArtifactGalleryItem {
-  id: string
-  kind: ArtifactGalleryItemKind
-  artifact?: Artifact
-  url?: string
-  stepOrder?: number
-  stepName?: string
-  stepType?: string
-  label: string
-  description?: string
-  sortOrder: number
 }
 

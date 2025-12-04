@@ -11,22 +11,9 @@ export interface AuthResponse {
 }
 
 export interface AuthUser {
-  user_id: string
   email: string
   name?: string
-  username?: string
-  role?: string
-  customer_id?: string
-}
-
-export interface AuthMeResponse {
-  realUser: AuthUser
-  actingUser: AuthUser
-  role: string
-  customerId: string
-  isImpersonating: boolean
-  viewMode?: 'agency' | 'subaccount'
-  selectedCustomerId?: string
+  username: string
 }
 
 export interface TokenStorage {

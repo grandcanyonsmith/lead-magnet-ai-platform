@@ -12,12 +12,12 @@ export type AIModel =
   | 'gpt-4-turbo'
   | 'gpt-3.5-turbo'
   | 'computer-use-preview'
-  | 'o4-mini-deep-research'
 
 export type ToolChoice = 'auto' | 'required' | 'none'
 
 export type ToolType = 
   | 'web_search'
+  | 'web_search_preview'
   | 'image_generation'
   | 'computer_use_preview'
   | 'file_search'
@@ -30,36 +30,17 @@ export interface ComputerUseToolConfig {
   environment: 'browser' | 'mac' | 'windows' | 'ubuntu'
 }
 
-export interface ImageGenerationToolConfig {
-  type: 'image_generation'
-  size?: '1024x1024' | '1024x1536' | '1536x1024' | 'auto'
-  quality?: 'low' | 'medium' | 'high' | 'auto'
-  format?: 'png' | 'jpeg' | 'webp'
-  compression?: number // 0-100
-  background?: 'transparent' | 'opaque' | 'auto'
-  input_fidelity?: 'low' | 'high'
-}
-
-export type Tool = ToolType | ComputerUseToolConfig | ImageGenerationToolConfig
+export type Tool = ToolType | ComputerUseToolConfig
 
 export interface WorkflowStep {
   step_name: string
   step_description?: string
-  step_type?: 'ai_generation' | 'webhook' // Default: 'ai_generation'
   model: AIModel
   instructions: string
   step_order?: number
   tools?: Tool[]
   tool_choice?: ToolChoice
   depends_on?: number[] // Array of step indices this step depends on
-  // Webhook step fields
-  webhook_url?: string
-  webhook_headers?: Record<string, string>
-  webhook_data_selection?: {
-    include_submission: boolean
-    exclude_step_indices?: number[] // Steps to exclude (all included by default)
-    include_job_info: boolean
-  }
 }
 
 export type DeliveryMethod = 'webhook' | 'sms' | 'none'
@@ -79,37 +60,34 @@ export interface Workflow extends BaseEntity {
   tenant_id: string
   workflow_name: string
   workflow_description: string
+  ai_model: AIModel
+  ai_instructions: string
+  rewrite_model: AIModel
+  research_enabled: boolean
+  html_enabled: boolean
   template_id: string
   template_version: number
   steps?: WorkflowStep[]
-  status: 'active' | 'inactive' | 'draft'
+  status: 'active' | 'inactive'
   form?: {
     form_id: string
     form_name: string
     public_slug: string
     status: string
   }
-  // Legacy fields (deprecated - kept for backward compatibility with existing database records)
-  // All new workflows must use the steps format. These fields are ignored.
-  ai_model?: AIModel
-  ai_instructions?: string
-  rewrite_model?: AIModel
-  research_enabled?: boolean
-  html_enabled?: boolean
 }
 
 export interface WorkflowCreateRequest {
   workflow_name: string
   workflow_description: string
-  template_id?: string
-  template_version?: number
-  steps?: WorkflowStep[]
-  // Legacy fields (deprecated - kept for backward compatibility, but ignored)
   ai_model?: AIModel
   ai_instructions?: string
   rewrite_model?: AIModel
   research_enabled?: boolean
   html_enabled?: boolean
+  template_id?: string
+  template_version?: number
+  steps?: WorkflowStep[]
   delivery_method?: DeliveryMethod
   delivery_webhook_url?: string
   delivery_webhook_headers?: Record<string, string>
@@ -129,7 +107,6 @@ export interface WorkflowListResponse {
 export interface WorkflowGenerationRequest {
   description: string
   model?: AIModel
-  webhook_url?: string
 }
 
 export interface WorkflowGenerationResponse {

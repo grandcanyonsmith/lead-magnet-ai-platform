@@ -12,7 +12,6 @@ import {
 } from 'amazon-cognito-identity-js'
 import { AuthResponse, AuthUser } from '@/types/auth'
 import { LocalStorageTokenStorage } from './storage'
-import { logger } from '@/utils/logger'
 
 // Initialize pool lazily to avoid build-time errors
 let userPool: CognitoUserPool | null = null
@@ -25,12 +24,10 @@ const getUserPool = (): CognitoUserPool => {
     
     if (!userPoolId || !clientIdValue) {
       const errorMsg = `Cognito configuration missing. UserPoolId: ${userPoolId ? 'set' : 'missing'}, ClientId: ${clientIdValue ? 'set' : 'missing'}`
-      logger.error(errorMsg, {
-        context: 'AuthService',
-        data: {
-          NEXT_PUBLIC_COGNITO_USER_POOL_ID: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID,
-          NEXT_PUBLIC_COGNITO_CLIENT_ID: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID,
-        },
+      console.error(errorMsg)
+      console.error('Environment variables:', {
+        NEXT_PUBLIC_COGNITO_USER_POOL_ID: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID,
+        NEXT_PUBLIC_COGNITO_CLIENT_ID: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID,
       })
       throw new Error(errorMsg)
     }
@@ -38,7 +35,7 @@ const getUserPool = (): CognitoUserPool => {
     // Validate UserPoolId format (should be like us-east-1_XXXXXXXXX)
     if (!/^[\w-]+_[a-zA-Z0-9]+$/.test(userPoolId)) {
       const errorMsg = `Invalid UserPoolId format: "${userPoolId}". Expected format: region_poolId (e.g., us-east-1_XXXXXXXXX)`
-      logger.error(errorMsg, { context: 'AuthService' })
+      console.error(errorMsg)
       throw new Error(errorMsg)
     }
     
@@ -124,7 +121,7 @@ export class AuthService {
 
         pool.signUp(email, password, attributeList, [], (err, result) => {
           if (err) {
-            logger.error('Signup error', { error: err, context: 'AuthService' })
+            console.error('Signup error:', err)
             let errorMessage = err.message || 'Failed to sign up'
             const errorCode = (err as { code?: string; name?: string }).code || (err as { code?: string; name?: string }).name
             
@@ -140,11 +137,11 @@ export class AuthService {
             return
           }
           
-          logger.info('Signup successful, user auto-confirmed', { context: 'AuthService' })
+          console.log('Signup successful, user auto-confirmed')
           resolve({ success: true })
         })
       } catch (error: unknown) {
-        logger.error('Signup exception', { error, context: 'AuthService' })
+        console.error('Signup exception:', error)
         const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred during signup'
         resolve({ success: false, error: errorMessage })
       }
@@ -159,7 +156,7 @@ export class AuthService {
         cognitoUser.signOut()
       }
     } catch (error) {
-      logger.warn('Error signing out', { error, context: 'AuthService' })
+      console.warn('Error signing out:', error)
     }
     this.tokenStorage.clearTokens()
   }
@@ -216,7 +213,7 @@ export class AuthService {
           resolve(session)
         })
       } catch (error) {
-        logger.error('Error in getSession', { error, context: 'AuthService' })
+        console.error('Error in getSession:', error)
         resolve(null)
       }
     })
@@ -244,7 +241,7 @@ export class AuthService {
       try {
         const session = await this.getSession()
         if (!session) {
-          logger.warn('No session found, clearing authentication', { context: 'AuthService' })
+          console.warn('No session found, clearing authentication')
           this.signOut()
           return false
         }
@@ -256,22 +253,22 @@ export class AuthService {
           if (exp > now) {
             return true
           }
-          logger.warn('Token expired, clearing authentication', { context: 'AuthService' })
+          console.warn('Token expired, clearing authentication')
           this.signOut()
           return false
         }
         
-        logger.warn('Session invalid, clearing authentication', { context: 'AuthService' })
+        console.warn('Session invalid, clearing authentication')
         this.signOut()
         return false
       } catch (sessionError: unknown) {
         const errorMessage = sessionError instanceof Error ? sessionError.message : 'Unknown error'
-        logger.warn('Session check failed, token may be expired', { error: sessionError, context: 'AuthService' })
+        console.warn('Session check failed, token may be expired:', errorMessage)
         this.signOut()
         return false
       }
     } catch (error) {
-      logger.error('Error checking authentication', { error, context: 'AuthService' })
+      console.error('Error checking authentication:', error)
       return false
     }
   }

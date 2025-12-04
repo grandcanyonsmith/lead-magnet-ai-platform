@@ -3,12 +3,6 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as tasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
 import { Construct } from 'constructs';
-import {
-  createStepFailureHandler,
-  createHtmlGenerationFailureHandler,
-  createExceptionHandlerChain,
-  createJobFinalizer,
-} from './error-handlers';
 
 export interface JobProcessorStateMachineProps {
   jobsTable: dynamodb.ITable;
@@ -18,13 +12,6 @@ export interface JobProcessorStateMachineProps {
 
 /**
  * Creates the Step Functions state machine definition for job processing
- * 
- * This state machine orchestrates the execution of workflow jobs, handling:
- * - Multi-step workflows with dependency resolution
- * - HTML generation for templates
- * - Error handling and job status updates
- * 
- * Note: Legacy format is no longer supported. All workflows must use steps format.
  */
 export function createJobProcessorStateMachine(
   scope: Construct,
@@ -49,11 +36,84 @@ export function createJobProcessorStateMachine(
     resultPath: '$.updateResult',
   });
 
-  // Create error handlers using helper functions
-  const handleStepFailure = createStepFailureHandler(scope, jobsTable);
-  const handleHtmlGenerationFailure = createHtmlGenerationFailureHandler(scope, jobsTable);
-  const parseErrorLegacy = createExceptionHandlerChain(scope, 'ParseErrorLegacy', jobsTable, false);
-  const parseErrorStep = createExceptionHandlerChain(scope, 'ParseErrorStep', jobsTable, true);
+  // Handle Lambda returning success: false (business logic failure) for workflow steps
+  const handleStepFailure = new tasks.DynamoUpdateItem(scope, 'HandleStepFailure', {
+    table: jobsTable,
+    key: {
+      job_id: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.job_id')),
+    },
+    updateExpression: 'SET #status = :status, error_message = :error, error_type = :error_type, updated_at = :updated_at',
+    expressionAttributeNames: {
+      '#status': 'status',
+    },
+    expressionAttributeValues: {
+      ':status': tasks.DynamoAttributeValue.fromString('failed'),
+      ':error': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.processResult.Payload.error')),
+      ':error_type': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.processResult.Payload.error_type')),
+      ':updated_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
+    },
+  });
+
+  // Handle HTML generation failures - reads from htmlResult instead of processResult
+  const handleHtmlGenerationFailure = new tasks.DynamoUpdateItem(scope, 'HandleHtmlGenerationFailure', {
+    table: jobsTable,
+    key: {
+      job_id: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.job_id')),
+    },
+    updateExpression: 'SET #status = :status, error_message = :error, error_type = :error_type, updated_at = :updated_at',
+    expressionAttributeNames: {
+      '#status': 'status',
+    },
+    expressionAttributeValues: {
+      ':status': tasks.DynamoAttributeValue.fromString('failed'),
+      ':error': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.htmlResult.Payload.error')),
+      ':error_type': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.htmlResult.Payload.error_type')),
+      ':updated_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
+    },
+  });
+
+  // Handle Lambda exception (timeout, etc.)
+  const handleStepException = new tasks.DynamoUpdateItem(scope, 'HandleStepException', {
+    table: jobsTable,
+    key: {
+      job_id: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.parsedError.job_id')),
+    },
+    updateExpression: 'SET #status = :status, error_message = :error, updated_at = :updated_at',
+    expressionAttributeNames: {
+      '#status': 'status',
+    },
+    expressionAttributeValues: {
+      ':status': tasks.DynamoAttributeValue.fromString('failed'),
+      ':error': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.parsedError.error_message')),
+      ':updated_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
+    },
+  });
+
+  // Parse error message from Lambda response (create separate instances for each catch handler)
+  const parseErrorLegacy = new sfn.Pass(scope, 'ParseErrorLegacy', {
+    parameters: {
+      'job_id.$': '$.job_id',
+      'error_message': sfn.JsonPath.format(
+        'Lambda execution failed: {} - {}',
+        sfn.JsonPath.stringAt('$.error.Error'),
+        sfn.JsonPath.stringAt('$.error.Cause')
+      ),
+    },
+    resultPath: '$.parsedError',
+  }).next(handleStepException);
+
+  const parseErrorStep = new sfn.Pass(scope, 'ParseErrorStep', {
+    parameters: {
+      'job_id.$': '$.job_id',
+      'step_index.$': '$.step_index',
+      'error_message': sfn.JsonPath.format(
+        'Lambda execution failed: {} - {}',
+        sfn.JsonPath.stringAt('$.error.Error'),
+        sfn.JsonPath.stringAt('$.error.Cause')
+      ),
+    },
+    resultPath: '$.parsedError',
+  }).next(handleStepException);
 
   // Initialize steps: Load workflow and get step count
   const initializeSteps = new tasks.DynamoGetItem(scope, 'InitializeSteps', {
@@ -82,43 +142,6 @@ export function createJobProcessorStateMachine(
     errors: ['States.ALL'],
   });
 
-  // Process a single step for rerun (separate state to avoid "already has next" error)
-  const processStepSingle = new tasks.LambdaInvoke(scope, 'ProcessStepSingle', {
-    lambdaFunction: jobProcessorLambda,
-    payload: sfn.TaskInput.fromObject({
-      'job_id': sfn.JsonPath.stringAt('$.job_id'),
-      'step_index': sfn.JsonPath.numberAt('$.step_index'),
-      'step_type': 'workflow_step',
-    }),
-    resultPath: '$.processResult',
-    retryOnServiceExceptions: false,
-  });
-
-  // Add error handling for Lambda failures
-  processStepSingle.addCatch(parseErrorStep, {
-    resultPath: '$.error',
-    errors: ['States.ALL'],
-  });
-
-  // Process step for continue-after-rerun path (separate state to avoid "already has next" error)
-  // This is needed because processStep is already chained in setupStepLoop
-  const processStepContinue = new tasks.LambdaInvoke(scope, 'ProcessStepContinue', {
-    lambdaFunction: jobProcessorLambda,
-    payload: sfn.TaskInput.fromObject({
-      'job_id': sfn.JsonPath.stringAt('$.job_id'),
-      'step_index': sfn.JsonPath.numberAt('$.step_index'),
-      'step_type': 'workflow_step',
-    }),
-    resultPath: '$.processResult',
-    retryOnServiceExceptions: false,
-  });
-
-  // Add error handling for Lambda failures
-  processStepContinue.addCatch(parseErrorStep, {
-    resultPath: '$.error',
-    errors: ['States.ALL'],
-  });
-
   // Process HTML generation step
   const processHtmlGeneration = new tasks.LambdaInvoke(scope, 'ProcessHtmlGeneration', {
     lambdaFunction: jobProcessorLambda,
@@ -131,32 +154,27 @@ export function createJobProcessorStateMachine(
   });
 
   // Add error handling for HTML generation failures
-  // Note: Use parseErrorLegacy (not parseErrorStep) because HTML generation
-  // runs after all workflow steps are complete, so step_index is not in context
-  processHtmlGeneration.addCatch(parseErrorLegacy, {
+  processHtmlGeneration.addCatch(parseErrorStep, {
     resultPath: '$.error',
     errors: ['States.ALL'],
   });
 
-  // Process HTML generation step for continue-after-rerun path (separate state to avoid "already has next" error)
-  const processHtmlGenerationContinue = new tasks.LambdaInvoke(scope, 'ProcessHtmlGenerationContinue', {
-    lambdaFunction: jobProcessorLambda,
-    payload: sfn.TaskInput.fromObject({
-      'job_id': sfn.JsonPath.stringAt('$.job_id'),
-      'step_type': 'html_generation',
-    }),
-    resultPath: '$.htmlResult',
-    retryOnServiceExceptions: false,
+  // Create reusable finalize job task
+  const finalizeJob = new tasks.DynamoUpdateItem(scope, 'FinalizeJob', {
+    table: jobsTable,
+    key: {
+      job_id: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.job_id')),
+    },
+    updateExpression: 'SET #status = :status, completed_at = :completed_at, updated_at = :updated_at',
+    expressionAttributeNames: {
+      '#status': 'status',
+    },
+    expressionAttributeValues: {
+      ':status': tasks.DynamoAttributeValue.fromString('completed'),
+      ':completed_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
+      ':updated_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
+    },
   });
-
-  // Add error handling for HTML generation failures
-  processHtmlGenerationContinue.addCatch(parseErrorLegacy, {
-    resultPath: '$.error',
-    errors: ['States.ALL'],
-  });
-
-  // Create reusable finalize job task using helper
-  const finalizeJob = createJobFinalizer(scope, 'FinalizeJob', jobsTable);
 
   // Check HTML generation result
   const checkHtmlResult = new sfn.Choice(scope, 'CheckHtmlResult')
@@ -232,9 +250,54 @@ export function createJobProcessorStateMachine(
     resultPath: '$',
   }).next(processStep).next(checkStepResult);
 
-  // All workflows must use steps format - route directly to dependency resolution
-  // If workflow has no steps, the Lambda will throw an error
-  const checkWorkflowType = resolveDependencies.next(setupStepLoop);
+  // Legacy workflow processing
+  const processLegacyJob = new tasks.LambdaInvoke(scope, 'ProcessLegacyJob', {
+    lambdaFunction: jobProcessorLambda,
+    payload: sfn.TaskInput.fromObject({
+      'job_id': sfn.JsonPath.stringAt('$.job_id'),
+    }),
+    resultPath: '$.processResult',
+    retryOnServiceExceptions: false,
+  })
+    .addCatch(parseErrorLegacy, {
+      resultPath: '$.error',
+      errors: ['States.ALL'],
+    })
+    .next(
+      new sfn.Choice(scope, 'CheckLegacyResult')
+        .when(
+          sfn.Condition.booleanEquals('$.processResult.Payload.success', false),
+          handleStepFailure
+        )
+        .otherwise(
+          new tasks.DynamoUpdateItem(scope, 'FinalizeLegacyJob', {
+            table: jobsTable,
+            key: {
+              job_id: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.job_id')),
+            },
+            updateExpression: 'SET #status = :status, completed_at = :completed_at, updated_at = :updated_at',
+            expressionAttributeNames: {
+              '#status': 'status',
+            },
+            expressionAttributeValues: {
+              ':status': tasks.DynamoAttributeValue.fromString('completed'),
+              ':completed_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
+              ':updated_at': tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.State.EnteredTime')),
+            },
+          })
+        )
+    );
+
+  // Check workflow type and route accordingly (defined after processLegacyJob and setupStepLoop)
+  const checkWorkflowType = new sfn.Choice(scope, 'CheckWorkflowType')
+    .when(
+      sfn.Condition.or(
+        sfn.Condition.isNotPresent('$.workflowData.Item.steps'),
+        sfn.Condition.numberEquals('$.steps_length', 0)
+      ),
+      processLegacyJob
+    )
+    .otherwise(resolveDependencies.next(setupStepLoop));
 
   // Set has_template to true when template exists
   const setHasTemplateTrue = new sfn.Pass(scope, 'SetHasTemplateTrue', {
@@ -275,8 +338,7 @@ export function createJobProcessorStateMachine(
     .otherwise(setHasTemplateFalse);
 
   // Compute steps length - handle both new (with steps) and legacy (without steps) workflows
-  // All workflows must have steps - compute steps length directly
-  const computeStepsLength = new sfn.Pass(scope, 'ComputeStepsLength', {
+  const computeStepsLengthWithSteps = new sfn.Pass(scope, 'ComputeStepsLengthWithSteps', {
     parameters: {
       'job_id.$': '$.job_id',
       'workflow_id.$': '$.workflow_id',
@@ -284,131 +346,35 @@ export function createJobProcessorStateMachine(
       'tenant_id.$': '$.tenant_id',
       'workflowData.$': '$.workflowData',
       'steps_length.$': 'States.ArrayLength($.workflowData.Item.steps.L)',
+      // Don't extract template_id here - let checkTemplateExists handle it safely
     },
     resultPath: '$',
   }).next(checkTemplateExists);
 
-  // Load workflow data for continue path (needed when continuing after rerun)
-  const loadWorkflowForContinue = new tasks.DynamoGetItem(scope, 'LoadWorkflowForContinue', {
-    table: workflowsTable,
-    key: {
-      workflow_id: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.workflow_id')),
-    },
-    resultPath: '$.workflowData',
-  });
-
-  // Check if more steps remain after rerun (for continue path)
-  // After setupContinuePath, we route to incrementStep which will handle the normal workflow loop
-  // Defined before setHasTemplateTrueContinue/setHasTemplateFalseContinue because it's referenced there
-  const checkMoreStepsAfterRerun = new sfn.Choice(scope, 'CheckMoreStepsAfterRerun')
-    .when(
-      sfn.Condition.numberLessThanJsonPath('$.step_index', '$.total_steps'),
-      processStepContinue.next(checkStepResult)  // Continue with next step, then incrementStep will handle the loop
-    )
-    .otherwise(
-      // All steps complete - check if HTML generation is needed
-      new sfn.Choice(scope, 'CheckIfHtmlNeededAfterRerun')
-        .when(
-          sfn.Condition.booleanEquals('$.has_template', true),
-          processHtmlGenerationContinue.next(checkHtmlResult)
-        )
-        .otherwise(finalizeJob)
-    );
-
-  // Set has_template for continue path when template exists
-  const setHasTemplateTrueContinue = new sfn.Pass(scope, 'SetHasTemplateTrueContinue', {
+  const computeStepsLengthLegacy = new sfn.Pass(scope, 'ComputeStepsLengthLegacy', {
     parameters: {
       'job_id.$': '$.job_id',
       'workflow_id.$': '$.workflow_id',
       'submission_id.$': '$.submission_id',
       'tenant_id.$': '$.tenant_id',
-      'step_index.$': 'States.MathAdd($.step_index, 1)',
-      'total_steps.$': 'States.ArrayLength($.workflowData.Item.steps.L)',
-      'has_template': true,
-      'template_id.$': '$.workflowData.Item.template_id.S',
       'workflowData.$': '$.workflowData',
+      'steps_length': 0,
+      // Don't extract template_id here - let checkTemplateExists handle it safely
     },
     resultPath: '$',
-  }).next(checkMoreStepsAfterRerun);
+  }).next(checkTemplateExists);
 
-  // Set has_template for continue path when template doesn't exist
-  const setHasTemplateFalseContinue = new sfn.Pass(scope, 'SetHasTemplateFalseContinue', {
-    parameters: {
-      'job_id.$': '$.job_id',
-      'workflow_id.$': '$.workflow_id',
-      'submission_id.$': '$.submission_id',
-      'tenant_id.$': '$.tenant_id',
-      'step_index.$': 'States.MathAdd($.step_index, 1)',
-      'total_steps.$': 'States.ArrayLength($.workflowData.Item.steps.L)',
-      'has_template': false,
-      'template_id': '',
-      'workflowData.$': '$.workflowData',
-    },
-    resultPath: '$',
-  }).next(checkMoreStepsAfterRerun);
-
-  // Check if template exists for continue path
-  const checkTemplateExistsContinue = new sfn.Choice(scope, 'CheckTemplateExistsContinue')
+  const computeStepsLength = new sfn.Choice(scope, 'ComputeStepsLength')
     .when(
-      sfn.Condition.isPresent('$.workflowData.Item.template_id.S'),
-      setHasTemplateTrueContinue
+      sfn.Condition.isPresent('$.workflowData.Item.steps'),
+      computeStepsLengthWithSteps
     )
-    .otherwise(setHasTemplateFalseContinue);
+    .otherwise(computeStepsLengthLegacy);
 
-  // Setup continue path after single step rerun
-  const setupContinuePath = new sfn.Pass(scope, 'SetupContinuePath', {
-    parameters: {
-      'job_id.$': '$.job_id',
-      'workflow_id.$': '$.workflow_id',
-      'submission_id.$': '$.submission_id',
-      'tenant_id.$': '$.tenant_id',
-      'step_index.$': 'States.MathAdd($.step_index, 1)',
-      'total_steps.$': 'States.ArrayLength($.workflowData.Item.steps.L)',
-      'workflowData.$': '$.workflowData',
-    },
-    resultPath: '$',
-  }).next(checkTemplateExistsContinue);
-
-  // Check step result for single-step rerun with continue option
-  const checkStepResultSingleStepContinue = new sfn.Choice(scope, 'CheckStepResultSingleStepContinue')
-    .when(
-      sfn.Condition.booleanEquals('$.processResult.Payload.success', false),
-      handleStepFailure
-    )
-    .otherwise(
-      // Step succeeded - check if we should continue
-      new sfn.Choice(scope, 'CheckContinueAfterRerun')
-        .when(
-          sfn.Condition.booleanEquals('$.continue_after', true),
-          // Load workflow data and continue with remaining steps
-          loadWorkflowForContinue.next(setupContinuePath)
-        )
-        .otherwise(finalizeJob)  // Just finalize if not continuing
-    );
-
-  // Check if this is a single-step rerun (action === 'process_single_step' or 'process_single_step_and_continue')
-  // If yes, route directly to processStepSingle with the provided step_index
-  // If no, continue with normal workflow initialization flow
-  // Note: Check if action field exists first to avoid runtime errors when field is missing
-  const checkAction = new sfn.Choice(scope, 'CheckAction')
-    .when(
-      sfn.Condition.and(
-        sfn.Condition.isPresent('$.action'),
-        sfn.Condition.or(
-          sfn.Condition.stringEquals('$.action', 'process_single_step'),
-          sfn.Condition.stringEquals('$.action', 'process_single_step_and_continue')
-        )
-      ),
-      // Single-step rerun path: processStepSingle -> checkStepResultSingleStepContinue
-      processStepSingle.next(checkStepResultSingleStepContinue)
-    )
-    .otherwise(
-      // Normal workflow path: initializeSteps -> computeStepsLength -> ...
-      initializeSteps.next(computeStepsLength)
-    );
-
-  // Define workflow: Update status -> Check action -> Route accordingly
-  // All workflows must use steps format - legacy format is no longer supported
-  return updateJobStatus.next(checkAction);
+  // Define workflow: Update status -> Initialize steps -> Compute steps length -> Check template -> Check workflow type -> Process accordingly
+  // Note: computeStepsLength internally connects to checkTemplateExists
+  return updateJobStatus
+    .next(initializeSteps)
+    .next(computeStepsLength);
 }
 

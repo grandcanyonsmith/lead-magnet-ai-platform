@@ -1,48 +1,49 @@
 /**
- * Data fetching hooks for forms using React Query
+ * Data fetching hooks for forms
  */
 
 'use client'
 
-import { useMemo } from 'react'
-import { useQuery } from '@/hooks/useQuery'
-import { useMutation } from '@/hooks/useMutation'
+import { useState, useEffect, useCallback } from 'react'
 import { api } from '@/lib/api'
 import { Form, FormCreateRequest, FormUpdateRequest, FormListResponse } from '@/types'
-import { normalizeError, extractListData } from './hookHelpers'
-
-// Query keys factory
-export const formKeys = {
-  all: ['forms'] as const,
-  lists: () => [...formKeys.all, 'list'] as const,
-  list: (params?: Record<string, unknown>) => [...formKeys.lists(), params] as const,
-  details: () => [...formKeys.all, 'detail'] as const,
-  detail: (id: string) => [...formKeys.details(), id] as const,
-}
 
 interface UseFormsResult {
   forms: Form[]
   loading: boolean
   error: string | null
-  refetch: () => void
+  refetch: () => Promise<void>
 }
 
 export function useForms(params?: Record<string, unknown>): UseFormsResult {
-  const queryKey = useMemo(() => formKeys.list(params), [params])
-  
-  const { data, isLoading, error, refetch } = useQuery<FormListResponse>(
-    queryKey,
-    () => api.getForms(params),
-    {
-      enabled: true,
+  const [forms, setForms] = useState<Form[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchForms = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await api.getForms(params)
+      setForms(response.forms || [])
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load forms'
+      setError(errorMessage)
+      console.error('Failed to load forms:', err)
+    } finally {
+      setLoading(false)
     }
-  )
+  }, [params])
+
+  useEffect(() => {
+    fetchForms()
+  }, [fetchForms])
 
   return {
-    forms: data?.forms ?? [],
-    loading: isLoading,
-    error: normalizeError(error),
-    refetch: () => refetch(),
+    forms,
+    loading,
+    error,
+    refetch: fetchForms,
   }
 }
 
@@ -50,28 +51,43 @@ interface UseFormResult {
   form: Form | null
   loading: boolean
   error: string | null
-  refetch: () => void
+  refetch: () => Promise<void>
 }
 
 export function useForm(id: string | null): UseFormResult {
-  const queryKey = useMemo(() => (id ? formKeys.detail(id) : ['forms', 'detail', null]), [id])
-  
-  const { data, isLoading, error, refetch } = useQuery<Form>(
-    queryKey,
-    () => {
-      if (!id) throw new Error('Form ID is required')
-      return api.getForm(id)
-    },
-    {
-      enabled: !!id,
+  const [form, setForm] = useState<Form | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchForm = useCallback(async () => {
+    if (!id) {
+      setLoading(false)
+      return
     }
-  )
+
+    try {
+      setLoading(true)
+      setError(null)
+      const data = await api.getForm(id)
+      setForm(data)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load form'
+      setError(errorMessage)
+      console.error('Failed to load form:', err)
+    } finally {
+      setLoading(false)
+    }
+  }, [id])
+
+  useEffect(() => {
+    fetchForm()
+  }, [fetchForm])
 
   return {
-    form: data || null,
-    loading: isLoading,
-    error: normalizeError(error),
-    refetch: () => refetch(),
+    form,
+    loading,
+    error,
+    refetch: fetchForm,
   }
 }
 
@@ -82,25 +98,28 @@ interface UseCreateFormResult {
 }
 
 export function useCreateForm(): UseCreateFormResult {
-  const { mutateAsync, isPending, error } = useMutation<Form, Error, FormCreateRequest>(
-    (data: FormCreateRequest) => api.createForm(data),
-    {
-      showSuccessToast: 'Form created successfully',
-      showErrorToast: true,
-      invalidateQueries: [formKeys.all],
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const createForm = useCallback(async (data: FormCreateRequest): Promise<Form | null> => {
+    try {
+      setLoading(true)
+      setError(null)
+      return await api.createForm(data)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create form'
+      setError(errorMessage)
+      console.error('Failed to create form:', err)
+      return null
+    } finally {
+      setLoading(false)
     }
-  )
+  }, [])
 
   return {
-    createForm: async (data: FormCreateRequest) => {
-      try {
-        return await mutateAsync(data)
-      } catch {
-        return null
-      }
-    },
-    loading: isPending,
-    error: normalizeError(error),
+    createForm,
+    loading,
+    error,
   }
 }
 
@@ -111,29 +130,28 @@ interface UseUpdateFormResult {
 }
 
 export function useUpdateForm(): UseUpdateFormResult {
-  const { mutateAsync, isPending, error } = useMutation<
-    Form,
-    Error,
-    { id: string; data: FormUpdateRequest }
-  >(
-    ({ id, data }) => api.updateForm(id, data),
-    {
-      showSuccessToast: 'Form updated successfully',
-      showErrorToast: true,
-      invalidateQueries: [formKeys.all],
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const updateForm = useCallback(async (id: string, data: FormUpdateRequest): Promise<Form | null> => {
+    try {
+      setLoading(true)
+      setError(null)
+      return await api.updateForm(id, data)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update form'
+      setError(errorMessage)
+      console.error('Failed to update form:', err)
+      return null
+    } finally {
+      setLoading(false)
     }
-  )
+  }, [])
 
   return {
-    updateForm: async (id: string, data: FormUpdateRequest) => {
-      try {
-        return await mutateAsync({ id, data })
-      } catch {
-        return null
-      }
-    },
-    loading: isPending,
-    error: normalizeError(error),
+    updateForm,
+    loading,
+    error,
   }
 }
 
