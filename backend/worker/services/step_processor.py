@@ -265,7 +265,7 @@ class StepProcessor:
         Returns:
             Tuple of (webhook_result, success, step_data)
         """
-        # Execute webhook step
+        # Execute webhook step (payload excluded from return to avoid Step Functions size limit)
         webhook_result, success = self.webhook_step_service.execute_webhook_step(
             step=step,
             step_index=step_index,
@@ -276,13 +276,25 @@ class StepProcessor:
             sorted_steps=sorted_steps
         )
         
+        # Rebuild payload for execution step storage (stored in DynamoDB/S3, not returned to Step Functions)
+        data_selection = step.get('webhook_data_selection', {})
+        payload = self.webhook_step_service._build_webhook_payload(
+            job_id=job_id,
+            job=job,
+            submission=submission,
+            step_outputs=step_outputs,
+            sorted_steps=sorted_steps,
+            step_index=step_index,
+            data_selection=data_selection
+        )
+        
         # Create execution step record
         step_name = step.get('step_name', f'Webhook Step {step_index + 1}')
         step_data = ExecutionStepManager.create_webhook_step(
             step_name=step_name,
             step_order=step_index + 1,
             webhook_url=webhook_result.get('webhook_url', ''),
-            payload=webhook_result.get('payload', {}),
+            payload=payload,
             response_status=webhook_result.get('response_status'),
             response_body=webhook_result.get('response_body'),
             success=success,
