@@ -1,4 +1,4 @@
-import PublicFormClient from './page-client'
+import PublicFormClient from './client'
 
 export async function generateStaticParams(): Promise<{ slug: string[] }[]> {
   // Return at least one placeholder route to satisfy Next.js static export requirements

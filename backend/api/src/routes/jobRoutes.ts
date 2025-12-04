@@ -1,6 +1,6 @@
-import { jobsController } from '../controllers/jobs';
-import { executionStepsController } from '../controllers/executionStepsController';
-import { jobRerunController } from '../controllers/jobRerunController';
+import { jobsController } from '../controllers/jobs.controller';
+import { executionStepsController } from '../controllers/execution-steps.controller';
+import { jobRerunController } from '../controllers/job-rerun.controller';
 import { router } from './router';
 import { ApiError } from '../utils/errors';
 import { logger } from '../utils/logger';

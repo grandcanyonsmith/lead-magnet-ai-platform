@@ -12,7 +12,7 @@ from typing import Dict, Any
 from processor import JobProcessor
 from db_service import DynamoDBService
 from s3_service import S3Service
-from services.error_handler_service import ErrorHandlerService
+from services.job_error_handler import JobErrorHandler
 
 # Setup logging
 logging.basicConfig(
@@ -65,7 +65,7 @@ def main():
         # Only use error handler if db_service was successfully initialized
         if db_service is not None:
             try:
-                error_handler = ErrorHandlerService(db_service)
+                error_handler = JobErrorHandler(db_service)
                 error_result = error_handler.handle_job_error(
                     job_id=job_id,
                     error=e,

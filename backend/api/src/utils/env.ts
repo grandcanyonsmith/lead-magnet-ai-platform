@@ -167,27 +167,5 @@ export class EnvConfig {
 // Export singleton instance
 export const env = new EnvConfig();
 
-// Export individual getters for backward compatibility during migration
-export const getWorkflowsTable = () => env.workflowsTable;
-export const getFormsTable = () => env.formsTable;
-export const getTemplatesTable = () => env.templatesTable;
-export const getJobsTable = () => env.jobsTable;
-export const getSubmissionsTable = () => env.submissionsTable;
-export const getArtifactsTable = () => env.artifactsTable;
-export const getNotificationsTable = () => env.notificationsTable;
-export const getUserSettingsTable = () => env.userSettingsTable;
-export const getUsageRecordsTable = () => env.usageRecordsTable;
-export const getSessionsTable = () => env.sessionsTable;
-export const getUsersTable = () => env.usersTable;
-export const getCustomersTable = () => env.customersTable;
-export const getFilesTable = () => env.filesTable;
-export const getImpersonationLogsTable = () => env.impersonationLogsTable;
-export const getAwsRegion = () => env.awsRegion;
-export const getLambdaFunctionName = () => env.lambdaFunctionName;
-export const getStepFunctionsArn = () => env.stepFunctionsArn;
-export const getArtifactsBucket = () => env.artifactsBucket;
-export const getCloudfrontDomain = () => env.cloudfrontDomain;
-export const getOpenaiSecretName = () => env.openaiSecretName;
-export const getApiUrl = () => env.apiUrl || env.apiGatewayUrl;
 export const isLocal = () => env.isDevelopment();
 

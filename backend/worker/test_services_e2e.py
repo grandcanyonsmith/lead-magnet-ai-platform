@@ -28,7 +28,7 @@ def test_imports():
     try:
         from services.openai_client import OpenAIClient
         from services.api_key_manager import APIKeyManager
-        from services.error_handler import ErrorHandler
+        from services.openai_error_classifier import OpenAIErrorClassifier
         from services.retry_handler import RetryHandler
         from services.tool_validator import ToolValidator
         from services.image_handler import ImageHandler
@@ -265,17 +265,17 @@ def test_error_handler():
     logger.info("Testing error handler...")
     
     try:
-        from services.error_handler import ErrorHandler
+        from services.openai_error_classifier import OpenAIErrorClassifier
         
         # Test error classification
-        assert ErrorHandler.classify_error("API key invalid") == "authentication"
-        assert ErrorHandler.classify_error("rate limit exceeded") == "rate_limit"
-        assert ErrorHandler.classify_error("model not found") == "model_not_found"
-        assert ErrorHandler.classify_error("timeout occurred") == "timeout"
+        assert OpenAIErrorClassifier.classify_error("API key invalid") == "authentication"
+        assert OpenAIErrorClassifier.classify_error("rate limit exceeded") == "rate_limit"
+        assert OpenAIErrorClassifier.classify_error("model not found") == "model_not_found"
+        assert OpenAIErrorClassifier.classify_error("timeout occurred") == "timeout"
         logger.info("✅ Error classification works")
         
         # Test error exception creation
-        exc = ErrorHandler.create_error_exception(
+        exc = OpenAIErrorClassifier.create_error_exception(
             "authentication",
             "AuthenticationError",
             "Invalid API key",

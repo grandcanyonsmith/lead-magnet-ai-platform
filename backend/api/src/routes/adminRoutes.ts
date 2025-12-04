@@ -1,11 +1,11 @@
-import { submissionsController } from '../controllers/submissions';
-import { artifactsController } from '../controllers/artifacts';
-import { settingsController } from '../controllers/settings';
-import { billingController } from '../controllers/billing';
-import { analyticsController } from '../controllers/analytics';
-import { notificationsController } from '../controllers/notifications';
-import { adminController } from '../controllers/admin';
-import { webhookLogsController } from '../controllers/webhookLogs';
+import { submissionsController } from '../controllers/submissions.controller';
+import { artifactsController } from '../controllers/artifacts.controller';
+import { settingsController } from '../controllers/settings.controller';
+import { billingController } from '../controllers/billing.controller';
+import { analyticsController } from '../controllers/analytics.controller';
+import { notificationsController } from '../controllers/notifications.controller';
+import { adminController } from '../controllers/admin.controller';
+import { webhookLogsController } from '../controllers/webhook-logs.controller';
 import { router } from './router';
 import { logger } from '../utils/logger';
 

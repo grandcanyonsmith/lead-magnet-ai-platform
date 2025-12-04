@@ -6,6 +6,8 @@
  * magic strings scattered throughout the codebase.
  */
 
+import type { TableKey } from '../types';
+
 /**
  * Secret names stored in AWS Secrets Manager
  */
@@ -134,7 +136,7 @@ export const ECR_CONFIG = {
 /**
  * Environment variable names (mapping from table keys to env var names)
  */
-export const TABLE_ENV_VAR_MAP: Record<string, string> = {
+export const TABLE_ENV_VAR_MAP: Record<TableKey, string> = {
   workflows: 'WORKFLOWS_TABLE',
   forms: 'FORMS_TABLE',
   submissions: 'SUBMISSIONS_TABLE',

@@ -1,6 +1,6 @@
-export * from './controllers/workflows';
-export * from './controllers/workflowAIController';
-export * from './controllers/workflowValidationController';
+export * from './controllers/workflows.controller';
+export * from './controllers/workflow-ai.controller';
+export * from './controllers/workflow-validation.controller';
 
 export * from './services/draftWorkflowService';
 export * from './services/workflowAIService';

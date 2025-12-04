@@ -4,12 +4,15 @@ import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { FiSearch, FiX, FiHome, FiList, FiBarChart2, FiFileText, FiSettings, FiCommand } from 'react-icons/fi'
 import { api } from '@/lib/api'
+import type { FormSubmission } from '@/types/form'
+import type { Job } from '@/types/job'
 
 interface SearchResult {
   id: string
-  type: 'page' | 'workflow' | 'job'
+  type: 'page' | 'workflow' | 'job' | 'submission'
   title: string
   subtitle?: string
+  preview?: string
   href: string
 }
 
@@ -24,7 +27,8 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [workflows, setWorkflows] = useState<any[]>([])
-  const [jobs, setJobs] = useState<any[]>([])
+  const [jobs, setJobs] = useState<Job[]>([])
+  const [submissions, setSubmissions] = useState<FormSubmission[]>([])
   const [loading, setLoading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const resultsRef = useRef<HTMLDivElement>(null)
@@ -52,17 +56,31 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
   const loadSearchData = async () => {
     setLoading(true)
     try {
-      const [workflowsData, jobsData] = await Promise.all([
+      const [workflowsData, jobsData, submissionsData] = await Promise.all([
         api.getWorkflows().catch(() => ({ workflows: [] })),
         api.getJobs({ limit: 50 }).catch(() => ({ jobs: [] })),
+        api.getSubmissions({ limit: 50 }).catch(() => ({ submissions: [] })),
       ])
       setWorkflows(workflowsData.workflows || [])
-      setJobs(jobsData.jobs || [])
+      setJobs((jobsData.jobs as Job[]) || [])
+      setSubmissions(submissionsData.submissions || [])
     } catch (error) {
       console.error('Failed to load search data:', error)
     } finally {
       setLoading(false)
     }
+  }
+
+  const buildSubmissionPreview = (formData: Record<string, unknown>) => {
+    const entries = Object.entries(formData || {})
+    if (!entries.length) return undefined
+
+    const formatted = entries
+      .map(([key, value]) => `${key}: ${typeof value === 'string' ? value : JSON.stringify(value)}`)
+      .join(' • ')
+
+    const truncated = formatted.length > 140 ? `${formatted.slice(0, 140)}…` : formatted
+    return truncated
   }
 
   const searchResults = useMemo(() => {
@@ -110,20 +128,56 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
     // Search jobs
     jobs.forEach((job) => {
       const jobId = (job.job_id || '').toLowerCase()
-      const workflowName = (job.workflow_name || '').toLowerCase()
+      const workflowName = ((job as any).workflow_name || '').toLowerCase()
       if (jobId.includes(queryLower) || workflowName.includes(queryLower)) {
         results.push({
           id: `job-${job.job_id}`,
           type: 'job',
-          title: job.workflow_name || 'Generated Lead Magnet',
+          title: (job as any).workflow_name || 'Generated Lead Magnet',
           subtitle: `Job ${job.job_id}`,
           href: `/dashboard/jobs/${job.job_id}`,
         })
       }
     })
 
+    // Search form submissions (map to their job/work run)
+    submissions.forEach((submission) => {
+      const submissionText = JSON.stringify(submission.form_data || {}).toLowerCase()
+      const submissionId = (submission.submission_id || '').toLowerCase()
+      const match =
+        submissionText.includes(queryLower) ||
+        submissionId.includes(queryLower)
+
+      if (!match) return
+
+      const job = jobs.find((j) => j.submission_id === submission.submission_id)
+      const workflowName = (job as any)?.workflow_name || 'Generated Lead Magnet'
+      const preview = buildSubmissionPreview(submission.form_data)
+
+      results.push({
+        id: `submission-${submission.submission_id}`,
+        type: 'submission',
+        title: workflowName,
+        subtitle: `Form submission • ${submission.submission_id}`,
+        preview,
+        href: job ? `/dashboard/jobs/${job.job_id}` : `/dashboard/workflows/${submission.workflow_id}`,
+      })
+    })
+
     return results.slice(0, 10) // Limit to 10 results
-  }, [query, workflows, jobs])
+  }, [query, workflows, jobs, submissions])
+
+  const buildSubmissionPreview = (formData: Record<string, unknown>, queryLower: string) => {
+    const entries = Object.entries(formData || {})
+    if (!entries.length) return undefined
+
+    const formatted = entries
+      .map(([key, value]) => `${key}: ${typeof value === 'string' ? value : JSON.stringify(value)}`)
+      .join(' • ')
+
+    const truncated = formatted.length > 140 ? `${formatted.slice(0, 140)}…` : formatted
+    return truncated
+  }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
@@ -165,6 +219,8 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
         return <FiList className="w-4 h-4" />
       case 'job':
         return <FiBarChart2 className="w-4 h-4" />
+      case 'submission':
+        return <FiFileText className="w-4 h-4" />
       default:
         return <FiSearch className="w-4 h-4" />
     }
@@ -191,7 +247,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Search pages, workflows, jobs..."
+            placeholder="Search pages, workflows, jobs, form submissions..."
             className="flex-1 text-base outline-none placeholder-gray-400"
           />
           <div className="flex items-center gap-2">
@@ -243,6 +299,11 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
                         {result.subtitle}
                       </div>
                     )}
+                    {result.preview && (
+                      <div className={`text-xs truncate ${index === selectedIndex ? 'text-primary-700' : 'text-gray-500'}`}>
+                        {result.preview}
+                      </div>
+                    )}
                   </div>
                   {result.type === 'workflow' && (
                     <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded">
@@ -252,6 +313,11 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
                   {result.type === 'job' && (
                     <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded">
                       Job
+                    </span>
+                  )}
+                  {result.type === 'submission' && (
+                    <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded">
+                      Submission
                     </span>
                   )}
                 </button>

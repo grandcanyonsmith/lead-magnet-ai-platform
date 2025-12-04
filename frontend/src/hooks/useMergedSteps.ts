@@ -1,6 +1,6 @@
 /**
  * Hook to merge workflow steps with execution steps
- * Extracted from page-client.tsx for reusability and testability
+ * Extracted from client.tsx for reusability and testability
  */
 
 import { useMemo } from 'react'

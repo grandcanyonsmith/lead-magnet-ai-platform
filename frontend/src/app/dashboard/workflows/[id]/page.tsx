@@ -1,4 +1,4 @@
-import WorkflowDetailClient from './page-client'
+import WorkflowDetailClient from './client'
 
 export async function generateStaticParams(): Promise<{ id: string }[]> {
   // Return at least one placeholder route to satisfy Next.js static export requirements
