@@ -63,7 +63,12 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
       ])
       setWorkflows(workflowsData.workflows || [])
       setJobs((jobsData.jobs as Job[]) || [])
-      setSubmissions(submissionsData.submissions || [])
+      setSubmissions(
+        (submissionsData.submissions as FormSubmission[] | undefined)?.map((s) => ({
+          ...s,
+          form_data: (s as any).form_data || (s as any).submission_data || {},
+        })) || []
+      )
     } catch (error) {
       console.error('Failed to load search data:', error)
     } finally {
