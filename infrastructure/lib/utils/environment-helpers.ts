@@ -26,7 +26,8 @@ export function createTableEnvironmentVars(tablesMap: TableMap): Record<string, 
 
   // Use centralized mapping from constants
   Object.entries(tablesMap).forEach(([key, table]) => {
-    const envVarName = TABLE_ENV_VAR_MAP[key];
+    const typedKey = key as TableKey;
+    const envVarName = TABLE_ENV_VAR_MAP[typedKey];
     if (envVarName) {
       env[envVarName] = table.tableName;
     } else {

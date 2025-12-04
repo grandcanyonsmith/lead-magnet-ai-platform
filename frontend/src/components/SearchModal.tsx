@@ -167,18 +167,6 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
     return results.slice(0, 10) // Limit to 10 results
   }, [query, workflows, jobs, submissions])
 
-  const buildSubmissionPreview = (formData: Record<string, unknown>, queryLower: string) => {
-    const entries = Object.entries(formData || {})
-    if (!entries.length) return undefined
-
-    const formatted = entries
-      .map(([key, value]) => `${key}: ${typeof value === 'string' ? value : JSON.stringify(value)}`)
-      .join(' • ')
-
-    const truncated = formatted.length > 140 ? `${formatted.slice(0, 140)}…` : formatted
-    return truncated
-  }
-
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       onClose()
