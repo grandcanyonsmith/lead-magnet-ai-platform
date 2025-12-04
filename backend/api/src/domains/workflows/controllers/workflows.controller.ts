@@ -1,5 +1,3 @@
-<<<<<<< Current (Your changes)
-=======
 import { ulid } from 'ulid';
 import { db } from '@utils/db';
 import { validate, createWorkflowSchema, updateWorkflowSchema } from '@utils/validation';
@@ -427,4 +425,3 @@ class WorkflowsController {
 }
 
 export const workflowsController = new WorkflowsController();
->>>>>>> Incoming (Background Agent changes)
