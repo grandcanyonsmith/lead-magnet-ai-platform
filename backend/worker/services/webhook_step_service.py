@@ -131,9 +131,14 @@ class WebhookStepService:
                 'duration_ms': step_duration
             })
             
+            # Calculate payload size for metadata (don't include full payload to avoid Step Functions size limit)
+            payload_size = len(json.dumps(payload, default=str)) if payload else 0
+            payload_keys = list(payload.keys()) if payload else []
+            
             return {
                 'webhook_url': webhook_url,
-                'payload': payload,
+                'payload_size_bytes': payload_size,
+                'payload_keys': payload_keys,
                 'response_status': response.status_code,
                 'response_body': response_body,
                 'success': True,
@@ -167,9 +172,14 @@ class WebhookStepService:
                 'duration_ms': step_duration
             }, exc_info=True)
             
+            # Calculate payload size for metadata (don't include full payload to avoid Step Functions size limit)
+            payload_size = len(json.dumps(payload, default=str)) if payload else 0
+            payload_keys = list(payload.keys()) if payload else []
+            
             return {
                 'webhook_url': webhook_url,
-                'payload': payload,
+                'payload_size_bytes': payload_size,
+                'payload_keys': payload_keys,
                 'response_status': response_status,
                 'response_body': response_body,
                 'success': False,
@@ -354,6 +364,38 @@ class WebhookStepService:
         
         return payload
     
+    def _extract_step_name_from_artifact(self, artifact_name: str) -> str:
+        """
+        Extract a readable step name from artifact filename.
+        
+        Examples:
+        - "step_12_competitive_advantage.md" -> "Step 12: Competitive Advantage"
+        - "step_1_initial_market_research.md" -> "Step 1: Initial Market Research"
+        - "image-123.png" -> "Image"
+        """
+        if not artifact_name:
+            return "Unknown Step"
+        
+        # Remove file extension
+        name_without_ext = artifact_name.rsplit('.', 1)[0] if '.' in artifact_name else artifact_name
+        
+        # Check if it matches step pattern: step_{number}_{name}
+        step_match = re.match(r'^step[_\s](\d+)[_\s](.+)$', name_without_ext, re.IGNORECASE)
+        if step_match:
+            step_num = step_match.group(1)
+            step_name_part = step_match.group(2)
+            # Convert underscores to spaces and title case
+            step_name_formatted = step_name_part.replace('_', ' ').replace('-', ' ').title()
+            return f"Step {step_num}: {step_name_formatted}"
+        
+        # For images or other artifacts, try to extract a readable name
+        if name_without_ext.startswith('image'):
+            return "Image"
+        
+        # Default: format the name nicely
+        formatted = name_without_ext.replace('_', ' ').replace('-', ' ').title()
+        return formatted
+    
     def _extract_text_from_html(self, html_content: str) -> str:
         """
         Extract text content from HTML by stripping tags.
@@ -406,12 +448,17 @@ class WebhookStepService:
 
         for artifact in all_artifacts:
             artifact_type = (artifact.get('artifact_type') or '').lower()
-            artifact_name = (artifact.get('artifact_name') or artifact.get('file_name') or '').lower()
+            artifact_name_raw = artifact.get('artifact_name') or artifact.get('file_name') or ''
+            artifact_name = artifact_name_raw.lower()
             s3_key = artifact.get('s3_key')
             artifact_url = artifact.get('public_url') or artifact.get('s3_url') or artifact.get('object_url') or artifact.get('s3_key') or ''
 
+            # Extract step name from artifact name (e.g., "step_12_competitive_advantage.md" -> "Step 12: Competitive Advantage")
+            step_name = self._extract_step_name_from_artifact(artifact_name_raw)
+
             block_lines = [
                 delimiter,
+                f"Step: {step_name}",
                 f"URL: {artifact_url}",
                 delimiter,
                 ""
