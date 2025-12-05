@@ -1,5 +1,3 @@
-<<<<<<< Current (Your changes)
-=======
 """
 Error Handler Service
 Provides centralized error handling for job processing.
@@ -88,5 +86,3 @@ class JobErrorHandler:
             result['step_type'] = step_type
         
         return result
-
->>>>>>> Incoming (Background Agent changes)
