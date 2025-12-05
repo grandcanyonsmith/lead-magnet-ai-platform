@@ -270,6 +270,14 @@ class WebhookStepService:
         if self.db:
             try:
                 all_artifacts = self.db.query_artifacts_by_job_id(job_id)
+                # Ensure artifacts are ordered by their step number (then created_at)
+                all_artifacts = sorted(
+                    all_artifacts,
+                    key=lambda a: (
+                        self._get_artifact_step_order(a),
+                        a.get('created_at') or ''
+                    )
+                )
                 logger.debug("[WebhookStepService] Queried artifacts for webhook step", extra={
                     'job_id': job_id,
                     'artifacts_count': len(all_artifacts)
@@ -528,4 +536,29 @@ class WebhookStepService:
         })
 
         return final_content
+
+    def _get_artifact_step_order(self, artifact: Dict[str, Any]) -> int:
+        """
+        Derive a sortable step order for an artifact.
+        Priority:
+          1. Explicit numeric fields: step_order, step_index, step_number
+          2. Parse from artifact_name/file_name (e.g., step_3_output.md)
+          3. Fallback large number to push unknowns to the end
+        """
+        for key in ('step_order', 'step_index', 'step_number'):
+            val = artifact.get(key)
+            if isinstance(val, int):
+                return val
+            if isinstance(val, str) and val.isdigit():
+                return int(val)
+
+        name = (artifact.get('artifact_name') or artifact.get('file_name') or '').lower()
+        match = re.search(r'step[_\s-]?(\d+)', name)
+        if match:
+            try:
+                return int(match.group(1))
+            except ValueError:
+                pass
+
+        return 10_000_000  # Unknown step -> end of list
 
