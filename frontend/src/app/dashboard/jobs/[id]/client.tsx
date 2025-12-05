@@ -546,18 +546,21 @@ export default function JobDetailClient() {
 
 
 function getJobDuration(job?: Job | null): JobDurationInfo | null {
-  if (!job?.started_at) {
+  // If job is processing but started_at is missing, fall back to created_at
+  const startTime = job?.started_at || (job?.status === 'processing' ? job?.created_at : null)
+  
+  if (!startTime) {
     return null
   }
 
-  const start = new Date(job.started_at).getTime()
-  const endTimestamp = job.completed_at || job.failed_at ? new Date(job.completed_at || job.failed_at || '').getTime() : Date.now()
+  const start = new Date(startTime).getTime()
+  const endTimestamp = job?.completed_at || job?.failed_at ? new Date(job.completed_at || job.failed_at || '').getTime() : Date.now()
   const seconds = Math.max(0, Math.round((endTimestamp - start) / 1000))
 
   return {
     seconds,
     label: formatDuration(seconds),
-    isLive: !job.completed_at && !job.failed_at && job.status === 'processing',
+    isLive: !job?.completed_at && !job?.failed_at && job?.status === 'processing',
   }
 }
 
