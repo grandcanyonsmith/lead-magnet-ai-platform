@@ -56,8 +56,9 @@ export function JobOverviewSection({
   })()
 
   const updatedDisplay = lastUpdatedLabel ?? (job.created_at ? formatRelativeTime(job.created_at) : null)
-  // Fall back to created_at when job is processing but started_at is not yet set
-  const effectiveStartTime = job.started_at || (job.status === 'processing' ? job.created_at : null)
+  // Fall back to created_at when started_at is not set for processing, completed, or failed jobs
+  const shouldFallbackToCreatedAt = job.status === 'processing' || job.status === 'completed' || job.status === 'failed'
+  const effectiveStartTime = job.started_at || (shouldFallbackToCreatedAt ? job.created_at : null)
   const startLabel = effectiveStartTime ? formatRelativeTime(effectiveStartTime) : null
   const completedLabel = job.completed_at ? formatRelativeTime(job.completed_at) : null
   const isAutoUpdating = job.status === 'processing'

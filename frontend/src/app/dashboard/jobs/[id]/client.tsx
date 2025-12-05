@@ -546,8 +546,9 @@ export default function JobDetailClient() {
 
 
 function getJobDuration(job?: Job | null): JobDurationInfo | null {
-  // If job is processing but started_at is missing, fall back to created_at
-  const startTime = job?.started_at || (job?.status === 'processing' ? job?.created_at : null)
+  // If started_at is missing, fall back to created_at for processing, completed, or failed jobs
+  const shouldFallbackToCreatedAt = job?.status === 'processing' || job?.status === 'completed' || job?.status === 'failed'
+  const startTime = job?.started_at || (shouldFallbackToCreatedAt ? job?.created_at : null)
   
   if (!startTime) {
     return null

@@ -1,5 +1,3 @@
-<<<<<<< Current (Your changes)
-=======
 """
 Error Handler Service
 Handles OpenAI API error classification and exception creation.
@@ -91,5 +89,3 @@ class OpenAIErrorClassifier:
         else:
             logger.error(f"[OpenAIErrorClassifier] Unexpected API error: {error_type}")
             return Exception(f"OpenAI API error ({error_type}): {error_message}")
-
->>>>>>> Incoming (Background Agent changes)
