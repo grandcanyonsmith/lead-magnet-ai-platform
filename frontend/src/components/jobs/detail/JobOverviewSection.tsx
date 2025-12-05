@@ -56,7 +56,9 @@ export function JobOverviewSection({
   })()
 
   const updatedDisplay = lastUpdatedLabel ?? (job.created_at ? formatRelativeTime(job.created_at) : null)
-  const startLabel = job.started_at ? formatRelativeTime(job.started_at) : null
+  // Fall back to created_at when job is processing but started_at is not yet set
+  const effectiveStartTime = job.started_at || (job.status === 'processing' ? job.created_at : null)
+  const startLabel = effectiveStartTime ? formatRelativeTime(effectiveStartTime) : null
   const completedLabel = job.completed_at ? formatRelativeTime(job.completed_at) : null
   const isAutoUpdating = job.status === 'processing'
 
@@ -165,14 +167,14 @@ export function JobOverviewSection({
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Runtime</p>
                 <p className="text-lg font-semibold text-gray-900">
-                  {jobDuration?.label || (job.started_at ? 'Initializing...' : 'Not started')}
+                  {jobDuration?.label || (effectiveStartTime ? 'Initializing...' : (isAutoUpdating ? 'Starting...' : 'Not started'))}
                 </p>
                 <p className="text-sm text-gray-600">
                   {completedLabel
                     ? `Completed ${completedLabel}`
                     : startLabel
                       ? `Started ${startLabel}`
-                      : 'Waiting for worker'}
+                      : (isAutoUpdating ? 'Processing started' : 'Waiting for worker')}
                 </p>
               </div>
               <span className="inline-flex rounded-full bg-orange-100 p-3 text-orange-700">
