@@ -179,9 +179,10 @@ export default function WorkflowStepEditor({
     } else {
       setWebhookHeaders({})
     }
-  }, [step])
+  }, [step, onChange, index])
 
   // Ensure image generation config is initialized when tool is selected
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (isToolSelected('image_generation')) {
       // Check if config needs initialization (only if size is not set or is undefined)

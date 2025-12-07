@@ -209,7 +209,7 @@ export function BillingUsage() {
                       No active subscription
                     </p>
                     <p className="text-xs text-yellow-800 mb-2">
-                      Start a subscription to use Lead Magnet AI's features
+                      Start a subscription to use Lead Magnet AI&apos;s features
                     </p>
                     <button
                       onClick={() => router.push('/setup-billing')}
