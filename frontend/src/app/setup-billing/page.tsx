@@ -94,7 +94,7 @@ export default function SetupBillingPage() {
           <div className="px-8 py-10">
             <div className="mb-8">
               <h3 className="text-xl font-semibold text-gray-900 mb-6">
-                What's included:
+                What&apos;s included:
               </h3>
               <div className="space-y-4">
                 <div className="flex items-start">
@@ -148,9 +148,9 @@ export default function SetupBillingPage() {
             {/* Billing Info */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8">
               <p className="text-sm text-blue-800">
-                <strong>How billing works:</strong> You'll be charged $29/month for your base subscription.
+                <strong>How billing works:</strong> You&apos;ll be charged $29/month for your base subscription.
                 This includes $10 of usage. If you exceed $10 in usage during a billing period,
-                you'll be charged for the overage at the end of the month. Cancel anytime.
+                you&apos;ll be charged for the overage at the end of the month. Cancel anytime.
               </p>
             </div>
 
@@ -211,7 +211,7 @@ export default function SetupBillingPage() {
             onClick={() => router.push('/dashboard')}
             className="text-gray-600 hover:text-gray-900 underline"
           >
-            I'll set this up later
+            I&apos;ll set this up later
           </button>
         </div>
       </div>

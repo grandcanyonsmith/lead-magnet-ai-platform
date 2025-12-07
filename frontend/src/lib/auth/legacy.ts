@@ -36,3 +36,11 @@ export const isAuthenticated = async (): Promise<boolean> => {
   return authService.isAuthenticated()
 }
 
+export const getIdToken = async (): Promise<string | null> => {
+  const session = await authService.getSession()
+  if (!session) {
+    return null
+  }
+  return session.getIdToken().getJwtToken()
+}
+
