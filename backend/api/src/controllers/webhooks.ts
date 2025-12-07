@@ -133,6 +133,16 @@ class WebhooksController {
     // Update submission with job_id
     await db.update(SUBMISSIONS_TABLE, { submission_id: submissionId }, { job_id: jobId });
 
+    // Create shared job copies for shared workflows (non-blocking)
+    const { createSharedJobCopies } = await import('../services/workflowSharingService');
+    createSharedJobCopies(jobId, workflow.workflow_id, tenantId || '', submissionId).catch((error: any) => {
+      logger.error('[Webhooks] Error creating shared job copies', {
+        error: error.message,
+        jobId,
+        workflowId: workflow.workflow_id,
+      });
+    });
+
     // Trigger workflow execution (same logic as form submission)
     try {
       if (env.isDevelopment() || !STEP_FUNCTIONS_ARN) {

@@ -2,6 +2,7 @@ import { formsController } from '@domains/forms';
 import { jobsController } from '../controllers/jobs.controller';
 import { webhooksController } from '../controllers/webhooks.controller';
 import { openAIWebhookController } from '../controllers/openai-webhook.controller';
+import { stripeWebhookController } from '../controllers/stripeWebhook';
 import { router } from './router';
 import { logger } from '../utils/logger';
 
@@ -42,6 +43,12 @@ export function registerPublicRoutes(): void {
     const rawBody = context?.event?.body;
     const sourceIp = context?.sourceIp || '';
     return await openAIWebhookController.handleWebhook(body, headers, rawBody, sourceIp);
+  }, false);
+
+  // Stripe webhook endpoint
+  router.register('POST', '/v1/stripe/webhook', async (_params, _body, _query, _tenantId, context) => {
+    logger.info('[Public Routes] POST /v1/stripe/webhook');
+    return await stripeWebhookController.handleWebhook(context?.event!);
   }, false);
 }
 

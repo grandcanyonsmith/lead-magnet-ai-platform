@@ -85,6 +85,16 @@ export class FormSubmissionService {
     // Update submission with job_id
     await db.update(SUBMISSIONS_TABLE, { submission_id: submissionId }, { job_id: jobId });
 
+    // Create shared job copies for shared workflows (non-blocking)
+    const { createSharedJobCopies } = await import('../../services/workflowSharingService');
+    createSharedJobCopies(jobId, form.workflow_id, form.tenant_id, submissionId).catch((error: any) => {
+      logger.error('[FormSubmission] Error creating shared job copies', {
+        error: error.message,
+        jobId,
+        workflowId: form.workflow_id,
+      });
+    });
+
     // Start job processing
     await this.startJobProcessing(jobId, form.tenant_id, form.workflow_id, submissionId);
 

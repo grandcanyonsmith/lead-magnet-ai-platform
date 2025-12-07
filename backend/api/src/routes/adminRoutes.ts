@@ -6,6 +6,7 @@ import { analyticsController } from '../controllers/analytics.controller';
 import { notificationsController } from '../controllers/notifications.controller';
 import { adminController } from '../controllers/admin.controller';
 import { webhookLogsController } from '../controllers/webhook-logs.controller';
+import { workflowSharingController } from '../controllers/workflowSharing.controller';
 import { router } from './router';
 import { logger } from '../utils/logger';
 
@@ -55,6 +56,18 @@ export function registerAdminRoutes(): void {
   // Billing
   router.register('GET', '/admin/billing/usage', async (_params, _body, query, tenantId) => {
     return await billingController.getUsage(tenantId!, query);
+  });
+
+  router.register('GET', '/admin/billing/subscription', async (_params, _body, _query, tenantId) => {
+    return await billingController.getSubscription(tenantId!);
+  });
+
+  router.register('POST', '/admin/billing/checkout-session', async (_params, body, _query, tenantId) => {
+    return await billingController.createCheckoutSession(tenantId!, body);
+  });
+
+  router.register('POST', '/admin/billing/portal-session', async (_params, body, _query, tenantId) => {
+    return await billingController.createPortalSession(tenantId!, body);
   });
 
   // Analytics
@@ -115,5 +128,10 @@ export function registerAdminRoutes(): void {
 
   router.register('POST', '/admin/webhook-logs/:id/retry', async (params, _body, _query, tenantId) => {
     return await webhookLogsController.retry(tenantId!, params.id);
+  });
+
+  // Workflow sharing (internal endpoint for worker)
+  router.register('POST', '/internal/workflow-sharing/share-artifact', async (_params, body, _query, tenantId) => {
+    return await workflowSharingController.shareArtifact(_params, body, _query, tenantId);
   });
 }

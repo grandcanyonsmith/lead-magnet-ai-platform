@@ -4,6 +4,8 @@ Handles artifact storage in S3 and DynamoDB.
 """
 
 import logging
+import os
+import requests
 from datetime import datetime
 from typing import Dict, Any, Optional
 from ulid import new as ulid
@@ -107,7 +109,49 @@ class ArtifactService:
             'content_size_bytes': content_size
         })
         
+        # Share artifact with shared workflows (non-blocking)
+        self._share_artifact_with_shared_workflows(artifact_id, job_id, tenant_id)
+        
         return artifact_id
+    
+    def _share_artifact_with_shared_workflows(self, artifact_id: str, job_id: str, tenant_id: str):
+        """
+        Share artifact with shared workflows by calling the API endpoint.
+        This is called asynchronously and failures are logged but don't affect artifact creation.
+        """
+        api_url = os.environ.get('API_URL') or os.environ.get('API_GATEWAY_URL')
+        if not api_url:
+            logger.debug("[ArtifactService] API_URL not configured, skipping artifact sharing")
+            return
+        
+        try:
+            # Call the internal API endpoint to share the artifact
+            share_url = f"{api_url.rstrip('/')}/internal/workflow-sharing/share-artifact"
+            response = requests.post(
+                share_url,
+                json={
+                    'artifact_id': artifact_id,
+                    'job_id': job_id,
+                    'tenant_id': tenant_id,  # Pass tenant_id in body for internal calls
+                },
+                headers={
+                    'Content-Type': 'application/json',
+                },
+                timeout=5  # Short timeout since this is non-critical
+            )
+            response.raise_for_status()
+            logger.debug("[ArtifactService] Artifact sharing initiated", extra={
+                'artifact_id': artifact_id,
+                'job_id': job_id,
+            })
+        except Exception as e:
+            # Log but don't fail - artifact sharing is non-critical
+            logger.warning("[ArtifactService] Failed to share artifact with shared workflows", extra={
+                'artifact_id': artifact_id,
+                'job_id': job_id,
+                'error_type': type(e).__name__,
+                'error_message': str(e),
+            })
     
     def get_content_type(self, filename: str) -> str:
         """
@@ -300,7 +344,9 @@ class ArtifactService:
             'created_at': datetime.utcnow().isoformat()
         }
         
-        logger.info(f"[ArtifactService] Storing image artifact", extra={
+        self.db.put_artifact(artifact)
+        
+        logger.info(f"[ArtifactService] Image artifact stored successfully", extra={
             'artifact_id': artifact_id,
             'tenant_id': tenant_id,
             'job_id': job_id,
@@ -317,6 +363,9 @@ class ArtifactService:
             'artifact_filename': filename,
             's3_key': s3_key
         })
+        
+        # Share artifact with shared workflows (non-blocking)
+        self._share_artifact_with_shared_workflows(artifact_id, job_id, tenant_id)
         
         return artifact_id
     

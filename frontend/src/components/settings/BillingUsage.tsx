@@ -5,7 +5,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { FiDollarSign, FiActivity, FiFileText } from 'react-icons/fi'
+import { FiDollarSign, FiActivity, FiFileText, FiExternalLink, FiCreditCard, FiAlertCircle } from 'react-icons/fi'
 import { useUsage } from '@/hooks/api/useSettings'
 import { DateRangePicker } from './DateRangePicker'
 import { LoadingState } from '@/components/ui/LoadingState'
@@ -13,10 +13,18 @@ import { ErrorState } from '@/components/ui/ErrorState'
 import { ServiceUsage } from '@/types/usage'
 import { UsageCharts } from './UsageCharts'
 import { ExportButton } from './ExportButton'
+import { BillingClient, SubscriptionInfo } from '@/lib/api/billing.client'
+import { getIdToken } from '@/lib/auth'
+import { useRouter } from 'next/navigation'
 
 export function BillingUsage() {
+  const router = useRouter()
   const [startDate, setStartDate] = useState<string>('')
   const [endDate, setEndDate] = useState<string>('')
+  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null)
+  const [subscriptionLoading, setSubscriptionLoading] = useState(true)
+  const [subscriptionError, setSubscriptionError] = useState<string | null>(null)
+  const [portalLoading, setPortalLoading] = useState(false)
 
   // Initialize date range to current month
   useEffect(() => {
@@ -26,7 +34,93 @@ export function BillingUsage() {
     setEndDate(now.toISOString().split('T')[0])
   }, [])
 
+  // Load subscription info
+  useEffect(() => {
+    const loadSubscription = async () => {
+      try {
+        const token = await getIdToken()
+        if (!token) return
+
+        const billingClient = new BillingClient({
+          getToken: () => token,
+        })
+
+        const subInfo = await billingClient.getSubscription()
+        setSubscription(subInfo)
+      } catch (err: any) {
+        console.error('Failed to load subscription:', err)
+        setSubscriptionError(err.message || 'Failed to load subscription')
+      } finally {
+        setSubscriptionLoading(false)
+      }
+    }
+
+    loadSubscription()
+  }, [])
+
   const { usage, loading, error, refetch } = useUsage(startDate, endDate)
+
+  const handleManageSubscription = async () => {
+    setPortalLoading(true)
+    try {
+      const token = await getIdToken()
+      if (!token) {
+        throw new Error('Not authenticated')
+      }
+
+      const billingClient = new BillingClient({
+        getToken: () => token,
+      })
+
+      const baseUrl = window.location.origin
+      const { portal_url } = await billingClient.createPortalSession(
+        `${baseUrl}/dashboard/settings?tab=billing`
+      )
+
+      // Redirect to Stripe Customer Portal
+      window.location.href = portal_url
+    } catch (err: any) {
+      console.error('Failed to create portal session:', err)
+      alert(err.message || 'Failed to open billing portal. Please try again.')
+      setPortalLoading(false)
+    }
+  }
+
+  const getSubscriptionStatusColor = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'bg-green-100 text-green-800'
+      case 'past_due':
+      case 'unpaid':
+        return 'bg-red-100 text-red-800'
+      case 'trialing':
+        return 'bg-blue-100 text-blue-800'
+      case 'canceled':
+      case 'no_subscription':
+        return 'bg-gray-100 text-gray-800'
+      default:
+        return 'bg-yellow-100 text-yellow-800'
+    }
+  }
+
+  const getSubscriptionStatusLabel = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'Active'
+      case 'past_due':
+        return 'Past Due'
+      case 'unpaid':
+        return 'Unpaid'
+      case 'trialing':
+        return 'Trial'
+      case 'canceled':
+        return 'Canceled'
+      case 'no_subscription':
+        return 'No Subscription'
+      default:
+        return status
+    }
+  }
 
   const formatServiceName = (serviceType: string): string => {
     return serviceType
@@ -37,9 +131,134 @@ export function BillingUsage() {
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
-      <div className="mb-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Billing & Usage</h3>
-        <p className="text-sm text-gray-600">Track your OpenAI API usage and costs</p>
+      {/* Subscription Status Header */}
+      <div className="mb-6 pb-6 border-b border-gray-200">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Billing & Usage</h3>
+            <p className="text-sm text-gray-600">Track your subscription and API usage</p>
+          </div>
+          {subscription?.has_subscription && (
+            <button
+              onClick={handleManageSubscription}
+              disabled={portalLoading}
+              className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {portalLoading ? (
+                <>
+                  <svg
+                    className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  Loading...
+                </>
+              ) : (
+                <>
+                  <FiCreditCard className="w-4 h-4 mr-2" />
+                  Manage Subscription
+                  <FiExternalLink className="w-4 h-4 ml-2" />
+                </>
+              )}
+            </button>
+          )}
+        </div>
+
+        {/* Subscription Status Card */}
+        {subscriptionLoading ? (
+          <div className="bg-gray-50 rounded-lg p-4">
+            <p className="text-sm text-gray-600">Loading subscription...</p>
+          </div>
+        ) : subscriptionError ? (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-sm text-red-800">{subscriptionError}</p>
+          </div>
+        ) : subscription ? (
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center">
+                <FiCreditCard className="w-5 h-5 text-primary-600 mr-2" />
+                <span className="font-semibold text-gray-900">Subscription Status</span>
+              </div>
+              <span className={`px-3 py-1 rounded-full text-xs font-medium ${getSubscriptionStatusColor(subscription.status)}`}>
+                {getSubscriptionStatusLabel(subscription.status)}
+              </span>
+            </div>
+
+            {!subscription.has_subscription && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-3">
+                <div className="flex items-start">
+                  <FiAlertCircle className="w-5 h-5 text-yellow-600 mt-0.5 mr-2 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-yellow-900 mb-1">
+                      No active subscription
+                    </p>
+                    <p className="text-xs text-yellow-800 mb-2">
+                      Start a subscription to use Lead Magnet AI's features
+                    </p>
+                    <button
+                      onClick={() => router.push('/setup-billing')}
+                      className="text-xs bg-yellow-600 text-white px-3 py-1 rounded hover:bg-yellow-700 transition-colors"
+                    >
+                      Start Subscription
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {subscription.has_subscription && subscription.usage && (
+              <div className="space-y-3">
+                <div>
+                  <div className="flex items-center justify-between text-sm mb-1">
+                    <span className="text-gray-600">Current Period Usage</span>
+                    <span className="font-medium text-gray-900">
+                      ${subscription.usage.current.toFixed(2)} / ${subscription.usage.allowance.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className={`h-2 rounded-full transition-all ${
+                        subscription.usage.percentage >= 100
+                          ? 'bg-red-500'
+                          : subscription.usage.percentage >= 80
+                          ? 'bg-yellow-500'
+                          : 'bg-green-500'
+                      }`}
+                      style={{ width: `${Math.min(100, subscription.usage.percentage)}%` }}
+                    />
+                  </div>
+                  {subscription.usage.overage > 0 && (
+                    <p className="text-xs text-red-600 mt-1">
+                      Overage: ${subscription.usage.overage.toFixed(2)} (will be charged at end of billing period)
+                    </p>
+                  )}
+                </div>
+
+                {subscription.current_period_end && (
+                  <p className="text-xs text-gray-600">
+                    Current period ends: {new Date(subscription.current_period_end * 1000).toLocaleDateString()}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        ) : null}
       </div>
 
       {/* Date Range Selector */}

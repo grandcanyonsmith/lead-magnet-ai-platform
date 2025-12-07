@@ -54,6 +54,7 @@ export class ApiStack extends cdk.Stack {
     grantSecretsAccess(lambdaRole, this, [
       SECRET_NAMES.OPENAI_API_KEY,
       SECRET_NAMES.TWILIO_CREDENTIALS,
+      SECRET_NAMES.STRIPE_API_KEY,
     ]);
 
     // Grant Lambda invoke permissions for async workflow generation
@@ -93,6 +94,12 @@ export class ApiStack extends cdk.Stack {
         [ENV_VAR_NAMES.LAMBDA_FUNCTION_NAME]: FUNCTION_NAMES.API_HANDLER,
         // AWS_REGION is automatically set by Lambda runtime, don't set it manually
         [ENV_VAR_NAMES.LOG_LEVEL]: DEFAULT_LOG_LEVEL,
+        // Stripe configuration (values should be set via CDK context or environment variables)
+        [ENV_VAR_NAMES.STRIPE_SECRET_NAME]: SECRET_NAMES.STRIPE_API_KEY,
+        [ENV_VAR_NAMES.STRIPE_PRICE_ID]: process.env.STRIPE_PRICE_ID || '',
+        [ENV_VAR_NAMES.STRIPE_METERED_PRICE_ID]: process.env.STRIPE_METERED_PRICE_ID || '',
+        [ENV_VAR_NAMES.STRIPE_WEBHOOK_SECRET]: process.env.STRIPE_WEBHOOK_SECRET || '',
+        [ENV_VAR_NAMES.STRIPE_PORTAL_RETURN_URL]: process.env.STRIPE_PORTAL_RETURN_URL || '',
       },
       tracing: lambda.Tracing.ACTIVE,
       logRetention: logs.RetentionDays.ONE_WEEK,

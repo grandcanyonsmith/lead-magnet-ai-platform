@@ -1,6 +1,7 @@
 import { ulid } from 'ulid';
 import { db } from '../utils/db';
 import { logger } from '../utils/logger';
+import { stripeService } from './stripeService';
 
 export interface UsageRecord {
   usage_id: string;
@@ -39,6 +40,7 @@ export class UsageTrackingService {
   /**
    * Store a usage record in DynamoDB.
    * This is called after each OpenAI API call to track costs.
+   * Also reports overage usage to Stripe for metered billing.
    * Errors are logged but do not fail the request.
    */
   async storeUsageRecord(params: UsageTrackingParams): Promise<void> {
@@ -68,6 +70,11 @@ export class UsageTrackingService {
         outputTokens,
         costUsd,
       });
+
+      // Report usage to Stripe for metered billing (2x markup)
+      // Use usage_id as idempotency key to prevent duplicate charges
+      const chargeableAmount = costUsd * 2; // Apply 2x markup
+      await stripeService.reportUsage(tenantId, chargeableAmount, usageId);
     } catch (error: any) {
       // Don't fail the request if usage tracking fails
       logger.error('[Usage Tracking] Failed to store usage record', {

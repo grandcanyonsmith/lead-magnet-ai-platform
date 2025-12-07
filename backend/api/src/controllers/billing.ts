@@ -3,8 +3,10 @@ import { RouteResponse } from '../routes';
 import { ApiError } from '../utils/errors';
 import { logger } from '../utils/logger';
 import { env } from '../utils/env';
+import { stripeService } from '../services/stripeService';
 
 const USAGE_RECORDS_TABLE = env.usageRecordsTable;
+const CUSTOMERS_TABLE = env.customersTable;
 
 interface UsageRecord {
   usage_id: string;
@@ -202,6 +204,175 @@ class BillingController {
         },
       },
     };
+  }
+
+  /**
+   * Create a Stripe Checkout session for subscription signup
+   */
+  async createCheckoutSession(tenantId: string, body: Record<string, any>): Promise<RouteResponse> {
+    logger.info('[Billing] Creating checkout session', { tenantId });
+
+    try {
+      // Get customer record
+      const customer = await db.get(CUSTOMERS_TABLE, { customer_id: tenantId });
+
+      if (!customer) {
+        throw new ApiError('Customer not found', 404);
+      }
+
+      if (!customer.stripe_customer_id) {
+        throw new ApiError('Customer has no Stripe customer ID', 400);
+      }
+
+      // Get URLs from request or use defaults
+      const successUrl = body.success_url || `${env.apiUrl}/setup-billing/success`;
+      const cancelUrl = body.cancel_url || `${env.apiUrl}/setup-billing`;
+
+      // Create checkout session
+      const checkoutUrl = await stripeService.createCheckoutSession(
+        tenantId,
+        customer.stripe_customer_id,
+        successUrl,
+        cancelUrl
+      );
+
+      return {
+        statusCode: 200,
+        body: {
+          checkout_url: checkoutUrl,
+        },
+      };
+    } catch (error: any) {
+      logger.error('[Billing] Error creating checkout session', {
+        error: error.message,
+        tenantId,
+      });
+
+      if (error instanceof ApiError) {
+        throw error;
+      }
+
+      throw new ApiError(`Failed to create checkout session: ${error.message}`, 500);
+    }
+  }
+
+  /**
+   * Create a Stripe customer portal session
+   */
+  async createPortalSession(tenantId: string, body: Record<string, any>): Promise<RouteResponse> {
+    logger.info('[Billing] Creating portal session', { tenantId });
+
+    try {
+      // Get customer record
+      const customer = await db.get(CUSTOMERS_TABLE, { customer_id: tenantId });
+
+      if (!customer) {
+        throw new ApiError('Customer not found', 404);
+      }
+
+      if (!customer.stripe_customer_id) {
+        throw new ApiError('Customer has no Stripe customer ID', 400);
+      }
+
+      // Get return URL from request or use default
+      const returnUrl = body.return_url || env.stripePortalReturnUrl || `${env.apiUrl}/dashboard/settings?tab=billing`;
+
+      // Create portal session
+      const portalUrl = await stripeService.createPortalSession(
+        customer.stripe_customer_id,
+        returnUrl
+      );
+
+      return {
+        statusCode: 200,
+        body: {
+          portal_url: portalUrl,
+        },
+      };
+    } catch (error: any) {
+      logger.error('[Billing] Error creating portal session', {
+        error: error.message,
+        tenantId,
+      });
+
+      if (error instanceof ApiError) {
+        throw error;
+      }
+
+      throw new ApiError(`Failed to create portal session: ${error.message}`, 500);
+    }
+  }
+
+  /**
+   * Get subscription information for the current customer
+   */
+  async getSubscription(tenantId: string): Promise<RouteResponse> {
+    logger.info('[Billing] Getting subscription', { tenantId });
+
+    try {
+      // Get customer record
+      const customer = await db.get(CUSTOMERS_TABLE, { customer_id: tenantId });
+
+      if (!customer) {
+        throw new ApiError('Customer not found', 404);
+      }
+
+      if (!customer.stripe_customer_id) {
+        // Customer doesn't have Stripe setup yet
+        return {
+          statusCode: 200,
+          body: {
+            has_subscription: false,
+            status: 'no_subscription',
+          },
+        };
+      }
+
+      // Get subscription from Stripe
+      const subscription = await stripeService.getSubscription(customer.stripe_customer_id);
+
+      if (!subscription) {
+        return {
+          statusCode: 200,
+          body: {
+            has_subscription: false,
+            status: 'no_subscription',
+          },
+        };
+      }
+
+      // Get usage information
+      const currentPeriodUsage = customer.current_period_usage || 0;
+      const usageAllowance = 10.0; // $10 included usage (TODO: Make configurable)
+
+      return {
+        statusCode: 200,
+        body: {
+          has_subscription: true,
+          status: subscription.status,
+          current_period_start: subscription.current_period_start,
+          current_period_end: subscription.current_period_end,
+          cancel_at_period_end: subscription.cancel_at_period_end,
+          usage: {
+            current: currentPeriodUsage,
+            allowance: usageAllowance,
+            overage: Math.max(0, currentPeriodUsage - usageAllowance),
+            percentage: Math.min(100, (currentPeriodUsage / usageAllowance) * 100),
+          },
+        },
+      };
+    } catch (error: any) {
+      logger.error('[Billing] Error getting subscription', {
+        error: error.message,
+        tenantId,
+      });
+
+      if (error instanceof ApiError) {
+        throw error;
+      }
+
+      throw new ApiError(`Failed to get subscription: ${error.message}`, 500);
+    }
   }
 }
 

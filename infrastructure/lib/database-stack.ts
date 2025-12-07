@@ -203,13 +203,19 @@ export class DatabaseStack extends cdk.Stack {
     );
 
     // Table 11: Customers
-    const customersTable = createTable(
+    const customersTable = createTableWithGSI(
       this,
       'CustomersTable',
       {
         tableName: TABLE_NAMES.CUSTOMERS,
         partitionKey: { name: 'customer_id', type: dynamodb.AttributeType.STRING },
-      }
+      },
+      [
+        {
+          indexName: 'gsi_stripe_customer_id',
+          partitionKey: { name: 'stripe_customer_id', type: dynamodb.AttributeType.STRING },
+        },
+      ]
     );
 
     // Table 12: Files
