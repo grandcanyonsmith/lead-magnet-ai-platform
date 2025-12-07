@@ -42,12 +42,19 @@ export class EnvConfig {
 
   // Secrets Configuration
   readonly openaiSecretName: string;
+  readonly stripeSecretName: string;
 
   // Security Configuration
   readonly superAdminEmails: string[];
 
   // Worker Configuration
   readonly workerScriptPath: string;
+
+  // Stripe Configuration
+  readonly stripePriceId: string | undefined;
+  readonly stripeMeteredPriceId: string | undefined;
+  readonly stripeWebhookSecret: string | undefined;
+  readonly stripePortalReturnUrl: string | undefined;
 
   constructor() {
     // DynamoDB Tables - required
@@ -86,6 +93,7 @@ export class EnvConfig {
 
     // Secrets Configuration
     this.openaiSecretName = this.getWithDefault('OPENAI_SECRET_NAME', 'leadmagnet/openai-api-key');
+    this.stripeSecretName = this.getWithDefault('STRIPE_SECRET_NAME', 'leadmagnet/stripe-api-key');
 
     // Security Configuration
     const superAdminEmailsStr = this.getOptional('SUPER_ADMIN_EMAILS') || '';
@@ -96,6 +104,12 @@ export class EnvConfig {
 
     // Worker Configuration
     this.workerScriptPath = this.getWithDefault('WORKER_SCRIPT_PATH', './backend/worker/worker.py');
+
+    // Stripe Configuration
+    this.stripePriceId = this.getOptional('STRIPE_PRICE_ID');
+    this.stripeMeteredPriceId = this.getOptional('STRIPE_METERED_PRICE_ID');
+    this.stripeWebhookSecret = this.getOptional('STRIPE_WEBHOOK_SECRET');
+    this.stripePortalReturnUrl = this.getOptional('STRIPE_PORTAL_RETURN_URL');
 
     // Validate critical configuration
     this.validate();

@@ -28,6 +28,7 @@ export class AuthStack extends cdk.Stack {
       environment: {
         USERS_TABLE: TABLE_NAMES.USERS,
         CUSTOMERS_TABLE: TABLE_NAMES.CUSTOMERS,
+        STRIPE_SECRET_NAME: 'leadmagnet/stripe-api-key',
         // Note: AWS_REGION is automatically provided by Lambda runtime, don't set it manually
       },
     });
@@ -101,6 +102,22 @@ export class AuthStack extends cdk.Stack {
     
     usersTable.grantReadWriteData(postConfirmationLambda);
     customersTable.grantReadWriteData(postConfirmationLambda);
+
+    // Grant PostConfirmation Lambda permission to access Secrets Manager for Stripe API key
+    postConfirmationLambda.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ['secretsmanager:GetSecretValue'],
+        resources: [
+          cdk.Stack.of(this).formatArn({
+            service: 'secretsmanager',
+            resource: 'secret',
+            resourceName: 'leadmagnet/stripe-api-key*',
+            arnFormat: cdk.ArnFormat.COLON_RESOURCE_NAME,
+          }),
+        ],
+      })
+    );
 
     // Add domain for hosted UI
     this.userPool.addDomain('UserPoolDomain', {
