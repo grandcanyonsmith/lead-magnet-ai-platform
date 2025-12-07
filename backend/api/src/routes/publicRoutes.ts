@@ -1,7 +1,7 @@
 import { formsController } from '@domains/forms';
-import { jobsController } from '../controllers/jobs.controller';
-import { webhooksController } from '../controllers/webhooks.controller';
-import { openAIWebhookController } from '../controllers/openai-webhook.controller';
+import { jobsController } from '../controllers/jobs';
+import { webhooksController } from '../controllers/webhooks';
+import { openAIWebhookController } from '../controllers/openaiWebhookController';
 import { stripeWebhookController } from '../controllers/stripeWebhook';
 import { router } from './router';
 import { logger } from '../utils/logger';

@@ -1,4 +1,4 @@
-import { templatesController } from '../controllers/templates.controller';
+import { templatesController } from '../controllers/templates';
 import { router } from './router';
 import { logger } from '../utils/logger';
 

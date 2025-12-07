@@ -1,2 +1,2 @@
-export * from './controllers/impersonation.controller';
+export * from './controllers/impersonation';
 export { registerImpersonationRoutes } from './routes/impersonationRoutes';

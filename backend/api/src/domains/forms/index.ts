@@ -1,5 +1,7 @@
-export * from './controllers/forms.controller';
-export * from './controllers/form-ai.controller';
+export * from './controllers/forms';
+export { formsController } from './controllers/forms';
+export * from './controllers/formAIController';
+export { formAIController } from './controllers/formAIController';
 
 export * from './services/formFieldGenerationService';
 export * from './services/formManagementService';

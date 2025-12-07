@@ -1,4 +1,4 @@
-import { impersonationController } from '../controllers/impersonation.controller';
+import { impersonationController } from '../controllers/impersonation';
 import { router } from '@routes/router';
 import { logger } from '@utils/logger';
 

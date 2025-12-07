@@ -71,7 +71,7 @@ export async function saveDraftWorkflow(
   let templateId: string | null = null;
   if (templateHtml && templateHtml.trim()) {
     try {
-      const { templatesController } = await import('@controllers/templates.controller');
+      const { templatesController } = await import('@controllers/templates');
       const templateResult = await templatesController.create(tenantId, {
         template_name: templateName || `${workflowData.workflow_name} Template`,
         template_description: templateDescription || '',

@@ -1,4 +1,4 @@
-import { filesController } from '../controllers/files.controller';
+import { filesController } from '../controllers/files';
 import { router } from './router';
 import { logger } from '../utils/logger';
 
