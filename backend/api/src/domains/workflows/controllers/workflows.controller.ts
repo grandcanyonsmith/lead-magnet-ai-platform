@@ -258,7 +258,7 @@ class WorkflowsController {
 
     // Create notification for workflow creation
     try {
-      const { notificationsController } = await import('@controllers/notifications.controller');
+      const { notificationsController } = await import('@controllers/notifications');
       await notificationsController.create(
         tenantId,
         'workflow_created',

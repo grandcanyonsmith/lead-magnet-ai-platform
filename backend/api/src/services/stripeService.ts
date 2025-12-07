@@ -53,7 +53,7 @@ async function getStripeClient(): Promise<Stripe> {
     // Cache the API key and create client
     cachedApiKey = apiKey;
     cachedClient = new Stripe(apiKey, {
-      apiVersion: '2024-11-20.acacia',
+      apiVersion: '2023-10-16',
       typescript: true,
     });
     

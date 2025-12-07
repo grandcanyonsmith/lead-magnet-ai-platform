@@ -1,6 +1,6 @@
 import { workflowsController } from '../controllers/workflows.controller';
-import { workflowAIController } from '../controllers/workflow-ai.controller';
-import { workflowValidationController } from '../controllers/workflow-validation.controller';
+import { workflowAIController } from '../controllers/workflowAIController';
+import { workflowValidationController } from '../controllers/workflowValidationController';
 import { router } from '@routes/router';
 import { logger } from '@utils/logger';
 import { workflowGenerationJobService } from '../services/workflowGenerationJobService';

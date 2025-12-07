@@ -214,14 +214,36 @@ class BillingController {
 
     try {
       // Get customer record
-      const customer = await db.get(CUSTOMERS_TABLE, { customer_id: tenantId });
+      let customer = await db.get(CUSTOMERS_TABLE, { customer_id: tenantId });
 
       if (!customer) {
         throw new ApiError('Customer not found', 404);
       }
 
+      // Create Stripe customer if one doesn't exist
       if (!customer.stripe_customer_id) {
-        throw new ApiError('Customer has no Stripe customer ID', 400);
+        logger.info('[Billing] Customer has no Stripe customer ID, creating one', { tenantId });
+        
+        const email = customer.email || `customer-${tenantId}@example.com`;
+        const name = customer.name || customer.customer_id || 'Customer';
+        
+        const stripeCustomerId = await stripeService.createCustomer(email, name, tenantId);
+        
+        // Update customer record with Stripe customer ID
+        await db.update(
+          CUSTOMERS_TABLE,
+          { customer_id: tenantId },
+          { stripe_customer_id: stripeCustomerId }
+        );
+        
+        // Refresh customer record
+        customer = await db.get(CUSTOMERS_TABLE, { customer_id: tenantId });
+        
+        if (!customer || !customer.stripe_customer_id) {
+          throw new ApiError('Failed to create Stripe customer', 500);
+        }
+        
+        logger.info('[Billing] Created Stripe customer', { tenantId, stripeCustomerId });
       }
 
       // Get URLs from request or use defaults

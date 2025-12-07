@@ -1,5 +1,5 @@
-import { formsController } from '../controllers/forms.controller';
-import { formAIController } from '../controllers/form-ai.controller';
+import { formsController } from '../controllers/forms';
+import { formAIController } from '../controllers/formAIController';
 import { router } from '@routes/router';
 import { logger } from '@utils/logger';
 
