@@ -8,3 +8,6 @@
 // Re-export everything from the new auth module
 export * from './auth/index'
 
+// Explicitly export getIdToken to ensure it's available
+export { getIdToken } from './auth/legacy'
+
