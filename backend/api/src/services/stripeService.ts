@@ -127,24 +127,102 @@ export class StripeService {
     return Array.from(ids);
   }
 
+  private normalizeModelName(model: string): string {
+    // Normalize model names to match price map keys
+    // Handle variants like "gpt-5-2025-08-07" -> "gpt-5", "gpt-4o-2024-08-06" -> "gpt-4o"
+    const normalized = model.toLowerCase().trim();
+    
+    // Map known variants to base model names
+    if (normalized.startsWith('gpt-5')) return 'gpt-5';
+    if (normalized.startsWith('gpt-4.1')) return 'gpt-4.1';
+    if (normalized.startsWith('gpt-4o-mini')) return 'gpt-4o-mini';
+    if (normalized.startsWith('gpt-4o')) return 'gpt-4o';
+    if (normalized.startsWith('gpt-4-turbo')) return 'gpt-4-turbo';
+    if (normalized.startsWith('gpt-3.5-turbo')) return 'gpt-3.5-turbo';
+    if (normalized.startsWith('computer-use-preview')) return 'computer-use-preview';
+    if (normalized.includes('o4-mini-deep-research') || normalized.includes('o4-mini-deep')) return 'o4-mini-deep-research';
+    if (normalized.includes('o3-deep-research') || normalized.includes('o3-deep')) return 'o4-mini-deep-research'; // Map o3 to o4-mini price
+    
+    // Return as-is if no variant detected
+    return normalized;
+  }
+
   private getMeteredPriceIdForModel(model: string): string | undefined {
-    if (env.stripeMeteredPriceMap && env.stripeMeteredPriceMap[model]) {
-      return env.stripeMeteredPriceMap[model];
+    const normalizedModel = this.normalizeModelName(model);
+    
+    logger.info('[Stripe Service] Getting price ID for model', {
+      originalModel: model,
+      normalizedModel,
+      priceMapKeys: Object.keys(env.stripeMeteredPriceMap || {}),
+    });
+    
+    if (env.stripeMeteredPriceMap && env.stripeMeteredPriceMap[normalizedModel]) {
+      return env.stripeMeteredPriceMap[normalizedModel];
     }
+    
+    logger.warn('[Stripe Service] Model not found in price map, using fallback', {
+      model,
+      normalizedModel,
+      fallbackPriceId: env.stripeMeteredPriceId,
+    });
+    
     return env.stripeMeteredPriceId;
   }
 
   private findMeteredSubscriptionItem(
-    items: Array<{ id: string; price: { id: string }; type?: string }>,
+    items: Array<{ id: string; price_id: string; type?: string; price?: { id: string } }>,
     model: string
-  ): { id: string; price: { id: string }; type?: string } | undefined {
+  ): { id: string; price_id: string; type?: string; price?: { id: string } } | undefined {
     const targetPriceId = this.getMeteredPriceIdForModel(model);
+    
+    logger.info('[Stripe Service] Finding metered item', {
+      model,
+      targetPriceId,
+      availableItems: items.map((item) => ({
+        id: item.id,
+        priceId: item.price_id || item.price?.id,
+        type: item.type,
+      })),
+      priceMap: env.stripeMeteredPriceMap,
+    });
+
     if (targetPriceId) {
-      const byPrice = items.find((item) => item.price.id === targetPriceId);
-      if (byPrice) return byPrice;
+      // Try both price_id (from getSubscription) and price.id (direct Stripe object)
+      const byPrice = items.find(
+        (item) => (item.price_id || item.price?.id) === targetPriceId
+      );
+      if (byPrice) {
+        logger.info('[Stripe Service] Found item by price ID', {
+          model,
+          targetPriceId,
+          itemId: byPrice.id,
+        });
+        return byPrice;
+      }
     }
-    // Fallback: first metered item, or any item
-    return items.find((item) => item.type === 'metered') || items[0];
+    
+    // Fallback: first metered item
+    const meteredItem = items.find((item) => item.type === 'metered');
+    if (meteredItem) {
+      logger.info('[Stripe Service] Using first metered item as fallback', {
+        model,
+        itemId: meteredItem.id,
+        priceId: meteredItem.price_id || meteredItem.price?.id,
+      });
+      return meteredItem;
+    }
+    
+    // Last resort: any item
+    if (items.length > 0) {
+      logger.warn('[Stripe Service] No metered item found, using first item', {
+        model,
+        itemId: items[0].id,
+        priceId: items[0].price_id || items[0].price?.id,
+      });
+      return items[0];
+    }
+    
+    return undefined;
   }
 
   /**
@@ -313,9 +391,25 @@ export class StripeService {
   async reportUsage(params: ReportUsageParams): Promise<void> {
     const { customerId, model, inputTokens, outputTokens, costUsd, usageId, timestamp } = params;
     try {
+      logger.info('[Stripe Service] reportUsage called', {
+        customerId,
+        model,
+        inputTokens,
+        outputTokens,
+        costUsd,
+        usageId,
+      });
+
       const usageTokens = Math.max(0, (inputTokens || 0) + (outputTokens || 0));
       const usageUnits = Math.ceil(usageTokens / 1000);
       const reportedAt = timestamp || Math.floor(Date.now() / 1000);
+
+      logger.info('[Stripe Service] Calculated usage', {
+        customerId,
+        usageTokens,
+        usageUnits,
+        reportedAt,
+      });
 
       // Get customer record with Stripe info
       const customer = await db.get(this.CUSTOMERS_TABLE, { customer_id: customerId });
@@ -323,9 +417,15 @@ export class StripeService {
       if (!customer || !customer.stripe_customer_id) {
         logger.warn('[Stripe Service] Customer has no Stripe ID, skipping usage report', {
           customerId,
+          hasCustomer: !!customer,
         });
         return;
       }
+
+      logger.info('[Stripe Service] Found customer', {
+        customerId,
+        stripeCustomerId: customer.stripe_customer_id,
+      });
 
       // Get subscription
       const subscription = await this.getSubscription(customer.stripe_customer_id);
@@ -334,9 +434,22 @@ export class StripeService {
         logger.warn('[Stripe Service] No active subscription, skipping usage report', {
           customerId,
           subscriptionStatus: subscription?.status,
+          hasSubscription: !!subscription,
         });
         return;
       }
+
+      logger.info('[Stripe Service] Found subscription', {
+        customerId,
+        subscriptionId: subscription.id,
+        status: subscription.status,
+        itemCount: subscription.items?.length || 0,
+        items: subscription.items?.map((item: any) => ({
+          id: item.id,
+          priceId: item.price?.id || item.price_id,
+          type: item.type || item.price?.recurring?.usage_type,
+        })),
+      });
 
       // Find the metered subscription item
       const meteredItem = this.findMeteredSubscriptionItem(subscription.items, model);
@@ -345,9 +458,27 @@ export class StripeService {
         logger.warn('[Stripe Service] No metered item found in subscription', {
           customerId,
           subscriptionId: subscription.id,
+          model,
+          availableItems: subscription.items?.map((item: any) => ({
+            id: item.id,
+            priceId: item.price?.id || item.price_id,
+            type: item.type || item.price?.recurring?.usage_type,
+          })),
+          priceMap: env.stripeMeteredPriceMap,
+          fallbackPriceId: env.stripeMeteredPriceId,
         });
         return;
       }
+
+      const subscriptionItemId = meteredItem.id;
+      const priceId = meteredItem.price_id || meteredItem.price?.id;
+
+      logger.info('[Stripe Service] Found metered item', {
+        customerId,
+        model,
+        subscriptionItemId,
+        priceId,
+      });
 
       const stripe = await getStripeClient();
 
@@ -358,8 +489,16 @@ export class StripeService {
 
       // Incremental usage record (idempotent per usageId)
       if (usageUnits > 0) {
-        await stripe.subscriptionItems.createUsageRecord(
-          meteredItem.id,
+        logger.info('[Stripe Service] Reporting incremental usage to Stripe', {
+          customerId,
+          model,
+          subscriptionItemId,
+          usageUnits,
+          usageId,
+        });
+
+        const incrementResult = await stripe.subscriptionItems.createUsageRecord(
+          subscriptionItemId,
           {
             quantity: usageUnits,
             timestamp: reportedAt,
@@ -369,6 +508,19 @@ export class StripeService {
             idempotencyKey: `${usageId}:inc`,
           }
         );
+
+        logger.info('[Stripe Service] Incremental usage reported successfully', {
+          customerId,
+          model,
+          usageRecordId: incrementResult.id,
+          quantity: incrementResult.quantity,
+        });
+      } else {
+        logger.info('[Stripe Service] Skipping incremental usage (0 units)', {
+          customerId,
+          model,
+          usageTokens,
+        });
       }
 
       const totalUnits = Math.ceil(newTotalTokens / 1000);
@@ -377,8 +529,17 @@ export class StripeService {
 
       // Daily backfill to keep Stripe in sync with our running total
       if (shouldSetTotal) {
-        await stripe.subscriptionItems.createUsageRecord(
-          meteredItem.id,
+        logger.info('[Stripe Service] Setting daily total usage in Stripe', {
+          customerId,
+          model,
+          subscriptionItemId,
+          totalUnits,
+          today,
+          lastSetDate: customer.last_usage_set_date,
+        });
+
+        const setResult = await stripe.subscriptionItems.createUsageRecord(
+          subscriptionItemId,
           {
             quantity: totalUnits,
             timestamp: reportedAt,
@@ -388,6 +549,19 @@ export class StripeService {
             idempotencyKey: `${customerId}:${today}:set`,
           }
         );
+
+        logger.info('[Stripe Service] Daily total usage set successfully', {
+          customerId,
+          model,
+          usageRecordId: setResult.id,
+          quantity: setResult.quantity,
+        });
+      } else {
+        logger.info('[Stripe Service] Skipping daily set (already set today)', {
+          customerId,
+          today,
+          lastSetDate: customer.last_usage_set_date,
+        });
       }
 
       await db.update(
@@ -402,14 +576,25 @@ export class StripeService {
           updated_at: new Date().toISOString(),
         }
       );
+
+      logger.info('[Stripe Service] Usage reporting completed successfully', {
+        customerId,
+        model,
+        newTotalTokens,
+        newTotalCostUsd,
+        newTotalUpchargeUsd: newTotalCostUsd * 2,
+        today,
+      });
     } catch (error: any) {
       logger.error('[Stripe Service] Error reporting usage', {
         error: error.message,
+        stack: error.stack,
         customerId,
         model,
         inputTokens,
         outputTokens,
         costUsd,
+        usageId,
       });
       // Don't throw - we don't want to fail the request if usage reporting fails
     }

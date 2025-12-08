@@ -61,7 +61,7 @@ export class UsageTrackingService {
       };
 
       await db.put(this.usageRecordsTable, usageRecord);
-      logger.info('[Usage Tracking] Usage record stored', {
+      logger.info('[Usage Tracking] Usage record stored in DynamoDB', {
         usageId,
         tenantId,
         serviceType,
@@ -69,24 +69,53 @@ export class UsageTrackingService {
         inputTokens,
         outputTokens,
         costUsd,
+        totalTokens: inputTokens + outputTokens,
       });
 
       // Report usage to Stripe for metered billing (tokens per 1k, 2x pricing baked into Stripe price)
       // Use usage_id as part of the idempotency key to prevent duplicates
-      await stripeService.reportUsage({
-        customerId: tenantId,
-        model,
-        inputTokens,
-        outputTokens,
-        costUsd,
-        usageId,
-      });
+      try {
+        logger.info('[Usage Tracking] Calling stripeService.reportUsage', {
+          tenantId,
+          model,
+          inputTokens,
+          outputTokens,
+          costUsd,
+          usageId,
+        });
+
+        await stripeService.reportUsage({
+          customerId: tenantId,
+          model,
+          inputTokens,
+          outputTokens,
+          costUsd,
+          usageId,
+        });
+
+        logger.info('[Usage Tracking] Stripe usage reporting completed', {
+          tenantId,
+          model,
+          usageId,
+        });
+      } catch (stripeError: any) {
+        // Log but don't fail - Stripe reporting is best effort
+        logger.error('[Usage Tracking] Stripe usage reporting failed', {
+          error: stripeError.message,
+          stack: stripeError.stack,
+          tenantId,
+          model,
+          usageId,
+        });
+      }
     } catch (error: any) {
       // Don't fail the request if usage tracking fails
       logger.error('[Usage Tracking] Failed to store usage record', {
         error: error.message,
+        stack: error.stack,
         tenantId,
         serviceType,
+        model,
       });
     }
   }
