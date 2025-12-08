@@ -68,6 +68,7 @@ export function ExecutionSteps({
   }
 
   return (
+    <ErrorBoundary>
     <div className="mt-4 sm:mt-6 bg-white rounded-lg shadow p-4 sm:p-6">
       <button
         onClick={onToggleShow}
