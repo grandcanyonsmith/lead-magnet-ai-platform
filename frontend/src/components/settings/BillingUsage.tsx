@@ -227,19 +227,19 @@ export function BillingUsage() {
                 <div className="flex items-center justify-between text-sm mb-1">
                   <span className="text-gray-600">Current Period Tokens</span>
                   <span className="font-medium text-gray-900">
-                    {subscription.usage.total_tokens.toLocaleString()} tokens
+                    {(typeof subscription.usage.total_tokens === 'number' ? subscription.usage.total_tokens : 0).toLocaleString()} tokens
                   </span>
                 </div>
                 <p className="text-xs text-gray-600">
-                  {subscription.usage.units_1k.toLocaleString()} × 1k-token units reported to Stripe
+                  {(typeof subscription.usage.units_1k === 'number' ? subscription.usage.units_1k : 0).toLocaleString()} × 1k-token units reported to Stripe
                 </p>
                 <div className="flex flex-wrap items-center text-sm gap-2">
                   <span className="text-gray-600">Est. billable (2×):</span>
                   <span className="font-semibold text-gray-900">
-                    ${subscription.usage.total_upcharge_cost.toFixed(2)}
+                    ${(typeof subscription.usage.total_upcharge_cost === 'number' ? subscription.usage.total_upcharge_cost : 0).toFixed(2)}
                   </span>
                   <span className="text-gray-500">
-                    Actual cost: ${subscription.usage.total_actual_cost.toFixed(2)}
+                    Actual cost: ${(typeof subscription.usage.total_actual_cost === 'number' ? subscription.usage.total_actual_cost : 0).toFixed(2)}
                   </span>
                 </div>
 
