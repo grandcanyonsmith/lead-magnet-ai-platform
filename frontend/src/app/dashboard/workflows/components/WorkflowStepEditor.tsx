@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useMemo } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { FiTrash2, FiChevronUp, FiChevronDown, FiZap, FiChevronDown as FiChevronCollapse, FiChevronUp as FiChevronExpand } from 'react-icons/fi'
 import { useWorkflowStepAI } from '@/hooks/useWorkflowStepAI'
 import StepDiffPreview from '@/components/workflows/edit/StepDiffPreview'
@@ -1160,6 +1160,7 @@ export default function WorkflowStepEditor({
             </p>
           )}
         </div>
+      </div>
       </div>
     </ErrorBoundary>
   )
