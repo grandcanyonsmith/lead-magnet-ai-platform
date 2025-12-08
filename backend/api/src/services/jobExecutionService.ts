@@ -47,13 +47,19 @@ export class JobExecutionService {
               jobId,
               error: error.message,
               errorStack: error.stack,
+              stderr: error.stderr,
+              stdout: error.stdout,
             });
-            // Update job status to failed
-            await db.update(JOBS_TABLE, { job_id: jobId }, {
-              status: 'failed',
-              error_message: `Processing failed: ${error.message}`,
-              updated_at: new Date().toISOString(),
-            });
+            // Use the full error message if available (includes stderr/stdout from worker)
+            // Only update if not already updated by processJobLocally
+            const errorMessage = error.message || 'Unknown error';
+            if (!errorMessage.includes('Worker execution failed')) {
+              await db.update(JOBS_TABLE, { job_id: jobId }, {
+                status: 'failed',
+                error_message: `Processing failed: ${errorMessage}`,
+                updated_at: new Date().toISOString(),
+              });
+            }
           }
         });
       } else {
