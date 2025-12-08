@@ -298,3 +298,4 @@ authorizeUser(email)
     console.error('\nFatal error:', error);
     process.exit(1);
   });
+
