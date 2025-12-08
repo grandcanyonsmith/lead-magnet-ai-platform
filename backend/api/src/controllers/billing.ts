@@ -438,8 +438,29 @@ class BillingController {
             error: error.message,
             tenantId,
           });
+          // Set to empty summary on error so frontend gets consistent structure
+          usageSummary = {
+            total_calls: 0,
+            total_input_tokens: 0,
+            total_output_tokens: 0,
+            total_tokens: 0,
+            total_actual_cost: 0,
+            total_upcharge_cost: 0,
+            by_service: {},
+          };
         }
       }
+
+      // Always return usage object, even if empty, for consistent frontend handling
+      const usageData = usageSummary || {
+        total_calls: 0,
+        total_input_tokens: 0,
+        total_output_tokens: 0,
+        total_tokens: 0,
+        total_actual_cost: 0,
+        total_upcharge_cost: 0,
+        by_service: {},
+      };
 
       return {
         statusCode: 200,
@@ -449,18 +470,16 @@ class BillingController {
           current_period_start: subscription.current_period_start,
           current_period_end: subscription.current_period_end,
           cancel_at_period_end: subscription.cancel_at_period_end,
-          usage: usageSummary
-            ? {
-                total_tokens: usageSummary.total_tokens,
-                total_input_tokens: usageSummary.total_input_tokens,
-                total_output_tokens: usageSummary.total_output_tokens,
-                total_actual_cost: usageSummary.total_actual_cost,
-                total_upcharge_cost: usageSummary.total_upcharge_cost,
-                units_1k: Math.ceil(usageSummary.total_tokens / 1000),
-                unit: 'tokens',
-                unit_scale: 'per_1k',
-              }
-            : undefined,
+          usage: {
+            total_tokens: usageData.total_tokens,
+            total_input_tokens: usageData.total_input_tokens,
+            total_output_tokens: usageData.total_output_tokens,
+            total_actual_cost: usageData.total_actual_cost,
+            total_upcharge_cost: usageData.total_upcharge_cost,
+            units_1k: Math.ceil(usageData.total_tokens / 1000),
+            unit: 'tokens',
+            unit_scale: 'per_1k',
+          },
         },
       };
     } catch (error: any) {
