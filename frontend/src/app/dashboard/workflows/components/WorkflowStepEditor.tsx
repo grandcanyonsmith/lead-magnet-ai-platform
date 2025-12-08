@@ -84,14 +84,14 @@ export default function WorkflowStepEditor({
   // Create stable step reference for dependency comparison
   const stepKey = useMemo(() => {
     return JSON.stringify({
-      step_id: step.step_id,
       step_name: step.step_name,
       step_type: step.step_type,
       webhook_url: step.webhook_url,
       tools: step.tools,
       model: step.model,
+      step_order: step.step_order,
     })
-  }, [step.step_id, step.step_name, step.step_type, step.webhook_url, step.tools, step.model])
+  }, [step.step_name, step.step_type, step.webhook_url, step.tools, step.model, step.step_order])
 
   // Sync localStep when step prop changes
   useEffect(() => {
