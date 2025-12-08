@@ -1,12 +1,14 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { getStatusIcon, getStatusBadge, getStepDisplayMeta, getJobSubmissionPreview } from '@/utils/jobs/listHelpers'
 import { formatRelativeTime, formatDuration } from '@/utils/date'
 import type { SortField } from '@/hooks/useJobFilters'
-import { FiChevronDown, FiChevronUp, FiXCircle } from 'react-icons/fi'
+import { FiChevronDown, FiChevronUp, FiXCircle, FiLoader } from 'react-icons/fi'
 import { api } from '@/lib/api'
+import toast from 'react-hot-toast'
+import type { Job } from '@/types/job'
 
 interface JobsTableProps {
-  jobs: any[]
+  jobs: Job[]
   workflowMap: Record<string, string>
   workflowStepCounts: Record<string, number>
   onNavigate: (jobId: string) => void
@@ -24,6 +26,8 @@ export function JobsDesktopTable({
   sortDirection,
   onSort,
 }: JobsTableProps) {
+  const [loadingDocUrl, setLoadingDocUrl] = useState<string | null>(null)
+
   if (!jobs.length) {
     return null
   }
@@ -33,11 +37,12 @@ export function JobsDesktopTable({
       <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
           <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lead Magnet</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" aria-label="Lead Magnet">Lead Magnet</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" aria-label="Status">Status</th>
             <th
               className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
               onClick={() => onSort('date')}
+              aria-label="Sort by date"
             >
               <div className="flex items-center">
                 Date
@@ -49,6 +54,7 @@ export function JobsDesktopTable({
             <th
               className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
               onClick={() => onSort('duration')}
+              aria-label="Sort by processing time"
             >
               <div className="flex items-center">
                 Processing Time
@@ -57,7 +63,7 @@ export function JobsDesktopTable({
                 )}
               </div>
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" aria-label="Document">Document</th>
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
@@ -71,10 +77,23 @@ export function JobsDesktopTable({
               : null
             const stepMeta = getStepDisplayMeta(job, workflowStepCounts)
             const submissionPreview = getJobSubmissionPreview(job)
+            const isLoadingDoc = loadingDocUrl === job.job_id
 
             return (
               <React.Fragment key={job.job_id}>
-                <tr className="hover:bg-gray-50 cursor-pointer transition-colors" onClick={() => onNavigate(job.job_id)}>
+                <tr 
+                  className="hover:bg-gray-50 cursor-pointer transition-colors" 
+                  onClick={() => onNavigate(job.job_id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      onNavigate(job.job_id)
+                    }
+                  }}
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`View job ${job.job_id}`}
+                >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
                       {workflowMap[job.workflow_id] || job.workflow_id || '-'}
@@ -108,21 +127,44 @@ export function JobsDesktopTable({
                     {job.output_url ? (
                       <button
                         data-tour="view-artifacts"
+                        disabled={isLoadingDoc}
                         onClick={async (e) => {
                           e.stopPropagation()
                           e.preventDefault()
+                          if (isLoadingDoc) return
+                          
+                          setLoadingDocUrl(job.job_id)
                           try {
                             const blobUrl = await api.getJobDocumentBlobUrl(job.job_id)
-                            window.open(blobUrl, '_blank', 'noopener,noreferrer')
-                            setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)
+                            const newWindow = window.open(blobUrl, '_blank', 'noopener,noreferrer')
+                            if (newWindow) {
+                              newWindow.addEventListener('load', () => {
+                                setTimeout(() => URL.revokeObjectURL(blobUrl), 5000)
+                              })
+                            } else {
+                              // Popup blocked or window failed to open
+                              setTimeout(() => URL.revokeObjectURL(blobUrl), 10000)
+                            }
                           } catch (error) {
-                            console.error('Failed to open document:', error)
-                            alert('Failed to open document. Please try again.')
+                            if (process.env.NODE_ENV === 'development') {
+                              console.error('Failed to open document:', error)
+                            }
+                            toast.error('Failed to open document. Please try again.')
+                          } finally {
+                            setLoadingDocUrl(null)
                           }
                         }}
-                        className="inline-flex items-center text-primary-600 hover:text-primary-900 font-medium"
+                        className="inline-flex items-center gap-1 text-primary-600 hover:text-primary-900 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                        aria-label={`View document for job ${job.job_id}`}
                       >
-                        View
+                        {isLoadingDoc ? (
+                          <>
+                            <FiLoader className="w-4 h-4 animate-spin" />
+                            Loading...
+                          </>
+                        ) : (
+                          'View'
+                        )}
                       </button>
                     ) : (
                       <span className="text-gray-400">-</span>

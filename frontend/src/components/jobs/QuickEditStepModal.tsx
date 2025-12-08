@@ -45,7 +45,9 @@ export function QuickEditStepModal({
       setProposedChanges(result)
       toast.success('Changes generated successfully')
     } catch (error: any) {
-      console.error('Failed to generate changes:', error)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to generate changes:', error)
+      }
       toast.error(error.message || 'Failed to generate changes')
     } finally {
       setGenerating(false)
@@ -67,7 +69,9 @@ export function QuickEditStepModal({
       onSave?.()
       onClose()
     } catch (error: any) {
-      console.error('Failed to save changes:', error)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to save changes:', error)
+      }
       toast.error(error.message || 'Failed to save changes')
     } finally {
       setSaving(false)

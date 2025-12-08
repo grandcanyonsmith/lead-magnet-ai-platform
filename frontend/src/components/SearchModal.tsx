@@ -70,7 +70,9 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
         })) || []
       )
     } catch (error) {
-      console.error('Failed to load search data:', error)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to load search data:', error)
+      }
     } finally {
       setLoading(false)
     }

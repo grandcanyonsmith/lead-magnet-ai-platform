@@ -9,6 +9,7 @@ import { StepProgressBar } from './StepProgressBar'
 import { ImagePreview } from './ImagePreview'
 import { getStepStatus, getPreviousSteps, getFormSubmission } from './utils'
 import { Artifact } from '@/types/artifact'
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 
 interface ExecutionStepsProps {
   steps: MergedStep[]
@@ -274,5 +275,6 @@ export function ExecutionSteps({
         </div>
       )}
     </div>
+    </ErrorBoundary>
   )
 }

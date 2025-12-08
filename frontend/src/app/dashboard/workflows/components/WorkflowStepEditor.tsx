@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { FiTrash2, FiChevronUp, FiChevronDown, FiZap, FiChevronDown as FiChevronCollapse, FiChevronUp as FiChevronExpand } from 'react-icons/fi'
 import { useWorkflowStepAI } from '@/hooks/useWorkflowStepAI'
 import StepDiffPreview from '@/components/workflows/edit/StepDiffPreview'
 import toast from 'react-hot-toast'
 import { WorkflowStep, AIModel, ComputerUseToolConfig, ImageGenerationToolConfig } from '@/types/workflow'
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 
 interface WorkflowStepEditorProps {
   step: WorkflowStep
@@ -79,6 +80,18 @@ export default function WorkflowStepEditor({
 
   // Always call hook unconditionally to comply with Rules of Hooks
   const { isGenerating, error: aiError, proposal, generateStep, acceptProposal, rejectProposal } = useWorkflowStepAI(workflowId)
+
+  // Create stable step reference for dependency comparison
+  const stepKey = useMemo(() => {
+    return JSON.stringify({
+      step_id: step.step_id,
+      step_name: step.step_name,
+      step_type: step.step_type,
+      webhook_url: step.webhook_url,
+      tools: step.tools,
+      model: step.model,
+    })
+  }, [stepKey, index, onChange])
 
   // Sync localStep when step prop changes
   useEffect(() => {
@@ -189,23 +202,32 @@ export default function WorkflowStepEditor({
   }, [step, onChange, index])
 
   // Ensure image generation config is initialized when tool is selected
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // Using functional setState form to avoid needing imageGenerationConfig in dependencies
   useEffect(() => {
-    if (isToolSelected('image_generation')) {
-      // Check if config needs initialization (only if size is not set or is undefined)
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      if (!imageGenerationConfig.size || imageGenerationConfig.size === undefined) {
-        setImageGenerationConfig({
-          size: 'auto',
-          quality: 'auto',
-          format: undefined,
-          compression: undefined,
-          background: 'auto',
-          input_fidelity: undefined,
-        })
-      }
+    const hasImageGenTool = (localStep.tools || []).some(t => {
+      if (typeof t === 'string') return t === 'image_generation'
+      return typeof t === 'object' && t.type === 'image_generation'
+    })
+    
+    // Only initialize if tool is selected and config hasn't been set yet
+    if (hasImageGenTool) {
+      setImageGenerationConfig(prev => {
+        // Only update if size is not set (avoid unnecessary updates)
+        if (!prev.size || prev.size === undefined) {
+          return {
+            size: 'auto',
+            quality: 'auto',
+            format: undefined,
+            compression: undefined,
+            background: 'auto',
+            input_fidelity: undefined,
+          }
+        }
+        return prev
+      })
     }
-  }, [localStep.tools]) // Only depend on tools, not config to avoid loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [localStep.tools]) // Only depend on tools to avoid loops - using functional setState prevents need for imageGenerationConfig dependency
 
   const handleChange = (field: keyof WorkflowStep, value: any) => {
     const updated = { ...localStep, [field]: value }
@@ -432,7 +454,13 @@ export default function WorkflowStepEditor({
   }
 
   return (
-    <div className="border border-gray-300 rounded-lg p-6 bg-white shadow-sm">
+    <ErrorBoundary fallback={
+      <div className="border border-red-300 rounded-lg p-6 bg-red-50">
+        <p className="text-red-800 font-medium">Error loading step editor</p>
+        <p className="text-red-600 text-sm mt-1">Please refresh the page or try again.</p>
+      </div>
+    }>
+      <div className="border border-gray-300 rounded-lg p-6 bg-white shadow-sm">
       <div className="flex items-start justify-between mb-4">
         <div 
           className="flex items-center gap-3"
@@ -564,37 +592,43 @@ export default function WorkflowStepEditor({
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`step-name-${index}`}>
             Step Name *
           </label>
           <input
+            id={`step-name-${index}`}
             type="text"
             value={localStep.step_name}
             onChange={(e) => handleChange('step_name', e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
             placeholder="e.g., Deep Research"
             required
+            aria-label="Step name"
+            aria-required="true"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`step-description-${index}`}>
             Step Description (optional)
           </label>
           <textarea
+            id={`step-description-${index}`}
             value={localStep.step_description || ''}
             onChange={(e) => handleChange('step_description', e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
             placeholder="Brief description of what this step does"
             rows={2}
+            aria-label="Step description"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`step-type-${index}`}>
             Step Type *
           </label>
           <select
+            id={`step-type-${index}`}
             value={localStep.step_type || (localStep.webhook_url ? 'webhook' : 'ai_generation')}
             onChange={(e) => {
               const newStepType = e.target.value as 'ai_generation' | 'webhook'
@@ -624,6 +658,8 @@ export default function WorkflowStepEditor({
               }
             }}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            aria-label="Step type"
+            aria-required="true"
           >
             <option value="ai_generation">AI Generation</option>
             <option value="webhook">Webhook</option>
@@ -634,14 +670,17 @@ export default function WorkflowStepEditor({
         {(localStep.step_type === 'ai_generation' || (!localStep.step_type && !localStep.webhook_url)) && (
           <>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`ai-model-${index}`}>
                 AI Model *
               </label>
               <select
+                id={`ai-model-${index}`}
                 value={localStep.model}
                 onChange={(e) => handleChange('model', e.target.value as AIModel)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                 required
+                aria-label="AI model"
+                aria-required="true"
               >
                 {MODEL_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -652,16 +691,19 @@ export default function WorkflowStepEditor({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`instructions-${index}`}>
                 Instructions *
               </label>
               <textarea
+                id={`instructions-${index}`}
                 value={localStep.instructions}
                 onChange={(e) => handleChange('instructions', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                 placeholder="Detailed instructions for what this step should do..."
                 rows={6}
                 required
+                aria-label="Step instructions"
+                aria-required="true"
               />
               <p className="mt-1 text-sm text-gray-500">
                 These instructions will be passed to the AI model along with context from previous steps.
@@ -697,13 +739,18 @@ export default function WorkflowStepEditor({
                   </label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                      <label className="block text-xs font-medium text-gray-600 mb-1" htmlFor={`display-width-${index}`}>
                         Display Width
                       </label>
                       <input
+                        id={`display-width-${index}`}
                         type="number"
                         value={computerUseConfig.display_width}
-                        onChange={(e) => handleComputerUseConfigChange('display_width', parseInt(e.target.value) || 1024)}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value) || 1024
+                          const clampedValue = Math.max(100, Math.min(4096, value))
+                          handleComputerUseConfigChange('display_width', clampedValue)
+                        }}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault()
@@ -714,16 +761,26 @@ export default function WorkflowStepEditor({
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
                         min="100"
                         max="4096"
+                        aria-label="Display width in pixels"
+                        aria-invalid={computerUseConfig.display_width < 100 || computerUseConfig.display_width > 4096}
                       />
+                      {(computerUseConfig.display_width < 100 || computerUseConfig.display_width > 4096) && (
+                        <p className="mt-1 text-xs text-red-600">Width must be between 100 and 4096 pixels</p>
+                      )}
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                      <label className="block text-xs font-medium text-gray-600 mb-1" htmlFor={`display-height-${index}`}>
                         Display Height
                       </label>
                       <input
+                        id={`display-height-${index}`}
                         type="number"
                         value={computerUseConfig.display_height}
-                        onChange={(e) => handleComputerUseConfigChange('display_height', parseInt(e.target.value) || 768)}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value) || 768
+                          const clampedValue = Math.max(100, Math.min(4096, value))
+                          handleComputerUseConfigChange('display_height', clampedValue)
+                        }}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault()
@@ -734,7 +791,12 @@ export default function WorkflowStepEditor({
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
                         min="100"
                         max="4096"
+                        aria-label="Display height in pixels"
+                        aria-invalid={computerUseConfig.display_height < 100 || computerUseConfig.display_height > 4096}
                       />
+                      {(computerUseConfig.display_height < 100 || computerUseConfig.display_height > 4096) && (
+                        <p className="mt-1 text-xs text-red-600">Height must be between 100 and 4096 pixels</p>
+                      )}
                     </div>
                   </div>
                   <div>
@@ -1099,7 +1161,7 @@ export default function WorkflowStepEditor({
           )}
         </div>
       </div>
-    </div>
+    </ErrorBoundary>
   )
 }
 

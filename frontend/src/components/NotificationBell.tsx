@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { FiBell, FiCheck, FiX } from 'react-icons/fi'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
@@ -25,6 +25,21 @@ export const NotificationBell: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
+  const loadNotifications = useCallback(async () => {
+    try {
+      const data = await api.getNotifications()
+      setNotifications(data.notifications || [])
+      setUnreadCount(data.unread_count || 0)
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to load notifications:', error)
+      }
+      // Silently fail for notifications to avoid disrupting UX
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
     loadNotifications()
     
@@ -34,7 +49,7 @@ export const NotificationBell: React.FC = () => {
     }, 30000)
 
     return () => clearInterval(interval)
-  }, [])
+  }, [loadNotifications])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -53,18 +68,6 @@ export const NotificationBell: React.FC = () => {
     }
   }, [isOpen])
 
-  const loadNotifications = async () => {
-    try {
-      const data = await api.getNotifications()
-      setNotifications(data.notifications || [])
-      setUnreadCount(data.unread_count || 0)
-    } catch (error) {
-      console.error('Failed to load notifications:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const handleMarkAsRead = async (notificationId: string, e?: React.MouseEvent) => {
     if (e) {
       e.stopPropagation()
@@ -73,7 +76,10 @@ export const NotificationBell: React.FC = () => {
       await api.markNotificationRead(notificationId)
       await loadNotifications()
     } catch (error) {
-      console.error('Failed to mark notification as read:', error)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to mark notification as read:', error)
+      }
+      // Silently fail for notification actions
     }
   }
 
@@ -83,7 +89,10 @@ export const NotificationBell: React.FC = () => {
       await api.markAllNotificationsRead()
       await loadNotifications()
     } catch (error) {
-      console.error('Failed to mark all notifications as read:', error)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to mark all notifications as read:', error)
+      }
+      // Silently fail for notification actions
     }
   }
 
