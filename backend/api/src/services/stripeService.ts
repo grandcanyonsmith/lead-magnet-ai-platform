@@ -10,6 +10,16 @@ import { logger } from '../utils/logger';
 import { env } from '../utils/env';
 import { db } from '../utils/db';
 
+interface ReportUsageParams {
+  customerId: string;
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  costUsd: number;
+  usageId: string;
+  timestamp?: number;
+}
+
 const STRIPE_SECRET_NAME = env.stripeSecretName;
 const secretsClient = new SecretsManagerClient({ region: env.awsRegion });
 
@@ -19,7 +29,7 @@ let cachedApiKey: string | null = null;
 
 /**
  * Get Stripe client instance (singleton pattern with caching)
- * Retrieves API key from AWS Secrets Manager and caches both key and client
+ * Retrieves API key from environment variable (local dev) or AWS Secrets Manager (production)
  */
 async function getStripeClient(): Promise<Stripe> {
   // Return cached client if available
@@ -28,14 +38,30 @@ async function getStripeClient(): Promise<Stripe> {
   }
 
   try {
+    let apiKey: string | undefined;
+    
+    // For local development, check for direct environment variable first
+    if (env.isLocal || process.env.STRIPE_SECRET_KEY) {
+      apiKey = process.env.STRIPE_SECRET_KEY;
+      if (apiKey && apiKey.trim().length > 0) {
+        logger.info('[Stripe Service] Using Stripe API key from environment variable (local dev)');
+        cachedApiKey = apiKey;
+        cachedClient = new Stripe(apiKey, {
+          apiVersion: '2023-10-16',
+          typescript: true,
+        });
+        logger.info('[Stripe Service] Client initialized and cached');
+        return cachedClient;
+      }
+    }
+    
+    // Otherwise, get from AWS Secrets Manager
     const command = new GetSecretValueCommand({ SecretId: STRIPE_SECRET_NAME });
     const response = await secretsClient.send(command);
     
     if (!response.SecretString) {
       throw new ApiError('Stripe API key not found in secret', 500);
     }
-
-    let apiKey: string;
     
     // Try to parse as JSON first (if secret is stored as {"STRIPE_SECRET_KEY": "..."})
     try {
@@ -89,7 +115,37 @@ export function clearStripeClientCache(): void {
  */
 export class StripeService {
   private readonly CUSTOMERS_TABLE = env.customersTable;
-  private readonly USAGE_ALLOWANCE = 10.0; // $10 included usage per month (2x markup = $5 actual cost)
+
+  private getMeteredPriceIds(): string[] {
+    const ids = new Set<string>();
+    Object.values(env.stripeMeteredPriceMap || {}).forEach((id) => {
+      if (id) ids.add(id);
+    });
+    if (env.stripeMeteredPriceId) {
+      ids.add(env.stripeMeteredPriceId);
+    }
+    return Array.from(ids);
+  }
+
+  private getMeteredPriceIdForModel(model: string): string | undefined {
+    if (env.stripeMeteredPriceMap && env.stripeMeteredPriceMap[model]) {
+      return env.stripeMeteredPriceMap[model];
+    }
+    return env.stripeMeteredPriceId;
+  }
+
+  private findMeteredSubscriptionItem(
+    items: Array<{ id: string; price: { id: string }; type?: string }>,
+    model: string
+  ): { id: string; price: { id: string }; type?: string } | undefined {
+    const targetPriceId = this.getMeteredPriceIdForModel(model);
+    if (targetPriceId) {
+      const byPrice = items.find((item) => item.price.id === targetPriceId);
+      if (byPrice) return byPrice;
+    }
+    // Fallback: first metered item, or any item
+    return items.find((item) => item.type === 'metered') || items[0];
+  }
 
   /**
    * Create a Stripe customer for a new user
@@ -135,22 +191,28 @@ export class StripeService {
     try {
       const stripe = await getStripeClient();
 
-      if (!env.stripePriceId || !env.stripeMeteredPriceId) {
-        throw new ApiError('Stripe price IDs not configured', 500);
+      const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
+
+      if (env.stripePriceId) {
+        lineItems.push({
+          price: env.stripePriceId,
+          quantity: 1,
+        });
       }
+
+      const meteredPriceIds = this.getMeteredPriceIds();
+      if (meteredPriceIds.length === 0) {
+        throw new ApiError('Stripe metered price IDs not configured', 500);
+      }
+
+      meteredPriceIds.forEach((priceId) => {
+        lineItems.push({ price: priceId });
+      });
 
       const session = await stripe.checkout.sessions.create({
         customer: stripeCustomerId,
         mode: 'subscription',
-        line_items: [
-          {
-            price: env.stripePriceId, // Base subscription price
-            quantity: 1,
-          },
-          {
-            price: env.stripeMeteredPriceId, // Metered usage price
-          },
-        ],
+        line_items: lineItems,
         success_url: successUrl,
         cancel_url: cancelUrl,
         subscription_data: {
@@ -247,14 +309,14 @@ export class StripeService {
 
   /**
    * Report usage to Stripe for metered billing
-   * This is called when a customer exceeds their usage allowance
    */
-  async reportUsage(
-    customerId: string,
-    costUsd: number,
-    idempotencyKey: string
-  ): Promise<void> {
+  async reportUsage(params: ReportUsageParams): Promise<void> {
+    const { customerId, model, inputTokens, outputTokens, costUsd, usageId, timestamp } = params;
     try {
+      const usageTokens = Math.max(0, (inputTokens || 0) + (outputTokens || 0));
+      const usageUnits = Math.ceil(usageTokens / 1000);
+      const reportedAt = timestamp || Math.floor(Date.now() / 1000);
+
       // Get customer record with Stripe info
       const customer = await db.get(this.CUSTOMERS_TABLE, { customer_id: customerId });
       
@@ -277,9 +339,7 @@ export class StripeService {
       }
 
       // Find the metered subscription item
-      const meteredItem = subscription.items.find(
-        (item: any) => item.type === 'metered'
-      );
+      const meteredItem = this.findMeteredSubscriptionItem(subscription.items, model);
 
       if (!meteredItem) {
         logger.warn('[Stripe Service] No metered item found in subscription', {
@@ -289,51 +349,56 @@ export class StripeService {
         return;
       }
 
-      // Get current period usage from database
-      const currentPeriodUsage = customer.current_period_usage || 0;
-      const newTotalUsage = currentPeriodUsage + costUsd;
+      const stripe = await getStripeClient();
 
-      // Only report usage if we've exceeded the allowance
-      if (newTotalUsage > this.USAGE_ALLOWANCE) {
-        const overage = newTotalUsage - this.USAGE_ALLOWANCE;
-        const previousOverage = Math.max(0, currentPeriodUsage - this.USAGE_ALLOWANCE);
-        const incrementalOverage = overage - previousOverage;
+      const currentPeriodTokens = customer.current_period_tokens || 0;
+      const currentPeriodCostUsd = customer.current_period_cost_usd || 0;
+      const newTotalTokens = currentPeriodTokens + usageTokens;
+      const newTotalCostUsd = currentPeriodCostUsd + (costUsd || 0);
 
-        if (incrementalOverage > 0) {
-          const stripe = await getStripeClient();
-
-          // Report usage in cents (Stripe uses smallest currency unit)
-          const quantityInCents = Math.ceil(incrementalOverage * 100);
-
-          await stripe.subscriptionItems.createUsageRecord(
-            meteredItem.id,
-            {
-              quantity: quantityInCents,
-              timestamp: Math.floor(Date.now() / 1000),
-              action: 'increment',
-            },
-            {
-              idempotencyKey,
-            }
-          );
-
-          logger.info('[Stripe Service] Reported usage overage', {
-            customerId,
-            subscriptionItemId: meteredItem.id,
-            incrementalOverage,
-            quantityInCents,
-            newTotalUsage,
-            idempotencyKey,
-          });
-        }
+      // Incremental usage record (idempotent per usageId)
+      if (usageUnits > 0) {
+        await stripe.subscriptionItems.createUsageRecord(
+          meteredItem.id,
+          {
+            quantity: usageUnits,
+            timestamp: reportedAt,
+            action: 'increment',
+          },
+          {
+            idempotencyKey: `${usageId}:inc`,
+          }
+        );
       }
 
-      // Update current period usage in database
+      const totalUnits = Math.ceil(newTotalTokens / 1000);
+      const today = new Date(reportedAt * 1000).toISOString().split('T')[0];
+      const shouldSetTotal = customer.last_usage_set_date !== today;
+
+      // Daily backfill to keep Stripe in sync with our running total
+      if (shouldSetTotal) {
+        await stripe.subscriptionItems.createUsageRecord(
+          meteredItem.id,
+          {
+            quantity: totalUnits,
+            timestamp: reportedAt,
+            action: 'set',
+          },
+          {
+            idempotencyKey: `${customerId}:${today}:set`,
+          }
+        );
+      }
+
       await db.update(
         this.CUSTOMERS_TABLE,
         { customer_id: customerId },
         {
-          current_period_usage: newTotalUsage,
+          current_period_usage: newTotalCostUsd * 2, // legacy field mapped to billable (2x) amount
+          current_period_tokens: newTotalTokens,
+          current_period_cost_usd: newTotalCostUsd,
+          current_period_upcharge_usd: newTotalCostUsd * 2,
+          last_usage_set_date: today,
           updated_at: new Date().toISOString(),
         }
       );
@@ -341,6 +406,9 @@ export class StripeService {
       logger.error('[Stripe Service] Error reporting usage', {
         error: error.message,
         customerId,
+        model,
+        inputTokens,
+        outputTokens,
         costUsd,
       });
       // Don't throw - we don't want to fail the request if usage reporting fails
@@ -348,22 +416,28 @@ export class StripeService {
   }
 
   /**
-   * Reset monthly usage counter (called from webhook on invoice.paid)
+   * Reset period usage counters (called from webhook on invoice events)
    */
-  async resetMonthlyUsage(customerId: string): Promise<void> {
+  async resetPeriodUsage(customerId: string, periodStart?: number): Promise<void> {
     try {
+      const periodStartIso = periodStart ? new Date(periodStart * 1000).toISOString() : undefined;
       await db.update(
         this.CUSTOMERS_TABLE,
         { customer_id: customerId },
         {
-          current_period_usage: 0,
+          current_period_usage: 0, // legacy field; maintained for backward compatibility
+          current_period_tokens: 0,
+          current_period_cost_usd: 0,
+          current_period_upcharge_usd: 0,
+          last_usage_set_date: null,
+          current_period_start_at: periodStartIso,
           updated_at: new Date().toISOString(),
         }
       );
 
-      logger.info('[Stripe Service] Reset monthly usage', { customerId });
+      logger.info('[Stripe Service] Reset period usage', { customerId, periodStart: periodStartIso });
     } catch (error: any) {
-      logger.error('[Stripe Service] Error resetting monthly usage', {
+      logger.error('[Stripe Service] Error resetting period usage', {
         error: error.message,
         customerId,
       });

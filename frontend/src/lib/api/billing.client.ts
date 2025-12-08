@@ -12,10 +12,14 @@ export interface SubscriptionInfo {
   current_period_end?: number
   cancel_at_period_end?: boolean
   usage?: {
-    current: number
-    allowance: number
-    overage: number
-    percentage: number
+    total_tokens: number
+    total_input_tokens: number
+    total_output_tokens: number
+    total_actual_cost: number
+    total_upcharge_cost: number
+    units_1k: number
+    unit: string
+    unit_scale: string
   }
 }
 

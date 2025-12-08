@@ -53,6 +53,7 @@ export class EnvConfig {
   // Stripe Configuration
   readonly stripePriceId: string | undefined;
   readonly stripeMeteredPriceId: string | undefined;
+  readonly stripeMeteredPriceMap: Record<string, string>;
   readonly stripeWebhookSecret: string | undefined;
   readonly stripePortalReturnUrl: string | undefined;
 
@@ -108,6 +109,26 @@ export class EnvConfig {
     // Stripe Configuration
     this.stripePriceId = this.getOptional('STRIPE_PRICE_ID');
     this.stripeMeteredPriceId = this.getOptional('STRIPE_METERED_PRICE_ID');
+    const meteredPriceMapRaw = this.getOptional('STRIPE_METERED_PRICE_MAP');
+    this.stripeMeteredPriceMap = {};
+    if (meteredPriceMapRaw) {
+      try {
+        const parsed = JSON.parse(meteredPriceMapRaw);
+        if (parsed && typeof parsed === 'object') {
+          Object.entries(parsed).forEach(([key, value]) => {
+            if (typeof value === 'string' && value.trim().length > 0) {
+              this.stripeMeteredPriceMap[key] = value;
+            }
+          });
+        } else {
+          logger.warn('[EnvConfig] STRIPE_METERED_PRICE_MAP is not an object, ignoring');
+        }
+      } catch (error: any) {
+        logger.warn('[EnvConfig] Failed to parse STRIPE_METERED_PRICE_MAP as JSON', {
+          error: error.message,
+        });
+      }
+    }
     this.stripeWebhookSecret = this.getOptional('STRIPE_WEBHOOK_SECRET');
     this.stripePortalReturnUrl = this.getOptional('STRIPE_PORTAL_RETURN_URL');
 

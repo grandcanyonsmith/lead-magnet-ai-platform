@@ -51,6 +51,10 @@ class StripeWebhookController {
           await this.handleSubscriptionDeleted(stripeEvent);
           break;
 
+        case 'invoice.finalized':
+          await this.handleInvoiceFinalized(stripeEvent);
+          break;
+
         case 'invoice.paid':
           await this.handleInvoicePaid(stripeEvent);
           break;
@@ -225,7 +229,7 @@ class StripeWebhookController {
 
   /**
    * Handle invoice.paid event
-   * Resets monthly usage counter when invoice is paid
+   * Resets period usage counter when invoice is paid
    */
   private async handleInvoicePaid(event: Stripe.Event): Promise<void> {
     const invoice = event.data.object as Stripe.Invoice;
@@ -262,8 +266,56 @@ class StripeWebhookController {
 
     const customer = customers.items[0];
 
-    // Reset monthly usage counter at the start of new billing period
-    await stripeService.resetMonthlyUsage(customer.customer_id);
+    const periodStart =
+      (invoice.lines?.data?.[0]?.period?.start as number | undefined) ||
+      (invoice.period_start as number | undefined);
+
+    await stripeService.resetPeriodUsage(customer.customer_id, periodStart);
+  }
+
+  /**
+   * Handle invoice.finalized event
+   * Resets usage counters when a new period starts (even if payment hasn't completed yet)
+   */
+  private async handleInvoiceFinalized(event: Stripe.Event): Promise<void> {
+    const invoice = event.data.object as Stripe.Invoice;
+
+    logger.info('[Stripe Webhook] Invoice finalized', {
+      invoiceId: invoice.id,
+      customerId: invoice.customer,
+      amountDue: invoice.amount_due,
+    });
+
+    const stripeCustomerId = typeof invoice.customer === 'string'
+      ? invoice.customer
+      : invoice.customer?.id;
+
+    if (!stripeCustomerId) {
+      logger.warn('[Stripe Webhook] No customer ID in invoice');
+      return;
+    }
+
+    const customers = await db.query(
+      CUSTOMERS_TABLE,
+      'gsi_stripe_customer_id',
+      'stripe_customer_id = :stripe_customer_id',
+      { ':stripe_customer_id': stripeCustomerId }
+    );
+
+    if (!customers.items || customers.items.length === 0) {
+      logger.error('[Stripe Webhook] Customer not found for Stripe customer ID', {
+        stripeCustomerId,
+      });
+      return;
+    }
+
+    const customer = customers.items[0];
+
+    const periodStart =
+      (invoice.lines?.data?.[0]?.period?.start as number | undefined) ||
+      (invoice.period_start as number | undefined);
+
+    await stripeService.resetPeriodUsage(customer.customer_id, periodStart);
   }
 
   /**

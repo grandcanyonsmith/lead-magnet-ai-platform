@@ -5,7 +5,12 @@ Handles the full CUA loop: execute actions → capture screenshots → send back
 
 import logging
 import time
+import warnings
 from typing import Tuple, List, Dict, Any, Optional
+
+# Suppress Pydantic serialization warnings
+warnings.filterwarnings('ignore', category=UserWarning, module='pydantic')
+warnings.filterwarnings('ignore', message='.*PydanticSerializationUnexpectedValue.*')
 
 from services.browser_service import BrowserService
 
@@ -174,7 +179,11 @@ class CUALoopService:
                 
                 # Execute action
                 try:
-                    action_dict = action if isinstance(action, dict) else action.model_dump() if hasattr(action, 'model_dump') else {}
+                    import warnings
+                    with warnings.catch_warnings():
+                        warnings.filterwarnings('ignore', category=UserWarning, module='pydantic')
+                        warnings.filterwarnings('ignore', message='.*PydanticSerializationUnexpectedValue.*')
+                        action_dict = action if isinstance(action, dict) else action.model_dump() if hasattr(action, 'model_dump') else {}
                     logger.info(f"[CUALoopService] Executing action: {action_dict.get('type', 'unknown')}")
                     browser.execute_action(action_dict)
                 except Exception as e:

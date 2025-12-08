@@ -363,9 +363,83 @@ class BillingController {
         };
       }
 
-      // Get usage information
-      const currentPeriodUsage = customer.current_period_usage || 0;
-      const usageAllowance = 10.0; // $10 included usage (TODO: Make configurable)
+      // Aggregate usage for the current Stripe billing period
+      let usageSummary: UsageSummary | null = null;
+      if (subscription.current_period_start) {
+        const periodStart = new Date(subscription.current_period_start * 1000);
+        const periodEnd = subscription.current_period_end
+          ? new Date(subscription.current_period_end * 1000)
+          : new Date();
+
+        try {
+          const usageRecordsResult = await db.query(
+            USAGE_RECORDS_TABLE,
+            'gsi_tenant_date',
+            'tenant_id = :tenant_id AND created_at BETWEEN :start_date AND :end_date',
+            {
+              ':tenant_id': tenantId,
+              ':start_date': periodStart.toISOString(),
+              ':end_date': periodEnd.toISOString(),
+            }
+          );
+
+          const usageRecords = normalizeQueryResult(usageRecordsResult) as UsageRecord[];
+          usageSummary = usageRecords.reduce<UsageSummary>(
+            (acc, record) => {
+              const serviceType = record.service_type;
+              if (!acc.by_service[serviceType]) {
+                acc.by_service[serviceType] = {
+                  service_type: serviceType,
+                  calls: 0,
+                  input_tokens: 0,
+                  output_tokens: 0,
+                  total_tokens: 0,
+                  actual_cost: 0,
+                  upcharge_cost: 0,
+                };
+              }
+
+              const service = acc.by_service[serviceType];
+              service.calls += 1;
+              service.input_tokens += record.input_tokens || 0;
+              service.output_tokens += record.output_tokens || 0;
+              service.total_tokens += (record.input_tokens || 0) + (record.output_tokens || 0);
+              service.actual_cost += record.cost_usd || 0;
+              service.upcharge_cost += (record.cost_usd || 0) * 2;
+
+              acc.total_calls += 1;
+              acc.total_input_tokens += record.input_tokens || 0;
+              acc.total_output_tokens += record.output_tokens || 0;
+              acc.total_tokens += (record.input_tokens || 0) + (record.output_tokens || 0);
+              acc.total_actual_cost += record.cost_usd || 0;
+              acc.total_upcharge_cost += (record.cost_usd || 0) * 2;
+
+              return acc;
+            },
+            {
+              total_calls: 0,
+              total_input_tokens: 0,
+              total_output_tokens: 0,
+              total_tokens: 0,
+              total_actual_cost: 0,
+              total_upcharge_cost: 0,
+              by_service: {},
+            }
+          );
+
+          usageSummary.total_actual_cost = Math.round(usageSummary.total_actual_cost * 1000000) / 1000000;
+          usageSummary.total_upcharge_cost = Math.round(usageSummary.total_upcharge_cost * 1000000) / 1000000;
+          Object.values(usageSummary.by_service).forEach((service) => {
+            service.actual_cost = Math.round(service.actual_cost * 1000000) / 1000000;
+            service.upcharge_cost = Math.round(service.upcharge_cost * 1000000) / 1000000;
+          });
+        } catch (error: any) {
+          logger.error('[Billing] Error aggregating period usage', {
+            error: error.message,
+            tenantId,
+          });
+        }
+      }
 
       return {
         statusCode: 200,
@@ -375,12 +449,18 @@ class BillingController {
           current_period_start: subscription.current_period_start,
           current_period_end: subscription.current_period_end,
           cancel_at_period_end: subscription.cancel_at_period_end,
-          usage: {
-            current: currentPeriodUsage,
-            allowance: usageAllowance,
-            overage: Math.max(0, currentPeriodUsage - usageAllowance),
-            percentage: Math.min(100, (currentPeriodUsage / usageAllowance) * 100),
-          },
+          usage: usageSummary
+            ? {
+                total_tokens: usageSummary.total_tokens,
+                total_input_tokens: usageSummary.total_input_tokens,
+                total_output_tokens: usageSummary.total_output_tokens,
+                total_actual_cost: usageSummary.total_actual_cost,
+                total_upcharge_cost: usageSummary.total_upcharge_cost,
+                units_1k: Math.ceil(usageSummary.total_tokens / 1000),
+                unit: 'tokens',
+                unit_scale: 'per_1k',
+              }
+            : undefined,
         },
       };
     } catch (error: any) {
