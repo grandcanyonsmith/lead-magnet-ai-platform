@@ -38,8 +38,12 @@ import type {
   ArtifactGalleryItem,
   Job,
   JobStepSummary,
+  MergedStep,
 } from '@/types/job'
 import type { WorkflowStep } from '@/types'
+import type { Workflow } from '@/types/workflow'
+import type { FormSubmission } from '@/types/form'
+import type { Artifact } from '@/types/artifact'
 
 // ---------------------------------------------------------------------------
 // Main Component
@@ -259,8 +263,15 @@ export default function JobDetailClient() {
   // Render
   // ---------------------------------------------------------------------------
 
+  const errorFallback = (
+    <div className="border border-red-300 rounded-lg p-6 bg-red-50">
+      <p className="text-red-800 font-medium">Error loading job details</p>
+      <p className="text-red-600 text-sm mt-1">Please refresh the page or try again.</p>
+    </div>
+  )
+
   return (
-    <ErrorBoundary fallback={<GenericError />}>
+    <ErrorBoundary fallback={errorFallback}>
       <div>
         <JobHeader
           error={error}
@@ -406,10 +417,8 @@ function getJobDuration(job?: Job | null): JobDurationInfo | null {
   if (!startTime) return null
 
   const start = new Date(startTime).getTime()
-  const endTimestamp =
-    job?.completed_at || job?.failed_at
-      ? new Date(job.completed_at || job.failed_at).getTime()
-      : Date.now()
+  const endTime = job?.completed_at || job?.failed_at
+  const endTimestamp = endTime ? new Date(endTime).getTime() : Date.now()
 
   const seconds = Math.max(0, Math.round((endTimestamp - start) / 1000))
 
@@ -424,6 +433,167 @@ function getJobDuration(job?: Job | null): JobDurationInfo | null {
 }
 
 type TabKey = 'execution' | 'artifacts' | 'raw'
+
+// ---------------------------------------------------------------------------
+// Job Tabs Component
+// ---------------------------------------------------------------------------
+
+interface JobTabsProps {
+  job: Job
+  activeTab: TabKey
+  setActiveTab: (tab: TabKey) => void
+  mergedSteps: MergedStep[]
+  artifactGalleryItems: ArtifactGalleryItem[]
+  expandedSteps: Set<number>
+  toggleStep: (stepOrder: number) => void
+  showExecutionSteps: boolean
+  setShowExecutionSteps: (show: boolean) => void
+  executionStepsError: string | null
+  imageArtifactsByStep: Map<number, Artifact[]>
+  loadingArtifacts: boolean
+  onCopy: (text: string) => void
+  onEditStep: (stepIndex: number) => void
+  onRerunStepClick: (stepIndex: number) => void
+  openPreview: (item: ArtifactGalleryItem) => void
+}
+
+function JobTabs({
+  job,
+  activeTab,
+  setActiveTab,
+  mergedSteps,
+  artifactGalleryItems,
+  expandedSteps,
+  toggleStep,
+  showExecutionSteps,
+  setShowExecutionSteps,
+  executionStepsError,
+  imageArtifactsByStep,
+  loadingArtifacts,
+  onCopy,
+  onEditStep,
+  onRerunStepClick,
+  openPreview,
+}: JobTabsProps) {
+  const tabs: { id: TabKey; label: string }[] = [
+    { id: 'execution', label: 'Execution' },
+    { id: 'artifacts', label: 'Artifacts' },
+    { id: 'raw', label: 'Raw JSON' },
+  ]
+
+  return (
+    <div className="mt-6">
+      {/* Tab Navigation */}
+      <div className="border-b border-gray-200">
+        <nav className="flex space-x-8" role="tablist">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              role="tab"
+              aria-selected={activeTab === tab.id}
+              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === tab.id
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {/* Tab Content */}
+      <div className="mt-6" role="tabpanel">
+        {activeTab === 'execution' && (
+          <ExecutionSteps
+            steps={mergedSteps}
+            expandedSteps={expandedSteps}
+            showExecutionSteps={showExecutionSteps}
+            onToggleShow={() => setShowExecutionSteps(!showExecutionSteps)}
+            onToggleStep={toggleStep}
+            onCopy={onCopy}
+            jobStatus={job.status}
+            onEditStep={onEditStep}
+            canEdit={true}
+            imageArtifactsByStep={imageArtifactsByStep}
+            loadingImageArtifacts={loadingArtifacts}
+            onRerunStepClick={onRerunStepClick}
+          />
+        )}
+
+        {activeTab === 'artifacts' && (
+          <ArtifactGallery
+            items={artifactGalleryItems}
+            loading={loadingArtifacts}
+            onPreview={openPreview}
+          />
+        )}
+
+        {activeTab === 'raw' && <RawJsonPanel data={job} />}
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Details Section Component
+// ---------------------------------------------------------------------------
+
+interface DetailsSectionProps {
+  showDetails: boolean
+  setShowDetails: (show: boolean) => void
+  job: Job
+  workflow: Workflow | null
+  submission: FormSubmission | null
+  handleResubmitClick: () => void
+  resubmitting: boolean
+}
+
+function DetailsSection({
+  showDetails,
+  setShowDetails,
+  job,
+  workflow,
+  submission,
+  handleResubmitClick,
+  resubmitting,
+}: DetailsSectionProps) {
+  if (!showDetails) {
+    return (
+      <div className="mt-6">
+        <button
+          onClick={() => setShowDetails(true)}
+          className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+        >
+          Show details
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mt-6">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold text-gray-900">Details</h2>
+        <button
+          onClick={() => setShowDetails(false)}
+          className="text-sm text-gray-500 hover:text-gray-700"
+        >
+          Hide details
+        </button>
+      </div>
+      <JobDetails
+        job={job}
+        workflow={workflow}
+        submission={submission}
+        onRerun={handleResubmitClick}
+        rerunning={resubmitting}
+      />
+    </div>
+  )
+}
 
 // ---------------------------------------------------------------------------
 // Raw JSON Panel
