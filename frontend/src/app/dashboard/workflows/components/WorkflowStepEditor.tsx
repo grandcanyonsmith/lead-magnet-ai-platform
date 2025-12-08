@@ -84,7 +84,14 @@ export default function WorkflowStepEditor({
   useEffect(() => {
     // Reset conversion tracking when step prop changes (new step or step updated externally)
     hasConvertedToolsRef.current = false
-    setLocalStep(step)
+    
+    // Preserve webhook step type if webhook_url exists but step_type is missing
+    const stepWithType = { ...step }
+    if (!stepWithType.step_type && stepWithType.webhook_url) {
+      stepWithType.step_type = 'webhook'
+    }
+    
+    setLocalStep(stepWithType)
     // Extract computer_use_preview config if present
     const computerUseTool = (step.tools || []).find(
       (t) => (typeof t === 'object' && t.type === 'computer_use_preview') || t === 'computer_use_preview'
@@ -427,11 +434,15 @@ export default function WorkflowStepEditor({
   return (
     <div className="border border-gray-300 rounded-lg p-6 bg-white shadow-sm">
       <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3">
+        <div 
+          className="flex items-center gap-3"
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
           <div className="flex items-center gap-1 text-gray-400">
             <span className="text-xs">⋮⋮</span>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900">
+          <h3 className="text-lg font-semibold text-gray-900 select-none">
             Step {index + 1}
           </h3>
         </div>
@@ -584,15 +595,16 @@ export default function WorkflowStepEditor({
             Step Type *
           </label>
           <select
-            value={localStep.step_type || 'ai_generation'}
+            value={localStep.step_type || (localStep.webhook_url ? 'webhook' : 'ai_generation')}
             onChange={(e) => {
               const newStepType = e.target.value as 'ai_generation' | 'webhook'
               if (newStepType === 'webhook') {
-                // Initialize webhook step with defaults
+                // Initialize webhook step with defaults, preserving existing webhook fields
                 const updated = {
                   ...localStep,
                   step_type: newStepType,
-                  webhook_data_selection: {
+                  webhook_url: localStep.webhook_url || '',
+                  webhook_data_selection: localStep.webhook_data_selection || {
                     include_submission: true,
                     exclude_step_indices: [],
                     include_job_info: true
@@ -601,7 +613,14 @@ export default function WorkflowStepEditor({
                 setLocalStep(updated)
                 onChange(index, updated)
               } else {
-                handleChange('step_type', newStepType)
+                // When switching to AI generation, preserve webhook fields but set step_type
+                // This allows switching back without losing data
+                const updated = {
+                  ...localStep,
+                  step_type: newStepType,
+                }
+                setLocalStep(updated)
+                onChange(index, updated)
               }
             }}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -612,7 +631,7 @@ export default function WorkflowStepEditor({
         </div>
 
         {/* AI Generation Step Fields */}
-        {(localStep.step_type === 'ai_generation' || !localStep.step_type) && (
+        {(localStep.step_type === 'ai_generation' || (!localStep.step_type && !localStep.webhook_url)) && (
           <>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -685,6 +704,13 @@ export default function WorkflowStepEditor({
                         type="number"
                         value={computerUseConfig.display_width}
                         onChange={(e) => handleComputerUseConfigChange('display_width', parseInt(e.target.value) || 1024)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            e.stopPropagation()
+                          }
+                        }}
+                        onClick={(e) => e.stopPropagation()}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
                         min="100"
                         max="4096"
@@ -698,6 +724,13 @@ export default function WorkflowStepEditor({
                         type="number"
                         value={computerUseConfig.display_height}
                         onChange={(e) => handleComputerUseConfigChange('display_height', parseInt(e.target.value) || 768)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            e.stopPropagation()
+                          }
+                        }}
+                        onClick={(e) => e.stopPropagation()}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
                         min="100"
                         max="4096"

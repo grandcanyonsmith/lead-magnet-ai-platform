@@ -14,7 +14,10 @@ class ResponseParser:
         image_handler: Optional[Any] = None,
         tenant_id: Optional[str] = None,
         job_id: Optional[str] = None,
-        base64_image_urls: Optional[List[str]] = None
+        base64_image_urls: Optional[List[str]] = None,
+        context: Optional[str] = None,
+        step_name: Optional[str] = None,
+        step_instructions: Optional[str] = None
     ) -> List[str]:
         """
         Extract image URLs from OpenAI Responses API response.
@@ -66,7 +69,8 @@ class ResponseParser:
                     # Check for ImageGenerationCall by class name first (most reliable)
                     if item_class_name == 'ImageGenerationCall':
                         url = ResponseParser._extract_from_image_generation_call(
-                            item, image_handler, tenant_id, job_id, item_idx
+                            item, image_handler, tenant_id, job_id, item_idx,
+                            context=context, step_name=step_name, step_instructions=step_instructions
                         )
                         if url:
                             image_urls.append(url)
@@ -94,7 +98,8 @@ class ResponseParser:
                         
                         if is_image_gen_call:
                             url = ResponseParser._extract_from_image_generation_call(
-                                item, image_handler, tenant_id, job_id, item_idx
+                                item, image_handler, tenant_id, job_id, item_idx,
+                                context=context, step_name=step_name, step_instructions=step_instructions
                             )
                             if url:
                                 image_urls.append(url)
@@ -203,7 +208,10 @@ class ResponseParser:
         image_handler: Optional[Any],
         tenant_id: Optional[str],
         job_id: Optional[str],
-        item_idx: int
+        item_idx: int,
+        context: Optional[str] = None,
+        step_name: Optional[str] = None,
+        step_instructions: Optional[str] = None
     ) -> Optional[str]:
         """Extract and convert base64 image from ImageGenerationCall item."""
         result = None
@@ -216,7 +224,11 @@ class ResponseParser:
                     image_b64=result,
                     content_type='image/png',
                     tenant_id=tenant_id,
-                    job_id=job_id
+                    job_id=job_id,
+                    context=context,
+                    step_name=step_name,
+                    step_instructions=step_instructions,
+                    image_index=item_idx
                 )
                 if converted_url:
                     logger.info(f"[Response Parser] Converted base64 image from ImageGenerationCall to URL", extra={

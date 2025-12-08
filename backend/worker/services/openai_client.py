@@ -923,7 +923,9 @@ class OpenAIClient:
         params: Dict,
         image_handler,
         tenant_id: Optional[str] = None,
-        job_id: Optional[str] = None
+        job_id: Optional[str] = None,
+        step_name: Optional[str] = None,
+        step_instructions: Optional[str] = None
     ):
         """Process Responses API response and return formatted results."""
         from cost_service import calculate_openai_cost
@@ -1096,7 +1098,10 @@ class OpenAIClient:
             image_handler=image_handler,
             tenant_id=tenant_id,
             job_id=job_id,
-            base64_image_urls=base64_image_urls
+            base64_image_urls=base64_image_urls,
+            context=context,
+            step_name=step_name,
+            step_instructions=step_instructions or instructions
         )
         
         # Image URL extraction is now handled by ResponseParser

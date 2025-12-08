@@ -89,18 +89,29 @@ class AIStepProcessor:
         
         step_start_time = datetime.utcnow()
         
-        # Generate step output
-        step_output, usage_info, request_details, response_details = self.ai_service.generate_report(
-            model=step_model,
-            instructions=step_instructions,
-            context=current_step_context,
-            previous_context=previous_context,
-            tools=step_tools,
-            tool_choice=step_tool_choice,
-            tenant_id=tenant_id,
-            job_id=job_id,
-            previous_image_urls=previous_image_urls
-        )
+        # Set step context for AI naming
+        self.ai_service._current_step_name = step_name
+        self.ai_service._current_step_instructions = step_instructions
+        
+        try:
+            # Generate step output
+            step_output, usage_info, request_details, response_details = self.ai_service.generate_report(
+                model=step_model,
+                instructions=step_instructions,
+                context=current_step_context,
+                previous_context=previous_context,
+                tools=step_tools,
+                tool_choice=step_tool_choice,
+                tenant_id=tenant_id,
+                job_id=job_id,
+                previous_image_urls=previous_image_urls
+            )
+        finally:
+            # Clean up step context
+            if hasattr(self.ai_service, '_current_step_name'):
+                delattr(self.ai_service, '_current_step_name')
+            if hasattr(self.ai_service, '_current_step_instructions'):
+                delattr(self.ai_service, '_current_step_instructions')
         
         step_duration = (datetime.utcnow() - step_start_time).total_seconds() * 1000
         

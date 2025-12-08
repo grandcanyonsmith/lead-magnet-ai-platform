@@ -259,7 +259,9 @@ class AIService:
                 params=params,
                 image_handler=self.image_handler,
                 tenant_id=tenant_id,
-                job_id=job_id
+                job_id=job_id,
+                step_name=getattr(self, '_current_step_name', None),
+                step_instructions=getattr(self, '_current_step_instructions', None) or instructions
             )
             
         except Exception as e:
