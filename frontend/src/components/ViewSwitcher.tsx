@@ -41,11 +41,6 @@ export function ViewSwitcher() {
   }, [viewMode, isOpen])
 
   // Only show for SUPER_ADMIN
-  // Debug: Log role to help troubleshoot
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[ViewSwitcher] Current role:', role)
-  }
-  
   if (role !== 'SUPER_ADMIN') {
     return null
   }
