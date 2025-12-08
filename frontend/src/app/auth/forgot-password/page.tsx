@@ -33,7 +33,7 @@ export default function ForgotPasswordPage() {
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unable to send reset code'
-      logger.error('Forgot password request failed', { err, context: 'ForgotPassword' })
+      logger.error('Forgot password request failed', { error: err, context: 'ForgotPassword' })
       setError(msg)
     } finally {
       setLoading(false)
@@ -59,7 +59,7 @@ export default function ForgotPasswordPage() {
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unable to reset password'
-      logger.error('Forgot password confirm failed', { err, context: 'ForgotPassword' })
+      logger.error('Forgot password confirm failed', { error: err, context: 'ForgotPassword' })
       setError(msg)
     } finally {
       setLoading(false)
