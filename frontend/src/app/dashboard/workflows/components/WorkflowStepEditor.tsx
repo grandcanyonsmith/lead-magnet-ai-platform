@@ -91,7 +91,7 @@ export default function WorkflowStepEditor({
       tools: step.tools,
       model: step.model,
     })
-  }, [stepKey, index, onChange])
+  }, [step.step_id, step.step_name, step.step_type, step.webhook_url, step.tools, step.model])
 
   // Sync localStep when step prop changes
   useEffect(() => {
@@ -268,7 +268,7 @@ export default function WorkflowStepEditor({
         }]
       } else if (toolValue === 'image_generation') {
         // Ensure config is initialized with defaults if not already set
-        const currentConfig = imageGenerationConfig.size ? imageGenerationConfig : {
+        const currentConfig: typeof imageGenerationConfig = imageGenerationConfig.size ? imageGenerationConfig : {
           size: 'auto' as const,
           quality: 'auto' as const,
           format: undefined as 'png' | 'jpeg' | 'webp' | undefined,
