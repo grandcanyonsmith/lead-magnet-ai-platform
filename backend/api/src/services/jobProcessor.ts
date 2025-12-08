@@ -75,15 +75,27 @@ export async function processJobLocally(
       logger.info('[Local Job Processor] Worker completed', { jobId, stdout, stderr });
     } catch (execError: any) {
       // If Python worker fails, log and mark as failed
+      const errorMessage = execError.message || 'Unknown error';
+      const stderrOutput = execError.stderr || '';
+      const stdoutOutput = execError.stdout || '';
+      
       logger.error('[Local Job Processor] Worker execution failed', {
         jobId,
-        error: execError.message,
-        stderr: execError.stderr,
+        error: errorMessage,
+        stderr: stderrOutput,
+        stdout: stdoutOutput,
+        code: execError.code,
+        signal: execError.signal,
       });
+      
+      // Include stderr in error message for better debugging
+      const fullErrorMessage = stderrOutput 
+        ? `Worker execution failed: ${errorMessage}\n\nSTDERR:\n${stderrOutput}`
+        : `Worker execution failed: ${errorMessage}`;
       
       await db.update(JOBS_TABLE, { job_id: jobId }, {
         status: 'failed',
-        error_message: `Worker execution failed: ${execError.message}`,
+        error_message: fullErrorMessage,
         updated_at: new Date().toISOString(),
       });
       
