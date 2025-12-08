@@ -84,3 +84,4 @@ cognitoUser.authenticateUser(authenticationDetails, {
     process.exit(1);
   },
 });
+
