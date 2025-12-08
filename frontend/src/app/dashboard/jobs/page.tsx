@@ -178,8 +178,8 @@ export default function JobsPage() {
           map[wf.workflow_id] = wf.workflow_name || wf.workflow_id
           if (Array.isArray(wf.steps)) {
             counts[wf.workflow_id] = wf.steps.length
-          } else if (typeof wf.total_steps === 'number') {
-            counts[wf.workflow_id] = wf.total_steps
+          } else {
+            counts[wf.workflow_id] = 0
           }
         })
         setWorkflowMap(map)
@@ -225,7 +225,7 @@ export default function JobsPage() {
         setRefreshing(false)
       }
     },
-    [statusFilter, workflowFilter, pageSize]
+    [statusFilter, workflowFilter, pageSize, currentPage]
   )
 
   // Reset page to 1 when filters change
