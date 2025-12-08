@@ -1,4 +1,4 @@
-import { getStatusIcon, getStatusBadge, getStepDisplayMeta } from '@/utils/jobs/listHelpers'
+import { getStatusIcon, getStatusBadge, getStepDisplayMeta, getJobSubmissionPreview } from '@/utils/jobs/listHelpers'
 import { formatRelativeTime, formatDuration } from '@/utils/date'
 import { FiExternalLink } from 'react-icons/fi'
 
@@ -22,6 +22,7 @@ export function JobsMobileList({ jobs, workflowMap, workflowStepCounts, onNaviga
           : null
         const hasError = job.status === 'failed' && job.error_message
         const stepMeta = getStepDisplayMeta(job, workflowStepCounts)
+        const submissionPreview = getJobSubmissionPreview(job)
 
         return (
           <div
@@ -34,6 +35,11 @@ export function JobsMobileList({ jobs, workflowMap, workflowStepCounts, onNaviga
                 <h3 className="text-sm font-semibold text-gray-900 truncate">
                   {workflowMap[job.workflow_id] || job.workflow_id || '-'}
                 </h3>
+                {submissionPreview && (
+                  <div className="text-xs text-gray-600 mt-1 font-medium truncate">
+                    {submissionPreview}
+                  </div>
+                )}
                 {stepMeta.label && <div className="text-xs text-gray-500 mt-0.5">{stepMeta.label}</div>}
               </div>
               <div className="ml-2 flex-shrink-0 text-right" data-tour="job-status">

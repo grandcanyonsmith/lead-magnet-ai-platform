@@ -1,5 +1,5 @@
 import React from 'react'
-import { getStatusIcon, getStatusBadge, getStepDisplayMeta } from '@/utils/jobs/listHelpers'
+import { getStatusIcon, getStatusBadge, getStepDisplayMeta, getJobSubmissionPreview } from '@/utils/jobs/listHelpers'
 import { formatRelativeTime, formatDuration } from '@/utils/date'
 import type { SortField } from '@/hooks/useJobFilters'
 import { FiChevronDown, FiChevronUp, FiXCircle } from 'react-icons/fi'
@@ -70,6 +70,7 @@ export function JobsDesktopTable({
               ? (job.error_message.length > 60 ? `${job.error_message.substring(0, 60)}...` : job.error_message)
               : null
             const stepMeta = getStepDisplayMeta(job, workflowStepCounts)
+            const submissionPreview = getJobSubmissionPreview(job)
 
             return (
               <React.Fragment key={job.job_id}>
@@ -78,6 +79,11 @@ export function JobsDesktopTable({
                     <div className="text-sm font-medium text-gray-900">
                       {workflowMap[job.workflow_id] || job.workflow_id || '-'}
                     </div>
+                    {submissionPreview && (
+                      <div className="text-xs text-gray-600 mt-1 font-medium">
+                        {submissionPreview}
+                      </div>
+                    )}
                     {stepMeta.label && <div className="text-xs text-gray-500 mt-0.5">{stepMeta.label}</div>}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap" data-tour="job-status">
