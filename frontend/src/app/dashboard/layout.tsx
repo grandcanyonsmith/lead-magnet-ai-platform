@@ -36,7 +36,7 @@ export default function DashboardLayout({
 }) {
   const router = useRouter()
   const pathname = usePathname()
-  const { role, user } = useAuth()
+  const { role, user, signOut } = useAuth()
   const [loading, setLoading] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [settings, setSettings] = useState<Settings | null>(null)
@@ -302,9 +302,6 @@ export default function DashboardLayout({
           </div>
 
           <div className="mt-auto px-3 py-3 border-t border-zinc-200 bg-white shrink-0">
-            <div className="flex items-center gap-2 mb-3">
-              <NotificationBell />
-            </div>
             <div className="relative">
               <button
                 type="button"
@@ -339,6 +336,11 @@ export default function DashboardLayout({
                     onClick={() => setAccountMenuOpen(false)}
                   />
                   <div className="absolute bottom-full left-0 right-0 mb-2 rounded-lg border border-zinc-200 bg-white shadow-lg ring-1 ring-black/5 z-50 overflow-hidden">
+                    <div className="px-3 py-2.5 flex items-center justify-between">
+                      <span className="text-sm text-zinc-700">Notifications</span>
+                      <NotificationBell />
+                    </div>
+                    <hr className="border-t border-zinc-100" />
                     <button
                       className="w-full px-3 py-2.5 text-sm text-zinc-700 hover:bg-zinc-50 text-left transition-colors"
                       onClick={() => {
@@ -355,6 +357,8 @@ export default function DashboardLayout({
                       onClick={() => {
                         setAccountMenuOpen(false)
                         setSidebarOpen(false)
+                        signOut()
+                        router.push('/auth/login')
                       }}
                     >
                       Sign out
