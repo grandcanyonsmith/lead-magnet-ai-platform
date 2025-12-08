@@ -26,6 +26,9 @@ process.env.ARTIFACTS_BUCKET = process.env.ARTIFACTS_BUCKET || 'leadmagnet-artif
 process.env.IS_LOCAL = process.env.IS_LOCAL || 'true';
 process.env.NODE_ENV = process.env.NODE_ENV || 'development';
 
+// Stripe configuration (can be overridden by environment variables)
+// For local dev, set STRIPE_SECRET_KEY, STRIPE_PRICE_ID, STRIPE_METERED_PRICE_ID, etc.
+
 // Now import modules after environment variables are set
 const express = require('express');
 const cors = require('cors');

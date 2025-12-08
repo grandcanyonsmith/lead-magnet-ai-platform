@@ -71,10 +71,16 @@ export class UsageTrackingService {
         costUsd,
       });
 
-      // Report usage to Stripe for metered billing (2x markup)
-      // Use usage_id as idempotency key to prevent duplicate charges
-      const chargeableAmount = costUsd * 2; // Apply 2x markup
-      await stripeService.reportUsage(tenantId, chargeableAmount, usageId);
+      // Report usage to Stripe for metered billing (tokens per 1k, 2x pricing baked into Stripe price)
+      // Use usage_id as part of the idempotency key to prevent duplicates
+      await stripeService.reportUsage({
+        customerId: tenantId,
+        model,
+        inputTokens,
+        outputTokens,
+        costUsd,
+        usageId,
+      });
     } catch (error: any) {
       // Don't fail the request if usage tracking fails
       logger.error('[Usage Tracking] Failed to store usage record', {

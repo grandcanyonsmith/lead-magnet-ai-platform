@@ -5,6 +5,11 @@ from typing import Dict, List, Optional, Tuple, Any
 import re
 import json
 import copy
+import warnings
+
+# Suppress Pydantic serialization warnings globally
+warnings.filterwarnings('ignore', category=UserWarning, module='pydantic')
+warnings.filterwarnings('ignore', message='.*PydanticSerializationUnexpectedValue.*')
 
 from services.api_key_manager import APIKeyManager
 
@@ -808,53 +813,102 @@ class OpenAIClient:
             Dictionary representation of the response
         """
         try:
-            # Convert response object to dict using model_dump if available (Pydantic v2)
-            if hasattr(response, 'model_dump'):
-                return response.model_dump(mode='json')
-            # Fallback to dict() if available (Pydantic v1 or simple objects)
-            elif hasattr(response, 'dict'):
-                return response.dict()
-            # Try to convert attributes to dict
-            else:
-                result = {}
-                # Get all non-private attributes
-                for attr in dir(response):
-                    if not attr.startswith('_'):
-                        try:
-                            value = getattr(response, attr)
-                            # Skip methods
-                            if not callable(value):
-                                # Try to serialize the value
+            # Suppress Pydantic serialization warnings
+            import warnings
+            with warnings.catch_warnings():
+                warnings.filterwarnings('ignore', category=UserWarning, module='pydantic')
+                warnings.filterwarnings('ignore', message='.*PydanticSerializationUnexpectedValue.*')
+                
+                # Convert response object to dict using model_dump if available (Pydantic v2)
+                if hasattr(response, 'model_dump'):
+                    try:
+                        return response.model_dump(mode='json')
+                    except Exception as e:
+                        logger.warning(f"[OpenAI Client] model_dump failed, trying fallback: {e}")
+                        # Fallback to dict() if available (Pydantic v1 or simple objects)
+                        if hasattr(response, 'dict'):
+                            return response.dict()
+                # Fallback to dict() if available (Pydantic v1 or simple objects)
+                elif hasattr(response, 'dict'):
+                    return response.dict()
+            
+            # Try to convert attributes to dict if model_dump/dict don't work
+            result = {}
+            # Get all non-private attributes
+            for attr in dir(response):
+                if not attr.startswith('_'):
+                    try:
+                        value = getattr(response, attr)
+                        # Skip methods
+                        if not callable(value):
+                            # Try to serialize the value
+                            import warnings
+                            with warnings.catch_warnings():
+                                warnings.filterwarnings('ignore', category=UserWarning, module='pydantic')
+                                warnings.filterwarnings('ignore', message='.*PydanticSerializationUnexpectedValue.*')
+                                
                                 if hasattr(value, 'model_dump'):
-                                    result[attr] = value.model_dump(mode='json')
+                                    try:
+                                        result[attr] = value.model_dump(mode='json')
+                                    except Exception:
+                                        # Fallback to string representation if serialization fails
+                                        result[attr] = str(value)
                                 elif hasattr(value, 'dict'):
                                     result[attr] = value.dict()
                                 elif isinstance(value, (str, int, float, bool, type(None))):
                                     result[attr] = value
                                 elif isinstance(value, list):
-                                    result[attr] = [
-                                        item.model_dump(mode='json') if hasattr(item, 'model_dump') 
-                                        else item.dict() if hasattr(item, 'dict')
-                                        else str(item) if not isinstance(item, (str, int, float, bool, type(None)))
-                                        else item
-                                        for item in value
-                                    ]
+                                    result[attr] = []
+                                    for item in value:
+                                        try:
+                                            with warnings.catch_warnings():
+                                                warnings.filterwarnings('ignore', category=UserWarning, module='pydantic')
+                                                warnings.filterwarnings('ignore', message='.*PydanticSerializationUnexpectedValue.*')
+                                                if hasattr(item, 'model_dump'):
+                                                    result[attr].append(item.model_dump(mode='json'))
+                                                elif hasattr(item, 'dict'):
+                                                    result[attr].append(item.dict())
+                                                elif isinstance(item, (str, int, float, bool, type(None))):
+                                                    result[attr].append(item)
+                                                else:
+                                                    result[attr].append(str(item))
+                                        except Exception:
+                                            # Fallback to string if serialization fails
+                                            result[attr].append(str(item))
                                 else:
                                     # For complex objects, try to convert to string
                                     result[attr] = str(value)
-                        except Exception as e:
-                            logger.debug(f"[OpenAI Client] Could not serialize response attribute {attr}: {e}")
-                            result[attr] = f"<unserializable: {type(value).__name__}>"
-                return result
+                    except Exception as e:
+                        logger.debug(f"[OpenAI Client] Could not serialize response attribute {attr}: {e}")
+                        result[attr] = f"<unserializable: {type(value).__name__}>"
+            return result
         except Exception as e:
-            logger.warning(f"[OpenAI Client] Error serializing response: {e}", exc_info=True)
-            # Fallback: return basic info
-            return {
-                "error": "Failed to serialize response",
-                "error_message": str(e),
-                "response_type": type(response).__name__,
-                "response_str": str(response)
-            }
+            # If serialization fails, try a more lenient approach
+            logger.warning(f"[OpenAI Client] Error serializing response with strict mode: {e}", exc_info=False)
+            try:
+                # Try serializing with exclude_unset and exclude_none to avoid problematic fields
+                if hasattr(response, 'model_dump'):
+                    return response.model_dump(mode='json', exclude_unset=True, exclude_none=True)
+                elif hasattr(response, 'dict'):
+                    return response.dict(exclude_unset=True, exclude_none=True)
+            except Exception as e2:
+                logger.warning(f"[OpenAI Client] Error with lenient serialization: {e2}", exc_info=False)
+            
+            # Final fallback: return basic info and string representation
+            try:
+                return {
+                    "error": "Failed to serialize response",
+                    "error_message": str(e),
+                    "response_type": type(response).__name__,
+                    "response_str": str(response),
+                    "response_repr": repr(response)
+                }
+            except Exception as e3:
+                # Last resort - return minimal info
+                return {
+                    "error": "Failed to serialize response",
+                    "error_message": f"Multiple serialization failures: {str(e)}, {str(e3)}"
+                }
     
     def process_api_response(
         self,

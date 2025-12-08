@@ -224,30 +224,23 @@ export function BillingUsage() {
 
             {subscription.has_subscription && subscription.usage && (
               <div className="space-y-3">
-                <div>
-                  <div className="flex items-center justify-between text-sm mb-1">
-                    <span className="text-gray-600">Current Period Usage</span>
-                    <span className="font-medium text-gray-900">
-                      ${subscription.usage.current.toFixed(2)} / ${subscription.usage.allowance.toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className={`h-2 rounded-full transition-all ${
-                        subscription.usage.percentage >= 100
-                          ? 'bg-red-500'
-                          : subscription.usage.percentage >= 80
-                          ? 'bg-yellow-500'
-                          : 'bg-green-500'
-                      }`}
-                      style={{ width: `${Math.min(100, subscription.usage.percentage)}%` }}
-                    />
-                  </div>
-                  {subscription.usage.overage > 0 && (
-                    <p className="text-xs text-red-600 mt-1">
-                      Overage: ${subscription.usage.overage.toFixed(2)} (will be charged at end of billing period)
-                    </p>
-                  )}
+                <div className="flex items-center justify-between text-sm mb-1">
+                  <span className="text-gray-600">Current Period Tokens</span>
+                  <span className="font-medium text-gray-900">
+                    {subscription.usage.total_tokens.toLocaleString()} tokens
+                  </span>
+                </div>
+                <p className="text-xs text-gray-600">
+                  {subscription.usage.units_1k.toLocaleString()} × 1k-token units reported to Stripe
+                </p>
+                <div className="flex flex-wrap items-center text-sm gap-2">
+                  <span className="text-gray-600">Est. billable (2×):</span>
+                  <span className="font-semibold text-gray-900">
+                    ${subscription.usage.total_upcharge_cost.toFixed(2)}
+                  </span>
+                  <span className="text-gray-500">
+                    Actual cost: ${subscription.usage.total_actual_cost.toFixed(2)}
+                  </span>
                 </div>
 
                 {subscription.current_period_end && (
