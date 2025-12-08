@@ -2,6 +2,7 @@
 
 import { useAuth } from '@/lib/auth/context'
 import { api } from '@/lib/api'
+import { ApiError } from '@/lib/api/errors'
 import { useState } from 'react'
 
 export function ImpersonationBanner() {
@@ -15,16 +16,20 @@ export function ImpersonationBanner() {
 
   const handleReturn = async () => {
     setIsResetting(true)
+    const sessionId = typeof window !== 'undefined' ? localStorage.getItem('impersonation_session_id') : null
     try {
-      const sessionId = localStorage.getItem('impersonation_session_id')
       if (sessionId) {
         await api.post('/admin/impersonate/reset', { sessionId })
         localStorage.removeItem('impersonation_session_id')
       }
-      await refreshAuth()
     } catch (error) {
+      if (error instanceof ApiError && error.statusCode === 404) {
+        // Session already gone; clear local state and continue
+        localStorage.removeItem('impersonation_session_id')
+      }
       console.error('Error resetting impersonation:', error)
     } finally {
+      await refreshAuth()
       setIsResetting(false)
     }
   }

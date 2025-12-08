@@ -5,7 +5,17 @@
 
 // Re-export service functions for backward compatibility
 export { authService } from './service'
-export { signIn, signUp, signOut, getCurrentUser, getSession, isAuthenticated, getIdToken } from './legacy'
+export {
+  signIn,
+  signUp,
+  forgotPassword,
+  confirmForgotPassword,
+  signOut,
+  getCurrentUser,
+  getSession,
+  isAuthenticated,
+  getIdToken,
+} from './legacy'
 
 // Re-export types
 export type { AuthResponse, AuthUser } from '@/types/auth'
