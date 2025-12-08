@@ -149,3 +149,115 @@ export const getStepDisplayMeta = (
 
   return { label: null, isActive }
 }
+
+/**
+ * Extract a preview string from submission form data.
+ * Tries common fields like name, email, company, etc.
+ */
+export const getSubmissionPreview = (submission: any): string | null => {
+  if (!submission) return null
+  
+  const formData = submission.form_data || submission.submission_data || {}
+  
+  // Try common identifier fields in order of preference
+  const identifierFields = ['name', 'full_name', 'first_name', 'email', 'company', 'company_name', 'organization', 'title', 'job_title']
+  
+  for (const field of identifierFields) {
+    const value = formData[field]
+    if (value && typeof value === 'string' && value.trim()) {
+      return value.trim()
+    }
+  }
+  
+  // If no common field found, try to get first non-empty string value
+  for (const [key, value] of Object.entries(formData)) {
+    if (typeof value === 'string' && value.trim() && value.trim().length > 0) {
+      return value.trim()
+    }
+  }
+  
+  // Fallback to submission_id if available
+  if (submission.submission_id) {
+    return submission.submission_id.substring(0, 8) + '...'
+  }
+  
+  return null
+}
+
+/**
+ * Get submission preview from job.
+ * Specifically looks for the "name" field from form submission data.
+ */
+export const getJobSubmissionPreview = (job: any): string | null => {
+  // Check for submission_preview from backend (includes submitter_name, submitter_email, etc.)
+  if (job.submission_preview) {
+    const preview = job.submission_preview
+    
+    // Prefer submitter_name if available (this is the name field from the form)
+    if (preview.submitter_name && typeof preview.submitter_name === 'string' && preview.submitter_name.trim()) {
+      return preview.submitter_name.trim()
+    }
+    
+    // Check form_data_preview for "name" field specifically
+    // Backend now prioritizes name fields first in form_data_preview
+    if (preview.form_data_preview) {
+      // Look for "name" field first (case-insensitive check)
+      const nameFields = ['name', 'Name', 'full_name', 'first_name', 'Full_Name', 'First_Name']
+      for (const field of nameFields) {
+        const value = preview.form_data_preview[field]
+        if (value && typeof value === 'string' && value.trim()) {
+          return value.trim()
+        }
+      }
+      
+      // Also check all keys case-insensitively for "name"
+      for (const [key, value] of Object.entries(preview.form_data_preview)) {
+        if (key.toLowerCase() === 'name' && value && typeof value === 'string' && value.trim()) {
+          return value.trim()
+        }
+      }
+      
+      // Fallback to first field value if it's a string
+      const firstValue = Object.values(preview.form_data_preview)[0]
+      if (firstValue && typeof firstValue === 'string' && firstValue.trim()) {
+        return firstValue.trim()
+      }
+    }
+    
+    // Fallback to submitter_email
+    if (preview.submitter_email && typeof preview.submitter_email === 'string' && preview.submitter_email.trim()) {
+      return preview.submitter_email.trim()
+    }
+  }
+  
+  // If job has submission data directly (from detail page)
+  if (job.submission) {
+    // Check submitter_name first
+    if (job.submission.submitter_name && typeof job.submission.submitter_name === 'string' && job.submission.submitter_name.trim()) {
+      return job.submission.submitter_name.trim()
+    }
+    
+    // Then check form_data or submission_data
+    const formData = job.submission.form_data || job.submission.submission_data || {}
+    if (formData.name && typeof formData.name === 'string' && formData.name.trim()) {
+      return formData.name.trim()
+    }
+    // Check other name field variations
+    const nameFields = ['full_name', 'first_name', 'Name', 'Full_Name', 'First_Name']
+    for (const field of nameFields) {
+      if (formData[field] && typeof formData[field] === 'string' && formData[field].trim()) {
+        return formData[field].trim()
+      }
+    }
+    // Fallback to general preview
+    const preview = getSubmissionPreview(job.submission)
+    if (preview) return preview
+  }
+  
+  // Fallback to submission_id (only if no name found)
+  if (job.submission_id) {
+    return `Submission ${job.submission_id.substring(0, 8)}...`
+  }
+  
+  return null
+}
