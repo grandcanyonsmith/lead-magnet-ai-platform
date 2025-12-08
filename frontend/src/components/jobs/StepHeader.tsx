@@ -266,20 +266,26 @@ export function StepHeader({
                       e.preventDefault()
                       e.stopPropagation()
                       if (status === 'pending' || status === 'in_progress') {
-                        console.warn(`[StepHeader] Cannot rerun step: status is ${status}`)
+                        if (process.env.NODE_ENV === 'development') {
+                          console.warn(`[StepHeader] Cannot rerun step: status is ${status}`)
+                        }
                         return
                       }
                       const stepIndex = step.step_order - 1
-                      console.log(
-                        `[StepHeader] Rerun button clicked for step ${step.step_order} (index ${stepIndex})`
-                      )
+                      if (process.env.NODE_ENV === 'development') {
+                        console.log(
+                          `[StepHeader] Rerun button clicked for step ${step.step_order} (index ${stepIndex})`
+                        )
+                      }
                       // Use dialog callback if provided, otherwise fall back to direct rerun
                       if (onRerunStepClick) {
                         onRerunStepClick(stepIndex)
                       } else if (onRerunStep) {
                         // Fallback to direct rerun for backward compatibility
                         onRerunStep(stepIndex).catch((error) => {
-                          console.error('[StepHeader] Error in rerun handler:', error)
+                          if (process.env.NODE_ENV === 'development') {
+                            console.error('[StepHeader] Error in rerun handler:', error)
+                          }
                         })
                       }
                     }}

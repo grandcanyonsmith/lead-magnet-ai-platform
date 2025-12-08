@@ -139,7 +139,9 @@ export function JobDetails({ job, workflow, hideContainer = false, submission, o
 
       toast.success('Document opened in new tab')
     } catch (error: unknown) {
-      console.error('Failed to open document:', error)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to open document:', error)
+      }
 
       const errorMessage =
         typeof error === 'object' && error && 'message' in error

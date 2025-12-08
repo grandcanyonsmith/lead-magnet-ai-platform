@@ -130,8 +130,10 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
       return null
     }
     
-    // Debug: log when rendering images
-    console.log(`[StepContent] Rendering ${imageUrls.length} inline images:`, imageUrls)
+    // Debug: log when rendering images (development only)
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[StepContent] Rendering ${imageUrls.length} inline images:`, imageUrls)
+    }
     
     return (
       <div className="mt-5 md:mt-4 space-y-4 md:space-y-2">

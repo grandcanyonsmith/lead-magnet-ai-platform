@@ -16,6 +16,7 @@ import { ExportButton } from './ExportButton'
 import { BillingClient, SubscriptionInfo } from '@/lib/api/billing.client'
 import { getIdToken } from '@/lib/auth'
 import { useRouter } from 'next/navigation'
+import toast from 'react-hot-toast'
 
 export function BillingUsage() {
   const router = useRouter()
@@ -48,7 +49,9 @@ export function BillingUsage() {
         const subInfo = await billingClient.getSubscription()
         setSubscription(subInfo)
       } catch (err: any) {
-        console.error('Failed to load subscription:', err)
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Failed to load subscription:', err)
+        }
         setSubscriptionError(err.message || 'Failed to load subscription')
       } finally {
         setSubscriptionLoading(false)
@@ -80,8 +83,10 @@ export function BillingUsage() {
       // Redirect to Stripe Customer Portal
       window.location.href = portal_url
     } catch (err: any) {
-      console.error('Failed to create portal session:', err)
-      alert(err.message || 'Failed to open billing portal. Please try again.')
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to create portal session:', err)
+      }
+      toast.error(err.message || 'Failed to open billing portal. Please try again.')
       setPortalLoading(false)
     }
   }

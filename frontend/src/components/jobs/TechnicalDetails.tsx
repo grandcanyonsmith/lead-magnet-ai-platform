@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react'
 import { api } from '@/lib/api'
 import { PreviewRenderer } from '@/components/artifacts/PreviewRenderer'
 import { Artifact } from '@/types/artifact'
+import toast from 'react-hot-toast'
 
 interface TechnicalDetailsProps {
   job: any
@@ -86,7 +87,9 @@ export function TechnicalDetails({ job, form, submission }: TechnicalDetailsProp
             parts.push(content)
             parts.push('')
           } catch (err) {
-            console.error(`Failed to fetch content for artifact ${artifact.artifact_id}:`, err)
+            if (process.env.NODE_ENV === 'development') {
+              console.error(`Failed to fetch content for artifact ${artifact.artifact_id}:`, err)
+            }
             const fileName = artifact.file_name || artifact.artifact_name || artifact.artifact_id
             parts.push(`--- ${fileName} (${artifact.artifact_id}) ---`)
             parts.push(`[Error: Could not fetch content]`)
@@ -101,7 +104,10 @@ export function TechnicalDetails({ job, form, submission }: TechnicalDetailsProp
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch (err) {
-      console.error('Failed to copy all content:', err)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to copy all content:', err)
+      }
+      // Error already handled by toast in catch block above
       // Still show copied feedback even on error (some content may have been copied)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
@@ -123,7 +129,10 @@ export function TechnicalDetails({ job, form, submission }: TechnicalDetailsProp
         })
         setArtifacts(response.artifacts || [])
       } catch (err) {
-        console.error('Failed to fetch artifacts:', err)
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Failed to fetch artifacts:', err)
+        }
+        toast.error('Failed to load artifacts. Please try again.')
         setArtifacts([])
       } finally {
         setLoadingArtifacts(false)

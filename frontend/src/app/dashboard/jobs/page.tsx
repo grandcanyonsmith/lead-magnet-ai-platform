@@ -10,11 +10,14 @@ import { formatRelativeTime, formatDuration } from '@/utils/date'
 import { SummarySection, SummaryCard, StatusQuickFilter } from '@/components/jobs/list/SummarySection'
 import { JobsMobileList } from '@/components/jobs/list/MobileList'
 import { JobsDesktopTable } from '@/components/jobs/list/DesktopTable'
+import type { Job } from '@/types/job'
+import type { Workflow } from '@/types/workflow'
+import toast from 'react-hot-toast'
 
 export default function JobsPage() {
   const router = useRouter()
-  const [jobs, setJobs] = useState<any[]>([])
-  const [workflows, setWorkflows] = useState<any[]>([])
+  const [jobs, setJobs] = useState<Job[]>([])
+  const [workflows, setWorkflows] = useState<Workflow[]>([])
   const [workflowMap, setWorkflowMap] = useState<Record<string, string>>({})
   const [workflowStepCounts, setWorkflowStepCounts] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
@@ -171,7 +174,7 @@ export default function JobsPage() {
         setWorkflows(data.workflows || [])
         const map: Record<string, string> = {}
         const counts: Record<string, number> = {}
-        data.workflows?.forEach((wf: any) => {
+        data.workflows?.forEach((wf: Workflow) => {
           map[wf.workflow_id] = wf.workflow_name || wf.workflow_id
           if (Array.isArray(wf.steps)) {
             counts[wf.workflow_id] = wf.steps.length
@@ -182,7 +185,10 @@ export default function JobsPage() {
         setWorkflowMap(map)
         setWorkflowStepCounts(counts)
       } catch (error) {
-        console.error('Failed to load workflows:', error)
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Failed to load workflows:', error)
+        }
+        toast.error('Failed to load workflows. Please try again.')
       }
     }
     loadWorkflows()
@@ -210,33 +216,39 @@ export default function JobsPage() {
         setHasMore(data.has_more || false)
         setLastLoadedAt(new Date())
       } catch (error) {
-        console.error('Failed to load jobs:', error)
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Failed to load jobs:', error)
+        }
+        toast.error('Failed to load jobs. Please try again.')
       } finally {
         setLoading(false)
         setRefreshing(false)
       }
     },
-    [statusFilter, workflowFilter, currentPage, pageSize]
+    [statusFilter, workflowFilter, pageSize]
   )
 
+  // Reset page to 1 when filters change
   useEffect(() => {
     setCurrentPage(1)
   }, [statusFilter, workflowFilter, searchQuery])
 
+  // Load jobs when page or filters change
   useEffect(() => {
     loadJobs(false, currentPage)
   }, [loadJobs, currentPage])
 
+  // Poll for updates when there are processing jobs
   useEffect(() => {
     const hasProcessingJobs = jobs.some((job) => job.status === 'processing' || job.status === 'pending')
     if (!hasProcessingJobs) return
 
     const interval = setInterval(() => {
-      loadJobs(true)
+      loadJobs(true, currentPage)
     }, 5000)
 
     return () => clearInterval(interval)
-  }, [jobs, loadJobs])
+  }, [jobs, loadJobs, currentPage])
 
   const hasProcessingJobs = jobs.some((job) => job.status === 'processing' || job.status === 'pending')
 
@@ -245,9 +257,22 @@ export default function JobsPage() {
       <div className="space-y-6">
         <div className="h-8 bg-gray-200 rounded w-48 animate-pulse"></div>
         <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="p-6 space-y-4">
+          {/* Table skeleton matching actual table structure */}
+          <div className="divide-y divide-gray-200">
+            <div className="px-6 py-4">
+              <div className="h-4 bg-gray-200 rounded w-32 mb-2 animate-pulse"></div>
+              <div className="h-3 bg-gray-100 rounded w-24 animate-pulse"></div>
+            </div>
             {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="h-16 bg-gray-200 rounded animate-pulse"></div>
+              <div key={i} className="px-6 py-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="h-4 bg-gray-200 rounded w-48 mb-2 animate-pulse"></div>
+                    <div className="h-3 bg-gray-100 rounded w-32 animate-pulse"></div>
+                  </div>
+                  <div className="h-6 bg-gray-200 rounded w-20 animate-pulse"></div>
+                </div>
+              </div>
             ))}
           </div>
         </div>
@@ -324,7 +349,7 @@ export default function JobsPage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 >
                   <option value="all">All Lead Magnets</option>
-                  {workflows.map((wf) => (
+                  {workflows.map((wf: Workflow) => (
                     <option key={wf.workflow_id} value={wf.workflow_id}>
                       {wf.workflow_name || wf.workflow_id}
                     </option>

@@ -40,10 +40,12 @@ export function useAIGeneration() {
       return null
     }
 
-    console.log('[Workflow Generation] Starting AI generation...', {
-      prompt: description.trim(),
-      timestamp: new Date().toISOString(),
-    })
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Workflow Generation] Starting AI generation...', {
+        prompt: description.trim(),
+        timestamp: new Date().toISOString(),
+      })
+    }
 
     setIsGenerating(true)
     setError(null)
@@ -68,7 +70,9 @@ export function useAIGeneration() {
       // Check if we got a job_id (async flow)
       if (initResponse.job_id) {
         const jobId = initResponse.job_id
-        console.log('[Workflow Generation] Job created', { jobId, status: initResponse.status })
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[Workflow Generation] Job created', { jobId, status: initResponse.status })
+        }
         
         setGenerationStatus('Creating your lead magnet... This may take a minute.')
         
@@ -92,13 +96,15 @@ export function useAIGeneration() {
         }
         const duration = Date.now() - startTime
 
-        console.log('[Workflow Generation] Success!', {
-          duration: `${duration}ms`,
-          workflow: syncResult.result.workflow,
-          template: syncResult.result.template,
-          form: syncResult.result.form,
-          timestamp: new Date().toISOString(),
-        })
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[Workflow Generation] Success!', {
+            duration: `${duration}ms`,
+            workflow: syncResult.result.workflow,
+            template: syncResult.result.template,
+            form: syncResult.result.form,
+            timestamp: new Date().toISOString(),
+          })
+        }
 
         setGenerationStatus('Generation complete!')
         setResult(syncResult.result)

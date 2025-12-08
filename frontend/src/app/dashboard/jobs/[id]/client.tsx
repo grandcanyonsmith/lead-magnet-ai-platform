@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState, useRef, useMemo } from 'react'
@@ -30,6 +31,8 @@ import { JobOverviewSection, JobDurationInfo } from '@/components/jobs/detail/Jo
 import { SubmissionSummary } from '@/components/jobs/detail/SubmissionSummary'
 import { ArtifactGallery } from '@/components/jobs/detail/ArtifactGallery'
 import { usePreviewModal } from '@/hooks/usePreviewModal'
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
+import type { ReactNode } from 'react'
 
 export default function JobDetailClient() {
   const router = useRouter()
@@ -154,7 +157,10 @@ export default function JobDetailClient() {
       // Refresh the page to show updated data
       router.refresh()
     } catch (error: any) {
-      console.error('Failed to save step:', error)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to save step:', error)
+      }
+      toast.error('Failed to save step. Please try again.')
       toast.error(error.message || 'Failed to save step changes')
       throw error
     }
@@ -205,64 +211,82 @@ export default function JobDetailClient() {
 
 
   if (loading) {
+    const loadingFallback = (
+      <div className="p-6">
+        <p className="text-red-800 font-medium">Error loading job details</p>
+        <p className="text-red-600 text-sm mt-1">Please refresh the page or try again.</p>
+      </div>
+    )
+
     return (
-      <div>
-        {/* Header skeleton */}
-        <div className="mb-6">
-          <div className="h-10 bg-gray-200 rounded w-20 mb-4 animate-pulse"></div>
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-0">
-            <div>
-              <div className="h-7 sm:h-8 bg-gray-200 rounded w-64 mb-2 animate-pulse"></div>
-              <div className="h-4 sm:h-5 bg-gray-200 rounded w-96 max-w-full animate-pulse"></div>
+      <ErrorBoundary fallback={loadingFallback}>
+        <div>
+          {/* Header skeleton */}
+          <div className="mb-6">
+            <div className="h-10 bg-gray-200 rounded w-20 mb-4 animate-pulse"></div>
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-0">
+              <div>
+                <div className="h-7 sm:h-8 bg-gray-200 rounded w-64 mb-2 animate-pulse"></div>
+                <div className="h-4 sm:h-5 bg-gray-200 rounded w-96 max-w-full animate-pulse"></div>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Job Details skeleton */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 mb-6">
-          <div className="space-y-4">
-            <div className="h-6 bg-gray-200 rounded w-32 animate-pulse"></div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="h-16 bg-gray-50 rounded-lg border border-gray-100 p-3">
-                  <div className="h-3 bg-gray-200 rounded w-24 mb-2 animate-pulse"></div>
-                  <div className="h-5 bg-gray-200 rounded w-32 animate-pulse"></div>
+          {/* Job Details skeleton */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 mb-6">
+            <div className="space-y-4">
+              <div className="h-6 bg-gray-200 rounded w-32 animate-pulse"></div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="h-16 bg-gray-50 rounded-lg border border-gray-100 p-3">
+                    <div className="h-3 bg-gray-200 rounded w-24 mb-2 animate-pulse"></div>
+                    <div className="h-5 bg-gray-200 rounded w-32 animate-pulse"></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Execution Steps skeleton */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+            <div className="h-6 bg-gray-200 rounded w-40 mb-4 animate-pulse"></div>
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="h-6 w-6 bg-gray-200 rounded-full animate-pulse flex-shrink-0"></div>
+                    <div className="flex-1 space-y-2">
+                      <div className="h-5 bg-gray-200 rounded w-48 animate-pulse"></div>
+                      <div className="h-4 bg-gray-200 rounded w-32 animate-pulse"></div>
+                      <div className="h-20 bg-gray-100 rounded animate-pulse mt-2"></div>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         </div>
-
-        {/* Execution Steps skeleton */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
-          <div className="h-6 bg-gray-200 rounded w-40 mb-4 animate-pulse"></div>
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="border border-gray-200 rounded-lg p-4">
-                <div className="flex items-start gap-3">
-                  <div className="h-6 w-6 bg-gray-200 rounded-full animate-pulse flex-shrink-0"></div>
-                  <div className="flex-1 space-y-2">
-                    <div className="h-5 bg-gray-200 rounded w-48 animate-pulse"></div>
-                    <div className="h-4 bg-gray-200 rounded w-32 animate-pulse"></div>
-                    <div className="h-20 bg-gray-100 rounded animate-pulse mt-2"></div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      </ErrorBoundary>
     )
   }
 
   if (error && !job) {
-    return (
-      <div>
-        <JobHeader error={error} resubmitting={false} onResubmit={() => {}} />
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-          {error}
-        </div>
+    const errorFallback = (
+      <div className="p-6">
+        <p className="text-red-800 font-medium">Error loading job details</p>
+        <p className="text-red-600 text-sm mt-1">Please refresh the page or try again.</p>
       </div>
+    )
+
+    return (
+      <ErrorBoundary fallback={errorFallback}>
+        <div>
+          <JobHeader error={error} resubmitting={false} onResubmit={() => {}} />
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            {error}
+          </div>
+        </div>
+      </ErrorBoundary>
     )
   }
 
@@ -270,8 +294,16 @@ export default function JobDetailClient() {
     return null
   }
 
+  const mainFallback = (
+    <div className="p-6">
+      <p className="text-red-800 font-medium">Error loading job details</p>
+      <p className="text-red-600 text-sm mt-1">Please refresh the page or try again.</p>
+    </div>
+  )
+
   return (
-    <div>
+    <ErrorBoundary fallback={mainFallback}>
+      <div>
       <JobHeader error={error} resubmitting={resubmitting} onResubmit={handleResubmitClick} job={job} />
       
       <JobOverviewSection
@@ -540,7 +572,7 @@ export default function JobDetailClient() {
           artifactId={previewItem?.artifact?.artifact_id}
         />
       )}
-    </div>
+    </ErrorBoundary>
   )
 }
 

@@ -38,7 +38,10 @@ export const FullScreenPreviewModal = React.memo(function FullScreenPreviewModal
 
     return () => {
       document.removeEventListener('keydown', handleEscape)
-      document.body.style.overflow = 'unset'
+      // Always restore body overflow in cleanup, even if isOpen is false
+      if (isOpen) {
+        document.body.style.overflow = 'unset'
+      }
     }
   }, [isOpen, handleEscape])
 

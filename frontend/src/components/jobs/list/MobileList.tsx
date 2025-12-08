@@ -1,9 +1,10 @@
 import { getStatusIcon, getStatusBadge, getStepDisplayMeta, getJobSubmissionPreview } from '@/utils/jobs/listHelpers'
 import { formatRelativeTime, formatDuration } from '@/utils/date'
 import { FiExternalLink } from 'react-icons/fi'
+import type { Job } from '@/types/job'
 
 interface JobsMobileListProps {
-  jobs: any[]
+  jobs: Job[]
   workflowMap: Record<string, string>
   workflowStepCounts: Record<string, number>
   onNavigate: (jobId: string) => void
@@ -28,6 +29,15 @@ export function JobsMobileList({ jobs, workflowMap, workflowStepCounts, onNaviga
           <div
             key={job.job_id}
             onClick={() => onNavigate(job.job_id)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onNavigate(job.job_id)
+              }
+            }}
+            tabIndex={0}
+            role="button"
+            aria-label={`View job ${job.job_id}`}
             className="bg-white rounded-lg shadow-sm border border-gray-100 p-3 cursor-pointer hover:shadow transition-shadow"
           >
             <div className="flex items-start justify-between mb-2">
@@ -73,6 +83,16 @@ export function JobsMobileList({ jobs, workflowMap, workflowStepCounts, onNaviga
               {hasError && (
                 <div className="pt-1">
                   <p className="text-red-600 text-xs line-clamp-1">{job.error_message}</p>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onNavigate(job.job_id)
+                    }}
+                    className="text-xs text-red-600 hover:text-red-800 font-medium mt-1 underline"
+                    aria-label="View job details"
+                  >
+                    View details
+                  </button>
                 </div>
               )}
             </div>
