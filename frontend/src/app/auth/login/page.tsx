@@ -153,6 +153,14 @@ function LoginForm() {
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all outline-none text-gray-900 placeholder-gray-400"
                   placeholder="Enter your password"
                 />
+                <div className="mt-2 text-right">
+                  <Link
+                    href="/auth/forgot-password"
+                    className="text-sm font-medium text-primary-600 hover:text-primary-700 transition-colors"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
               </div>
             </div>
 

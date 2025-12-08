@@ -151,6 +151,40 @@ export class AuthService {
     })
   }
 
+  async forgotPassword(email: string): Promise<AuthResponse> {
+    return new Promise((resolve) => {
+      try {
+        const pool = getUserPool()
+        const cognitoUser = new CognitoUser({ Username: email, Pool: pool })
+
+        cognitoUser.forgotPassword({
+          onSuccess: () => resolve({ success: true }),
+          onFailure: (err) => resolve({ success: false, error: err.message }),
+        })
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred'
+        resolve({ success: false, error: errorMessage })
+      }
+    })
+  }
+
+  async confirmForgotPassword(email: string, code: string, newPassword: string): Promise<AuthResponse> {
+    return new Promise((resolve) => {
+      try {
+        const pool = getUserPool()
+        const cognitoUser = new CognitoUser({ Username: email, Pool: pool })
+
+        cognitoUser.confirmPassword(code, newPassword, {
+          onSuccess: () => resolve({ success: true }),
+          onFailure: (err) => resolve({ success: false, error: err.message }),
+        })
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred'
+        resolve({ success: false, error: errorMessage })
+      }
+    })
+  }
+
   signOut(): void {
     try {
       const pool = getUserPool()

@@ -113,6 +113,16 @@ export default function SettingsPage() {
     return Object.keys(newErrors).length === 0
   }
 
+  const sanitizeUrl = (value?: string) => {
+    if (!value) return undefined
+    try {
+      const url = new URL(value.trim())
+      return url.protocol === 'http:' || url.protocol === 'https:' ? value.trim() : undefined
+    } catch {
+      return undefined
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -121,22 +131,22 @@ export default function SettingsPage() {
     }
 
     const updatedSettings = await updateSettings({
-      organization_name: formData.organization_name,
-      contact_email: formData.contact_email,
-      website_url: formData.website_url,
+      organization_name: formData.organization_name?.trim() || undefined,
+      contact_email: formData.contact_email?.trim() || undefined,
+      website_url: sanitizeUrl(formData.website_url),
       default_ai_model: formData.default_ai_model,
-      logo_url: formData.logo_url,
-      ghl_webhook_url: formData.ghl_webhook_url,
-      lead_phone_field: formData.lead_phone_field,
+      logo_url: sanitizeUrl(formData.logo_url),
+      ghl_webhook_url: sanitizeUrl(formData.ghl_webhook_url),
+      lead_phone_field: formData.lead_phone_field?.trim() || undefined,
       // Brand information fields
-      brand_description: formData.brand_description,
-      brand_voice: formData.brand_voice,
-      target_audience: formData.target_audience,
-      company_values: formData.company_values,
-      industry: formData.industry,
-      company_size: formData.company_size,
-      brand_messaging_guidelines: formData.brand_messaging_guidelines,
-      icp_document_url: formData.icp_document_url,
+      brand_description: formData.brand_description?.trim() || undefined,
+      brand_voice: formData.brand_voice?.trim() || undefined,
+      target_audience: formData.target_audience?.trim() || undefined,
+      company_values: formData.company_values?.trim() || undefined,
+      industry: formData.industry?.trim() || undefined,
+      company_size: formData.company_size?.trim() || undefined,
+      brand_messaging_guidelines: formData.brand_messaging_guidelines?.trim() || undefined,
+      icp_document_url: sanitizeUrl(formData.icp_document_url),
     })
 
     if (updatedSettings) {

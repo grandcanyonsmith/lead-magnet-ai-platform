@@ -20,6 +20,18 @@ export const signUp = async (
   return authService.signUp(email, password, name)
 }
 
+export const forgotPassword = async (email: string): Promise<AuthResponse> => {
+  return authService.forgotPassword(email)
+}
+
+export const confirmForgotPassword = async (
+  email: string,
+  code: string,
+  newPassword: string
+): Promise<AuthResponse> => {
+  return authService.confirmForgotPassword(email, code, newPassword)
+}
+
 export const signOut = (): void => {
   authService.signOut()
 }
