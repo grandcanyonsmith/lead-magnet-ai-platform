@@ -22,11 +22,17 @@ export function useImageArtifacts(options: UseImageArtifactsOptions) {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useImageArtifacts.ts:24',message:'useImageArtifacts effect triggered',data:{jobId,stepsLength:steps.length,stepsRef:steps},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
     const fetchImageArtifacts = async () => {
       if (!jobId) return
 
       try {
         setLoading(true)
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useImageArtifacts.ts:30',message:'API call: getArtifacts',data:{jobId},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'B,E'})}).catch(()=>{});
+        // #endregion
         const response = await api.getArtifacts({ 
           job_id: jobId,
           limit: 200 
