@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react'
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { FiClock, FiLoader, FiAlertTriangle, FiTrendingUp } from 'react-icons/fi'
@@ -27,6 +27,10 @@ export default function JobsPage() {
   const [totalJobs, setTotalJobs] = useState(0)
   const [hasMore, setHasMore] = useState(false)
   const [lastLoadedAt, setLastLoadedAt] = useState<Date | null>(null)
+  const inFlightRequestsRef = useRef<Set<string>>(new Set())
+  const loadJobsRef = useRef<typeof loadJobs | null>(null)
+  const prevFiltersRef = useRef({ statusFilter: 'all', workflowFilter: 'all' })
+  const currentPageRef = useRef(currentPage)
 
   const filters = useJobFilters(jobs, workflowMap)
   const {
@@ -195,13 +199,26 @@ export default function JobsPage() {
   }, [])
 
   const loadJobs = useCallback(
-    async (showRefreshing = false, page = currentPage) => {
+    async (showRefreshing = false, page?: number) => {
+      // Use provided page or current page from ref
+      const targetPage = page ?? currentPageRef.current
+      // Create a unique key for this load request to prevent duplicates
+      const loadKey = `${statusFilter}-${workflowFilter}-${targetPage}-${pageSize}`
+
+      // Prevent duplicate calls with same parameters - atomic check-and-set
+      if (inFlightRequestsRef.current.has(loadKey)) {
+        return
+      }
+      
+      // Mark this request as in-flight immediately (atomic operation)
+      inFlightRequestsRef.current.add(loadKey)
+      
       try {
         if (showRefreshing) setRefreshing(true)
 
         const params: any = {
           limit: pageSize,
-          offset: (page - 1) * pageSize,
+          offset: (targetPage - 1) * pageSize,
         }
         if (statusFilter !== 'all') {
           params.status = statusFilter
@@ -211,6 +228,7 @@ export default function JobsPage() {
         }
 
         const data = await api.getJobs(params)
+        
         setJobs(data.jobs || [])
         setTotalJobs(data.total || 0)
         setHasMore(data.has_more || false)
@@ -223,32 +241,63 @@ export default function JobsPage() {
       } finally {
         setLoading(false)
         setRefreshing(false)
+        // Remove from in-flight set
+        inFlightRequestsRef.current.delete(loadKey)
       }
     },
-    [statusFilter, workflowFilter, pageSize, currentPage]
+    [statusFilter, workflowFilter, pageSize] // Removed currentPage - use parameter or ref instead
   )
 
-  // Reset page to 1 when filters change
+  // Keep refs updated with latest values
   useEffect(() => {
-    setCurrentPage(1)
-  }, [statusFilter, workflowFilter, searchQuery])
-
-  // Load jobs when page or filters change
-  useEffect(() => {
-    loadJobs(false, currentPage)
+    loadJobsRef.current = loadJobs
+    currentPageRef.current = currentPage
   }, [loadJobs, currentPage])
+
+  // Single effect: Handle filter changes and page changes
+  // When filters change, reset to page 1 first, then load will happen when currentPage updates
+  useEffect(() => {
+    const filtersChanged = prevFiltersRef.current.statusFilter !== statusFilter || prevFiltersRef.current.workflowFilter !== workflowFilter
+    
+    if (filtersChanged) {
+      // Filters changed - update tracking and reset page if needed
+      prevFiltersRef.current = { statusFilter, workflowFilter }
+      if (currentPage !== 1) {
+        // Reset page - this will cause this effect to fire again with currentPage=1
+        setCurrentPage(1)
+        return // Don't load yet, wait for page update
+      }
+    } else {
+      // Only page changed or initial mount - update tracking
+      prevFiltersRef.current = { statusFilter, workflowFilter }
+    }
+    
+    // Load jobs (either filters changed and we're on page 1, or just page changed)
+    // Use explicit currentPage to ensure we're loading the right page
+    if (loadJobsRef.current) {
+      loadJobsRef.current(false, currentPage)
+    }
+  }, [statusFilter, workflowFilter, currentPage, pageSize])
 
   // Poll for updates when there are processing jobs
   useEffect(() => {
     const hasProcessingJobs = jobs.some((job) => job.status === 'processing' || job.status === 'pending')
-    if (!hasProcessingJobs) return
+    if (!hasProcessingJobs) {
+      return
+    }
 
+    // Use refs to access latest values to avoid stale closures when filters change
     const interval = setInterval(() => {
-      loadJobs(true, currentPage)
+      // Use refs to get latest loadJobs function and currentPage with current filters
+      if (loadJobsRef.current) {
+        loadJobsRef.current(true, currentPageRef.current)
+      }
     }, 5000)
 
-    return () => clearInterval(interval)
-  }, [jobs, loadJobs, currentPage])
+    return () => {
+      clearInterval(interval)
+    }
+  }, [jobs, loadJobs, statusFilter, workflowFilter]) // Removed currentPage from deps - use ref instead
 
   const hasProcessingJobs = jobs.some((job) => job.status === 'processing' || job.status === 'pending')
 
@@ -331,7 +380,9 @@ export default function JobsPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Status</label>
                 <select
                   value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
+                  onChange={(e) => {
+                    setStatusFilter(e.target.value)
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 >
                   <option value="all">All Statuses</option>
@@ -345,7 +396,9 @@ export default function JobsPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Lead Magnet</label>
                 <select
                   value={workflowFilter}
-                  onChange={(e) => setWorkflowFilter(e.target.value)}
+                  onChange={(e) => {
+                    setWorkflowFilter(e.target.value)
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 >
                   <option value="all">All Lead Magnets</option>

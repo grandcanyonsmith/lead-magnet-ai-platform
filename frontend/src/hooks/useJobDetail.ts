@@ -103,6 +103,9 @@ export function useJobResource(jobId: string | null, router: RouterInstance): Us
   const [lastLoadedAt, setLastLoadedAt] = useState<Date | null>(null)
 
   const loadJob = useCallback(async () => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useJobDetail.ts:105',message:'loadJob called',data:{jobId},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
     if (!jobId || jobId.trim() === '' || jobId === '_') {
       setError('Invalid job ID. Please select a job from the list.')
       setLoading(false)
@@ -110,9 +113,61 @@ export function useJobResource(jobId: string | null, router: RouterInstance): Us
     }
 
     try {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useJobDetail.ts:113',message:'API call: getJob',data:{jobId},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
       const data = await api.getJob(jobId)
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useJobDetail.ts:115',message:'API response: getJob',data:{jobId,hasWorkflowId:!!data.workflow_id,hasSubmissionId:!!data.submission_id},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
       setJob(data)
       setLastLoadedAt(new Date())
+
+      if (data.workflow_id) {
+        try {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useJobDetail.ts:119',message:'API call: getWorkflow',data:{workflowId:data.workflow_id},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'C'})}).catch(()=>{});
+          // #endregion
+          const workflowData = await api.getWorkflow(data.workflow_id)
+          setWorkflow(workflowData)
+        } catch (err) {
+          console.error('Failed to load workflow:', err)
+        }
+      } else {
+        setWorkflow(null)
+      }
+
+      if (data.submission_id) {
+        try {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useJobDetail.ts:130',message:'API call: getSubmission',data:{submissionId:data.submission_id},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'C'})}).catch(()=>{});
+          // #endregion
+          const submissionData = await api.getSubmission(data.submission_id)
+          setSubmission(submissionData)
+
+          if (submissionData.form_id) {
+            try {
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useJobDetail.ts:135',message:'API call: getForm',data:{formId:submissionData.form_id},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'C'})}).catch(()=>{});
+              // #endregion
+              const formData = await api.getForm(submissionData.form_id)
+              setForm(formData)
+            } catch (err) {
+              console.error('Failed to load form:', err)
+              setForm(null)
+            }
+          } else {
+            setForm(null)
+          }
+        } catch (err) {
+          console.error('Failed to load submission:', err)
+          setSubmission(null)
+          setForm(null)
+        }
+      } else {
+        setSubmission(null)
+        setForm(null)
+      }
 
       if (data.workflow_id) {
         try {
@@ -197,13 +252,17 @@ export function useJobResource(jobId: string | null, router: RouterInstance): Us
   }, [jobId, router])
 
   useEffect(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useJobDetail.ts:199',message:'useJobResource loadJob effect triggered',data:{jobId,jobIdValid:jobId && jobId.trim() !== '' && jobId !== '_'},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
     if (jobId && jobId.trim() !== '' && jobId !== '_') {
       loadJob()
     } else {
       setError('Invalid job ID. Please select a job from the list.')
       setLoading(false)
     }
-  }, [jobId, loadJob])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobId]) // Only depend on jobId - loadJob is stable as long as jobId doesn't change
 
   return {
     job,
@@ -246,11 +305,17 @@ export function useJobExecution({ jobId, job, setJob, loadJob }: UseJobExecution
 
   const loadExecutionSteps = useCallback(
     async (jobSnapshot?: Job | null) => {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useJobDetail.ts:247',message:'loadExecutionSteps called',data:{jobId,hasSnapshot:!!jobSnapshot},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
       if (!jobId) return
       const snapshot = jobSnapshot ?? job
       if (!snapshot) return
 
       try {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useJobDetail.ts:254',message:'API call: getExecutionSteps',data:{jobId},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
         const executionSteps = await api.getExecutionSteps(jobId)
         if (Array.isArray(executionSteps)) {
           setJob((prevJob) => (prevJob ? { ...prevJob, execution_steps: executionSteps } : prevJob))
@@ -278,6 +343,9 @@ export function useJobExecution({ jobId, job, setJob, loadJob }: UseJobExecution
   )
 
   useEffect(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useJobDetail.ts:280',message:'useJobExecution loadExecutionSteps effect triggered',data:{jobId,hasJob:!!job,hasExecutionSteps:Array.isArray(job?.execution_steps) && job?.execution_steps.length > 0,hasLoadedExecutionSteps},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
     if (!jobId || !job) {
       return
     }
@@ -288,11 +356,17 @@ export function useJobExecution({ jobId, job, setJob, loadJob }: UseJobExecution
       (job.execution_steps_s3_key && !hasLoadedExecutionSteps)
 
     if (shouldLoadFromApi) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useJobDetail.ts:291',message:'Calling loadExecutionSteps',data:{jobId},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
       loadExecutionSteps(job)
     }
   }, [jobId, job, loadExecutionSteps, hasLoadedExecutionSteps])
 
   useEffect(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useJobDetail.ts:295',message:'useJobExecution polling effect triggered',data:{jobId,hasJob:!!job,jobStatus:job?.status,rerunningStep,shouldPoll:job?.status === 'processing' || rerunningStep !== null},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'F'})}).catch(()=>{});
+    // #endregion
     if (!job || !jobId) {
       return
     }
@@ -302,8 +376,14 @@ export function useJobExecution({ jobId, job, setJob, loadJob }: UseJobExecution
       return
     }
 
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useJobDetail.ts:305',message:'Setting up polling interval',data:{jobId,jobStatus:job.status},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'F'})}).catch(()=>{});
+    // #endregion
     const pollInterval = setInterval(async () => {
       try {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useJobDetail.ts:307',message:'Polling: API call getJob',data:{jobId},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'F'})}).catch(()=>{});
+        // #endregion
         const data = await api.getJob(jobId)
         setJob((prevJob) => (prevJob ? { ...prevJob, status: data.status, updated_at: data.updated_at } : prevJob))
         await loadExecutionSteps(data)
@@ -318,7 +398,12 @@ export function useJobExecution({ jobId, job, setJob, loadJob }: UseJobExecution
       }
     }, 3000)
 
-    return () => clearInterval(pollInterval)
+    return () => {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useJobDetail.ts:321',message:'Clearing polling interval',data:{jobId},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'F'})}).catch(()=>{});
+      // #endregion
+      clearInterval(pollInterval)
+    }
   }, [job, jobId, loadExecutionSteps, rerunningStep, setJob])
 
   const handleRerunStep = useCallback(
