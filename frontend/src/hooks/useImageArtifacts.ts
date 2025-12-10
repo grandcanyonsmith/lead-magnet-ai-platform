@@ -33,25 +33,16 @@ export function useImageArtifacts(options: UseImageArtifactsOptions) {
 
   // Fetch artifacts only when jobId changes
   useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useImageArtifacts.ts:35',message:'useImageArtifacts fetch effect triggered',data:{jobId,lastFetchedJobId:lastFetchedJobIdRef.current},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'B'})}).catch(()=>{});
-    // #endregion
     const fetchImageArtifacts = async () => {
       if (!jobId) return
       
       // Skip if we already fetched artifacts for this jobId
       if (lastFetchedJobIdRef.current === jobId) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useImageArtifacts.ts:42',message:'Skipping fetch - already fetched for jobId',data:{jobId},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
         return
       }
 
       try {
         setLoading(true)
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useImageArtifacts.ts:48',message:'API call: getArtifacts',data:{jobId},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'B,E'})}).catch(()=>{});
-        // #endregion
         const response = await api.getArtifacts({ 
           job_id: jobId,
           limit: 200 
@@ -73,9 +64,6 @@ export function useImageArtifacts(options: UseImageArtifactsOptions) {
 
   // Re-organize artifacts by step when steps change (but don't re-fetch)
   useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useImageArtifacts.ts:70',message:'useImageArtifacts organize effect triggered',data:{stepsKey,artifactsCount:artifacts.length},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'B'})}).catch(()=>{});
-    // #endregion
     if (artifacts.length === 0 || steps.length === 0) {
       setImageArtifactsByStep(new Map())
       return
