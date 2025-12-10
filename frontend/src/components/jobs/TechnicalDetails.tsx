@@ -118,11 +118,17 @@ export function TechnicalDetails({ job, form, submission }: TechnicalDetailsProp
 
   // Fetch all artifacts for this job (including images)
   useEffect(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'TechnicalDetails.tsx:120',message:'TechnicalDetails fetchArtifacts effect triggered',data:{jobId:job?.job_id,showTechnicalDetails},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
     const fetchArtifacts = async () => {
       if (!job?.job_id || !showTechnicalDetails) return
       
       try {
         setLoadingArtifacts(true)
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'TechnicalDetails.tsx:126',message:'API call: getArtifacts (TechnicalDetails)',data:{jobId:job.job_id},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'E'})}).catch(()=>{});
+        // #endregion
         const response = await api.getArtifacts({ 
           job_id: job.job_id,
           limit: 100 // Get all artifacts
