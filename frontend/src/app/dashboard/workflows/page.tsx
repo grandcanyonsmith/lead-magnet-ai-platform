@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { FiPlus, FiEdit, FiTrash2, FiEye, FiExternalLink, FiCopy, FiCheck, FiMoreVertical, FiLoader, FiCheckCircle, FiXCircle, FiClock, FiList, FiFileText } from 'react-icons/fi'
@@ -15,42 +15,258 @@ export default function WorkflowsPage() {
   const [workflowJobs, setWorkflowJobs] = useState<Record<string, any[]>>({})
   const [loadingJobs, setLoadingJobs] = useState<Record<string, boolean>>({})
   const menuRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  // Track which workflow IDs we've already loaded jobs for
+  const loadedWorkflowIdsRef = useRef<Set<string>>(new Set())
+  // Ref to track the latest workflows and workflowJobs for polling
+  const workflowsRef = useRef<any[]>([])
+  const workflowJobsRef = useRef<Record<string, any[]>>({})
+  const loadJobsForWorkflowRef = useRef<((workflowId: string) => Promise<void>) | null>(null)
+  // Track if we're currently processing a batch to prevent concurrent batches
+  const isProcessingBatchRef = useRef<boolean>(false)
+  // Track active polling cancellation to allow cleanup
+  const pollingCancellationRef = useRef<(() => void) | null>(null)
+  // Track active initial load cancellation to allow cleanup
+  const initialLoadCancellationRef = useRef<(() => void) | null>(null)
+  // Global request queue to ensure only one API request happens at a time
+  const requestQueueRef = useRef<Promise<void>>(Promise.resolve())
 
   useEffect(() => {
     loadWorkflows()
   }, [])
 
-  // Load jobs for each workflow
+  // Create stable workflow IDs array to prevent unnecessary effect runs
+  const workflowIds = useMemo(() => {
+    return workflows.map(w => w.workflow_id).sort().join(',')
+  }, [workflows])
+
+  // Track the last workflowIds we processed to prevent duplicate processing
+  const lastProcessedWorkflowIdsRef = useRef<string>('')
+
+  // Load jobs for each workflow - only when workflow IDs actually change
   useEffect(() => {
-    if (workflows.length > 0) {
-      workflows.forEach((workflow) => {
-        loadJobsForWorkflow(workflow.workflow_id)
-      })
+    if (workflows.length === 0) return
+
+    // Skip if we've already processed these workflow IDs
+    if (lastProcessedWorkflowIdsRef.current === workflowIds) {
+      return
+    }
+
+    // Cancel any previous initial load batch before starting a new one
+    if (initialLoadCancellationRef.current) {
+      initialLoadCancellationRef.current()
+      initialLoadCancellationRef.current = null
+    }
+
+    // Atomic check-and-set: skip if already processing, otherwise mark as processing
+    if (isProcessingBatchRef.current) {
+      return
+    }
+
+    // Mark as processing IMMEDIATELY to prevent concurrent runs (atomic)
+    // This must happen synchronously before any async work starts
+    isProcessingBatchRef.current = true
+    lastProcessedWorkflowIdsRef.current = workflowIds
+
+    // Batch load jobs to prevent overwhelming the server
+    // Process workflows in batches of 5 with a small delay between batches
+    const workflowsToLoad = workflows.filter((workflow) => {
+      const workflowId = workflow.workflow_id
+      if (!loadedWorkflowIdsRef.current.has(workflowId)) {
+        loadedWorkflowIdsRef.current.add(workflowId)
+        return true
+      }
+      return false
+    })
+
+    if (workflowsToLoad.length === 0) {
+      isProcessingBatchRef.current = false
+      return
+    }
+
+    // Process in batches of 5
+    const batchSize = 5
+    let batchIndex = 0
+    let cancelled = false
+    const timeoutIds: NodeJS.Timeout[] = []
+
+    // Create cleanup function and store it in ref so it can be called from outside
+    const cleanupInitialLoad = () => {
+      cancelled = true
+      timeoutIds.forEach(id => clearTimeout(id))
+      isProcessingBatchRef.current = false
+      initialLoadCancellationRef.current = null
+    }
+
+    // Store cleanup function so it can be called when effect re-runs or unmounts
+    initialLoadCancellationRef.current = cleanupInitialLoad
+
+    const processBatch = async () => {
+      if (cancelled) {
+        return
+      }
+
+      const batch = workflowsToLoad.slice(batchIndex * batchSize, (batchIndex + 1) * batchSize)
+
+      // Process workflows sequentially within batch to prevent race conditions
+      for (const workflow of batch) {
+        if (cancelled) break
+        await loadJobsForWorkflow(workflow.workflow_id)
+        // Small delay between requests in the same batch
+        if (!cancelled) {
+          await new Promise(resolve => setTimeout(resolve, 50))
+        }
+      }
+
+      if (cancelled) return
+
+      batchIndex++
+      if (batchIndex * batchSize < workflowsToLoad.length) {
+        // Process next batch after a short delay
+        const timeoutId = setTimeout(processBatch, 100)
+        timeoutIds.push(timeoutId)
+      } else {
+        // All batches processed, clear the flag after a small delay to ensure all requests started
+        const timeoutId = setTimeout(() => {
+          if (!cancelled) {
+            isProcessingBatchRef.current = false
+            initialLoadCancellationRef.current = null
+          }
+        }, 200)
+        timeoutIds.push(timeoutId)
+      }
+    }
+
+    processBatch()
+
+    // Cleanup function: cancel any pending batches and clear the flag
+    return () => {
+      cleanupInitialLoad()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workflows])
+  }, [workflowIds]) // Removed loadJobsForWorkflow - it's stable and we use ref
+
+  // Keep refs updated with latest values
+  useEffect(() => {
+    workflowsRef.current = workflows
+    workflowJobsRef.current = workflowJobs
+    loadJobsForWorkflowRef.current = loadJobsForWorkflow
+  }, [workflows, workflowJobs, loadJobsForWorkflow])
+
+  // Track if we have processing jobs to avoid recreating interval unnecessarily
+  const hasProcessingJobs = useMemo(() => {
+    return Object.values(workflowJobs).some((jobs) =>
+      jobs.some((job: any) => job.status === 'processing' || job.status === 'pending')
+    )
+  }, [workflowJobs])
 
   // Auto-refresh jobs for workflows that have processing jobs
   useEffect(() => {
-    const hasProcessingJobs = Object.values(workflowJobs).some((jobs) =>
-      jobs.some((job: any) => job.status === 'processing' || job.status === 'pending')
-    )
-
-    if (!hasProcessingJobs) return
+    if (!hasProcessingJobs) {
+      // Cancel any active polling when there are no processing jobs
+      if (pollingCancellationRef.current) {
+        pollingCancellationRef.current()
+        pollingCancellationRef.current = null
+      }
+      return
+    }
 
     const interval = setInterval(() => {
-      workflows.forEach((workflow) => {
-        const jobs = workflowJobs[workflow.workflow_id] || []
-        const hasProcessing = jobs.some((job: any) => job.status === 'processing' || job.status === 'pending')
-        if (hasProcessing) {
-          loadJobsForWorkflow(workflow.workflow_id)
-        }
+      // Use refs to get latest values without recreating interval
+      const currentWorkflows = workflowsRef.current
+      const currentWorkflowJobs = workflowJobsRef.current
+      const currentLoadJobsForWorkflow = loadJobsForWorkflowRef.current
+
+      if (!currentLoadJobsForWorkflow) return
+
+      // Collect workflows that need polling
+      const workflowsToPoll = currentWorkflows.filter((workflow) => {
+        const jobs = currentWorkflowJobs[workflow.workflow_id] || []
+        return jobs.some((job: any) => job.status === 'processing' || job.status === 'pending')
       })
+
+      if (workflowsToPoll.length === 0) return
+
+      // Cancel any previous polling cycle before starting a new one
+      if (pollingCancellationRef.current) {
+        pollingCancellationRef.current()
+        pollingCancellationRef.current = null
+      }
+
+      // Atomic check-and-set: skip if already processing, otherwise mark as processing
+      if (isProcessingBatchRef.current) {
+        return
+      }
+
+      // Mark as processing IMMEDIATELY (atomic operation)
+      // This must happen synchronously before any async work starts
+      isProcessingBatchRef.current = true
+
+      // Batch polling requests to prevent overwhelming the server
+      const batchSize = 5
+      let batchIndex = 0
+      let cancelled = false
+      const timeoutIds: NodeJS.Timeout[] = []
+
+      // Create cleanup function and store it in ref so it can be called from outside
+      const cleanupPolling = () => {
+        cancelled = true
+        timeoutIds.forEach(id => clearTimeout(id))
+        isProcessingBatchRef.current = false
+        pollingCancellationRef.current = null
+      }
+
+      // Store cleanup function so it can be called when effect re-runs or unmounts
+      pollingCancellationRef.current = cleanupPolling
+
+      const processPollBatch = async () => {
+        if (cancelled) {
+          return
+        }
+
+        const batch = workflowsToPoll.slice(batchIndex * batchSize, (batchIndex + 1) * batchSize)
+
+        // Process workflows sequentially within batch to prevent race conditions
+        for (const workflow of batch) {
+          if (cancelled) break
+          await currentLoadJobsForWorkflow(workflow.workflow_id)
+          // Small delay between requests in the same batch
+          if (!cancelled) {
+            await new Promise(resolve => setTimeout(resolve, 50))
+          }
+        }
+
+        if (cancelled) return
+
+        batchIndex++
+        if (batchIndex * batchSize < workflowsToPoll.length) {
+          // Process next batch after a short delay
+          const timeoutId = setTimeout(processPollBatch, 100)
+          timeoutIds.push(timeoutId)
+        } else {
+          // All batches processed, clear the flag
+          const timeoutId = setTimeout(() => {
+            if (!cancelled) {
+              isProcessingBatchRef.current = false
+              pollingCancellationRef.current = null
+            }
+          }, 200)
+          timeoutIds.push(timeoutId)
+        }
+      }
+
+      processPollBatch()
     }, 5000)
 
-    return () => clearInterval(interval)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workflows, workflowJobs])
+    return () => {
+      clearInterval(interval)
+      // Cancel any active polling batches
+      if (pollingCancellationRef.current) {
+        pollingCancellationRef.current()
+        pollingCancellationRef.current = null
+      }
+      isProcessingBatchRef.current = false
+    }
+  }, [hasProcessingJobs]) // Only recreate interval when processing status changes
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -71,20 +287,45 @@ export default function WorkflowsPage() {
     }
   }, [openMenuId])
 
-  const loadJobsForWorkflow = async (workflowId: string) => {
-    if (loadingJobs[workflowId]) return
-    
-    setLoadingJobs((prev) => ({ ...prev, [workflowId]: true }))
-    try {
-      const data = await api.getJobs({ workflow_id: workflowId, limit: 5 })
-      setWorkflowJobs((prev) => ({ ...prev, [workflowId]: data.jobs || [] }))
-    } catch (error) {
-      console.error(`Failed to load jobs for workflow ${workflowId}:`, error)
-      setWorkflowJobs((prev) => ({ ...prev, [workflowId]: [] }))
-    } finally {
-      setLoadingJobs((prev) => ({ ...prev, [workflowId]: false }))
+  // Track active requests to prevent duplicates - use Map to store promises for deduplication
+  const activeRequestsRef = useRef<Map<string, Promise<void>>>(new Map())
+
+  const loadJobsForWorkflow = useCallback(async (workflowId: string) => {
+    // Check if there's already an active request for this workflow
+    const existingRequest = activeRequestsRef.current.get(workflowId)
+    if (existingRequest) {
+      // Return the existing promise to deduplicate
+      return existingRequest
     }
-  }
+
+    // Create a promise that will be queued after the previous request completes
+    // This ensures global serialization - only one API request happens at a time
+    const requestPromise = requestQueueRef.current.then(async () => {
+      // Mark as loading in state
+      setLoadingJobs((prev) => ({ ...prev, [workflowId]: true }))
+
+      try {
+        const data = await api.getJobs({ workflow_id: workflowId, limit: 5 })
+        setWorkflowJobs((prev) => ({ ...prev, [workflowId]: data.jobs || [] }))
+      } catch (error) {
+        console.error(`Failed to load jobs for workflow ${workflowId}:`, error)
+        setWorkflowJobs((prev) => ({ ...prev, [workflowId]: [] }))
+        throw error
+      } finally {
+        // Remove from active requests and clear loading state
+        activeRequestsRef.current.delete(workflowId)
+        setLoadingJobs((prev) => ({ ...prev, [workflowId]: false }))
+      }
+    })
+
+    // Update the queue to include this new request
+    requestQueueRef.current = requestPromise.catch(() => {}) // Don't let errors break the queue
+
+    // Store the promise IMMEDIATELY (atomic operation) - before any async work starts
+    activeRequestsRef.current.set(workflowId, requestPromise)
+
+    return requestPromise
+  }, [])
 
   const loadWorkflows = async () => {
     try {
@@ -100,6 +341,10 @@ export default function WorkflowsPage() {
         return dateB - dateA // DESC order
       })
       setWorkflows(workflowsList)
+      // Reset loaded workflow IDs when workflows are reloaded
+      loadedWorkflowIdsRef.current.clear()
+      // Reset processed workflow IDs tracker so effect runs again
+      lastProcessedWorkflowIdsRef.current = ''
     } catch (error) {
       console.error('Failed to load workflows:', error)
     } finally {
@@ -164,7 +409,7 @@ export default function WorkflowsPage() {
     const date = new Date(dateString)
     const now = new Date()
     const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
-    
+
     if (seconds < 60) return `${seconds}s ago`
     const minutes = Math.floor(seconds / 60)
     if (minutes < 60) return `${minutes}m ago`
@@ -384,7 +629,7 @@ export default function WorkflowsPage() {
                       )}
                     </div>
                   </div>
-                  
+
                   <div className="space-y-2.5 text-xs">
                     {/* Form Link - Consolidated */}
                     {workflow.form && formUrl ? (
@@ -403,7 +648,7 @@ export default function WorkflowsPage() {
                     ) : workflow.form ? (
                       <div className="text-gray-400 italic text-xs">No form URL</div>
                     ) : null}
-                    
+
                     {/* Metadata - Two Column Grid */}
                     <div className="grid grid-cols-2 gap-3">
                       <div className="flex items-center gap-1.5">
@@ -419,13 +664,13 @@ export default function WorkflowsPage() {
                           )}
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center gap-1.5">
                         <FiClock className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
                         <span className="text-gray-600 text-xs">{new Date(workflow.created_at).toLocaleDateString()}</span>
                       </div>
                     </div>
-                    
+
                     {/* Generated Documents - Simplified */}
                     <div className="pt-1.5">
                       {loadingJobs[workflow.workflow_id] ? (
@@ -437,7 +682,7 @@ export default function WorkflowsPage() {
                         const jobs = workflowJobs[workflow.workflow_id] || []
                         const processingJobs = jobs.filter((j: any) => j.status === 'processing' || j.status === 'pending')
                         const completedJobs = jobs.filter((j: any) => j.status === 'completed')
-                        
+
                         if (processingJobs.length > 0) {
                           return (
                             <div className="text-xs text-blue-600 flex items-center gap-1.5">
@@ -531,7 +776,7 @@ export default function WorkflowsPage() {
                   const jobs = workflowJobs[workflow.workflow_id] || []
                   const processingJobs = jobs.filter((j: any) => j.status === 'processing' || j.status === 'pending')
                   const completedJobs = jobs.filter((j: any) => j.status === 'completed')
-                  
+
                   return (
                     <tr key={workflow.workflow_id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4">
