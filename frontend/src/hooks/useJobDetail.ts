@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { api } from '@/lib/api'
@@ -280,42 +280,85 @@ export function useJobExecution({ jobId, job, setJob, loadJob }: UseJobExecution
   const [executionStepsError, setExecutionStepsError] = useState<string | null>(null)
   const [rerunningStep, setRerunningStep] = useState<number | null>(null)
   const [hasLoadedExecutionSteps, setHasLoadedExecutionSteps] = useState(false)
+  
+  // Track loading promise to prevent concurrent loads for the same jobId
+  const loadingExecutionStepsPromiseRef = useRef<Promise<void> | null>(null)
+  const lastClearedExecutionStepsJobIdRef = useRef<string | null>(null)
+  
+  // Extract S3 key as a stable value to avoid re-running effect when job reference changes
+  const executionStepsS3Key = useMemo(() => job?.execution_steps_s3_key || null, [job?.execution_steps_s3_key])
 
   useEffect(() => {
     setHasLoadedExecutionSteps(false)
+    // Clear promise ref when jobId changes
+    loadingExecutionStepsPromiseRef.current = null
+    lastClearedExecutionStepsJobIdRef.current = jobId
   }, [jobId])
 
   const loadExecutionSteps = useCallback(
     async (jobSnapshot?: Job | null) => {
       if (!jobId) return
-      const snapshot = jobSnapshot ?? job
-      if (!snapshot) return
-
-      try {
-        const executionSteps = await api.getExecutionSteps(jobId)
-        if (Array.isArray(executionSteps)) {
-          setJob((prevJob) => (prevJob ? { ...prevJob, execution_steps: executionSteps } : prevJob))
-          setExecutionStepsError(null)
-          setHasLoadedExecutionSteps(true)
-        } else {
-          const errorMsg = `Invalid execution steps data format: expected array, got ${typeof executionSteps}`
-          console.error(`❌ ${errorMsg} for job ${jobId}`)
-          setExecutionStepsError(errorMsg)
-        }
-      } catch (err: unknown) {
-        const error = err as { response?: { data?: { message?: string } }; message?: string }
-        let errorMsg = `Error fetching execution steps: ${error.response?.data?.message || error.message || 'Unknown error'}`
-        if (snapshot?.execution_steps_s3_key) {
-          errorMsg += ` (S3 Key: ${snapshot.execution_steps_s3_key})`
-        }
-        console.error(`❌ ${errorMsg} for job ${jobId}`, {
-          error: err,
-          response: error.response,
-        })
-        setExecutionStepsError(errorMsg)
+      
+      // If there's already a load in progress for this jobId, return the existing promise
+      if (loadingExecutionStepsPromiseRef.current) {
+        return loadingExecutionStepsPromiseRef.current
       }
+      
+      // Create and IMMEDIATELY store the promise to prevent race conditions
+      let promiseResolve: (() => void) | undefined
+      let promiseReject: ((error: unknown) => void) | undefined
+      const loadPromise = new Promise<void>((resolve, reject) => {
+        promiseResolve = resolve
+        promiseReject = reject
+      })
+      
+      // Store the promise IMMEDIATELY before starting async work
+      loadingExecutionStepsPromiseRef.current = loadPromise
+      
+      // Now start the async work
+      ;(async () => {
+        const snapshot = jobSnapshot
+        if (!snapshot) {
+          promiseReject?.(new Error('No job snapshot provided'))
+          return
+        }
+
+        try {
+          const executionSteps = await api.getExecutionSteps(jobId)
+          if (Array.isArray(executionSteps)) {
+            setJob((prevJob) => (prevJob ? { ...prevJob, execution_steps: executionSteps } : prevJob))
+            setExecutionStepsError(null)
+            setHasLoadedExecutionSteps(true)
+            promiseResolve?.()
+          } else {
+            const errorMsg = `Invalid execution steps data format: expected array, got ${typeof executionSteps}`
+            console.error(`❌ ${errorMsg} for job ${jobId}`)
+            setExecutionStepsError(errorMsg)
+            promiseReject?.(new Error(errorMsg))
+          }
+        } catch (err: unknown) {
+          const error = err as { response?: { data?: { message?: string } }; message?: string }
+          let errorMsg = `Error fetching execution steps: ${error.response?.data?.message || error.message || 'Unknown error'}`
+          if (snapshot?.execution_steps_s3_key) {
+            errorMsg += ` (S3 Key: ${snapshot.execution_steps_s3_key})`
+          }
+          console.error(`❌ ${errorMsg} for job ${jobId}`, {
+            error: err,
+            response: error.response,
+          })
+          setExecutionStepsError(errorMsg)
+          promiseReject?.(err)
+        } finally {
+          // Clear the promise ref when done (only if it's still this promise)
+          if (loadingExecutionStepsPromiseRef.current === loadPromise) {
+            loadingExecutionStepsPromiseRef.current = null
+          }
+        }
+      })()
+      
+      return loadPromise
     },
-    [jobId, job, setJob]
+    [jobId, setJob] // Removed 'job' dependency - use jobSnapshot parameter instead
   )
 
   useEffect(() => {
@@ -323,15 +366,22 @@ export function useJobExecution({ jobId, job, setJob, loadJob }: UseJobExecution
       return
     }
 
+    // If we've already loaded execution steps for this jobId, don't reload
+    // (even if execution_steps is empty - that's valid data)
+    if (hasLoadedExecutionSteps) {
+      return
+    }
+
     const hasExecutionSteps = Array.isArray(job.execution_steps) && job.execution_steps.length > 0
     const shouldLoadFromApi =
       !hasExecutionSteps ||
-      (job.execution_steps_s3_key && !hasLoadedExecutionSteps)
+      (executionStepsS3Key && !hasLoadedExecutionSteps)
 
     if (shouldLoadFromApi) {
       loadExecutionSteps(job)
     }
-  }, [jobId, job, loadExecutionSteps, hasLoadedExecutionSteps])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobId, executionStepsS3Key, hasLoadedExecutionSteps]) // Use memoized S3 key value instead of job reference
 
   useEffect(() => {
     if (!job || !jobId) {
