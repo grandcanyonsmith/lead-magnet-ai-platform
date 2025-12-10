@@ -253,7 +253,7 @@ export function useJobResource(jobId: string | null, router: RouterInstance): Us
 
   useEffect(() => {
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useJobDetail.ts:199',message:'useJobResource loadJob effect triggered',data:{jobId,jobIdValid:jobId && jobId.trim() !== '' && jobId !== '_'},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'C'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useJobDetail.ts:199',message:'useJobResource loadJob effect triggered',data:{jobId,jobIdValid:jobId && jobId.trim() !== '' && jobId !== '_'},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'C'})}).catch(()=>{});
     // #endregion
     if (jobId && jobId.trim() !== '' && jobId !== '_') {
       loadJob()
@@ -261,7 +261,8 @@ export function useJobResource(jobId: string | null, router: RouterInstance): Us
       setError('Invalid job ID. Please select a job from the list.')
       setLoading(false)
     }
-  }, [jobId, loadJob])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobId]) // Only depend on jobId - loadJob is stable as long as jobId doesn't change
 
   return {
     job,
