@@ -29,6 +29,46 @@ export default function WorkflowsPage() {
   const initialLoadCancellationRef = useRef<(() => void) | null>(null)
   // Global request queue to ensure only one API request happens at a time
   const requestQueueRef = useRef<Promise<void>>(Promise.resolve())
+  // Track active requests to prevent duplicates - use Map to store promises for deduplication
+  const activeRequestsRef = useRef<Map<string, Promise<void>>>(new Map())
+
+  // Define loadJobsForWorkflow before it's used in useEffect hooks
+  const loadJobsForWorkflow = useCallback(async (workflowId: string) => {
+    // Check if there's already an active request for this workflow
+    const existingRequest = activeRequestsRef.current.get(workflowId)
+    if (existingRequest) {
+      // Return the existing promise to deduplicate
+      return existingRequest
+    }
+
+    // Create a promise that will be queued after the previous request completes
+    // This ensures global serialization - only one API request happens at a time
+    const requestPromise = requestQueueRef.current.then(async () => {
+      // Mark as loading in state
+      setLoadingJobs((prev) => ({ ...prev, [workflowId]: true }))
+
+      try {
+        const data = await api.getJobs({ workflow_id: workflowId, limit: 5 })
+        setWorkflowJobs((prev) => ({ ...prev, [workflowId]: data.jobs || [] }))
+      } catch (error) {
+        console.error(`Failed to load jobs for workflow ${workflowId}:`, error)
+        setWorkflowJobs((prev) => ({ ...prev, [workflowId]: [] }))
+        throw error
+      } finally {
+        // Remove from active requests and clear loading state
+        activeRequestsRef.current.delete(workflowId)
+        setLoadingJobs((prev) => ({ ...prev, [workflowId]: false }))
+      }
+    })
+
+    // Update the queue to include this new request
+    requestQueueRef.current = requestPromise.catch(() => {}) // Don't let errors break the queue
+
+    // Store the promise IMMEDIATELY (atomic operation) - before any async work starts
+    activeRequestsRef.current.set(workflowId, requestPromise)
+
+    return requestPromise
+  }, [])
 
   useEffect(() => {
     loadWorkflows()
@@ -286,46 +326,6 @@ export default function WorkflowsPage() {
       document.removeEventListener('touchstart', handleClickOutside)
     }
   }, [openMenuId])
-
-  // Track active requests to prevent duplicates - use Map to store promises for deduplication
-  const activeRequestsRef = useRef<Map<string, Promise<void>>>(new Map())
-
-  const loadJobsForWorkflow = useCallback(async (workflowId: string) => {
-    // Check if there's already an active request for this workflow
-    const existingRequest = activeRequestsRef.current.get(workflowId)
-    if (existingRequest) {
-      // Return the existing promise to deduplicate
-      return existingRequest
-    }
-
-    // Create a promise that will be queued after the previous request completes
-    // This ensures global serialization - only one API request happens at a time
-    const requestPromise = requestQueueRef.current.then(async () => {
-      // Mark as loading in state
-      setLoadingJobs((prev) => ({ ...prev, [workflowId]: true }))
-
-      try {
-        const data = await api.getJobs({ workflow_id: workflowId, limit: 5 })
-        setWorkflowJobs((prev) => ({ ...prev, [workflowId]: data.jobs || [] }))
-      } catch (error) {
-        console.error(`Failed to load jobs for workflow ${workflowId}:`, error)
-        setWorkflowJobs((prev) => ({ ...prev, [workflowId]: [] }))
-        throw error
-      } finally {
-        // Remove from active requests and clear loading state
-        activeRequestsRef.current.delete(workflowId)
-        setLoadingJobs((prev) => ({ ...prev, [workflowId]: false }))
-      }
-    })
-
-    // Update the queue to include this new request
-    requestQueueRef.current = requestPromise.catch(() => {}) // Don't let errors break the queue
-
-    // Store the promise IMMEDIATELY (atomic operation) - before any async work starts
-    activeRequestsRef.current.set(workflowId, requestPromise)
-
-    return requestPromise
-  }, [])
 
   const loadWorkflows = async () => {
     try {
