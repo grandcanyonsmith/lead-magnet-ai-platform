@@ -90,6 +90,22 @@ export function useStepStatus(step: MergedStep, options: UseStepStatusOptions): 
       }
     }
     
+    // If job is completed, all steps that should have run are completed
+    // This handles cases where step data might be missing but job completed successfully
+    if (jobStatus === 'completed') {
+      // If step has an error, mark as failed
+      if (step.error) {
+        return 'failed'
+      }
+      // Otherwise, if job completed, the step must have completed
+      // Only mark as completed if this step should have run (not future steps)
+      const stepIndex = sortedSteps.indexOf(step)
+      const lastStepIndex = sortedSteps.length - 1
+      if (stepIndex <= lastStepIndex) {
+        return 'completed'
+      }
+    }
+    
     return 'pending'
   }, [step, steps, jobStatus])
 }
@@ -137,6 +153,19 @@ export function useAllStepStatuses(options: UseStepStatusOptions): Map<number, S
           status = 'failed'
         } else {
           status = 'pending'
+        }
+      } else if (jobStatus === 'completed') {
+        // If job is completed, all steps that should have run are completed
+        if (step.error) {
+          status = 'failed'
+        } else {
+          const stepIndex = sortedSteps.indexOf(step)
+          const lastStepIndex = sortedSteps.length - 1
+          if (stepIndex <= lastStepIndex) {
+            status = 'completed'
+          } else {
+            status = 'pending'
+          }
         }
       } else {
         status = 'pending'

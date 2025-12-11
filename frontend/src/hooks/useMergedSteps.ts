@@ -77,6 +77,10 @@ export function useMergedSteps({ job, workflow }: UseMergedStepsParams): MergedS
     const executionSteps = job.execution_steps || []
     const workflowSteps = workflow?.steps || []
     
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useMergedSteps.ts:77',message:'Execution steps summary',data:{executionStepsCount:executionSteps.length,executionStepOrders:executionSteps.map((s:ExecutionStep)=>s.step_order),executionStepTypes:executionSteps.map((s:ExecutionStep)=>s.step_type),executionStepsDetail:executionSteps.map((s:ExecutionStep)=>({step_order:s.step_order,step_type:s.step_type,hasDuration:!!s.duration_ms,hasUsageInfo:!!s.usage_info,hasArtifactId:!!s.artifact_id,hasOutput:!!s.output})),workflowStepsCount:workflowSteps.length,jobStatus:job.status,jobId:job.job_id},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
+    
     if (!workflowSteps || !Array.isArray(workflowSteps) || workflowSteps.length === 0) {
       // Fallback to execution steps if no workflow steps available
       return executionSteps.map((step: ExecutionStep) => ({
@@ -146,6 +150,10 @@ export function useMergedSteps({ job, workflow }: UseMergedStepsParams): MergedS
       // Workflow steps are 0-indexed, execution steps for workflow steps are 1-indexed
       const executionStepOrder = index + 1
       const existingStep = mergedStepsMap.get(executionStepOrder)
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useMergedSteps.ts:145',message:'Processing workflow step',data:{workflowStepIndex:index,executionStepOrder,hasExistingStep:!!existingStep,executionStepsCount:executionSteps.length,executionStepForOrder:!!executionStepsMap.get(executionStepOrder),jobStatus:job.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       
       if (existingStep) {
         // Step has been executed - enrich with workflow step info
@@ -237,21 +245,75 @@ export function useMergedSteps({ job, workflow }: UseMergedStepsParams): MergedS
             _status: 'in_progress' as const,
           })
         } else {
-          mergedStepsMap.set(executionStepOrder, {
-            step_name: workflowStep.step_name,
-            step_order: executionStepOrder,
-            step_type: 'workflow_step',
-            model: workflowStep.model,
-            tools: workflowStep.tools || [],
-            tool_choice: workflowStep.tool_choice || 'auto',
-            instructions: workflowStep.instructions,
-            input: {
+          // Step hasn't been executed yet - check if there's an execution step we can use
+          // Even if it doesn't have output, it might have duration_ms, usage_info, artifact_id, etc.
+          const executionStepForOrder = executionStepsMap.get(executionStepOrder)
+          
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useMergedSteps.ts:239',message:'No existing step, checking execution step',data:{executionStepOrder,hasExecutionStep:!!executionStepForOrder,executionStepHasDuration:!!executionStepForOrder?.duration_ms,executionStepHasUsageInfo:!!executionStepForOrder?.usage_info,executionStepHasArtifactId:!!executionStepForOrder?.artifact_id,executionStepHasOutput:!!executionStepForOrder?.output,jobStatus:job.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+          // #endregion
+          
+          // Determine status
+          let stepStatus: StepStatus = 'pending'
+          
+          // If job is completed, all workflow steps should be marked as completed
+          // (the job wouldn't have completed if steps failed)
+          if (job.status === 'completed') {
+            stepStatus = 'completed'
+          } else if (isCurrentStep) {
+            stepStatus = 'in_progress'
+          }
+          
+          // If we found an execution step for this order, use its data (duration, cost, artifacts, etc.)
+          if (executionStepForOrder) {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useMergedSteps.ts:239',message:'Using execution step data',data:{executionStepOrder,duration_ms:executionStepForOrder.duration_ms,hasUsageInfo:!!executionStepForOrder.usage_info,cost_usd:executionStepForOrder.usage_info?.cost_usd,artifact_id:executionStepForOrder.artifact_id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+            // #endregion
+            const mergedTools = workflowStep.tools || executionStepForOrder.input?.tools || executionStepForOrder.tools || []
+            const mergedToolChoice = workflowStep.tool_choice || executionStepForOrder.input?.tool_choice || executionStepForOrder.tool_choice || 'auto'
+            
+            mergedStepsMap.set(executionStepOrder, {
+              ...executionStepForOrder,
+              step_type: 'workflow_step',
+              step_name: workflowStep.step_name || executionStepForOrder.step_name,
+              model: workflowStep.model || executionStepForOrder.model,
+              tools: mergedTools,
+              tool_choice: mergedToolChoice,
+              instructions: workflowStep.instructions || executionStepForOrder.instructions,
+              input: {
+                ...executionStepForOrder.input,
+                tools: mergedTools,
+                tool_choice: mergedToolChoice,
+              },
+              // Preserve all execution step fields (duration_ms, usage_info, artifact_id, etc.)
+              duration_ms: executionStepForOrder.duration_ms,
+              usage_info: executionStepForOrder.usage_info,
+              started_at: executionStepForOrder.started_at,
+              completed_at: executionStepForOrder.completed_at,
+              output: executionStepForOrder.output,
+              error: executionStepForOrder.error,
+              artifact_id: executionStepForOrder.artifact_id,
+              image_urls: executionStepForOrder.image_urls,
+              _status: stepStatus,
+            })
+          } else {
+            // No execution step found - create new step with workflow step data only
+            mergedStepsMap.set(executionStepOrder, {
+              step_name: workflowStep.step_name,
+              step_order: executionStepOrder,
+              step_type: 'workflow_step',
+              model: workflowStep.model,
               tools: workflowStep.tools || [],
               tool_choice: workflowStep.tool_choice || 'auto',
-            },
-            output: null,
-            _status: isCurrentStep ? 'in_progress' as const : 'pending' as const,
-          })
+              instructions: workflowStep.instructions,
+              input: {
+                tools: workflowStep.tools || [],
+                tool_choice: workflowStep.tool_choice || 'auto',
+              },
+              output: null,
+              _status: stepStatus,
+            })
+          }
         }
       }
     })

@@ -353,6 +353,9 @@ export function useJobExecution({ jobId, job, setJob, loadJob }: UseJobExecution
 
         try {
           const executionSteps = await api.getExecutionSteps(jobId)
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useJobDetail.ts:355',message:'Fetched execution steps from API',data:{jobId,executionStepsCount:Array.isArray(executionSteps)?executionSteps.length:0,executionStepOrders:Array.isArray(executionSteps)?executionSteps.map((s:any)=>s.step_order):[],executionStepTypes:Array.isArray(executionSteps)?executionSteps.map((s:any)=>s.step_type):[],hasS3Key:!!snapshot?.execution_steps_s3_key,s3Key:snapshot?.execution_steps_s3_key},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'C'})}).catch(()=>{});
+          // #endregion
           if (Array.isArray(executionSteps)) {
             setJob((prevJob) => (prevJob ? { ...prevJob, execution_steps: executionSteps } : prevJob))
             setExecutionStepsError(null)

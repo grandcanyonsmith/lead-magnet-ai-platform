@@ -119,6 +119,24 @@ class JobCompletionService:
         artifacts_list.append(final_artifact_id)
         artifacts_list.extend(all_image_artifact_ids)
         
+        # CRITICAL: Reload execution_steps from S3 to ensure we have all workflow steps
+        # that were saved during step processing and HTML generation. The execution_steps
+        # list passed as parameter might be stale if steps were saved in separate operations.
+        try:
+            job_with_steps = self.db.get_job(job_id, s3_service=self.s3)
+            if job_with_steps and job_with_steps.get('execution_steps'):
+                execution_steps = job_with_steps['execution_steps']
+                logger.debug(f"[JobCompletionService] Reloaded execution_steps from S3 before finalizing job", extra={
+                    'job_id': job_id,
+                    'execution_steps_count': len(execution_steps)
+                })
+        except Exception as e:
+            logger.warning(f"[JobCompletionService] Failed to reload execution_steps from S3, using provided list", extra={
+                'job_id': job_id,
+                'error': str(e)
+            })
+            # Continue with provided execution_steps if reload fails
+        
         # Update job as completed
         logger.info("Finalizing job")
         self.db.update_job(job_id, {
@@ -294,6 +312,24 @@ class JobCompletionService:
         
         # Store usage record
         self.usage_service.store_usage_record(tenant_id, job_id, html_usage_info)
+        
+        # CRITICAL: Reload execution_steps from S3 to ensure we have all workflow steps
+        # that were saved during step processing. The execution_steps list passed as parameter
+        # might be stale if steps were saved in separate operations.
+        try:
+            job_with_steps = self.db.get_job(job_id, s3_service=self.s3)
+            if job_with_steps and job_with_steps.get('execution_steps'):
+                execution_steps = job_with_steps['execution_steps']
+                logger.debug(f"[JobCompletionService] Reloaded execution_steps from S3 before HTML generation", extra={
+                    'job_id': job_id,
+                    'execution_steps_count': len(execution_steps)
+                })
+        except Exception as e:
+            logger.warning(f"[JobCompletionService] Failed to reload execution_steps from S3, using provided list", extra={
+                'job_id': job_id,
+                'error': str(e)
+            })
+            # Continue with provided execution_steps if reload fails
         
         # Add HTML generation step
         html_step_data = ExecutionStepManager.create_html_generation_step(
