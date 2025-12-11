@@ -94,6 +94,7 @@ export function FormTab({
   formFormData,
   workflowName,
   submitting,
+  customDomain,
   onFormChange,
   onFieldChange,
   onAddField,
