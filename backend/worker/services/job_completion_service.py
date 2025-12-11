@@ -313,6 +313,15 @@ class JobCompletionService:
         # Store usage record
         self.usage_service.store_usage_record(tenant_id, job_id, html_usage_info)
         
+        # Inject tracking script into HTML
+        from services.tracking_script_generator import TrackingScriptGenerator
+        tracking_generator = TrackingScriptGenerator()
+        final_content = tracking_generator.inject_tracking_script(
+            html_content=final_content,
+            job_id=job_id,
+            tenant_id=tenant_id
+        )
+        
         # CRITICAL: Reload execution_steps from S3 to ensure we have all workflow steps
         # that were saved during step processing. The execution_steps list passed as parameter
         # might be stale if steps were saved in separate operations.
@@ -420,6 +429,15 @@ class JobCompletionService:
         
         html_duration = (datetime.utcnow() - html_start_time).total_seconds() * 1000
         self.usage_service.store_usage_record(job['tenant_id'], job_id, html_usage_info)
+        
+        # Inject tracking script into HTML
+        from services.tracking_script_generator import TrackingScriptGenerator
+        tracking_generator = TrackingScriptGenerator()
+        final_content = tracking_generator.inject_tracking_script(
+            html_content=final_content,
+            job_id=job_id,
+            tenant_id=job['tenant_id']
+        )
         
         # Store HTML as final artifact
         final_artifact_id = self.artifact_service.store_artifact(

@@ -7,6 +7,7 @@ import { notificationsController } from '../controllers/notifications';
 import { adminController } from '../controllers/admin';
 import { webhookLogsController } from '../controllers/webhookLogs';
 import { workflowSharingController } from '../controllers/workflowSharing.controller';
+import { trackingController } from '../controllers/tracking';
 import { router } from './router';
 import { logger } from '../utils/logger';
 
@@ -133,5 +134,14 @@ export function registerAdminRoutes(): void {
   // Workflow sharing (internal endpoint for worker)
   router.register('POST', '/internal/workflow-sharing/share-artifact', async (_params, body, _query, tenantId) => {
     return await workflowSharingController.shareArtifact(_params, body, _query, tenantId);
+  });
+
+  // Tracking analytics
+  router.register('GET', '/admin/tracking/jobs/:jobId/stats', async (params, _body, _query, tenantId) => {
+    return await trackingController.getJobStats(tenantId!, params.jobId);
+  });
+
+  router.register('GET', '/admin/tracking/jobs/:jobId/events', async (params, _body, query, tenantId) => {
+    return await trackingController.getJobEvents(tenantId!, params.jobId, query);
   });
 }

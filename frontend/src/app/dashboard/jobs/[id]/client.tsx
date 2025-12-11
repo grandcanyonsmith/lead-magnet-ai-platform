@@ -33,6 +33,7 @@ import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import FlowchartSidePanel from '@/app/dashboard/workflows/components/FlowchartSidePanel'
 import { JobOverviewSection, JobDurationInfo } from '@/components/jobs/detail/JobOverviewSection'
 import { SubmissionSummary } from '@/components/jobs/detail/SubmissionSummary'
+import { JobTrackingStats } from '@/components/tracking/JobTrackingStats'
 
 import type {
   ArtifactGalleryItem,
@@ -433,7 +434,7 @@ function getJobDuration(job?: Job | null): JobDurationInfo | null {
   }
 }
 
-type TabKey = 'execution' | 'artifacts' | 'raw'
+type TabKey = 'execution' | 'artifacts' | 'tracking' | 'raw'
 
 // ---------------------------------------------------------------------------
 // Job Tabs Component
@@ -481,6 +482,7 @@ function JobTabs({
   const tabs: { id: TabKey; label: string }[] = [
     { id: 'execution', label: 'Execution' },
     { id: 'artifacts', label: 'Artifacts' },
+    { id: 'tracking', label: 'Tracking' },
     { id: 'raw', label: 'Raw JSON' },
   ]
 
@@ -534,6 +536,12 @@ function JobTabs({
               loading={loadingArtifacts}
               onPreview={openPreview}
             />
+          </div>
+        )}
+
+        {activeTab === 'tracking' && (
+          <div id="job-tab-panel-tracking">
+            <JobTrackingStats jobId={job.job_id} />
           </div>
         )}
 

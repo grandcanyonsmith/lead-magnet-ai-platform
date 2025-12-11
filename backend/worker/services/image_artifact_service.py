@@ -30,7 +30,9 @@ class ImageArtifactService:
         tenant_id: str,
         job_id: str,
         step_index: int,
-        step_name: str = ''
+        step_name: str = '',
+        step_instructions: Optional[str] = None,
+        context: Optional[str] = None
     ) -> List[str]:
         """
         Store multiple image artifacts from image URLs.
@@ -98,14 +100,52 @@ class ImageArtifactService:
                         'image_filename': filename
                     })
                 else:
-                    filename = f"image_{step_index + 1}_{idx + 1}.png"
-                    logger.debug(f"[ImageArtifactService] Generated filename", extra={
-                        'job_id': job_id,
-                        'step_index': step_index,
-                        'step_name': step_name,
-                        'image_index': idx,
-                        'image_filename': filename
-                    })
+                    # Try to use AI naming if context is available
+                    filename = None
+                    if (step_name or step_instructions or context):
+                        try:
+                            import requests
+                            import base64
+                            from services.image_naming_service import ImageNamingService
+                            
+                            # Download image temporarily for AI naming
+                            response = requests.get(image_url, timeout=10)
+                            if response.status_code == 200:
+                                image_data = response.content
+                                image_b64 = base64.b64encode(image_data).decode('utf-8')
+                                
+                                naming_service = ImageNamingService()
+                                filename = naming_service.generate_filename_from_image(
+                                    image_b64=image_b64,
+                                    context=context,
+                                    step_name=step_name,
+                                    step_instructions=step_instructions,
+                                    image_index=idx
+                                )
+                                logger.info(f"[ImageArtifactService] Generated AI filename", extra={
+                                    'job_id': job_id,
+                                    'step_index': step_index,
+                                    'step_name': step_name,
+                                    'image_index': idx,
+                                    'ai_filename': filename
+                                })
+                        except Exception as e:
+                            logger.warning(f"[ImageArtifactService] AI naming failed, using fallback: {e}", extra={
+                                'error_type': type(e).__name__,
+                                'error_message': str(e),
+                                'job_id': job_id
+                            })
+                    
+                    # Fallback to generic filename if AI naming failed or wasn't attempted
+                    if not filename:
+                        filename = f"image_{step_index + 1}_{idx + 1}.png"
+                        logger.debug(f"[ImageArtifactService] Generated generic filename", extra={
+                            'job_id': job_id,
+                            'step_index': step_index,
+                            'step_name': step_name,
+                            'image_index': idx,
+                            'image_filename': filename
+                        })
                 
                 logger.info(f"[ImageArtifactService] Storing image artifact", extra={
                     'job_id': job_id,
