@@ -154,36 +154,38 @@ export default function DashboardLayout({
       <div className="min-h-screen bg-zinc-50 lg:flex lg:flex-row">
         {/* Mobile top bar */}
         <header className="lg:hidden sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-zinc-200">
-          <div className="flex items-center justify-between px-4 py-3">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-700 shadow-sm hover:bg-zinc-50"
+                className="inline-flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-700 shadow-sm hover:bg-zinc-50 shrink-0"
                 aria-label="Open navigation"
               >
                 <FiMenu className="h-5 w-5" />
               </button>
-              <div className="flex items-center gap-2">
-                <div className="h-9 w-9 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center shadow-sm">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="h-8 w-8 sm:h-9 sm:w-9 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center shadow-sm shrink-0">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                 </div>
-                <div>
-                  <p className="text-sm font-semibold text-zinc-900">Lead Magnet AI</p>
-                  <p className="text-xs text-zinc-500">Dashboard</p>
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm font-semibold text-zinc-900 truncate">Lead Magnet AI</p>
+                  <p className="text-[10px] sm:text-xs text-zinc-500 truncate">Dashboard</p>
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
               <button
                 onClick={() => setSearchOpen(true)}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-700 shadow-sm hover:bg-zinc-50"
+                className="inline-flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-700 shadow-sm hover:bg-zinc-50"
                 aria-label="Open search"
               >
-                <FiSearch className="h-5 w-5" />
+                <FiSearch className="h-4 w-4 sm:h-5 sm:w-5" />
               </button>
-              <NotificationBell />
+              <div className="scale-90 sm:scale-100">
+                <NotificationBell />
+              </div>
             </div>
           </div>
         </header>
@@ -203,25 +205,25 @@ export default function DashboardLayout({
         {/* Sidebar */}
         <aside
           className={`
-            fixed top-0 left-0 z-40 h-screen w-[280px] max-w-[85vw] bg-white shadow-xl border-r border-zinc-200 transform transition-transform duration-300 ease-in-out flex flex-col
+            fixed top-0 left-0 z-40 h-screen w-[280px] max-w-[85vw] sm:max-w-[320px] bg-white shadow-xl border-r border-zinc-200 transform transition-transform duration-300 ease-in-out flex flex-col
             ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
             lg:translate-x-0 lg:sticky lg:top-0 lg:shadow-none lg:shrink-0 lg:w-72 lg:max-w-none
           `}
           aria-label="Sidebar navigation"
         >
           {/* Mobile sidebar header with close button */}
-          <div className="lg:hidden flex items-center justify-between px-4 py-3 border-b border-zinc-200 bg-white">
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center shadow-sm">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="lg:hidden flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 border-b border-zinc-200 bg-white">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <div className="h-8 w-8 sm:h-9 sm:w-9 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center shadow-sm shrink-0">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
-              <span className="text-sm font-semibold text-zinc-900">Lead Magnet AI</span>
+              <span className="text-xs sm:text-sm font-semibold text-zinc-900 truncate">Lead Magnet AI</span>
             </div>
             <button
               onClick={() => setSidebarOpen(false)}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700"
+              className="inline-flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 shrink-0"
               aria-label="Close navigation"
             >
               <FiX className="h-5 w-5" />
@@ -253,23 +255,26 @@ export default function DashboardLayout({
           </div>
 
           <div className="flex-1 overflow-y-auto min-h-0">
-            <nav className="px-3 py-4 space-y-6">
+            <nav className="px-2 sm:px-3 py-3 sm:py-4 space-y-4 sm:space-y-6">
               <div className="space-y-1">
                 <button
-                  onClick={() => setSearchOpen(true)}
-                  className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-zinc-700 hover:bg-zinc-100/70 transition"
+                  onClick={() => {
+                    setSearchOpen(true)
+                    setSidebarOpen(false)
+                  }}
+                  className="w-full flex items-center gap-2 sm:gap-3 rounded-xl px-2.5 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm font-medium text-zinc-700 hover:bg-zinc-100/70 transition"
                   aria-label="Open search"
                 >
-                  <FiSearch className="h-5 w-5 text-zinc-500" />
+                  <FiSearch className="h-4 w-4 sm:h-5 sm:w-5 text-zinc-500 shrink-0" />
                   <span className="truncate">Search</span>
-                  <kbd className="ml-auto hidden md:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[11px] font-semibold text-zinc-500 bg-white border border-zinc-200 rounded">
+                  <kbd className="ml-auto hidden md:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] sm:text-[11px] font-semibold text-zinc-500 bg-white border border-zinc-200 rounded">
                     ⌘K
                   </kbd>
                 </button>
               </div>
 
               <div className="space-y-1">
-                <p className="px-2 text-xs font-semibold uppercase tracking-[0.08em] text-zinc-500">Main</p>
+                <p className="px-2 text-[10px] sm:text-xs font-semibold uppercase tracking-[0.08em] text-zinc-500">Main</p>
                 {navItems.map((item) => {
                   const isActive = pathname === item.href || pathname?.startsWith(item.href + '/')
                   const Icon = item.icon
@@ -279,7 +284,7 @@ export default function DashboardLayout({
                       href={item.href}
                       onClick={() => setSidebarOpen(false)}
                       className={`
-                        group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200
+                        group flex items-center gap-2 sm:gap-3 rounded-xl px-2.5 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all duration-200
                         ${
                           isActive
                             ? 'bg-primary-50 text-primary-700 ring-1 ring-primary-100'
@@ -288,12 +293,12 @@ export default function DashboardLayout({
                       `}
                     >
                       <Icon
-                        className={`h-5 w-5 ${
+                        className={`h-4 w-4 sm:h-5 sm:w-5 shrink-0 ${
                           isActive ? 'text-primary-600' : 'text-zinc-500 group-hover:text-zinc-700'
                         }`}
                       />
                       <span className="truncate">{item.label}</span>
-                      {isActive && <FiChevronRight className="ml-auto h-4 w-4 text-primary-500" />}
+                      {isActive && <FiChevronRight className="ml-auto h-3 w-3 sm:h-4 sm:w-4 text-primary-500 shrink-0" />}
                     </Link>
                   )
                 })}
@@ -301,30 +306,30 @@ export default function DashboardLayout({
             </nav>
           </div>
 
-          <div className="mt-auto px-3 py-3 border-t border-zinc-200 bg-white shrink-0">
+          <div className="mt-auto px-2 sm:px-3 py-2 sm:py-3 border-t border-zinc-200 bg-white shrink-0">
             <div className="relative">
               <button
                 type="button"
                 onClick={() => setAccountMenuOpen((open) => !open)}
-                className="w-full flex items-center justify-between rounded-lg px-2 py-2 hover:bg-zinc-50 transition-colors"
+                className="w-full flex items-center justify-between rounded-lg px-1.5 sm:px-2 py-1.5 sm:py-2 hover:bg-zinc-50 transition-colors"
               >
-                <span className="flex items-center gap-2 min-w-0">
-                  <span className="h-8 w-8 rounded-md bg-zinc-200 flex items-center justify-center overflow-hidden shrink-0">
-                    <span className="text-xs font-semibold text-zinc-700">
+                <span className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
+                  <span className="h-7 w-7 sm:h-8 sm:w-8 rounded-md bg-zinc-200 flex items-center justify-center overflow-hidden shrink-0">
+                    <span className="text-[10px] sm:text-xs font-semibold text-zinc-700">
                       {(user?.name || user?.email || 'U').slice(0, 1).toUpperCase()}
                     </span>
                   </span>
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-medium text-zinc-900">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-xs sm:text-sm font-medium text-zinc-900">
                       {user?.name || user?.email || 'Account'}
                     </span>
                     {user?.email && (
-                      <span className="block truncate text-xs text-zinc-500">{user.email}</span>
+                      <span className="block truncate text-[10px] sm:text-xs text-zinc-500">{user.email}</span>
                     )}
                   </span>
                 </span>
                 <FiChevronUp
-                  className={`h-4 w-4 text-zinc-400 transition-transform shrink-0 ${accountMenuOpen ? 'rotate-180' : ''}`}
+                  className={`h-3 w-3 sm:h-4 sm:w-4 text-zinc-400 transition-transform shrink-0 ${accountMenuOpen ? 'rotate-180' : ''}`}
                 />
               </button>
 
@@ -335,14 +340,16 @@ export default function DashboardLayout({
                     className="fixed inset-0 z-40" 
                     onClick={() => setAccountMenuOpen(false)}
                   />
-                  <div className="absolute bottom-full left-0 right-0 mb-2 rounded-lg border border-zinc-200 bg-white shadow-lg ring-1 ring-black/5 z-50 overflow-hidden">
-                    <div className="px-3 py-2.5 flex items-center justify-between">
-                      <span className="text-sm text-zinc-700">Notifications</span>
-                      <NotificationBell />
+                  <div className="absolute bottom-full left-0 right-0 mb-1.5 sm:mb-2 rounded-lg border border-zinc-200 bg-white shadow-lg ring-1 ring-black/5 z-50 overflow-hidden">
+                    <div className="px-2.5 sm:px-3 py-2 sm:py-2.5 flex items-center justify-between">
+                      <span className="text-xs sm:text-sm text-zinc-700">Notifications</span>
+                      <div className="scale-90 sm:scale-100">
+                        <NotificationBell />
+                      </div>
                     </div>
                     <hr className="border-t border-zinc-100" />
                     <button
-                      className="w-full px-3 py-2.5 text-sm text-zinc-700 hover:bg-zinc-50 text-left transition-colors"
+                      className="w-full px-2.5 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm text-zinc-700 hover:bg-zinc-50 text-left transition-colors"
                       onClick={() => {
                         setAccountMenuOpen(false)
                         setSidebarOpen(false)
@@ -353,7 +360,7 @@ export default function DashboardLayout({
                     </button>
                     <hr className="border-t border-zinc-100" />
                     <button
-                      className="w-full px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 text-left transition-colors"
+                      className="w-full px-2.5 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm text-red-600 hover:bg-red-50 text-left transition-colors"
                       onClick={() => {
                         setAccountMenuOpen(false)
                         setSidebarOpen(false)
@@ -371,13 +378,13 @@ export default function DashboardLayout({
         </aside>
 
         {/* Main content */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 w-full">
           <ImpersonationBanner />
 
           {/* Page content */}
           <main className="p-3 sm:p-4 md:p-6 lg:p-8 bg-zinc-50 min-h-screen">
-            <div className="w-full lg:rounded-lg lg:bg-white lg:p-8 lg:shadow-sm lg:ring-1 lg:ring-zinc-950/5">
-              <div className="mx-auto max-w-6xl">
+            <div className="w-full lg:rounded-lg lg:bg-white lg:p-6 xl:p-8 lg:shadow-sm lg:ring-1 lg:ring-zinc-950/5">
+              <div className="mx-auto max-w-6xl w-full">
                 {children}
               </div>
             </div>

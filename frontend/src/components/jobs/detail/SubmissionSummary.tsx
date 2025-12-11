@@ -99,11 +99,39 @@ function JsonValue({ value, depth = 0 }: { value: any; depth?: number }) {
 }
 
 function FormFieldValue({ value }: { value: any }) {
+  const [isExpanded, setIsExpanded] = useState(false)
+  const MAX_LENGTH = 200
+  
   // If it's a simple string, display it directly
   if (typeof value === 'string' && !value.trim().startsWith('{') && !value.trim().startsWith('[')) {
+    const shouldTruncate = value.length > MAX_LENGTH
+    const displayText = shouldTruncate && !isExpanded 
+      ? value.substring(0, MAX_LENGTH) + '...' 
+      : value
+    
     return (
-      <div className="mt-1 text-sm text-gray-900 break-words whitespace-pre-wrap">
-        {value}
+      <div className="mt-1">
+        <div className="text-sm text-gray-900 break-words whitespace-pre-wrap">
+          {displayText}
+        </div>
+        {shouldTruncate && (
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="mt-2 text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
+          >
+            {isExpanded ? (
+              <>
+                <FiChevronUp className="w-3 h-3" />
+                Show less
+              </>
+            ) : (
+              <>
+                <FiChevronDown className="w-3 h-3" />
+                Show more
+              </>
+            )}
+          </button>
+        )}
       </div>
     )
   }

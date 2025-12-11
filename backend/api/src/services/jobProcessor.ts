@@ -97,8 +97,8 @@ export async function processJobLocally(
       const { stdout, stderr } = await execAsync(command, {
         cwd: workerDir,
         env: { ...process.env, JOB_ID: jobId },
-        timeout: 300000, // 5 minute timeout
-        maxBuffer: 10 * 1024 * 1024, // 10MB buffer for large outputs
+        timeout: 1800000, // 30 minute timeout (allows for workflows with many steps)
+        maxBuffer: 50 * 1024 * 1024, // 50MB buffer for large outputs (increased for verbose logging)
       });
       
       logger.info('[Local Job Processor] Worker completed', { jobId, stdout, stderr });
