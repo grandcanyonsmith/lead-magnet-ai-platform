@@ -86,9 +86,13 @@ export function JobOverviewSection({
     }
     onSelectArtifacts?.()
     if (typeof window !== 'undefined') {
-      window.requestAnimationFrame(() => {
-        document.getElementById('job-tab-panel-artifacts')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      })
+      // Wait for tab to switch and DOM to update before scrolling
+      setTimeout(() => {
+        const artifactsElement = document.getElementById('job-tab-panel-artifacts')
+        if (artifactsElement) {
+          artifactsElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+      }, 100)
     }
   }
 
@@ -102,20 +106,6 @@ export function JobOverviewSection({
               {isAutoUpdating && (
                 <span className="rounded-full bg-primary-50 px-2 py-0.5 text-primary-700">Live updating</span>
               )}
-            </div>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Job ID</p>
-              <div className="mt-1 flex items-center gap-2 flex-wrap">
-                <span className="text-2xl font-semibold text-gray-900 break-all">{job.job_id}</span>
-                <button
-                  type="button"
-                  onClick={handleCopyJobId}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50"
-                >
-                  <FiCopy className="h-3.5 w-3.5" />
-                  Copy ID
-                </button>
-              </div>
             </div>
             <div className="text-sm text-gray-500">
               {updatedDisplay ? <span>Updated {updatedDisplay}</span> : <span>Waiting for first update</span>}

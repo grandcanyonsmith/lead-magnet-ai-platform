@@ -27,7 +27,7 @@ export function ArtifactGallery({ items, loading, onPreview }: ArtifactGalleryPr
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2">
+    <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
       {items.map((item) => (
         <ArtifactCard key={item.id} item={item} onPreview={onPreview} />
       ))}
@@ -80,15 +80,15 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
 
   return (
     <article className="rounded-2xl border border-gray-200 bg-white shadow-sm">
-      <div className="p-4 flex items-start justify-between gap-3">
-        <div className="min-w-0">
+      <div className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3">
+        <div className="min-w-0 flex-1">
           {item.stepOrder !== undefined && (
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Step {item.stepOrder}</p>
+            <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-gray-500">Step {item.stepOrder}</p>
           )}
-          <p className="text-base font-semibold text-gray-900 mt-0.5 break-words">{item.label}</p>
-          {item.description && <p className="text-sm text-gray-600 mt-1 line-clamp-2">{item.description}</p>}
+          <p className="text-sm sm:text-base font-semibold text-gray-900 mt-0.5 break-words">{item.label}</p>
+          {item.description && <p className="text-xs sm:text-sm text-gray-600 mt-1 line-clamp-2">{item.description}</p>}
         </div>
-        <span className={`px-2.5 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${BADGE_CLASS_MAP[item.kind]}`}>
+        <span className={`px-2 sm:px-2.5 py-0.5 sm:py-1 text-[10px] sm:text-xs font-semibold rounded-full whitespace-nowrap shrink-0 self-start sm:self-auto ${BADGE_CLASS_MAP[item.kind]}`}>
           {badgeLabel}
         </span>
       </div>
@@ -108,19 +108,19 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
       )}
 
       {item.kind === 'jobOutput' && (
-        <div className="px-4 pb-2 text-sm text-gray-600">Access the final deliverable generated for this run.</div>
+        <div className="px-3 sm:px-4 pb-2 text-xs sm:text-sm text-gray-600">Access the final deliverable generated for this run.</div>
       )}
 
-      <div className="flex flex-wrap gap-2 px-4 py-3 border-t border-gray-100">
+      <div className="flex flex-wrap gap-2 px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100">
         {artifactUrl && (
           <a
             href={artifactUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-700"
+            className="inline-flex items-center gap-1.5 sm:gap-2 rounded-lg bg-primary-600 px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-white transition-colors hover:bg-primary-700 active:bg-primary-800"
           >
-            <FiExternalLink className="h-4 w-4" aria-hidden="true" />
-            View
+            <FiExternalLink className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
+            <span>View</span>
           </a>
         )}
         {item.kind === 'jobOutput' && item.url && (
@@ -128,30 +128,30 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
             href={item.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
+            className="inline-flex items-center gap-1.5 sm:gap-2 rounded-lg border border-gray-300 px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 active:bg-gray-100"
           >
-            <FiFileText className="h-4 w-4" aria-hidden="true" />
-            Download
+            <FiFileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
+            <span>Download</span>
           </a>
         )}
         {artifactUrl && item.kind !== 'jobOutput' && (
           <button
             type="button"
             onClick={() => onPreview(item)}
-            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
+            className="inline-flex items-center gap-1.5 sm:gap-2 rounded-lg border border-gray-300 px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 active:bg-gray-100"
           >
-            <FiMaximize2 className="h-4 w-4" aria-hidden="true" />
-            Expand
+            <FiMaximize2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
+            <span>Expand</span>
           </button>
         )}
         {artifactUrl && (
           <button
             type="button"
             onClick={() => handleCopy(artifactUrl, 'Link copied')}
-            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
+            className="inline-flex items-center gap-1.5 sm:gap-2 rounded-lg border border-gray-300 px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 active:bg-gray-100"
           >
-            <FiCopy className="h-4 w-4" aria-hidden="true" />
-            Copy link
+            <FiCopy className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
+            <span>Copy link</span>
           </button>
         )}
       </div>

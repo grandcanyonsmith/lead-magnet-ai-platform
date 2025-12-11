@@ -524,11 +524,13 @@ function JobTabs({
         )}
 
         {activeTab === 'artifacts' && (
-          <ArtifactGallery
-            items={artifactGalleryItems}
-            loading={loadingArtifacts}
-            onPreview={openPreview}
-          />
+          <div id="job-tab-panel-artifacts">
+            <ArtifactGallery
+              items={artifactGalleryItems}
+              loading={loadingArtifacts}
+              onPreview={openPreview}
+            />
+          </div>
         )}
 
         {activeTab === 'raw' && <RawJsonPanel data={job} />}

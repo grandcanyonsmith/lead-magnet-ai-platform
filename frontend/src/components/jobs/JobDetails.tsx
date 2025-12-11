@@ -345,50 +345,6 @@ export function JobDetails({ job, workflow, hideContainer = false, submission, o
         <KeyValueList items={infoItems} columns={2} onCopy={handleCopyValue} />
       )}
 
-      {submission?.form_data && Object.keys(submission.form_data).length > 0 && (
-        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
-          <div className="flex flex-col gap-3 p-4 sm:p-6 md:flex-row md:items-center md:justify-between border-b border-gray-100">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Form Submission</p>
-              <h3 className="text-lg font-semibold text-gray-900 mt-1">Submitted Answers</h3>
-              {submission.created_at && (
-                <p className="text-sm text-gray-500 mt-1">Submitted {formatRelativeTime(submission.created_at)}</p>
-              )}
-            </div>
-            {onRerun && (
-              <button
-                type="button"
-                onClick={onRerun}
-                disabled={rerunning}
-                className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
-                title="Rerun this job with the same form submission data"
-              >
-                <FiRefreshCw className={`h-4 w-4 ${rerunning ? 'animate-spin' : ''}`} />
-                {rerunning ? 'Rerunning...' : 'Rerun Job'}
-              </button>
-            )}
-          </div>
-          <dl className="divide-y divide-gray-100">
-            {Object.entries(submission.form_data).map(([key, value]) => (
-              <div key={key} className="px-4 py-3 sm:px-6 sm:py-4">
-                <dt className="text-sm font-medium text-gray-700 capitalize">
-                  {key.replace(/_/g, ' ')}
-                </dt>
-                <dd className="mt-1 text-sm text-gray-900 break-words">
-                  {typeof value === 'string' ? value : JSON.stringify(value, null, 2)}
-                </dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-      )}
-      
-      {submission && (!submission.form_data || Object.keys(submission.form_data).length === 0) && (
-        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
-          <p className="text-sm text-gray-500">No form submission data available for this job.</p>
-        </div>
-      )}
-
       {job.status === 'failed' && job.error_message && (
         <div
           className="rounded-2xl border border-red-100 bg-red-50/70 p-4 text-sm text-red-900"
