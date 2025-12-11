@@ -3,6 +3,8 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
+import { useSettings } from '@/hooks/api/useSettings'
+import { buildPublicFormUrl } from '@/utils/url'
 import { FiPlus, FiEdit, FiTrash2, FiEye, FiExternalLink, FiCopy, FiCheck, FiMoreVertical, FiLoader, FiCheckCircle, FiXCircle, FiClock, FiList, FiFileText } from 'react-icons/fi'
 
 export default function WorkflowsPage() {
@@ -31,6 +33,7 @@ export default function WorkflowsPage() {
   const requestQueueRef = useRef<Promise<void>>(Promise.resolve())
   // Track active requests to prevent duplicates - use Map to store promises for deduplication
   const activeRequestsRef = useRef<Map<string, Promise<void>>>(new Map())
+  const { settings } = useSettings()
 
   // Define loadJobsForWorkflow before it's used in useEffect hooks
   const loadJobsForWorkflow = useCallback(async (workflowId: string) => {
@@ -369,10 +372,7 @@ export default function WorkflowsPage() {
 
   const publicUrlFor = (form: any) => {
     if (!form || !form.public_slug) return null
-    if (typeof window !== 'undefined') {
-      return `${window.location.origin}/v1/forms/${form.public_slug}`
-    }
-    return `/v1/forms/${form.public_slug}`
+    return buildPublicFormUrl(form.public_slug, settings?.custom_domain)
   }
 
   const copyToClipboard = async (text: string, workflowId: string) => {

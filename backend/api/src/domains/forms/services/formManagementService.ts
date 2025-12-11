@@ -49,13 +49,15 @@ class FormManagementService {
     try {
       const form = await this.getActiveFormBySlug(slug);
 
-      // Fetch user settings to get logo URL
-      let logoUrl: string | undefined;
-      try {
-        const settings = await db.get(USER_SETTINGS_TABLE, { tenant_id: form.tenant_id });
-        logoUrl = settings?.logo_url;
-      } catch (error) {
-        logger.warn('Failed to fetch user settings for logo', { error });
+      // Prefer form-specific logo, otherwise fall back to tenant settings
+      let logoUrl: string | undefined = form.logo_url;
+      if (!logoUrl) {
+        try {
+          const settings = await db.get(USER_SETTINGS_TABLE, { tenant_id: form.tenant_id });
+          logoUrl = settings?.logo_url;
+        } catch (error) {
+          logger.warn('Failed to fetch user settings for logo', { error });
+        }
       }
 
       const fieldsWithRequired = ensureRequiredFields(form.form_fields_schema.fields);
