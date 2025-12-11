@@ -3,9 +3,29 @@
  */
 
 export function formatRelativeTime(dateString: string): string {
-  const date = new Date(dateString)
+  // Normalize date string: if it's missing timezone indicator, assume UTC
+  // This handles cases like "2025-12-11T01:37:36.150707" which should be treated as UTC
+  // ISO 8601 strings without timezone are ambiguous - we assume UTC for API timestamps
+  let normalizedDateString = dateString
+  if (dateString && !dateString.includes('Z') && !dateString.match(/[+-]\d{2}:\d{2}$/)) {
+    // Append 'Z' to indicate UTC if no timezone is present
+    normalizedDateString = dateString + 'Z'
+  }
+  
+  const date = new Date(normalizedDateString)
   const now = new Date()
+  
+  // Check if date is invalid
+  if (isNaN(date.getTime())) {
+    return 'Invalid date'
+  }
+  
   const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+  
+  // Handle negative values (date in future or clock skew) - clamp to 0
+  if (seconds < 0) {
+    return 'just now'
+  }
   
   if (seconds < 60) return `${seconds}s ago`
   const minutes = Math.floor(seconds / 60)
