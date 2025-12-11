@@ -172,6 +172,8 @@ export interface UserSettings {
   logo_url?: string;
   webhook_token?: string;
   webhook_url?: string;
+  custom_domain?: string;
+  lead_phone_field?: string;
   created_at: string;
   updated_at: string;
 }

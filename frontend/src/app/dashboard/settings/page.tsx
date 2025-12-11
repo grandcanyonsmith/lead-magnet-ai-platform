@@ -31,6 +31,7 @@ export default function SettingsPage() {
         default_ai_model: settings.default_ai_model || 'gpt-5',
         logo_url: settings.logo_url || '',
         ghl_webhook_url: settings.ghl_webhook_url || '',
+        custom_domain: settings.custom_domain || '',
         lead_phone_field: settings.lead_phone_field || '',
         // Brand information fields
         brand_description: settings.brand_description || '',
@@ -56,6 +57,7 @@ export default function SettingsPage() {
       formData.default_ai_model !== (settings.default_ai_model || 'gpt-5') ||
       formData.logo_url !== (settings.logo_url || '') ||
       formData.ghl_webhook_url !== (settings.ghl_webhook_url || '') ||
+      formData.custom_domain !== (settings.custom_domain || '') ||
       formData.lead_phone_field !== (settings.lead_phone_field || '') ||
       formData.brand_description !== (settings.brand_description || '') ||
       formData.brand_voice !== (settings.brand_voice || '') ||
@@ -105,6 +107,20 @@ export default function SettingsPage() {
       newErrors.ghl_webhook_url = 'Please enter a valid URL (must start with http:// or https://)'
     }
 
+    if (formData.custom_domain) {
+      const value = formData.custom_domain.trim()
+      const hasProtocol = /^https?:\/\//i.test(value)
+      const candidate = hasProtocol ? value : `https://${value}`
+      try {
+        const parsed = new URL(candidate)
+        if (!parsed.hostname) {
+          newErrors.custom_domain = 'Please enter a valid domain'
+        }
+      } catch {
+        newErrors.custom_domain = 'Please enter a valid domain'
+      }
+    }
+
     if (formData.icp_document_url && !/^https?:\/\/.+/.test(formData.icp_document_url)) {
       newErrors.icp_document_url = 'Please enter a valid URL (must start with http:// or https://)'
     }
@@ -118,6 +134,19 @@ export default function SettingsPage() {
     try {
       const url = new URL(value.trim())
       return url.protocol === 'http:' || url.protocol === 'https:' ? value.trim() : undefined
+    } catch {
+      return undefined
+    }
+  }
+
+  const sanitizeDomain = (value?: string) => {
+    if (!value) return undefined
+    const trimmed = value.trim()
+    if (!trimmed) return undefined
+    const candidate = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`
+    try {
+      const url = new URL(candidate)
+      return url.origin
     } catch {
       return undefined
     }
@@ -137,6 +166,7 @@ export default function SettingsPage() {
       default_ai_model: formData.default_ai_model,
       logo_url: sanitizeUrl(formData.logo_url),
       ghl_webhook_url: sanitizeUrl(formData.ghl_webhook_url),
+      custom_domain: sanitizeDomain(formData.custom_domain),
       lead_phone_field: formData.lead_phone_field?.trim() || undefined,
       // Brand information fields
       brand_description: formData.brand_description?.trim() || undefined,

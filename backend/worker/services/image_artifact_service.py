@@ -95,7 +95,7 @@ class ImageArtifactService:
                         'step_index': step_index,
                         'step_name': step_name,
                         'image_index': idx,
-                        'filename': filename
+                        'image_filename': filename
                     })
                 else:
                     filename = f"image_{step_index + 1}_{idx + 1}.png"
@@ -104,7 +104,7 @@ class ImageArtifactService:
                         'step_index': step_index,
                         'step_name': step_name,
                         'image_index': idx,
-                        'filename': filename
+                        'image_filename': filename
                     })
                 
                 logger.info(f"[ImageArtifactService] Storing image artifact", extra={
@@ -113,7 +113,7 @@ class ImageArtifactService:
                     'step_name': step_name,
                     'image_index': idx,
                     'image_url': image_url,
-                    'filename': filename
+                    'image_filename': filename
                 })
                 
                 image_artifact_id = self.artifact_service.store_image_artifact(
@@ -134,7 +134,7 @@ class ImageArtifactService:
                         'image_index': idx,
                         'image_artifact_id': image_artifact_id,
                         'image_url': image_url,
-                        'filename': filename,
+                        'image_filename': filename,
                         'total_stored': len(image_artifact_ids)
                     }
                 )

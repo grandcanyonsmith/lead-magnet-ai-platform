@@ -141,6 +141,24 @@ export function DeliverySettings({
         />
 
         <FormField
+          label={
+            <>
+              Custom Domain
+              <span className="ml-2 text-xs text-gray-500" title="Use your own domain for public forms">
+                ℹ️
+              </span>
+            </>
+          }
+          name="custom_domain"
+          type="text"
+          value={settings.custom_domain || ''}
+          onChange={(value) => onChange('custom_domain', value)}
+          error={errors?.custom_domain}
+          placeholder="forms.yourdomain.com or https://forms.yourdomain.com"
+          helpText="Point a CNAME for your domain to this app and enter it here so share links use your domain."
+        />
+
+        <FormField
           label="Lead Phone Number Field"
           name="lead_phone_field"
           type="text"

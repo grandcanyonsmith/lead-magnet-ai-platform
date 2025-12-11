@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { api } from '@/lib/api'
+import { useSettings } from '@/hooks/api/useSettings'
+import { buildPublicFormUrl } from '@/utils/url'
 import { FiArrowLeft, FiSave } from 'react-icons/fi'
 
 type FormField = {
@@ -39,6 +41,7 @@ export default function EditFormClient() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { settings } = useSettings()
   
   const [formFormData, setFormFormData] = useState({
     form_name: '',
@@ -256,7 +259,7 @@ export default function EditFormClient() {
           </p>
           {formFormData.public_slug && (
             <p className="mt-1 text-xs text-primary-600">
-              Form URL: {typeof window !== 'undefined' ? `${window.location.origin}/v1/forms/${formFormData.public_slug}` : `/v1/forms/${formFormData.public_slug}`}
+              Form URL: {buildPublicFormUrl(formFormData.public_slug, settings?.custom_domain)}
             </p>
           )}
         </div>

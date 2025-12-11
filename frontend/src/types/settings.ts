@@ -26,6 +26,7 @@ export interface Settings extends BaseEntity {
   logo_url?: string
   webhook_url?: string
   ghl_webhook_url?: string
+  custom_domain?: string
   lead_phone_field?: string
   // Brand information fields
   brand_description?: string
@@ -49,6 +50,7 @@ export interface SettingsUpdateRequest {
   default_ai_model?: string
   logo_url?: string
   ghl_webhook_url?: string
+  custom_domain?: string
   lead_phone_field?: string
   // Brand information fields
   brand_description?: string
@@ -69,6 +71,7 @@ export interface SettingsFormData {
   default_ai_model: string
   logo_url: string
   ghl_webhook_url: string
+  custom_domain: string
   lead_phone_field: string
   brand_description: string
   brand_voice: string

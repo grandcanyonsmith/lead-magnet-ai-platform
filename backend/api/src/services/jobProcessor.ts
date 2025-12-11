@@ -82,6 +82,9 @@ export async function processJobLocally(
       cwd: process.cwd()
     });
     
+    // Track duration for debugging long-running local jobs
+    const startTime = Date.now();
+    
     try {
       // Set JOB_ID environment variable and run worker
       // Run from worker directory so Python imports work correctly
@@ -97,11 +100,16 @@ export async function processJobLocally(
       const { stdout, stderr } = await execAsync(command, {
         cwd: workerDir,
         env: { ...process.env, JOB_ID: jobId },
-        timeout: 1800000, // 30 minute timeout (allows for workflows with many steps)
-        maxBuffer: 50 * 1024 * 1024, // 50MB buffer for large outputs (increased for verbose logging)
+        timeout: 1800000, // 30 minute timeout to allow larger workflows
+        maxBuffer: 50 * 1024 * 1024, // 50MB buffer for verbose logs
       });
       
-      logger.info('[Local Job Processor] Worker completed', { jobId, stdout, stderr });
+      logger.info('[Local Job Processor] Worker completed', { 
+        jobId, 
+        stdout, 
+        stderr,
+        durationMs: Date.now() - startTime,
+      });
     } catch (execError: any) {
       // If Python worker fails, log and mark as failed
       const errorMessage = execError.message || 'Unknown error';
@@ -115,6 +123,7 @@ export async function processJobLocally(
         stdout: stdoutOutput,
         code: execError.code,
         signal: execError.signal,
+        durationMs: Date.now() - startTime,
         workerPath,
         workerDir,
       });

@@ -9,6 +9,7 @@ import { env } from '@utils/env';
 const SUBMISSIONS_TABLE = env.submissionsTable;
 const JOBS_TABLE = env.jobsTable;
 const STEP_FUNCTIONS_ARN = env.stepFunctionsArn;
+const USER_SETTINGS_TABLE = env.userSettingsTable;
 
 const sfnClient = STEP_FUNCTIONS_ARN ? new SFNClient({ region: env.awsRegion }) : null;
 
@@ -45,10 +46,18 @@ export class FormSubmissionService {
     thankYouMessage?: string,
     redirectUrl?: string
   ): Promise<SubmissionResult> {
-    // Ensure name, email, and phone are present
-    if (!submissionData.name || !submissionData.email || !submissionData.phone) {
-      throw new ApiError('Form submission must include name, email, and phone fields', 400);
+    // Ensure name/email are present (phone is normalized below)
+    if (!submissionData.name || !submissionData.email) {
+      throw new ApiError('Form submission must include name and email fields', 400);
     }
+
+    // Normalize phone number (supports custom phone field names)
+    const { phoneNumber, fieldUsed } = await this.normalizePhoneNumber(submissionData, form.tenant_id);
+    if (!phoneNumber) {
+      throw new ApiError('Form submission must include a phone number', 400);
+    }
+
+    submissionData.phone = phoneNumber;
 
     // Create submission record
     const submissionId = `sub_${ulid()}`;
@@ -60,8 +69,9 @@ export class FormSubmissionService {
       submission_data: submissionData,
       submitter_ip: sourceIp,
       submitter_email: submissionData.email || null,
-      submitter_phone: submissionData.phone || null,
+      submitter_phone: phoneNumber,
       submitter_name: submissionData.name || null,
+      phone_field_used: fieldUsed,
       created_at: new Date().toISOString(),
       ttl: Math.floor(Date.now() / 1000) + 90 * 24 * 60 * 60, // 90 days
     };
@@ -104,6 +114,68 @@ export class FormSubmissionService {
       message: thankYouMessage || 'Thank you! Your submission is being processed.',
       redirectUrl,
     };
+  }
+
+  /**
+   * Normalize phone number from submission data using tenant settings.
+   * Falls back to any field containing "phone" or "mobile".
+   */
+  private async normalizePhoneNumber(
+    submissionData: Record<string, any>,
+    tenantId: string
+  ): Promise<{ phoneNumber: string | null; fieldUsed?: string }> {
+    // Prefer explicit phone-related fields
+    const preferredFields = ['phone', 'phone_number', 'phoneNumber', 'mobile', 'mobile_phone', 'contact_phone'];
+    let settingsPhoneField: string | undefined;
+
+    if (USER_SETTINGS_TABLE) {
+      try {
+        const settings = await db.get(USER_SETTINGS_TABLE, { tenant_id: tenantId });
+        if (settings?.lead_phone_field) {
+          settingsPhoneField = String(settings.lead_phone_field);
+        }
+      } catch (error) {
+        logger.warn('[FormSubmission] Failed to load settings for phone normalization', {
+          error: error instanceof Error ? error.message : String(error),
+          tenantId,
+        });
+      }
+    }
+
+    const candidates: Array<{ value: any; field: string }> = [];
+
+    if (settingsPhoneField && submissionData[settingsPhoneField]) {
+      candidates.push({ value: submissionData[settingsPhoneField], field: settingsPhoneField });
+    }
+
+    for (const field of preferredFields) {
+      if (submissionData[field]) {
+        candidates.push({ value: submissionData[field], field });
+      }
+    }
+
+    if (candidates.length === 0) {
+      // Fallback: any field containing "phone" or "mobile"
+      for (const [key, value] of Object.entries(submissionData)) {
+        const lower = key.toLowerCase();
+        if ((lower.includes('phone') || lower.includes('mobile')) && value) {
+          candidates.push({ value, field: key });
+          break;
+        }
+      }
+    }
+
+    const selected = candidates.find((c) => !!c.value);
+    if (!selected) {
+      return { phoneNumber: null };
+    }
+
+    const raw = String(selected.value).trim();
+    if (!raw) {
+      return { phoneNumber: null };
+    }
+
+    return { phoneNumber: raw, fieldUsed: selected.field };
   }
 
   /**
