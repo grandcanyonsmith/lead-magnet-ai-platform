@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { api } from '@/lib/api'
+import { useSettings } from '@/hooks/api/useSettings'
+import { buildPublicFormUrl } from '@/utils/url'
 import { FiArrowLeft, FiEdit, FiTrash2, FiClock, FiCheckCircle, FiXCircle, FiExternalLink, FiLink, FiZap, FiSettings, FiFileText, FiCalendar, FiCopy } from 'react-icons/fi'
 
 export default function WorkflowDetailPage() {
@@ -31,6 +33,7 @@ export default function WorkflowDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [creatingForm, setCreatingForm] = useState(false)
+  const { settings } = useSettings()
 
   useEffect(() => {
     if (workflowId) {
@@ -247,7 +250,7 @@ export default function WorkflowDetailPage() {
                   <div className="flex flex-col sm:flex-row gap-2">
                     {workflow.form.public_slug && (
                       <a
-                        href={`/v1/forms/${workflow.form.public_slug}`}
+                        href={buildPublicFormUrl(workflow.form.public_slug, settings?.custom_domain)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors touch-target"
@@ -273,15 +276,13 @@ export default function WorkflowDetailPage() {
                         <input
                           type="text"
                           readOnly
-                          value={typeof window !== 'undefined' ? `${window.location.origin}/v1/forms/${workflow.form.public_slug}` : `/v1/forms/${workflow.form.public_slug}`}
+                          value={buildPublicFormUrl(workflow.form.public_slug, settings?.custom_domain)}
                           className="flex-1 text-xs font-mono bg-white border border-blue-200 rounded px-3 py-2 text-gray-900 break-all focus:outline-none focus:ring-2 focus:ring-blue-500"
                           onClick={(e) => (e.target as HTMLInputElement).select()}
                         />
                         <button
                           onClick={() => {
-                            const url = typeof window !== 'undefined' 
-                              ? `${window.location.origin}/v1/forms/${workflow.form.public_slug}`
-                              : `/v1/forms/${workflow.form.public_slug}`
+                            const url = buildPublicFormUrl(workflow.form.public_slug, settings?.custom_domain)
                             navigator.clipboard.writeText(url)
                           }}
                           className="p-2.5 text-blue-700 hover:text-blue-900 hover:bg-blue-100 rounded-lg transition-colors flex-shrink-0 touch-target border border-blue-200"

@@ -368,6 +368,7 @@ export default function JobDetailClient() {
           onCopy={copyToClipboard}
           onEditStep={handleEditStep}
           onRerunStepClick={handleRerunStepClick}
+          rerunningStep={rerunningStep}
           openPreview={openPreview}
         />
 
@@ -454,6 +455,7 @@ interface JobTabsProps {
   onCopy: (text: string) => void
   onEditStep: (stepIndex: number) => void
   onRerunStepClick: (stepIndex: number) => void
+  rerunningStep: number | null
   openPreview: (item: ArtifactGalleryItem) => void
 }
 
@@ -473,6 +475,7 @@ function JobTabs({
   onCopy,
   onEditStep,
   onRerunStepClick,
+  rerunningStep,
   openPreview,
 }: JobTabsProps) {
   const tabs: { id: TabKey; label: string }[] = [
@@ -520,6 +523,7 @@ function JobTabs({
             imageArtifactsByStep={imageArtifactsByStep}
             loadingImageArtifacts={loadingArtifacts}
             onRerunStepClick={onRerunStepClick}
+            rerunningStep={rerunningStep}
           />
         )}
 

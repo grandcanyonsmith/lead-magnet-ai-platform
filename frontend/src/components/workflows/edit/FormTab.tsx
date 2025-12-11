@@ -14,11 +14,13 @@ import {
 import { SectionCard } from '@/components/ui/SectionCard'
 import { FormFormData, FormField } from '@/hooks/useFormEdit'
 import { getFieldTypeIcon } from '@/utils/formUtils'
+import { buildPublicFormUrl } from '@/utils/url'
 
 interface FormTabProps {
   formFormData: FormFormData
   workflowName: string
   submitting: boolean
+  customDomain?: string
   onFormChange: (field: string, value: any) => void
   onFieldChange: (index: number, field: string, value: any) => void
   onAddField: () => void
@@ -157,10 +159,7 @@ export function FormTab({
               </p>
               {formFormData.public_slug && (
                 <p className="mt-1 text-xs font-medium text-primary-600">
-                  Form URL:{' '}
-                  {typeof window !== 'undefined'
-                    ? `${window.location.origin}/v1/forms/${formFormData.public_slug}`
-                    : `/v1/forms/${formFormData.public_slug}`}
+                  Form URL: {buildPublicFormUrl(formFormData.public_slug, customDomain)}
                 </p>
               )}
             </div>
