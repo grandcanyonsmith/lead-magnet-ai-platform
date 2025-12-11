@@ -70,17 +70,25 @@ Only the final `html_generation` step (step_order: 1) is being saved. Workflow s
 
 ## Fix Applied
 
-**File**: `backend/worker/services/job_completion_service.py`
+**Files**: 
+1. `backend/worker/services/job_completion_service.py`
+2. `backend/worker/services/step_processor.py`
 
 **Changes**:
-1. Added execution_steps reload from S3 in `generate_html_from_accumulated_context()` before appending HTML generation step
-2. Added execution_steps reload from S3 in `finalize_job()` before saving final execution_steps
+1. **job_completion_service.py**:
+   - Added execution_steps reload from S3 in `generate_html_from_accumulated_context()` before appending HTML generation step
+   - Added execution_steps reload from S3 in `finalize_job()` before saving final execution_steps
+
+2. **step_processor.py**:
+   - Added execution_steps reload from S3 in `process_step_batch_mode()` before processing each AI generation step
+   - Added execution_steps reload from S3 in `_process_webhook_step_batch_mode()` before processing each webhook step
 
 **Why This Fixes It**: 
 - Each workflow step correctly saves its execution step to S3 during processing
-- However, when HTML generation and finalization occurred, they used a potentially stale `execution_steps` list
-- Saving this incomplete list overwrote the S3 file, losing workflow steps
-- Now, we reload from S3 before appending/saving, ensuring all steps are preserved
+- However, the `execution_steps` list passed between steps could become stale
+- When a step saves its execution_steps list to S3, it overwrites the entire file
+- If the list is stale (missing previous steps), it would overwrite S3 and lose those steps
+- Now, we reload from S3 before processing each step and before HTML generation/finalization, ensuring all steps are preserved
 
 ## Next Steps
 

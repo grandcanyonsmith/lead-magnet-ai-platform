@@ -119,6 +119,26 @@ class StepProcessor:
         # Regular AI generation step
         step_model = step.get('model', 'gpt-5')
         
+        # CRITICAL: Reload execution_steps from S3 to ensure we have all previous steps
+        # This prevents overwriting S3 with a stale execution_steps list that might be missing
+        # steps saved by previous step processing operations.
+        try:
+            job_with_steps = self.db.get_job(job_id, s3_service=self.s3)
+            if job_with_steps and job_with_steps.get('execution_steps'):
+                execution_steps = job_with_steps['execution_steps']
+                logger.debug(f"[StepProcessor] Reloaded execution_steps from S3 before processing step (batch mode)", extra={
+                    'job_id': job_id,
+                    'step_index': step_index,
+                    'execution_steps_count': len(execution_steps)
+                })
+        except Exception as e:
+            logger.warning(f"[StepProcessor] Failed to reload execution_steps from S3, using provided list", extra={
+                'job_id': job_id,
+                'step_index': step_index,
+                'error': str(e)
+            })
+            # Continue with provided execution_steps if reload fails
+        
         # Extract tools and tool_choice from step config
         # Do NOT auto-add web_search for o4-mini-deep-research model
         default_tools = [] if step_model == 'o4-mini-deep-research' else ['web_search']
@@ -399,6 +419,26 @@ class StepProcessor:
             'step_name': step_name,
             'webhook_url': step.get('webhook_url')
         })
+        
+        # CRITICAL: Reload execution_steps from S3 to ensure we have all previous steps
+        # This prevents overwriting S3 with a stale execution_steps list that might be missing
+        # steps saved by previous step processing operations.
+        try:
+            job_with_steps = self.db.get_job(job_id, s3_service=self.s3)
+            if job_with_steps and job_with_steps.get('execution_steps'):
+                execution_steps = job_with_steps['execution_steps']
+                logger.debug(f"[StepProcessor] Reloaded execution_steps from S3 before processing webhook step (batch mode)", extra={
+                    'job_id': job_id,
+                    'step_index': step_index,
+                    'execution_steps_count': len(execution_steps)
+                })
+        except Exception as e:
+            logger.warning(f"[StepProcessor] Failed to reload execution_steps from S3, using provided list", extra={
+                'job_id': job_id,
+                'step_index': step_index,
+                'error': str(e)
+            })
+            # Continue with provided execution_steps if reload fails
         
         # Get job and submission data
         job = self.db.get_job(job_id)
