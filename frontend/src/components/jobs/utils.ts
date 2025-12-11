@@ -83,6 +83,22 @@ export function getStepStatus(
     }
   }
 
+  // If job is completed, all steps that should have run are completed
+  // This handles cases where step data might be missing but job completed successfully
+  if (jobStatus === 'completed') {
+    // If step has an error, mark as failed
+    if (step.error) {
+      return 'failed'
+    }
+    // Otherwise, if job completed, the step must have completed
+    // Only mark as completed if this step should have run (not future steps)
+    // Steps are sequential, so if job completed, all steps up to the last one completed
+    const lastCompletedStepIndex = sortedSteps.length - 1
+    if (stepIndex <= lastCompletedStepIndex) {
+      return 'completed'
+    }
+  }
+
   return 'pending'
 }
 

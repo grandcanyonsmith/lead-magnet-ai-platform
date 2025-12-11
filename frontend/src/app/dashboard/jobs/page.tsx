@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { api } from '@/lib/api'
 import { FiClock, FiLoader, FiAlertTriangle, FiTrendingUp } from 'react-icons/fi'
 import { useJobFilters, useJobSorting } from '@/hooks/useJobFilters'
@@ -16,6 +16,7 @@ import toast from 'react-hot-toast'
 
 export default function JobsPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [jobs, setJobs] = useState<Job[]>([])
   const [workflows, setWorkflows] = useState<Workflow[]>([])
   const [workflowMap, setWorkflowMap] = useState<Record<string, string>>({})
@@ -170,6 +171,18 @@ export default function JobsPage() {
     setSearchQuery('')
     setCurrentPage(1)
   }, [setStatusFilter, setWorkflowFilter, setSearchQuery])
+
+  // Initialize workflow filter from URL query parameter on mount
+  const hasInitializedFromUrlRef = useRef(false)
+  useEffect(() => {
+    if (!hasInitializedFromUrlRef.current) {
+      const workflowIdFromUrl = searchParams?.get('workflow_id')
+      if (workflowIdFromUrl) {
+        setWorkflowFilter(workflowIdFromUrl)
+      }
+      hasInitializedFromUrlRef.current = true
+    }
+  }, [searchParams, setWorkflowFilter])
 
   useEffect(() => {
     const loadWorkflows = async () => {
