@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { api } from '@/lib/api'
@@ -101,120 +101,96 @@ export function useJobResource(jobId: string | null, router: RouterInstance): Us
   const [error, setError] = useState<string | null>(null)
   const [resubmitting, setResubmitting] = useState(false)
   const [lastLoadedAt, setLastLoadedAt] = useState<Date | null>(null)
+  
+  // Track loading promise to prevent concurrent loads for the same jobId
+  const loadingPromiseRef = useRef<Promise<void> | null>(null)
 
   const loadJob = useCallback(async () => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useJobDetail.ts:105',message:'loadJob called',data:{jobId},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
     if (!jobId || jobId.trim() === '' || jobId === '_') {
       setError('Invalid job ID. Please select a job from the list.')
       setLoading(false)
       return
     }
-
-    try {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useJobDetail.ts:113',message:'API call: getJob',data:{jobId},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
-      const data = await api.getJob(jobId)
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useJobDetail.ts:115',message:'API response: getJob',data:{jobId,hasWorkflowId:!!data.workflow_id,hasSubmissionId:!!data.submission_id},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
-      setJob(data)
-      setLastLoadedAt(new Date())
-
-      if (data.workflow_id) {
-        try {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useJobDetail.ts:119',message:'API call: getWorkflow',data:{workflowId:data.workflow_id},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'C'})}).catch(()=>{});
-          // #endregion
-          const workflowData = await api.getWorkflow(data.workflow_id)
-          setWorkflow(workflowData)
-        } catch (err) {
-          console.error('Failed to load workflow:', err)
-        }
-      } else {
-        setWorkflow(null)
-      }
-
-      if (data.submission_id) {
-        try {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useJobDetail.ts:130',message:'API call: getSubmission',data:{submissionId:data.submission_id},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'C'})}).catch(()=>{});
-          // #endregion
-          const submissionData = await api.getSubmission(data.submission_id)
-          setSubmission(submissionData)
-
-          if (submissionData.form_id) {
-            try {
-              // #region agent log
-              fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useJobDetail.ts:135',message:'API call: getForm',data:{formId:submissionData.form_id},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'C'})}).catch(()=>{});
-              // #endregion
-              const formData = await api.getForm(submissionData.form_id)
-              setForm(formData)
-            } catch (err) {
-              console.error('Failed to load form:', err)
-              setForm(null)
-            }
-          } else {
-            setForm(null)
-          }
-        } catch (err) {
-          console.error('Failed to load submission:', err)
-          setSubmission(null)
-          setForm(null)
-        }
-      } else {
-        setSubmission(null)
-        setForm(null)
-      }
-
-      if (data.workflow_id) {
-        try {
-          const workflowData = await api.getWorkflow(data.workflow_id)
-          setWorkflow(workflowData)
-        } catch (err) {
-          console.error('Failed to load workflow:', err)
-        }
-      } else {
-        setWorkflow(null)
-      }
-
-      if (data.submission_id) {
-        try {
-          const submissionData = await api.getSubmission(data.submission_id)
-          setSubmission(submissionData)
-
-          if (submissionData.form_id) {
-            try {
-              const formData = await api.getForm(submissionData.form_id)
-              setForm(formData)
-            } catch (err) {
-              console.error('Failed to load form:', err)
-              setForm(null)
-            }
-          } else {
-            setForm(null)
-          }
-        } catch (err) {
-          console.error('Failed to load submission:', err)
-          setSubmission(null)
-          setForm(null)
-        }
-      } else {
-        setSubmission(null)
-        setForm(null)
-      }
-
-      setError(null)
-    } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } }; message?: string }
-      console.error('Failed to load job:', error)
-      setError(err.response?.data?.message || err.message || 'Failed to load lead magnet')
-      setLoading(false)
-    } finally {
-      setLoading(false)
+    
+    // If there's already a load in progress for this jobId, return the existing promise
+    if (loadingPromiseRef.current) {
+      return loadingPromiseRef.current
     }
+    
+    // Create and IMMEDIATELY store the promise to prevent race conditions
+    // We create a promise that wraps the async work
+    let promiseResolve: (() => void) | undefined
+    let promiseReject: ((error: unknown) => void) | undefined
+    const loadPromise = new Promise<void>((resolve, reject) => {
+      promiseResolve = resolve
+      promiseReject = reject
+    })
+    
+    // Store the promise IMMEDIATELY before starting async work
+    loadingPromiseRef.current = loadPromise
+    
+    // Now start the async work
+    ;(async () => {
+      try {
+        const data = await api.getJob(jobId)
+        setJob(data)
+        setLastLoadedAt(new Date())
+
+        if (data.workflow_id) {
+          try {
+            const workflowData = await api.getWorkflow(data.workflow_id)
+            setWorkflow(workflowData)
+          } catch (err) {
+            console.error('Failed to load workflow:', err)
+          }
+        } else {
+          setWorkflow(null)
+        }
+
+        if (data.submission_id) {
+          try {
+            const submissionData = await api.getSubmission(data.submission_id)
+            setSubmission(submissionData)
+
+            if (submissionData.form_id) {
+              try {
+                const formData = await api.getForm(submissionData.form_id)
+                setForm(formData)
+              } catch (err) {
+                console.error('Failed to load form:', err)
+                setForm(null)
+              }
+            } else {
+              setForm(null)
+            }
+          } catch (err) {
+            console.error('Failed to load submission:', err)
+            setSubmission(null)
+            setForm(null)
+          }
+        } else {
+          setSubmission(null)
+          setForm(null)
+        }
+
+        setError(null)
+        promiseResolve?.()
+      } catch (error: unknown) {
+        const err = error as { response?: { data?: { message?: string } }; message?: string }
+        console.error('Failed to load job:', error)
+        setError(err.response?.data?.message || err.message || 'Failed to load lead magnet')
+        setLoading(false)
+        promiseReject?.(error)
+      } finally {
+        setLoading(false)
+        // Clear the promise ref when done (only if it's still this promise)
+        if (loadingPromiseRef.current === loadPromise) {
+          loadingPromiseRef.current = null
+        }
+      }
+    })()
+    
+    return loadPromise
   }, [jobId])
 
   const refreshJob = useCallback(async () => {
@@ -251,10 +227,16 @@ export function useJobResource(jobId: string | null, router: RouterInstance): Us
     }
   }, [jobId, router])
 
+  // Track the last jobId we cleared the ref for
+  const lastClearedJobIdRef = useRef<string | null>(null)
+  
   useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useJobDetail.ts:199',message:'useJobResource loadJob effect triggered',data:{jobId,jobIdValid:jobId && jobId.trim() !== '' && jobId !== '_'},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
+    // Only clear loading promise when jobId actually changes (not on every render)
+    if (lastClearedJobIdRef.current !== jobId) {
+      loadingPromiseRef.current = null
+      lastClearedJobIdRef.current = jobId
+    }
+    
     if (jobId && jobId.trim() !== '' && jobId !== '_') {
       loadJob()
     } else {
@@ -298,75 +280,117 @@ export function useJobExecution({ jobId, job, setJob, loadJob }: UseJobExecution
   const [executionStepsError, setExecutionStepsError] = useState<string | null>(null)
   const [rerunningStep, setRerunningStep] = useState<number | null>(null)
   const [hasLoadedExecutionSteps, setHasLoadedExecutionSteps] = useState(false)
+  
+  // Track loading promise to prevent concurrent loads for the same jobId
+  const loadingExecutionStepsPromiseRef = useRef<Promise<void> | null>(null)
+  const lastClearedExecutionStepsJobIdRef = useRef<string | null>(null)
+  
+  // Extract S3 key as a stable value to avoid re-running effect when job reference changes
+  const executionStepsS3Key = useMemo(() => job?.execution_steps_s3_key || null, [job?.execution_steps_s3_key])
 
   useEffect(() => {
     setHasLoadedExecutionSteps(false)
+    // Clear promise ref when jobId changes
+    loadingExecutionStepsPromiseRef.current = null
+    lastClearedExecutionStepsJobIdRef.current = jobId
   }, [jobId])
 
   const loadExecutionSteps = useCallback(
     async (jobSnapshot?: Job | null) => {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useJobDetail.ts:247',message:'loadExecutionSteps called',data:{jobId,hasSnapshot:!!jobSnapshot},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'D'})}).catch(()=>{});
-      // #endregion
       if (!jobId) return
-      const snapshot = jobSnapshot ?? job
-      if (!snapshot) return
-
-      try {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useJobDetail.ts:254',message:'API call: getExecutionSteps',data:{jobId},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'D'})}).catch(()=>{});
-        // #endregion
-        const executionSteps = await api.getExecutionSteps(jobId)
-        if (Array.isArray(executionSteps)) {
-          setJob((prevJob) => (prevJob ? { ...prevJob, execution_steps: executionSteps } : prevJob))
-          setExecutionStepsError(null)
-          setHasLoadedExecutionSteps(true)
-        } else {
-          const errorMsg = `Invalid execution steps data format: expected array, got ${typeof executionSteps}`
-          console.error(`❌ ${errorMsg} for job ${jobId}`)
-          setExecutionStepsError(errorMsg)
-        }
-      } catch (err: unknown) {
-        const error = err as { response?: { data?: { message?: string } }; message?: string }
-        let errorMsg = `Error fetching execution steps: ${error.response?.data?.message || error.message || 'Unknown error'}`
-        if (snapshot?.execution_steps_s3_key) {
-          errorMsg += ` (S3 Key: ${snapshot.execution_steps_s3_key})`
-        }
-        console.error(`❌ ${errorMsg} for job ${jobId}`, {
-          error: err,
-          response: error.response,
-        })
-        setExecutionStepsError(errorMsg)
+      
+      // If there's already a load in progress for this jobId, return the existing promise
+      if (loadingExecutionStepsPromiseRef.current) {
+        return loadingExecutionStepsPromiseRef.current
       }
+      
+      // Create and IMMEDIATELY store the promise to prevent race conditions
+      let promiseResolve: (() => void) | undefined
+      let promiseReject: ((error: unknown) => void) | undefined
+      const loadPromise = new Promise<void>((resolve, reject) => {
+        promiseResolve = resolve
+        promiseReject = reject
+      })
+      
+      // Store the promise IMMEDIATELY before starting async work
+      loadingExecutionStepsPromiseRef.current = loadPromise
+      
+      // Now start the async work
+      ;(async () => {
+        const snapshot = jobSnapshot
+        if (!snapshot) {
+          const errorMsg = 'No job snapshot provided'
+          setExecutionStepsError(errorMsg)
+          setHasLoadedExecutionSteps(true) // Mark as loaded to prevent retries
+          promiseReject?.(new Error(errorMsg))
+          // Clear the promise ref when done
+          if (loadingExecutionStepsPromiseRef.current === loadPromise) {
+            loadingExecutionStepsPromiseRef.current = null
+          }
+          return
+        }
+
+        try {
+          const executionSteps = await api.getExecutionSteps(jobId)
+          if (Array.isArray(executionSteps)) {
+            setJob((prevJob) => (prevJob ? { ...prevJob, execution_steps: executionSteps } : prevJob))
+            setExecutionStepsError(null)
+            setHasLoadedExecutionSteps(true)
+            promiseResolve?.()
+          } else {
+            const errorMsg = `Invalid execution steps data format: expected array, got ${typeof executionSteps}`
+            console.error(`❌ ${errorMsg} for job ${jobId}`)
+            setExecutionStepsError(errorMsg)
+            promiseReject?.(new Error(errorMsg))
+          }
+        } catch (err: unknown) {
+          const error = err as { response?: { data?: { message?: string } }; message?: string }
+          let errorMsg = `Error fetching execution steps: ${error.response?.data?.message || error.message || 'Unknown error'}`
+          if (snapshot?.execution_steps_s3_key) {
+            errorMsg += ` (S3 Key: ${snapshot.execution_steps_s3_key})`
+          }
+          console.error(`❌ ${errorMsg} for job ${jobId}`, {
+            error: err,
+            response: error.response,
+          })
+          setExecutionStepsError(errorMsg)
+          promiseReject?.(err)
+        } finally {
+          // Clear the promise ref when done (only if it's still this promise)
+          if (loadingExecutionStepsPromiseRef.current === loadPromise) {
+            loadingExecutionStepsPromiseRef.current = null
+          }
+        }
+      })()
+      
+      return loadPromise
     },
-    [jobId, job, setJob]
+    [jobId, setJob] // Removed 'job' dependency - use jobSnapshot parameter instead
   )
 
   useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useJobDetail.ts:280',message:'useJobExecution loadExecutionSteps effect triggered',data:{jobId,hasJob:!!job,hasExecutionSteps:Array.isArray(job?.execution_steps) && job?.execution_steps.length > 0,hasLoadedExecutionSteps},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
     if (!jobId || !job) {
+      return
+    }
+
+    // If we've already loaded execution steps for this jobId, don't reload
+    // (even if execution_steps is empty - that's valid data)
+    if (hasLoadedExecutionSteps) {
       return
     }
 
     const hasExecutionSteps = Array.isArray(job.execution_steps) && job.execution_steps.length > 0
     const shouldLoadFromApi =
       !hasExecutionSteps ||
-      (job.execution_steps_s3_key && !hasLoadedExecutionSteps)
+      (executionStepsS3Key && !hasLoadedExecutionSteps)
 
     if (shouldLoadFromApi) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useJobDetail.ts:291',message:'Calling loadExecutionSteps',data:{jobId},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'D'})}).catch(()=>{});
-      // #endregion
       loadExecutionSteps(job)
     }
-  }, [jobId, job, loadExecutionSteps, hasLoadedExecutionSteps])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobId, executionStepsS3Key, hasLoadedExecutionSteps]) // Use memoized S3 key value instead of job reference
 
   useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useJobDetail.ts:295',message:'useJobExecution polling effect triggered',data:{jobId,hasJob:!!job,jobStatus:job?.status,rerunningStep,shouldPoll:job?.status === 'processing' || rerunningStep !== null},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'F'})}).catch(()=>{});
-    // #endregion
     if (!job || !jobId) {
       return
     }
@@ -376,14 +400,8 @@ export function useJobExecution({ jobId, job, setJob, loadJob }: UseJobExecution
       return
     }
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useJobDetail.ts:305',message:'Setting up polling interval',data:{jobId,jobStatus:job.status},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'F'})}).catch(()=>{});
-    // #endregion
     const pollInterval = setInterval(async () => {
       try {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useJobDetail.ts:307',message:'Polling: API call getJob',data:{jobId},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'F'})}).catch(()=>{});
-        // #endregion
         const data = await api.getJob(jobId)
         setJob((prevJob) => (prevJob ? { ...prevJob, status: data.status, updated_at: data.updated_at } : prevJob))
         await loadExecutionSteps(data)
@@ -399,9 +417,6 @@ export function useJobExecution({ jobId, job, setJob, loadJob }: UseJobExecution
     }, 3000)
 
     return () => {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useJobDetail.ts:321',message:'Clearing polling interval',data:{jobId},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'F'})}).catch(()=>{});
-      // #endregion
       clearInterval(pollInterval)
     }
   }, [job, jobId, loadExecutionSteps, rerunningStep, setJob])

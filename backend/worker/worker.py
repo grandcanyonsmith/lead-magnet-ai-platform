@@ -7,6 +7,7 @@ Processes jobs by generating AI reports and rendering HTML templates.
 import os
 import sys
 import logging
+import signal
 from typing import Dict, Any
 
 from processor import JobProcessor
@@ -22,9 +23,30 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Global flag to track if we're shutting down
+_shutting_down = False
+_processor_instance = None
+
+
+def signal_handler(signum, frame):
+    """Handle termination signals gracefully."""
+    global _shutting_down
+    signal_name = signal.Signals(signum).name
+    logger.warning(f"[Worker] Received signal {signal_name} ({signum}), initiating graceful shutdown...")
+    print(f"ERROR: Worker received signal {signal_name}, shutting down gracefully...", file=sys.stderr)
+    sys.stderr.flush()
+    _shutting_down = True
+    # Exit with error code to indicate abnormal termination
+    sys.exit(130 if signum == signal.SIGINT else 143)
+
 
 def main():
     """Main entry point for the worker."""
+    global _processor_instance
+    
+    # Register signal handlers for graceful shutdown
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
     
     # Suppress Pydantic warnings at the very start
     import warnings
@@ -60,12 +82,23 @@ def main():
         db_service = DynamoDBService()
         s3_service = S3Service()
         processor = JobProcessor(db_service, s3_service)
+        _processor_instance = processor  # Store for signal handler
         
         print(f"[Worker] Services initialized, processing job...", file=sys.stdout)
         sys.stdout.flush()
         
+        # Check if we're shutting down before processing
+        if _shutting_down:
+            logger.warning(f"[Worker] Shutdown requested before job processing started")
+            print(f"ERROR: Shutdown requested before job processing", file=sys.stderr)
+            sys.stderr.flush()
+            sys.exit(130)
+        
         # Process the job
         result = processor.process_job(job_id)
+        
+        # Flush stdout after processing
+        sys.stdout.flush()
         
         if result['success']:
             logger.info(f"Job {job_id} completed successfully")
@@ -82,7 +115,11 @@ def main():
     except KeyboardInterrupt:
         logger.warning(f"Job {job_id} interrupted by user")
         print(f"ERROR: Job {job_id} interrupted", file=sys.stderr)
+        sys.stderr.flush()
         sys.exit(130)  # Standard exit code for SIGINT
+    except SystemExit:
+        # Re-raise SystemExit to allow proper exit
+        raise
     except Exception as e:
         # Log full exception with traceback
         import traceback
@@ -93,6 +130,7 @@ def main():
         print(f"ERROR: Fatal error processing job {job_id}: {str(e)}", file=sys.stderr)
         print(f"TRACEBACK:\n{error_traceback}", file=sys.stderr)
         sys.stderr.flush()
+        sys.stdout.flush()  # Also flush stdout to ensure all logs are captured
         
         # Use error handler service for consistent error handling
         # Only use error handler if db_service was successfully initialized

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
-import { FiFile, FiImage, FiFileText, FiCode } from 'react-icons/fi'
+import { FiFile, FiImage, FiFileText, FiCode, FiMonitor, FiTablet, FiSmartphone } from 'react-icons/fi'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { api } from '@/lib/api'
@@ -11,6 +11,9 @@ interface PreviewRendererProps {
   fileName?: string
   className?: string
   artifactId?: string
+  isFullScreen?: boolean
+  viewMode?: 'desktop' | 'tablet' | 'mobile'
+  onViewModeChange?: (mode: 'desktop' | 'tablet' | 'mobile') => void
 }
 
 /**
@@ -63,7 +66,7 @@ function extractHtmlFromCodeBlocks(text: string): string {
   return text
 }
 
-export function PreviewRenderer({ contentType, objectUrl, fileName, className = '', artifactId }: PreviewRendererProps) {
+export function PreviewRenderer({ contentType, objectUrl, fileName, className = '', artifactId, isFullScreen = false, viewMode, onViewModeChange }: PreviewRendererProps) {
   const [imageLoaded, setImageLoaded] = useState(false)
   const [imageError, setImageError] = useState(false)
   const [isInView, setIsInView] = useState(false)
@@ -193,6 +196,35 @@ export function PreviewRenderer({ contentType, objectUrl, fileName, className = 
 
   const renderPreview = () => {
     if (effectiveContentType.startsWith('image/')) {
+      if (isFullScreen) {
+        // Full-screen mode: use regular img tag for better scaling
+        return (
+          <div className="relative flex items-center justify-center w-full h-full">
+            {!imageLoaded && !imageError && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black">
+                <FiImage className="w-12 h-12 text-white/50 animate-pulse" />
+              </div>
+            )}
+            {imageError && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black">
+                <FiImage className="w-12 h-12 text-white/50" />
+              </div>
+            )}
+            {isInView && objectUrl && (
+              <img
+                src={objectUrl}
+                alt={fileName || 'Preview'}
+                className={`max-w-[95vw] max-h-[95vh] object-contain ${imageLoaded ? 'opacity-100' : 'opacity-0'} transition-opacity`}
+                onLoad={() => setImageLoaded(true)}
+                onError={() => setImageError(true)}
+                style={{ maxWidth: '95vw', maxHeight: '95vh' }}
+              />
+            )}
+          </div>
+        )
+      }
+      
+      // Regular mode: use Next.js Image with fill
       return (
         <div className="relative w-full h-full flex items-center justify-center min-h-0">
           {!imageLoaded && !imageError && (
@@ -242,6 +274,105 @@ export function PreviewRenderer({ contentType, objectUrl, fileName, className = 
     }
 
     if (effectiveContentType === 'text/html' || effectiveContentType === 'application/xhtml+xml') {
+      if (isFullScreen) {
+        // Full-screen HTML rendering with view mode support
+        return (
+          <div className="relative w-full h-full bg-white flex flex-col">
+            {/* Header with view mode switcher */}
+            {onViewModeChange && (
+              <div className="flex items-center justify-between px-4 py-3 bg-gray-100 border-b border-gray-200">
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => onViewModeChange('desktop')}
+                    className={`p-2 rounded-lg transition-colors ${
+                      viewMode === 'desktop'
+                        ? 'bg-gray-700 text-white'
+                        : 'bg-white text-gray-700 hover:bg-gray-200'
+                    }`}
+                    aria-label="Desktop view"
+                    title="Desktop view"
+                  >
+                    <FiMonitor className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => onViewModeChange('tablet')}
+                    className={`p-2 rounded-lg transition-colors ${
+                      viewMode === 'tablet'
+                        ? 'bg-gray-700 text-white'
+                        : 'bg-white text-gray-700 hover:bg-gray-200'
+                    }`}
+                    aria-label="Tablet view"
+                    title="Tablet view"
+                  >
+                    <FiTablet className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => onViewModeChange('mobile')}
+                    className={`p-2 rounded-lg transition-colors ${
+                      viewMode === 'mobile'
+                        ? 'bg-gray-700 text-white'
+                        : 'bg-white text-gray-700 hover:bg-gray-200'
+                    }`}
+                    aria-label="Mobile view"
+                    title="Mobile view"
+                  >
+                    <FiSmartphone className="w-5 h-5" />
+                  </button>
+                </div>
+                {fileName && (
+                  <div className="text-sm font-medium text-gray-700 truncate max-w-md">
+                    {fileName}
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* HTML content area */}
+            <div className="flex-1 min-h-0">
+              {isInView ? (
+                htmlError ? (
+                  <div className="flex items-center justify-center h-full bg-gray-50">
+                    <div className="text-center">
+                      <FiCode className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                      <p className="text-xs text-gray-500">Failed to load HTML</p>
+                    </div>
+                  </div>
+                ) : htmlContent ? (
+                  <div 
+                    className={`bg-white transition-all duration-300 h-full ${
+                      viewMode === 'tablet' ? 'w-[768px] max-w-[768px] mx-auto' : 
+                      viewMode === 'mobile' ? 'w-[375px] max-w-[375px] mx-auto' : 
+                      'w-full'
+                    }`}
+                  >
+                    <iframe
+                      srcDoc={htmlContent}
+                      className="w-full h-full border-0"
+                      title={fileName || 'HTML Preview'}
+                      sandbox="allow-same-origin allow-scripts allow-forms"
+                      referrerPolicy="no-referrer"
+                      style={{ display: 'block', height: '100%' }}
+                    />
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-full bg-black">
+                    <div className="text-center">
+                      <FiCode className="w-12 h-12 text-white/50 mx-auto mb-2 animate-pulse" />
+                      <p className="text-xs text-white/70">Loading HTML...</p>
+                    </div>
+                  </div>
+                )
+              ) : (
+                <div className="flex items-center justify-center h-full bg-black">
+                  <FiCode className="w-12 h-12 text-white/50" />
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      }
+      
+      // Regular HTML rendering
       return (
         <div className="relative w-full h-full bg-white">
           {isInView ? (
@@ -278,6 +409,45 @@ export function PreviewRenderer({ contentType, objectUrl, fileName, className = 
     }
 
     if (effectiveContentType === 'text/markdown') {
+      if (isFullScreen) {
+        // Full-screen markdown rendering with scrolling
+        return (
+          <div className="relative w-full bg-white">
+            {isInView ? (
+              markdownError ? (
+                <div className="flex items-center justify-center min-h-[95vh] bg-gray-50">
+                  <div className="text-center">
+                    <FiFileText className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                    <p className="text-xs text-gray-500">Failed to load markdown</p>
+                  </div>
+                </div>
+              ) : markdownContent ? (
+                <div className="p-8 prose prose-lg max-w-none">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {markdownContent}
+                  </ReactMarkdown>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center min-h-[95vh] bg-black">
+                  <div className="text-center">
+                    <FiFileText className="w-12 h-12 text-white/50 mx-auto mb-2 animate-pulse" />
+                    <p className="text-xs text-white/70">Loading markdown...</p>
+                  </div>
+                </div>
+              )
+            ) : (
+              <div className="flex items-center justify-center min-h-[95vh] bg-black">
+                <div className="text-center">
+                  <FiFileText className="w-12 h-12 text-white/50 mx-auto mb-2" />
+                  <p className="text-xs text-white/70">Markdown File</p>
+                </div>
+              </div>
+            )}
+          </div>
+        )
+      }
+      
+      // Regular markdown rendering
       return (
         <div className="relative w-full h-full bg-white overflow-auto">
           {isInView ? (

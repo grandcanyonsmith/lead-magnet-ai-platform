@@ -50,9 +50,6 @@ import type { Artifact } from '@/types/artifact'
 // ---------------------------------------------------------------------------
 
 export default function JobDetailClient() {
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client.tsx:52',message:'JobDetailClient render',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'A'})}).catch(()=>{});
-  // #endregion
   const router = useRouter()
 
   const [showResubmitModal, setShowResubmitModal] = useState(false)
@@ -81,10 +78,6 @@ export default function JobDetailClient() {
     lastLoadedAt,
   } = useJobDetail()
 
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client.tsx:79',message:'After useJobDetail',data:{jobId:job?.job_id,hasJob:!!job,hasWorkflow:!!workflow,loading},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'C'})}).catch(()=>{});
-  // #endregion
-
   const {
     showExecutionSteps,
     setShowExecutionSteps,
@@ -94,10 +87,6 @@ export default function JobDetailClient() {
 
   const mergedSteps = useMergedSteps({ job, workflow })
 
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client.tsx:91',message:'After useMergedSteps',data:{mergedStepsLength:mergedSteps.length,mergedStepsRef:mergedSteps},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'B'})}).catch(()=>{});
-  // #endregion
-
   const {
     imageArtifactsByStep,
     artifacts: jobArtifacts,
@@ -106,10 +95,6 @@ export default function JobDetailClient() {
     jobId: job?.job_id,
     steps: mergedSteps,
   })
-
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client.tsx:97',message:'After useImageArtifacts',data:{jobId:job?.job_id,loadingArtifacts,artifactsCount:jobArtifacts.length},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'B,E'})}).catch(()=>{});
-  // #endregion
 
   const [activeTab, setActiveTab] = useState<TabKey>('execution')
 
@@ -539,11 +524,13 @@ function JobTabs({
         )}
 
         {activeTab === 'artifacts' && (
-          <ArtifactGallery
-            items={artifactGalleryItems}
-            loading={loadingArtifacts}
-            onPreview={openPreview}
-          />
+          <div id="job-tab-panel-artifacts">
+            <ArtifactGallery
+              items={artifactGalleryItems}
+              loading={loadingArtifacts}
+              onPreview={openPreview}
+            />
+          </div>
         )}
 
         {activeTab === 'raw' && <RawJsonPanel data={job} />}
