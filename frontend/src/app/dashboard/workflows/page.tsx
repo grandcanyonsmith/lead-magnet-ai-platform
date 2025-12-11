@@ -315,10 +315,35 @@ export default function WorkflowsPage() {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
       if (openMenuId) {
-        const menuElement = menuRefs.current[openMenuId]
-        if (menuElement && !menuElement.contains(event.target as Node)) {
+        const target = event.target as HTMLElement
+        if (!target) {
           setOpenMenuId(null)
+          return
         }
+        
+        // Check if click is on a menu item using data attribute (more reliable than refs)
+        const menuItem = target.closest('[data-menu-item="true"]')
+        const menuContainer = target.closest('[data-menu-id]')
+        
+        // If click is on a menu item or inside a menu container for the open menu, don't close
+        if (menuItem || (menuContainer && menuContainer.getAttribute('data-menu-id') === openMenuId)) {
+          return // Don't close menu - let the button's onClick handle it
+        }
+        
+        // Also check refs for backward compatibility (mobile and desktop use different ref keys)
+        const mobileMenuElement = menuRefs.current[`mobile-${openMenuId}`]
+        const desktopMenuElement = menuRefs.current[openMenuId]
+        const menuElement = mobileMenuElement || desktopMenuElement
+        
+        if (menuElement) {
+          // Check if target is inside the menu element
+          if (menuElement.contains(target)) {
+            return
+          }
+        }
+        
+        // Click is outside menu - close it
+        setOpenMenuId(null)
       }
     }
 
@@ -556,13 +581,15 @@ export default function WorkflowsPage() {
                       </button>
                       {openMenuId === workflow.workflow_id && (
                         <div
-                          ref={(el) => { menuRefs.current[workflow.workflow_id] = el; }}
+                          ref={(el) => { menuRefs.current[`mobile-${workflow.workflow_id}`] = el; }}
+                          data-menu-id={workflow.workflow_id}
                           className="absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-200 z-10"
                           onMouseDown={(e) => e.stopPropagation()}
                           onTouchStart={(e) => e.stopPropagation()}
                         >
                           <div className="py-1">
                             <button
+                              data-menu-item="true"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 e.preventDefault()
@@ -573,14 +600,15 @@ export default function WorkflowsPage() {
                                   router.push(`/dashboard/workflows/${workflow.workflow_id}`)
                                 }
                               }}
-                              onPointerDown={(e) => {
+                              onTouchEnd={(e) => {
                                 e.stopPropagation()
-                              }}
-                              onTouchStart={(e) => {
-                                e.stopPropagation()
-                              }}
-                              onMouseDown={(e) => {
-                                e.stopPropagation()
+                                e.preventDefault()
+                                setOpenMenuId(null)
+                                if (typeof window !== 'undefined') {
+                                  window.location.href = `/dashboard/workflows/${workflow.workflow_id}`
+                                } else {
+                                  router.push(`/dashboard/workflows/${workflow.workflow_id}`)
+                                }
                               }}
                               className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 active:bg-gray-100 flex items-center touch-target"
                             >
@@ -588,6 +616,7 @@ export default function WorkflowsPage() {
                               View
                             </button>
                             <button
+                              data-menu-item="true"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 e.preventDefault()
@@ -598,14 +627,15 @@ export default function WorkflowsPage() {
                                   router.push(`/dashboard/workflows/${workflow.workflow_id}/edit`)
                                 }
                               }}
-                              onPointerDown={(e) => {
+                              onTouchEnd={(e) => {
                                 e.stopPropagation()
-                              }}
-                              onTouchStart={(e) => {
-                                e.stopPropagation()
-                              }}
-                              onMouseDown={(e) => {
-                                e.stopPropagation()
+                                e.preventDefault()
+                                setOpenMenuId(null)
+                                if (typeof window !== 'undefined') {
+                                  window.location.href = `/dashboard/workflows/${workflow.workflow_id}/edit`
+                                } else {
+                                  router.push(`/dashboard/workflows/${workflow.workflow_id}/edit`)
+                                }
                               }}
                               className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 active:bg-gray-100 flex items-center touch-target"
                             >
@@ -613,14 +643,18 @@ export default function WorkflowsPage() {
                               Edit
                             </button>
                             <button
+                              data-menu-item="true"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 e.preventDefault()
                                 setOpenMenuId(null)
                                 handleDelete(workflow.workflow_id)
                               }}
-                              onTouchStart={(e) => {
+                              onTouchEnd={(e) => {
                                 e.stopPropagation()
+                                e.preventDefault()
+                                setOpenMenuId(null)
+                                handleDelete(workflow.workflow_id)
                               }}
                               className="w-full text-left px-3 py-2 text-xs text-red-600 hover:bg-red-50 active:bg-red-50 flex items-center touch-target"
                             >
@@ -629,6 +663,7 @@ export default function WorkflowsPage() {
                             </button>
                             {formUrl && (
                               <button
+                                data-menu-item="true"
                                 onClick={async (e) => {
                                   e.stopPropagation()
                                   e.preventDefault()
@@ -636,8 +671,12 @@ export default function WorkflowsPage() {
                                   // Small delay to show feedback before closing
                                   setTimeout(() => setOpenMenuId(null), 100)
                                 }}
-                                onTouchStart={(e) => {
+                                onTouchEnd={async (e) => {
                                   e.stopPropagation()
+                                  e.preventDefault()
+                                  await copyToClipboard(formUrl, workflow.workflow_id)
+                                  // Small delay to show feedback before closing
+                                  setTimeout(() => setOpenMenuId(null), 100)
                                 }}
                                 className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 active:bg-gray-100 flex items-center touch-target border-t border-gray-100"
                               >
@@ -933,6 +972,7 @@ export default function WorkflowsPage() {
                           {openMenuId === workflow.workflow_id && (
                             <div
                               ref={(el) => { menuRefs.current[workflow.workflow_id] = el; }}
+                              data-menu-id={workflow.workflow_id}
                               className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10"
                               onMouseDown={(e) => e.stopPropagation()}
                               onTouchStart={(e) => e.stopPropagation()}

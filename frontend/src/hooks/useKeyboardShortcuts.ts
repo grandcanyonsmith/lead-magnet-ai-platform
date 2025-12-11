@@ -26,6 +26,13 @@ export function useKeyboardShortcuts({
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
       const modKey = isMac ? e.metaKey : e.ctrlKey
 
+      // Check if user is typing in an input field
+      const target = e.target as HTMLElement
+      const isInputField = target.tagName === 'INPUT' || 
+                          target.tagName === 'TEXTAREA' || 
+                          target.tagName === 'SELECT' ||
+                          target.isContentEditable
+
       // Cmd/Ctrl+K: Open search
       if (modKey && e.key === 'k' && onSearch) {
         e.preventDefault()
@@ -41,7 +48,8 @@ export function useKeyboardShortcuts({
       }
 
       // Number keys (1-5): Navigate to nav items
-      if (onNavigate && !modKey && !e.altKey && !e.shiftKey) {
+      // Only handle if NOT typing in an input field
+      if (onNavigate && !modKey && !e.altKey && !e.shiftKey && !isInputField) {
         const num = parseInt(e.key)
         if (num >= 1 && num <= navItemsCount) {
           e.preventDefault()
