@@ -319,7 +319,14 @@ export function useJobExecution({ jobId, job, setJob, loadJob }: UseJobExecution
       ;(async () => {
         const snapshot = jobSnapshot
         if (!snapshot) {
-          promiseReject?.(new Error('No job snapshot provided'))
+          const errorMsg = 'No job snapshot provided'
+          setExecutionStepsError(errorMsg)
+          setHasLoadedExecutionSteps(true) // Mark as loaded to prevent retries
+          promiseReject?.(new Error(errorMsg))
+          // Clear the promise ref when done
+          if (loadingExecutionStepsPromiseRef.current === loadPromise) {
+            loadingExecutionStepsPromiseRef.current = null
+          }
           return
         }
 

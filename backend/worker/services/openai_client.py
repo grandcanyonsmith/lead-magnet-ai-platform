@@ -304,8 +304,24 @@ class OpenAIClient:
                 'tools': params.get('tools', []),
                 'tool_choice': params.get('tool_choice')
             })
+            # Flush logs before making the API call to ensure they're captured
+            import sys
+            sys.stdout.flush()
+            sys.stderr.flush()
             
-            response = self.client.responses.create(**params)
+            try:
+                response = self.client.responses.create(**params)
+            except Exception as api_error:
+                # Log and flush immediately on API error
+                logger.exception("[OpenAI Client] API call failed", extra={
+                    'job_id': job_id,
+                    'tenant_id': tenant_id,
+                    'error_type': type(api_error).__name__,
+                    'error_message': str(api_error)
+                })
+                sys.stdout.flush()
+                sys.stderr.flush()
+                raise
             
             # Log response structure immediately after receiving it
             logger.info("[OpenAI Client] ✅ RECEIVED RESPONSES API RESPONSE ✅", extra={
