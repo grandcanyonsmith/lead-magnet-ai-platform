@@ -3,6 +3,7 @@ import { jobsController } from '../controllers/jobs';
 import { webhooksController } from '../controllers/webhooks';
 import { openAIWebhookController } from '../controllers/openaiWebhookController';
 import { stripeWebhookController } from '../controllers/stripeWebhook';
+import { trackingController } from '../controllers/tracking';
 import { router } from './router';
 import { logger } from '../utils/logger';
 
@@ -49,6 +50,15 @@ export function registerPublicRoutes(): void {
   router.register('POST', '/v1/stripe/webhook', async (_params, _body, _query, _tenantId, context) => {
     logger.info('[Public Routes] POST /v1/stripe/webhook');
     return await stripeWebhookController.handleWebhook(context?.event!);
+  }, false);
+
+  // Tracking event endpoint (public, no auth required)
+  router.register('POST', '/v1/tracking/event', async (_params, body, _query, _tenantId, context) => {
+    logger.info('[Public Routes] POST /v1/tracking/event');
+    const headers = context?.event?.headers || {};
+    const userAgent = headers['user-agent'] || headers['User-Agent'];
+    const referrer = headers['referer'] || headers['Referer'];
+    return await trackingController.recordEvent(body, context?.sourceIp || '', userAgent, referrer);
   }, false);
 }
 

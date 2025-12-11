@@ -22,6 +22,7 @@ export class EnvConfig {
   readonly filesTable: string;
   readonly impersonationLogsTable: string;
   readonly webhookLogsTable: string;
+  readonly trackingEventsTable: string;
 
   // AWS Configuration
   readonly awsRegion: string;
@@ -74,6 +75,7 @@ export class EnvConfig {
     this.filesTable = this.getWithDefault('FILES_TABLE', 'leadmagnet-files');
     this.impersonationLogsTable = this.getWithDefault('IMPERSONATION_LOGS_TABLE', 'leadmagnet-impersonation-logs');
     this.webhookLogsTable = this.getWithDefault('WEBHOOK_LOGS_TABLE', 'leadmagnet-webhook-logs');
+    this.trackingEventsTable = this.getWithDefault('TRACKING_EVENTS_TABLE', 'leadmagnet-tracking-events');
 
     // AWS Configuration
     this.awsRegion = this.getWithDefault('AWS_REGION', 'us-east-1');

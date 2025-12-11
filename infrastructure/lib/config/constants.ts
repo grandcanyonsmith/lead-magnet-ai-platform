@@ -37,6 +37,7 @@ export const TABLE_NAMES = {
   IMPERSONATION_LOGS: 'leadmagnet-impersonation-logs',
   SESSIONS: 'leadmagnet-sessions',
   WEBHOOK_LOGS: 'leadmagnet-webhook-logs',
+  TRACKING_EVENTS: 'leadmagnet-tracking-events',
 } as const;
 
 /**
@@ -153,6 +154,7 @@ export const TABLE_ENV_VAR_MAP: Record<TableKey, string> = {
   impersonationLogs: 'IMPERSONATION_LOGS_TABLE',
   sessions: 'SESSIONS_TABLE',
   webhookLogs: 'WEBHOOK_LOGS_TABLE',
+  trackingEvents: 'TRACKING_EVENTS_TABLE',
 } as const;
 
 /**

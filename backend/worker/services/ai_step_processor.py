@@ -160,7 +160,9 @@ class AIStepProcessor:
             tenant_id=tenant_id,
             job_id=job_id,
             step_index=step_index,
-            step_name=step_name
+            step_name=step_name,
+            step_instructions=step_instructions,
+            context=current_step_context
         )
         
         logger.info("[AIStepProcessor] Image artifacts stored", extra={

@@ -697,7 +697,10 @@ class OpenAIClient:
         content: str,
         image_handler,
         tenant_id: Optional[str] = None,
-        job_id: Optional[str] = None
+        job_id: Optional[str] = None,
+        context: Optional[str] = None,
+        step_name: Optional[str] = None,
+        step_instructions: Optional[str] = None
     ) -> Tuple[str, List[str]]:
         """
         Extract base64-encoded images from JSON response and convert them to URLs.
@@ -771,13 +774,17 @@ class OpenAIClient:
                                     ext = 'jpg'
                                 filename = f"image_{int(time.time())}_{str(uuid.uuid4())[:8]}.{ext}"
                         
-                        # Upload base64 image to S3
+                        # Upload base64 image to S3 with context for AI naming
                         image_url = image_handler.upload_base64_image_to_s3(
                             image_b64=data_field,
                             content_type=content_type,
                             tenant_id=tenant_id,
                             job_id=job_id,
-                            filename=filename
+                            filename=filename,
+                            context=context,
+                            step_name=step_name,
+                            step_instructions=step_instructions,
+                            image_index=len(image_urls)  # Use current count as index
                         )
                         
                         if image_url:
@@ -1051,7 +1058,10 @@ class OpenAIClient:
                     content=content,
                     image_handler=image_handler,
                     tenant_id=tenant_id,
-                    job_id=job_id
+                    job_id=job_id,
+                    context=context,
+                    step_name=step_name,
+                    step_instructions=step_instructions or instructions
                 )
                 if updated_content != content:
                     content = updated_content

@@ -264,7 +264,30 @@ export class DatabaseStack extends cdk.Stack {
       TABLE_NAMES.WEBHOOK_LOGS
     );
 
-    // Table 16: Folders (legacy table - keep resource definition to maintain CloudFormation exports)
+    // Table 16: Tracking Events
+    const trackingEventsTable = createTableWithGSI(
+      this,
+      'TrackingEventsTable',
+      {
+        tableName: TABLE_NAMES.TRACKING_EVENTS,
+        partitionKey: { name: 'event_id', type: dynamodb.AttributeType.STRING },
+        timeToLiveAttribute: 'ttl',
+      },
+      [
+        {
+          indexName: 'gsi_job_created',
+          partitionKey: { name: 'job_id', type: dynamodb.AttributeType.STRING },
+          sortKey: { name: 'created_at', type: dynamodb.AttributeType.STRING },
+        },
+        {
+          indexName: 'gsi_ip_created',
+          partitionKey: { name: 'ip_address', type: dynamodb.AttributeType.STRING },
+          sortKey: { name: 'created_at', type: dynamodb.AttributeType.STRING },
+        },
+      ]
+    );
+
+    // Table 17: Folders (legacy table - keep resource definition to maintain CloudFormation exports)
     // This table exists in DynamoDB and CloudFormation - keep the resource definition unchanged
     // CloudFormation will reference existing table without modifications
     // Note: Not included in tablesMap as it's legacy and not used by application code
@@ -314,6 +337,7 @@ export class DatabaseStack extends cdk.Stack {
       [TableKey.IMPERSONATION_LOGS]: impersonationLogsTable,
       [TableKey.SESSIONS]: sessionsTable,
       [TableKey.WEBHOOK_LOGS]: webhookLogsTable,
+      [TableKey.TRACKING_EVENTS]: trackingEventsTable,
     };
 
     // CloudFormation outputs
