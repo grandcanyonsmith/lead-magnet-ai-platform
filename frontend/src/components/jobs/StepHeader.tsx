@@ -245,7 +245,7 @@ export function StepHeader({
             )}
 
             {/* Rerun Step Button - Available for all executable steps except form_submission (step 0) */}
-            {onRerunStep &&
+            {(onRerunStep || onRerunStepClick) &&
               step.step_order > 0 &&
               step.step_type !== 'form_submission' &&
               step.step_type !== 'final_output' && (
