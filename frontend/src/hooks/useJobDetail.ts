@@ -104,6 +104,8 @@ export function useJobResource(jobId: string | null, router: RouterInstance): Us
   
   // Track loading promise to prevent concurrent loads for the same jobId
   const loadingPromiseRef = useRef<Promise<void> | null>(null)
+  // Track latest job value to avoid stale closures
+  const jobRef = useRef<Job | null>(null)
 
   const loadJob = useCallback(async () => {
     if (!jobId || jobId.trim() === '' || jobId === '_') {
@@ -134,6 +136,7 @@ export function useJobResource(jobId: string | null, router: RouterInstance): Us
       try {
         const data = await api.getJob(jobId)
         setJob(data)
+        jobRef.current = data // Update ref with latest job value
         setLastLoadedAt(new Date())
 
         if (data.workflow_id) {
@@ -230,11 +233,17 @@ export function useJobResource(jobId: string | null, router: RouterInstance): Us
   // Track the last jobId we cleared the ref for
   const lastClearedJobIdRef = useRef<string | null>(null)
   
+  // Keep jobRef in sync with job state
+  useEffect(() => {
+    jobRef.current = job
+  }, [job])
+
   useEffect(() => {
     // Only clear loading promise when jobId actually changes (not on every render)
     if (lastClearedJobIdRef.current !== jobId) {
       loadingPromiseRef.current = null
       lastClearedJobIdRef.current = jobId
+      jobRef.current = null // Clear job ref when jobId changes
     }
     
     if (jobId && jobId.trim() !== '' && jobId !== '_') {
@@ -242,6 +251,7 @@ export function useJobResource(jobId: string | null, router: RouterInstance): Us
     } else {
       setError('Invalid job ID. Please select a job from the list.')
       setLoading(false)
+      jobRef.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId]) // Only depend on jobId - loadJob is stable as long as jobId doesn't change
@@ -285,6 +295,14 @@ export function useJobExecution({ jobId, job, setJob, loadJob }: UseJobExecution
   const loadingExecutionStepsPromiseRef = useRef<Promise<void> | null>(null)
   const lastClearedExecutionStepsJobIdRef = useRef<string | null>(null)
   
+  // Track latest job value to avoid stale closures
+  const jobRef = useRef<Job | null>(null)
+  
+  // Keep jobRef in sync with job prop
+  useEffect(() => {
+    jobRef.current = job
+  }, [job])
+  
   // Extract S3 key as a stable value to avoid re-running effect when job reference changes
   const executionStepsS3Key = useMemo(() => job?.execution_steps_s3_key || null, [job?.execution_steps_s3_key])
 
@@ -317,12 +335,15 @@ export function useJobExecution({ jobId, job, setJob, loadJob }: UseJobExecution
       
       // Now start the async work
       ;(async () => {
-        const snapshot = jobSnapshot
+        // Use jobSnapshot if provided, otherwise fall back to ref (latest value) or job from closure
+        const snapshot = jobSnapshot ?? jobRef.current ?? job
         if (!snapshot) {
-          const errorMsg = 'No job snapshot provided'
+          const errorMsg = 'No job snapshot provided and job not available'
           setExecutionStepsError(errorMsg)
           setHasLoadedExecutionSteps(true) // Mark as loaded to prevent retries
-          promiseReject?.(new Error(errorMsg))
+          if (promiseReject) {
+            promiseReject(new Error(errorMsg))
+          }
           // Clear the promise ref when done
           if (loadingExecutionStepsPromiseRef.current === loadPromise) {
             loadingExecutionStepsPromiseRef.current = null
@@ -437,9 +458,22 @@ export function useJobExecution({ jobId, job, setJob, loadJob }: UseJobExecution
         const actionText = continueAfter ? 'rerun and continue' : 'rerun'
         toast.success(`Step ${stepIndex + 1} ${actionText} initiated. The step will be reprocessed shortly.`)
 
-        setTimeout(() => {
-          loadJob()
-          loadExecutionSteps()
+        setTimeout(async () => {
+          try {
+            // Wait for loadJob to complete to ensure job state is updated
+            await loadJob()
+            // Wait a tick for React to update the job prop and sync jobRef
+            await new Promise(resolve => setTimeout(resolve, 0))
+            // Use jobRef (synced with job prop) or fall back to job prop directly
+            const jobToUse = jobRef.current ?? job
+            if (jobToUse) {
+              loadExecutionSteps(jobToUse)
+            } else {
+              console.warn('[useJobExecution] No job available after loadJob, skipping loadExecutionSteps')
+            }
+          } catch (error) {
+            console.error('[useJobExecution] Error in handleRerunStep timeout:', error)
+          }
         }, 2000)
       } catch (error: unknown) {
         const err = error as { response?: { data?: { message?: string } }; message?: string }

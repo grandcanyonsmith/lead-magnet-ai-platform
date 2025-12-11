@@ -46,7 +46,18 @@ export function getStatusBadge(status: string) {
 export function formatRelativeTime(dateString: string): string {
   const date = new Date(dateString)
   const now = new Date()
+  
+  // Check if date is invalid
+  if (isNaN(date.getTime())) {
+    return 'Invalid date'
+  }
+  
   const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+  
+  // Handle negative values (date in future or clock skew)
+  if (seconds < 0) {
+    return 'just now'
+  }
   
   if (seconds < 60) return `${seconds} seconds ago`
   const minutes = Math.floor(seconds / 60)

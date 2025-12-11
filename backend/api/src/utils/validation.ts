@@ -261,6 +261,19 @@ export const updateSettingsSchema = z.object({
     })
     .optional(),
   default_ai_model: z.string().optional(),
+  custom_domain: z.preprocess(
+    (val) => {
+      if (val === '' || val === null || val === undefined) return undefined;
+      const strVal = String(val).trim();
+      try {
+        const url = new URL(strVal.includes('://') ? strVal : `https://${strVal}`);
+        return url.origin;
+      } catch {
+        return strVal;
+      }
+    },
+    z.string().url().optional()
+  ),
   webhooks: z.array(z.string().url()).optional(),
   ghl_webhook_url: z.preprocess(
     (val) => (val === '' || val === null || val === undefined ? undefined : val),
@@ -291,14 +304,28 @@ export const updateSettingsSchema = z.object({
 });
 
 // Form submission schema
+const hasPhoneValue = (data: Record<string, any>) => {
+  // Prefer explicit phone/phone_number/mobile fields
+  const explicitPhoneFields = ['phone', 'phone_number', 'phoneNumber', 'mobile', 'mobile_phone', 'contact_phone'];
+  for (const field of explicitPhoneFields) {
+    if (data[field]) return true;
+  }
+  
+  // Fallback: any field containing "phone" or "mobile"
+  return Object.keys(data).some((key) => {
+    const lower = key.toLowerCase();
+    return (lower.includes('phone') || lower.includes('mobile')) && !!data[key];
+  });
+};
+
 export const submitFormSchema = z.object({
   submission_data: z.record(z.any()).refine(
     (data) => {
-      // Ensure name, email, and phone are always present
-      return data.name && data.email && data.phone;
+      // Ensure name, email, and at least one phone-like field are present
+      return !!data.name && !!data.email && hasPhoneValue(data);
     },
     {
-      message: 'Form submission must include name, email, and phone fields',
+      message: 'Form submission must include name, email, and a phone number',
     }
   ),
 });

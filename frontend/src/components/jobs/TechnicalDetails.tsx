@@ -7,6 +7,8 @@ import { api } from '@/lib/api'
 import { PreviewRenderer } from '@/components/artifacts/PreviewRenderer'
 import { Artifact } from '@/types/artifact'
 import toast from 'react-hot-toast'
+import { useSettings } from '@/hooks/api/useSettings'
+import { buildPublicFormUrl } from '@/utils/url'
 
 interface TechnicalDetailsProps {
   job: any
@@ -21,6 +23,7 @@ export function TechnicalDetails({ job, form, submission }: TechnicalDetailsProp
   const [artifacts, setArtifacts] = useState<Artifact[]>([])
   const [loadingArtifacts, setLoadingArtifacts] = useState(false)
   const [copyingAll, setCopyingAll] = useState(false)
+  const { settings } = useSettings()
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)
@@ -200,7 +203,7 @@ export function TechnicalDetails({ job, form, submission }: TechnicalDetailsProp
               <div className="flex items-center space-x-2">
                 {form?.public_slug ? (
                   <a
-                    href={`/v1/forms/${form.public_slug}`}
+                    href={buildPublicFormUrl(form.public_slug, settings?.custom_domain)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-sm font-mono text-primary-600 hover:text-primary-900 hover:underline"

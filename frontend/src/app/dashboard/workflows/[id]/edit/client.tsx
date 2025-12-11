@@ -12,6 +12,7 @@ import { FormTab } from '@/components/workflows/edit/FormTab'
 import { TemplateTab } from '@/components/workflows/edit/TemplateTab'
 import { extractPlaceholders } from '@/utils/templateUtils'
 import { formatHTML } from '@/utils/templateUtils'
+import { useSettings } from '@/hooks/api/useSettings'
 
 export default function EditWorkflowPage() {
   const [activeTab, setActiveTab] = useState<'workflow' | 'form' | 'template'>('workflow')
@@ -75,6 +76,8 @@ export default function EditWorkflowPage() {
     setDevicePreviewSize,
     setEditPrompt,
   } = templateEdit
+
+  const { settings } = useSettings()
 
   // Update templateId when formData.template_id changes
   useEffect(() => {
@@ -332,6 +335,7 @@ export default function EditWorkflowPage() {
           formFormData={formFormData}
           workflowName={formData.workflow_name}
           submitting={submitting}
+          customDomain={settings?.custom_domain}
           onFormChange={handleFormChange}
           onFieldChange={handleFieldChange}
           onAddField={addField}
