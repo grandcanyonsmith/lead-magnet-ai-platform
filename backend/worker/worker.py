@@ -62,12 +62,22 @@ def main():
         print(f"ERROR: JOB_ID environment variable not set", file=sys.stderr)
         sys.exit(1)
     
+    # Check if this is a single step rerun
+    step_index_str = os.environ.get('STEP_INDEX')
+    step_index = int(step_index_str) if step_index_str is not None and step_index_str.isdigit() else None
+    continue_after = os.environ.get('CONTINUE_AFTER', 'false').lower() == 'true'
+    
     logger.info(f"[Worker] Starting worker", extra={
         'job_id': job_id,
+        'step_index': step_index,
+        'continue_after': continue_after,
         'python_version': sys.version,
         'aws_region': os.environ.get('AWS_REGION', 'not set')
     })
-    print(f"[Worker] Starting worker for job {job_id}", file=sys.stdout)
+    if step_index is not None:
+        print(f"[Worker] Starting worker for job {job_id}, rerunning step {step_index}", file=sys.stdout)
+    else:
+        print(f"[Worker] Starting worker for job {job_id}", file=sys.stdout)
     sys.stdout.flush()
     
     # Initialize db_service to None to ensure it's always defined
@@ -94,8 +104,27 @@ def main():
             sys.stderr.flush()
             sys.exit(130)
         
-        # Process the job
-        result = processor.process_job(job_id)
+        # Process the job or single step
+        if step_index is not None:
+            logger.info(f"[Worker] Processing single step {step_index} for job {job_id}", extra={
+                'job_id': job_id,
+                'step_index': step_index,
+                'continue_after': continue_after
+            })
+            print(f"[Worker] Processing single step {step_index}...", file=sys.stdout)
+            sys.stdout.flush()
+            result = processor.process_single_step(job_id, step_index, 'workflow_step')
+            
+            # Note: continue_after functionality for local mode would require processing remaining steps
+            # For now, we only support single step rerun in local mode
+            # In production, Step Functions handles continue_after by triggering subsequent step executions
+            if continue_after:
+                logger.warning(f"[Worker] continue_after=true is not fully supported in local mode - only single step will be processed", extra={
+                    'job_id': job_id,
+                    'step_index': step_index
+                })
+        else:
+            result = processor.process_job(job_id)
         
         # Flush stdout after processing
         sys.stdout.flush()
