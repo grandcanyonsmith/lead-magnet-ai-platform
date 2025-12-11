@@ -101,19 +101,17 @@ export class TrackingService {
     }
 
     // Query all events for this job using GSI
-    const events = await db.query(
+    const result = await db.query(
       TRACKING_EVENTS_TABLE,
-      {
-        IndexName: 'gsi_job_created',
-        KeyConditionExpression: 'job_id = :jobId',
-        ExpressionAttributeValues: {
-          ':jobId': jobId,
-        },
-      }
+      'gsi_job_created', // indexName
+      'job_id = :jobId', // keyCondition
+      { ':jobId': jobId }, // expressionAttributeValues
+      undefined, // expressionAttributeNames
+      undefined // limit (no limit for stats calculation)
     );
 
     // Filter by tenant_id (safety check)
-    const tenantEvents = events.filter((e: any) => e.tenant_id === tenantId);
+    const tenantEvents = result.items.filter((e: any) => e.tenant_id === tenantId);
 
     // Calculate statistics
     const uniqueIPs = new Set<string>();
@@ -210,24 +208,18 @@ export class TrackingService {
       throw new Error('TRACKING_EVENTS_TABLE environment variable is not set');
     }
 
-    const queryParams: any = {
-      IndexName: 'gsi_job_created',
-      KeyConditionExpression: 'job_id = :jobId',
-      ExpressionAttributeValues: {
-        ':jobId': jobId,
-      },
-      Limit: limit,
-      ScanIndexForward: false, // Most recent first
-    };
-
-    if (lastEvaluatedKey) {
-      queryParams.ExclusiveStartKey = lastEvaluatedKey;
-    }
-
-    const result = await db.query(TRACKING_EVENTS_TABLE, queryParams);
+    const result = await db.query(
+      TRACKING_EVENTS_TABLE,
+      'gsi_job_created', // indexName
+      'job_id = :jobId', // keyCondition
+      { ':jobId': jobId }, // expressionAttributeValues
+      undefined, // expressionAttributeNames
+      limit, // limit
+      lastEvaluatedKey // exclusiveStartKey
+    );
 
     // Filter by tenant_id and map to TrackingEvent
-    const events = result
+    const events = result.items
       .filter((e: any) => e.tenant_id === tenantId)
       .map((e: any) => e as TrackingEvent);
 
