@@ -63,7 +63,6 @@ export function JobsDesktopTable({
                 )}
               </div>
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" aria-label="Document">Document</th>
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
@@ -82,7 +81,7 @@ export function JobsDesktopTable({
             return (
               <React.Fragment key={job.job_id}>
                 <tr 
-                  className="hover:bg-gray-50 cursor-pointer transition-colors" 
+                  className="hover:bg-gray-50 cursor-pointer transition-all duration-150 hover:shadow-sm" 
                   onClick={() => onNavigate(job.job_id)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
@@ -123,61 +122,14 @@ export function JobsDesktopTable({
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {duration !== null ? formatDuration(duration) : '-'}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm" onClick={(e) => e.stopPropagation()}>
-                    {job.output_url ? (
-                      <button
-                        data-tour="view-artifacts"
-                        disabled={isLoadingDoc}
-                        onClick={async (e) => {
-                          e.stopPropagation()
-                          e.preventDefault()
-                          if (isLoadingDoc) return
-                          
-                          setLoadingDocUrl(job.job_id)
-                          try {
-                            const blobUrl = await api.getJobDocumentBlobUrl(job.job_id)
-                            const newWindow = window.open(blobUrl, '_blank', 'noopener,noreferrer')
-                            if (newWindow) {
-                              newWindow.addEventListener('load', () => {
-                                setTimeout(() => URL.revokeObjectURL(blobUrl), 5000)
-                              })
-                            } else {
-                              // Popup blocked or window failed to open
-                              setTimeout(() => URL.revokeObjectURL(blobUrl), 10000)
-                            }
-                          } catch (error) {
-                            if (process.env.NODE_ENV === 'development') {
-                              console.error('Failed to open document:', error)
-                            }
-                            toast.error('Failed to open document. Please try again.')
-                          } finally {
-                            setLoadingDocUrl(null)
-                          }
-                        }}
-                        className="inline-flex items-center gap-1 text-primary-600 hover:text-primary-900 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                        aria-label={`View document for job ${job.job_id}`}
-                      >
-                        {isLoadingDoc ? (
-                          <>
-                            <FiLoader className="w-4 h-4 animate-spin" />
-                            Loading...
-                          </>
-                        ) : (
-                          'View'
-                        )}
-                      </button>
-                    ) : (
-                      <span className="text-gray-400">-</span>
-                    )}
-                  </td>
                 </tr>
                 {hasError && (
                   <tr
                     key={`${job.job_id}-error`}
-                    className="bg-red-50 hover:bg-red-100 cursor-pointer transition-colors"
+                    className="bg-red-50 hover:bg-red-100 cursor-pointer transition-all duration-150 hover:shadow-sm"
                     onClick={() => onNavigate(job.job_id)}
                   >
-                    <td colSpan={5} className="px-6 py-3">
+                    <td colSpan={4} className="px-6 py-3">
                       <div className="flex items-start">
                         <FiXCircle className="w-4 h-4 text-red-600 mt-0.5 mr-2 flex-shrink-0" />
                         <div className="flex-1">

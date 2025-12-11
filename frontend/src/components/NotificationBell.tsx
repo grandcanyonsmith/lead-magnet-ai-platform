@@ -140,21 +140,27 @@ export const NotificationBell: React.FC = () => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-[calc(100vw-1rem)] max-w-[24rem] sm:w-80 md:w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-96 overflow-hidden flex flex-col">
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
-            <div className="flex items-center space-x-2">
+        <>
+          {/* Mobile backdrop */}
+          <div 
+            className="fixed inset-0 z-[55] sm:hidden" 
+            onClick={() => setIsOpen(false)}
+          />
+          <div className="fixed bottom-4 left-4 right-4 sm:absolute sm:bottom-[100%] sm:left-auto sm:right-0 sm:top-auto sm:mb-2 sm:w-[calc(100vw-1rem)] sm:max-w-[24rem] sm:w-80 md:w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-[60] max-h-[calc(100vh-10rem)] sm:max-h-[min(600px,calc(100vh-8rem))] overflow-hidden flex flex-col">
+          <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Notifications</h3>
+            <div className="flex items-center space-x-1 sm:space-x-2">
               {unreadCount > 0 && (
                 <button
                   onClick={handleMarkAllAsRead}
-                  className="text-xs text-primary-600 hover:text-primary-700 font-medium py-2 px-2 touch-target"
+                  className="text-xs text-primary-600 hover:text-primary-700 font-medium py-1.5 sm:py-2 px-1.5 sm:px-2 touch-target"
                 >
                   Mark all read
                 </button>
               )}
               <button
                 onClick={() => setIsOpen(false)}
-                className="text-gray-400 hover:text-gray-600 p-2 rounded-md hover:bg-gray-100 touch-target"
+                className="text-gray-400 hover:text-gray-600 p-1.5 sm:p-2 rounded-md hover:bg-gray-100 touch-target"
                 aria-label="Close notifications"
               >
                 <FiX className="w-4 h-4" />
@@ -164,11 +170,11 @@ export const NotificationBell: React.FC = () => {
 
           <div className="overflow-y-auto flex-1">
             {loading ? (
-              <div className="p-4 text-center text-gray-500">Loading...</div>
+              <div className="p-4 text-center text-sm sm:text-base text-gray-500">Loading...</div>
             ) : notifications.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
-                <FiBell className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                <p>No notifications</p>
+              <div className="p-6 sm:p-8 text-center text-gray-500">
+                <FiBell className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 text-gray-300" />
+                <p className="text-sm sm:text-base">No notifications</p>
               </div>
             ) : (
               <div className="divide-y divide-gray-100">
@@ -176,7 +182,7 @@ export const NotificationBell: React.FC = () => {
                   <div
                     key={notification.notification_id}
                     onClick={() => handleNotificationClick(notification)}
-                    className={`p-4 cursor-pointer transition-colors ${
+                    className={`p-3 sm:p-4 cursor-pointer transition-colors ${
                       notification.read
                         ? 'bg-white hover:bg-gray-50'
                         : 'bg-blue-50 hover:bg-blue-100'
@@ -184,24 +190,24 @@ export const NotificationBell: React.FC = () => {
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between mb-1">
-                          <h4 className="text-sm font-semibold text-gray-900 truncate">
+                        <div className="flex items-start justify-between mb-1 gap-2">
+                          <h4 className="text-xs sm:text-sm font-semibold text-gray-900 line-clamp-2 flex-1">
                             {notification.title}
                           </h4>
                           {!notification.read && (
                             <button
                               onClick={(e) => handleMarkAsRead(notification.notification_id, e)}
-                              className="ml-2 p-2 text-gray-400 hover:text-gray-600 rounded-md hover:bg-gray-200 flex-shrink-0 touch-target"
+                              className="ml-2 p-1.5 sm:p-2 text-gray-400 hover:text-gray-600 rounded-md hover:bg-gray-200 flex-shrink-0 touch-target"
                               aria-label="Mark as read"
                             >
-                              <FiCheck className="w-4 h-4" />
+                              <FiCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             </button>
                           )}
                         </div>
-                        <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                        <p className="text-xs sm:text-sm text-gray-600 mb-1.5 sm:mb-2 line-clamp-2">
                           {notification.message}
                         </p>
-                        <p className="text-xs text-gray-400">
+                        <p className="text-[10px] sm:text-xs text-gray-400">
                           {formatTimeAgo(notification.created_at)}
                         </p>
                       </div>
@@ -211,7 +217,8 @@ export const NotificationBell: React.FC = () => {
               </div>
             )}
           </div>
-        </div>
+          </div>
+        </>
       )}
     </div>
   )
