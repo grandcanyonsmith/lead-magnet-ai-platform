@@ -376,12 +376,32 @@ export default function WorkflowsPage() {
   }
 
   const copyToClipboard = async (text: string, workflowId: string) => {
+    if (!text) {
+      console.error('No URL to copy')
+      return
+    }
     try {
       await navigator.clipboard.writeText(text)
       setCopiedUrl(workflowId)
       setTimeout(() => setCopiedUrl(null), 2000)
     } catch (error) {
       console.error('Failed to copy:', error)
+      // Fallback for older browsers
+      try {
+        const textArea = document.createElement('textarea')
+        textArea.value = text
+        textArea.style.position = 'fixed'
+        textArea.style.left = '-999999px'
+        document.body.appendChild(textArea)
+        textArea.select()
+        document.execCommand('copy')
+        document.body.removeChild(textArea)
+        setCopiedUrl(workflowId)
+        setTimeout(() => setCopiedUrl(null), 2000)
+      } catch (fallbackError) {
+        console.error('Fallback copy also failed:', fallbackError)
+        alert('Failed to copy URL. Please copy manually: ' + text)
+      }
     }
   }
 
@@ -609,19 +629,29 @@ export default function WorkflowsPage() {
                             </button>
                             {formUrl && (
                               <button
-                                onClick={(e) => {
+                                onClick={async (e) => {
                                   e.stopPropagation()
                                   e.preventDefault()
-                                  copyToClipboard(formUrl, workflow.workflow_id)
-                                  setOpenMenuId(null)
+                                  await copyToClipboard(formUrl, workflow.workflow_id)
+                                  // Small delay to show feedback before closing
+                                  setTimeout(() => setOpenMenuId(null), 100)
                                 }}
                                 onTouchStart={(e) => {
                                   e.stopPropagation()
                                 }}
                                 className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 active:bg-gray-100 flex items-center touch-target border-t border-gray-100"
                               >
-                                <FiCopy className="w-3 h-3 mr-2" />
-                                Copy Form URL
+                                {copiedUrl === workflow.workflow_id ? (
+                                  <>
+                                    <FiCheck className="w-3 h-3 mr-2 text-green-600" />
+                                    Copied!
+                                  </>
+                                ) : (
+                                  <>
+                                    <FiCopy className="w-3 h-3 mr-2" />
+                                    Copy Form URL
+                                  </>
+                                )}
                               </button>
                             )}
                           </div>
@@ -953,6 +983,33 @@ export default function WorkflowsPage() {
                                   <FiTrash2 className="w-4 h-4 mr-2" />
                                   Delete
                                 </button>
+                                {formUrl && (
+                                  <button
+                                    onClick={async (e) => {
+                                      e.stopPropagation()
+                                      e.preventDefault()
+                                      await copyToClipboard(formUrl, workflow.workflow_id)
+                                      // Small delay to show feedback before closing
+                                      setTimeout(() => setOpenMenuId(null), 100)
+                                    }}
+                                    onTouchStart={(e) => {
+                                      e.stopPropagation()
+                                    }}
+                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 active:bg-gray-100 flex items-center touch-target border-t border-gray-100"
+                                  >
+                                    {copiedUrl === workflow.workflow_id ? (
+                                      <>
+                                        <FiCheck className="w-4 h-4 mr-2 text-green-600" />
+                                        Copied!
+                                      </>
+                                    ) : (
+                                      <>
+                                        <FiCopy className="w-4 h-4 mr-2" />
+                                        Copy Form URL
+                                      </>
+                                    )}
+                                  </button>
+                                )}
                               </div>
                             </div>
                           )}
