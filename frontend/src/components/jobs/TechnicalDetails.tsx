@@ -1,10 +1,11 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { FiChevronDown, FiChevronUp, FiCopy, FiExternalLink, FiLoader, FiFile } from 'react-icons/fi'
+import { FiChevronDown, FiChevronUp, FiCopy, FiExternalLink, FiLoader, FiFile, FiMaximize2 } from 'react-icons/fi'
 import { useState, useEffect } from 'react'
 import { api } from '@/lib/api'
 import { PreviewRenderer } from '@/components/artifacts/PreviewRenderer'
+import { FullScreenPreviewModal } from '@/components/ui/FullScreenPreviewModal'
 import { Artifact } from '@/types/artifact'
 import toast from 'react-hot-toast'
 
@@ -21,6 +22,7 @@ export function TechnicalDetails({ job, form, submission }: TechnicalDetailsProp
   const [artifacts, setArtifacts] = useState<Artifact[]>([])
   const [loadingArtifacts, setLoadingArtifacts] = useState(false)
   const [copyingAll, setCopyingAll] = useState(false)
+  const [fullScreenArtifact, setFullScreenArtifact] = useState<Artifact | null>(null)
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)
@@ -349,15 +351,24 @@ export function TechnicalDetails({ job, form, submission }: TechnicalDetailsProp
                         key={artifact.artifact_id} 
                         className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow"
                       >
-                        <div className="aspect-video bg-gray-100">
+                        <div className="aspect-video bg-gray-100 relative">
                           {artifactUrl ? (
-                            <PreviewRenderer
-                              contentType={artifact.content_type}
-                              objectUrl={artifactUrl}
-                              fileName={fileName}
-                              className="w-full h-full"
-                              artifactId={artifact.artifact_id}
-                            />
+                            <>
+                              <button
+                                onClick={() => setFullScreenArtifact(artifact)}
+                                className="absolute top-2 right-2 z-10 p-2 bg-white/90 hover:bg-white text-gray-700 rounded-lg shadow-md transition-all hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                aria-label="Expand preview"
+                              >
+                                <FiMaximize2 className="w-4 h-4" />
+                              </button>
+                              <PreviewRenderer
+                                contentType={artifact.content_type}
+                                objectUrl={artifactUrl}
+                                fileName={fileName}
+                                className="w-full h-full"
+                                artifactId={artifact.artifact_id}
+                              />
+                            </>
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-gray-400">
                               <FiFile className="w-8 h-8" />
@@ -446,6 +457,17 @@ export function TechnicalDetails({ job, form, submission }: TechnicalDetailsProp
             </div>
           )}
         </div>
+      )}
+
+      {fullScreenArtifact && (
+        <FullScreenPreviewModal
+          isOpen={!!fullScreenArtifact}
+          onClose={() => setFullScreenArtifact(null)}
+          contentType={fullScreenArtifact.content_type}
+          objectUrl={fullScreenArtifact.object_url || fullScreenArtifact.public_url}
+          fileName={fullScreenArtifact.file_name || fullScreenArtifact.artifact_name || fullScreenArtifact.artifact_id}
+          artifactId={fullScreenArtifact.artifact_id}
+        />
       )}
     </div>
   )
