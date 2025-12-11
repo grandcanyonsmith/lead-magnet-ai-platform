@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { useSettings } from '@/hooks/api/useSettings'
 import { buildPublicFormUrl } from '@/utils/url'
-import { FiPlus, FiEdit, FiTrash2, FiEye, FiExternalLink, FiCopy, FiCheck, FiMoreVertical, FiLoader, FiCheckCircle, FiXCircle, FiClock, FiList, FiFileText } from 'react-icons/fi'
+import { FiPlus, FiEdit, FiTrash2, FiEye, FiExternalLink, FiCopy, FiCheck, FiMoreVertical, FiLoader, FiCheckCircle, FiXCircle, FiClock, FiList, FiFileText, FiArrowLeft } from 'react-icons/fi'
 
 export default function WorkflowsPage() {
   const router = useRouter()
@@ -362,10 +362,10 @@ export default function WorkflowsPage() {
       const workflowsList = data.workflows || []
       // Ensure we include all statuses: 'active', 'inactive', and 'draft'
       // No status filtering - show all workflows regardless of status
-      // Sort by created_at DESC (most recent first) as fallback
+      // Sort by updated_at DESC (most recently updated first), fallback to created_at
       workflowsList.sort((a: any, b: any) => {
-        const dateA = new Date(a.created_at || 0).getTime()
-        const dateB = new Date(b.created_at || 0).getTime()
+        const dateA = new Date(a.updated_at || a.created_at || 0).getTime()
+        const dateB = new Date(b.updated_at || b.created_at || 0).getTime()
         return dateB - dateA // DESC order
       })
       setWorkflows(workflowsList)
@@ -491,6 +491,13 @@ export default function WorkflowsPage() {
 
   return (
     <div>
+      <button
+        onClick={() => router.back()}
+        className="flex items-center text-gray-600 hover:text-gray-900 mb-4 py-2 touch-target"
+      >
+        <FiArrowLeft className="w-4 h-4 mr-2" />
+        Back
+      </button>
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6">
         <div className="mb-2 sm:mb-0">
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-1">Lead Magnets</h1>
@@ -559,7 +566,16 @@ export default function WorkflowsPage() {
                 <div key={workflow.workflow_id} className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-base font-semibold text-gray-900 truncate">{workflow.workflow_name}</h3>
+                      <a
+                        href={`/dashboard/workflows/${workflow.workflow_id}`}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          router.push(`/dashboard/workflows/${workflow.workflow_id}`)
+                        }}
+                        className="text-base font-semibold text-primary-600 hover:text-primary-900 truncate block transition-colors"
+                      >
+                        {workflow.workflow_name}
+                      </a>
                       {workflow.workflow_description && (
                         <p className="text-xs text-gray-500 mt-1 line-clamp-2">{workflow.workflow_description}</p>
                       )}
@@ -816,25 +832,19 @@ export default function WorkflowsPage() {
               <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-3 md:px-4 lg:px-6 py-3 md:py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Lead Magnet Name
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-3 md:px-4 lg:px-6 py-3 md:py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Form
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Research Model
+                  <th className="hidden xl:table-cell px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Last Updated
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Features
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Created
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-3 md:px-4 lg:px-6 py-3 md:py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Generated Documents
                   </th>
-                  <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-3 md:px-4 lg:px-6 py-3 md:py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -848,70 +858,45 @@ export default function WorkflowsPage() {
 
                   return (
                     <tr key={workflow.workflow_id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="text-sm font-semibold text-gray-900">{workflow.workflow_name}</div>
+                      <td className="px-3 md:px-4 lg:px-6 py-3 md:py-4">
+                        <a
+                          href={`/dashboard/workflows/${workflow.workflow_id}`}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            router.push(`/dashboard/workflows/${workflow.workflow_id}`)
+                          }}
+                          className="text-xs md:text-sm font-semibold text-primary-600 hover:text-primary-900 transition-colors"
+                        >
+                          {workflow.workflow_name}
+                        </a>
                         {workflow.workflow_description && (
-                          <div className="text-sm text-gray-500 mt-1">{workflow.workflow_description}</div>
+                          <div className="text-xs md:text-sm text-gray-500 mt-1 line-clamp-1">{workflow.workflow_description}</div>
                         )}
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-3 md:px-4 lg:px-6 py-3 md:py-4">
                         {workflow.form ? (
-                          <div className="space-y-1">
-                            <div className="text-sm text-gray-900">{workflow.form.form_name}</div>
-                            {formUrl && (
-                              <div className="flex items-center gap-2">
-                                <a
-                                  href={formUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-xs text-primary-600 hover:text-primary-900 break-all"
-                                  title={formUrl}
-                                >
-                                  {formatUrl(formUrl)}
-                                </a>
-                                <button
-                                  onClick={() => copyToClipboard(formUrl, workflow.workflow_id)}
-                                  className="text-gray-400 hover:text-gray-600 p-2 touch-target"
-                                  title="Copy URL"
-                                >
-                                  {copiedUrl === workflow.workflow_id ? (
-                                    <FiCheck className="w-3 h-3 text-green-600" />
-                                  ) : (
-                                    <FiCopy className="w-3 h-3" />
-                                  )}
-                                </button>
-                                <a
-                                  href={formUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-primary-600 hover:text-primary-900"
-                                  title="Open form"
-                                >
-                                  <FiExternalLink className="w-3 h-3" />
-                                </a>
-                              </div>
-                            )}
-                          </div>
+                          formUrl ? (
+                            <a
+                              href={formUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs md:text-sm text-primary-600 hover:text-primary-900 font-medium flex items-center gap-1.5"
+                              title={formUrl}
+                            >
+                              <span className="truncate">{workflow.form.form_name}</span>
+                              <FiExternalLink className="w-3 h-3 flex-shrink-0" />
+                            </a>
+                          ) : (
+                            <div className="text-xs md:text-sm text-gray-900">{workflow.form.form_name}</div>
+                          )
                         ) : (
-                          <span className="text-sm text-gray-400 italic">No form</span>
+                          <span className="text-xs md:text-sm text-gray-400 italic">No form</span>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex gap-2">
-                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-                            {workflow.steps?.length || 0} step{workflow.steps?.length !== 1 ? 's' : ''}
-                          </span>
-                          {workflow.template_id && (
-                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
-                              Template
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      <td className="hidden xl:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                         {new Date(workflow.created_at).toLocaleDateString()}
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-3 md:px-4 lg:px-6 py-3 md:py-4">
                         {loadingJobs[workflow.workflow_id] ? (
                           <div className="text-xs text-gray-500 flex items-center">
                             <FiLoader className="w-3 h-3 mr-1 animate-spin" />
@@ -953,7 +938,7 @@ export default function WorkflowsPage() {
                           <span className="text-xs text-gray-400 italic">No documents yet</span>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right">
+                      <td className="px-3 md:px-4 lg:px-6 py-3 md:py-4 whitespace-nowrap text-right">
                         <div className="relative inline-block">
                           <button
                             onClick={(e) => {
@@ -964,10 +949,10 @@ export default function WorkflowsPage() {
                               e.stopPropagation()
                               setOpenMenuId(openMenuId === workflow.workflow_id ? null : workflow.workflow_id)
                             }}
-                            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all touch-target"
+                            className="p-1.5 md:p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all touch-target"
                             title="Actions"
                           >
-                            <FiMoreVertical className="w-5 h-5" />
+                            <FiMoreVertical className="w-4 h-4 md:w-5 md:h-5" />
                           </button>
                           {openMenuId === workflow.workflow_id && (
                             <div
