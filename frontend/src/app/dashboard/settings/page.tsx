@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { FiSave } from 'react-icons/fi'
 import { useSettings, useUpdateSettings } from '@/hooks/api/useSettings'
 import { Settings } from '@/types'
@@ -17,14 +17,16 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('general')
   const [formData, setFormData] = useState<Partial<Settings>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const initializedRef = useRef(false)
+  const lastSavedRef = useRef<Partial<Settings>>({})
 
   const { settings, loading, error, refetch } = useSettings()
   const { updateSettings, loading: saving } = useUpdateSettings()
 
-  // Initialize form data when settings load
+  // Initialize form data when settings first load (only once)
   useEffect(() => {
-    if (settings) {
-      setFormData({
+    if (settings && !initializedRef.current) {
+      const initialFormData = {
         organization_name: settings.organization_name || '',
         contact_email: settings.contact_email || '',
         website_url: settings.website_url || '',
@@ -42,31 +44,77 @@ export default function SettingsPage() {
         company_size: settings.company_size || '',
         brand_messaging_guidelines: settings.brand_messaging_guidelines || '',
         icp_document_url: settings.icp_document_url || '',
-      })
+      }
+      setFormData(initialFormData)
+      lastSavedRef.current = initialFormData
+      initializedRef.current = true
+    } else if (settings && initializedRef.current && Object.keys(lastSavedRef.current).length === 0) {
+      // If settings updated after initial load but lastSavedRef is empty, update it
+      // This handles the case where refetch updates settings
+      lastSavedRef.current = {
+        organization_name: settings.organization_name || '',
+        contact_email: settings.contact_email || '',
+        website_url: settings.website_url || '',
+        default_ai_model: settings.default_ai_model || 'gpt-5',
+        logo_url: settings.logo_url || '',
+        ghl_webhook_url: settings.ghl_webhook_url || '',
+        custom_domain: settings.custom_domain || '',
+        lead_phone_field: settings.lead_phone_field || '',
+        brand_description: settings.brand_description || '',
+        brand_voice: settings.brand_voice || '',
+        target_audience: settings.target_audience || '',
+        company_values: settings.company_values || '',
+        industry: settings.industry || '',
+        company_size: settings.company_size || '',
+        brand_messaging_guidelines: settings.brand_messaging_guidelines || '',
+        icp_document_url: settings.icp_document_url || '',
+      }
     }
   }, [settings])
 
+  // Normalize domain for comparison (handle both with and without protocol)
+  const normalizeDomain = (domain?: string): string => {
+    if (!domain) return ''
+    const trimmed = domain.trim()
+    if (!trimmed) return ''
+    // If it already has a protocol, extract just the hostname
+    try {
+      const url = new URL(trimmed.includes('://') ? trimmed : `https://${trimmed}`)
+      return url.origin
+    } catch {
+      return trimmed
+    }
+  }
+
   // Check if there are unsaved changes
+  // Compare against lastSavedRef if available (immediately after save), otherwise use settings
   const hasUnsavedChanges = useMemo(() => {
     if (!settings) return false
     
+    // Use lastSavedRef if it has values (means we just saved), otherwise use settings
+    const compareTo = Object.keys(lastSavedRef.current).length > 0 ? lastSavedRef.current : settings
+    
+    // Normalize domains for comparison
+    const formDomain = normalizeDomain(formData.custom_domain)
+    const compareDomain = normalizeDomain(compareTo.custom_domain)
+    
     return (
-      formData.organization_name !== (settings.organization_name || '') ||
-      formData.contact_email !== (settings.contact_email || '') ||
-      formData.website_url !== (settings.website_url || '') ||
-      formData.default_ai_model !== (settings.default_ai_model || 'gpt-5') ||
-      formData.logo_url !== (settings.logo_url || '') ||
-      formData.ghl_webhook_url !== (settings.ghl_webhook_url || '') ||
-      formData.custom_domain !== (settings.custom_domain || '') ||
-      formData.lead_phone_field !== (settings.lead_phone_field || '') ||
-      formData.brand_description !== (settings.brand_description || '') ||
-      formData.brand_voice !== (settings.brand_voice || '') ||
-      formData.target_audience !== (settings.target_audience || '') ||
-      formData.company_values !== (settings.company_values || '') ||
-      formData.industry !== (settings.industry || '') ||
-      formData.company_size !== (settings.company_size || '') ||
-      formData.brand_messaging_guidelines !== (settings.brand_messaging_guidelines || '') ||
-      formData.icp_document_url !== (settings.icp_document_url || '')
+      formData.organization_name !== (compareTo.organization_name || '') ||
+      formData.contact_email !== (compareTo.contact_email || '') ||
+      formData.website_url !== (compareTo.website_url || '') ||
+      formData.default_ai_model !== (compareTo.default_ai_model || 'gpt-5') ||
+      formData.logo_url !== (compareTo.logo_url || '') ||
+      formData.ghl_webhook_url !== (compareTo.ghl_webhook_url || '') ||
+      formDomain !== compareDomain ||
+      formData.lead_phone_field !== (compareTo.lead_phone_field || '') ||
+      formData.brand_description !== (compareTo.brand_description || '') ||
+      formData.brand_voice !== (compareTo.brand_voice || '') ||
+      formData.target_audience !== (compareTo.target_audience || '') ||
+      formData.company_values !== (compareTo.company_values || '') ||
+      formData.industry !== (compareTo.industry || '') ||
+      formData.company_size !== (compareTo.company_size || '') ||
+      formData.brand_messaging_guidelines !== (compareTo.brand_messaging_guidelines || '') ||
+      formData.icp_document_url !== (compareTo.icp_document_url || '')
     )
   }, [settings, formData])
 
@@ -159,7 +207,7 @@ export default function SettingsPage() {
       return
     }
 
-    const updatedSettings = await updateSettings({
+    const settingsPayload = {
       organization_name: formData.organization_name?.trim() || undefined,
       contact_email: formData.contact_email?.trim() || undefined,
       website_url: sanitizeUrl(formData.website_url),
@@ -177,9 +225,34 @@ export default function SettingsPage() {
       company_size: formData.company_size?.trim() || undefined,
       brand_messaging_guidelines: formData.brand_messaging_guidelines?.trim() || undefined,
       icp_document_url: sanitizeUrl(formData.icp_document_url),
-    })
+    }
+
+    const updatedSettings = await updateSettings(settingsPayload)
 
     if (updatedSettings) {
+      // Update formData to match what was actually saved (the payload we sent)
+      const savedFormData = {
+        organization_name: settingsPayload.organization_name || '',
+        contact_email: settingsPayload.contact_email || '',
+        website_url: settingsPayload.website_url || '',
+        default_ai_model: settingsPayload.default_ai_model || 'gpt-5',
+        logo_url: settingsPayload.logo_url || '',
+        ghl_webhook_url: settingsPayload.ghl_webhook_url || '',
+        custom_domain: settingsPayload.custom_domain || '',
+        lead_phone_field: settingsPayload.lead_phone_field || '',
+        brand_description: settingsPayload.brand_description || '',
+        brand_voice: settingsPayload.brand_voice || '',
+        target_audience: settingsPayload.target_audience || '',
+        company_values: settingsPayload.company_values || '',
+        industry: settingsPayload.industry || '',
+        company_size: settingsPayload.company_size || '',
+        brand_messaging_guidelines: settingsPayload.brand_messaging_guidelines || '',
+        icp_document_url: settingsPayload.icp_document_url || '',
+      }
+      setFormData((prev) => ({ ...prev, ...savedFormData }))
+      // Update lastSavedRef so hasUnsavedChanges compares against what we just saved
+      // This immediately clears the "unsaved changes" badge
+      lastSavedRef.current = savedFormData
       // Refetch to get latest settings including webhook_url
       refetch()
     }
