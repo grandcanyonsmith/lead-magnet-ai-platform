@@ -9,6 +9,7 @@ import re
 import requests
 from datetime import datetime
 from typing import Dict, Any, List, Optional, Tuple
+from utils.decimal_utils import convert_decimals_to_float
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +100,9 @@ class WebhookStepService:
             'payload_keys': list(payload.keys()) if payload else [],
             'headers_count': len(headers)
         })
+        
+        # Convert any Decimal values to JSON-serializable types before sending
+        payload = convert_decimals_to_float(payload)
         
         step_start_time = datetime.utcnow()
         
