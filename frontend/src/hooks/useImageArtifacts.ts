@@ -32,6 +32,8 @@ export function useImageArtifacts(options: UseImageArtifactsOptions) {
   }, [steps])
 
   // Fetch artifacts only when jobId changes
+  // Fetch artifacts only when jobId changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const fetchImageArtifacts = async () => {
       if (!jobId) return
