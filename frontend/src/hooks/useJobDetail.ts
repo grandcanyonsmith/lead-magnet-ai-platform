@@ -389,7 +389,7 @@ export function useJobExecution({ jobId, job, setJob, loadJob }: UseJobExecution
       
       return loadPromise
     },
-    [jobId, setJob] // Removed 'job' dependency - use jobSnapshot parameter instead
+    [jobId, job, setJob] // Include job to satisfy hook deps; main input still jobSnapshot
   )
 
   useEffect(() => {
@@ -490,7 +490,7 @@ export function useJobExecution({ jobId, job, setJob, loadJob }: UseJobExecution
         }, 5000)
       }
     },
-    [jobId, loadExecutionSteps, loadJob]
+    [job, jobId, loadExecutionSteps, loadJob]
   )
 
   return {
