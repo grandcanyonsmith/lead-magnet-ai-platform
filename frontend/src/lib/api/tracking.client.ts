@@ -59,19 +59,10 @@ export async function trackEvent(event: {
   user_agent?: string;
   referrer?: string;
 }): Promise<{ event_id: string; success: boolean }> {
-  const response = await fetch(`${api.baseUrl}/v1/tracking/event`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(event),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to track event: ${response.statusText}`);
-  }
-
-  return response.json();
+  return api.post<{ event_id: string; success: boolean }>(
+    '/v1/tracking/event',
+    event
+  );
 }
 
 /**

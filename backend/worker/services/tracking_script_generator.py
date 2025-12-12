@@ -3,6 +3,7 @@ Tracking Script Generator
 Generates JavaScript tracking code to inject into HTML lead magnets.
 """
 
+import json
 import logging
 import os
 from typing import Optional
@@ -17,39 +18,6 @@ class TrackingScriptGenerator:
         """Initialize tracking script generator."""
         # Get API URL from environment
         self.api_url = os.environ.get('API_URL') or os.environ.get('API_GATEWAY_URL') or ''
-    
-    def _escape_js_string(self, value: str) -> str:
-        """
-        Escape a string for safe use in JavaScript string literals.
-        Escapes quotes, backslashes, newlines, and other special characters.
-        
-        Args:
-            value: String to escape
-            
-        Returns:
-            Escaped string safe for JavaScript
-        """
-        if not value:
-            return ''
-        
-        # Replace backslashes first (before other replacements)
-        value = value.replace('\\', '\\\\')
-        # Replace single quotes
-        value = value.replace("'", "\\'")
-        # Replace double quotes
-        value = value.replace('"', '\\"')
-        # Replace newlines
-        value = value.replace('\n', '\\n')
-        # Replace carriage returns
-        value = value.replace('\r', '\\r')
-        # Replace tabs
-        value = value.replace('\t', '\\t')
-        # Replace backticks (for template literals)
-        value = value.replace('`', '\\`')
-        # Replace forward slashes (less critical but good practice)
-        value = value.replace('/', '\\/')
-        
-        return value
     
     def generate_tracking_script(self, job_id: str, tenant_id: str) -> str:
         """
@@ -66,10 +34,11 @@ class TrackingScriptGenerator:
             logger.warning("[TrackingScriptGenerator] API_URL not set, tracking script will not work")
             return ""
         
-        # Escape values to prevent XSS
-        escaped_job_id = self._escape_js_string(job_id)
-        escaped_tenant_id = self._escape_js_string(tenant_id)
-        escaped_api_url = self._escape_js_string(self.api_url.rstrip("/"))
+        # Escape values to prevent XSS using json.dumps(), which handles
+        # quotes, backslashes, newlines, tabs, unicode, etc.
+        escaped_job_id = json.dumps(job_id)
+        escaped_tenant_id = json.dumps(tenant_id)
+        escaped_api_url = json.dumps(self.api_url.rstrip("/"))
         
         # Generate tracking script
         script = f"""
@@ -80,9 +49,9 @@ class TrackingScriptGenerator:
     
     // Configuration
     const TRACKING_CONFIG = {{
-        jobId: '{escaped_job_id}',
-        tenantId: '{escaped_tenant_id}',
-        apiUrl: '{escaped_api_url}',
+        jobId: {escaped_job_id},
+        tenantId: {escaped_tenant_id},
+        apiUrl: {escaped_api_url},
         heartbeatInterval: 30000, // 30 seconds
         sessionTimeout: 1800000, // 30 minutes
     }};
