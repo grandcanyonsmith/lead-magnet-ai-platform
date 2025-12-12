@@ -353,9 +353,6 @@ export function useJobExecution({ jobId, job, setJob, loadJob }: UseJobExecution
 
         try {
           const executionSteps = await api.getExecutionSteps(jobId)
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useJobDetail.ts:355',message:'Fetched execution steps from API',data:{jobId,executionStepsCount:Array.isArray(executionSteps)?executionSteps.length:0,executionStepOrders:Array.isArray(executionSteps)?executionSteps.map((s:any)=>s.step_order):[],executionStepTypes:Array.isArray(executionSteps)?executionSteps.map((s:any)=>s.step_type):[],executionStepsFull:Array.isArray(executionSteps)?executionSteps.map((s:any)=>({step_order:s.step_order,step_type:s.step_type,step_name:s.step_name,duration_ms:s.duration_ms,hasUsageInfo:!!s.usage_info,cost_usd:s.usage_info?.cost_usd,hasArtifactId:!!s.artifact_id,artifact_id:s.artifact_id})):[],hasS3Key:!!snapshot?.execution_steps_s3_key,s3Key:snapshot?.execution_steps_s3_key,jobStatus:snapshot?.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'D'})}).catch(()=>{});
-          // #endregion
           if (Array.isArray(executionSteps)) {
             setJob((prevJob) => (prevJob ? { ...prevJob, execution_steps: executionSteps } : prevJob))
             setExecutionStepsError(null)
