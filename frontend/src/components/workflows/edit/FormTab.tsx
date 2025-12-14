@@ -32,12 +32,7 @@ interface FormTabProps {
 }
 
 function FormPreview({ formFormData }: { formFormData: FormFormData }) {
-  const defaultFields: FormField[] = [
-    { field_id: 'name', field_type: 'text', label: 'Name', required: true },
-    { field_id: 'email', field_type: 'email', label: 'Email', required: true },
-    { field_id: 'phone', field_type: 'tel', label: 'Phone', required: false },
-  ]
-  const allFields = [...defaultFields, ...formFormData.form_fields_schema.fields]
+  const allFields = formFormData.form_fields_schema.fields
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-6">
@@ -116,7 +111,7 @@ export function FormTab({
         >
           <div className="rounded-2xl border border-blue-100/80 bg-blue-50/70 px-4 py-3 text-sm text-blue-900">
             <p>
-              <strong className="font-semibold">Heads up:</strong> this form name automatically mirrors your lead magnet name. Name, email, and phone fields are always included for you.
+              <strong className="font-semibold">Heads up:</strong> this form name automatically mirrors your lead magnet name.
             </p>
           </div>
 
@@ -183,7 +178,7 @@ export function FormTab({
           }
         >
           <p className="text-sm text-gray-500">
-            Name, email, and phone are already in place. Add custom fields below or reorder them to fine tune your lead capture.
+            Add fields below to collect the information you need from your leads.
           </p>
 
           <div className="mt-4 space-y-3">
@@ -324,7 +319,7 @@ export function FormTab({
             {customFields.length === 0 && (
               <div className="rounded-2xl border-2 border-dashed border-gray-200 px-4 py-10 text-center">
                 <p className="text-sm text-gray-600">
-                  No custom fields yet. Your default contact fields are ready to go.
+                  No fields yet. Add fields to collect information from your leads.
                 </p>
                 <button
                   type="button"

@@ -662,7 +662,7 @@ export default function WorkflowStepEditor({
             aria-required="true"
           >
             <option value="ai_generation">AI Generation</option>
-            <option value="webhook">Webhook</option>
+            <option value="webhook">HTTP Request</option>
           </select>
         </div>
 
@@ -940,19 +940,19 @@ export default function WorkflowStepEditor({
           </>
         )}
 
-        {/* Webhook Step Fields */}
+        {/* HTTP Request Step Fields */}
         {localStep.step_type === 'webhook' && (
           <>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Webhook URL *
+                HTTP URL *
               </label>
               <input
                 type="url"
                 value={localStep.webhook_url || ''}
                 onChange={(e) => handleChange('webhook_url', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                placeholder="https://example.com/webhook"
+                placeholder="https://api.example.com/endpoint"
                 required
               />
               <p className="mt-1 text-sm text-gray-500">
@@ -962,10 +962,10 @@ export default function WorkflowStepEditor({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Webhook Headers (optional)
+                HTTP Headers (optional)
               </label>
               <p className="text-xs text-gray-500 mb-2">
-                Add custom headers to include in the webhook request (e.g., Authorization).
+                Add custom headers to include in the HTTP request (e.g., Authorization).
               </p>
               <div className="space-y-2">
                 {Object.entries(webhookHeaders).map(([key, value], idx) => (
@@ -1026,7 +1026,7 @@ export default function WorkflowStepEditor({
                 Data Selection
               </label>
               <p className="text-xs text-gray-500 mb-3">
-                Choose which data to include in the webhook payload. All step outputs are included by default.
+                Choose which data to include in the HTTP request payload. All step outputs are included by default.
               </p>
               
               <div className="space-y-3">

@@ -69,11 +69,16 @@ export function useWorkflowEdit() {
         return {
           step_name: step.step_name || `Step ${index + 1}`,
           step_description: step.step_description || '',
+          step_type: step.step_type || 'ai_generation',
           model: step.model || 'gpt-5',
           instructions: step.instructions?.trim() || defaultInstructions,
           step_order: step.step_order !== undefined ? step.step_order : index,
           tools: step.tools || ['web_search'],
           tool_choice: step.tool_choice || 'auto',
+          // Webhook step fields
+          webhook_url: step.webhook_url || '',
+          webhook_headers: step.webhook_headers || {},
+          webhook_data_selection: step.webhook_data_selection || undefined,
         }
       })
       setSteps(loadedSteps)
