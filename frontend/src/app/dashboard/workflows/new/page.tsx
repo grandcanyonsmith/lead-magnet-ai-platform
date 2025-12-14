@@ -14,6 +14,7 @@ import { useWorkflowSteps } from '@/hooks/useWorkflowSteps'
 import { useWorkflowValidation } from '@/hooks/useWorkflowValidation'
 import { useWorkflowSubmission } from '@/hooks/useWorkflowSubmission'
 import { useWorkflowGenerationStatus } from '@/hooks/useWorkflowGenerationStatus'
+import { useSettings } from '@/hooks/api/useSettings'
 
 export default function NewWorkflowPage() {
   const router = useRouter()
@@ -30,6 +31,7 @@ export default function NewWorkflowPage() {
   const validation = useWorkflowValidation(workflowForm.formData, workflowSteps.steps, workflowForm.templateData)
   const submission = useWorkflowSubmission()
   const generationStatus = useWorkflowGenerationStatus(generationJobId)
+  const { settings } = useSettings()
 
   // Handle AI generation result
   useEffect(() => {
@@ -70,7 +72,7 @@ export default function NewWorkflowPage() {
 
     setError(null)
     setStep('creating')
-    const result = await aiGeneration.generateWorkflow(prompt.trim(), 'gpt-5')
+    const result = await aiGeneration.generateWorkflow(prompt.trim(), settings?.default_ai_model || 'gpt-5.1-codex')
     
     if (result && result.job_id) {
       // Store job_id for status tracking

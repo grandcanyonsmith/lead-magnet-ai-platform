@@ -14,6 +14,7 @@ interface GeneralSettingsProps {
 }
 
 const AI_MODEL_OPTIONS = [
+  { value: 'gpt-5.1-codex', label: 'GPT-5.1 Codex' },
   { value: 'gpt-5', label: 'GPT-5' },
   { value: 'gpt-4.1', label: 'GPT-4.1' },
   { value: 'gpt-4o', label: 'GPT-4o' },

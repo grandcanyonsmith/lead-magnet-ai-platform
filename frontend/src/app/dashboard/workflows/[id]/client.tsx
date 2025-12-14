@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import { api } from '@/lib/api'
 import { useSettings } from '@/hooks/api/useSettings'
 import { buildPublicFormUrl } from '@/utils/url'
-import { FiArrowLeft, FiEdit, FiTrash2, FiClock, FiCheckCircle, FiXCircle, FiExternalLink, FiLink, FiZap, FiSettings, FiFileText, FiCalendar, FiCopy } from 'react-icons/fi'
+import { FiArrowLeft, FiEdit, FiTrash2, FiClock, FiExternalLink, FiLink, FiSettings, FiFileText, FiCalendar } from 'react-icons/fi'
 
 export default function WorkflowDetailPage() {
   const router = useRouter()
@@ -169,7 +169,7 @@ export default function WorkflowDetailPage() {
   }
 
   return (
-    <div>
+    <div className="overflow-x-hidden">
       <div className="mb-4 sm:mb-6">
         <button
           onClick={() => router.back()}
@@ -211,7 +211,7 @@ export default function WorkflowDetailPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Workflow Details */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+        <div className="min-w-0 bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
           <div className="flex items-center gap-2 mb-6">
             <FiSettings className="w-5 h-5 text-gray-600" />
             <h2 className="text-lg font-semibold text-gray-900">Workflow Details</h2>
@@ -237,9 +237,6 @@ export default function WorkflowDetailPage() {
                 <div className="space-y-3">
                   <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                     <p className="text-sm font-semibold text-gray-900 break-words">{workflow.form.form_name || 'Form'}</p>
-                    {workflow.form.public_slug && (
-                      <p className="text-xs text-gray-500 mt-1 font-mono break-all">/{workflow.form.public_slug}</p>
-                    )}
                   </div>
                   <div className="flex flex-col sm:flex-row gap-2">
                     {workflow.form.public_slug && (
@@ -263,30 +260,6 @@ export default function WorkflowDetailPage() {
                       </button>
                     )}
                   </div>
-                  {workflow.form.public_slug && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                      <label className="block text-xs font-semibold text-blue-900 mb-2">Public Form URL</label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          readOnly
-                          value={buildPublicFormUrl(workflow.form.public_slug, settings?.custom_domain)}
-                          className="flex-1 text-xs font-mono bg-white border border-blue-200 rounded px-3 py-2 text-gray-900 break-all focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          onClick={(e) => (e.target as HTMLInputElement).select()}
-                        />
-                        <button
-                          onClick={() => {
-                            const url = buildPublicFormUrl(workflow.form.public_slug, settings?.custom_domain)
-                            navigator.clipboard.writeText(url)
-                          }}
-                          className="p-2.5 text-blue-700 hover:text-blue-900 hover:bg-blue-100 rounded-lg transition-colors flex-shrink-0 touch-target border border-blue-200"
-                          title="Copy URL"
-                        >
-                          <FiCopy className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  )}
                 </div>
               ) : (
                 <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 text-center">

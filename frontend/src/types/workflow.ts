@@ -6,6 +6,7 @@ import { BaseEntity } from './common'
 import { FormField } from './form'
 
 export type AIModel = 
+  | 'gpt-5.1-codex'
   | 'gpt-5'
   | 'gpt-4.1'
   | 'gpt-4o'
