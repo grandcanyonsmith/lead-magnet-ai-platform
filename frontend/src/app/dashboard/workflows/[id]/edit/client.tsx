@@ -121,9 +121,9 @@ export default function EditWorkflowPage() {
         setError(`Step ${i + 1} instructions are required for AI generation steps`)
         return
       }
-      // Validate webhook URL for webhook steps
+      // Validate HTTP URL for HTTP request steps
       if (step.step_type === 'webhook' && (!step.webhook_url || !step.webhook_url.trim())) {
-        setError(`Step ${i + 1} webhook URL is required for webhook steps`)
+        setError(`Step ${i + 1} HTTP URL is required for HTTP request steps`)
         return
       }
     }
