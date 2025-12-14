@@ -6,7 +6,7 @@
 import { RouteResponse } from '../routes';
 import { ApiError } from '../utils/errors';
 import { logger } from '../utils/logger';
-import { trackingService, TrackingEvent } from '../services/trackingService';
+import { trackingService } from '../services/trackingService';
 import { db } from '../utils/db';
 import { env } from '../utils/env';
 import fs from 'fs';

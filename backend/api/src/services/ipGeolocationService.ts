@@ -13,6 +13,16 @@ interface LocationData {
   longitude?: number;
 }
 
+interface IpApiResponse {
+  status: 'success' | 'fail';
+  message?: string;
+  country?: string;
+  regionName?: string;
+  city?: string;
+  lat?: number;
+  lon?: number;
+}
+
 // Simple in-memory cache to avoid repeated lookups
 const locationCache = new Map<string, { data: LocationData; timestamp: number }>();
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -55,7 +65,7 @@ export class IPGeolocationService {
         return null;
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as IpApiResponse;
 
       if (data.status === 'fail') {
         logger.warn('[IP Geolocation] IP lookup failed', {
