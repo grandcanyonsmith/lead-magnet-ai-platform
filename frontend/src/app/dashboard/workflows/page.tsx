@@ -5,11 +5,14 @@ import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { useSettings } from '@/hooks/api/useSettings'
 import { buildPublicFormUrl } from '@/utils/url'
-import { FiPlus, FiEdit, FiTrash2, FiEye, FiExternalLink, FiCopy, FiCheck, FiMoreVertical, FiLoader, FiCheckCircle, FiXCircle, FiClock, FiList, FiFileText, FiArrowLeft } from 'react-icons/fi'
+import { FiPlus, FiEdit, FiTrash2, FiEye, FiExternalLink, FiCopy, FiCheck, FiMoreVertical, FiLoader, FiCheckCircle, FiXCircle, FiClock, FiList, FiFileText, FiArrowLeft, FiFolder, FiFolderPlus, FiMove, FiX } from 'react-icons/fi'
+import { Folder } from '@/types'
 
 export default function WorkflowsPage() {
   const router = useRouter()
   const [workflows, setWorkflows] = useState<any[]>([])
+  const [folders, setFolders] = useState<Folder[]>([])
+  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
@@ -17,6 +20,13 @@ export default function WorkflowsPage() {
   const [workflowJobs, setWorkflowJobs] = useState<Record<string, any[]>>({})
   const [loadingJobs, setLoadingJobs] = useState<Record<string, boolean>>({})
   const menuRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  // Folder modal state
+  const [showCreateFolderModal, setShowCreateFolderModal] = useState(false)
+  const [showMoveFolderModal, setShowMoveFolderModal] = useState<string | null>(null)
+  const [newFolderName, setNewFolderName] = useState('')
+  const [editingFolderId, setEditingFolderId] = useState<string | null>(null)
+  const [editingFolderName, setEditingFolderName] = useState('')
+  const [folderActionLoading, setFolderActionLoading] = useState(false)
   // Track which workflow IDs we've already loaded jobs for
   const loadedWorkflowIdsRef = useRef<Set<string>>(new Set())
   // Ref to track the latest workflows and workflowJobs for polling
@@ -73,8 +83,92 @@ export default function WorkflowsPage() {
     return requestPromise
   }, [])
 
+  // Load folders
+  const loadFolders = useCallback(async () => {
+    try {
+      const data = await api.getFolders()
+      setFolders(data.folders || [])
+    } catch (error) {
+      console.error('Failed to load folders:', error)
+    }
+  }, [])
+
+  // Create folder
+  const handleCreateFolder = async () => {
+    if (!newFolderName.trim()) return
+    setFolderActionLoading(true)
+    try {
+      await api.createFolder({ folder_name: newFolderName.trim() })
+      await loadFolders()
+      setNewFolderName('')
+      setShowCreateFolderModal(false)
+    } catch (error: any) {
+      console.error('Failed to create folder:', error)
+      alert(error?.message || 'Failed to create folder')
+    } finally {
+      setFolderActionLoading(false)
+    }
+  }
+
+  // Rename folder
+  const handleRenameFolder = async (folderId: string) => {
+    if (!editingFolderName.trim()) return
+    setFolderActionLoading(true)
+    try {
+      await api.updateFolder(folderId, { folder_name: editingFolderName.trim() })
+      await loadFolders()
+      setEditingFolderId(null)
+      setEditingFolderName('')
+    } catch (error: any) {
+      console.error('Failed to rename folder:', error)
+      alert(error?.message || 'Failed to rename folder')
+    } finally {
+      setFolderActionLoading(false)
+    }
+  }
+
+  // Delete folder
+  const handleDeleteFolder = async (folderId: string) => {
+    if (!confirm('Are you sure you want to delete this folder? Lead magnets inside will be moved to the root.')) return
+    setFolderActionLoading(true)
+    try {
+      await api.deleteFolder(folderId)
+      await Promise.all([loadFolders(), loadWorkflows()])
+      if (currentFolderId === folderId) {
+        setCurrentFolderId(null)
+      }
+    } catch (error: any) {
+      console.error('Failed to delete folder:', error)
+      alert(error?.message || 'Failed to delete folder')
+    } finally {
+      setFolderActionLoading(false)
+    }
+  }
+
+  // Move workflow to folder
+  const handleMoveToFolder = async (workflowId: string, folderId: string | null) => {
+    setFolderActionLoading(true)
+    try {
+      await api.moveWorkflowToFolder(workflowId, folderId)
+      await loadWorkflows()
+      setShowMoveFolderModal(null)
+    } catch (error: any) {
+      console.error('Failed to move workflow:', error)
+      alert(error?.message || 'Failed to move lead magnet')
+    } finally {
+      setFolderActionLoading(false)
+    }
+  }
+
+  // Get current folder name
+  const currentFolder = useMemo(() => {
+    if (!currentFolderId) return null
+    return folders.find(f => f.folder_id === currentFolderId) || null
+  }, [currentFolderId, folders])
+
   useEffect(() => {
     loadWorkflows()
+    loadFolders()
   }, [])
 
   // Create stable workflow IDs array to prevent unnecessary effect runs
@@ -464,15 +558,27 @@ export default function WorkflowsPage() {
     return `${days}d ago`
   }
 
-  // Filter workflows based on search query
-  const filteredWorkflows = workflows.filter((workflow) => {
-    if (!searchQuery.trim()) return true
-    const query = searchQuery.toLowerCase()
-    const name = (workflow.workflow_name || '').toLowerCase()
-    const description = (workflow.workflow_description || '').toLowerCase()
-    const formName = (workflow.form?.form_name || '').toLowerCase()
-    return name.includes(query) || description.includes(query) || formName.includes(query)
-  })
+  // Filter workflows based on search query and current folder
+  const filteredWorkflows = useMemo(() => {
+    return workflows.filter((workflow) => {
+      // Filter by folder
+      const workflowFolderId = workflow.folder_id || null
+      if (workflowFolderId !== currentFolderId) return false
+      
+      // Filter by search query
+      if (!searchQuery.trim()) return true
+      const query = searchQuery.toLowerCase()
+      const name = (workflow.workflow_name || '').toLowerCase()
+      const description = (workflow.workflow_description || '').toLowerCase()
+      const formName = (workflow.form?.form_name || '').toLowerCase()
+      return name.includes(query) || description.includes(query) || formName.includes(query)
+    })
+  }, [workflows, currentFolderId, searchQuery])
+
+  // Workflows in root (no folder) for count
+  const rootWorkflowCount = useMemo(() => {
+    return workflows.filter(w => !w.folder_id).length
+  }, [workflows])
 
   if (loading) {
     return (
@@ -492,24 +598,44 @@ export default function WorkflowsPage() {
   return (
     <div>
       <button
-        onClick={() => router.back()}
+        onClick={() => {
+          if (currentFolderId) {
+            setCurrentFolderId(null)
+          } else {
+            router.back()
+          }
+        }}
         className="flex items-center text-gray-600 hover:text-gray-900 mb-4 py-2 touch-target"
       >
         <FiArrowLeft className="w-4 h-4 mr-2" />
-        Back
+        {currentFolderId ? 'Back to All Lead Magnets' : 'Back'}
       </button>
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6">
         <div className="mb-2 sm:mb-0">
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-1">Lead Magnets</h1>
-          <p className="text-sm sm:text-base text-gray-600">Manage your AI lead magnets and their forms</p>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-1">
+            {currentFolder ? currentFolder.folder_name : 'Lead Magnets'}
+          </h1>
+          <p className="text-sm sm:text-base text-gray-600">
+            {currentFolder ? `${filteredWorkflows.length} lead magnet${filteredWorkflows.length !== 1 ? 's' : ''} in this folder` : 'Manage your AI lead magnets and their forms'}
+          </p>
         </div>
-        <button
-          onClick={() => router.push('/dashboard/workflows/new')}
-          className="flex items-center justify-center px-3 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg hover:from-primary-700 hover:to-primary-800 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 text-sm sm:text-base w-full sm:w-auto"
-        >
-          <FiPlus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-          Create Lead Magnet
-        </button>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <button
+            onClick={() => setShowCreateFolderModal(true)}
+            className="flex items-center justify-center px-3 py-2 sm:py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all text-sm sm:text-base"
+          >
+            <FiFolderPlus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+            <span className="hidden sm:inline">New Folder</span>
+            <span className="sm:hidden">Folder</span>
+          </button>
+          <button
+            onClick={() => router.push('/dashboard/workflows/new')}
+            className="flex items-center justify-center px-3 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg hover:from-primary-700 hover:to-primary-800 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 text-sm sm:text-base flex-1 sm:flex-none"
+          >
+            <FiPlus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+            Create Lead Magnet
+          </button>
+        </div>
       </div>
 
       {/* Search Bar */}
@@ -531,6 +657,202 @@ export default function WorkflowsPage() {
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
+          </div>
+        </div>
+      )}
+
+      {/* Folders Section - Only show when not inside a folder */}
+      {!currentFolderId && folders.length > 0 && (
+        <div className="mb-6">
+          <h2 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+            <FiFolder className="w-4 h-4" />
+            Folders
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            {folders.map((folder) => (
+              <div
+                key={folder.folder_id}
+                className="relative group"
+              >
+                {editingFolderId === folder.folder_id ? (
+                  <div className="bg-white rounded-lg border-2 border-primary-500 p-3 shadow-sm">
+                    <input
+                      type="text"
+                      value={editingFolderName}
+                      onChange={(e) => setEditingFolderName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleRenameFolder(folder.folder_id)
+                        if (e.key === 'Escape') {
+                          setEditingFolderId(null)
+                          setEditingFolderName('')
+                        }
+                      }}
+                      className="w-full text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                      autoFocus
+                      disabled={folderActionLoading}
+                    />
+                    <div className="flex gap-1 mt-2">
+                      <button
+                        onClick={() => handleRenameFolder(folder.folder_id)}
+                        className="text-xs bg-primary-600 text-white px-2 py-1 rounded hover:bg-primary-700 disabled:opacity-50"
+                        disabled={folderActionLoading}
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingFolderId(null)
+                          setEditingFolderName('')
+                        }}
+                        className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200"
+                        disabled={folderActionLoading}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setCurrentFolderId(folder.folder_id)}
+                    className="w-full bg-white rounded-lg border border-gray-200 p-3 hover:border-primary-300 hover:shadow-md transition-all text-left group"
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <FiFolder className="w-5 h-5 text-primary-600" />
+                      <span className="text-sm font-medium text-gray-900 truncate flex-1">{folder.folder_name}</span>
+                    </div>
+                    <span className="text-xs text-gray-500">
+                      {folder.workflow_count || 0} item{(folder.workflow_count || 0) !== 1 ? 's' : ''}
+                    </span>
+                  </button>
+                )}
+                {/* Folder actions dropdown */}
+                {editingFolderId !== folder.folder_id && (
+                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex gap-1">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setEditingFolderId(folder.folder_id)
+                          setEditingFolderName(folder.folder_name)
+                        }}
+                        className="p-1 bg-white rounded shadow text-gray-600 hover:text-primary-600"
+                        title="Rename folder"
+                      >
+                        <FiEdit className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDeleteFolder(folder.folder_id)
+                        }}
+                        className="p-1 bg-white rounded shadow text-gray-600 hover:text-red-600"
+                        title="Delete folder"
+                      >
+                        <FiTrash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Create Folder Modal */}
+      {showCreateFolderModal && (
+        <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Create New Folder</h2>
+              <button
+                onClick={() => {
+                  setShowCreateFolderModal(false)
+                  setNewFolderName('')
+                }}
+                className="p-1 text-gray-400 hover:text-gray-600"
+              >
+                <FiX className="w-5 h-5" />
+              </button>
+            </div>
+            <input
+              type="text"
+              value={newFolderName}
+              onChange={(e) => setNewFolderName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleCreateFolder()
+                if (e.key === 'Escape') {
+                  setShowCreateFolderModal(false)
+                  setNewFolderName('')
+                }
+              }}
+              placeholder="Folder name"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent mb-4"
+              autoFocus
+              disabled={folderActionLoading}
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setShowCreateFolderModal(false)
+                  setNewFolderName('')
+                }}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                disabled={folderActionLoading}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateFolder}
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
+                disabled={!newFolderName.trim() || folderActionLoading}
+              >
+                {folderActionLoading ? 'Creating...' : 'Create Folder'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Move to Folder Modal */}
+      {showMoveFolderModal && (
+        <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Move to Folder</h2>
+              <button
+                onClick={() => setShowMoveFolderModal(null)}
+                className="p-1 text-gray-400 hover:text-gray-600"
+              >
+                <FiX className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              <button
+                onClick={() => handleMoveToFolder(showMoveFolderModal, null)}
+                className="w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors flex items-center gap-3"
+                disabled={folderActionLoading}
+              >
+                <FiFolder className="w-5 h-5 text-gray-400" />
+                <span className="text-sm font-medium text-gray-700">Root (No folder)</span>
+              </button>
+              {folders.map((folder) => (
+                <button
+                  key={folder.folder_id}
+                  onClick={() => handleMoveToFolder(showMoveFolderModal, folder.folder_id)}
+                  className="w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors flex items-center gap-3"
+                  disabled={folderActionLoading}
+                >
+                  <FiFolder className="w-5 h-5 text-primary-600" />
+                  <span className="text-sm font-medium text-gray-700">{folder.folder_name}</span>
+                </button>
+              ))}
+            </div>
+            {folderActionLoading && (
+              <div className="flex justify-center mt-4">
+                <FiLoader className="w-5 h-5 animate-spin text-primary-600" />
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -677,6 +999,25 @@ export default function WorkflowsPage() {
                               <FiTrash2 className="w-3 h-3 mr-2" />
                               Delete
                             </button>
+                            <button
+                              data-menu-item="true"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                e.preventDefault()
+                                setOpenMenuId(null)
+                                setShowMoveFolderModal(workflow.workflow_id)
+                              }}
+                              onTouchEnd={(e) => {
+                                e.stopPropagation()
+                                e.preventDefault()
+                                setOpenMenuId(null)
+                                setShowMoveFolderModal(workflow.workflow_id)
+                              }}
+                              className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 active:bg-gray-100 flex items-center touch-target border-t border-gray-100"
+                            >
+                              <FiMove className="w-3 h-3 mr-2" />
+                              Move to Folder
+                            </button>
                             {formUrl && (
                               <button
                                 data-menu-item="true"
@@ -694,7 +1035,7 @@ export default function WorkflowsPage() {
                                   // Small delay to show feedback before closing
                                   setTimeout(() => setOpenMenuId(null), 100)
                                 }}
-                                className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 active:bg-gray-100 flex items-center touch-target border-t border-gray-100"
+                                className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 active:bg-gray-100 flex items-center touch-target"
                               >
                                 {copiedUrl === workflow.workflow_id ? (
                                   <>
@@ -1008,6 +1349,21 @@ export default function WorkflowsPage() {
                                   <FiTrash2 className="w-4 h-4 mr-2" />
                                   Delete
                                 </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    e.preventDefault()
+                                    setOpenMenuId(null)
+                                    setShowMoveFolderModal(workflow.workflow_id)
+                                  }}
+                                  onTouchStart={(e) => {
+                                    e.stopPropagation()
+                                  }}
+                                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 active:bg-gray-100 flex items-center touch-target border-t border-gray-100"
+                                >
+                                  <FiMove className="w-4 h-4 mr-2" />
+                                  Move to Folder
+                                </button>
                                 {formUrl && (
                                   <button
                                     onClick={async (e) => {
@@ -1020,7 +1376,7 @@ export default function WorkflowsPage() {
                                     onTouchStart={(e) => {
                                       e.stopPropagation()
                                     }}
-                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 active:bg-gray-100 flex items-center touch-target border-t border-gray-100"
+                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 active:bg-gray-100 flex items-center touch-target"
                                   >
                                     {copiedUrl === workflow.workflow_id ? (
                                       <>

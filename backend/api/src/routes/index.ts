@@ -10,6 +10,7 @@ import { registerAdminRoutes } from './adminRoutes';
 import { registerFileRoutes } from './fileRoutes';
 import { registerImpersonationRoutes } from '@domains/impersonation';
 import { registerAuthRoutes } from './authRoutes';
+import { registerFolderRoutes } from './folderRoutes';
 
 // Re-export RouteResponse for use in other modules
 export type { RouteResponse };
@@ -24,6 +25,7 @@ registerAdminRoutes();
 registerFileRoutes();
 registerImpersonationRoutes();
 registerAuthRoutes();
+registerFolderRoutes();
 
 /**
  * Main router function.

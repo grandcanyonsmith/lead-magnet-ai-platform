@@ -12,6 +12,10 @@ import {
   WorkflowGenerationResponse,
   WorkflowRefineInstructionsRequest,
   WorkflowRefineInstructionsResponse,
+  Folder,
+  FolderListResponse,
+  FolderCreateRequest,
+  FolderUpdateRequest,
 } from '@/types'
 
 export class WorkflowsClient extends BaseApiClient {
@@ -102,6 +106,31 @@ export class WorkflowsClient extends BaseApiClient {
     changes_summary: string
   }> {
     return this.post(`/admin/workflows/${workflowId}/ai-edit`, request)
+  }
+
+  // Folder methods
+  async getFolders(): Promise<FolderListResponse> {
+    return this.get<FolderListResponse>('/admin/folders')
+  }
+
+  async getFolder(id: string): Promise<Folder> {
+    return this.get<Folder>(`/admin/folders/${id}`)
+  }
+
+  async createFolder(data: FolderCreateRequest): Promise<Folder> {
+    return this.post<Folder>('/admin/folders', data)
+  }
+
+  async updateFolder(id: string, data: FolderUpdateRequest): Promise<Folder> {
+    return this.put<Folder>(`/admin/folders/${id}`, data)
+  }
+
+  async deleteFolder(id: string): Promise<void> {
+    return this.delete<void>(`/admin/folders/${id}`)
+  }
+
+  async moveWorkflowToFolder(workflowId: string, folderId: string | null): Promise<Workflow> {
+    return this.put<Workflow>(`/admin/workflows/${workflowId}`, { folder_id: folderId })
   }
 }
 

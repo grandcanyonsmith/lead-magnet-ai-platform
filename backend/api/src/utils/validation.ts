@@ -69,6 +69,8 @@ const baseWorkflowSchema = z.object({
   steps: z.array(workflowStepSchema).optional(),
   // Status field for workflow lifecycle
   status: z.enum(['draft', 'active', 'inactive']).optional(),
+  // Folder organization
+  folder_id: z.string().nullable().optional(),
   // Legacy fields (kept for backward compatibility in database, but not used for new workflows)
   ai_model: z.string().optional(),
   ai_instructions: z.string().optional(),
