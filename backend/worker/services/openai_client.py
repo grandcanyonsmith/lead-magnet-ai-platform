@@ -753,26 +753,9 @@ class OpenAIClient:
                     len(data_field) > 0):
                     
                     try:
-                        # Extract filename from asset if available
-                        filename = asset.get('name', '')
-                        if not filename:
-                            # Generate filename from asset ID or index
-                            asset_id = asset.get('id', '')
-                            if asset_id:
-                                # Try to determine extension from content_type
-                                ext = 'png'
-                                if 'jpeg' in content_type or 'jpg' in content_type:
-                                    ext = 'jpg'
-                                elif 'png' in content_type:
-                                    ext = 'png'
-                                filename = f"{asset_id}.{ext}"
-                            else:
-                                import time
-                                import uuid
-                                ext = 'png'
-                                if 'jpeg' in content_type or 'jpg' in content_type:
-                                    ext = 'jpg'
-                                filename = f"image_{int(time.time())}_{str(uuid.uuid4())[:8]}.{ext}"
+                        # Extract filename from asset only if it has a meaningful name
+                        # Otherwise pass None to let ImageHandler use AI naming
+                        filename = asset.get('name', '') or None
                         
                         # Upload base64 image to S3 with context for AI naming
                         image_url = image_handler.upload_base64_image_to_s3(
