@@ -51,7 +51,9 @@ class OpenAIClient:
         reasoning_level: Optional[str] = None,
         previous_image_urls: Optional[List[str]] = None,
         job_id: Optional[str] = None,
-        tenant_id: Optional[str] = None
+        tenant_id: Optional[str] = None,
+        reasoning_effort: Optional[str] = None,
+        service_tier: Optional[str] = None
     ) -> Dict:
         """
         Build parameters for OpenAI Responses API call.
@@ -65,6 +67,8 @@ class OpenAIClient:
             has_computer_use: Whether computer_use_preview is in tools
             reasoning_level: Reasoning level (deprecated, kept for compatibility)
             previous_image_urls: Optional list of image URLs from previous steps to include in input
+            reasoning_effort: Reasoning effort for supported models ('low'|'medium'|'high')
+            service_tier: Service tier / speed preference (e.g., 'default' for fast)
             
         Returns:
             API parameters dictionary for Responses API
@@ -264,6 +268,25 @@ class OpenAIClient:
             params["tools"] = cleaned_tools
             if tool_choice != "none":
                 params["tool_choice"] = tool_choice
+
+        # Reasoning + speed controls (Responses API)
+        # Map deprecated reasoning_level to reasoning_effort if provided
+        if reasoning_level and not reasoning_effort:
+            reasoning_effort = reasoning_level
+
+        # Default to "high" reasoning for GPT-5 family unless explicitly overridden
+        if reasoning_effort is None and isinstance(model, str) and model.startswith('gpt-5'):
+            reasoning_effort = 'high'
+
+        if reasoning_effort:
+            params["reasoning"] = {"effort": reasoning_effort}
+
+        # Prefer the default (non-flex) tier for faster responses on supported models
+        if service_tier is None and isinstance(model, str) and model.startswith('gpt-5'):
+            service_tier = 'default'
+
+        if service_tier:
+            params["service_tier"] = service_tier
         
         return params
     
@@ -287,6 +310,8 @@ class OpenAIClient:
                 'job_id': job_id,
                 'tenant_id': tenant_id,
                 'model': params.get('model'),
+                'service_tier': params.get('service_tier'),
+                'reasoning_effort': (params.get('reasoning') or {}).get('effort') if isinstance(params.get('reasoning'), dict) else None,
                 'has_tools': 'tools' in params and params.get('tools'),
                 'tools_count': len(params.get('tools', [])) if params.get('tools') else 0,
                 'tools': params.get('tools', []),
@@ -359,6 +384,42 @@ class OpenAIClient:
             error_message = str(e)
             error_body = getattr(e, 'body', {}) or {}
             error_info = error_body.get('error', {}) if isinstance(error_body, dict) else {}
+
+            # If OpenAI rejects newer optional params (e.g., reasoning/service_tier),
+            # retry once without them to avoid failing the whole job.
+            try:
+                retry_params = None
+                unsupported = []
+                if 'reasoning' in params and ('reasoning' in error_message or (isinstance(error_info, dict) and error_info.get('param') == 'reasoning')):
+                    unsupported.append('reasoning')
+                if 'service_tier' in params and ('service_tier' in error_message or (isinstance(error_info, dict) and error_info.get('param') == 'service_tier')):
+                    unsupported.append('service_tier')
+
+                # Some OpenAI errors use "Unknown parameter" wording
+                if 'reasoning' in params and 'Unknown parameter' in error_message and 'reasoning' in error_message:
+                    if 'reasoning' not in unsupported:
+                        unsupported.append('reasoning')
+                if 'service_tier' in params and 'Unknown parameter' in error_message and 'service_tier' in error_message:
+                    if 'service_tier' not in unsupported:
+                        unsupported.append('service_tier')
+
+                if unsupported:
+                    retry_params = params.copy()
+                    for key in unsupported:
+                        retry_params.pop(key, None)
+
+                    logger.warning("[OpenAI Client] Retrying Responses API call without unsupported params", extra={
+                        'job_id': job_id,
+                        'tenant_id': tenant_id,
+                        'model': params.get('model'),
+                        'removed_params': unsupported,
+                        'original_error': error_message,
+                    })
+
+                    return self.client.responses.create(**retry_params)
+            except Exception:
+                # If the retry attempt itself fails unexpectedly, fall through to normal handling below.
+                pass
             
             # Extract the failed image URL from error message
             # Error format: "Error while downloading https://..."

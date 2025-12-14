@@ -207,7 +207,7 @@ class AIService:
         # Regular API call flow (non-CUA)
         try:
             # Build API parameters
-            # NOTE: reasoning_level is NOT supported in Responses API, so we don't pass it
+            # NOTE: reasoning_level is deprecated; OpenAIClient applies supported reasoning/service_tier controls internally.
             logger.debug(f"[AI Service] About to build API params", extra={
                 'model': model,
                 'normalized_tool_choice': normalized_tool_choice,
@@ -221,7 +221,7 @@ class AIService:
                 tools=validated_tools,
                 tool_choice=normalized_tool_choice,
                 has_computer_use=has_computer_use,
-                reasoning_level=None,  # Not supported in Responses API
+                reasoning_level=None,
                 previous_image_urls=previous_image_urls if has_image_generation else None,
                 job_id=job_id,
                 tenant_id=tenant_id
