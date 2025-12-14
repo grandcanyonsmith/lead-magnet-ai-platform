@@ -74,6 +74,31 @@ export interface WorkflowDeliveryConfig {
   delivery_sms_ai_instructions: string
 }
 
+// Folder for organizing workflows
+export interface Folder {
+  folder_id: string
+  tenant_id: string
+  folder_name: string
+  parent_folder_id?: string | null  // For nested folders (future)
+  workflow_count?: number
+  created_at: string
+  updated_at: string
+}
+
+export interface FolderCreateRequest {
+  folder_name: string
+  parent_folder_id?: string | null
+}
+
+export interface FolderUpdateRequest {
+  folder_name?: string
+  parent_folder_id?: string | null
+}
+
+export interface FolderListResponse {
+  folders: Folder[]
+}
+
 export interface Workflow extends BaseEntity {
   workflow_id: string
   tenant_id: string
@@ -83,6 +108,7 @@ export interface Workflow extends BaseEntity {
   template_version: number
   steps?: WorkflowStep[]
   status: 'active' | 'inactive' | 'draft'
+  folder_id?: string | null  // Folder this workflow belongs to
   form?: {
     form_id: string
     form_name: string

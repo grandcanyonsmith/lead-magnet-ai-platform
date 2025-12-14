@@ -209,6 +209,31 @@ class ApiClientImpl extends BaseApiClient implements ApiClient {
     return this.workflows.editWorkflowWithAI(workflowId, request)
   }
 
+  // Folders - delegate to workflows client
+  async getFolders() {
+    return this.workflows.getFolders()
+  }
+
+  async getFolder(id: string) {
+    return this.workflows.getFolder(id)
+  }
+
+  async createFolder(data: Parameters<WorkflowsClient['createFolder']>[0]) {
+    return this.workflows.createFolder(data)
+  }
+
+  async updateFolder(id: string, data: Parameters<WorkflowsClient['updateFolder']>[1]) {
+    return this.workflows.updateFolder(id, data)
+  }
+
+  async deleteFolder(id: string) {
+    return this.workflows.deleteFolder(id)
+  }
+
+  async moveWorkflowToFolder(workflowId: string, folderId: string | null) {
+    return this.workflows.moveWorkflowToFolder(workflowId, folderId)
+  }
+
   // Template AI - delegate to templates client
   async generateTemplateWithAI(request: Parameters<TemplatesClient['generateTemplateWithAI']>[0]) {
     return this.templates.generateTemplateWithAI(request)
