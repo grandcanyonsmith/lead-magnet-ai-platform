@@ -12,8 +12,12 @@ export type StepType = 'workflow_step' | 'ai_generation' | 'form_submission' | '
 export interface ExecutionStepUsageInfo {
   prompt_tokens?: number
   completion_tokens?: number
+  input_tokens?: number    // Backend uses input_tokens
+  output_tokens?: number   // Backend uses output_tokens
   total_tokens?: number
-  cost_usd?: number
+  cost_usd?: number | string  // Can be number or string from DynamoDB Decimal
+  model?: string
+  service_type?: string
 }
 
 export interface ExecutionStepInput {

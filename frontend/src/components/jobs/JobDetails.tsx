@@ -178,7 +178,7 @@ export function JobDetails({ job, workflow, hideContainer = false, submission, o
     totalCost !== null && totalCost >= 0
       ? {
           label: 'Total Cost',
-          value: `$${totalCost.toFixed(2)}`,
+          value: `$${totalCost.toFixed(4)}`,
           tone: totalCost > 5 ? 'warning' : 'neutral',
           icon: <FiDollarSign className="h-4 w-4" />,
           helperText: 'Aggregated from every execution step.',

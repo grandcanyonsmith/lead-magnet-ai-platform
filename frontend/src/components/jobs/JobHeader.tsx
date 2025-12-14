@@ -80,7 +80,7 @@ export function JobHeader({ error, job }: JobHeaderProps) {
           <div className="sm:text-right">
             <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 inline-block">
               <div className="text-xs font-medium uppercase tracking-wide text-gray-500 mb-1">Total Cost</div>
-              <div className="text-lg sm:text-xl font-semibold text-gray-900">${totalCost.toFixed(2)}</div>
+              <div className="text-lg sm:text-xl font-semibold text-gray-900">${totalCost.toFixed(4)}</div>
             </div>
           </div>
         )}
