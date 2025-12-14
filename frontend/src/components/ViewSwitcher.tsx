@@ -82,12 +82,12 @@ export function ViewSwitcher() {
 
       {isOpen && (
         <>
-          {/* Mobile backdrop */}
+          {/* Backdrop */}
           <div
-            className="fixed inset-0 bg-black bg-opacity-25 z-40 md:hidden"
+            className="fixed inset-0 bg-black/20 z-[90]"
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute left-0 md:right-0 mt-2 w-[calc(100vw-1rem)] max-w-[20rem] sm:w-80 md:w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-[calc(100vh-8rem)] flex flex-col">
+          <div className="fixed inset-x-4 bottom-4 top-auto sm:absolute sm:inset-auto sm:left-0 sm:right-auto sm:top-full sm:mt-2 sm:w-72 bg-white border border-gray-200 rounded-xl shadow-2xl z-[91] max-h-[60vh] sm:max-h-[calc(100vh-8rem)] flex flex-col">
             <div className="p-3 sm:p-4 border-b border-gray-200 flex-shrink-0">
               <h3 className="text-base sm:text-lg font-semibold text-gray-900">Switch View</h3>
             </div>

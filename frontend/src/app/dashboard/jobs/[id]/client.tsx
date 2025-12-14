@@ -18,7 +18,6 @@ import { summarizeStepProgress } from '@/utils/jobs/steps'
 import { formatRelativeTime, formatDuration } from '@/utils/date'
 
 import { JobHeader } from '@/components/jobs/JobHeader'
-import { JobDetails } from '@/components/jobs/JobDetails'
 import { ExecutionSteps } from '@/components/jobs/ExecutionSteps'
 import { TechnicalDetails } from '@/components/jobs/TechnicalDetails'
 import { ResubmitModal } from '@/components/jobs/ResubmitModal'
@@ -58,7 +57,6 @@ export default function JobDetailClient() {
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false)
   const [showRerunDialog, setShowRerunDialog] = useState(false)
   const [stepIndexForRerun, setStepIndexForRerun] = useState<number | null>(null)
-  const [showDetails, setShowDetails] = useState(true)
 
   const latestStepUpdateRef = useRef<WorkflowStep | null>(null)
 
@@ -373,17 +371,6 @@ export default function JobDetailClient() {
           openPreview={openPreview}
         />
 
-        {/* Details + Technical sections */}
-        <DetailsSection
-          showDetails={showDetails}
-          setShowDetails={setShowDetails}
-          job={job}
-          workflow={workflow}
-          submission={submission}
-          handleResubmitClick={handleResubmitClick}
-          resubmitting={resubmitting}
-        />
-
         <TechnicalDetails job={job} form={form} submission={submission} />
 
         {/* Artifact Preview Modal */}
@@ -547,64 +534,6 @@ function JobTabs({
 
         {activeTab === 'raw' && <RawJsonPanel data={job} />}
       </div>
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Details Section Component
-// ---------------------------------------------------------------------------
-
-interface DetailsSectionProps {
-  showDetails: boolean
-  setShowDetails: (show: boolean) => void
-  job: Job
-  workflow: Workflow | null
-  submission: FormSubmission | null
-  handleResubmitClick: () => void
-  resubmitting: boolean
-}
-
-function DetailsSection({
-  showDetails,
-  setShowDetails,
-  job,
-  workflow,
-  submission,
-  handleResubmitClick,
-  resubmitting,
-}: DetailsSectionProps) {
-  if (!showDetails) {
-    return (
-      <div className="mt-6">
-        <button
-          onClick={() => setShowDetails(true)}
-          className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-        >
-          Show details
-        </button>
-      </div>
-    )
-  }
-
-  return (
-    <div className="mt-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-gray-900">Details</h2>
-        <button
-          onClick={() => setShowDetails(false)}
-          className="text-sm text-gray-500 hover:text-gray-700"
-        >
-          Hide details
-        </button>
-      </div>
-      <JobDetails
-        job={job}
-        workflow={workflow}
-        submission={submission}
-        onRerun={handleResubmitClick}
-        rerunning={resubmitting}
-      />
     </div>
   )
 }

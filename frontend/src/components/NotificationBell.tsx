@@ -141,12 +141,13 @@ export const NotificationBell: React.FC = () => {
 
       {isOpen && (
         <>
-          {/* Mobile backdrop */}
+          {/* Mobile backdrop - covers entire screen */}
           <div 
-            className="fixed inset-0 z-[55] sm:hidden" 
+            className="fixed inset-0 bg-black/20 z-[100]" 
             onClick={() => setIsOpen(false)}
           />
-          <div className="fixed bottom-4 left-4 right-4 sm:absolute sm:bottom-[100%] sm:left-auto sm:right-0 sm:top-auto sm:mb-2 sm:w-[calc(100vw-1rem)] sm:max-w-[24rem] sm:w-80 md:w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-[60] max-h-[calc(100vh-10rem)] sm:max-h-[min(600px,calc(100vh-8rem))] overflow-hidden flex flex-col">
+          {/* Notification panel - fixed on mobile, absolute on desktop */}
+          <div className="fixed inset-x-4 bottom-4 top-auto sm:absolute sm:inset-auto sm:bottom-full sm:right-0 sm:mb-2 sm:w-80 md:w-96 bg-white rounded-xl shadow-2xl border border-gray-200 z-[101] max-h-[70vh] sm:max-h-[min(500px,calc(100vh-8rem))] overflow-hidden flex flex-col">
           <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200">
             <h3 className="text-base sm:text-lg font-semibold text-gray-900">Notifications</h3>
             <div className="flex items-center space-x-1 sm:space-x-2">

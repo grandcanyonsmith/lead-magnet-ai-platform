@@ -147,12 +147,12 @@ export function StepHeader({
               {step.duration_ms !== undefined && (
                 <span>Duration: {formatDurationMs(step.duration_ms)}</span>
               )}
-              {step.usage_info?.cost_usd && (
+              {step.usage_info?.cost_usd !== undefined && (
                 <span>
                   Cost: $
                   {typeof step.usage_info.cost_usd === 'number'
-                    ? step.usage_info.cost_usd.toFixed(2)
-                    : parseFloat(step.usage_info.cost_usd || '0').toFixed(2)}
+                    ? step.usage_info.cost_usd.toFixed(4)
+                    : parseFloat(String(step.usage_info.cost_usd) || '0').toFixed(4)}
                 </span>
               )}
             </div>
@@ -169,25 +169,24 @@ export function StepHeader({
                   )}
                   {step.usage_info && (
                     <>
-                      {step.usage_info.total_tokens && (
+                      {step.usage_info.total_tokens ? (
                         <div>Tokens: {step.usage_info.total_tokens.toLocaleString()}</div>
-                      )}
-                      {!step.usage_info.total_tokens &&
-                        (step.usage_info.prompt_tokens || step.usage_info.completion_tokens) && (
-                          <div>
-                            Tokens:{' '}
-                            {(
-                              (step.usage_info.prompt_tokens || 0) +
-                              (step.usage_info.completion_tokens || 0)
-                            ).toLocaleString()}
-                          </div>
-                        )}
-                      {step.usage_info?.cost_usd && (
+                      ) : (step.usage_info.input_tokens || step.usage_info.output_tokens ||
+                           step.usage_info.prompt_tokens || step.usage_info.completion_tokens) ? (
+                        <div>
+                          Tokens:{' '}
+                          {(
+                            (step.usage_info.input_tokens || step.usage_info.prompt_tokens || 0) +
+                            (step.usage_info.output_tokens || step.usage_info.completion_tokens || 0)
+                          ).toLocaleString()}
+                        </div>
+                      ) : null}
+                      {step.usage_info?.cost_usd !== undefined && (
                         <div>
                           Cost: $
                           {typeof step.usage_info.cost_usd === 'number'
-                            ? step.usage_info.cost_usd.toFixed(2)
-                            : parseFloat(step.usage_info.cost_usd || '0').toFixed(2)}
+                            ? step.usage_info.cost_usd.toFixed(4)
+                            : parseFloat(String(step.usage_info.cost_usd) || '0').toFixed(4)}
                         </div>
                       )}
                     </>
@@ -198,12 +197,12 @@ export function StepHeader({
             >
               <div className="px-2 py-1 text-xs font-medium text-gray-600 bg-gray-50 rounded-full border border-gray-200 cursor-help">
                 {step.duration_ms !== undefined && formatDurationMs(step.duration_ms)}
-                {step.usage_info?.cost_usd && (
+                {step.usage_info?.cost_usd !== undefined && (
                   <span className="ml-1.5">
                     • $
                     {typeof step.usage_info.cost_usd === 'number'
-                      ? step.usage_info.cost_usd.toFixed(2)
-                      : parseFloat(step.usage_info.cost_usd || '0').toFixed(2)}
+                      ? step.usage_info.cost_usd.toFixed(4)
+                      : parseFloat(String(step.usage_info.cost_usd) || '0').toFixed(4)}
                   </span>
                 )}
               </div>
