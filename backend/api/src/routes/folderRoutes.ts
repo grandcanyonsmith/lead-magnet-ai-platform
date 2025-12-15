@@ -35,5 +35,11 @@ export function registerFolderRoutes(): void {
     logger.info('[Router] Matched /admin/folders/:id DELETE route', { id: params.id });
     return await foldersController.delete(params, null, query, tenantId, context);
   });
+
+  // Move workflow (lead magnet) to folder
+  router.register('PUT', '/admin/workflows/:id/move-to-folder', async (params, body, query, tenantId, context) => {
+    logger.info('[Router] Matched /admin/workflows/:id/move-to-folder PUT route', { id: params.id });
+    return await foldersController.moveWorkflowToFolder(params, body, query, tenantId, context);
+  });
 }
 

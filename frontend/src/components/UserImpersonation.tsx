@@ -5,6 +5,7 @@ import { api } from '@/lib/api'
 import { useState, useEffect, useRef } from 'react'
 import { AuthUser } from '@/types/auth'
 import { FiUser } from 'react-icons/fi'
+import toast from 'react-hot-toast'
 
 interface UserSearchResult {
   users: AuthUser[]
@@ -83,7 +84,7 @@ export function UserImpersonation() {
       setUsers([])
     } catch (error) {
       console.error('Error starting impersonation:', error)
-      alert('Failed to start impersonation. Please try again.')
+      toast.error('Failed to start impersonation')
     } finally {
       setIsImpersonating(false)
     }

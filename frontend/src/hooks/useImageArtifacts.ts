@@ -23,6 +23,8 @@ export function useImageArtifacts(options: UseImageArtifactsOptions) {
   
   // Use ref to track the last jobId we fetched artifacts for
   const lastFetchedJobIdRef = useRef<string | undefined>(undefined)
+  // Use ref to access latest steps without re-triggering effects on array reference changes
+  const stepsRef = useRef<MergedStep[]>(steps)
   
   // Create a stable reference for steps by serializing key properties
   // This prevents re-fetching when steps array reference changes but content is the same
@@ -31,9 +33,12 @@ export function useImageArtifacts(options: UseImageArtifactsOptions) {
     return steps.map(s => `${s.step_order}-${s.started_at || ''}`).join(',')
   }, [steps])
 
+  // Keep steps ref updated
+  useEffect(() => {
+    stepsRef.current = steps
+  }, [steps])
+
   // Fetch artifacts only when jobId changes
-  // Fetch artifacts only when jobId changes
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const fetchImageArtifacts = async () => {
       if (!jobId) return
@@ -66,7 +71,8 @@ export function useImageArtifacts(options: UseImageArtifactsOptions) {
 
   // Re-organize artifacts by step when steps change (but don't re-fetch)
   useEffect(() => {
-    if (artifacts.length === 0 || steps.length === 0) {
+    const currentSteps = stepsRef.current || []
+    if (artifacts.length === 0 || currentSteps.length === 0) {
       setImageArtifactsByStep(new Map())
       return
     }
@@ -80,7 +86,7 @@ export function useImageArtifacts(options: UseImageArtifactsOptions) {
     const artifactsByStep = new Map<number, Artifact[]>()
     
     // Sort steps by step_order for matching
-    const sortedSteps = [...steps].sort((a, b) => {
+    const sortedSteps = [...currentSteps].sort((a, b) => {
       const orderA = a.step_order ?? 0
       const orderB = b.step_order ?? 0
       return orderA - orderB

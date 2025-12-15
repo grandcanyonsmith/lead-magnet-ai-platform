@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { api } from '@/lib/api'
 import { useAuth } from '@/lib/auth/context'
+import toast from 'react-hot-toast'
 
 interface File {
   file_id: string
@@ -72,10 +73,10 @@ export default function FilesPage() {
           })
 
           await loadFiles()
-          alert('File uploaded successfully!')
+          toast.success('File uploaded')
         } catch (error) {
           console.error('Error uploading file:', error)
-          alert('Failed to upload file. Please try again.')
+          toast.error('Failed to upload file')
         } finally {
           setIsUploading(false)
         }
@@ -101,7 +102,7 @@ export default function FilesPage() {
       setSearchResults(response)
     } catch (error) {
       console.error('Error searching files:', error)
-      alert('Failed to search files. Please try again.')
+      toast.error('Failed to search files')
     } finally {
       setIsSearching(false)
     }
@@ -131,7 +132,7 @@ export default function FilesPage() {
       }
     } catch (error) {
       console.error('Error deleting file:', error)
-      alert('Failed to delete file. Please try again.')
+      toast.error('Failed to delete file')
     }
   }
 

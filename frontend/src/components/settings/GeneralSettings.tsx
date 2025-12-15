@@ -70,7 +70,7 @@ export function GeneralSettings({ settings, onChange, errors }: GeneralSettingsP
           label="Default AI Model"
           name="default_ai_model"
           type="text"
-          value={settings.default_ai_model || 'gpt-5'}
+          value={settings.default_ai_model || 'gpt-5.1-codex'}
           onChange={(value) => onChange('default_ai_model', value)}
           options={AI_MODEL_OPTIONS}
           helpText="Default AI model used for generating lead magnets"

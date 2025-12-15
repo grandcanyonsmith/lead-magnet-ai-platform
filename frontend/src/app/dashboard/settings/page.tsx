@@ -30,7 +30,7 @@ export default function SettingsPage() {
         organization_name: settings.organization_name || '',
         contact_email: settings.contact_email || '',
         website_url: settings.website_url || '',
-        default_ai_model: settings.default_ai_model || 'gpt-5',
+        default_ai_model: settings.default_ai_model || 'gpt-5.1-codex',
         logo_url: settings.logo_url || '',
         ghl_webhook_url: settings.ghl_webhook_url || '',
         custom_domain: settings.custom_domain || '',
@@ -55,7 +55,7 @@ export default function SettingsPage() {
         organization_name: settings.organization_name || '',
         contact_email: settings.contact_email || '',
         website_url: settings.website_url || '',
-        default_ai_model: settings.default_ai_model || 'gpt-5',
+        default_ai_model: settings.default_ai_model || 'gpt-5.1-codex',
         logo_url: settings.logo_url || '',
         ghl_webhook_url: settings.ghl_webhook_url || '',
         custom_domain: settings.custom_domain || '',
@@ -102,7 +102,7 @@ export default function SettingsPage() {
       formData.organization_name !== (compareTo.organization_name || '') ||
       formData.contact_email !== (compareTo.contact_email || '') ||
       formData.website_url !== (compareTo.website_url || '') ||
-      formData.default_ai_model !== (compareTo.default_ai_model || 'gpt-5') ||
+      formData.default_ai_model !== (compareTo.default_ai_model || 'gpt-5.1-codex') ||
       formData.logo_url !== (compareTo.logo_url || '') ||
       formData.ghl_webhook_url !== (compareTo.ghl_webhook_url || '') ||
       formDomain !== compareDomain ||
@@ -235,7 +235,7 @@ export default function SettingsPage() {
         organization_name: settingsPayload.organization_name || '',
         contact_email: settingsPayload.contact_email || '',
         website_url: settingsPayload.website_url || '',
-        default_ai_model: settingsPayload.default_ai_model || 'gpt-5',
+        default_ai_model: settingsPayload.default_ai_model || 'gpt-5.1-codex',
         logo_url: settingsPayload.logo_url || '',
         ghl_webhook_url: settingsPayload.ghl_webhook_url || '',
         custom_domain: settingsPayload.custom_domain || '',
