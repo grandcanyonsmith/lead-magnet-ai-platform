@@ -6,6 +6,7 @@ import { stripeWebhookController } from '../controllers/stripeWebhook';
 import { trackingController } from '../controllers/tracking';
 import { router } from './router';
 import { logger } from '../utils/logger';
+import { ApiError } from '../utils/errors';
 
 /**
  * Public routes that don't require authentication.
@@ -49,7 +50,11 @@ export function registerPublicRoutes(): void {
   // Stripe webhook endpoint
   router.register('POST', '/v1/stripe/webhook', async (_params, _body, _query, _tenantId, context) => {
     logger.info('[Public Routes] POST /v1/stripe/webhook');
-    return await stripeWebhookController.handleWebhook(context?.event!);
+    const event = context?.event;
+    if (!event) {
+      throw new ApiError('Missing request event', 400);
+    }
+    return await stripeWebhookController.handleWebhook(event);
   }, false);
 
   // Tracking event endpoint (public, no auth required)

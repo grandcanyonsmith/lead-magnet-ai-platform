@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth/context'
 import { api } from '@/lib/api'
 import { FiUsers, FiSearch, FiEdit2, FiShield, FiUser, FiUserCheck, FiLogIn, FiCopy, FiCheck } from 'react-icons/fi'
+import toast from 'react-hot-toast'
 
 interface User {
   user_id: string
@@ -79,9 +80,10 @@ export default function AgencyUsersPage() {
       await loadUsers()
       setEditingUser(null)
       setNewRole('')
+      toast.success('Role updated')
     } catch (error) {
       console.error('Error updating user role:', error)
-      alert('Failed to update user role. Please try again.')
+      toast.error('Failed to update user role')
     } finally {
       setIsSaving(false)
     }
@@ -128,7 +130,7 @@ export default function AgencyUsersPage() {
       router.push('/dashboard')
     } catch (error) {
       console.error('Error starting impersonation from agency table:', error)
-      alert('Failed to login as this user. Please try again.')
+      toast.error('Failed to login as this user')
     } finally {
       setImpersonatingUserId(null)
     }
@@ -141,6 +143,7 @@ export default function AgencyUsersPage() {
       setTimeout(() => setCopiedCustomerId(null), 2000)
     } catch (error) {
       console.error('Failed to copy customer ID:', error)
+      toast.error('Failed to copy customer ID')
     }
   }
 

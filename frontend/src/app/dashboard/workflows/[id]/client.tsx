@@ -6,6 +6,7 @@ import { api } from '@/lib/api'
 import { useSettings } from '@/hooks/api/useSettings'
 import { buildPublicFormUrl } from '@/utils/url'
 import { FiArrowLeft, FiEdit, FiTrash2, FiClock, FiExternalLink, FiLink, FiSettings, FiFileText, FiCalendar } from 'react-icons/fi'
+import toast from 'react-hot-toast'
 
 export default function WorkflowDetailPage() {
   const router = useRouter()
@@ -90,7 +91,7 @@ export default function WorkflowDetailPage() {
       router.push('/dashboard/workflows')
     } catch (error: any) {
       console.error('Failed to delete workflow:', error)
-      alert(error.response?.data?.message || error.message || 'Failed to delete workflow')
+      toast.error(error.response?.data?.message || error.message || 'Failed to delete lead magnet')
     }
   }
 

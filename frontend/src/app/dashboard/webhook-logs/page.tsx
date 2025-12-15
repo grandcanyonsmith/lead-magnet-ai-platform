@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { api } from '@/lib/api'
 import { FiRefreshCw, FiAlertCircle, FiCheckCircle, FiClock, FiChevronDown, FiChevronUp, FiCode, FiExternalLink } from 'react-icons/fi'
 import type { WebhookLog } from '@/lib/api/webhookLogs.client'
+import toast from 'react-hot-toast'
 
 const formatRelativeTime = (dateString: string) => {
   const date = new Date(dateString)
@@ -85,7 +86,7 @@ export default function WebhookLogsPage() {
       setLogs(data.logs || [])
     } catch (error) {
       console.error('Failed to load webhook logs:', error)
-      alert('Failed to load webhook logs. Please try again.')
+      toast.error('Failed to load webhook logs')
     } finally {
       setLoading(false)
       setRefreshing(false)
@@ -114,14 +115,14 @@ export default function WebhookLogsPage() {
     setRetryingLogs(prev => new Set(prev).add(log.log_id))
     try {
       await api.webhookLogs.retryWebhook(log.log_id)
-      alert('Webhook retried successfully!')
+      toast.success('Webhook retried')
       // Reload logs after a short delay
       setTimeout(() => {
         loadLogs(true)
       }, 1000)
     } catch (error: any) {
       console.error('Failed to retry webhook:', error)
-      alert(`Failed to retry webhook: ${error.message || 'Unknown error'}`)
+      toast.error(`Failed to retry webhook: ${error.message || 'Unknown error'}`)
     } finally {
       setRetryingLogs(prev => {
         const newSet = new Set(prev)

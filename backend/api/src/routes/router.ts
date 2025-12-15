@@ -154,7 +154,7 @@ class SimpleRouter {
     // Convert pattern to regex
     // Strategy: Escape special chars except : and *, then replace :param and *
     // This ensures capture group parentheses aren't escaped
-    let regexPattern = pattern
+    const regexPattern = pattern
       .replace(/[.+?^${}|[\]\\]/g, '\\$&') // Escape special chars (excluding :, *, and () which we add)
       .replace(/:[^/]+/g, '([^/]+)') // Replace :param with capture group
       .replace(/\*/g, '.*'); // Replace * with .*

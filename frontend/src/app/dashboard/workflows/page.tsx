@@ -7,6 +7,7 @@ import { useSettings } from '@/hooks/api/useSettings'
 import { buildPublicFormUrl } from '@/utils/url'
 import { FiPlus, FiEdit, FiTrash2, FiEye, FiExternalLink, FiCopy, FiCheck, FiMoreVertical, FiLoader, FiCheckCircle, FiXCircle, FiClock, FiList, FiFileText, FiArrowLeft, FiFolder, FiFolderPlus, FiMove, FiX } from 'react-icons/fi'
 import { Folder } from '@/types'
+import toast from 'react-hot-toast'
 
 export default function WorkflowsPage() {
   const router = useRouter()
@@ -44,6 +45,32 @@ export default function WorkflowsPage() {
   // Track active requests to prevent duplicates - use Map to store promises for deduplication
   const activeRequestsRef = useRef<Map<string, Promise<void>>>(new Map())
   const { settings } = useSettings()
+
+  const loadWorkflows = useCallback(async () => {
+    try {
+      // Get all workflows including drafts - don't filter by status
+      const data = await api.getWorkflows()
+      const workflowsList = data.workflows || []
+      // Ensure we include all statuses: 'active', 'inactive', and 'draft'
+      // No status filtering - show all workflows regardless of status
+      // Sort by updated_at DESC (most recently updated first), fallback to created_at
+      workflowsList.sort((a: any, b: any) => {
+        const dateA = new Date(a.updated_at || a.created_at || 0).getTime()
+        const dateB = new Date(b.updated_at || b.created_at || 0).getTime()
+        return dateB - dateA // DESC order
+      })
+      setWorkflows(workflowsList)
+      // Reset loaded workflow IDs when workflows are reloaded
+      loadedWorkflowIdsRef.current.clear()
+      // Reset processed workflow IDs tracker so effect runs again
+      lastProcessedWorkflowIdsRef.current = ''
+    } catch (error) {
+      console.error('Failed to load workflows:', error)
+      toast.error('Failed to load lead magnets')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
   // Define loadJobsForWorkflow before it's used in useEffect hooks
   const loadJobsForWorkflow = useCallback(async (workflowId: string) => {
@@ -90,6 +117,7 @@ export default function WorkflowsPage() {
       setFolders(data.folders || [])
     } catch (error) {
       console.error('Failed to load folders:', error)
+      toast.error('Failed to load folders')
     }
   }, [])
 
@@ -102,9 +130,10 @@ export default function WorkflowsPage() {
       await loadFolders()
       setNewFolderName('')
       setShowCreateFolderModal(false)
+      toast.success('Folder created')
     } catch (error: any) {
       console.error('Failed to create folder:', error)
-      alert(error?.message || 'Failed to create folder')
+      toast.error(error?.message || 'Failed to create folder')
     } finally {
       setFolderActionLoading(false)
     }
@@ -119,9 +148,10 @@ export default function WorkflowsPage() {
       await loadFolders()
       setEditingFolderId(null)
       setEditingFolderName('')
+      toast.success('Folder renamed')
     } catch (error: any) {
       console.error('Failed to rename folder:', error)
-      alert(error?.message || 'Failed to rename folder')
+      toast.error(error?.message || 'Failed to rename folder')
     } finally {
       setFolderActionLoading(false)
     }
@@ -137,9 +167,10 @@ export default function WorkflowsPage() {
       if (currentFolderId === folderId) {
         setCurrentFolderId(null)
       }
+      toast.success('Folder deleted')
     } catch (error: any) {
       console.error('Failed to delete folder:', error)
-      alert(error?.message || 'Failed to delete folder')
+      toast.error(error?.message || 'Failed to delete folder')
     } finally {
       setFolderActionLoading(false)
     }
@@ -152,9 +183,10 @@ export default function WorkflowsPage() {
       await api.moveWorkflowToFolder(workflowId, folderId)
       await loadWorkflows()
       setShowMoveFolderModal(null)
+      toast.success('Moved')
     } catch (error: any) {
       console.error('Failed to move workflow:', error)
-      alert(error?.message || 'Failed to move lead magnet')
+      toast.error(error?.message || 'Failed to move lead magnet')
     } finally {
       setFolderActionLoading(false)
     }
@@ -169,7 +201,7 @@ export default function WorkflowsPage() {
   useEffect(() => {
     loadWorkflows()
     loadFolders()
-  }, [])
+  }, [loadFolders, loadWorkflows])
 
   // Create stable workflow IDs array to prevent unnecessary effect runs
   const workflowIds = useMemo(() => {
@@ -449,30 +481,7 @@ export default function WorkflowsPage() {
     }
   }, [openMenuId])
 
-  const loadWorkflows = async () => {
-    try {
-      // Get all workflows including drafts - don't filter by status
-      const data = await api.getWorkflows()
-      const workflowsList = data.workflows || []
-      // Ensure we include all statuses: 'active', 'inactive', and 'draft'
-      // No status filtering - show all workflows regardless of status
-      // Sort by updated_at DESC (most recently updated first), fallback to created_at
-      workflowsList.sort((a: any, b: any) => {
-        const dateA = new Date(a.updated_at || a.created_at || 0).getTime()
-        const dateB = new Date(b.updated_at || b.created_at || 0).getTime()
-        return dateB - dateA // DESC order
-      })
-      setWorkflows(workflowsList)
-      // Reset loaded workflow IDs when workflows are reloaded
-      loadedWorkflowIdsRef.current.clear()
-      // Reset processed workflow IDs tracker so effect runs again
-      lastProcessedWorkflowIdsRef.current = ''
-    } catch (error) {
-      console.error('Failed to load workflows:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  // loadWorkflows is defined above with useCallback
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this lead magnet? This will also delete its associated form.')) {
@@ -482,9 +491,10 @@ export default function WorkflowsPage() {
     try {
       await api.deleteWorkflow(id)
       await loadWorkflows()
+      toast.success('Lead magnet deleted')
     } catch (error) {
       console.error('Failed to delete workflow:', error)
-      alert('Failed to delete lead magnet')
+      toast.error('Failed to delete lead magnet')
     }
   }
 
@@ -503,6 +513,7 @@ export default function WorkflowsPage() {
       await navigator.clipboard.writeText(text)
       setCopiedUrl(workflowId)
       setTimeout(() => setCopiedUrl(null), 2000)
+      toast.success('Copied')
     } catch (error) {
       console.error('Failed to copy:', error)
       // Fallback for older browsers
@@ -517,9 +528,10 @@ export default function WorkflowsPage() {
         document.body.removeChild(textArea)
         setCopiedUrl(workflowId)
         setTimeout(() => setCopiedUrl(null), 2000)
+        toast.success('Copied')
       } catch (fallbackError) {
         console.error('Fallback copy also failed:', fallbackError)
-        alert('Failed to copy URL. Please copy manually: ' + text)
+        toast.error('Failed to copy URL')
       }
     }
   }

@@ -211,6 +211,7 @@ export function PreviewRenderer({ contentType, objectUrl, fileName, className = 
               </div>
             )}
             {isInView && objectUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={objectUrl}
                 alt={fileName || 'Preview'}

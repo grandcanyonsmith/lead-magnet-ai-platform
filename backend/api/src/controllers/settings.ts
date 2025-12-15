@@ -31,28 +31,94 @@ class SettingsController {
 
       let settings = await db.get(USER_SETTINGS_TABLE, { tenant_id: tenantId });
 
+      const now = new Date().toISOString();
+      const defaultSettings = {
+        organization_name: '',
+        contact_email: '',
+        default_ai_model: 'gpt-5.1-codex',
+        api_usage_limit: 1000000,
+        api_usage_current: 0,
+        billing_tier: 'free',
+        onboarding_survey_completed: false,
+        onboarding_survey_responses: {},
+        onboarding_checklist: {
+          complete_profile: false,
+          create_first_lead_magnet: false,
+          view_generated_lead_magnets: false,
+        },
+        folders: [] as any[],
+      };
+
       // If settings don't exist, create default settings
       if (!settings) {
         logger.info('[SettingsController.get] Creating default settings', { tenantId });
         settings = {
           tenant_id: tenantId,
-          organization_name: '',
-          contact_email: '',
-          default_ai_model: 'gpt-4o',
-          api_usage_limit: 1000000,
-          api_usage_current: 0,
-          billing_tier: 'free',
-          onboarding_survey_completed: false,
-          onboarding_survey_responses: {},
-          onboarding_checklist: {
-            complete_profile: false,
-            create_first_lead_magnet: false,
-            view_generated_lead_magnets: false,
-          },
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+          ...defaultSettings,
+          created_at: now,
+          updated_at: now,
         };
         await db.put(USER_SETTINGS_TABLE, settings);
+      } else {
+        // Backfill any missing settings fields to prevent partial/incomplete records
+        const merged = {
+          ...defaultSettings,
+          ...settings,
+          onboarding_survey_responses:
+            settings.onboarding_survey_responses && typeof settings.onboarding_survey_responses === 'object'
+              ? settings.onboarding_survey_responses
+              : {},
+          onboarding_checklist: {
+            ...defaultSettings.onboarding_checklist,
+            ...(settings.onboarding_checklist && typeof settings.onboarding_checklist === 'object'
+              ? settings.onboarding_checklist
+              : {}),
+          },
+          folders: Array.isArray(settings.folders) ? settings.folders : [],
+        };
+
+        const updates: Record<string, any> = {};
+
+        // Top-level defaults
+        for (const key of Object.keys(defaultSettings)) {
+          if ((settings as any)[key] === undefined) {
+            updates[key] = (merged as any)[key];
+          }
+        }
+
+        // Nested fixes even when key exists but is malformed
+        if (!settings.onboarding_checklist || typeof settings.onboarding_checklist !== 'object') {
+          updates.onboarding_checklist = merged.onboarding_checklist;
+        } else {
+          const existingChecklist = settings.onboarding_checklist || {};
+          const hasAllChecklistKeys = Object.keys(defaultSettings.onboarding_checklist).every(
+            (k) => (existingChecklist as any)[k] !== undefined
+          );
+          if (!hasAllChecklistKeys) {
+            updates.onboarding_checklist = merged.onboarding_checklist;
+          }
+        }
+
+        if (!settings.onboarding_survey_responses || typeof settings.onboarding_survey_responses !== 'object') {
+          updates.onboarding_survey_responses = merged.onboarding_survey_responses;
+        }
+
+        if (!Array.isArray(settings.folders)) {
+          updates.folders = merged.folders;
+        }
+
+        if (!settings.created_at) {
+          updates.created_at = now;
+        }
+
+        if (Object.keys(updates).length > 0) {
+          settings = await db.update(USER_SETTINGS_TABLE, { tenant_id: tenantId }, {
+            ...updates,
+            updated_at: now,
+          });
+        } else {
+          settings = merged;
+        }
       }
 
       // Auto-generate webhook_token if missing
@@ -61,7 +127,7 @@ class SettingsController {
         const webhookToken = generateWebhookToken();
         settings = await db.update(USER_SETTINGS_TABLE, { tenant_id: tenantId }, {
           webhook_token: webhookToken,
-          updated_at: new Date().toISOString(),
+          updated_at: now,
         });
       }
 

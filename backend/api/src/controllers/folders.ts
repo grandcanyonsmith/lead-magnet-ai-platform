@@ -19,12 +19,58 @@ interface Folder {
 }
 
 class FoldersController {
+  private async ensureSettings(tenantId: string): Promise<any> {
+    if (!USER_SETTINGS_TABLE) {
+      throw new InternalServerError('USER_SETTINGS_TABLE environment variable is not configured');
+    }
+
+    let settings = await db.get(USER_SETTINGS_TABLE, { tenant_id: tenantId });
+
+    // If settings don't exist yet, create a full default settings record.
+    // This prevents folder actions from accidentally creating an incomplete settings item via UpdateItem upsert.
+    if (!settings) {
+      const now = new Date().toISOString();
+      settings = {
+        tenant_id: tenantId,
+        organization_name: '',
+        contact_email: '',
+        default_ai_model: 'gpt-5.1-codex',
+        api_usage_limit: 1000000,
+        api_usage_current: 0,
+        billing_tier: 'free',
+        onboarding_survey_completed: false,
+        onboarding_survey_responses: {},
+        onboarding_checklist: {
+          complete_profile: false,
+          create_first_lead_magnet: false,
+          view_generated_lead_magnets: false,
+        },
+        folders: [],
+        created_at: now,
+        updated_at: now,
+      };
+      await db.put(USER_SETTINGS_TABLE, settings);
+      return settings;
+    }
+
+    // Ensure folders is always an array
+    if (!Array.isArray(settings.folders)) {
+      settings = await db.update(USER_SETTINGS_TABLE, { tenant_id: tenantId }, {
+        folders: [],
+        updated_at: new Date().toISOString(),
+      });
+    }
+
+    return settings;
+  }
+
   private async getFolders(tenantId: string): Promise<Folder[]> {
-    const settings = await db.get(USER_SETTINGS_TABLE, { tenant_id: tenantId });
+    const settings = await this.ensureSettings(tenantId);
     return settings?.folders || [];
   }
 
   private async saveFolders(tenantId: string, folders: Folder[]): Promise<void> {
+    await this.ensureSettings(tenantId);
     await db.update(USER_SETTINGS_TABLE, { tenant_id: tenantId }, {
       folders,
       updated_at: new Date().toISOString(),
@@ -39,6 +85,9 @@ class FoldersController {
     context?: RequestContext
   ): Promise<RouteResponse> {
     try {
+      if (!WORKFLOWS_TABLE) {
+        throw new InternalServerError('WORKFLOWS_TABLE environment variable is not configured');
+      }
       const customerId = getCustomerId(context);
       const tenantId = customerId;
 
@@ -227,6 +276,9 @@ class FoldersController {
     context?: RequestContext
   ): Promise<RouteResponse> {
     try {
+      if (!WORKFLOWS_TABLE) {
+        throw new InternalServerError('WORKFLOWS_TABLE environment variable is not configured');
+      }
       const customerId = getCustomerId(context);
       const tenantId = customerId;
       const folderId = params.id;
@@ -274,6 +326,61 @@ class FoldersController {
       if (error instanceof ApiError) throw error;
       logger.error('[FoldersController.delete] Error', { error });
       throw new InternalServerError('Failed to delete folder');
+    }
+  }
+
+  async moveWorkflowToFolder(
+    params: Record<string, string>,
+    body: any,
+    _query: Record<string, string | undefined>,
+    _tenantId: string | undefined,
+    context?: RequestContext
+  ): Promise<RouteResponse> {
+    try {
+      if (!WORKFLOWS_TABLE) {
+        throw new InternalServerError('WORKFLOWS_TABLE environment variable is not configured');
+      }
+
+      const customerId = getCustomerId(context);
+      const tenantId = customerId;
+      const workflowId = params.id;
+
+      const folderId = body?.folder_id ?? null;
+      if (folderId !== null && typeof folderId !== 'string') {
+        throw new ValidationError('folder_id must be a string or null');
+      }
+
+      // Validate folder existence (if moving into a folder)
+      if (folderId) {
+        const folders = await this.getFolders(tenantId);
+        const exists = folders.some((f) => f.folder_id === folderId);
+        if (!exists) {
+          throw new NotFoundError('Folder not found');
+        }
+      }
+
+      // Validate workflow existence and ownership
+      const existing = await db.get(WORKFLOWS_TABLE, { workflow_id: workflowId });
+      if (!existing || existing.deleted_at) {
+        throw new NotFoundError('Lead magnet not found');
+      }
+      if (existing.tenant_id !== tenantId) {
+        throw new ApiError('You do not have permission to access this lead magnet', 403);
+      }
+
+      const updated = await db.update(WORKFLOWS_TABLE, { workflow_id: workflowId }, {
+        folder_id: folderId,
+        updated_at: new Date().toISOString(),
+      });
+
+      return {
+        statusCode: 200,
+        body: updated,
+      };
+    } catch (error) {
+      if (error instanceof ApiError) throw error;
+      logger.error('[FoldersController.moveWorkflowToFolder] Error', { error });
+      throw new InternalServerError('Failed to move lead magnet');
     }
   }
 }

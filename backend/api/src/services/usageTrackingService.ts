@@ -2,6 +2,7 @@ import { ulid } from 'ulid';
 import { db } from '../utils/db';
 import { logger } from '../utils/logger';
 import { stripeService } from './stripeService';
+import { env } from '../utils/env';
 
 export interface UsageRecord {
   usage_id: string;
@@ -33,7 +34,6 @@ export class UsageTrackingService {
   private readonly usageRecordsTable: string;
 
   constructor(usageRecordsTable?: string) {
-    const { env } = require('../utils/env');
     this.usageRecordsTable = usageRecordsTable || env.usageRecordsTable;
   }
 
