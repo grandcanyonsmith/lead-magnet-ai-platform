@@ -14,10 +14,6 @@ interface JobsMobileListProps {
 }
 
 export function JobsMobileList({ jobs, workflowMap, workflowStepCounts, onNavigate }: JobsMobileListProps) {
-  if (!jobs.length) {
-    return null
-  }
-
   const [openingJobId, setOpeningJobId] = useState<string | null>(null)
 
   const handleViewDocument = async (job: Job) => {
@@ -57,6 +53,10 @@ export function JobsMobileList({ jobs, workflowMap, workflowStepCounts, onNaviga
     } finally {
       setOpeningJobId(null)
     }
+  }
+
+  if (!jobs.length) {
+    return null
   }
 
   return (
