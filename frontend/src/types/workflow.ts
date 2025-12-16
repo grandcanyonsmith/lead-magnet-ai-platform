@@ -24,6 +24,9 @@ export type ToolType =
   | 'file_search'
   | 'code_interpreter'
 
+export type HTTPMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+export type HTTPBodyMode = 'auto' | 'custom'
+
 export interface ComputerUseToolConfig {
   type: 'computer_use_preview'
   display_width: number
@@ -55,7 +58,13 @@ export interface WorkflowStep {
   depends_on?: number[] // Array of step indices this step depends on
   // Webhook step fields
   webhook_url?: string
+  webhook_method?: HTTPMethod
   webhook_headers?: Record<string, string>
+  webhook_query_params?: Record<string, string>
+  webhook_content_type?: string
+  webhook_body_mode?: HTTPBodyMode
+  webhook_body?: string
+  webhook_save_response?: boolean
   webhook_data_selection?: {
     include_submission: boolean
     exclude_step_indices?: number[] // Steps to exclude (all included by default)

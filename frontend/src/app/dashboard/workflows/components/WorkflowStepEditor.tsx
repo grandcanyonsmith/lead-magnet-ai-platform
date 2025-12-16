@@ -5,8 +5,9 @@ import { FiTrash2, FiChevronUp, FiChevronDown, FiZap, FiChevronDown as FiChevron
 import { useWorkflowStepAI } from '@/hooks/useWorkflowStepAI'
 import StepDiffPreview from '@/components/workflows/edit/StepDiffPreview'
 import toast from 'react-hot-toast'
-import { WorkflowStep, AIModel, ComputerUseToolConfig, ImageGenerationToolConfig } from '@/types/workflow'
+import { WorkflowStep, AIModel, ComputerUseToolConfig, ImageGenerationToolConfig, HTTPMethod } from '@/types/workflow'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
+import { api } from '@/lib/api'
 
 interface WorkflowStepEditorProps {
   step: WorkflowStep
@@ -74,6 +75,13 @@ export default function WorkflowStepEditor({
   const [webhookHeaders, setWebhookHeaders] = useState<Record<string, string>>(
     step.webhook_headers || {}
   )
+  const [webhookQueryParams, setWebhookQueryParams] = useState<Record<string, string>>(
+    (step as any).webhook_query_params || {}
+  )
+  const [httpTestLoading, setHttpTestLoading] = useState(false)
+  const [httpTestResult, setHttpTestResult] = useState<any>(null)
+  const [httpTestError, setHttpTestError] = useState<string | null>(null)
+  const [httpTestValues, setHttpTestValues] = useState<Record<string, string>>({})
 
   // Track if we've already converted string tools to objects to prevent infinite loops
   const hasConvertedToolsRef = useRef<boolean>(false)
@@ -87,11 +95,28 @@ export default function WorkflowStepEditor({
       step_name: step.step_name,
       step_type: step.step_type,
       webhook_url: step.webhook_url,
+      webhook_method: (step as any).webhook_method,
+      webhook_query_params: (step as any).webhook_query_params,
+      webhook_content_type: (step as any).webhook_content_type,
+      webhook_body_mode: (step as any).webhook_body_mode,
+      webhook_body: (step as any).webhook_body,
       tools: step.tools,
       model: step.model,
       step_order: step.step_order,
     })
-  }, [step.step_name, step.step_type, step.webhook_url, step.tools, step.model, step.step_order])
+  }, [
+    step.step_name,
+    step.step_type,
+    step.webhook_url,
+    (step as any).webhook_method,
+    (step as any).webhook_query_params,
+    (step as any).webhook_content_type,
+    (step as any).webhook_body_mode,
+    (step as any).webhook_body,
+    step.tools,
+    step.model,
+    step.step_order,
+  ])
 
   // Sync localStep when step prop changes
   useEffect(() => {
@@ -199,6 +224,12 @@ export default function WorkflowStepEditor({
     } else {
       setWebhookHeaders({})
     }
+    // Sync webhook query params
+    if ((step as any).webhook_query_params) {
+      setWebhookQueryParams((step as any).webhook_query_params || {})
+    } else {
+      setWebhookQueryParams({})
+    }
   }, [step, onChange, index])
 
   // Ensure image generation config is initialized when tool is selected
@@ -233,6 +264,54 @@ export default function WorkflowStepEditor({
     const updated = { ...localStep, [field]: value }
     setLocalStep(updated)
     onChange(index, updated)
+  }
+
+  const handleTestHttpRequest = async () => {
+    const url = (localStep.webhook_url || '').trim()
+    if (!url) {
+      toast.error('HTTP URL is required to test')
+      return
+    }
+
+    const bodyMode = ((localStep as any).webhook_body_mode || 'auto') as 'auto' | 'custom'
+    const body = String((localStep as any).webhook_body || '')
+
+    // Testing is only supported for custom bodies (auto payload requires a real run context)
+    if (bodyMode !== 'custom' || !body.trim()) {
+      toast.error('Add a Custom Body to test this request')
+      return
+    }
+
+    setHttpTestLoading(true)
+    setHttpTestError(null)
+    setHttpTestResult(null)
+    try {
+      const result = await api.post<any>('/admin/http-request/test', {
+        url,
+        method: (((localStep as any).webhook_method || 'POST') as HTTPMethod) || 'POST',
+        headers: localStep.webhook_headers || {},
+        query_params: (localStep as any).webhook_query_params || {},
+        content_type: (localStep as any).webhook_content_type || 'application/json',
+        body,
+        test_values: httpTestValues || {},
+      })
+      setHttpTestResult(result)
+      if (result?.response?.status) {
+        toast.success(`Request completed (${result.response.status})`)
+      } else {
+        toast.success('Request completed')
+      }
+    } catch (error: any) {
+      const msg =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        error?.message ||
+        'Failed to test request'
+      setHttpTestError(msg)
+      toast.error(msg)
+    } finally {
+      setHttpTestLoading(false)
+    }
   }
 
   const isToolSelected = (toolValue: string): boolean => {
@@ -453,6 +532,11 @@ export default function WorkflowStepEditor({
     toast('AI proposal rejected')
   }
 
+  const webhookBodyMode = (((localStep as any).webhook_body_mode ||
+    ((localStep as any).webhook_body ? 'custom' : 'auto')) as 'auto' | 'custom')
+  const webhookMethod = (((localStep as any).webhook_method || 'POST') as HTTPMethod) || 'POST'
+  const webhookContentType = String((localStep as any).webhook_content_type || 'application/json')
+
   return (
     <ErrorBoundary fallback={
       <div className="border border-red-300 rounded-lg p-6 bg-red-50">
@@ -638,6 +722,13 @@ export default function WorkflowStepEditor({
                   ...localStep,
                   step_type: newStepType,
                   webhook_url: localStep.webhook_url || '',
+                  webhook_method: (localStep as any).webhook_method || 'POST',
+                  webhook_query_params: (localStep as any).webhook_query_params || {},
+                  webhook_content_type: (localStep as any).webhook_content_type || 'application/json',
+                  webhook_body_mode: (localStep as any).webhook_body_mode || 'auto',
+                  webhook_body: (localStep as any).webhook_body || '',
+                  webhook_save_response:
+                    (localStep as any).webhook_save_response !== undefined ? (localStep as any).webhook_save_response : true,
                   webhook_data_selection: localStep.webhook_data_selection || {
                     include_submission: true,
                     exclude_step_indices: [],
@@ -943,6 +1034,33 @@ export default function WorkflowStepEditor({
         {/* HTTP Request Step Fields */}
         {localStep.step_type === 'webhook' && (
           <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Method</label>
+                <select
+                  value={webhookMethod}
+                  onChange={(e) => handleChange('webhook_method', e.target.value as HTTPMethod)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="POST">POST</option>
+                  <option value="GET">GET</option>
+                  <option value="PUT">PUT</option>
+                  <option value="PATCH">PATCH</option>
+                  <option value="DELETE">DELETE</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Content-Type</label>
+                <input
+                  type="text"
+                  value={webhookContentType}
+                  onChange={(e) => handleChange('webhook_content_type', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  placeholder="application/json"
+                />
+              </div>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 HTTP URL *
@@ -956,8 +1074,69 @@ export default function WorkflowStepEditor({
                 required
               />
               <p className="mt-1 text-sm text-gray-500">
-                The URL where the POST request will be sent with selected data.
+                The URL where the HTTP request will be sent.
               </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Query Parameters (optional)
+              </label>
+              <p className="text-xs text-gray-500 mb-2">
+                Add query parameters to append to the URL.
+              </p>
+              <div className="space-y-2">
+                {Object.entries(webhookQueryParams).map(([key, value], idx) => (
+                  <div key={idx} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={key}
+                      onChange={(e) => {
+                        const newParams = { ...webhookQueryParams }
+                        delete newParams[key]
+                        newParams[e.target.value] = value
+                        setWebhookQueryParams(newParams)
+                        handleChange('webhook_query_params', newParams)
+                      }}
+                      placeholder="Param name"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                    />
+                    <input
+                      type="text"
+                      value={value}
+                      onChange={(e) => {
+                        const newParams = { ...webhookQueryParams, [key]: e.target.value }
+                        setWebhookQueryParams(newParams)
+                        handleChange('webhook_query_params', newParams)
+                      }}
+                      placeholder="Param value"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newParams = { ...webhookQueryParams }
+                        delete newParams[key]
+                        setWebhookQueryParams(newParams)
+                        handleChange('webhook_query_params', newParams)
+                      }}
+                      className="px-3 py-2 text-red-600 hover:text-red-700 text-sm"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newParams = { ...webhookQueryParams, '': '' }
+                    setWebhookQueryParams(newParams)
+                  }}
+                  className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+                >
+                  + Add Query Parameter
+                </button>
+              </div>
             </div>
 
             <div>
@@ -1022,98 +1201,303 @@ export default function WorkflowStepEditor({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Data Selection
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Body</label>
               <p className="text-xs text-gray-500 mb-3">
-                Choose which data to include in the HTTP request payload. All step outputs are included by default.
+                Choose whether to send an auto-generated payload (submission + step outputs) or write a custom body.
               </p>
-              
-              <div className="space-y-3">
-                <label className="flex items-center space-x-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={localStep.webhook_data_selection?.include_submission !== false}
-                    onChange={(e) => {
-                      const dataSelection = localStep.webhook_data_selection || {
-                        include_submission: true,
-                        exclude_step_indices: [],
-                        include_job_info: true
-                      }
-                      handleChange('webhook_data_selection', {
-                        ...dataSelection,
-                        include_submission: e.target.checked
-                      })
-                    }}
-                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                  />
-                  <span className="text-sm text-gray-900">Include submission data</span>
-                </label>
 
-                <label className="flex items-center space-x-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={localStep.webhook_data_selection?.include_job_info !== false}
-                    onChange={(e) => {
-                      const dataSelection = localStep.webhook_data_selection || {
-                        include_submission: true,
-                        exclude_step_indices: [],
-                        include_job_info: true
-                      }
-                      handleChange('webhook_data_selection', {
-                        ...dataSelection,
-                        include_job_info: e.target.checked
-                      })
-                    }}
-                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                  />
-                  <span className="text-sm text-gray-900">Include job information</span>
-                </label>
+              <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1">
+                <button
+                  type="button"
+                  onClick={() => handleChange('webhook_body_mode', 'auto')}
+                  className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                    webhookBodyMode === 'auto' ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  Auto payload
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleChange('webhook_body_mode', 'custom')}
+                  className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                    webhookBodyMode === 'custom' ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  Custom body
+                </button>
+              </div>
 
-                {allSteps.length > 0 && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Exclude Step Outputs (optional)
+              {webhookBodyMode === 'custom' ? (
+                <div className="mt-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-semibold text-gray-600 uppercase">Raw body</span>
+                    <select
+                      value=""
+                      onChange={(e) => {
+                        const token = e.target.value
+                        if (!token) return
+                        const current = String((localStep as any).webhook_body || '')
+                        handleChange('webhook_body', current + token)
+                        e.currentTarget.value = ''
+                      }}
+                      className="text-xs border border-gray-300 rounded-md px-2 py-1 bg-white"
+                      aria-label="Insert variable"
+                      title="Insert a variable token"
+                    >
+                      <option value="">Insert variable…</option>
+                      <option value="{{job.job_id}}">{'{{job.job_id}}'}</option>
+                      <option value="{{job.workflow_id}}">{'{{job.workflow_id}}'}</option>
+                      <option value="{{submission}}">{'{{submission}}'}</option>
+                      <option value="{{submission.email}}">{'{{submission.email}}'}</option>
+                      <option value="{{steps.0.output}}">{'{{steps.0.output}}'}</option>
+                    </select>
+                  </div>
+                  <textarea
+                    value={String((localStep as any).webhook_body || '')}
+                    onChange={(e) => handleChange('webhook_body', e.target.value)}
+                    className="w-full min-h-[180px] px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono text-sm"
+                    placeholder={`{\n  \"example\": \"{{some_value}}\"\n}`}
+                  />
+                  <p className="text-xs text-gray-500">
+                    You can reference variables like <span className="font-mono">{"{{job.job_id}}"}</span>,{' '}
+                    <span className="font-mono">{"{{submission.email}}"}</span>, or{' '}
+                    <span className="font-mono">{"{{steps.0.output}}"}</span>. During testing, values in “Test values”
+                    will replace <span className="font-mono">{"{{your_key}}"}</span>.
+                  </p>
+                </div>
+              ) : (
+                <div className="mt-3">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Data Selection</label>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Choose which data to include in the HTTP request payload. All step outputs are included by default.
+                  </p>
+
+                  <div className="space-y-3">
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={localStep.webhook_data_selection?.include_submission !== false}
+                        onChange={(e) => {
+                          const dataSelection = localStep.webhook_data_selection || {
+                            include_submission: true,
+                            exclude_step_indices: [],
+                            include_job_info: true,
+                          }
+                          handleChange('webhook_data_selection', {
+                            ...dataSelection,
+                            include_submission: e.target.checked,
+                          })
+                        }}
+                        className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                      />
+                      <span className="text-sm text-gray-900">Include submission data</span>
                     </label>
-                    <p className="text-xs text-gray-500 mb-2">
-                      All step outputs are included by default. Check steps to exclude from the payload.
-                    </p>
-                    <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-3">
-                      {allSteps.map((otherStep, otherIndex) => {
-                        if (otherIndex >= index) return null // Can't exclude future steps
-                        const isExcluded = (localStep.webhook_data_selection?.exclude_step_indices || []).includes(otherIndex)
-                        return (
-                          <label key={otherIndex} className="flex items-center space-x-2 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={isExcluded}
-                              onChange={(e) => {
-                                const dataSelection = localStep.webhook_data_selection || {
-                                  include_submission: true,
-                                  exclude_step_indices: [],
-                                  include_job_info: true
-                                }
-                                const currentExcluded = dataSelection.exclude_step_indices || []
-                                const newExcluded = e.target.checked
-                                  ? [...currentExcluded, otherIndex]
-                                  : currentExcluded.filter((idx: number) => idx !== otherIndex)
-                                handleChange('webhook_data_selection', {
-                                  ...dataSelection,
-                                  exclude_step_indices: newExcluded
-                                })
-                              }}
-                              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                            />
-                            <span className="text-sm text-gray-900">
-                              Exclude: {otherStep.step_name || `Step ${otherIndex + 1}`}
-                            </span>
-                          </label>
-                        )
-                      })}
+
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={localStep.webhook_data_selection?.include_job_info !== false}
+                        onChange={(e) => {
+                          const dataSelection = localStep.webhook_data_selection || {
+                            include_submission: true,
+                            exclude_step_indices: [],
+                            include_job_info: true,
+                          }
+                          handleChange('webhook_data_selection', {
+                            ...dataSelection,
+                            include_job_info: e.target.checked,
+                          })
+                        }}
+                        className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                      />
+                      <span className="text-sm text-gray-900">Include job information</span>
+                    </label>
+
+                    {allSteps.length > 0 && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Exclude Step Outputs (optional)
+                        </label>
+                        <p className="text-xs text-gray-500 mb-2">
+                          All step outputs are included by default. Check steps to exclude from the payload.
+                        </p>
+                        <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-3">
+                          {allSteps.map((otherStep, otherIndex) => {
+                            if (otherIndex >= index) return null // Can't exclude future steps
+                            const isExcluded = (localStep.webhook_data_selection?.exclude_step_indices || []).includes(
+                              otherIndex
+                            )
+                            return (
+                              <label key={otherIndex} className="flex items-center space-x-2 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={isExcluded}
+                                  onChange={(e) => {
+                                    const dataSelection = localStep.webhook_data_selection || {
+                                      include_submission: true,
+                                      exclude_step_indices: [],
+                                      include_job_info: true,
+                                    }
+                                    const currentExcluded = dataSelection.exclude_step_indices || []
+                                    const newExcluded = e.target.checked
+                                      ? [...currentExcluded, otherIndex]
+                                      : currentExcluded.filter((idx: number) => idx !== otherIndex)
+                                    handleChange('webhook_data_selection', {
+                                      ...dataSelection,
+                                      exclude_step_indices: newExcluded,
+                                    })
+                                  }}
+                                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                                />
+                                <span className="text-sm text-gray-900">
+                                  Exclude: {otherStep.step_name || `Step ${otherIndex + 1}`}
+                                </span>
+                              </label>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">Test request</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Sends the request server-side and shows what was sent and what came back.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleTestHttpRequest}
+                  disabled={httpTestLoading}
+                  className="px-3 py-2 text-sm font-medium bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:opacity-50"
+                >
+                  {httpTestLoading ? 'Testing…' : httpTestResult ? 'Test Again' : 'Test'}
+                </button>
+              </div>
+
+              <div className="mt-3">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Test values (optional)</label>
+                <p className="text-xs text-gray-500 mb-2">
+                  These replace <span className="font-mono">{"{{key}}"}</span> placeholders during testing.
+                </p>
+                <div className="space-y-2">
+                  {Object.entries(httpTestValues).map(([key, value], idx) => (
+                    <div key={idx} className="flex gap-2">
+                      <input
+                        type="text"
+                        value={key}
+                        onChange={(e) => {
+                          const newVals = { ...httpTestValues }
+                          delete newVals[key]
+                          newVals[e.target.value] = value
+                          setHttpTestValues(newVals)
+                        }}
+                        placeholder="key"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm bg-white"
+                      />
+                      <input
+                        type="text"
+                        value={value}
+                        onChange={(e) => {
+                          const newVals = { ...httpTestValues, [key]: e.target.value }
+                          setHttpTestValues(newVals)
+                        }}
+                        placeholder="value"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm bg-white"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newVals = { ...httpTestValues }
+                          delete newVals[key]
+                          setHttpTestValues(newVals)
+                        }}
+                        className="px-3 py-2 text-red-600 hover:text-red-700 text-sm"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setHttpTestValues({ ...httpTestValues, '': '' })}
+                    className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+                  >
+                    + Add value
+                  </button>
+                </div>
+              </div>
+
+              {httpTestError && (
+                <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+                  {httpTestError}
+                </div>
+              )}
+
+              {httpTestResult && (
+                <div className="mt-3 space-y-3">
+                  <div
+                    className={`rounded-lg border px-3 py-2 text-sm ${
+                      httpTestResult.ok
+                        ? 'border-green-200 bg-green-50 text-green-900'
+                        : 'border-red-200 bg-red-50 text-red-900'
+                    }`}
+                  >
+                    {httpTestResult.ok ? 'Request success' : 'Request completed'} with status:{' '}
+                    <span className="font-mono">{httpTestResult.response?.status ?? 'N/A'}</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                      <div className="px-3 py-2 border-b border-gray-200 bg-gray-50 text-sm font-semibold text-gray-700">
+                        Sent
+                      </div>
+                      <pre className="p-3 text-xs overflow-x-auto whitespace-pre-wrap">
+                        {JSON.stringify(
+                          {
+                            method: httpTestResult.request?.method,
+                            url: httpTestResult.request?.url,
+                            headers: httpTestResult.request?.headers,
+                            body:
+                              httpTestResult.request?.body_json !== null &&
+                              httpTestResult.request?.body_json !== undefined
+                                ? httpTestResult.request?.body_json
+                                : httpTestResult.request?.body,
+                          },
+                          null,
+                          2
+                        )}
+                      </pre>
+                    </div>
+                    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                      <div className="px-3 py-2 border-b border-gray-200 bg-gray-50 text-sm font-semibold text-gray-700">
+                        Response
+                      </div>
+                      <pre className="p-3 text-xs overflow-x-auto whitespace-pre-wrap">
+                        {JSON.stringify(
+                          {
+                            status: httpTestResult.response?.status,
+                            headers: httpTestResult.response?.headers,
+                            body:
+                              httpTestResult.response?.body_json !== null &&
+                              httpTestResult.response?.body_json !== undefined
+                                ? httpTestResult.response?.body_json
+                                : httpTestResult.response?.body,
+                          },
+                          null,
+                          2
+                        )}
+                      </pre>
                     </div>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </>
         )}

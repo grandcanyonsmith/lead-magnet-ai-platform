@@ -132,7 +132,14 @@ export function isHTML(str: string): boolean {
 
 interface WebhookInput {
   webhook_url?: string
+  method?: string
+  headers?: Record<string, unknown>
+  query_params?: Record<string, unknown>
+  content_type?: string
+  body_mode?: string
   payload?: Record<string, unknown>
+  body?: string
+  body_json?: unknown
 }
 
 interface AIInput {
@@ -145,12 +152,18 @@ export function formatStepInput(step: ExecutionStep): { content: string | unknow
     return { content: step.input, type: 'json' }
   }
   if (step.step_type === 'webhook') {
-    // For webhook steps, show webhook URL and payload
+    // For webhook steps, show request details (URL/method/headers/body or payload)
     const inputObj = step.input as WebhookInput | undefined
     return {
       content: {
         webhook_url: inputObj?.webhook_url || 'N/A',
-        payload: inputObj?.payload || {}
+        method: inputObj?.method || 'POST',
+        headers: inputObj?.headers || {},
+        query_params: inputObj?.query_params || {},
+        content_type: inputObj?.content_type || 'application/json',
+        body_mode: inputObj?.body_mode || (inputObj?.body || inputObj?.body_json ? 'custom' : 'auto'),
+        payload: inputObj?.payload || undefined,
+        body: inputObj?.body_json !== undefined && inputObj?.body_json !== null ? inputObj?.body_json : inputObj?.body || undefined,
       },
       type: 'json'
     }

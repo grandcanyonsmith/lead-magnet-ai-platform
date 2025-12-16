@@ -8,6 +8,7 @@ import { adminController } from '../controllers/admin';
 import { webhookLogsController } from '../controllers/webhookLogs';
 import { workflowSharingController } from '../controllers/workflowSharing.controller';
 import { trackingController } from '../controllers/tracking';
+import { httpRequestTestController } from '../controllers/httpRequestTest';
 import { router } from './router';
 import { logger } from '../utils/logger';
 
@@ -129,6 +130,12 @@ export function registerAdminRoutes(): void {
 
   router.register('POST', '/admin/webhook-logs/:id/retry', async (params, _body, _query, tenantId) => {
     return await webhookLogsController.retry(tenantId!, params.id);
+  });
+
+  // HTTP Request Tester (for workflow HTTP steps)
+  router.register('POST', '/admin/http-request/test', async (_params, body, _query, tenantId, context) => {
+    logger.info('[Admin Routes] POST /admin/http-request/test');
+    return await httpRequestTestController.test(_params, body, _query, tenantId, context);
   });
 
   // Workflow sharing (internal endpoint for worker)

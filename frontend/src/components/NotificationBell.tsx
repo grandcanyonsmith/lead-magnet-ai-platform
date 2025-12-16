@@ -17,7 +17,18 @@ interface Notification {
   created_at: string
 }
 
-export const NotificationBell: React.FC = () => {
+type NotificationBellLayer = 'global' | 'account_menu'
+
+interface NotificationBellProps {
+  /**
+   * Controls z-index layering when this component is rendered inside another overlay/menu.
+   * - global: default; notifications sit above most UI
+   * - account_menu: keep the backdrop *below* the account menu so it doesn't cover it
+   */
+  layer?: NotificationBellLayer
+}
+
+export const NotificationBell: React.FC<NotificationBellProps> = ({ layer = 'global' }) => {
   const router = useRouter()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
@@ -143,11 +154,11 @@ export const NotificationBell: React.FC = () => {
         <>
           {/* Mobile backdrop - covers entire screen */}
           <div 
-            className="fixed inset-0 bg-black/20 z-[100]" 
+            className={`fixed inset-0 bg-black/20 ${layer === 'account_menu' ? 'z-[46]' : 'z-[100]'}`} 
             onClick={() => setIsOpen(false)}
           />
           {/* Notification panel - fixed on mobile, absolute on desktop */}
-          <div className="fixed inset-x-4 bottom-4 top-auto sm:absolute sm:inset-auto sm:bottom-full sm:right-0 sm:mb-2 sm:w-80 md:w-96 bg-white rounded-xl shadow-2xl border border-gray-200 z-[101] max-h-[70vh] sm:max-h-[min(500px,calc(100vh-8rem))] overflow-hidden flex flex-col">
+          <div className={`fixed inset-x-4 bottom-4 top-auto sm:absolute sm:inset-auto sm:bottom-full sm:right-0 sm:mb-2 sm:w-80 md:w-96 bg-white rounded-xl shadow-2xl border border-gray-200 ${layer === 'account_menu' ? 'z-[60]' : 'z-[101]'} max-h-[70vh] sm:max-h-[min(500px,calc(100vh-8rem))] overflow-hidden flex flex-col`}>
           <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200">
             <h3 className="text-base sm:text-lg font-semibold text-gray-900">Notifications</h3>
             <div className="flex items-center space-x-1 sm:space-x-2">

@@ -77,7 +77,13 @@ export function useWorkflowEdit() {
           tool_choice: step.tool_choice || 'auto',
           // Webhook step fields
           webhook_url: step.webhook_url || '',
+          webhook_method: step.webhook_method || 'POST',
           webhook_headers: step.webhook_headers || {},
+          webhook_query_params: step.webhook_query_params || {},
+          webhook_content_type: step.webhook_content_type || 'application/json',
+          webhook_body_mode: step.webhook_body_mode || (step.webhook_body ? 'custom' : 'auto'),
+          webhook_body: step.webhook_body || '',
+          webhook_save_response: step.webhook_save_response !== undefined ? step.webhook_save_response : true,
           webhook_data_selection: step.webhook_data_selection || undefined,
         }
       })
