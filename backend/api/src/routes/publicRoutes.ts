@@ -31,6 +31,12 @@ export function registerPublicRoutes(): void {
     return await jobsController.getPublicStatus(params.jobId);
   }, false);
 
+  // Public job document endpoint (for form submissions / sharing)
+  router.register('GET', '/v1/jobs/:jobId/document', async (params) => {
+    logger.info('[Public Routes] GET /v1/jobs/:jobId/document', { jobId: params.jobId });
+    return await jobsController.getPublicDocument(params.jobId);
+  }, false);
+
   // Public webhook endpoint
   router.register('POST', '/v1/webhooks/:token', async (params, body, _query, _tenantId, context) => {
     logger.info('[Public Routes] POST /v1/webhooks/:token', { token: params.token });

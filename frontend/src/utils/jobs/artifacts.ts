@@ -100,6 +100,7 @@ export function buildArtifactGalleryItems({
     items.push({
       id: 'job-output-url',
       kind: 'jobOutput',
+      jobId: job.job_id,
       url: job.output_url,
       label: 'Final Deliverable',
       description: 'Download the generated lead magnet document.',
