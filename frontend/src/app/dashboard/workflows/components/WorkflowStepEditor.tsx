@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef, useMemo } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { FiTrash2, FiChevronUp, FiChevronDown, FiZap, FiChevronDown as FiChevronCollapse, FiChevronUp as FiChevronExpand } from 'react-icons/fi'
 import { useWorkflowStepAI } from '@/hooks/useWorkflowStepAI'
 import StepDiffPreview from '@/components/workflows/edit/StepDiffPreview'
@@ -82,41 +82,17 @@ export default function WorkflowStepEditor({
   const [httpTestResult, setHttpTestResult] = useState<any>(null)
   const [httpTestError, setHttpTestError] = useState<string | null>(null)
   const [httpTestValues, setHttpTestValues] = useState<Record<string, string>>({})
+  const [availableRuns, setAvailableRuns] = useState<any[]>([])
+  const [selectedRunId, setSelectedRunId] = useState<string>('')
+  const [selectedRunLoading, setSelectedRunLoading] = useState(false)
+  const [selectedRunError, setSelectedRunError] = useState<string | null>(null)
+  const [selectedRunVars, setSelectedRunVars] = useState<any>(null)
 
   // Track if we've already converted string tools to objects to prevent infinite loops
   const hasConvertedToolsRef = useRef<boolean>(false)
 
   // Always call hook unconditionally to comply with Rules of Hooks
   const { isGenerating, error: aiError, proposal, generateStep, acceptProposal, rejectProposal } = useWorkflowStepAI(workflowId)
-
-  // Create stable step reference for dependency comparison
-  const stepKey = useMemo(() => {
-    return JSON.stringify({
-      step_name: step.step_name,
-      step_type: step.step_type,
-      webhook_url: step.webhook_url,
-      webhook_method: (step as any).webhook_method,
-      webhook_query_params: (step as any).webhook_query_params,
-      webhook_content_type: (step as any).webhook_content_type,
-      webhook_body_mode: (step as any).webhook_body_mode,
-      webhook_body: (step as any).webhook_body,
-      tools: step.tools,
-      model: step.model,
-      step_order: step.step_order,
-    })
-  }, [
-    step.step_name,
-    step.step_type,
-    step.webhook_url,
-    (step as any).webhook_method,
-    (step as any).webhook_query_params,
-    (step as any).webhook_content_type,
-    (step as any).webhook_body_mode,
-    (step as any).webhook_body,
-    step.tools,
-    step.model,
-    step.step_order,
-  ])
 
   // Sync localStep when step prop changes
   useEffect(() => {
@@ -232,6 +208,129 @@ export default function WorkflowStepEditor({
     }
   }, [step, onChange, index])
 
+  // Load recent completed runs for this workflow (used by HTTP test tooling)
+  useEffect(() => {
+    if (!workflowId) return
+    if (localStep.step_type !== 'webhook') return
+
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await api.getJobs({ workflow_id: workflowId, status: 'completed', limit: 20 })
+        if (cancelled) return
+        setAvailableRuns(res?.jobs || [])
+      } catch (_err) {
+        if (cancelled) return
+        setAvailableRuns([])
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [workflowId, localStep.step_type])
+
+  // When a run is selected, fetch its execution steps and resolve artifact URLs
+  useEffect(() => {
+    if (!selectedRunId) {
+      setSelectedRunVars(null)
+      setSelectedRunError(null)
+      return
+    }
+
+    let cancelled = false
+    ;(async () => {
+      setSelectedRunLoading(true)
+      setSelectedRunError(null)
+      try {
+        const executionSteps = await api.getExecutionSteps(selectedRunId)
+        const runMeta = (availableRuns || []).find((j: any) => j.job_id === selectedRunId)
+
+        const workflowSteps = (Array.isArray(executionSteps) ? executionSteps : [])
+          .filter((s: any) => {
+            const orderOk = typeof s?.step_order === 'number' && s.step_order > 0
+            const typeOk =
+              s?.step_type === 'ai_generation' ||
+              s?.step_type === 'webhook' ||
+              s?.step_type === 'html_generation' ||
+              s?.step_type === 'workflow_step'
+            return orderOk && typeOk
+          })
+          .sort((a: any, b: any) => (a.step_order || 0) - (b.step_order || 0))
+
+        const artifactIds = workflowSteps
+          .map((s: any) => s?.artifact_id)
+          .filter((id: any) => typeof id === 'string' && id.trim().length > 0)
+
+        const artifactRecords = await Promise.all(
+          artifactIds.map(async (artifactId: string) => {
+            try {
+              return await api.getArtifact(artifactId)
+            } catch {
+              return null
+            }
+          })
+        )
+
+        const artifactUrlById = new Map<string, string>()
+        artifactRecords.forEach((a: any) => {
+          if (!a?.artifact_id) return
+          const url = a.public_url || a.object_url || a.url
+          if (url) artifactUrlById.set(a.artifact_id, String(url))
+        })
+
+        const runSteps = workflowSteps.map((s: any) => {
+          const outputText =
+            typeof s?.output === 'string'
+              ? s.output
+              : s?.output !== undefined && s?.output !== null
+                ? JSON.stringify(s.output)
+                : ''
+          const imageUrls = Array.isArray(s?.image_urls) ? s.image_urls.filter(Boolean).map(String) : []
+          const artifactId = typeof s?.artifact_id === 'string' ? s.artifact_id : null
+          const artifactUrl = artifactId ? artifactUrlById.get(artifactId) || null : null
+          const artifactUrls = Array.from(new Set([...(artifactUrl ? [artifactUrl] : []), ...imageUrls]))
+          return {
+            step_order: s?.step_order,
+            step_name: s?.step_name,
+            step_type: s?.step_type,
+            output: outputText,
+            artifact_id: artifactId,
+            artifact_url: artifactUrl,
+            artifact_urls: artifactUrls,
+            image_urls: imageUrls,
+          }
+        })
+
+        const vars = {
+          job: {
+            job_id: selectedRunId,
+            workflow_id: runMeta?.workflow_id,
+            status: runMeta?.status,
+            created_at: runMeta?.created_at,
+            output_url: runMeta?.output_url,
+          },
+          steps: runSteps,
+        }
+
+        if (cancelled) return
+        setSelectedRunVars(vars)
+      } catch (err: any) {
+        if (cancelled) return
+        const msg = err?.response?.data?.message || err?.message || 'Failed to load run data'
+        setSelectedRunError(msg)
+        setSelectedRunVars(null)
+      } finally {
+        if (cancelled) return
+        setSelectedRunLoading(false)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [selectedRunId, availableRuns])
+
   // Ensure image generation config is initialized when tool is selected
   // Using functional setState form to avoid needing imageGenerationConfig in dependencies
   useEffect(() => {
@@ -273,6 +372,15 @@ export default function WorkflowStepEditor({
       return
     }
 
+    if (selectedRunId && selectedRunLoading) {
+      toast('Loading run data…')
+      return
+    }
+    if (selectedRunId && !selectedRunVars) {
+      toast.error('Selected run data could not be loaded')
+      return
+    }
+
     const bodyMode = ((localStep as any).webhook_body_mode || 'auto') as 'auto' | 'custom'
     const body = String((localStep as any).webhook_body || '')
 
@@ -286,6 +394,10 @@ export default function WorkflowStepEditor({
     setHttpTestError(null)
     setHttpTestResult(null)
     try {
+      const mergedTestValues = {
+        ...(selectedRunVars || {}),
+        ...(httpTestValues || {}),
+      }
       const result = await api.post<any>('/admin/http-request/test', {
         url,
         method: (((localStep as any).webhook_method || 'POST') as HTTPMethod) || 'POST',
@@ -293,7 +405,7 @@ export default function WorkflowStepEditor({
         query_params: (localStep as any).webhook_query_params || {},
         content_type: (localStep as any).webhook_content_type || 'application/json',
         body,
-        test_values: httpTestValues || {},
+        test_values: mergedTestValues,
       })
       setHttpTestResult(result)
       if (result?.response?.status) {
@@ -1245,11 +1357,25 @@ export default function WorkflowStepEditor({
                       title="Insert a variable token"
                     >
                       <option value="">Insert variable…</option>
-                      <option value="{{job.job_id}}">{'{{job.job_id}}'}</option>
-                      <option value="{{job.workflow_id}}">{'{{job.workflow_id}}'}</option>
-                      <option value="{{submission}}">{'{{submission}}'}</option>
-                      <option value="{{submission.email}}">{'{{submission.email}}'}</option>
-                      <option value="{{steps.0.output}}">{'{{steps.0.output}}'}</option>
+                      <optgroup label="Job">
+                        <option value="{{job.job_id}}">{'{{job.job_id}}'}</option>
+                        <option value="{{job.workflow_id}}">{'{{job.workflow_id}}'}</option>
+                        <option value="{{job.output_url}}">{'{{job.output_url}}'}</option>
+                      </optgroup>
+                      <optgroup label="Submission">
+                        <option value="{{submission}}">{'{{submission}}'}</option>
+                        <option value="{{submission.email}}">{'{{submission.email}}'}</option>
+                      </optgroup>
+                      {(allSteps || []).slice(0, index).map((s, i) => {
+                        const label = s?.step_name ? `Step ${i + 1}: ${s.step_name}` : `Step ${i + 1}`
+                        return (
+                          <optgroup key={i} label={label}>
+                            <option value={`{{steps.${i}.output}}`}>{`{{steps.${i}.output}}`} (text output)</option>
+                            <option value={`{{steps.${i}.artifact_url}}`}>{`{{steps.${i}.artifact_url}}`} (artifact URL)</option>
+                            <option value={`{{steps.${i}.artifact_urls}}`}>{`{{steps.${i}.artifact_urls}}`} (all URLs)</option>
+                          </optgroup>
+                        )
+                      })}
                     </select>
                   </div>
                   <textarea
@@ -1261,7 +1387,8 @@ export default function WorkflowStepEditor({
                   <p className="text-xs text-gray-500">
                     You can reference variables like <span className="font-mono">{"{{job.job_id}}"}</span>,{' '}
                     <span className="font-mono">{"{{submission.email}}"}</span>, or{' '}
-                    <span className="font-mono">{"{{steps.0.output}}"}</span>. During testing, values in “Test values”
+                    <span className="font-mono">{"{{steps.0.output}}"}</span> /{' '}
+                    <span className="font-mono">{"{{steps.0.artifact_url}}"}</span>. During testing, values in “Test values”
                     will replace <span className="font-mono">{"{{your_key}}"}</span>.
                   </p>
                 </div>
@@ -1374,11 +1501,58 @@ export default function WorkflowStepEditor({
                 <button
                   type="button"
                   onClick={handleTestHttpRequest}
-                  disabled={httpTestLoading}
+                  disabled={httpTestLoading || (selectedRunId ? selectedRunLoading : false)}
                   className="px-3 py-2 text-sm font-medium bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:opacity-50"
                 >
                   {httpTestLoading ? 'Testing…' : httpTestResult ? 'Test Again' : 'Test'}
                 </button>
+              </div>
+
+              <div className="mt-3">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Use data from a previous run (optional)</label>
+                <p className="text-xs text-gray-500 mb-2">
+                  Select a completed run so placeholders like <span className="font-mono">{"{{steps.0.output}}"}</span> and{' '}
+                  <span className="font-mono">{"{{steps.0.artifact_url}}"}</span> resolve to that run’s step outputs and artifact URLs during testing.
+                </p>
+
+                {!workflowId ? (
+                  <p className="text-xs text-gray-500">Save this workflow to enable run selection.</p>
+                ) : (
+                  <>
+                    <select
+                      value={selectedRunId}
+                      onChange={(e) => {
+                        setSelectedRunId(e.target.value)
+                        setHttpTestResult(null)
+                        setHttpTestError(null)
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm bg-white"
+                    >
+                      <option value="">No run selected</option>
+                      {(availableRuns || []).map((job: any) => {
+                        const createdAt = job?.created_at ? new Date(job.created_at).toLocaleString() : ''
+                        const label = `${job?.job_id || 'job'}${createdAt ? ` • ${createdAt}` : ''}`
+                        return (
+                          <option key={job.job_id} value={job.job_id}>
+                            {label}
+                          </option>
+                        )
+                      })}
+                    </select>
+
+                    {selectedRunId && (
+                      <div className="mt-2">
+                        {selectedRunLoading && <p className="text-xs text-gray-500">Loading run data…</p>}
+                        {selectedRunError && <p className="text-xs text-red-700">{selectedRunError}</p>}
+                        {selectedRunVars?.steps && Array.isArray(selectedRunVars.steps) && (
+                          <p className="text-xs text-gray-500">
+                            Loaded <span className="font-medium">{selectedRunVars.steps.length}</span> step outputs from this run.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
 
               <div className="mt-3">

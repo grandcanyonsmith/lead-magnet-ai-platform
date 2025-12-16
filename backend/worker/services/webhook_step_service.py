@@ -100,7 +100,12 @@ class WebhookStepService:
         json_body: Optional[Any] = None
 
         if use_custom_body:
-            template_vars = self._build_template_context(job=job, submission=submission, step_outputs=step_outputs)
+            template_vars = self._build_template_context(
+                job_id=job_id,
+                job=job,
+                submission=submission,
+                step_outputs=step_outputs
+            )
             rendered_body = self._render_template(str(body_template), template_vars)
             if content_type and 'application/json' in str(content_type).lower():
                 try:
@@ -275,7 +280,12 @@ class WebhookStepService:
         use_custom_body = bool(body_template and str(body_template).strip()) and body_mode == 'custom'
 
         if use_custom_body:
-            template_vars = self._build_template_context(job=job, submission=submission, step_outputs=step_outputs)
+            template_vars = self._build_template_context(
+                job_id=job_id,
+                job=job,
+                submission=submission,
+                step_outputs=step_outputs
+            )
             rendered_body = self._render_template(str(body_template), template_vars)
             body_json = None
             if content_type and 'application/json' in str(content_type).lower():
@@ -336,6 +346,7 @@ class WebhookStepService:
     def _build_template_context(
         self,
         *,
+        job_id: str,
         job: Dict[str, Any],
         submission: Dict[str, Any],
         step_outputs: List[Dict[str, Any]],
@@ -344,11 +355,70 @@ class WebhookStepService:
         submission_meta = {}
         if isinstance(submission, dict):
             submission_meta = {k: v for k, v in submission.items() if k != 'submission_data'}
+
+        artifact_url_by_id: Dict[str, str] = {}
+        artifacts_list: List[Dict[str, Any]] = []
+
+        # Optionally enrich step outputs with artifact URLs (so templates can reference {{steps.N.artifact_url}})
+        if self.db and job_id:
+            try:
+                all_artifacts = self.db.query_artifacts_by_job_id(job_id)
+                if all_artifacts:
+                    for artifact in all_artifacts:
+                        artifact_id = artifact.get('artifact_id')
+                        public_url = artifact.get('public_url') or artifact.get('s3_url') or ''
+                        if artifact_id and public_url:
+                            artifact_url_by_id[str(artifact_id)] = str(public_url)
+                        artifacts_list.append({
+                            'artifact_id': artifact_id,
+                            'artifact_type': artifact.get('artifact_type'),
+                            'artifact_name': artifact.get('artifact_name') or artifact.get('file_name') or '',
+                            'public_url': public_url,
+                            'step_order': self._get_artifact_step_order(artifact),
+                            'created_at': artifact.get('created_at'),
+                        })
+            except Exception as e:
+                logger.debug("[WebhookStepService] Failed to enrich template context with artifacts", extra={
+                    'job_id': job_id,
+                    'error_type': type(e).__name__,
+                    'error_message': str(e)
+                })
+
+        enriched_steps: List[Dict[str, Any]] = []
+        for s in (step_outputs or []):
+            try:
+                artifact_id = s.get('artifact_id') if isinstance(s, dict) else None
+                artifact_url = artifact_url_by_id.get(str(artifact_id)) if artifact_id else None
+                image_urls = s.get('image_urls', []) if isinstance(s, dict) else []
+                if image_urls is None:
+                    image_urls = []
+                if not isinstance(image_urls, list):
+                    image_urls = [str(image_urls)] if image_urls else []
+                image_urls = [str(u) for u in image_urls if u]
+                artifact_urls = []
+                if artifact_url:
+                    artifact_urls.append(artifact_url)
+                artifact_urls.extend(image_urls)
+                # Deduplicate, keep order
+                seen = set()
+                artifact_urls = [u for u in artifact_urls if not (u in seen or seen.add(u))]
+                if isinstance(s, dict):
+                    enriched_steps.append({
+                        **s,
+                        'artifact_url': artifact_url,
+                        'artifact_urls': artifact_urls,
+                    })
+                else:
+                    enriched_steps.append(s)
+            except Exception:
+                enriched_steps.append(s)
+
         return {
             'job': job or {},
             'submission': submission_data or {},
             'submission_meta': submission_meta or {},
-            'steps': step_outputs or [],
+            'steps': enriched_steps,
+            'artifacts': artifacts_list,
         }
 
     def _get_path(self, obj: Any, path: str) -> Any:
@@ -448,16 +518,56 @@ class WebhookStepService:
         exclude_step_indices = set(data_selection.get('exclude_step_indices', []))
         step_outputs_dict = {}
         
+        # Build an artifact_id -> public_url map (used to attach artifact URLs to each step output)
+        artifact_url_by_id = {}
+        try:
+            for a in payload.get('artifacts', []) if isinstance(payload.get('artifacts'), list) else []:
+                aid = a.get('artifact_id') if isinstance(a, dict) else None
+                url = a.get('public_url') if isinstance(a, dict) else None
+                if aid and url:
+                    artifact_url_by_id[str(aid)] = str(url)
+        except Exception:
+            artifact_url_by_id = {}
+
         for i, step_output in enumerate(step_outputs):
-            if i not in exclude_step_indices and i < step_index:  # Only include previous steps
-                step_name = sorted_steps[i].get('step_name', f'Step {i}') if i < len(sorted_steps) else f'Step {i}'
-                step_outputs_dict[f'step_{i}'] = {
-                    'step_name': step_name,
-                    'step_index': i,
-                    'output': step_output.get('output', ''),
-                    'artifact_id': step_output.get('artifact_id'),
-                    'image_urls': step_output.get('image_urls', [])
-                }
+            # Prefer explicit step_index if provided (single-step mode), otherwise fall back to list index (batch mode)
+            idx = step_output.get('step_index') if isinstance(step_output, dict) else None
+            if idx is None:
+                idx = i
+            if not isinstance(idx, int):
+                continue
+            if idx in exclude_step_indices or idx >= step_index:
+                continue  # Only include previous steps
+
+            step_name = sorted_steps[idx].get('step_name', f'Step {idx}') if idx < len(sorted_steps) else f'Step {idx}'
+
+            artifact_id = step_output.get('artifact_id') if isinstance(step_output, dict) else None
+            artifact_url = artifact_url_by_id.get(str(artifact_id)) if artifact_id else None
+
+            image_urls = step_output.get('image_urls', []) if isinstance(step_output, dict) else []
+            if image_urls is None:
+                image_urls = []
+            if not isinstance(image_urls, list):
+                image_urls = [str(image_urls)] if image_urls else []
+            image_urls = [str(u) for u in image_urls if u]
+
+            artifact_urls = []
+            if artifact_url:
+                artifact_urls.append(artifact_url)
+            artifact_urls.extend(image_urls)
+            # Deduplicate, keep order
+            seen = set()
+            artifact_urls = [u for u in artifact_urls if not (u in seen or seen.add(u))]
+
+            step_outputs_dict[f'step_{idx}'] = {
+                'step_name': step_name,
+                'step_index': idx,
+                'output': step_output.get('output', '') if isinstance(step_output, dict) else '',
+                'artifact_id': artifact_id,
+                'artifact_url': artifact_url,
+                'artifact_urls': artifact_urls,
+                'image_urls': image_urls
+            }
         
         if step_outputs_dict:
             payload['step_outputs'] = step_outputs_dict
