@@ -177,6 +177,19 @@ Artifacts (research reports, HTML deliverables, etc.) are stored in S3 and acces
 4. Check CloudFront cache behavior
 5. Review CloudFront access logs
 
+## Public Job Document Endpoint (Fallback Viewer)
+
+If a CloudFront artifact URL is unavailable (misconfigured domain, cached 404s, or origin issues), the API exposes a **public, non-authenticated** fallback endpoint that proxies the final artifact directly from S3:
+
+```
+GET /v1/jobs/:jobId/document
+```
+
+Notes:
+- The endpoint **only serves the final deliverable** (`html_final` / `markdown_final`) and does not expose internal report artifacts.
+- This is safe in our model because the final deliverable is already treated as public (it is normally shared via `output_url`).
+- The public forms UI prefers this route for the “View Your Lead Magnet” button to avoid CloudFront edge cases.
+
 ## Code Examples
 
 ### Generate URL

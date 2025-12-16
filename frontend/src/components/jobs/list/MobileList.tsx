@@ -1,6 +1,9 @@
+import { useState } from 'react'
 import { getStatusIcon, getStatusBadge, getStepDisplayMeta, getJobSubmissionPreview } from '@/utils/jobs/listHelpers'
 import { formatRelativeTime, formatDuration } from '@/utils/date'
 import { FiExternalLink } from 'react-icons/fi'
+import toast from 'react-hot-toast'
+import { api } from '@/lib/api'
 import type { Job } from '@/types/job'
 
 interface JobsMobileListProps {
@@ -13,6 +16,47 @@ interface JobsMobileListProps {
 export function JobsMobileList({ jobs, workflowMap, workflowStepCounts, onNavigate }: JobsMobileListProps) {
   if (!jobs.length) {
     return null
+  }
+
+  const [openingJobId, setOpeningJobId] = useState<string | null>(null)
+
+  const handleViewDocument = async (job: Job) => {
+    if (!job.output_url || openingJobId) return
+
+    setOpeningJobId(job.job_id)
+    let blobUrl: string | null = null
+
+    try {
+      blobUrl = await api.getJobDocumentBlobUrl(job.job_id)
+
+      if (!blobUrl) {
+        throw new Error('Failed to create blob URL')
+      }
+
+      const newWindow = window.open(blobUrl, '_blank', 'noopener,noreferrer')
+
+      if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+        toast.error('Popup blocked. Please allow popups for this site and try again.')
+        URL.revokeObjectURL(blobUrl)
+        return
+      }
+
+      setTimeout(() => {
+        if (blobUrl) {
+          URL.revokeObjectURL(blobUrl)
+        }
+      }, 5000)
+    } catch (error: unknown) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to open document:', error)
+      }
+      toast.error('Failed to open document. Please try again.')
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl)
+      }
+    } finally {
+      setOpeningJobId(null)
+    }
   }
 
   return (
@@ -68,15 +112,15 @@ export function JobsMobileList({ jobs, workflowMap, workflowStepCounts, onNaviga
 
               {job.output_url && (
                 <div className="pt-1" data-tour="view-artifacts" onClick={(e) => e.stopPropagation()}>
-                  <a
-                    href={job.output_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center text-primary-600 hover:text-primary-900 text-xs"
+                  <button
+                    type="button"
+                    onClick={() => handleViewDocument(job)}
+                    disabled={openingJobId === job.job_id}
+                    className="inline-flex items-center text-primary-600 hover:text-primary-900 text-xs disabled:cursor-not-allowed disabled:text-gray-400"
                   >
                     <FiExternalLink className="w-3 h-3 mr-1" />
-                    View
-                  </a>
+                    {openingJobId === job.job_id ? 'Opening…' : 'View'}
+                  </button>
                 </div>
               )}
 

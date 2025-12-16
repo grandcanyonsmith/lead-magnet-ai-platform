@@ -20,6 +20,7 @@ export default function WorkflowsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [workflowJobs, setWorkflowJobs] = useState<Record<string, any[]>>({})
   const [loadingJobs, setLoadingJobs] = useState<Record<string, boolean>>({})
+  const [openingDocumentJobId, setOpeningDocumentJobId] = useState<string | null>(null)
   const menuRefs = useRef<Record<string, HTMLDivElement | null>>({})
   // Folder modal state
   const [showCreateFolderModal, setShowCreateFolderModal] = useState(false)
@@ -45,6 +46,55 @@ export default function WorkflowsPage() {
   // Track active requests to prevent duplicates - use Map to store promises for deduplication
   const activeRequestsRef = useRef<Map<string, Promise<void>>>(new Map())
   const { settings } = useSettings()
+
+  const openJobDocument = useCallback(
+    async (jobId: string, fallbackUrl?: string) => {
+      if (!jobId || openingDocumentJobId) return
+
+      setOpeningDocumentJobId(jobId)
+      let blobUrl: string | null = null
+
+      try {
+        blobUrl = await api.getJobDocumentBlobUrl(jobId)
+
+        if (!blobUrl) {
+          throw new Error('Failed to create blob URL')
+        }
+
+        const newWindow = window.open(blobUrl, '_blank', 'noopener,noreferrer')
+
+        if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+          toast.error('Popup blocked. Please allow popups for this site and try again.')
+          URL.revokeObjectURL(blobUrl)
+          return
+        }
+
+        setTimeout(() => {
+          if (blobUrl) {
+            URL.revokeObjectURL(blobUrl)
+          }
+        }, 5000)
+      } catch (error: unknown) {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Failed to open document:', error)
+        }
+
+        if (fallbackUrl) {
+          window.open(fallbackUrl, '_blank', 'noopener,noreferrer')
+          toast.error('Could not open via secure viewer — opened direct link instead.')
+        } else {
+          toast.error('Failed to open document. Please try again.')
+        }
+
+        if (blobUrl) {
+          URL.revokeObjectURL(blobUrl)
+        }
+      } finally {
+        setOpeningDocumentJobId(null)
+      }
+    },
+    [openingDocumentJobId]
+  )
 
   const loadWorkflows = useCallback(async () => {
     try {
@@ -1138,16 +1188,22 @@ export default function WorkflowsPage() {
                                   {completedJobs.length} document{completedJobs.length !== 1 ? 's' : ''}
                                 </span>
                                 {mostRecentJob.output_url && (
-                                  <a
-                                    href={mostRecentJob.output_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
+                                  <button
+                                    type="button"
                                     className="text-primary-600 hover:text-primary-900 flex-shrink-0"
-                                    onClick={(e) => e.stopPropagation()}
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      openJobDocument(mostRecentJob.job_id, mostRecentJob.output_url)
+                                    }}
                                     title="Open most recent document"
+                                    aria-label="Open most recent document"
                                   >
-                                    <FiExternalLink className="w-3 h-3" />
-                                  </a>
+                                    {openingDocumentJobId === mostRecentJob.job_id ? (
+                                      <FiLoader className="w-3 h-3 animate-spin" />
+                                    ) : (
+                                      <FiExternalLink className="w-3 h-3" />
+                                    )}
+                                  </button>
                                 )}
                               </div>
                               {completedJobs.length > 1 && (
@@ -1267,14 +1323,22 @@ export default function WorkflowsPage() {
                                 {getJobStatusIcon(job.status)}
                                 <span className="text-gray-600">{formatRelativeTime(job.created_at)}</span>
                                 {job.output_url && (
-                                  <a
-                                    href={job.output_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
+                                  <button
+                                    type="button"
                                     className="text-primary-600 hover:text-primary-900"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      openJobDocument(job.job_id, job.output_url)
+                                    }}
+                                    title="Open document"
+                                    aria-label="Open document"
                                   >
-                                    <FiExternalLink className="w-3 h-3" />
-                                  </a>
+                                    {openingDocumentJobId === job.job_id ? (
+                                      <FiLoader className="w-3 h-3 animate-spin" />
+                                    ) : (
+                                      <FiExternalLink className="w-3 h-3" />
+                                    )}
+                                  </button>
                                 )}
                               </div>
                             ))}

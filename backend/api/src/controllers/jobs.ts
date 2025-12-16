@@ -234,10 +234,28 @@ class JobsController {
     // This ensures the URL never expires
     if (job.status === 'completed' && job.artifacts && Array.isArray(job.artifacts) && job.artifacts.length > 0) {
       try {
-        // Get the first artifact (usually the final output)
-        const artifactId = job.artifacts[job.artifacts.length - 1]; // Get the last artifact (final output)
-        if (artifactId) {
-          const artifactResponse = await artifactsController.get(tenantId, artifactId);
+        const ARTIFACTS_TABLE = env.artifactsTable;
+        let finalArtifactId: string | null = null;
+
+        // Prefer the true final artifact (html_final/markdown_final). Images are often appended later.
+        if (ARTIFACTS_TABLE) {
+          const artifactsReversed = [...job.artifacts].reverse();
+          for (const artifactId of artifactsReversed) {
+            try {
+              const artifact = await db.get(ARTIFACTS_TABLE, { artifact_id: artifactId });
+              if (artifact && (artifact.artifact_type === 'html_final' || artifact.artifact_type === 'markdown_final')) {
+                finalArtifactId = artifactId;
+                break;
+              }
+            } catch (error) {
+              logger.warn(`Failed to fetch artifact ${artifactId} while refreshing output_url for job ${jobId}`, { error });
+            }
+          }
+        }
+
+        // Fallback: if we can't determine the final artifact, don't overwrite output_url.
+        if (finalArtifactId) {
+          const artifactResponse = await artifactsController.get(tenantId, finalArtifactId);
           if (artifactResponse.body && artifactResponse.body.public_url) {
             // Update job with fresh URL
             await db.update(JOBS_TABLE, { job_id: jobId }, {
@@ -412,6 +430,56 @@ class JobsController {
         message: 'Job resubmitted successfully',
       },
     };
+  }
+
+  /**
+   * Public document endpoint.
+   *
+   * This proxies the final artifact content by job ID without requiring auth.
+   * It is safe because the final output URL is already treated as public (via CloudFront/S3).
+   */
+  async getPublicDocument(jobId: string): Promise<RouteResponse> {
+    const job = await db.get(JOBS_TABLE, { job_id: jobId });
+
+    if (!job) {
+      throw new ApiError('Job not found', 404);
+    }
+
+    const tenantId = job.tenant_id;
+    if (!tenantId) {
+      throw new ApiError('Job tenant not found', 404);
+    }
+
+    // Reuse the same logic as the authenticated document endpoint: prefer html_final/markdown_final.
+    if (!job.artifacts || !Array.isArray(job.artifacts) || job.artifacts.length === 0) {
+      throw new ApiError('No artifacts found for this job', 404);
+    }
+
+    const ARTIFACTS_TABLE = env.artifactsTable;
+    if (!ARTIFACTS_TABLE) {
+      throw new ApiError('ARTIFACTS_TABLE environment variable is not configured', 500);
+    }
+
+    let finalArtifactId: string | null = null;
+
+    const artifactsReversed = [...job.artifacts].reverse();
+    for (const artifactId of artifactsReversed) {
+      try {
+        const artifact = await db.get(ARTIFACTS_TABLE, { artifact_id: artifactId });
+        if (artifact && (artifact.artifact_type === 'html_final' || artifact.artifact_type === 'markdown_final')) {
+          finalArtifactId = artifactId;
+          break;
+        }
+      } catch (error) {
+        logger.warn(`Failed to fetch artifact ${artifactId} for public document route`, { error });
+      }
+    }
+
+    if (!finalArtifactId) {
+      throw new ApiError('Final artifact not found', 404);
+    }
+
+    return await artifactsController.getContent(tenantId, finalArtifactId);
   }
 }
 

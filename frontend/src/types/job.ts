@@ -104,6 +104,7 @@ export interface ArtifactGalleryItem {
   kind: ArtifactGalleryItemKind
   artifact?: Artifact
   url?: string
+  jobId?: string
   stepOrder?: number
   stepName?: string
   stepType?: string

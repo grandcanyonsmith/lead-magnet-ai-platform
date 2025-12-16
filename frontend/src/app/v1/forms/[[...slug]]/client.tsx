@@ -328,7 +328,7 @@ export default function PublicFormPage() {
                 {form?.thank_you_message || 'Your personalized lead magnet has been generated successfully.'}
               </p>
               <a
-                href={outputUrl}
+                href={jobId ? `${API_URL}/v1/jobs/${jobId}/document` : outputUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-block w-full sm:w-auto px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium text-sm sm:text-base"
