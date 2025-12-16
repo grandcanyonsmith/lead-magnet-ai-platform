@@ -167,8 +167,8 @@ def test_webhook_step_exclude_steps():
     return True
 
 
-@patch('services.webhook_step_service.requests.post')
-def test_webhook_step_execution_success(mock_post):
+@patch('services.webhook_step_service.requests.request')
+def test_webhook_step_execution_success(mock_request):
     """Test successful webhook step execution."""
     logger.info("Testing webhook step execution (success case)...")
     
@@ -177,7 +177,7 @@ def test_webhook_step_execution_success(mock_post):
     mock_response.status_code = 200
     mock_response.text = '{"status": "ok"}'
     mock_response.raise_for_status = Mock()
-    mock_post.return_value = mock_response
+    mock_request.return_value = mock_response
     
     service = WebhookStepService()
     
@@ -206,12 +206,13 @@ def test_webhook_step_execution_success(mock_post):
     assert result['success'] is True
     assert result['response_status'] == 200
     assert result['webhook_url'] == 'https://example.com/webhook'
-    assert 'payload' in result
+    assert 'payload_size_bytes' in result
     
     # Verify request was made correctly
-    mock_post.assert_called_once()
-    call_args = mock_post.call_args
-    assert call_args[0][0] == 'https://example.com/webhook'
+    mock_request.assert_called_once()
+    call_args = mock_request.call_args
+    assert call_args[0][0] == 'POST'
+    assert call_args[0][1] == 'https://example.com/webhook'
     assert 'json' in call_args[1]
     assert 'headers' in call_args[1]
     assert call_args[1]['headers']['X-Custom'] == 'value'
@@ -221,8 +222,8 @@ def test_webhook_step_execution_success(mock_post):
     return True
 
 
-@patch('services.webhook_step_service.requests.post')
-def test_webhook_step_execution_failure(mock_post):
+@patch('services.webhook_step_service.requests.request')
+def test_webhook_step_execution_failure(mock_request):
     """Test webhook step execution failure handling."""
     logger.info("Testing webhook step execution (failure case)...")
     
@@ -233,7 +234,7 @@ def test_webhook_step_execution_failure(mock_post):
     mock_response.text = 'Internal Server Error'
     mock_error = requests.exceptions.HTTPError()
     mock_error.response = mock_response
-    mock_post.side_effect = mock_error
+    mock_request.side_effect = mock_error
     
     service = WebhookStepService()
     

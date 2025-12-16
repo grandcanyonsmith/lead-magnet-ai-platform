@@ -200,8 +200,7 @@ class ExecutionStepManager:
     def create_webhook_step(
         step_name: str,
         step_order: int,
-        webhook_url: str,
-        payload: Dict[str, Any],
+        request: Dict[str, Any],
         response_status: Optional[int],
         response_body: Optional[str],
         success: bool,
@@ -215,8 +214,7 @@ class ExecutionStepManager:
         Args:
             step_name: Name of the step
             step_order: Order of the step (1-indexed)
-            webhook_url: Webhook URL that was called
-            payload: Payload that was sent
+            request: Request details that were sent (may include payload or body)
             response_status: HTTP response status code
             response_body: Response body (may be truncated)
             success: Whether the webhook call succeeded
@@ -231,10 +229,7 @@ class ExecutionStepManager:
             'step_name': step_name,
             'step_order': step_order,
             'step_type': 'webhook',
-            'input': {
-                'webhook_url': webhook_url,
-                'payload': payload
-            },
+            'input': request,
             'output': {
                 'response_status': response_status,
                 'response_body': response_body,

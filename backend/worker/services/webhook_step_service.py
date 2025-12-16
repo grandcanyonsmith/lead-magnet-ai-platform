@@ -9,6 +9,7 @@ import re
 import requests
 from datetime import datetime
 from typing import Dict, Any, List, Optional, Tuple
+from urllib.parse import urlparse, urlunparse, parse_qsl, urlencode
 from utils.decimal_utils import convert_decimals_to_float
 
 logger = logging.getLogger(__name__)
@@ -72,47 +73,85 @@ class WebhookStepService:
                 'success': False,
                 'error': error_msg
             }, False
-        
-        webhook_headers = step.get('webhook_headers', {})
-        data_selection = step.get('webhook_data_selection', {})
-        
-        # Build payload based on data selection
-        payload = self._build_webhook_payload(
-            job_id=job_id,
-            job=job,
-            submission=submission,
-            step_outputs=step_outputs,
-            sorted_steps=sorted_steps,
-            step_index=step_index,
-            data_selection=data_selection
-        )
-        
-        # Prepare headers
-        headers = {
-            'Content-Type': 'application/json',
-            **webhook_headers
-        }
+
+        # Request config
+        method = str(step.get('webhook_method') or 'POST').upper()
+        webhook_headers = step.get('webhook_headers', {}) or {}
+        query_params = step.get('webhook_query_params', {}) or {}
+        content_type = step.get('webhook_content_type') or 'application/json'
+        body_mode = step.get('webhook_body_mode') or ('custom' if step.get('webhook_body') else 'auto')
+        body_template = step.get('webhook_body') or ''
+        save_response = step.get('webhook_save_response', True)
+
+        # Prepare headers (preserve user-provided header casing/keys)
+        headers = {**webhook_headers}
+        if not any(str(k).lower() == 'content-type' for k in headers.keys()):
+            headers['Content-Type'] = content_type
+
+        # Build resolved URL with query params
+        resolved_url = self._build_url_with_query_params(webhook_url, query_params)
+
+        data_selection = step.get('webhook_data_selection', {}) or {}
+
+        # Decide body/payload
+        use_custom_body = bool(body_template and str(body_template).strip()) and body_mode == 'custom'
+        payload: Dict[str, Any] = {}
+        rendered_body: Optional[str] = None
+        json_body: Optional[Any] = None
+
+        if use_custom_body:
+            template_vars = self._build_template_context(job=job, submission=submission, step_outputs=step_outputs)
+            rendered_body = self._render_template(str(body_template), template_vars)
+            if content_type and 'application/json' in str(content_type).lower():
+                try:
+                    json_body = json.loads(rendered_body) if rendered_body else None
+                except Exception:
+                    json_body = None
+        else:
+            # Build payload based on data selection
+            payload = self._build_webhook_payload(
+                job_id=job_id,
+                job=job,
+                submission=submission,
+                step_outputs=step_outputs,
+                sorted_steps=sorted_steps,
+                step_index=step_index,
+                data_selection=data_selection
+            )
+            # Convert any Decimal values to JSON-serializable types before sending
+            payload = convert_decimals_to_float(payload)
         
         logger.info(f"[WebhookStepService] Executing webhook step {step_index}", extra={
             'job_id': job_id,
             'step_index': step_index,
-            'webhook_url': webhook_url,
+            'webhook_url': resolved_url,
+            'method': method,
+            'body_mode': body_mode,
             'payload_keys': list(payload.keys()) if payload else [],
             'headers_count': len(headers)
         })
         
-        # Convert any Decimal values to JSON-serializable types before sending
-        payload = convert_decimals_to_float(payload)
-        
         step_start_time = datetime.utcnow()
         
         try:
-            response = requests.post(
-                webhook_url,
-                json=payload,
-                headers=headers,
-                timeout=30
-            )
+            request_kwargs: Dict[str, Any] = {
+                'headers': headers,
+                'timeout': 30,
+            }
+
+            # Only attach a body for methods that can carry one
+            if method in ('GET', 'HEAD'):
+                pass
+            else:
+                if use_custom_body:
+                    if json_body is not None:
+                        request_kwargs['json'] = json_body
+                    elif rendered_body is not None:
+                        request_kwargs['data'] = rendered_body.encode('utf-8')
+                else:
+                    request_kwargs['json'] = payload
+
+            response = requests.request(method, resolved_url, **request_kwargs)
             
             step_duration = (datetime.utcnow() - step_start_time).total_seconds() * 1000
             
@@ -136,15 +175,21 @@ class WebhookStepService:
             })
             
             # Calculate payload size for metadata (don't include full payload to avoid Step Functions size limit)
-            payload_size = len(json.dumps(payload, default=str)) if payload else 0
-            payload_keys = list(payload.keys()) if payload else []
+            if use_custom_body:
+                payload_size = len((rendered_body or '').encode('utf-8')) if rendered_body else 0
+                payload_keys = []
+            else:
+                payload_size = len(json.dumps(payload, default=str)) if payload else 0
+                payload_keys = list(payload.keys()) if payload else []
             
             return {
-                'webhook_url': webhook_url,
+                'webhook_url': resolved_url,
+                'method': method,
+                'body_mode': body_mode,
                 'payload_size_bytes': payload_size,
                 'payload_keys': payload_keys,
                 'response_status': response.status_code,
-                'response_body': response_body,
+                'response_body': response_body if save_response else None,
                 'success': True,
                 'error': None,
                 'duration_ms': int(step_duration)
@@ -177,19 +222,180 @@ class WebhookStepService:
             }, exc_info=True)
             
             # Calculate payload size for metadata (don't include full payload to avoid Step Functions size limit)
-            payload_size = len(json.dumps(payload, default=str)) if payload else 0
-            payload_keys = list(payload.keys()) if payload else []
+            if use_custom_body:
+                payload_size = len((rendered_body or '').encode('utf-8')) if rendered_body else 0
+                payload_keys = []
+            else:
+                payload_size = len(json.dumps(payload, default=str)) if payload else 0
+                payload_keys = list(payload.keys()) if payload else []
             
             return {
-                'webhook_url': webhook_url,
+                'webhook_url': resolved_url,
+                'method': method,
+                'body_mode': body_mode,
                 'payload_size_bytes': payload_size,
                 'payload_keys': payload_keys,
                 'response_status': response_status,
-                'response_body': response_body,
+                'response_body': response_body if save_response else None,
                 'success': False,
                 'error': error_msg,
                 'duration_ms': int(step_duration)
             }, False
+
+    def build_request_details(
+        self,
+        *,
+        step: Dict[str, Any],
+        job_id: str,
+        job: Dict[str, Any],
+        submission: Dict[str, Any],
+        step_outputs: List[Dict[str, Any]],
+        sorted_steps: List[Dict[str, Any]],
+        step_index: int,
+    ) -> Dict[str, Any]:
+        """
+        Build full request details for storage/debugging (includes full payload/body).
+        This should NOT be returned to Step Functions; it may be large.
+        """
+        webhook_url = step.get('webhook_url') or ''
+        method = str(step.get('webhook_method') or 'POST').upper()
+        headers = step.get('webhook_headers', {}) or {}
+        query_params = step.get('webhook_query_params', {}) or {}
+        content_type = step.get('webhook_content_type') or 'application/json'
+        body_mode = step.get('webhook_body_mode') or ('custom' if step.get('webhook_body') else 'auto')
+        body_template = step.get('webhook_body') or ''
+
+        resolved_url = self._build_url_with_query_params(webhook_url, query_params)
+
+        request_headers = {**headers}
+        if not any(str(k).lower() == 'content-type' for k in request_headers.keys()):
+            request_headers['Content-Type'] = content_type
+
+        data_selection = step.get('webhook_data_selection', {}) or {}
+        use_custom_body = bool(body_template and str(body_template).strip()) and body_mode == 'custom'
+
+        if use_custom_body:
+            template_vars = self._build_template_context(job=job, submission=submission, step_outputs=step_outputs)
+            rendered_body = self._render_template(str(body_template), template_vars)
+            body_json = None
+            if content_type and 'application/json' in str(content_type).lower():
+                try:
+                    body_json = json.loads(rendered_body) if rendered_body else None
+                except Exception:
+                    body_json = None
+            return {
+                'webhook_url': resolved_url,
+                'method': method,
+                'headers': request_headers,
+                'query_params': query_params,
+                'content_type': content_type,
+                'body_mode': 'custom',
+                'body': rendered_body,
+                'body_json': body_json,
+            }
+
+        payload = self._build_webhook_payload(
+            job_id=job_id,
+            job=job,
+            submission=submission,
+            step_outputs=step_outputs,
+            sorted_steps=sorted_steps,
+            step_index=step_index,
+            data_selection=data_selection,
+        )
+        payload = convert_decimals_to_float(payload)
+
+        return {
+            'webhook_url': resolved_url,
+            'method': method,
+            'headers': request_headers,
+            'query_params': query_params,
+            'content_type': content_type,
+            'body_mode': 'auto',
+            'payload': payload,
+        }
+
+    def _build_url_with_query_params(self, url: str, query_params: Dict[str, Any]) -> str:
+        try:
+            parsed = urlparse(url)
+            existing = dict(parse_qsl(parsed.query, keep_blank_values=True))
+            merged = {**existing}
+            for k, v in (query_params or {}).items():
+                if k is None:
+                    continue
+                key = str(k).strip()
+                if not key:
+                    continue
+                merged[key] = '' if v is None else str(v)
+            new_query = urlencode(merged, doseq=True)
+            return urlunparse(parsed._replace(query=new_query))
+        except Exception:
+            # If URL parsing fails, fall back to original URL
+            return url
+
+    def _build_template_context(
+        self,
+        *,
+        job: Dict[str, Any],
+        submission: Dict[str, Any],
+        step_outputs: List[Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        submission_data = submission.get('submission_data', {}) if isinstance(submission, dict) else {}
+        submission_meta = {}
+        if isinstance(submission, dict):
+            submission_meta = {k: v for k, v in submission.items() if k != 'submission_data'}
+        return {
+            'job': job or {},
+            'submission': submission_data or {},
+            'submission_meta': submission_meta or {},
+            'steps': step_outputs or [],
+        }
+
+    def _get_path(self, obj: Any, path: str) -> Any:
+        parts = [p.strip() for p in str(path).split('.') if p.strip()]
+        cur = obj
+        for part in parts:
+            if cur is None:
+                return None
+            if isinstance(cur, list):
+                if not part.isdigit():
+                    return None
+                idx = int(part)
+                if idx < 0 or idx >= len(cur):
+                    return None
+                cur = cur[idx]
+            elif isinstance(cur, dict):
+                cur = cur.get(part)
+            else:
+                return None
+        return cur
+
+    def _render_template(self, template: str, variables: Dict[str, Any]) -> str:
+        if not template:
+            return ''
+
+        def replacer(match: re.Match) -> str:
+            key = (match.group(1) or '').strip()
+            if not key:
+                return ''
+            value = None
+            try:
+                if '.' in key:
+                    value = self._get_path(variables, key)
+                else:
+                    value = variables.get(key)
+            except Exception:
+                value = None
+            if value is None:
+                return ''
+            if isinstance(value, (dict, list)):
+                try:
+                    return json.dumps(value, default=str)
+                except Exception:
+                    return str(value)
+            return str(value)
+
+        return re.sub(r'\{\{\s*([^}]+?)\s*\}\}', replacer, template)
     
     def _build_webhook_payload(
         self,

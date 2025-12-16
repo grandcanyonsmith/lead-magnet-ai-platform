@@ -41,7 +41,19 @@ export const workflowStepSchema = z.object({
     (val) => (val === '' || val === null || val === undefined ? undefined : val),
     z.string().url().optional()
   ),
+  webhook_method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']).optional().default('POST'),
   webhook_headers: z.record(z.string()).optional(),
+  webhook_query_params: z.record(z.string()).optional(),
+  webhook_content_type: z.preprocess(
+    (val) => (val === '' || val === null || val === undefined ? undefined : val),
+    z.string().optional()
+  ).default('application/json'),
+  webhook_body_mode: z.enum(['auto', 'custom']).optional().default('auto'),
+  webhook_body: z.preprocess(
+    (val) => (val === '' || val === null || val === undefined ? undefined : val),
+    z.string().optional()
+  ),
+  webhook_save_response: z.boolean().optional().default(true),
   webhook_data_selection: z.object({
     include_submission: z.boolean().optional().default(true),
     exclude_step_indices: z.array(z.number().int().min(0)).optional(),
