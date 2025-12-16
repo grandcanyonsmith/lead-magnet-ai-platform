@@ -96,18 +96,7 @@ class JobCompletionService:
             public_url = self.artifact_service.get_artifact_public_url(final_artifact_id)
             
             final_duration = (datetime.utcnow() - final_start_time).total_seconds() * 1000
-            
-            # Add final output step
-            execution_steps.append(
-                ExecutionStepManager.create_final_output_step(
-                    final_artifact_type=final_artifact_type,
-                    final_filename=final_filename,
-                    final_artifact_id=final_artifact_id,
-                    public_url=public_url,
-                    step_order=len(execution_steps)
-                )
-            )
-            
+
             logger.info(f"Final artifact stored with URL: {public_url[:80]}...")
         except Exception as e:
             raise Exception(f"Failed to store final document: {str(e)}") from e
@@ -136,6 +125,17 @@ class JobCompletionService:
                 'error': str(e)
             })
             # Continue with provided execution_steps if reload fails
+
+        # Add final output step AFTER reload so we don't lose it
+        execution_steps.append(
+            ExecutionStepManager.create_final_output_step(
+                final_artifact_type=final_artifact_type,
+                final_filename=final_filename,
+                final_artifact_id=final_artifact_id,
+                public_url=public_url,
+                step_order=len(execution_steps)
+            )
+        )
         
         # Update job as completed
         logger.info("Finalizing job")
@@ -400,6 +400,22 @@ class JobCompletionService:
         
         logger.info("Generating HTML from accumulated step outputs")
         html_start_time = datetime.utcnow()
+
+        # CRITICAL: Reload execution_steps from S3 to avoid overwriting the canonical
+        # execution_steps.json with a stale/partial list (common in per-step Step Functions mode).
+        try:
+            job_with_steps = self.db.get_job(job_id, s3_service=self.s3)
+            if job_with_steps and job_with_steps.get('execution_steps'):
+                execution_steps = job_with_steps['execution_steps']
+                logger.debug(f"[JobCompletionService] Reloaded execution_steps from S3 before HTML generation (single-step mode)", extra={
+                    'job_id': job_id,
+                    'execution_steps_count': len(execution_steps)
+                })
+        except Exception as e:
+            logger.warning(f"[JobCompletionService] Failed to reload execution_steps from S3 for HTML generation (single-step mode), using provided list", extra={
+                'job_id': job_id,
+                'error': str(e)
+            })
         
         # Build accumulated context from all workflow steps
         accumulated_context = ContextBuilder.build_accumulated_context_for_html(

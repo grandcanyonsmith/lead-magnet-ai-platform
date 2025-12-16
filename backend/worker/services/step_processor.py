@@ -504,15 +504,24 @@ class StepProcessor:
             List of step output dictionaries
         """
         step_outputs = []
-        sorted_steps = sorted(steps, key=lambda s: s.get('step_order', 0))
-        for i, exec_step in enumerate(execution_steps):
-            if exec_step.get('step_type') == 'ai_generation' and exec_step.get('step_order', 0) > 0:
-                step_outputs.append({
-                    'step_name': exec_step.get('step_name', f'Step {i}'),
-                    'output': exec_step.get('output', ''),
-                    'artifact_id': exec_step.get('artifact_id'),
-                    'image_urls': exec_step.get('image_urls', [])
-                })
+        for exec_step in execution_steps:
+            if exec_step.get('step_type') != 'ai_generation':
+                continue
+            step_order = normalize_step_order(exec_step)
+            if step_order <= 0:
+                continue
+            # step_order is 1-indexed for workflow steps -> convert to 0-indexed workflow step index
+            workflow_step_index = step_order - 1
+            step_outputs.append({
+                'step_name': exec_step.get('step_name', f'Step {workflow_step_index + 1}'),
+                'step_index': workflow_step_index,
+                'output': exec_step.get('output', ''),
+                'artifact_id': exec_step.get('artifact_id'),
+                'image_urls': exec_step.get('image_urls', [])
+            })
+
+        # Keep a stable order for downstream payload building / template insertion
+        step_outputs.sort(key=lambda s: s.get('step_index', 0))
         return step_outputs
     
     def _update_execution_steps_with_rerun_support(
@@ -579,6 +588,24 @@ class StepProcessor:
         # Get submission data
         submission = self._get_submission_for_webhook(job)
         
+        # CRITICAL: Reload execution_steps from S3 so webhook steps don't operate on a stale list
+        # (and accidentally overwrite execution_steps.json with partial data).
+        try:
+            job_with_steps = self.db.get_job(job_id, s3_service=self.s3)
+            if job_with_steps and job_with_steps.get('execution_steps'):
+                execution_steps = job_with_steps['execution_steps']
+                logger.debug(f"[StepProcessor] Reloaded execution_steps from S3 before webhook step (single mode)", extra={
+                    'job_id': job_id,
+                    'step_index': step_index,
+                    'execution_steps_count': len(execution_steps)
+                })
+        except Exception as e:
+            logger.warning(f"[StepProcessor] Failed to reload execution_steps from S3 before webhook step (single mode), using provided list", extra={
+                'job_id': job_id,
+                'step_index': step_index,
+                'error': str(e)
+            })
+
         # Build step_outputs from execution_steps
         sorted_steps = sorted(steps, key=lambda s: s.get('step_order', 0))
         step_outputs = self._build_step_outputs_from_execution_steps(execution_steps, steps)
