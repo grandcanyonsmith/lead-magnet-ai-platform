@@ -1,9 +1,10 @@
-import { env } from './env';
-
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 class Logger {
-  private logLevel: LogLevel = (env.logLevel as LogLevel) || 'info';
+  // IMPORTANT: Do not import `env` here.
+  // `env.ts` logs during module initialization and imports this logger, so importing `env`
+  // would create a circular dependency (env -> logger -> env) that breaks in Jest/runtime.
+  private logLevel: LogLevel = (process.env.LOG_LEVEL as LogLevel) || 'info';
 
   private shouldLog(level: LogLevel): boolean {
     const levels: LogLevel[] = ['debug', 'info', 'warn', 'error'];

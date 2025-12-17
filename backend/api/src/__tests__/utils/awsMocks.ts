@@ -55,7 +55,7 @@ export function setupSecret(secretId: string, secretValue: string): void {
 export const mockDynamoDBClient = {
   send: jest.fn(async (command: any) => {
     if (command instanceof GetCommand) {
-      const tableStore = mockDynamoDBStore.get(command.input.TableName);
+      const tableStore = mockDynamoDBStore.get(command.input.TableName!);
       if (!tableStore) {
         return { Item: undefined };
       }
@@ -65,19 +65,19 @@ export const mockDynamoDBClient = {
     }
 
     if (command instanceof PutCommand) {
-      const tableStore = mockDynamoDBStore.get(command.input.TableName) || new Map();
+      const tableStore = mockDynamoDBStore.get(command.input.TableName!) || new Map();
       const keyString = JSON.stringify(
-        Object.keys(command.input.Item)
+        Object.keys(command.input.Item!)
           .filter((k) => k.endsWith('_id') || k === 'tenant_id')
-          .reduce((acc, k) => ({ ...acc, [k]: command.input.Item[k] }), {})
+          .reduce((acc, k) => ({ ...acc, [k]: command.input.Item![k] }), {})
       );
       tableStore.set(keyString, command.input.Item);
-      mockDynamoDBStore.set(command.input.TableName, tableStore);
+      mockDynamoDBStore.set(command.input.TableName!, tableStore);
       return {};
     }
 
     if (command instanceof UpdateCommand) {
-      const tableStore = mockDynamoDBStore.get(command.input.TableName);
+      const tableStore = mockDynamoDBStore.get(command.input.TableName!);
       if (!tableStore) {
         throw new Error('Table not found');
       }
@@ -92,7 +92,7 @@ export const mockDynamoDBClient = {
     }
 
     if (command instanceof QueryCommand) {
-      const tableStore = mockDynamoDBStore.get(command.input.TableName);
+      const tableStore = mockDynamoDBStore.get(command.input.TableName!);
       if (!tableStore) {
         return { Items: [], LastEvaluatedKey: undefined };
       }
@@ -102,7 +102,7 @@ export const mockDynamoDBClient = {
     }
 
     if (command instanceof ScanCommand) {
-      const tableStore = mockDynamoDBStore.get(command.input.TableName);
+      const tableStore = mockDynamoDBStore.get(command.input.TableName!);
       if (!tableStore) {
         return { Items: [] };
       }
