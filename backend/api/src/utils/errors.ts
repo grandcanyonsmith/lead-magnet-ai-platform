@@ -218,7 +218,9 @@ export const handleError = (
     }
 
     // Don't expose internal error details in production
-    const isDevelopment = env.isDevelopment();
+    // In normal runtime, env.nodeEnv is stable. In tests, NODE_ENV may be mutated after env is instantiated.
+    // Honor the live process.env.NODE_ENV to keep error output expectations deterministic.
+    const isDevelopment = env.isDevelopment() || process.env.NODE_ENV === 'development';
     
     return {
       statusCode: 500,

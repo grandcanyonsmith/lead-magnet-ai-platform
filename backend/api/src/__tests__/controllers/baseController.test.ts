@@ -2,9 +2,8 @@
  * Example test for BaseController
  */
 
-import { BaseController } from '../../controllers/base.controller';
+import { BaseController } from '../../controllers/baseController';
 import { ApiError } from '../../utils/errors';
-import { setupDynamoDBItem, resetMocks } from '../utils/awsMocks';
 import { db } from '../../utils/db';
 
 // Create a test controller that extends BaseController
@@ -23,18 +22,19 @@ describe('BaseController', () => {
 
   beforeEach(() => {
     controller = new TestController();
-    resetMocks();
+    jest.restoreAllMocks();
   });
 
   describe('validateTenantAccess', () => {
     it('should throw 404 if resource does not exist', async () => {
+      jest.spyOn(db, 'get').mockResolvedValueOnce(undefined as any);
       await expect(
         controller.testGet('test-table', { id: 'missing' }, 'tenant-1')
       ).rejects.toThrow(ApiError);
     });
 
     it('should throw 403 if resource belongs to different tenant', async () => {
-      setupDynamoDBItem('test-table', { id: 'test-1' }, {
+      jest.spyOn(db, 'get').mockResolvedValueOnce({
         id: 'test-1',
         tenant_id: 'tenant-2',
       });
@@ -50,7 +50,7 @@ describe('BaseController', () => {
         tenant_id: 'tenant-1',
         name: 'Test Resource',
       };
-      setupDynamoDBItem('test-table', { id: 'test-1' }, item);
+      jest.spyOn(db, 'get').mockResolvedValueOnce(item as any);
 
       const result = await controller.testGet('test-table', { id: 'test-1' }, 'tenant-1');
       expect(result.statusCode).toBe(200);
