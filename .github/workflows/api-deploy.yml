@@ -32,7 +32,7 @@ jobs:
       
       - name: Install dependencies
         working-directory: backend/api
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       - name: Lint
         working-directory: backend/api

@@ -32,7 +32,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: infrastructure
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       - name: Build
         working-directory: infrastructure

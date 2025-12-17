@@ -6,6 +6,7 @@ overwrote the canonical `execution_steps.json` in S3 during finalization.
 """
 
 import sys
+import os
 from pathlib import Path
 from unittest.mock import Mock
 
@@ -13,6 +14,11 @@ from unittest.mock import Mock
 # Add the worker directory to Python path so imports work
 worker_dir = Path(__file__).parent
 sys.path.insert(0, str(worker_dir))
+
+# Unit tests should be hermetic. Some worker services instantiate S3/OpenAI clients
+# during import/initialization and expect ARTIFACTS_BUCKET to exist.
+os.environ.setdefault("AWS_REGION", "us-east-1")
+os.environ.setdefault("ARTIFACTS_BUCKET", "leadmagnet-artifacts-test")
 
 
 from services.job_completion_service import JobCompletionService  # noqa: E402
