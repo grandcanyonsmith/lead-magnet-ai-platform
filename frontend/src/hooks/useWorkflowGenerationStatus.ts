@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import { logger } from '@/utils/logger';
 
 interface GenerationJob {
   jobId: string;
@@ -30,10 +31,9 @@ export function useWorkflowGenerationStatus(jobId: string | null) {
         const { job_id, workflow_id, status: eventStatus } = event.data;
         
         if (job_id === jobId) {
-          console.log('[Workflow Generation Status] Webhook completion received', {
-            jobId,
-            workflowId: workflow_id,
-            status: eventStatus,
+          logger.debug('Webhook completion received', {
+            context: 'WorkflowGenerationStatus',
+            data: { jobId, workflowId: workflow_id, status: eventStatus },
           });
 
           if (eventStatus === 'completed' && workflow_id) {
@@ -79,7 +79,10 @@ export function useWorkflowGenerationStatus(jobId: string | null) {
         }
       } catch (webhookErr) {
         // Webhook endpoint not available, fall back to API
-        console.debug('[Workflow Generation Status] Webhook endpoint not available, using API');
+        logger.debug('Webhook endpoint not available, using API', {
+          context: 'WorkflowGenerationStatus',
+          error: webhookErr,
+        });
       }
 
       // Fall back to API status check
@@ -94,7 +97,7 @@ export function useWorkflowGenerationStatus(jobId: string | null) {
         } else if (response.result) {
           // Legacy: workflow data is in result, need to load workflow
           // This shouldn't happen with new flow, but handle it
-          console.warn('[Workflow Generation Status] No workflow_id in response, checking result');
+          logger.debug('No workflow_id in response, checking result', { context: 'WorkflowGenerationStatus' });
         }
       } else if (response.status === 'failed') {
         setStatus('failed');
@@ -103,7 +106,7 @@ export function useWorkflowGenerationStatus(jobId: string | null) {
         setStatus(response.status as any);
       }
     } catch (err: any) {
-      console.error('[Workflow Generation Status] Error polling status', err);
+      logger.debug('Error polling status', { context: 'WorkflowGenerationStatus', error: err });
       setError(err.message || 'Failed to check generation status');
     }
   }, [jobId, router]);

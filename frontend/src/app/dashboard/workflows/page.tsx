@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { useSettings } from '@/hooks/api/useSettings'
 import { buildPublicFormUrl } from '@/utils/url'
+import { openJobDocumentInNewTab } from '@/utils/jobs/openJobDocument'
 import { FiPlus, FiEdit, FiTrash2, FiEye, FiExternalLink, FiCopy, FiCheck, FiMoreVertical, FiLoader, FiCheckCircle, FiXCircle, FiClock, FiList, FiFileText, FiArrowLeft, FiFolder, FiFolderPlus, FiMove, FiX } from 'react-icons/fi'
 import { Folder } from '@/types'
 import toast from 'react-hot-toast'
@@ -52,43 +53,9 @@ export default function WorkflowsPage() {
       if (!jobId || openingDocumentJobId) return
 
       setOpeningDocumentJobId(jobId)
-      let blobUrl: string | null = null
 
       try {
-        blobUrl = await api.getJobDocumentBlobUrl(jobId)
-
-        if (!blobUrl) {
-          throw new Error('Failed to create blob URL')
-        }
-
-        const newWindow = window.open(blobUrl, '_blank', 'noopener,noreferrer')
-
-        if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-          toast.error('Popup blocked. Please allow popups for this site and try again.')
-          URL.revokeObjectURL(blobUrl)
-          return
-        }
-
-        setTimeout(() => {
-          if (blobUrl) {
-            URL.revokeObjectURL(blobUrl)
-          }
-        }, 5000)
-      } catch (error: unknown) {
-        if (process.env.NODE_ENV === 'development') {
-          console.error('Failed to open document:', error)
-        }
-
-        if (fallbackUrl) {
-          window.open(fallbackUrl, '_blank', 'noopener,noreferrer')
-          toast.error('Could not open via secure viewer — opened direct link instead.')
-        } else {
-          toast.error('Failed to open document. Please try again.')
-        }
-
-        if (blobUrl) {
-          URL.revokeObjectURL(blobUrl)
-        }
+        await openJobDocumentInNewTab(jobId, { fallbackUrl })
       } finally {
         setOpeningDocumentJobId(null)
       }

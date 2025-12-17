@@ -2,9 +2,8 @@ import React, { useState } from 'react'
 import { getStatusIcon, getStatusBadge, getStepDisplayMeta, getJobSubmissionPreview } from '@/utils/jobs/listHelpers'
 import { formatRelativeTime, formatDuration } from '@/utils/date'
 import type { SortField } from '@/hooks/useJobFilters'
-import { FiChevronDown, FiChevronUp, FiXCircle, FiLoader } from 'react-icons/fi'
-import { api } from '@/lib/api'
-import toast from 'react-hot-toast'
+import { FiChevronDown, FiChevronUp, FiXCircle, FiLoader, FiExternalLink } from 'react-icons/fi'
+import { openJobDocumentInNewTab } from '@/utils/jobs/openJobDocument'
 import type { Job } from '@/types/job'
 
 interface JobsTableProps {
@@ -26,7 +25,17 @@ export function JobsDesktopTable({
   sortDirection,
   onSort,
 }: JobsTableProps) {
-  const [loadingDocUrl, setLoadingDocUrl] = useState<string | null>(null)
+  const [openingJobId, setOpeningJobId] = useState<string | null>(null)
+
+  const handleViewDocument = async (job: Job) => {
+    if (!job.output_url || openingJobId) return
+    setOpeningJobId(job.job_id)
+    try {
+      await openJobDocumentInNewTab(job.job_id)
+    } finally {
+      setOpeningJobId(null)
+    }
+  }
 
   if (!jobs.length) {
     return null
@@ -63,6 +72,7 @@ export function JobsDesktopTable({
                 )}
               </div>
             </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" aria-label="Output">Output</th>
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
@@ -76,7 +86,8 @@ export function JobsDesktopTable({
               : null
             const stepMeta = getStepDisplayMeta(job, workflowStepCounts)
             const submissionPreview = getJobSubmissionPreview(job)
-            const isLoadingDoc = loadingDocUrl === job.job_id
+            const isOpening = openingJobId === job.job_id
+            const disableView = openingJobId !== null
 
             return (
               <React.Fragment key={job.job_id}>
@@ -122,6 +133,29 @@ export function JobsDesktopTable({
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {duration !== null ? formatDuration(duration) : '-'}
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500" data-tour="view-artifacts">
+                    {job.output_url ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleViewDocument(job)
+                        }}
+                        disabled={disableView}
+                        className="inline-flex items-center text-primary-600 hover:text-primary-900 text-xs disabled:cursor-not-allowed disabled:text-gray-400"
+                        aria-label="View job output document"
+                      >
+                        {isOpening ? (
+                          <FiLoader className="w-3 h-3 mr-1 animate-spin" />
+                        ) : (
+                          <FiExternalLink className="w-3 h-3 mr-1" />
+                        )}
+                        {isOpening ? 'Opening…' : 'View'}
+                      </button>
+                    ) : (
+                      <span className="text-xs text-gray-400">—</span>
+                    )}
+                  </td>
                 </tr>
                 {hasError && (
                   <tr
@@ -129,7 +163,7 @@ export function JobsDesktopTable({
                     className="bg-red-50 hover:bg-red-100 cursor-pointer transition-all duration-150 hover:shadow-sm"
                     onClick={() => onNavigate(job.job_id)}
                   >
-                    <td colSpan={4} className="px-6 py-3">
+                    <td colSpan={5} className="px-6 py-3">
                       <div className="flex items-start">
                         <FiXCircle className="w-4 h-4 text-red-600 mt-0.5 mr-2 flex-shrink-0" />
                         <div className="flex-1">

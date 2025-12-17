@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { api } from '@/lib/api'
+import { logger } from '@/utils/logger'
 import type { Job } from '@/types/job'
 import type { Workflow } from '@/types/workflow'
 import type { FormSubmission, Form } from '@/types/form'
@@ -431,9 +432,7 @@ export function useJobExecution({ jobId, job, setJob, loadJob }: UseJobExecution
           setRerunningStep(null)
         }
       } catch (err) {
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('Polling error:', err)
-        }
+        logger.debug('Polling error', { context: 'useJobExecution', error: err })
       }
     }, 3000)
 
@@ -454,7 +453,7 @@ export function useJobExecution({ jobId, job, setJob, loadJob }: UseJobExecution
 
       try {
         const result = await api.rerunStep(jobId, stepIndex, continueAfter)
-        console.log('[useJobExecution] Rerun step response:', result)
+        logger.debug('Rerun step response received', { context: 'useJobExecution', data: { result } })
         const actionText = continueAfter ? 'rerun and continue' : 'rerun'
         toast.success(`Step ${stepIndex + 1} ${actionText} initiated. The step will be reprocessed shortly.`)
 
@@ -469,16 +468,16 @@ export function useJobExecution({ jobId, job, setJob, loadJob }: UseJobExecution
             if (jobToUse) {
               loadExecutionSteps(jobToUse)
             } else {
-              console.warn('[useJobExecution] No job available after loadJob, skipping loadExecutionSteps')
+              logger.debug('No job available after loadJob, skipping loadExecutionSteps', { context: 'useJobExecution' })
             }
           } catch (error) {
-            console.error('[useJobExecution] Error in handleRerunStep timeout:', error)
+            logger.debug('Error in handleRerunStep timeout', { context: 'useJobExecution', error })
           }
         }, 2000)
       } catch (error: unknown) {
         const err = error as { response?: { data?: { message?: string } }; message?: string }
         const errorMessage = err.response?.data?.message || err.message || 'Failed to rerun step'
-        console.error('[useJobExecution] Failed to rerun step:', error)
+        logger.debug('Failed to rerun step', { context: 'useJobExecution', error })
         setExecutionStepsError(errorMessage)
         toast.error(`Failed to rerun step: ${errorMessage}`)
       } finally {
