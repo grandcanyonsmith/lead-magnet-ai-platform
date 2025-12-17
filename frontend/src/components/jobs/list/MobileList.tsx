@@ -2,8 +2,7 @@ import { useState } from 'react'
 import { getStatusIcon, getStatusBadge, getStepDisplayMeta, getJobSubmissionPreview } from '@/utils/jobs/listHelpers'
 import { formatRelativeTime, formatDuration } from '@/utils/date'
 import { FiExternalLink } from 'react-icons/fi'
-import toast from 'react-hot-toast'
-import { api } from '@/lib/api'
+import { openJobDocumentInNewTab } from '@/utils/jobs/openJobDocument'
 import type { Job } from '@/types/job'
 
 interface JobsMobileListProps {
@@ -20,36 +19,9 @@ export function JobsMobileList({ jobs, workflowMap, workflowStepCounts, onNaviga
     if (!job.output_url || openingJobId) return
 
     setOpeningJobId(job.job_id)
-    let blobUrl: string | null = null
 
     try {
-      blobUrl = await api.getJobDocumentBlobUrl(job.job_id)
-
-      if (!blobUrl) {
-        throw new Error('Failed to create blob URL')
-      }
-
-      const newWindow = window.open(blobUrl, '_blank', 'noopener,noreferrer')
-
-      if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-        toast.error('Popup blocked. Please allow popups for this site and try again.')
-        URL.revokeObjectURL(blobUrl)
-        return
-      }
-
-      setTimeout(() => {
-        if (blobUrl) {
-          URL.revokeObjectURL(blobUrl)
-        }
-      }, 5000)
-    } catch (error: unknown) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Failed to open document:', error)
-      }
-      toast.error('Failed to open document. Please try again.')
-      if (blobUrl) {
-        URL.revokeObjectURL(blobUrl)
-      }
+      await openJobDocumentInNewTab(job.job_id)
     } finally {
       setOpeningJobId(null)
     }

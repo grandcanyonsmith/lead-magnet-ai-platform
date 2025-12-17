@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { api } from '@/lib/api'
 import { WorkflowStep } from '@/types/workflow'
+import { logger } from '@/utils/logger'
 
 export interface AIStepGenerationResult {
   action: 'update' | 'add'
@@ -38,14 +39,15 @@ export function useWorkflowStepAI(workflowId?: string) {
     setProposal(null)
 
     try {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[useWorkflowStepAI] Generating step', {
+      logger.debug('Generating step', {
+        context: 'useWorkflowStepAI',
+        data: {
           workflowId,
           promptLength: userPrompt.length,
           action: suggestedAction,
           hasCurrentStep: !!currentStep,
-        })
-      }
+        },
+      })
 
       const result = await api.generateStepWithAI(workflowId, {
         userPrompt,
@@ -54,12 +56,10 @@ export function useWorkflowStepAI(workflowId?: string) {
         currentStepIndex,
       })
 
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[useWorkflowStepAI] Generation successful', {
-          action: result.action,
-          stepName: result.step.step_name,
-        })
-      }
+      logger.debug('Generation successful', {
+        context: 'useWorkflowStepAI',
+        data: { action: result.action, stepName: result.step.step_name },
+      })
 
       // Create proposal for review
       const aiProposal: AIStepProposal = {
@@ -72,9 +72,7 @@ export function useWorkflowStepAI(workflowId?: string) {
       setProposal(aiProposal)
       return aiProposal
     } catch (err: any) {
-      console.error('[useWorkflowStepAI] Generation failed', {
-        error: err.message,
-      })
+      logger.debug('Generation failed', { context: 'useWorkflowStepAI', error: err })
       setError(err.message || 'Failed to generate step. Please try again.')
       return null
     } finally {

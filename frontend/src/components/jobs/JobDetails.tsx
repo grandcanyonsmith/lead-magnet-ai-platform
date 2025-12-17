@@ -13,7 +13,7 @@ import {
 } from 'react-icons/fi'
 import { toast } from 'react-hot-toast'
 import { formatDurationSeconds, formatRelativeTime } from '@/utils/jobFormatting'
-import { api } from '@/lib/api'
+import { openJobDocumentInNewTab } from '@/utils/jobs/openJobDocument'
 import { SectionCard } from '@/components/ui/SectionCard'
 import { StatPill } from '@/components/ui/StatPill'
 import { KeyValueItem, KeyValueList } from '@/components/ui/KeyValueList'
@@ -112,53 +112,9 @@ export function JobDetails({ job, workflow, hideContainer = false, submission, o
     if (!hasDocument || loadingDocument) return
 
     setLoadingDocument(true)
-    let blobUrl: string | null = null
 
     try {
-      blobUrl = await api.getJobDocumentBlobUrl(job.job_id)
-
-      if (!blobUrl) {
-        throw new Error('Failed to create blob URL')
-      }
-
-      const newWindow = window.open(blobUrl, '_blank', 'noopener,noreferrer')
-
-      if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-        toast.error('Popup blocked. Please allow popups for this site and try again.')
-        if (blobUrl) {
-          URL.revokeObjectURL(blobUrl)
-        }
-        return
-      }
-
-      setTimeout(() => {
-        if (blobUrl) {
-          URL.revokeObjectURL(blobUrl)
-        }
-      }, 5000)
-
-      toast.success('Document opened in new tab')
-    } catch (error: unknown) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Failed to open document:', error)
-      }
-
-      const errorMessage =
-        typeof error === 'object' && error && 'message' in error
-          ? String((error as Error).message)
-          : ''
-
-      if (errorMessage.includes('404') || errorMessage.includes('not found')) {
-        toast.error('Document not found. It may not have been generated yet.')
-      } else if (errorMessage.includes('403') || errorMessage.includes('permission')) {
-        toast.error('You do not have permission to view this document.')
-      } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
-        toast.error('Network error. Please check your connection and try again.')
-      } else if (errorMessage) {
-        toast.error(`Failed to open document: ${errorMessage}`)
-      } else {
-        toast.error('Failed to open document. Please try again.')
-      }
+      await openJobDocumentInNewTab(job.job_id, { successToast: 'Document opened in new tab' })
     } finally {
       setLoadingDocument(false)
     }

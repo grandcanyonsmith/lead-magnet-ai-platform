@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { FiCopy, FiExternalLink, FiFileText, FiMaximize2 } from 'react-icons/fi'
 import toast from 'react-hot-toast'
 import { PreviewRenderer } from '@/components/artifacts/PreviewRenderer'
-import { api } from '@/lib/api'
+import { openJobDocumentInNewTab } from '@/utils/jobs/openJobDocument'
 import type { ArtifactGalleryItem } from '@/types/job'
 
 interface ArtifactGalleryProps {
@@ -85,36 +85,9 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
     if (!item.jobId || openingJobOutput) return
 
     setOpeningJobOutput(true)
-    let blobUrl: string | null = null
 
     try {
-      blobUrl = await api.getJobDocumentBlobUrl(item.jobId)
-
-      if (!blobUrl) {
-        throw new Error('Failed to create blob URL')
-      }
-
-      const newWindow = window.open(blobUrl, '_blank', 'noopener,noreferrer')
-
-      if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-        toast.error('Popup blocked. Please allow popups for this site and try again.')
-        URL.revokeObjectURL(blobUrl)
-        return
-      }
-
-      setTimeout(() => {
-        if (blobUrl) {
-          URL.revokeObjectURL(blobUrl)
-        }
-      }, 5000)
-    } catch (error: unknown) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Failed to open job output document:', error)
-      }
-      toast.error('Failed to open document. Please try again.')
-      if (blobUrl) {
-        URL.revokeObjectURL(blobUrl)
-      }
+      await openJobDocumentInNewTab(item.jobId)
     } finally {
       setOpeningJobOutput(false)
     }

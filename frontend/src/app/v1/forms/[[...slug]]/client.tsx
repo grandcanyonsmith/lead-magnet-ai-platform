@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import Image from 'next/image'
 import axios from 'axios'
+import { logger } from '@/utils/logger'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -68,18 +69,25 @@ export default function PublicFormPage() {
   const [outputUrl, setOutputUrl] = useState<string | null>(null)
   const [logoError, setLogoError] = useState(false)
 
-  useEffect(() => {
-    if (slug && slug.trim() !== '' && slug !== '_') {
-      loadForm()
-    } else if (!slug || slug.trim() === '' || slug === '_') {
-      setError('Invalid form URL. Please check the form link.')
-      setLoading(false)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug])
+  // Polling cancellation + safety against setting state after unmount/navigation
+  const pollSessionRef = useRef(0)
+  const pollTimeoutRef = useRef<number | null>(null)
 
-  const loadForm = async () => {
+  const stopPolling = useCallback(() => {
+    pollSessionRef.current += 1
+    if (pollTimeoutRef.current !== null) {
+      window.clearTimeout(pollTimeoutRef.current)
+      pollTimeoutRef.current = null
+    }
+  }, [])
+
+  const loadForm = useCallback(async () => {
     try {
+      setLoading(true)
+      setError(null)
+      setForm(null)
+      setLogoError(false)
+
       const response = await axios.get(`${API_URL}/v1/forms/${slug}`)
       setForm(response.data)
       
@@ -96,6 +104,7 @@ export default function PublicFormPage() {
       })
       setFormData(initialData)
     } catch (error) {
+      logger.debug('Failed to load public form', { context: 'PublicForm', error })
       // Handle errors gracefully
       const errorMessage = error instanceof Error 
         ? error.message 
@@ -106,10 +115,112 @@ export default function PublicFormPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [slug])
+
+  useEffect(() => {
+    // When the slug changes, reset any in-flight generation/polling state.
+    stopPolling()
+    setSuccess(false)
+    setSubmitting(false)
+    setGenerating(false)
+    setJobId(null)
+    setJobStatus(null)
+    setOutputUrl(null)
+
+    if (slug && slug.trim() !== '' && slug !== '_') {
+      loadForm()
+    } else {
+      setForm(null)
+      setError('Invalid form URL. Please check the form link.')
+      setLoading(false)
+    }
+  }, [slug, loadForm, stopPolling])
+
+  const startPollingJobStatus = useCallback(
+    (jobIdToPoll: string) => {
+      if (!jobIdToPoll) return
+
+      // Reset session + clear any existing timers before starting a new poll loop.
+      stopPolling()
+      const session = pollSessionRef.current
+
+      let attempts = 0
+      const maxAttempts = 180 // ~3 minutes (1s intervals)
+
+      const poll = async () => {
+        if (pollSessionRef.current !== session) return
+
+        try {
+          const response = await axios.get(`${API_URL}/v1/jobs/${jobIdToPoll}/status`)
+
+          if (pollSessionRef.current !== session) return
+
+          const status = response.data.status
+          setJobStatus(status)
+
+          if (status === 'completed') {
+            setGenerating(false)
+            return
+          }
+
+          if (status === 'failed') {
+            setGenerating(false)
+            setError(response.data.error_message || 'Lead magnet generation failed')
+            return
+          }
+
+          if (status === 'pending' || status === 'processing') {
+            attempts += 1
+            if (attempts < maxAttempts) {
+              pollTimeoutRef.current = window.setTimeout(poll, 1000)
+            } else {
+              setGenerating(false)
+              setError('Generation is taking longer than expected. Please check back later.')
+            }
+            return
+          }
+
+          // Unknown / unexpected status - keep polling a bit, then give up with a visible error.
+          attempts += 1
+          if (attempts < maxAttempts) {
+            pollTimeoutRef.current = window.setTimeout(poll, 2000)
+          } else {
+            setGenerating(false)
+            setJobStatus('unknown')
+            setError('Unable to confirm generation status. Please check back later.')
+          }
+        } catch (error) {
+          if (pollSessionRef.current !== session) return
+
+          logger.debug('Could not poll public job status', { context: 'PublicForm', error })
+
+          attempts += 1
+          if (attempts < maxAttempts) {
+            pollTimeoutRef.current = window.setTimeout(poll, 2000)
+          } else {
+            setGenerating(false)
+            setJobStatus('unknown')
+            setError('Unable to confirm generation status. Please check back later.')
+          }
+        }
+      }
+
+      pollTimeoutRef.current = window.setTimeout(poll, 1000)
+    },
+    [stopPolling]
+  )
+
+  useEffect(() => {
+    if (!jobId) return
+    startPollingJobStatus(jobId)
+    return () => {
+      stopPolling()
+    }
+  }, [jobId, startPollingJobStatus, stopPolling])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    stopPolling()
     setError(null)
     setSuccess(false)
     setSubmitting(true)
@@ -130,7 +241,6 @@ export default function PublicFormPage() {
         setJobId(response.data.job_id)
         setGenerating(true)
         setJobStatus('pending')
-        pollJobStatus(response.data.job_id)
       }
       
       // Show thank you message or redirect (but only if no job_id or after completion)
@@ -140,65 +250,11 @@ export default function PublicFormPage() {
         }, 2000)
       }
     } catch (error: any) {
-      console.error('Failed to submit form:', error)
+      logger.debug('Failed to submit public form', { context: 'PublicForm', error })
       setError(error.response?.data?.message || error.message || 'Failed to submit form')
     } finally {
       setSubmitting(false)
     }
-  }
-
-  const pollJobStatus = async (jobIdToPoll: string) => {
-    let attempts = 0
-    const maxAttempts = 180 // 3 minutes max (1 second intervals)
-    
-    const poll = async () => {
-      try {
-        // Poll the public job status endpoint (if it exists) or use admin endpoint
-        // For now, we'll try to access job status - note: this might require auth
-        // We'll need to handle this properly
-        const response = await axios.get(`${API_URL}/v1/jobs/${jobIdToPoll}/status`)
-        
-        const status = response.data.status
-        setJobStatus(status)
-        
-        if (status === 'completed') {
-          setGenerating(false)
-          if (response.data.output_url) {
-            setOutputUrl(response.data.output_url)
-          }
-          return
-        } else if (status === 'failed') {
-          setGenerating(false)
-          setError(response.data.error_message || 'Lead magnet generation failed')
-          return
-        }
-        
-        // Continue polling if still processing
-        if (status === 'pending' || status === 'processing') {
-          attempts++
-          if (attempts < maxAttempts) {
-            setTimeout(poll, 1000)
-          } else {
-            setGenerating(false)
-            setError('Generation is taking longer than expected. Please check back later.')
-          }
-        }
-      } catch (error: any) {
-        // If we can't poll (e.g., no public endpoint), just show generating message
-        // and let user know to check back
-        console.warn('Could not poll job status:', error)
-        attempts++
-        if (attempts < maxAttempts) {
-          setTimeout(poll, 2000) // Poll less frequently on error
-        } else {
-          setGenerating(false)
-          setJobStatus('unknown')
-        }
-      }
-    }
-    
-    // Start polling after a short delay
-    setTimeout(poll, 1000)
   }
 
   const handleChange = (fieldId: string, value: any) => {
@@ -297,6 +353,7 @@ export default function PublicFormPage() {
   }
 
   if (success) {
+    const isReady = Boolean(outputUrl) || jobStatus === 'completed'
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 sm:px-6">
         <div className="bg-white rounded-lg shadow p-6 sm:p-8 max-w-md w-full text-center">
@@ -316,7 +373,7 @@ export default function PublicFormPage() {
               )}
               <p className="text-xs text-gray-400 px-2">This may take a minute. Please don&apos;t close this page.</p>
             </>
-          ) : outputUrl ? (
+          ) : isReady ? (
             <>
               <div className="mb-4">
                 <svg className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -328,7 +385,7 @@ export default function PublicFormPage() {
                 {form?.thank_you_message || 'Your personalized lead magnet has been generated successfully.'}
               </p>
               <a
-                href={jobId ? `${API_URL}/v1/jobs/${jobId}/document` : outputUrl}
+                href={jobId ? `${API_URL}/v1/jobs/${jobId}/document` : (outputUrl || '#')}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-block w-full sm:w-auto px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium text-sm sm:text-base"
@@ -346,6 +403,31 @@ export default function PublicFormPage() {
                 </div>
               )}
             </>
+          ) : error ? (
+            <>
+              <div className="mb-4">
+                <svg className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-4">We couldn&apos;t generate your lead magnet</h1>
+              <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6 px-2">{error}</p>
+              <button
+                type="button"
+                onClick={() => {
+                  stopPolling()
+                  setError(null)
+                  setGenerating(false)
+                  setJobId(null)
+                  setJobStatus(null)
+                  setOutputUrl(null)
+                  setSuccess(false)
+                }}
+                className="inline-block w-full sm:w-auto px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium text-sm sm:text-base"
+              >
+                Try again
+              </button>
+            </>
           ) : (
             <>
               <div className="mb-4">
@@ -361,6 +443,10 @@ export default function PublicFormPage() {
                 <p className="text-xs sm:text-sm text-gray-500">Redirecting...</p>
               )}
             </>
+          )}
+
+          {form?.custom_css && (
+            <style dangerouslySetInnerHTML={{ __html: form.custom_css }} />
           )}
         </div>
       </div>

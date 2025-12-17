@@ -5,6 +5,7 @@ import { api } from '@/lib/api'
 import { AIModel } from '@/types'
 import { WorkflowStep } from '@/types/workflow'
 import { FormField } from '@/types/form'
+import { logger } from '@/utils/logger'
 
 export interface AIGenerationResult {
   workflow: {
@@ -40,12 +41,10 @@ export function useAIGeneration() {
       return null
     }
 
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[Workflow Generation] Starting AI generation...', {
-        prompt: description.trim(),
-        timestamp: new Date().toISOString(),
-      })
-    }
+    logger.debug('Starting AI generation', {
+      context: 'WorkflowGeneration',
+      data: { prompt: description.trim(), timestamp: new Date().toISOString() },
+    })
 
     setIsGenerating(true)
     setError(null)
@@ -70,9 +69,10 @@ export function useAIGeneration() {
       // Check if we got a job_id (async flow)
       if (initResponse.job_id) {
         const jobId = initResponse.job_id
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[Workflow Generation] Job created', { jobId, status: initResponse.status })
-        }
+        logger.debug('Job created', {
+          context: 'WorkflowGeneration',
+          data: { jobId, status: initResponse.status },
+        })
         
         setGenerationStatus('Creating your lead magnet... This may take a minute.')
         
@@ -96,15 +96,16 @@ export function useAIGeneration() {
         }
         const duration = Date.now() - startTime
 
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[Workflow Generation] Success!', {
+        logger.debug('Success', {
+          context: 'WorkflowGeneration',
+          data: {
             duration: `${duration}ms`,
             workflow: syncResult.result.workflow,
             template: syncResult.result.template,
             form: syncResult.result.form,
             timestamp: new Date().toISOString(),
-          })
-        }
+          },
+        })
 
         setGenerationStatus('Generation complete!')
         setResult(syncResult.result)
@@ -116,7 +117,7 @@ export function useAIGeneration() {
         return syncResult.result
       }
     } catch (err: any) {
-      console.error('[Workflow Generation] Failed:', err)
+      logger.debug('Failed', { context: 'WorkflowGeneration', error: err })
       setError(err.response?.data?.message || err.message || 'Failed to generate lead magnet with AI')
       setGenerationStatus(null)
       return null

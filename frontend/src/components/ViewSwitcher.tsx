@@ -1,9 +1,10 @@
 'use client'
 
 import { useAuth } from '@/lib/auth/context'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { api } from '@/lib/api'
 import { FiUsers, FiBriefcase, FiChevronDown } from 'react-icons/fi'
+import { logger } from '@/utils/logger'
 
 interface Customer {
   customer_id: string
@@ -18,7 +19,7 @@ export function ViewSwitcher() {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [isLoading, setIsLoading] = useState(false)
 
-  const loadCustomers = async () => {
+  const loadCustomers = useCallback(async () => {
     setIsLoading(true)
     try {
       const response = await api.get<{ customers: Customer[] }>('/admin/agency/customers', {
@@ -26,19 +27,18 @@ export function ViewSwitcher() {
       })
       setCustomers(response.customers || [])
     } catch (error) {
-      console.error('Error loading customers:', error)
+      logger.debug('Error loading customers', { context: 'ViewSwitcher', error })
       setCustomers([])
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     if (viewMode === 'agency' && isOpen) {
       loadCustomers()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewMode, isOpen])
+  }, [viewMode, isOpen, loadCustomers])
 
   // Only show for SUPER_ADMIN
   if (role !== 'SUPER_ADMIN') {
