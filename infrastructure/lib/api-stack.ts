@@ -8,7 +8,6 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as logs from 'aws-cdk-lib/aws-logs';
-import * as wafv2 from 'aws-cdk-lib/aws-wafv2';
 import { Construct } from 'constructs';
 import { TableMap } from './types';
 import { createLambdaRole, grantDynamoDBPermissions, grantS3Permissions, grantSecretsAccess } from './utils/lambda-helpers';
@@ -130,130 +129,16 @@ export class ApiStack extends cdk.Stack {
       },
     });
 
-    // WAFv2 (REGIONAL) for API Gateway HTTP API ($default stage)
-    // Provides baseline protection + rate limiting before requests hit Lambda.
-    const apiWebAcl = new wafv2.CfnWebACL(this, 'ApiWebAcl', {
-      scope: 'REGIONAL',
-      defaultAction: { allow: {} },
-      visibilityConfig: {
-        cloudWatchMetricsEnabled: true,
-        sampledRequestsEnabled: true,
-        metricName: 'leadmagnet-api-waf',
-      },
-      rules: [
-        {
-          name: 'AWSManagedRulesCommonRuleSet',
-          priority: 0,
-          overrideAction: { none: {} },
-          statement: {
-            managedRuleGroupStatement: {
-              vendorName: 'AWS',
-              name: 'AWSManagedRulesCommonRuleSet',
-            },
-          },
-          visibilityConfig: {
-            cloudWatchMetricsEnabled: true,
-            sampledRequestsEnabled: true,
-            metricName: 'aws-common',
-          },
-        },
-        {
-          name: 'AWSManagedRulesKnownBadInputsRuleSet',
-          priority: 1,
-          overrideAction: { none: {} },
-          statement: {
-            managedRuleGroupStatement: {
-              vendorName: 'AWS',
-              name: 'AWSManagedRulesKnownBadInputsRuleSet',
-            },
-          },
-          visibilityConfig: {
-            cloudWatchMetricsEnabled: true,
-            sampledRequestsEnabled: true,
-            metricName: 'aws-known-bad-inputs',
-          },
-        },
-        {
-          name: 'AWSManagedRulesAmazonIpReputationList',
-          priority: 2,
-          overrideAction: { none: {} },
-          statement: {
-            managedRuleGroupStatement: {
-              vendorName: 'AWS',
-              name: 'AWSManagedRulesAmazonIpReputationList',
-            },
-          },
-          visibilityConfig: {
-            cloudWatchMetricsEnabled: true,
-            sampledRequestsEnabled: true,
-            metricName: 'aws-ip-reputation',
-          },
-        },
-        // Targeted rate limit for public form submits: /v1/forms/<slug>/submit
-        {
-          name: 'RateLimitFormSubmissions',
-          priority: 3,
-          action: { block: {} },
-          statement: {
-            rateBasedStatement: {
-              aggregateKeyType: 'IP',
-              // Requests per 5-minute period
-              limit: 500,
-              scopeDownStatement: {
-                andStatement: {
-                  statements: [
-                    {
-                      byteMatchStatement: {
-                        searchString: '/v1/forms/',
-                        fieldToMatch: { uriPath: {} },
-                        positionalConstraint: 'CONTAINS',
-                        textTransformations: [{ priority: 0, type: 'NONE' }],
-                      },
-                    },
-                    {
-                      byteMatchStatement: {
-                        searchString: '/submit',
-                        fieldToMatch: { uriPath: {} },
-                        positionalConstraint: 'ENDS_WITH',
-                        textTransformations: [{ priority: 0, type: 'NONE' }],
-                      },
-                    },
-                  ],
-                },
-              },
-            },
-          },
-          visibilityConfig: {
-            cloudWatchMetricsEnabled: true,
-            sampledRequestsEnabled: true,
-            metricName: 'rate-limit-form-submit',
-          },
-        },
-        // Global rate limit to blunt naive scanners (kept high to avoid false positives).
-        {
-          name: 'RateLimitGlobal',
-          priority: 4,
-          action: { block: {} },
-          statement: {
-            rateBasedStatement: {
-              aggregateKeyType: 'IP',
-              limit: 5000,
-            },
-          },
-          visibilityConfig: {
-            cloudWatchMetricsEnabled: true,
-            sampledRequestsEnabled: true,
-            metricName: 'rate-limit-global',
-          },
-        },
-      ],
-    });
-
-    const apiStageArn = `arn:aws:apigateway:${this.region}::/apis/${this.api.apiId}/stages/$default`;
-    new wafv2.CfnWebACLAssociation(this, 'ApiWebAclAssociation', {
-      resourceArn: apiStageArn,
-      webAclArn: apiWebAcl.attrArn,
-    });
+    // NOTE: We intentionally do NOT associate an AWS WAFv2 WebACL with the API Gateway HTTP API here.
+    // In practice, WAFv2 WebACLAssociation can fail for HTTP API $default stages due to ARN validation
+    // (e.g., arn:aws:apigateway:region::/apis/<apiId>/stages/$default) depending on AWS/WAF support.
+    //
+    // Protections in place instead:
+    // - DynamoDB-backed per-IP/per-form rate limiting on POST /v1/forms/:slug/submit
+    // - CloudFront WAF (attached in StorageStack) for the frontend distribution
+    //
+    // If you later move to an API Gateway type/stage that supports WAF association cleanly,
+    // you can re-introduce a regional WebACL and attach it to that stage ARN.
 
     // Create JWT Authorizer
     const jwtAuthorizer = new authorizers.HttpJwtAuthorizer(
@@ -334,11 +219,6 @@ export class ApiStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'ApiFunctionArn', {
       value: this.apiFunction.functionArn,
       exportName: 'ApiFunctionArn',
-    });
-
-    new cdk.CfnOutput(this, 'ApiWebAclArn', {
-      value: apiWebAcl.attrArn,
-      exportName: 'ApiWebAclArn',
     });
   }
 }

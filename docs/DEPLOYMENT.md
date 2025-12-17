@@ -77,7 +77,6 @@ This will deploy:
 - Cognito User Pool
 - S3 buckets + CloudFront
 - API Gateway + Lambda
-- API WAF (recommended for production)
 - Step Functions state machine (orchestration)
 - ECR repository (Lambda container images)
 

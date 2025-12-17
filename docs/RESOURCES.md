@@ -89,7 +89,6 @@ aws cloudformation describe-stacks --stack-name leadmagnet-{stack-name} \
 | E1GPKD58HXUDIV | dmydkyj79auy7.cloudfront.net | Deployed |
 
 ### WAFv2 (optional)
-- API WAF ARN: `ApiWebAclArn` (CloudFormation output on `leadmagnet-api`)
 - CloudFront WAF ARN: `CloudFrontWebAclArn` (CloudFormation output on `leadmagnet-storage`, created only in `us-east-1`)
 
 ### ECR
