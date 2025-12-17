@@ -21,7 +21,7 @@ type FormField = {
 export default function EditFormClient() {
   const router = useRouter()
   const params = useParams()
-  // Extract form ID from params, or fallback to URL pathname if param is '_' (Vercel rewrite)
+  // Extract form ID from params, or fallback to URL pathname if param is '_' (static export edge rewrite)
   const getFormId = () => {
     const paramId = params?.id as string
     if (paramId && paramId !== '_') {

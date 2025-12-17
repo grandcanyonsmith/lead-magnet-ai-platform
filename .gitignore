@@ -43,6 +43,10 @@ backend/worker/*/
 !backend/worker/utils/
 !backend/worker/utils/**
 
+# Re-ignore Python bytecode/caches under the re-included worker source dirs
+backend/worker/**/__pycache__/
+backend/worker/**/*.py[cod]
+
 # IDE
 .vscode/
 .idea/

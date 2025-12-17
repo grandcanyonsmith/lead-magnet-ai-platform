@@ -22,14 +22,23 @@
    bash scripts/build-and-push-worker-image.sh
    ```
 
-3. **Update ECS Task Definition** (if needed)
+3. **Update Job Processor Lambda to use the new image**
    ```bash
-   # The ECS service should automatically pick up the new image
-   # Or force a new deployment:
-   aws ecs update-service \
-     --cluster leadmagnet-cluster \
-     --service leadmagnet-worker-service \
-     --force-new-deployment \
+   # IMPORTANT: Lambda container images do NOT auto-refresh when a tag is updated in ECR.
+   # Update the Lambda function to point at the latest image.
+   ECR_REPO=$(aws cloudformation describe-stacks \
+     --stack-name leadmagnet-worker \
+     --query "Stacks[0].Outputs[?OutputKey=='EcrRepositoryUri'].OutputValue" \
+     --output text)
+
+   JOB_PROCESSOR_LAMBDA_ARN=$(aws cloudformation describe-stacks \
+     --stack-name leadmagnet-compute \
+     --query "Stacks[0].Outputs[?OutputKey=='JobProcessorLambdaArn'].OutputValue" \
+     --output text)
+
+   aws lambda update-function-code \
+     --function-name "$JOB_PROCESSOR_LAMBDA_ARN" \
+     --image-uri "$ECR_REPO:latest" \
      --region us-east-1
    ```
 
@@ -37,7 +46,7 @@
 
 ```bash
 cd /Users/canyonsmith/lead-magnent-ai
-bash scripts/deploy.sh
+bash scripts/deployment/deploy.sh
 ```
 
 This will deploy:
@@ -63,7 +72,7 @@ After deployment, verify the changes work:
 
 1. **Check CloudWatch Logs**
    ```bash
-   aws logs tail /ecs/leadmagnet-worker --follow --region us-east-1
+   aws logs tail /aws/lambda/leadmagnet-job-processor --follow --region us-east-1
    ```
 
 2. **Look for log messages:**
@@ -89,11 +98,15 @@ aws ecr describe-images \
   --query 'sort_by(imageDetails,&imagePushedAt)[-2].imageTags[0]' \
   --output text
 
-# Update service to use previous image
-aws ecs update-service \
-  --cluster leadmagnet-cluster \
-  --service leadmagnet-worker-service \
-  --task-definition leadmagnet-worker:PREVIOUS_VERSION \
+# Update Lambda to use previous image tag
+JOB_PROCESSOR_LAMBDA_ARN=$(aws cloudformation describe-stacks \
+  --stack-name leadmagnet-compute \
+  --query "Stacks[0].Outputs[?OutputKey=='JobProcessorLambdaArn'].OutputValue" \
+  --output text)
+
+aws lambda update-function-code \
+  --function-name "$JOB_PROCESSOR_LAMBDA_ARN" \
+  --image-uri "471112574622.dkr.ecr.us-east-1.amazonaws.com/leadmagnet/worker:PREVIOUS_VERSION" \
   --region us-east-1
 ```
 

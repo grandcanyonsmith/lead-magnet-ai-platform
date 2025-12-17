@@ -13,7 +13,7 @@
 - **Status**: ✅ Deployed
 
 ### 3. Form Page Slug Extraction
-- **Fix**: Extract slug from URL pathname for CloudFront/Vercel compatibility
+- **Fix**: Extract slug from URL pathname for CloudFront static export compatibility
 - **Files**: `frontend/src/app/v1/forms/[[...slug]]/page-client.tsx`
 - **Status**: ✅ Deployed
 

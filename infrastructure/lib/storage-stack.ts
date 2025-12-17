@@ -3,6 +3,7 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as wafv2 from 'aws-cdk-lib/aws-wafv2';
 import { Construct } from 'constructs';
 import { RESOURCE_PREFIXES, S3_CONFIG, CLOUDFRONT_CONFIG } from './config/constants';
 
@@ -107,11 +108,188 @@ export class StorageStack extends cdk.Stack {
       this.artifactsBucket.addToResourcePolicy(statement);
     });
 
+    // Optional WAFv2 for CloudFront (scope=CLOUDFRONT requires deployment in us-east-1)
+    // This is primarily to blunt obvious bots scraping the dashboard/static assets.
+    let cloudfrontWebAclArn: string | undefined;
+    if (this.region === 'us-east-1') {
+      const cloudfrontWebAcl = new wafv2.CfnWebACL(this, 'CloudFrontWebAcl', {
+        scope: 'CLOUDFRONT',
+        defaultAction: { allow: {} },
+        visibilityConfig: {
+          cloudWatchMetricsEnabled: true,
+          sampledRequestsEnabled: true,
+          metricName: 'leadmagnet-cloudfront-waf',
+        },
+        rules: [
+          {
+            name: 'AWSManagedRulesCommonRuleSet',
+            priority: 0,
+            overrideAction: { none: {} },
+            statement: {
+              managedRuleGroupStatement: {
+                vendorName: 'AWS',
+                name: 'AWSManagedRulesCommonRuleSet',
+              },
+            },
+            visibilityConfig: {
+              cloudWatchMetricsEnabled: true,
+              sampledRequestsEnabled: true,
+              metricName: 'aws-common',
+            },
+          },
+          {
+            name: 'AWSManagedRulesAmazonIpReputationList',
+            priority: 1,
+            overrideAction: { none: {} },
+            statement: {
+              managedRuleGroupStatement: {
+                vendorName: 'AWS',
+                name: 'AWSManagedRulesAmazonIpReputationList',
+              },
+            },
+            visibilityConfig: {
+              cloudWatchMetricsEnabled: true,
+              sampledRequestsEnabled: true,
+              metricName: 'aws-ip-reputation',
+            },
+          },
+          {
+            name: 'RateLimitStatic',
+            priority: 2,
+            action: { block: {} },
+            statement: {
+              rateBasedStatement: {
+                aggregateKeyType: 'IP',
+                limit: 20000,
+              },
+            },
+            visibilityConfig: {
+              cloudWatchMetricsEnabled: true,
+              sampledRequestsEnabled: true,
+              metricName: 'rate-limit-static',
+            },
+          },
+        ],
+      });
+
+      cloudfrontWebAclArn = cloudfrontWebAcl.attrArn;
+
+      new cdk.CfnOutput(this, 'CloudFrontWebAclArn', {
+        value: cloudfrontWebAcl.attrArn,
+        exportName: 'CloudFrontWebAclArn',
+        description: 'WAFv2 WebACL ARN associated with CloudFront (if created)',
+      });
+    }
+
     // CloudFront Distribution
     // Default behavior: serve both frontend and artifacts from root
     // Artifacts are stored at {tenant_id}/jobs/{job_id}/* paths
     // Frontend files are at root level (index.html, _next/, etc.)
+    //
+    // IMPORTANT (Next.js static export):
+    // Next.js `output: 'export'` produces `.html` + `.txt` files for routes, and uses a placeholder `_`
+    // for dynamic params in order to export at least one copy of the page (e.g. `dashboard/jobs/_.html`).
+    // To support "clean URLs" like `/dashboard/jobs/<job_id>` on CloudFront+S3 origins (no directory index),
+    // we attach a CloudFront Function to rewrite request URIs to the correct exported asset paths.
+    const nextStaticRewriteFunction = new cloudfront.Function(this, 'NextStaticRewriteFunction', {
+      comment: 'Rewrite clean URLs to Next.js static export assets (CloudFront+S3 origin)',
+      code: cloudfront.FunctionCode.fromInline(`
+function endsWith(uri, suffix) {
+  return uri.length >= suffix.length && uri.substring(uri.length - suffix.length) === suffix;
+}
+
+function isStaticAsset(uri) {
+  // Skip common static asset extensions (but NOT Next.js exported route payloads: .txt)
+  return (
+    endsWith(uri, '.js') ||
+    endsWith(uri, '.css') ||
+    endsWith(uri, '.map') ||
+    endsWith(uri, '.png') ||
+    endsWith(uri, '.jpg') ||
+    endsWith(uri, '.jpeg') ||
+    endsWith(uri, '.gif') ||
+    endsWith(uri, '.webp') ||
+    endsWith(uri, '.svg') ||
+    endsWith(uri, '.ico') ||
+    endsWith(uri, '.woff') ||
+    endsWith(uri, '.woff2') ||
+    endsWith(uri, '.ttf') ||
+    endsWith(uri, '.eot') ||
+    endsWith(uri, '.json') ||
+    endsWith(uri, '.xml')
+  );
+}
+
+function stripTrailingSlash(uri) {
+  if (uri.length > 1 && uri.charAt(uri.length - 1) === '/') {
+    return uri.substring(0, uri.length - 1);
+  }
+  return uri;
+}
+
+function handler(event) {
+  var request = event.request;
+  var uri = request.uri || '/';
+
+  // Leave Next.js build assets and any requests that already target a file
+  if (uri.startsWith('/_next/') || uri.startsWith('/assets/') || isStaticAsset(uri)) {
+    return request;
+  }
+
+  // Normalize
+  uri = stripTrailingSlash(uri);
+
+  // Next.js static export uses .txt route payloads (RSC). Rewrite those too.
+  var isTxt = false;
+  if (endsWith(uri, '.txt')) {
+    isTxt = true;
+    uri = uri.substring(0, uri.length - 4);
+    uri = stripTrailingSlash(uri);
+  } else if (endsWith(uri, '.html')) {
+    // Allow direct .html requests to pass through (no rewrite needed)
+    return request;
+  }
+
+  // CloudFront Functions run before origin fetch. We can rewrite the origin URI while preserving
+  // the viewer URL (rewrite, not redirect). This is required for dynamic routes in static export.
+  // Dynamic route rewrites:
+  // - /dashboard/jobs/<id>           -> /dashboard/jobs/_.html
+  // - /dashboard/workflows/<id>      -> /dashboard/workflows/_.html
+  // - /dashboard/workflows/<id>/edit -> /dashboard/workflows/_/edit.html
+  // - /dashboard/forms/<id>/edit     -> /dashboard/forms/_/edit.html
+  // - /v1/forms/<slug...>            -> /v1/forms/_.html
+  var parts = uri.split('/');
+
+  if (parts.length >= 4 && parts[1] === 'dashboard' && parts[2] === 'jobs' && parts[3] && parts[3] !== '_') {
+    uri = '/dashboard/jobs/_';
+  } else if (parts.length >= 4 && parts[1] === 'dashboard' && parts[2] === 'workflows' && parts[3] && parts[3] !== '_') {
+    if (parts.length >= 5 && parts[4] === 'edit') {
+      uri = '/dashboard/workflows/_/edit';
+    } else {
+      uri = '/dashboard/workflows/_';
+    }
+  } else if (parts.length >= 5 && parts[1] === 'dashboard' && parts[2] === 'forms' && parts[3] && parts[3] !== '_' && parts[4] === 'edit') {
+    uri = '/dashboard/forms/_/edit';
+  } else if (parts.length >= 3 && parts[1] === 'v1' && parts[2] === 'forms') {
+    // Anything under /v1/forms/* is a dynamic slug - serve the exported placeholder
+    uri = '/v1/forms/_';
+  }
+
+  // Map clean URLs to static export files.
+  if (uri === '' || uri === '/') {
+    request.uri = isTxt ? '/index.txt' : '/index.html';
+  } else {
+    request.uri = uri + (isTxt ? '.txt' : '.html');
+  }
+
+  return request;
+}
+      `.trim()),
+    });
+
     this.distribution = new cloudfront.Distribution(this, 'Distribution', {
+      defaultRootObject: 'index.html',
+      webAclId: cloudfrontWebAclArn,
       defaultBehavior: {
         origin: new origins.S3Origin(this.artifactsBucket, {
           originAccessIdentity,
@@ -121,6 +299,12 @@ export class StorageStack extends cdk.Stack {
         cachedMethods: cloudfront.CachedMethods.CACHE_GET_HEAD,
         compress: true,
         cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+        functionAssociations: [
+          {
+            eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+            function: nextStaticRewriteFunction,
+          },
+        ],
       },
       errorResponses: [
         {

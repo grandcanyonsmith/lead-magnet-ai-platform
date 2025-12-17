@@ -5,6 +5,7 @@ import { logger } from '@utils/logger';
 import { ensureRequiredFields } from '@utils/formFieldUtils';
 import { validate, createFormSchema, updateFormSchema, submitFormSchema } from '@utils/validation';
 import { formSubmissionService, FormSubmissionData } from './formSubmissionService';
+import { rateLimitService } from '@services/rateLimitService';
 import { env } from '@utils/env';
 
 const FORMS_TABLE = env.formsTable;
@@ -86,6 +87,18 @@ class FormManagementService {
     redirect_url?: string;
   }> {
     const form = await this.getActiveFormBySlug(slug);
+
+    // Public endpoint hardening: per-form, per-IP rate limiting (DynamoDB + TTL).
+    // Fail-open if limiter storage is misconfigured/unavailable, but fail-closed when the limit is exceeded.
+    if (form.rate_limit_enabled) {
+      await rateLimitService.consumeFormSubmissionToken({
+        tenantId: form.tenant_id,
+        formId: form.form_id,
+        sourceIp,
+        limitPerHour: form.rate_limit_per_hour || 10,
+      });
+    }
+
     const { submission_data } = validate(submitFormSchema, body);
 
     const result = await formSubmissionService.submitFormAndStartJob(

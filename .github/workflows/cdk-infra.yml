@@ -32,7 +32,11 @@ jobs:
 
       - name: Install dependencies
         working-directory: infrastructure
-        run: npm install
+        run: npm ci
+
+      - name: Build
+        working-directory: infrastructure
+        run: npm run build
 
       - name: Configure AWS credentials (OIDC)
         if: env.AWS_ROLE_ARN != ''

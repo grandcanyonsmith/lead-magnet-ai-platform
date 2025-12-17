@@ -6,6 +6,7 @@
 
 import React, { Component, ErrorInfo, ReactNode } from 'react'
 import { ErrorMessage } from './index'
+import { reportReactError } from '@/utils/errorReporting'
 
 interface Props {
   children: ReactNode
@@ -29,12 +30,12 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     // Log error for debugging (always log errors, even in production)
-    // TODO: Integrate with error tracking service (e.g., Sentry)
     if (process.env.NODE_ENV === 'development') {
       console.error('ErrorBoundary caught an error:', error, errorInfo)
     }
-    // In production, errors should be sent to error tracking service
-    // Example: Sentry.captureException(error, { contexts: { react: errorInfo } })
+
+    // In production, send errors to the backend for centralized logging/alerting.
+    reportReactError(error, errorInfo)
   }
 
   render(): ReactNode {

@@ -1,6 +1,6 @@
 # Lead Magnet AI Platform - Deployment Guide
 
-> **Last Updated**: 2025-01-27  
+> **Last Updated**: 2025-12-17  
 > **Status**: Current  
 > **Related Docs**: [Architecture Overview](./ARCHITECTURE.md), [Quick Start Guide](./QUICK_START.md), [Resources](./RESOURCES.md), [Troubleshooting Guide](./TROUBLESHOOTING.md)
 
@@ -73,12 +73,13 @@ npx cdk deploy --all --require-approval never
 ```
 
 This will deploy:
-- DynamoDB tables (7 tables)
+- DynamoDB tables (core + billing/ops)
 - Cognito User Pool
 - S3 buckets + CloudFront
 - API Gateway + Lambda
-- Step Functions state machine
-- ECS Cluster
+- API WAF (recommended for production)
+- Step Functions state machine (orchestration)
+- ECR repository (Lambda container images)
 
 **Expected Time:** 10-15 minutes
 
@@ -101,6 +102,18 @@ aws ecr get-login-password --region us-east-1 | \
 # Build and push image
 docker build -t $ECR_REPO:latest .
 docker push $ECR_REPO:latest
+
+# IMPORTANT: Updating the image tag in ECR does NOT automatically update the Lambda container.
+# Update the job processor Lambda to use the new image.
+JOB_PROCESSOR_LAMBDA_ARN=$(aws cloudformation describe-stacks \
+  --stack-name leadmagnet-compute \
+  --query "Stacks[0].Outputs[?OutputKey=='JobProcessorLambdaArn'].OutputValue" \
+  --output text)
+
+aws lambda update-function-code \
+  --function-name "$JOB_PROCESSOR_LAMBDA_ARN" \
+  --image-uri "$ECR_REPO:latest" \
+  --region us-east-1
 ```
 
 ### 6. Build and Deploy API Lambda
@@ -111,16 +124,14 @@ cd backend/api
 # Install dependencies
 npm install
 
-# Build TypeScript
-npm run build
+# Package Lambda bundle
+npm run package:lambda
 
-# Package and deploy
-npm run package
-
-# Update Lambda function
+# Update Lambda function code
 aws lambda update-function-code \
   --function-name leadmagnet-api-handler \
-  --zip-file fileb://api.zip
+  --zip-file fileb://api-bundle.zip \
+  --region us-east-1
 ```
 
 ### 7. Build and Deploy Frontend
@@ -152,7 +163,7 @@ NEXT_PUBLIC_API_URL=$API_URL \
 NEXT_PUBLIC_COGNITO_USER_POOL_ID=$USER_POOL_ID \
 NEXT_PUBLIC_COGNITO_CLIENT_ID=$CLIENT_ID \
 NEXT_PUBLIC_AWS_REGION=us-east-1 \
-npm run build && npm run export
+npm run build
 
 # Deploy to S3
 FRONTEND_BUCKET=$(aws cloudformation describe-stacks \
@@ -160,7 +171,17 @@ FRONTEND_BUCKET=$(aws cloudformation describe-stacks \
   --query "Stacks[0].Outputs[?OutputKey=='ArtifactsBucketName'].OutputValue" \
   --output text)
 
-aws s3 sync out s3://$FRONTEND_BUCKET --delete
+# 1) Upload immutable build assets with long cache
+aws s3 sync out/_next s3://$FRONTEND_BUCKET/_next --delete \
+  --cache-control "public,max-age=31536000,immutable"
+
+# 2) Upload HTML + route payloads with no-cache (prevents stale app shell in browsers)
+# Also exclude artifact prefixes so `--delete` doesn't wipe job outputs.
+aws s3 sync out s3://$FRONTEND_BUCKET/ --delete \
+  --exclude "_next/*" \
+  --exclude "*/jobs/*" \
+  --exclude "*/images/*" \
+  --cache-control "no-cache, no-store, must-revalidate"
 
 # Invalidate CloudFront
 DISTRIBUTION_ID=$(aws cloudformation describe-stacks \
@@ -261,9 +282,6 @@ aws dynamodb list-tables
 
 # Verify Lambda functions
 aws lambda list-functions
-
-# Verify ECS cluster
-aws ecs list-clusters
 ```
 
 ### 2. Test API Endpoints
@@ -329,7 +347,7 @@ Open the URL in your browser and log in with the created user.
 aws logs tail /aws/lambda/leadmagnet-api-handler --follow
 
 # Worker logs
-aws logs tail /ecs/leadmagnet-worker --follow
+aws logs tail /aws/lambda/leadmagnet-job-processor --follow
 
 # Step Functions logs
 aws logs tail /aws/stepfunctions/leadmagnet-job-processor --follow
@@ -340,7 +358,7 @@ aws logs tail /aws/stepfunctions/leadmagnet-job-processor --follow
 Navigate to CloudWatch Console:
 - Lambda metrics: Invocations, Duration, Errors
 - DynamoDB metrics: Read/Write capacity, Throttles
-- ECS metrics: CPU, Memory utilization
+- WAF metrics: blocked requests, rate-based rules
 
 ## Troubleshooting
 
@@ -361,12 +379,10 @@ aws lambda update-function-configuration \
   --timeout 60
 ```
 
-**Issue: Worker Task Fails to Start**
+**Issue: Job Processor Lambda Fails**
 ```bash
-# Check ECS task logs
-aws ecs describe-tasks \
-  --cluster leadmagnet-cluster \
-  --tasks <task-id>
+# Check job processor logs
+aws logs tail /aws/lambda/leadmagnet-job-processor --follow
 ```
 
 **Issue: Frontend Not Loading**
@@ -420,8 +436,9 @@ For issues or questions:
 - `leadmagnet-artifacts` - Generated artifacts
 - `leadmagnet-templates` - HTML templates
 - `leadmagnet-user-settings` - User preferences
+- (plus additional billing/ops tables: notifications, users/customers, sessions, tracking, rate limits, etc.)
 
-**Status:** All 7 tables created with GSIs configured
+**Status:** Tables created with GSIs configured
 
 #### 2. **Authentication (Cognito)** ✅
 - User Pool ID: `us-east-1_asu0YOrBD`
@@ -437,13 +454,12 @@ For issues or questions:
 
 **Status:** Bucket created, CloudFront distribution deployed
 
-#### 4. **Compute (Step Functions + ECS)** ✅
+#### 4. **Compute (Step Functions + Lambda)** ✅
 - State Machine: `leadmagnet-job-processor`
 - State Machine ARN: `arn:aws:states:us-east-1:471112574622:stateMachine:leadmagnet-job-processor`
-- ECS Cluster: `leadmagnet-cluster`
-- VPC: `vpc-08d64cbdaee46da3d`
+- Job Processor Lambda: `leadmagnet-job-processor` (container image)
 
-**Status:** State machine active, ECS cluster created
+**Status:** State machine active, job processor Lambda deployed
 
 #### 5. **API (API Gateway + Lambda)** ✅
 - API URL: `https://czp5b77azd.execute-api.us-east-1.amazonaws.com`
@@ -452,12 +468,12 @@ For issues or questions:
 
 **Status:** API Gateway deployed, Lambda function active and tested
 
-#### 6. **Worker (ECS + ECR)** ✅
+#### 6. **Worker (ECR + Lambda container image)** ✅
 - ECR Repository: `leadmagnet/worker`
 - ECR URI: `471112574622.dkr.ecr.us-east-1.amazonaws.com/leadmagnet/worker`
-- Task Definition: `leadmagnet-worker:1`
+- Used by: Job processor Lambda (container image)
 
-**Status:** Docker image built and pushed to ECR
+**Status:** Docker image built and pushed to ECR, Lambda updated to new image
 
 #### 7. **Secrets Manager** ✅
 - OpenAI API Key: `leadmagnet/openai-api-key`
@@ -465,8 +481,8 @@ For issues or questions:
 **Status:** Secret created and accessible
 
 #### 8. **Frontend (Next.js Static Site)** ✅
-- Deployment Location: `s3://leadmagnet-artifacts-471112574622/app/`
-- CloudFront URL: `https://dmydkyj79auy7.cloudfront.net/app/`
+- Deployment Location: `s3://leadmagnet-artifacts-471112574622/`
+- CloudFront URL: `https://dmydkyj79auy7.cloudfront.net/`
 
 **Status:** Built and deployed to S3
 
@@ -483,7 +499,7 @@ All tests passed successfully:
 | **Form Submission** | ✅ PASS | POST `/v1/forms/{slug}/submit` working |
 | **Job Creation** | ✅ PASS | Jobs created in DynamoDB |
 | **Step Functions** | ✅ PASS | State machine executions successful |
-| **DynamoDB Tables** | ✅ PASS | All 7 tables accessible |
+| **DynamoDB Tables** | ✅ PASS | Tables accessible |
 | **Worker Image** | ✅ PASS | Docker image in ECR |
 | **Frontend Build** | ✅ PASS | Static site generated |
 
@@ -491,7 +507,8 @@ All tests passed successfully:
 
 **API Base URL:** `https://czp5b77azd.execute-api.us-east-1.amazonaws.com`
 
-**Frontend URL:** `https://dmydkyj79auy7.cloudfront.net/app/`
+**Frontend URL:** `https://dmydkyj79auy7.cloudfront.net/`
+ 
 
 **Test User:**
 - Email: `test@example.com`
@@ -504,11 +521,11 @@ Based on current deployment:
 
 | Resource | Monthly Cost (Estimate) |
 |----------|------------------------|
-| DynamoDB (7 tables, on-demand) | $5-10 |
+| DynamoDB (multiple tables, on-demand) | $5-15 |
 | Lambda (API handler) | $0-5 (free tier) |
 | S3 (artifacts storage) | $1-5 |
 | CloudFront | $1-5 |
-| ECS Fargate (per job) | $0.10-0.50 per hour |
+| WAFv2 | $1-10 |
 | Step Functions | $0-1 |
 | Cognito | $0-5 |
 | **OpenAI API** | **$10-100 (varies)** |
@@ -530,7 +547,7 @@ Based on current deployment:
 - Check S3 storage usage
 
 **As Needed:**
-- Scale ECS tasks if processing is slow
+- Increase job processor Lambda memory/timeout if processing is slow
 - Adjust DynamoDB capacity if throttling occurs
 - Update Lambda memory if timeouts occur
 
@@ -543,8 +560,8 @@ Based on current deployment:
 - ✅ HTTPS/TLS everywhere
 - ✅ IAM least privilege configured
 - ✅ CloudFront with secure headers
-- ⏳ WAF rules (recommended for production)
-- ⏳ Rate limiting (recommended for production)
+- ✅ WAF rules (API; optional CloudFront WAF in us-east-1)
+- ✅ Rate limiting (WAF + DynamoDB-backed per-IP/per-form submit limits)
 - ⏳ Custom domain with SSL (recommended)
 
 ## Next Steps
@@ -552,7 +569,7 @@ Based on current deployment:
 - Configure custom domain with Route 53
 - Set up monitoring alerts
 - Configure backup policies for DynamoDB
-- Implement rate limiting with WAF
+- Tune WAF rate limits based on real traffic
 - Add custom AI models
 - Integrate with external services
 

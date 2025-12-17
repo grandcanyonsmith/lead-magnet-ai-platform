@@ -8,6 +8,7 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import * as wafv2 from 'aws-cdk-lib/aws-wafv2';
 import { Construct } from 'constructs';
 import { TableMap } from './types';
 import { createLambdaRole, grantDynamoDBPermissions, grantS3Permissions, grantSecretsAccess } from './utils/lambda-helpers';
@@ -101,6 +102,10 @@ export class ApiStack extends cdk.Stack {
         [ENV_VAR_NAMES.STRIPE_METERED_PRICE_MAP]: process.env.STRIPE_METERED_PRICE_MAP || '',
         [ENV_VAR_NAMES.STRIPE_WEBHOOK_SECRET]: process.env.STRIPE_WEBHOOK_SECRET || '',
         [ENV_VAR_NAMES.STRIPE_PORTAL_RETURN_URL]: process.env.STRIPE_PORTAL_RETURN_URL || '',
+        // Optional error reporting webhook (e.g. Slack/Discord/custom collector)
+        [ENV_VAR_NAMES.ERROR_WEBHOOK_URL]: process.env.ERROR_WEBHOOK_URL || '',
+        [ENV_VAR_NAMES.ERROR_WEBHOOK_HEADERS]: process.env.ERROR_WEBHOOK_HEADERS || '',
+        [ENV_VAR_NAMES.ERROR_WEBHOOK_TIMEOUT_MS]: process.env.ERROR_WEBHOOK_TIMEOUT_MS || '',
       },
       tracing: lambda.Tracing.ACTIVE,
       logRetention: logs.RetentionDays.ONE_WEEK,
@@ -123,6 +128,131 @@ export class ApiStack extends cdk.Stack {
         allowHeaders: ['content-type', 'authorization', 'x-api-key', 'x-session-id', 'x-view-mode', 'x-selected-customer-id'],
         maxAge: cdk.Duration.days(1),
       },
+    });
+
+    // WAFv2 (REGIONAL) for API Gateway HTTP API ($default stage)
+    // Provides baseline protection + rate limiting before requests hit Lambda.
+    const apiWebAcl = new wafv2.CfnWebACL(this, 'ApiWebAcl', {
+      scope: 'REGIONAL',
+      defaultAction: { allow: {} },
+      visibilityConfig: {
+        cloudWatchMetricsEnabled: true,
+        sampledRequestsEnabled: true,
+        metricName: 'leadmagnet-api-waf',
+      },
+      rules: [
+        {
+          name: 'AWSManagedRulesCommonRuleSet',
+          priority: 0,
+          overrideAction: { none: {} },
+          statement: {
+            managedRuleGroupStatement: {
+              vendorName: 'AWS',
+              name: 'AWSManagedRulesCommonRuleSet',
+            },
+          },
+          visibilityConfig: {
+            cloudWatchMetricsEnabled: true,
+            sampledRequestsEnabled: true,
+            metricName: 'aws-common',
+          },
+        },
+        {
+          name: 'AWSManagedRulesKnownBadInputsRuleSet',
+          priority: 1,
+          overrideAction: { none: {} },
+          statement: {
+            managedRuleGroupStatement: {
+              vendorName: 'AWS',
+              name: 'AWSManagedRulesKnownBadInputsRuleSet',
+            },
+          },
+          visibilityConfig: {
+            cloudWatchMetricsEnabled: true,
+            sampledRequestsEnabled: true,
+            metricName: 'aws-known-bad-inputs',
+          },
+        },
+        {
+          name: 'AWSManagedRulesAmazonIpReputationList',
+          priority: 2,
+          overrideAction: { none: {} },
+          statement: {
+            managedRuleGroupStatement: {
+              vendorName: 'AWS',
+              name: 'AWSManagedRulesAmazonIpReputationList',
+            },
+          },
+          visibilityConfig: {
+            cloudWatchMetricsEnabled: true,
+            sampledRequestsEnabled: true,
+            metricName: 'aws-ip-reputation',
+          },
+        },
+        // Targeted rate limit for public form submits: /v1/forms/<slug>/submit
+        {
+          name: 'RateLimitFormSubmissions',
+          priority: 3,
+          action: { block: {} },
+          statement: {
+            rateBasedStatement: {
+              aggregateKeyType: 'IP',
+              // Requests per 5-minute period
+              limit: 500,
+              scopeDownStatement: {
+                andStatement: {
+                  statements: [
+                    {
+                      byteMatchStatement: {
+                        searchString: '/v1/forms/',
+                        fieldToMatch: { uriPath: {} },
+                        positionalConstraint: 'CONTAINS',
+                        textTransformations: [{ priority: 0, type: 'NONE' }],
+                      },
+                    },
+                    {
+                      byteMatchStatement: {
+                        searchString: '/submit',
+                        fieldToMatch: { uriPath: {} },
+                        positionalConstraint: 'ENDS_WITH',
+                        textTransformations: [{ priority: 0, type: 'NONE' }],
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+          visibilityConfig: {
+            cloudWatchMetricsEnabled: true,
+            sampledRequestsEnabled: true,
+            metricName: 'rate-limit-form-submit',
+          },
+        },
+        // Global rate limit to blunt naive scanners (kept high to avoid false positives).
+        {
+          name: 'RateLimitGlobal',
+          priority: 4,
+          action: { block: {} },
+          statement: {
+            rateBasedStatement: {
+              aggregateKeyType: 'IP',
+              limit: 5000,
+            },
+          },
+          visibilityConfig: {
+            cloudWatchMetricsEnabled: true,
+            sampledRequestsEnabled: true,
+            metricName: 'rate-limit-global',
+          },
+        },
+      ],
+    });
+
+    const apiStageArn = `arn:aws:apigateway:${this.region}::/apis/${this.api.apiId}/stages/$default`;
+    new wafv2.CfnWebACLAssociation(this, 'ApiWebAclAssociation', {
+      resourceArn: apiStageArn,
+      webAclArn: apiWebAcl.attrArn,
     });
 
     // Create JWT Authorizer
@@ -204,6 +334,11 @@ export class ApiStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'ApiFunctionArn', {
       value: this.apiFunction.functionArn,
       exportName: 'ApiFunctionArn',
+    });
+
+    new cdk.CfnOutput(this, 'ApiWebAclArn', {
+      value: apiWebAcl.attrArn,
+      exportName: 'ApiWebAclArn',
     });
   }
 }

@@ -287,7 +287,18 @@ export class DatabaseStack extends cdk.Stack {
       ]
     );
 
-    // Table 17: Folders (legacy table - keep resource definition to maintain CloudFormation exports)
+    // Table 17: Rate Limits (public endpoint hardening, TTL-based counters)
+    const rateLimitsTable = createTable(
+      this,
+      'RateLimitsTable',
+      {
+        tableName: TABLE_NAMES.RATE_LIMITS,
+        partitionKey: { name: 'pk', type: dynamodb.AttributeType.STRING },
+        timeToLiveAttribute: 'ttl',
+      }
+    );
+
+    // Table 18: Folders (legacy table - keep resource definition to maintain CloudFormation exports)
     // This table exists in DynamoDB and CloudFormation - keep the resource definition unchanged
     // CloudFormation will reference existing table without modifications
     // Note: Not included in tablesMap as it's legacy and not used by application code
@@ -338,6 +349,7 @@ export class DatabaseStack extends cdk.Stack {
       [TableKey.SESSIONS]: sessionsTable,
       [TableKey.WEBHOOK_LOGS]: webhookLogsTable,
       [TableKey.TRACKING_EVENTS]: trackingEventsTable,
+      [TableKey.RATE_LIMITS]: rateLimitsTable,
     };
 
     // CloudFormation outputs

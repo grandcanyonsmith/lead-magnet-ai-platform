@@ -20,7 +20,7 @@ type FormField = {
 
 export default function PublicFormPage() {
   const params = useParams()
-  // Extract slug from params or URL pathname (for static export/Vercel compatibility)
+  // Extract slug from params or URL pathname (static export edge-rewrite compatibility, e.g. CloudFront Function)
   const getSlug = useCallback(() => {
     // First try to get from params
     const slugParam = params?.slug
