@@ -113,7 +113,16 @@ export function StepHeader({
   const statusBadge = STEP_STATUS_BADGE[status]
   const stepTypeColor = STEP_TYPE_COLORS[step.step_type] || STEP_TYPE_COLORS.workflow_step
   const stepNumberBg = STEP_NUMBER_BG[status] || STEP_NUMBER_BG.pending
-  const typeLabel = step.step_type ? step.step_type.replace(/_/g, ' ') : 'Workflow Step'
+  const typeLabel =
+    step.step_type === 'final_output'
+      ? 'Published deliverable'
+      : step.step_type
+        ? step.step_type.replace(/_/g, ' ')
+        : 'Workflow Step'
+  const typeHelp =
+    step.step_type === 'final_output'
+      ? 'This is the published deliverable URL sent to the customer.'
+      : undefined
 
   return (
     <div className="flex flex-col gap-4 p-4 sm:p-5">
@@ -124,9 +133,17 @@ export function StepHeader({
           </div>
           <div className="min-w-0 space-y-1">
             <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-              <span className={`px-2 py-0.5 rounded-full border ${stepTypeColor}`}>
-                {typeLabel}
-              </span>
+              {typeHelp ? (
+                <Tooltip content={typeHelp} position="top">
+                  <span className={`px-2 py-0.5 rounded-full border ${stepTypeColor}`}>
+                    {typeLabel}
+                  </span>
+                </Tooltip>
+              ) : (
+                <span className={`px-2 py-0.5 rounded-full border ${stepTypeColor}`}>
+                  {typeLabel}
+                </span>
+              )}
               {statusBadge && (
                 <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${statusBadge.className}`}>
                   {renderStatusIcon(status)}

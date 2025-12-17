@@ -31,6 +31,14 @@ class APIKeyManager:
             ValueError: If secret format is not supported
             Exception: If secret retrieval fails
         """
+        # Local/dev/test override: allow providing the key via env var to avoid Secrets Manager dependency.
+        env_key = os.environ.get("OPENAI_API_KEY")
+        if env_key and env_key.strip():
+            logger.info("[APIKeyManager] Using OPENAI_API_KEY from environment", extra={
+                'key_length': len(env_key.strip())
+            })
+            return env_key.strip()
+
         secret_name = secret_name or os.environ.get('OPENAI_SECRET_NAME', 'leadmagnet/openai-api-key')
         region = region or os.environ.get('AWS_REGION', 'us-east-1')
         

@@ -76,6 +76,7 @@ class AIStepProcessor:
         step_name = step.get('step_name', f'Step {step_index + 1}')
         step_model = step.get('model', 'gpt-5')
         step_instructions = step.get('instructions', '')
+        step_reasoning_effort = step.get('reasoning_effort')
         
         logger.info(f"[AIStepProcessor] Processing AI step {step_index + 1}", extra={
             'job_id': job_id,
@@ -104,7 +105,8 @@ class AIStepProcessor:
                 tool_choice=step_tool_choice,
                 tenant_id=tenant_id,
                 job_id=job_id,
-                previous_image_urls=previous_image_urls
+                previous_image_urls=previous_image_urls,
+                reasoning_effort=step_reasoning_effort
             )
         finally:
             # Clean up step context

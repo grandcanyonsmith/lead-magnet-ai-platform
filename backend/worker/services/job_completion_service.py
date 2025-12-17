@@ -82,6 +82,17 @@ class JobCompletionService:
         """
         # Store final artifact
         try:
+            # Guarantee tracking injection for the final HTML deliverable regardless of how it was generated.
+            if final_artifact_type == 'html_final' and isinstance(final_content, str) and final_content.strip():
+                if 'Lead Magnet Tracking Script' not in final_content:
+                    from services.tracking_script_generator import TrackingScriptGenerator
+                    tracking_generator = TrackingScriptGenerator()
+                    final_content = tracking_generator.inject_tracking_script(
+                        html_content=final_content,
+                        job_id=job_id,
+                        tenant_id=job.get('tenant_id', '')
+                    )
+
             final_start_time = datetime.utcnow()
             final_artifact_id = self.artifact_service.store_artifact(
                 tenant_id=job['tenant_id'],

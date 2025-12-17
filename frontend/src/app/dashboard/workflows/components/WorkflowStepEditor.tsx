@@ -23,6 +23,7 @@ interface WorkflowStepEditorProps {
 
 const MODEL_OPTIONS = [
   { value: 'gpt-5', label: 'GPT-5' },
+  { value: 'gpt-5.2', label: 'GPT-5.2' },
   { value: 'gpt-4.1', label: 'GPT-4.1' },
   { value: 'gpt-4o', label: 'GPT-4o' },
   { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
@@ -63,6 +64,7 @@ export default function WorkflowStepEditor({
     environment: 'browser' as 'browser' | 'mac' | 'windows' | 'ubuntu',
   })
   const [imageGenerationConfig, setImageGenerationConfig] = useState({
+    model: 'gpt-image-1.5',
     size: 'auto' as '1024x1024' | '1024x1536' | '1536x1024' | 'auto',
     quality: 'auto' as 'low' | 'medium' | 'high' | 'auto',
     format: undefined as 'png' | 'jpeg' | 'webp' | undefined,
@@ -126,6 +128,7 @@ export default function WorkflowStepEditor({
     if (imageGenTool && typeof imageGenTool === 'object' && (imageGenTool as ImageGenerationToolConfig).type === 'image_generation') {
       const config = imageGenTool as ImageGenerationToolConfig
       setImageGenerationConfig({
+        model: config.model || 'gpt-image-1.5',
         size: config.size || 'auto',
         quality: config.quality || 'auto',
         format: config.format,
@@ -142,6 +145,7 @@ export default function WorkflowStepEditor({
       if (hasImageGenTool) {
         // Tool is selected but no config - use defaults
         const defaultConfig = {
+          model: 'gpt-image-1.5' as const,
           size: 'auto' as const,
           quality: 'auto' as const,
           format: undefined as 'png' | 'jpeg' | 'webp' | undefined,
@@ -165,6 +169,7 @@ export default function WorkflowStepEditor({
             if (t === 'image_generation') {
               const config: ImageGenerationToolConfig = {
                 type: 'image_generation',
+                model: defaultConfig.model,
                 size: defaultConfig.size,
                 quality: defaultConfig.quality,
                 background: defaultConfig.background,
@@ -185,6 +190,7 @@ export default function WorkflowStepEditor({
       } else {
         // Tool not selected - reset to defaults
         setImageGenerationConfig({
+          model: 'gpt-image-1.5',
           size: 'auto',
           quality: 'auto',
           format: undefined,
@@ -345,6 +351,7 @@ export default function WorkflowStepEditor({
         // Only update if size is not set (avoid unnecessary updates)
         if (!prev.size || prev.size === undefined) {
           return {
+            model: 'gpt-image-1.5',
             size: 'auto',
             quality: 'auto',
             format: undefined,
@@ -541,6 +548,7 @@ export default function WorkflowStepEditor({
       if (t === 'image_generation') {
         const config: any = {
           type: 'image_generation',
+          model: newConfig.model || 'gpt-image-1.5',
           size: newConfig.size,
           quality: newConfig.quality,
           background: newConfig.background,
@@ -564,6 +572,7 @@ export default function WorkflowStepEditor({
       if (typeof t === 'object' && t.type === 'image_generation') {
         const updated: any = {
           ...t,
+          model: newConfig.model || (t as any).model || 'gpt-image-1.5',
           size: newConfig.size,
           quality: newConfig.quality,
           background: newConfig.background,
@@ -592,6 +601,7 @@ export default function WorkflowStepEditor({
     if (isToolSelected('image_generation') && !updatedTools.some(t => typeof t === 'object' && t.type === 'image_generation')) {
       const config: any = {
         type: 'image_generation',
+        model: newConfig.model || 'gpt-image-1.5',
         size: newConfig.size,
         quality: newConfig.quality,
         background: newConfig.background,
@@ -894,6 +904,27 @@ export default function WorkflowStepEditor({
             </div>
 
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`reasoning-effort-${index}`}>
+                Reasoning Effort
+              </label>
+              <select
+                id={`reasoning-effort-${index}`}
+                value={localStep.reasoning_effort || ''}
+                onChange={(e) => handleChange('reasoning_effort', e.target.value || undefined)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                aria-label="Reasoning effort"
+              >
+                <option value="">Default</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+              <p className="mt-1 text-sm text-gray-500">
+                Optional. Controls how much reasoning the model uses (mainly for GPT-5 models).
+              </p>
+            </div>
+
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`instructions-${index}`}>
                 Instructions *
               </label>
@@ -1027,6 +1058,18 @@ export default function WorkflowStepEditor({
                     Image Generation Configuration
                   </label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Model
+                      </label>
+                      <select
+                        value={imageGenerationConfig.model}
+                        onChange={(e) => handleImageGenerationConfigChange('model', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                      >
+                        <option value="gpt-image-1.5">gpt-image-1.5</option>
+                      </select>
+                    </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">
                         Size

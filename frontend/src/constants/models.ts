@@ -6,6 +6,7 @@ import { AIModel } from '@/types/workflow'
 
 export const AI_MODELS: Array<{ value: AIModel; label: string }> = [
   { value: 'gpt-5', label: 'GPT-5' },
+  { value: 'gpt-5.2', label: 'GPT-5.2' },
   { value: 'gpt-4.1', label: 'GPT-4.1' },
   { value: 'gpt-4o', label: 'GPT-4o' },
   { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },

@@ -16,6 +16,7 @@ interface StepEditModalProps {
 
 const AI_MODELS: AIModel[] = [
   'gpt-5',
+  'gpt-5.2',
   'gpt-4.1',
   'gpt-4o',
   'gpt-4-turbo',
@@ -48,6 +49,7 @@ export function StepEditModal({
     step_name: '',
     instructions: '',
     model: 'gpt-5',
+    reasoning_effort: undefined,
     tools: [],
     tool_choice: 'auto',
     depends_on: [],
@@ -63,6 +65,7 @@ export function StepEditModal({
         step_description: step.step_description,
         instructions: step.instructions,
         model: step.model,
+        reasoning_effort: (step as any).reasoning_effort,
         step_order: step.step_order,
         tools: step.tools || [],
         tool_choice: step.tool_choice || 'auto',
@@ -231,6 +234,26 @@ export function StepEditModal({
                   </option>
                 ))}
               </select>
+            </div>
+
+            {/* Reasoning Effort (GPT-5 family) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Reasoning Effort
+              </label>
+              <select
+                value={(formData as any).reasoning_effort || ''}
+                onChange={(e) => setFormData({ ...formData, reasoning_effort: e.target.value || undefined } as any)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              >
+                <option value="">Default</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+              <p className="mt-1 text-xs text-gray-500">
+                Optional. Controls how much reasoning the model uses (mainly for GPT-5 models).
+              </p>
             </div>
 
             {/* Tools */}

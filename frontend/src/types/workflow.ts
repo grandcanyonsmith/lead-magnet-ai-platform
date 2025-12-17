@@ -7,6 +7,7 @@ import { FormField } from './form'
 
 export type AIModel = 
   | 'gpt-5.1-codex'
+  | 'gpt-5.2'
   | 'gpt-5'
   | 'gpt-4.1'
   | 'gpt-4o'
@@ -16,6 +17,8 @@ export type AIModel =
   | 'o4-mini-deep-research'
 
 export type ToolChoice = 'auto' | 'required' | 'none'
+
+export type ReasoningEffort = 'low' | 'medium' | 'high'
 
 export type ToolType = 
   | 'web_search'
@@ -36,6 +39,7 @@ export interface ComputerUseToolConfig {
 
 export interface ImageGenerationToolConfig {
   type: 'image_generation'
+  model?: 'gpt-image-1.5' | string
   size?: '1024x1024' | '1024x1536' | '1536x1024' | 'auto'
   quality?: 'low' | 'medium' | 'high' | 'auto'
   format?: 'png' | 'jpeg' | 'webp'
@@ -51,6 +55,7 @@ export interface WorkflowStep {
   step_description?: string
   step_type?: 'ai_generation' | 'webhook' // Default: 'ai_generation'
   model: AIModel
+  reasoning_effort?: ReasoningEffort
   instructions: string
   step_order?: number
   tools?: Tool[]

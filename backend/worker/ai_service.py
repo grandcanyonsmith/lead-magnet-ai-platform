@@ -39,6 +39,7 @@ class AIService:
         tenant_id: Optional[str] = None,
         job_id: Optional[str] = None,
         previous_image_urls: Optional[List[str]] = None,
+        reasoning_effort: Optional[str] = None,
     ) -> Tuple[str, Dict, Dict, Dict]:
         """
         Generate a report using OpenAI with configurable tools.
@@ -94,6 +95,7 @@ class AIService:
             'tool_choice': normalized_tool_choice,
             'has_computer_use': has_computer_use,
             'has_image_generation': has_image_generation,
+            'reasoning_effort': reasoning_effort,
             'instructions_length': len(instructions),
             'context_length': len(context),
             'previous_context_length': len(previous_context),
@@ -128,7 +130,8 @@ class AIService:
                     reasoning_level=None,
                     previous_image_urls=previous_image_urls if has_image_generation else None,
                     job_id=job_id,
-                    tenant_id=tenant_id
+                    tenant_id=tenant_id,
+                    reasoning_effort=reasoning_effort,
                 )
                 
                 # Run CUA loop
@@ -224,7 +227,8 @@ class AIService:
                 reasoning_level=None,
                 previous_image_urls=previous_image_urls if has_image_generation else None,
                 job_id=job_id,
-                tenant_id=tenant_id
+                tenant_id=tenant_id,
+                reasoning_effort=reasoning_effort,
             )
             
             logger.debug(f"[AI Service] API params built successfully", extra={

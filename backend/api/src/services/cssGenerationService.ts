@@ -85,7 +85,7 @@ Return ONLY the CSS code, no markdown formatting, no explanations.`;
         input: prompt,
       };
       // GPT-5 only supports default temperature (1), don't set custom temperature
-      if (model !== 'gpt-5') {
+      if (!model.startsWith('gpt-5')) {
         completionParams.temperature = 0.7;
       }
       const completion = await callResponsesWithTimeout(
@@ -207,7 +207,7 @@ Return ONLY the modified CSS code, no markdown formatting, no explanations.`;
         input: prompt,
       };
       // GPT-5 only supports default temperature (1), don't set custom temperature
-      if (model !== 'gpt-5') {
+      if (!model.startsWith('gpt-5')) {
         completionParams.temperature = 0.7;
       }
       const completion = await callResponsesWithTimeout(

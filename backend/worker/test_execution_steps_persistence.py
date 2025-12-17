@@ -19,6 +19,7 @@ sys.path.insert(0, str(worker_dir))
 # during import/initialization and expect ARTIFACTS_BUCKET to exist.
 os.environ.setdefault("AWS_REGION", "us-east-1")
 os.environ.setdefault("ARTIFACTS_BUCKET", "leadmagnet-artifacts-test")
+os.environ.setdefault("OPENAI_API_KEY", "test-openai-key")
 
 
 from services.job_completion_service import JobCompletionService  # noqa: E402

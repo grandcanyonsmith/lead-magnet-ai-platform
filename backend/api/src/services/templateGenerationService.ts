@@ -69,7 +69,7 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
       instructions: 'You are an expert HTML template designer. Return only valid HTML code without markdown formatting.',
       input: templatePrompt,
     };
-    if (model !== 'gpt-5') {
+    if (!model.startsWith('gpt-5')) {
       templateCompletionParams.temperature = 0.7;
     }
     const templateCompletion = await callResponsesWithTimeout(
@@ -168,7 +168,7 @@ Return JSON format: {"name": "...", "description": "..."}`;
       model,
       input: templateNamePrompt,
     };
-    if (model !== 'gpt-5') {
+    if (!model.startsWith('gpt-5')) {
       templateNameCompletionParams.temperature = 0.5;
     }
     const templateNameCompletion = await callResponsesWithTimeout(

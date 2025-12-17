@@ -55,7 +55,7 @@ export class WorkflowConfigService {
       instructions: 'You are an expert at creating AI-powered lead magnets. Return only valid JSON without markdown formatting.',
       input: workflowPrompt,
     };
-    if (model !== 'gpt-5') {
+    if (!model.startsWith('gpt-5')) {
       workflowCompletionParams.temperature = 0.7;
     }
     const workflowCompletion = await callResponsesWithTimeout(
