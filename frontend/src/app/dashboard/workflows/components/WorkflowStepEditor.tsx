@@ -467,6 +467,7 @@ export default function WorkflowStepEditor({
       } else if (toolValue === 'image_generation') {
         // Ensure config is initialized with defaults if not already set
         const currentConfig: typeof imageGenerationConfig = imageGenerationConfig.size ? imageGenerationConfig : {
+          model: 'gpt-image-1.5',
           size: 'auto' as const,
           quality: 'auto' as const,
           format: undefined as 'png' | 'jpeg' | 'webp' | undefined,
@@ -478,6 +479,7 @@ export default function WorkflowStepEditor({
         // Add as object with config
         const config: any = {
           type: 'image_generation',
+          model: currentConfig.model || 'gpt-image-1.5',
           size: currentConfig.size,
           quality: currentConfig.quality,
           background: currentConfig.background,
