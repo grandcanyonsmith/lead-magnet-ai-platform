@@ -41,9 +41,9 @@ print_subsection() {
     local title="$1"
     local width="${2:-80}"
     echo ""
-    echo -e "${CYAN}$(printf '-%.0s' $(seq 1 $width))${NC}"
+    echo -e "${CYAN}$(printf -- '-%.0s' $(seq 1 $width))${NC}"
     echo -e "${CYAN}$title${NC}"
-    echo -e "${CYAN}$(printf '-%.0s' $(seq 1 $width))${NC}"
+    echo -e "${CYAN}$(printf -- '-%.0s' $(seq 1 $width))${NC}"
     echo ""
 }
 

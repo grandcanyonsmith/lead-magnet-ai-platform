@@ -37,6 +37,7 @@ API_URL=$(get_stack_output "leadmagnet-api" "ApiUrl" "$AWS_REGION")
 USER_POOL_ID=$(get_stack_output "leadmagnet-auth" "UserPoolId" "$AWS_REGION")
 CLIENT_ID=$(get_stack_output "leadmagnet-auth" "UserPoolClientId" "$AWS_REGION")
 ECR_REPO=$(get_stack_output "leadmagnet-worker" "EcrRepositoryUri" "$AWS_REGION")
+JOB_PROCESSOR_LAMBDA_ARN=$(get_stack_output "leadmagnet-compute" "JobProcessorLambdaArn" "$AWS_REGION")
 ARTIFACTS_BUCKET=$(get_stack_output "leadmagnet-storage" "ArtifactsBucketName" "$AWS_REGION")
 DISTRIBUTION_ID=$(get_stack_output "leadmagnet-storage" "DistributionId" "$AWS_REGION")
 
@@ -51,6 +52,14 @@ cd backend/worker
 aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPO
 docker build -t $ECR_REPO:latest .
 docker push $ECR_REPO:latest
+
+# IMPORTANT: Lambda container images do NOT auto-refresh when a tag is updated in ECR.
+# Update the Job Processor Lambda to use the latest pushed image.
+aws lambda update-function-code \
+  --function-name "$JOB_PROCESSOR_LAMBDA_ARN" \
+  --image-uri "$ECR_REPO:latest" \
+  --region "$AWS_REGION"
+
 cd ../..
 print_success "Worker deployed"
 echo ""
@@ -81,8 +90,22 @@ NEXT_PUBLIC_COGNITO_USER_POOL_ID=$USER_POOL_ID \
 NEXT_PUBLIC_COGNITO_CLIENT_ID=$CLIENT_ID \
 NEXT_PUBLIC_AWS_REGION=$AWS_REGION \
 npm run build
-# Sync frontend to root, but exclude artifact paths to prevent deletion
-aws s3 sync out s3://$ARTIFACTS_BUCKET/ --delete --exclude "*/jobs/*" --exclude "*/images/*" --cache-control max-age=31536000,public --region "$AWS_REGION"
+
+# Deploy strategy:
+# - Upload immutable build assets with long cache
+# - Upload HTML + route payloads with no-cache to prevent stale app shell in browsers
+aws s3 sync out/_next s3://$ARTIFACTS_BUCKET/_next --delete \
+  --cache-control "public,max-age=31536000,immutable" \
+  --region "$AWS_REGION"
+
+# Sync everything else to root, but exclude artifact prefixes to prevent accidental deletion.
+aws s3 sync out s3://$ARTIFACTS_BUCKET/ --delete \
+  --exclude "_next/*" \
+  --exclude "*/jobs/*" \
+  --exclude "*/images/*" \
+  --cache-control "no-cache, no-store, must-revalidate" \
+  --region "$AWS_REGION"
+
 aws cloudfront create-invalidation --distribution-id $DISTRIBUTION_ID --paths '/*' --region "$AWS_REGION"
 cd ..
 print_success "Frontend deployed"

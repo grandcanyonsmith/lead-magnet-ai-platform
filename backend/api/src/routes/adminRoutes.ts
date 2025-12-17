@@ -9,6 +9,7 @@ import { webhookLogsController } from '../controllers/webhookLogs';
 import { workflowSharingController } from '../controllers/workflowSharing.controller';
 import { trackingController } from '../controllers/tracking';
 import { httpRequestTestController } from '../controllers/httpRequestTest';
+import { clientErrorsController } from '../controllers/clientErrors';
 import { router } from './router';
 import { logger } from '../utils/logger';
 
@@ -136,6 +137,11 @@ export function registerAdminRoutes(): void {
   router.register('POST', '/admin/http-request/test', async (_params, body, _query, tenantId, context) => {
     logger.info('[Admin Routes] POST /admin/http-request/test');
     return await httpRequestTestController.test(_params, body, _query, tenantId, context);
+  });
+
+  // Client-side error reporting (React ErrorBoundary)
+  router.register('POST', '/admin/client-errors', async (_params, body, _query, tenantId, context) => {
+    return await clientErrorsController.report(tenantId!, body, context);
   });
 
   // Workflow sharing (internal endpoint for worker)

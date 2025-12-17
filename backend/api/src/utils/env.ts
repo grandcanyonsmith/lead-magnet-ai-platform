@@ -23,6 +23,7 @@ export class EnvConfig {
   readonly impersonationLogsTable: string;
   readonly webhookLogsTable: string;
   readonly trackingEventsTable: string;
+  readonly rateLimitsTable: string;
 
   // AWS Configuration
   readonly awsRegion: string;
@@ -58,6 +59,11 @@ export class EnvConfig {
   readonly stripeWebhookSecret: string | undefined;
   readonly stripePortalReturnUrl: string | undefined;
 
+  // Error Reporting (optional)
+  readonly errorWebhookUrl: string | undefined;
+  readonly errorWebhookHeaders: Record<string, string>;
+  readonly errorWebhookTimeoutMs: number;
+
   constructor() {
     // DynamoDB Tables - required
     this.workflowsTable = this.getRequired('WORKFLOWS_TABLE');
@@ -76,6 +82,7 @@ export class EnvConfig {
     this.impersonationLogsTable = this.getWithDefault('IMPERSONATION_LOGS_TABLE', 'leadmagnet-impersonation-logs');
     this.webhookLogsTable = this.getWithDefault('WEBHOOK_LOGS_TABLE', 'leadmagnet-webhook-logs');
     this.trackingEventsTable = this.getWithDefault('TRACKING_EVENTS_TABLE', 'leadmagnet-tracking-events');
+    this.rateLimitsTable = this.getWithDefault('RATE_LIMITS_TABLE', 'leadmagnet-rate-limits');
 
     // AWS Configuration
     this.awsRegion = this.getWithDefault('AWS_REGION', 'us-east-1');
@@ -133,6 +140,35 @@ export class EnvConfig {
     }
     this.stripeWebhookSecret = this.getOptional('STRIPE_WEBHOOK_SECRET');
     this.stripePortalReturnUrl = this.getOptional('STRIPE_PORTAL_RETURN_URL');
+
+    // Error reporting webhook (optional)
+    const errorWebhookUrlRaw = (this.getOptional('ERROR_WEBHOOK_URL') || '').trim();
+    this.errorWebhookUrl = errorWebhookUrlRaw.length > 0 ? errorWebhookUrlRaw : undefined;
+
+    const errorWebhookHeadersRaw = this.getOptional('ERROR_WEBHOOK_HEADERS');
+    this.errorWebhookHeaders = {};
+    if (errorWebhookHeadersRaw) {
+      try {
+        const parsed = JSON.parse(errorWebhookHeadersRaw);
+        if (parsed && typeof parsed === 'object') {
+          Object.entries(parsed).forEach(([key, value]) => {
+            if (typeof value === 'string' && value.trim().length > 0) {
+              this.errorWebhookHeaders[key] = value;
+            }
+          });
+        } else {
+          logger.warn('[EnvConfig] ERROR_WEBHOOK_HEADERS is not an object, ignoring');
+        }
+      } catch (error: any) {
+        logger.warn('[EnvConfig] Failed to parse ERROR_WEBHOOK_HEADERS as JSON', {
+          error: error.message,
+        });
+      }
+    }
+
+    const timeoutRaw = (this.getOptional('ERROR_WEBHOOK_TIMEOUT_MS') || '').trim();
+    const parsedTimeout = timeoutRaw ? parseInt(timeoutRaw, 10) : NaN;
+    this.errorWebhookTimeoutMs = Number.isFinite(parsedTimeout) ? Math.max(250, parsedTimeout) : 3000;
 
     // Validate critical configuration
     this.validate();

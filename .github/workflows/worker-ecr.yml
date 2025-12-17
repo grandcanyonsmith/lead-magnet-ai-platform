@@ -25,6 +25,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: backend/worker/requirements.txt
       
       - name: Configure AWS credentials (OIDC)
         if: env.AWS_ROLE_ARN != ''
@@ -48,6 +55,25 @@ jobs:
             exit 1
           fi
           echo "AWS credentials verified"
+
+      - name: Install worker dependencies
+        working-directory: backend/worker
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest
+
+      - name: Run worker tests
+        working-directory: backend/worker
+        env:
+          AWS_REGION: ${{ env.AWS_REGION }}
+          OPENAI_SECRET_NAME: leadmagnet/openai-api-key
+        run: |
+          # Exclude integration-style tests that require full AWS table/bucket wiring.
+          pytest -q \
+            --ignore=test_webhook_artifacts.py \
+            --ignore=test_webhook_step.py \
+            --ignore=test_workflow_with_images.py \
+            --ignore=test_local.py
       
       - name: Login to Amazon ECR
         id: login-ecr
@@ -74,4 +100,26 @@ jobs:
           # Push both tags
           docker push $ECR_REGISTRY:$IMAGE_TAG
           docker push $ECR_REGISTRY:latest
+
+      - name: Update job processor Lambda to new image
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-repo.outputs.repository }}
+          IMAGE_TAG: ${{ github.sha }}
+          AWS_REGION: ${{ env.AWS_REGION }}
+        run: |
+          JOB_PROCESSOR_LAMBDA_ARN=$(aws cloudformation describe-stacks \
+            --stack-name leadmagnet-compute \
+            --query "Stacks[0].Outputs[?OutputKey=='JobProcessorLambdaArn'].OutputValue" \
+            --output text)
+          
+          if [ -z "$JOB_PROCESSOR_LAMBDA_ARN" ]; then
+            echo "Error: Could not find JobProcessorLambdaArn output on leadmagnet-compute"
+            exit 1
+          fi
+
+          echo "Updating Lambda: $JOB_PROCESSOR_LAMBDA_ARN"
+          aws lambda update-function-code \
+            --function-name "$JOB_PROCESSOR_LAMBDA_ARN" \
+            --image-uri "$ECR_REGISTRY:$IMAGE_TAG" \
+            --region "$AWS_REGION"
 

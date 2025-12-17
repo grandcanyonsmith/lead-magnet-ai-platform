@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from 'react'
 
 /**
  * Hook to extract workflow ID from params/URL
- * Handles Vercel rewrite scenarios where param might be '_'
+ * Handles static-export edge rewrite scenarios where param might be '_'
  */
 export function useWorkflowId(): string {
   const params = useParams()

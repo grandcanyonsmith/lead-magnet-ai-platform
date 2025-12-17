@@ -11,7 +11,7 @@ import toast from 'react-hot-toast'
 export default function WorkflowDetailPage() {
   const router = useRouter()
   const params = useParams()
-  // Extract workflow ID from params, or fallback to URL pathname if param is '_' (Vercel rewrite)
+  // Extract workflow ID from params, or fallback to URL pathname if param is '_' (static export edge rewrite)
   const getWorkflowId = () => {
     const paramId = params?.id as string
     if (paramId && paramId !== '_') {

@@ -5,6 +5,10 @@ import { logger } from './utils/logger';
 import { handleWorkflowGenerationJob } from '@domains/workflows/handlers/workflowGenerationHandler';
 import { handleCORS } from './cors-handler';
 import { addSecurityHeaders } from './middleware/securityHeaders';
+import { initErrorReporting } from './services/errorReportingService';
+
+// Initialize error reporting (hooks into handleError via setErrorTrackingHook)
+initErrorReporting();
 
 export const handler = async (
   event: APIGatewayProxyEventV2 | any,

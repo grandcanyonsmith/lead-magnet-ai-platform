@@ -1,6 +1,6 @@
 # Lead Magnet AI Platform - Resource Inventory
 
-> **Last Updated**: 2025-01-27  
+> **Last Updated**: 2025-12-17  
 > **Status**: Current  
 > **Related Docs**: [Architecture Overview](./ARCHITECTURE.md), [Deployment Guide](./DEPLOYMENT.md), [Quick Start Guide](./QUICK_START.md)
 
@@ -27,12 +27,12 @@ aws cloudformation describe-stacks --stack-name leadmagnet-{stack-name} \
 
 | Stack Name | Status | Resources |
 |------------|--------|-----------|
-| leadmagnet-database | CREATE_COMPLETE | 7 DynamoDB tables |
+| leadmagnet-database | CREATE_COMPLETE | DynamoDB tables (core + billing/ops) |
 | leadmagnet-auth | CREATE_COMPLETE | Cognito User Pool |
 | leadmagnet-storage | CREATE_COMPLETE | S3, CloudFront |
-| leadmagnet-compute | CREATE_COMPLETE | Step Functions, ECS, VPC |
-| leadmagnet-api | CREATE_COMPLETE | API Gateway, Lambda |
-| leadmagnet-worker | CREATE_COMPLETE | ECS Task, ECR |
+| leadmagnet-compute | CREATE_COMPLETE | Step Functions, Lambda (job processor) |
+| leadmagnet-api | CREATE_COMPLETE | API Gateway, Lambda, WAF |
+| leadmagnet-worker | CREATE_COMPLETE | ECR repository |
 
 ---
 
@@ -47,6 +47,17 @@ aws cloudformation describe-stacks --stack-name leadmagnet-{stack-name} \
 | leadmagnet-artifacts | artifact_id | - | gsi_job_id, gsi_tenant_type |
 | leadmagnet-templates | template_id | version | gsi_tenant_id |
 | leadmagnet-user-settings | tenant_id | - | - |
+| leadmagnet-notifications | notification_id | - | gsi_tenant_created, gsi_tenant_read |
+| leadmagnet-users | user_id | - | gsi_customer_id |
+| leadmagnet-customers | customer_id | - | gsi_stripe_customer_id |
+| leadmagnet-files | file_id | - | gsi_customer_id |
+| leadmagnet-impersonation-logs | log_id | - | - |
+| leadmagnet-sessions | session_id | - | - |
+| leadmagnet-webhook-logs | log_id | - | - |
+| leadmagnet-tracking-events | event_id | - | gsi_job_created, gsi_ip_created |
+| leadmagnet-rate-limits | pk | - | - |
+| leadmagnet-usage-records | usage_id | - | - |
+| leadmagnet-folders | folder_id | - | gsi_tenant_created |
 
 ---
 
@@ -55,18 +66,13 @@ aws cloudformation describe-stacks --stack-name leadmagnet-{stack-name} \
 ### Lambda Functions
 | Function Name | Runtime | Memory | Timeout | Status |
 |---------------|---------|--------|---------|--------|
-| leadmagnet-api-handler | nodejs20.x | 2048 MB | 30s | Active |
+| leadmagnet-api-handler | nodejs20.x | 2048 MB | 900s | Active |
+| leadmagnet-job-processor | container image (Python) | 3008 MB | 15m | Active |
 
 ### Step Functions
 | State Machine | ARN | Status |
 |---------------|-----|--------|
 | leadmagnet-job-processor | arn:aws:states:us-east-1:471112574622:stateMachine:leadmagnet-job-processor | Active |
-
-### ECS
-| Resource | Name | Status |
-|----------|------|--------|
-| Cluster | leadmagnet-cluster | Active |
-| Task Definition | leadmagnet-worker:1 | Active |
 
 ---
 
@@ -81,6 +87,10 @@ aws cloudformation describe-stacks --stack-name leadmagnet-{stack-name} \
 | Distribution ID | Domain | Status |
 |-----------------|--------|--------|
 | E1GPKD58HXUDIV | dmydkyj79auy7.cloudfront.net | Deployed |
+
+### WAFv2 (optional)
+- API WAF ARN: `ApiWebAclArn` (CloudFormation output on `leadmagnet-api`)
+- CloudFront WAF ARN: `CloudFrontWebAclArn` (CloudFormation output on `leadmagnet-storage`, created only in `us-east-1`)
 
 ### ECR
 | Repository | URI |
@@ -102,24 +112,21 @@ aws cloudformation describe-stacks --stack-name leadmagnet-{stack-name} \
 | Secret Name | Purpose |
 |-------------|---------|
 | leadmagnet/openai-api-key | OpenAI API key for AI generation |
+| leadmagnet/stripe-api-key | Stripe API key (billing) |
 
 ### IAM Roles
 - ApiLambdaRole - For API Lambda function
+- JobProcessorLambdaRole - For job processor Lambda function
 - StateMachineRole - For Step Functions
-- TaskRole - For ECS tasks
-- TaskExecutionRole - For ECS task execution
 
 ---
 
 ## Networking
 
-### VPC
-| Resource | ID |
-|----------|-----|
-| VPC | vpc-08d64cbdaee46da3d |
-| Public Subnets | 2 subnets across 2 AZs |
-| Private Subnets | 2 subnets across 2 AZs |
-| NAT Gateway | 1 NAT Gateway |
+No custom VPC is required for the default deployment. Lambdas run with AWS-managed networking.
+
+If you later attach Lambdas to a VPC (e.g., for private resources), ensure you provision NAT (or VPC endpoints)
+so outbound calls (OpenAI/Stripe/webhooks) can still reach the internet.
 
 ---
 
@@ -170,8 +177,8 @@ aws cloudformation describe-stacks --stack-name leadmagnet-{stack-name} \
 
 ### CloudWatch Log Groups
 - /aws/lambda/leadmagnet-api-handler
+- /aws/lambda/leadmagnet-job-processor
 - /aws/stepfunctions/leadmagnet-job-processor
-- /ecs/leadmagnet-worker
 
 ### X-Ray
 - Tracing enabled on Lambda and Step Functions
@@ -183,13 +190,12 @@ aws cloudformation describe-stacks --stack-name leadmagnet-{stack-name} \
 ### Provisioned Resources
 | Resource | Pricing Model | Est. Cost/Month |
 |----------|---------------|-----------------|
-| DynamoDB (7 tables) | On-Demand | $5-10 |
+| DynamoDB (multiple tables) | On-Demand | $5-15 |
 | Lambda | Pay-per-invocation | $0-5 (free tier) |
 | Step Functions | Pay-per-transition | $0-1 |
 | S3 | Pay-per-GB | $1-5 |
 | CloudFront | Pay-per-request | $1-5 |
-| ECS Fargate | Pay-per-second | $0.10-0.50 per job |
-| NAT Gateway | Hourly + data | $30-40 |
+| WAFv2 | Pay-per-rule/request | $1-10 |
 | ECR | Pay-per-GB | $0-1 |
 | Cognito | Pay-per-MAU | $0-5 |
 | **OpenAI API** | **Pay-per-token** | **$10-100** |
@@ -232,7 +238,7 @@ export FRONTEND_URL=$(aws cloudformation describe-stacks \
   --stack-name leadmagnet-storage \
   --query "Stacks[0].Outputs[?OutputKey=='DistributionDomainName'].OutputValue" \
   --output text)
-export FRONTEND_URL="https://$FRONTEND_URL/app/"
+export FRONTEND_URL="https://$FRONTEND_URL/"
 
 # Test Form (replace with your form slug)
 export TEST_FORM="$API_URL/v1/forms/{your-form-slug}"
@@ -257,10 +263,9 @@ aws dynamodb list-tables
 aws lambda list-functions --query 'Functions[?contains(FunctionName, `leadmagnet`)].FunctionName'
 ```
 
-### View ECS Resources
+### View ECR Repositories
 ```bash
-aws ecs list-clusters
-aws ecs list-task-definitions
+aws ecr describe-repositories --query 'repositories[?contains(repositoryName, `leadmagnet`)].repositoryName'
 ```
 
 ---
@@ -275,5 +280,5 @@ aws ecs list-task-definitions
 
 ---
 
-**Last Updated:** 2025-01-27  
+**Last Updated:** 2025-12-17  
 **Status:** Current - Use CloudFormation outputs to find specific resource values

@@ -3,7 +3,6 @@ import { RouteResponse } from '../routes';
 import { logger } from '../utils/logger';
 import { env } from '../utils/env';
 import { webhooksController } from './webhooks';
-import { openAIWebhookController } from './openaiWebhookController';
 
 const WEBHOOK_LOGS_TABLE = env.webhookLogsTable;
 
@@ -178,24 +177,6 @@ class WebhookLogsController {
           requestBody,
           log.source_ip || '',
           headers
-        );
-        return {
-          statusCode: 200,
-          body: {
-            message: 'Webhook retried successfully',
-            result,
-          },
-        };
-      } else if (log.endpoint === '/v1/openai/webhook') {
-        // Retry OpenAI webhook
-        const headers = log.request_headers 
-          ? (typeof log.request_headers === 'string' ? JSON.parse(log.request_headers) : log.request_headers)
-          : {};
-        const result = await openAIWebhookController.handleWebhook(
-          requestBody,
-          headers,
-          typeof log.request_body === 'string' ? log.request_body : JSON.stringify(log.request_body),
-          log.source_ip
         );
         return {
           statusCode: 200,

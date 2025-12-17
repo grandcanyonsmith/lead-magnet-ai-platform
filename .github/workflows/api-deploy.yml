@@ -32,7 +32,15 @@ jobs:
       
       - name: Install dependencies
         working-directory: backend/api
-        run: npm install
+        run: npm ci
+
+      - name: Lint
+        working-directory: backend/api
+        run: npm run lint
+
+      - name: Unit tests
+        working-directory: backend/api
+        run: npm test
       
       - name: Configure AWS credentials (OIDC)
         if: env.AWS_ROLE_ARN != ''

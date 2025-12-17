@@ -24,6 +24,7 @@ export enum TableKey {
   SESSIONS = 'sessions',
   WEBHOOK_LOGS = 'webhookLogs',
   TRACKING_EVENTS = 'trackingEvents',
+  RATE_LIMITS = 'rateLimits',
 }
 
 /**
@@ -47,6 +48,7 @@ export interface TableMap {
   [TableKey.SESSIONS]: dynamodb.ITable;
   [TableKey.WEBHOOK_LOGS]: dynamodb.ITable;
   [TableKey.TRACKING_EVENTS]: dynamodb.ITable;
+  [TableKey.RATE_LIMITS]: dynamodb.ITable;
 }
 
 /**

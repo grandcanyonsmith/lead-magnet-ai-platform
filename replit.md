@@ -15,7 +15,7 @@ The frontend is built with Next.js 14 and React 18, using Tailwind CSS. It featu
 The project is an npm monorepo comprising:
 - **Frontend**: A Next.js 14 application (`frontend/`) handling the UI, user authentication via AWS Cognito, and interaction with the backend API.
 - **Backend API**: An Express-based Node.js/TypeScript application (`backend/api/`) deployed as AWS Lambda functions, providing APIs for workflow, form, job, S3 artifact, and DynamoDB management.
-- **Worker**: A Python application (`backend/worker/`) for AI-powered job processing, utilizing OpenAI and deployed as AWS Lambda/ECS workers.
+- **Worker**: A Python application (`backend/worker/`) for AI-powered job processing, utilizing OpenAI and deployed as an AWS Lambda container image (stored in ECR).
 - **Infrastructure**: AWS CDK definitions (`infrastructure/`) in TypeScript for managing AWS resources like authentication, API Gateway, databases, storage, and compute services.
 
 ### Feature Specifications

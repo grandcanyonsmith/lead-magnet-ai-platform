@@ -32,7 +32,7 @@ FRONTEND_URL=$(aws cloudformation describe-stacks \
   --stack-name leadmagnet-storage \
   --query "Stacks[0].Outputs[?OutputKey=='DistributionDomainName'].OutputValue" \
   --output text)
-echo "https://$FRONTEND_URL/app/"
+echo "https://$FRONTEND_URL/"
 ```
 
 ### Form URLs
@@ -208,7 +208,7 @@ NEXT_PUBLIC_API_URL=$API_URL \
 NEXT_PUBLIC_COGNITO_USER_POOL_ID=$USER_POOL_ID \
 NEXT_PUBLIC_COGNITO_CLIENT_ID=$CLIENT_ID \
 NEXT_PUBLIC_AWS_REGION=us-east-1 \
-npm run build && npm run export
+npm run build
 
 # Deploy to S3
 FRONTEND_BUCKET=$(aws cloudformation describe-stacks \
@@ -216,7 +216,17 @@ FRONTEND_BUCKET=$(aws cloudformation describe-stacks \
   --query "Stacks[0].Outputs[?OutputKey=='ArtifactsBucketName'].OutputValue" \
   --output text)
 
-aws s3 sync out/ s3://$FRONTEND_BUCKET/app/ --delete
+# 1) Upload immutable build assets with long cache
+aws s3 sync out/_next s3://$FRONTEND_BUCKET/_next --delete \
+  --cache-control "public,max-age=31536000,immutable"
+
+# 2) Upload HTML + route payloads with no-cache (prevents stale app shell in browsers)
+# Also exclude artifact prefixes so `--delete` doesn't wipe job outputs.
+aws s3 sync out/ s3://$FRONTEND_BUCKET/ --delete \
+  --exclude "_next/*" \
+  --exclude "*/jobs/*" \
+  --exclude "*/images/*" \
+  --cache-control "no-cache, no-store, must-revalidate"
 
 # Invalidate CloudFront
 DISTRIBUTION_ID=$(aws cloudformation describe-stacks \
@@ -226,7 +236,7 @@ DISTRIBUTION_ID=$(aws cloudformation describe-stacks \
 
 aws cloudfront create-invalidation \
   --distribution-id $DISTRIBUTION_ID \
-  --paths "/app/*"
+  --paths "/*"
 ```
 
 ## AWS Resource Names

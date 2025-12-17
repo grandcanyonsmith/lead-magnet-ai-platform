@@ -38,6 +38,7 @@ export const TABLE_NAMES = {
   SESSIONS: 'leadmagnet-sessions',
   WEBHOOK_LOGS: 'leadmagnet-webhook-logs',
   TRACKING_EVENTS: 'leadmagnet-tracking-events',
+  RATE_LIMITS: 'leadmagnet-rate-limits',
 } as const;
 
 /**
@@ -155,6 +156,7 @@ export const TABLE_ENV_VAR_MAP: Record<TableKey, string> = {
   sessions: 'SESSIONS_TABLE',
   webhookLogs: 'WEBHOOK_LOGS_TABLE',
   trackingEvents: 'TRACKING_EVENTS_TABLE',
+  rateLimits: 'RATE_LIMITS_TABLE',
 } as const;
 
 /**
@@ -181,6 +183,9 @@ export const ENV_VAR_NAMES = {
   STRIPE_METERED_PRICE_MAP: 'STRIPE_METERED_PRICE_MAP',
   STRIPE_WEBHOOK_SECRET: 'STRIPE_WEBHOOK_SECRET',
   STRIPE_PORTAL_RETURN_URL: 'STRIPE_PORTAL_RETURN_URL',
+  ERROR_WEBHOOK_URL: 'ERROR_WEBHOOK_URL',
+  ERROR_WEBHOOK_HEADERS: 'ERROR_WEBHOOK_HEADERS',
+  ERROR_WEBHOOK_TIMEOUT_MS: 'ERROR_WEBHOOK_TIMEOUT_MS',
 } as const;
 
 /**

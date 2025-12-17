@@ -1,6 +1,6 @@
 # Architecture Overview
 
-> **Last Updated**: 2025-01-27  
+> **Last Updated**: 2025-12-17  
 > **Status**: Current  
 > **Related Docs**: [Flow Diagram](./FLOW_DIAGRAM.md), [Deployment Guide](./DEPLOYMENT.md), [Resources](./RESOURCES.md), [Quick Start](./QUICK_START.md)
 
@@ -39,12 +39,12 @@ This platform enables businesses to create automated workflows that transform fo
 
 **Backend:**
 - Node.js/TypeScript Lambda functions
-- Python 3.11 ECS worker service
+- Python 3.11 Lambda container job processor (ECR-based)
 - API Gateway HTTP API
 - AWS Step Functions for orchestration
 
 **Data & Storage:**
-- DynamoDB (7 tables)
+- DynamoDB (multiple tables: core + billing/ops)
 - S3 + CloudFront for artifact storage
 - Secrets Manager for API keys
 
@@ -83,7 +83,7 @@ lead-magnent-ai/
 │   │   │   └── index.ts     # Lambda handler
 │   │   └── package.json
 │   │
-│   └── worker/              # ECS worker for AI processing
+│   └── worker/              # Lambda container worker (Python) for AI processing
 │       ├── worker.py        # Main entry point
 │       ├── processor.py     # Job processor (handles multi-step workflows)
 │       ├── ai_service.py    # OpenAI integration (refactored with helper methods)
@@ -101,9 +101,9 @@ lead-magnent-ai/
 │   │   ├── database-stack.ts    # DynamoDB tables
 │   │   ├── auth-stack.ts        # Cognito User Pool
 │   │   ├── storage-stack.ts     # S3 + CloudFront
-│   │   ├── compute-stack.ts     # Step Functions + ECS
+│   │   ├── compute-stack.ts     # Step Functions + Lambda (job processor)
 │   │   ├── api-stack.ts         # API Gateway + Lambda
-│   │   └── worker-stack.ts      # ECS Task Definition
+│   │   └── worker-stack.ts      # ECR repository (Lambda container images)
 │   ├── bin/app.ts           # CDK app entry point
 │   └── package.json
 │
@@ -251,7 +251,7 @@ See [Authentication Documentation](./AUTHENTICATION.md) for complete details.
 ### CloudWatch Dashboards
 - Lambda metrics (invocations, duration, errors)
 - DynamoDB metrics (read/write capacity)
-- ECS metrics (CPU, memory)
+- WAF metrics (blocked requests, rate limiting)
 - Step Functions execution metrics
 
 ### Logs
@@ -260,7 +260,7 @@ See [Authentication Documentation](./AUTHENTICATION.md) for complete details.
 aws logs tail /aws/lambda/leadmagnet-api-handler --follow
 
 # Worker logs
-aws logs tail /ecs/leadmagnet-worker --follow
+aws logs tail /aws/lambda/leadmagnet-job-processor --follow
 
 # Step Functions logs
 aws logs tail /aws/stepfunctions/leadmagnet-job-processor --follow
@@ -272,7 +272,8 @@ aws logs tail /aws/stepfunctions/leadmagnet-job-processor --follow
 - DynamoDB: $5-10 (on-demand pricing)
 - Lambda: $0-5 (within free tier)
 - S3 + CloudFront: $5-10
-- ECS Fargate: $10-20 (per job execution)
+- Job processor Lambda (container): varies with usage
+- WAFv2: $1-10
 - Step Functions: $1-5
 - OpenAI API: $10-100 (varies by usage)
 
