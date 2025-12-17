@@ -34,6 +34,7 @@ class ToolBuilder:
                     # Convert image_generation string to object with defaults
                     tool = {
                         "type": "image_generation",
+                        "model": "gpt-image-1.5",
                         "size": "auto",
                         "quality": "auto",
                         "background": "auto"
@@ -74,6 +75,9 @@ class ToolBuilder:
                 
                 # Validate and preserve image_generation tool parameters
                 if tool_type == "image_generation":
+                    # Default to the latest image model unless explicitly overridden
+                    if "model" not in cleaned_tool:
+                        cleaned_tool["model"] = "gpt-image-1.5"
                     # Set defaults for image_generation if not provided
                     if "size" not in cleaned_tool:
                         cleaned_tool["size"] = "auto"

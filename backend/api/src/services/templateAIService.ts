@@ -73,8 +73,8 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
         instructions: 'You are an expert HTML template designer. Return only valid HTML code without markdown formatting.',
         input: prompt,
       };
-      // GPT-5 only supports default temperature (1), don't set custom temperature
-      if (model !== 'gpt-5') {
+      // GPT-5 family only supports default temperature (1), don't set custom temperature
+      if (!model.startsWith('gpt-5')) {
         // Note: temperature not set for gpt-5, but this is fine
       }
       const completion = await callResponsesWithTimeout(
@@ -233,8 +233,8 @@ Return ONLY the modified HTML code, no markdown formatting, no explanations.`;
           : 'You are an expert HTML template designer. Return only valid HTML code without markdown formatting. Preserve all placeholder syntax {{PLACEHOLDER_NAME}} exactly.',
         input: prompt,
       };
-      // GPT-5 only supports default temperature (1), don't set custom temperature
-      if (model !== 'gpt-5') {
+      // GPT-5 family only supports default temperature (1), don't set custom temperature
+      if (!model.startsWith('gpt-5')) {
         completionParams.temperature = 0.7;
       }
       const completion = await callResponsesWithTimeout(
@@ -337,8 +337,8 @@ Return JSON format: {"name": "...", "description": "..."}`;
       model,
       input: namePrompt,
     };
-    // GPT-5 only supports default temperature (1), don't set custom temperature
-    if (model !== 'gpt-5') {
+    // GPT-5 family only supports default temperature (1), don't set custom temperature
+    if (!model.startsWith('gpt-5')) {
       nameCompletionParams.temperature = 0.5;
     }
     const nameCompletion = await callResponsesWithTimeout(

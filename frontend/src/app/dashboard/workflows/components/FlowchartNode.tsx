@@ -36,6 +36,7 @@ const MODEL_STYLES: Record<
   }
 > = {
   'gpt-5': { badge: 'bg-blue-100 text-blue-800 border-blue-300', accent: 'from-blue-100/70' },
+  'gpt-5.2': { badge: 'bg-blue-100 text-blue-800 border-blue-300', accent: 'from-blue-100/70' },
   'gpt-4.1': { badge: 'bg-indigo-100 text-indigo-800 border-indigo-300', accent: 'from-indigo-100/70' },
   'gpt-4o': { badge: 'bg-emerald-100 text-emerald-800 border-emerald-300', accent: 'from-emerald-100/70' },
   'gpt-4-turbo': { badge: 'bg-teal-100 text-teal-800 border-teal-300', accent: 'from-teal-100/70' },

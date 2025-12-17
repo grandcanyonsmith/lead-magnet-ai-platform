@@ -7,6 +7,7 @@ export const workflowStepSchema = z.object({
   step_description: z.string().max(500).optional(),
   step_type: z.enum(['ai_generation', 'webhook']).optional().default('ai_generation'),
   model: z.string().min(1).optional(), // Optional for webhook steps
+  reasoning_effort: z.enum(['low', 'medium', 'high']).optional(),
   instructions: z.string().min(1).optional(), // Optional for webhook steps
   step_order: z.number().int().min(0).optional(),
   depends_on: z.array(z.number().int().min(0)).optional(), // Array of step indices this step depends on

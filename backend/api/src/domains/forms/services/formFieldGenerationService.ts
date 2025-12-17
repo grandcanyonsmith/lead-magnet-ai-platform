@@ -84,7 +84,7 @@ The public_slug should be URL-friendly (lowercase, hyphens only, no spaces).`;
       instructions: 'You are an expert at creating lead capture forms. Return only valid JSON without markdown formatting.',
       input: formPrompt,
     };
-    if (model !== 'gpt-5') {
+    if (!model.startsWith('gpt-5')) {
       formCompletionParams.temperature = 0.7;
     }
     const formCompletion = await callResponsesWithTimeout(

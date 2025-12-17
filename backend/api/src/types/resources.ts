@@ -37,6 +37,7 @@ export interface WorkflowStep {
   step_description?: string;
   step_type?: 'ai_generation' | 'webhook'; // Default: 'ai_generation'
   model: string;
+  reasoning_effort?: 'low' | 'medium' | 'high';
   instructions: string;
   step_order: number;
   depends_on?: number[];
@@ -62,6 +63,7 @@ export interface ToolConfig {
 
 export interface ImageGenerationToolConfig {
   type: 'image_generation';
+  model?: string;
   size?: '1024x1024' | '1024x1536' | '1536x1024' | 'auto';
   quality?: 'low' | 'medium' | 'high' | 'auto';
   format?: 'png' | 'jpeg' | 'webp';

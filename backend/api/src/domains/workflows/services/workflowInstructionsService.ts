@@ -56,7 +56,7 @@ export class WorkflowInstructionsService {
         input: prompt,
       };
       // GPT-5 only supports default temperature (1), don't set custom temperature
-      if (model !== 'gpt-5') {
+      if (!model.startsWith('gpt-5')) {
         completionParams.temperature = 0.7;
       }
       const completion = await callResponsesWithTimeout(

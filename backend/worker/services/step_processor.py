@@ -151,6 +151,7 @@ class StepProcessor:
                     # Convert image_generation string to object with defaults
                     step_tools.append({
                         "type": "image_generation",
+                        "model": "gpt-image-1.5",
                         "size": "auto",
                         "quality": "auto",
                         "background": "auto"
@@ -798,6 +799,7 @@ class StepProcessor:
                     # Convert image_generation string to object with defaults
                     step_tools.append({
                         "type": "image_generation",
+                        "model": "gpt-image-1.5",
                         "size": "auto",
                         "quality": "auto",
                         "background": "auto"

@@ -28,6 +28,7 @@ export interface AIStepGenerationResponse {
 
 const AVAILABLE_MODELS = [
   'gpt-5',
+  'gpt-5.2',
   'gpt-4o',
   'gpt-4o-mini',
   'o4-mini-deep-research',

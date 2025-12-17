@@ -178,6 +178,24 @@ class WorkflowOrchestrator:
         Returns:
             Tuple of (final_content, final_artifact_type, final_filename)
         """
+        import re
+
+        def _strip_html_tags(text: str) -> str:
+            """
+            Best-effort conversion of HTML-ish strings to plain text so the final
+            template render doesn't anchor on intermediate HTML from earlier steps.
+            """
+            if not text:
+                return ""
+            # Remove script/style blocks first
+            text = re.sub(r"<script[^>]*>.*?</script>", "", text, flags=re.IGNORECASE | re.DOTALL)
+            text = re.sub(r"<style[^>]*>.*?</style>", "", text, flags=re.IGNORECASE | re.DOTALL)
+            # Remove remaining tags
+            text = re.sub(r"<[^>]+>", "", text)
+            # Normalize whitespace a bit
+            text = re.sub(r"\n{3,}", "\n\n", text)
+            return text.strip()
+
         template_id = workflow.get('template_id')
         
         # Check if template exists
@@ -197,24 +215,17 @@ class WorkflowOrchestrator:
             template = None
         
         if template:
-            # Last step output should be HTML-ready, but if not, generate HTML
-            last_step_output = step_outputs[-1]['output'] if step_outputs else ""
-            
-            # Check if last step output looks like HTML
-            if last_step_output.strip().startswith('<'):
-                final_content = last_step_output
-                final_artifact_type = 'html_final'
-                final_filename = 'final.html'
-            else:
-                # Generate HTML from accumulated context using job completion service
-                final_content, final_artifact_type, final_filename = self.job_completion_service.generate_html_from_accumulated_context(
-                    accumulated_context=accumulated_context,
-                    submission_data=submission_data,
-                    workflow=workflow,
-                    execution_steps=execution_steps,
-                    job_id=job_id,
-                    tenant_id=tenant_id
-                )
+            # Always generate the deliverable from the template when a template is configured.
+            # This avoids treating intermediate HTML (e.g., "HTML Packaging") as the final deliverable.
+            safe_accumulated_context = _strip_html_tags(accumulated_context)
+            final_content, final_artifact_type, final_filename = self.job_completion_service.generate_html_from_accumulated_context(
+                accumulated_context=safe_accumulated_context,
+                submission_data=submission_data,
+                workflow=workflow,
+                execution_steps=execution_steps,
+                job_id=job_id,
+                tenant_id=tenant_id
+            )
         else:
             # Use last step output as final content
             final_content = step_outputs[-1]['output'] if step_outputs else accumulated_context
