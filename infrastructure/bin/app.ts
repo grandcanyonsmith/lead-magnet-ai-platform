@@ -95,6 +95,13 @@ function createStacks(app: cdk.App, env: cdk.Environment): void {
     description: 'ECS Fargate shell executor + result bucket',
   });
 
+  // Fargate tasks require an execution role (ECR pulls + CloudWatch logs).
+  // CDK types this as optional, so assert it exists to satisfy strict TS and fail fast if not.
+  const shellExecutorExecutionRoleArn = shellExecutorStack.taskDefinition.executionRole?.roleArn;
+  if (!shellExecutorExecutionRoleArn) {
+    throw new Error('Shell executor task definition executionRole is undefined');
+  }
+
   // Stack 5: Compute (Step Functions + Lambda) - Application layer
   // Depends on: DatabaseStack, StorageStack, WorkerStack
   const computeStack = new ComputeStack(app, 'LeadMagnetComputeStack', {
@@ -108,7 +115,7 @@ function createStacks(app: cdk.App, env: cdk.Environment): void {
     shellExecutor: {
       clusterArn: shellExecutorStack.cluster.clusterArn,
       taskDefinitionFamily: SHELL_EXECUTOR_TASK_FAMILY,
-      executionRoleArn: shellExecutorStack.taskDefinition.executionRole.roleArn,
+      executionRoleArn: shellExecutorExecutionRoleArn,
       securityGroupId: shellExecutorStack.securityGroup.securityGroupId,
       subnetIds: shellExecutorStack.subnetIds,
       resultsBucketName: shellExecutorStack.resultsBucket.bucketName,
@@ -130,7 +137,7 @@ function createStacks(app: cdk.App, env: cdk.Environment): void {
     shellExecutor: {
       clusterArn: shellExecutorStack.cluster.clusterArn,
       taskDefinitionFamily: SHELL_EXECUTOR_TASK_FAMILY,
-      executionRoleArn: shellExecutorStack.taskDefinition.executionRole.roleArn,
+      executionRoleArn: shellExecutorExecutionRoleArn,
       securityGroupId: shellExecutorStack.securityGroup.securityGroupId,
       subnetIds: shellExecutorStack.subnetIds,
       resultsBucketName: shellExecutorStack.resultsBucket.bucketName,
