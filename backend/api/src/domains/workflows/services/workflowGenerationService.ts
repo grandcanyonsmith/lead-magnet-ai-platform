@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 import { WorkflowConfigService } from './workflowConfigService';
-import { TemplateGenerationService } from '@services/templateGenerationService';
+import { TemplateAIService, type StoreUsageRecordFn } from '@services/templateAIService';
 import { FormFieldGenerationService } from '@domains/forms/services/formFieldGenerationService';
 
 export interface GenerationResult {
@@ -39,7 +39,7 @@ export interface UsageInfo {
  */
 export class WorkflowGenerationService {
   private workflowConfigService: WorkflowConfigService;
-  private templateGenerationService: TemplateGenerationService;
+  private templateService: TemplateAIService;
   private formFieldGenerationService: FormFieldGenerationService;
 
   constructor(
@@ -55,7 +55,26 @@ export class WorkflowGenerationService {
     ) => Promise<void>
   ) {
     this.workflowConfigService = new WorkflowConfigService(openai, storeUsageRecord);
-    this.templateGenerationService = new TemplateGenerationService(openai, storeUsageRecord);
+    const storeUsageRecordAdapter: StoreUsageRecordFn = async ({
+      tenantId: usageTenantId,
+      serviceType,
+      model: usageModel,
+      inputTokens,
+      outputTokens,
+      costUsd,
+      jobId: usageJobId,
+    }) => {
+      await storeUsageRecord(
+        usageTenantId,
+        serviceType,
+        usageModel,
+        inputTokens,
+        outputTokens,
+        costUsd,
+        usageJobId
+      );
+    };
+    this.templateService = new TemplateAIService({ openai, storeUsageRecord: storeUsageRecordAdapter });
     this.formFieldGenerationService = new FormFieldGenerationService(openai, storeUsageRecord);
   }
 
@@ -86,7 +105,7 @@ export class WorkflowGenerationService {
     brandContext?: string,
     icpContext?: string
   ): Promise<{ htmlContent: string; usageInfo: UsageInfo }> {
-    return this.templateGenerationService.generateTemplateHTML(description, model, tenantId, jobId, brandContext, icpContext);
+    return this.templateService.generateTemplateHTML({ description, model, tenantId, jobId, brandContext, icpContext });
   }
 
   /**
@@ -101,7 +120,7 @@ export class WorkflowGenerationService {
     brandContext?: string,
     icpContext?: string
   ): Promise<{ templateName: string; templateDescription: string; usageInfo: UsageInfo }> {
-    return this.templateGenerationService.generateTemplateMetadata(description, model, tenantId, jobId, brandContext, icpContext);
+    return this.templateService.generateTemplateMetadata({ description, model, tenantId, jobId, brandContext, icpContext });
   }
 
   /**

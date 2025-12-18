@@ -69,4 +69,24 @@ export async function callResponsesWithTimeout<T>(
   }
 }
 
+/**
+ * Remove markdown code fences (``` / ```html / ```css) from model output.
+ *
+ * OpenAI sometimes wraps raw HTML/CSS in code blocks; this normalizes it to plain text.
+ */
+export function stripMarkdownCodeFences(content: string): string {
+  let cleaned = content.trim();
+
+  if (!cleaned.startsWith('```')) {
+    return cleaned;
+  }
+
+  // Remove opening fence line (``` or ```lang)
+  cleaned = cleaned.replace(/^```[a-z0-9_-]*\s*/i, '');
+  // Remove closing fence
+  cleaned = cleaned.replace(/\s*```$/i, '');
+
+  return cleaned.trim();
+}
+
 
