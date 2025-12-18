@@ -28,6 +28,7 @@ export interface AIStepGenerationResponse {
 
 const AVAILABLE_MODELS = [
   'gpt-5',
+  'gpt-5.1',
   'gpt-5.2',
   'gpt-4o',
   'gpt-4o-mini',
@@ -39,6 +40,7 @@ const AVAILABLE_TOOLS = [
   'code_interpreter',
   'computer_use_preview',
   'image_generation',
+  'shell',
 ];
 
 const AI_STEP_SYSTEM_PROMPT = `You are an AI assistant that helps users configure workflow steps for an AI-powered lead magnet generation platform.
@@ -53,6 +55,7 @@ Available Tools:
 - code_interpreter: For data analysis, calculations, file processing
 - computer_use_preview: For browser automation and UI interaction
 - image_generation: For generating images with DALL-E
+- shell: For running shell commands (executed via AWS shell executor)
 
 Tool Choice Options:
 - "auto": Let the model decide when to use tools

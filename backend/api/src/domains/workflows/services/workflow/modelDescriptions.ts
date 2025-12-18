@@ -4,6 +4,7 @@
 
 export const MODEL_DESCRIPTIONS_SHORT: Record<string, string> = {
   'gpt-5': 'For creative content, rewriting, general tasks (highest quality)',
+  'gpt-5.1': 'For creative content, rewriting, general tasks (highest quality, tool-friendly)',
   'gpt-5.2': 'For creative content, rewriting, general tasks (highest quality, newer)',
   'gpt-4o': 'For balanced performance and quality',
   'gpt-4o-mini': 'For cost-effective tasks with good quality',
@@ -21,6 +22,12 @@ export const MODEL_DESCRIPTIONS_DETAILED: Record<string, ModelDescription> = {
   'gpt-5': {
     bestFor: 'High-quality content generation, HTML rewriting, general-purpose tasks',
     useWhen: 'You need the best quality output for content generation',
+    cost: 'Higher cost, premium quality',
+    speed: 'Moderate',
+  },
+  'gpt-5.1': {
+    bestFor: 'High-quality content generation and general-purpose tasks (supports more tool integrations)',
+    useWhen: 'You need GPT-5 quality but also want better tool compatibility (e.g., shell tool)',
     cost: 'Higher cost, premium quality',
     speed: 'Moderate',
   },
