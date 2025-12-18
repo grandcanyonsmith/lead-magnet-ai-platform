@@ -105,6 +105,13 @@ function createStacks(app: cdk.App, env: cdk.Environment): void {
     artifactsBucket: storageStack.artifactsBucket,
     cloudfrontDomain: storageStack.distribution.distributionDomainName,
     ecrRepository: workerStack.ecrRepository,
+    shellExecutor: {
+      cluster: shellExecutorStack.cluster,
+      taskDefinition: shellExecutorStack.taskDefinition,
+      securityGroup: shellExecutorStack.securityGroup,
+      subnetIds: shellExecutorStack.subnetIds,
+      resultsBucket: shellExecutorStack.resultsBucket,
+    },
   });
 
   // Stack 6: API Gateway + Lambda - Application layer
