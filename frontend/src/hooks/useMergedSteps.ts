@@ -61,6 +61,13 @@ function hasCompleted(step: ExecutionStep | MergedStep): boolean {
   return false
 }
 
+function isExplicitlyFailed(step: ExecutionStep | MergedStep): boolean {
+  // Worker sets `success: false` on failed AI steps (even if output contains an error message)
+  if ((step as any).success === false) return true
+  if (step.error) return true
+  return false
+}
+
 /**
  * Merge workflow steps with execution steps to display all steps in the UI.
  * 
@@ -81,9 +88,11 @@ export function useMergedSteps({ job, workflow }: UseMergedStepsParams): MergedS
       // Fallback to execution steps if no workflow steps available
       return executionSteps.map((step: ExecutionStep) => ({
         ...step,
-        _status: hasCompleted(step) 
-          ? 'completed' as const 
-          : 'pending' as const
+        _status: isExplicitlyFailed(step)
+          ? 'failed' as const
+          : hasCompleted(step)
+            ? 'completed' as const
+            : 'pending' as const
       }))
     }
 
@@ -105,14 +114,16 @@ export function useMergedSteps({ job, workflow }: UseMergedStepsParams): MergedS
         // Determine step status more accurately using hasCompleted helper
         let stepStatus: StepStatus = 'pending'
         
-        if (hasCompleted(execStep)) {
+        if (isExplicitlyFailed(execStep)) {
+          stepStatus = 'failed'
+        } else if (hasCompleted(execStep)) {
           stepStatus = 'completed'
         } else if (job.status === 'completed') {
           // If job is completed, all execution steps that exist should be marked as completed
           // The job wouldn't have completed if steps failed, so if an execution step exists,
           // it must have completed successfully (even if output is missing or stored elsewhere)
           // Only mark as failed if there's explicit error information
-          if (execStep.error) {
+          if (isExplicitlyFailed(execStep)) {
             stepStatus = 'failed'
           } else {
             // Job completed successfully, so this step must have completed

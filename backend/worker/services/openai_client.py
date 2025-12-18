@@ -23,6 +23,46 @@ class OpenAIClient:
         """Initialize OpenAI client with API key from Secrets Manager."""
         self.openai_api_key = APIKeyManager.get_openai_key()
         self.client = openai.OpenAI(api_key=self.openai_api_key)
+
+    def generate_images(
+        self,
+        *,
+        model: str,
+        prompt: str,
+        n: int = 1,
+        size: str = "auto",
+        quality: str = "auto",
+        background: Optional[str] = None,
+        output_format: Optional[str] = None,
+        output_compression: Optional[int] = None,
+        response_format: str = "b64_json",
+        user: Optional[str] = None,
+    ):
+        """
+        Generate images using the OpenAI Images API.
+
+        NOTE: Some image models (e.g., gpt-image-1.5) are supported via Images API,
+        not via the Responses API image_generation tool.
+        """
+        params: Dict[str, Any] = {
+            "model": model,
+            "prompt": prompt,
+            "n": n,
+            "size": size,
+            "quality": quality,
+            "response_format": response_format,
+        }
+
+        if background is not None:
+            params["background"] = background
+        if output_format is not None:
+            params["output_format"] = output_format
+        if output_compression is not None:
+            params["output_compression"] = output_compression
+        if user is not None:
+            params["user"] = user
+
+        return self.client.images.generate(**params)
     
     @staticmethod
     def build_input_text(context: str, previous_context: str = "") -> str:
