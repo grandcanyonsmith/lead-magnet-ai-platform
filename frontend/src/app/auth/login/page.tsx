@@ -48,6 +48,11 @@ function LoginForm() {
   }, [router, searchParams])
 
   const waitForCognitoTokens = useCallback(async (maxAttempts = 10, delay = 100): Promise<boolean> => {
+    // Our app also stores tokens under custom keys (used by the API client).
+    // Prefer those first so local/mock auth flows don't hang waiting for Cognito SDK keys.
+    const customIdToken = localStorage.getItem('id_token')
+    if (customIdToken) return true
+
     const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID || ''
     if (!clientId) return false
 

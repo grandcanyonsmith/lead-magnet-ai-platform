@@ -58,5 +58,12 @@ export default defineConfig({
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
+    env: {
+      ...process.env,
+      // Keep e2e deterministic: use mock auth by default so tests don't depend on real Cognito.
+      NEXT_PUBLIC_AUTH_MODE: process.env.NEXT_PUBLIC_AUTH_MODE || 'mock',
+      NEXT_PUBLIC_MOCK_AUTH_EMAIL: process.env.NEXT_PUBLIC_MOCK_AUTH_EMAIL || 'test@example.com',
+      NEXT_PUBLIC_MOCK_AUTH_PASSWORD: process.env.NEXT_PUBLIC_MOCK_AUTH_PASSWORD || 'TestPass123!',
+    },
   },
 })

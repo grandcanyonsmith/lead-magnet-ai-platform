@@ -9,6 +9,7 @@ import { AuthService, authService } from './service'
 import { AuthResponse, AuthUser, AuthMeResponse } from '@/types/auth'
 import { CognitoUserSession } from 'amazon-cognito-identity-js'
 import { api } from '@/lib/api'
+import { decodeJwtPayload } from '@/utils/jwt'
 
 interface AuthContextValue {
   user: AuthUser | null
@@ -100,21 +101,24 @@ export function AuthProvider({ children, authService: service = authService }: A
       }
     } catch (error) {
       console.error('Error refreshing auth:', error)
-      // If /me fails, fall back to Cognito token
-      const currentSession = await service.getSession()
-      if (currentSession) {
-        const idToken = currentSession.getIdToken()
-        const payload = idToken.payload
-        
+      // If /me fails, fall back to whatever token we have locally.
+      // This keeps the UI usable in local dev / offline scenarios (and during e2e with mock auth).
+      const storedIdToken = service.getTokenStorage().getIdToken()
+      const payload = storedIdToken ? decodeJwtPayload(storedIdToken) : null
+
+      if (payload) {
         const fallbackUser: AuthUser = {
-          user_id: payload.sub as string || '',
-          email: payload.email as string || '',
-          name: payload.name as string | undefined,
-          username: payload['cognito:username'] as string || payload.email as string || '',
-          role: payload['custom:role'] as string || 'USER',
-          customer_id: payload['custom:customer_id'] as string || undefined,
+          user_id: (payload.sub as string) || '',
+          email: (payload.email as string) || '',
+          name: (payload.name as string) || undefined,
+          username:
+            (payload['cognito:username'] as string) ||
+            (payload.email as string) ||
+            '',
+          role: (payload['custom:role'] as string) || 'USER',
+          customer_id: (payload['custom:customer_id'] as string) || undefined,
         }
-        
+
         setUser(fallbackUser)
         setRealUser(fallbackUser)
         setActingUser(fallbackUser)
