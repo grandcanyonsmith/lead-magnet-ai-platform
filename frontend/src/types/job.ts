@@ -30,6 +30,7 @@ export interface ExecutionStep {
   step_order: number
   step_type: StepType
   step_name?: string
+  success?: boolean
   model?: string
   tools?: string[] | unknown[]
   tool_choice?: string

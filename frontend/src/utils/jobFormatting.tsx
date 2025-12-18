@@ -175,13 +175,14 @@ export function formatStepInput(step: ExecutionStep): { content: string | unknow
       return { content: step.input, type: 'json' }
     }
     const inputText = inputObj.input || ''
+    const instructions = inputObj.instructions || step.instructions || 'N/A'
     
     // Check if input text is markdown
     if (typeof inputText === 'string' && isMarkdown(inputText)) {
       return {
         content: {
           model: step.model || 'N/A',
-          instructions: inputObj.instructions || 'N/A',
+          instructions,
           input: inputText
         },
         type: 'markdown',
@@ -193,7 +194,7 @@ export function formatStepInput(step: ExecutionStep): { content: string | unknow
     return {
       content: {
         model: step.model || 'N/A',
-        instructions: inputObj.instructions || 'N/A',
+        instructions,
         input: inputObj.input || inputObj
       },
       type: 'json',
