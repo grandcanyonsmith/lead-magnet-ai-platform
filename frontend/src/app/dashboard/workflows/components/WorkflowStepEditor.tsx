@@ -38,6 +38,7 @@ const AVAILABLE_TOOLS = [
   { value: 'computer_use_preview', label: 'Computer Use Preview', description: 'Control computer interfaces (requires configuration)' },
   { value: 'file_search', label: 'File Search', description: 'Search uploaded files for context' },
   { value: 'code_interpreter', label: 'Code Interpreter', description: 'Execute Python code in a secure sandbox' },
+  { value: 'shell', label: 'Shell', description: 'Run shell commands via the AWS shell executor (high risk)' },
 ]
 
 const TOOL_CHOICE_OPTIONS = [
