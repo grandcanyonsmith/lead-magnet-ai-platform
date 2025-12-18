@@ -141,7 +141,9 @@ export class ShellAbuseControlService {
       }
     };
 
-    while (true) {
+    // Use `for (;;)` instead of `while (true)` to satisfy `no-constant-condition`
+    // while still representing an intentional bounded wait loop.
+    for (;;) {
       const acquired = await tryAcquire();
       if (acquired) {
         return {
