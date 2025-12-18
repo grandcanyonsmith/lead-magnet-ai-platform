@@ -1,14 +1,26 @@
+import OpenAI from 'openai';
 import { getOpenAIClient } from './openaiService';
-import { callResponsesWithTimeout } from '../utils/openaiHelpers';
+import { callResponsesWithTimeout, stripMarkdownCodeFences } from '../utils/openaiHelpers';
 import { calculateOpenAICost } from './costService';
-import { usageTrackingService } from './usageTrackingService';
+import { usageTrackingService, type UsageTrackingParams } from './usageTrackingService';
 import { logger } from '../utils/logger';
 import { ApiError } from '../utils/errors';
+
+export interface UsageInfo {
+  service_type: string;
+  model: string;
+  input_tokens: number;
+  output_tokens: number;
+  cost_usd: number;
+}
 
 export interface TemplateGenerationRequest {
   description: string;
   model?: string;
   tenantId: string;
+  jobId?: string;
+  brandContext?: string;
+  icpContext?: string;
 }
 
 export interface TemplateRefinementRequest {
@@ -16,12 +28,190 @@ export interface TemplateRefinementRequest {
   edit_prompt: string;
   model?: string;
   tenantId: string;
+  jobId?: string;
 }
+
+export type StoreUsageRecordFn = (params: UsageTrackingParams) => Promise<void>;
+
+export type TemplateAIServiceDeps = {
+  /**
+   * Optional injected OpenAI client (useful in job-style flows where a client is already created).
+   */
+  openai?: OpenAI;
+  /**
+   * Optional injected usage recorder (defaults to usageTrackingService.storeUsageRecord).
+   */
+  storeUsageRecord?: StoreUsageRecordFn;
+};
 
 /**
  * Service for generating and refining templates using AI.
  */
 export class TemplateAIService {
+  constructor(private readonly deps: TemplateAIServiceDeps = {}) {}
+
+  /**
+   * Generate template HTML only.
+   * Used by workflow generation and by the templates endpoint (via generateWithAI).
+   */
+  async generateTemplateHTML(request: TemplateGenerationRequest): Promise<{ htmlContent: string; usageInfo: UsageInfo }> {
+    const { description, model = 'gpt-5', tenantId, jobId, brandContext, icpContext } = request;
+
+    if (!description || !description.trim()) {
+      throw new ApiError('Description is required', 400);
+    }
+
+    const contextSection = this.buildContextSection(brandContext, icpContext);
+    const prompt = `You are an expert HTML template designer for lead magnets. Create a professional HTML template for: "${description}"${contextSection}
+
+Requirements:
+1. Generate a complete, valid HTML5 document
+2. Include modern, clean CSS styling (inline or in <style> tag)
+3. DO NOT use placeholder syntax - use actual sample content and descriptive text
+4. Make it responsive and mobile-friendly
+5. Use professional color scheme and typography that aligns with the brand context if provided
+6. Design it to beautifully display lead magnet content
+7. Include actual text content that demonstrates the design - use sample headings, paragraphs, and sections
+8. The HTML should be ready to use with real content filled in manually or via code
+
+Return ONLY the HTML code, no markdown formatting, no explanations.`;
+
+    logger.info('[Template Generation] Calling OpenAI for template HTML generation...', {
+      tenantId,
+      model,
+      jobId,
+      promptLength: prompt.length,
+    });
+
+    const openai = await this.getOpenAI();
+    const startTime = Date.now();
+
+    const completionParams: any = {
+      model,
+      instructions: 'You are an expert HTML template designer. Return only valid HTML code without markdown formatting.',
+      input: prompt,
+    };
+    if (!model.startsWith('gpt-5')) {
+      completionParams.temperature = 0.7;
+    }
+
+    const completion = await callResponsesWithTimeout(
+      () => openai.responses.create(completionParams),
+      'template HTML generation'
+    );
+
+    const duration = Date.now() - startTime;
+    const modelUsed = (completion as any).model || model;
+    logger.info('[Template Generation] Template HTML generation completed', {
+      tenantId,
+      jobId,
+      durationMs: duration,
+      tokensUsed: (completion as any).usage?.total_tokens,
+      modelUsed,
+    });
+
+    const usageInfo = await this.trackUsage({
+      tenantId,
+      jobId,
+      serviceType: 'openai_template_generate',
+      modelUsed,
+      usage: (completion as any).usage,
+    });
+
+    if (!(completion as any).output_text) {
+      throw new ApiError(
+        'OpenAI Responses API returned empty response. output_text is missing for template HTML generation.',
+        500
+      );
+    }
+
+    const cleanedHtml = stripMarkdownCodeFences((completion as any).output_text);
+    return { htmlContent: cleanedHtml, usageInfo };
+  }
+
+  /**
+   * Generate template name + description only.
+   * Used by workflow generation and by the templates endpoint (via generateWithAI).
+   */
+  async generateTemplateMetadata(
+    request: TemplateGenerationRequest
+  ): Promise<{ templateName: string; templateDescription: string; usageInfo: UsageInfo }> {
+    const { description, model = 'gpt-5', tenantId, jobId, brandContext, icpContext } = request;
+
+    if (!description || !description.trim()) {
+      throw new ApiError('Description is required', 400);
+    }
+
+    const contextSection = this.buildContextSection(brandContext, icpContext);
+    const prompt = `Based on this lead magnet: "${description}"${contextSection}, generate:
+1. A short, descriptive template name (2-4 words max)
+2. A brief template description (1-2 sentences)
+
+Return JSON format: {"name": "...", "description": "..."}`;
+
+    logger.info('[Template Generation] Calling OpenAI for template name/description generation...', {
+      tenantId,
+      model,
+      jobId,
+      promptLength: prompt.length,
+    });
+
+    const openai = await this.getOpenAI();
+    const startTime = Date.now();
+
+    const completionParams: any = { model, input: prompt };
+    if (!model.startsWith('gpt-5')) {
+      completionParams.temperature = 0.5;
+    }
+
+    const completion = await callResponsesWithTimeout(
+      () => openai.responses.create(completionParams),
+      'template name generation'
+    );
+
+    const duration = Date.now() - startTime;
+    const modelUsed = (completion as any).model || model;
+    logger.info('[Template Generation] Template name/description generation completed', {
+      tenantId,
+      jobId,
+      durationMs: duration,
+      modelUsed,
+    });
+
+    const usageInfo = await this.trackUsage({
+      tenantId,
+      jobId,
+      serviceType: 'openai_template_generate',
+      modelUsed,
+      usage: (completion as any).usage,
+    });
+
+    if (!(completion as any).output_text) {
+      throw new ApiError('OpenAI Responses API returned empty response. output_text is missing for template name generation.', 500);
+    }
+
+    const content = String((completion as any).output_text);
+    let templateName = 'Generated Template';
+    let templateDescription = 'A professional HTML template for displaying lead magnet content';
+
+    try {
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        templateName = parsed.name || templateName;
+        templateDescription = parsed.description || templateDescription;
+      }
+    } catch (e) {
+      logger.warn('[Template Generation] Failed to parse template name JSON, using defaults', {
+        tenantId,
+        jobId,
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
+
+    return { templateName, templateDescription, usageInfo };
+  }
+
   /**
    * Generate a template with AI.
    */
@@ -31,139 +221,28 @@ export class TemplateAIService {
     html_content: string;
     placeholder_tags: string[];
   }> {
-    const { description, model = 'gpt-5', tenantId } = request;
-
-    if (!description || !description.trim()) {
-      throw new ApiError('Description is required', 400);
-    }
+    const { tenantId, model = 'gpt-5', jobId } = request;
 
     logger.info('[Template Generation] Starting AI generation', {
       tenantId,
       model,
-      descriptionLength: description.length,
+      jobId,
+      descriptionLength: request.description?.length,
       timestamp: new Date().toISOString(),
     });
 
-    try {
-      const openai = await getOpenAIClient();
-      logger.info('[Template Generation] OpenAI client initialized');
+    const htmlResult = await this.generateTemplateHTML(request);
+    const metadataResult = await this.generateTemplateMetadata(request);
 
-      const prompt = `You are an expert HTML template designer for lead magnets. Create a professional HTML template based on this description: "${description}"
+    // Placeholder extraction disabled - no longer using placeholder syntax.
+    const placeholderTags: string[] = [];
 
-Requirements:
-1. Generate a complete, valid HTML5 document
-2. Include modern, clean CSS styling (inline or in <style> tag)
-3. DO NOT use placeholder syntax - use actual sample content and descriptive text
-4. Make it responsive and mobile-friendly
-5. Use professional color scheme and typography
-6. Design it to beautifully display lead magnet content
-7. Include actual text content that demonstrates the design - use sample headings, paragraphs, and sections
-8. The HTML should be ready to use with real content filled in manually or via code
-
-Return ONLY the HTML code, no markdown formatting, no explanations.`;
-
-      logger.info('[Template Generation] Calling OpenAI for HTML generation...', {
-        model,
-        promptLength: prompt.length,
-      });
-
-      const htmlStartTime = Date.now();
-      const completionParams: any = {
-        model,
-        instructions: 'You are an expert HTML template designer. Return only valid HTML code without markdown formatting.',
-        input: prompt,
-      };
-      // GPT-5 family only supports default temperature (1), don't set custom temperature
-      if (!model.startsWith('gpt-5')) {
-        // Note: temperature not set for gpt-5, but this is fine
-      }
-      const completion = await callResponsesWithTimeout(
-        () => openai.responses.create(completionParams),
-        'template HTML generation'
-      );
-
-      const htmlDuration = Date.now() - htmlStartTime;
-      const htmlModelUsed = (completion as any).model || model;
-      logger.info('[Template Generation] HTML generation completed', {
-        duration: `${htmlDuration}ms`,
-        tokensUsed: completion.usage?.total_tokens,
-        model: htmlModelUsed,
-      });
-
-      // Track usage
-      const usage = completion.usage;
-      if (usage) {
-        const inputTokens = usage.input_tokens || 0;
-        const outputTokens = usage.output_tokens || 0;
-        const costData = calculateOpenAICost(htmlModelUsed, inputTokens, outputTokens);
-        
-        await usageTrackingService.storeUsageRecord({
-          tenantId,
-          serviceType: 'openai_template_generate',
-          model: htmlModelUsed,
-          inputTokens,
-          outputTokens,
-          costUsd: costData.cost_usd,
-        });
-      }
-
-      // Validate response has output_text
-      if (!completion.output_text) {
-        throw new ApiError('OpenAI Responses API returned empty response. output_text is missing for template HTML generation.', 500);
-      }
-      
-      const htmlContent = completion.output_text;
-      logger.info('[Template Generation] Raw HTML received', {
-        htmlLength: htmlContent.length,
-        firstChars: htmlContent.substring(0, 100),
-      });
-      
-      // Clean up markdown code blocks if present
-      const cleanedHtml = this.cleanMarkdownCodeBlocks(htmlContent);
-
-      // Extract placeholder tags (disabled - no longer using placeholder syntax)
-      const placeholderTags: string[] = [];
-      logger.info('[Template Generation] Extracted placeholders', {
-        placeholderCount: placeholderTags.length,
-        placeholders: placeholderTags,
-      });
-
-      // Generate template name and description
-      const { templateName, templateDescription } = await this.generateTemplateMetadata(
-        description,
-        model,
-        tenantId
-      );
-
-      const totalDuration = Date.now() - htmlStartTime;
-      logger.info('[Template Generation] Success!', {
-        tenantId,
-        templateName,
-        htmlLength: cleanedHtml.length,
-        placeholderCount: placeholderTags.length,
-        totalDuration: `${totalDuration}ms`,
-        timestamp: new Date().toISOString(),
-      });
-
-      return {
-        template_name: templateName,
-        template_description: templateDescription,
-        html_content: cleanedHtml,
-        placeholder_tags: placeholderTags,
-      };
-    } catch (error: any) {
-      logger.error('[Template Generation] Error occurred', {
-        tenantId,
-        errorMessage: error.message,
-        errorName: error.name,
-        errorStack: error.stack,
-        timestamp: new Date().toISOString(),
-      });
-      throw new ApiError(
-        error.message || 'Failed to generate template with AI',
-        500
-      );
-    }
+    return {
+      template_name: metadataResult.templateName,
+      template_description: metadataResult.templateDescription,
+      html_content: htmlResult.htmlContent,
+      placeholder_tags: placeholderTags,
+    };
   }
 
   /**
@@ -173,7 +252,7 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
     html_content: string;
     placeholder_tags: string[];
   }> {
-    const { current_html, edit_prompt, model = 'gpt-5', tenantId } = request;
+    const { current_html, edit_prompt, model = 'gpt-5', tenantId, jobId } = request;
 
     if (!current_html || !current_html.trim()) {
       throw new ApiError('Current HTML content is required', 400);
@@ -186,14 +265,14 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
     logger.info('[Template Refinement] Starting refinement', {
       tenantId,
       model,
+      jobId,
       currentHtmlLength: current_html.length,
       editPromptLength: edit_prompt.length,
       timestamp: new Date().toISOString(),
     });
 
     try {
-      const openai = await getOpenAIClient();
-      logger.info('[Template Refinement] OpenAI client initialized');
+      const openai = await this.getOpenAI();
 
       // Check if user wants to remove placeholders
       const shouldRemovePlaceholders = edit_prompt.toLowerCase().includes('remove placeholder') || 
@@ -250,22 +329,13 @@ Return ONLY the modified HTML code, no markdown formatting, no explanations.`;
         model: refinementModelUsed,
       });
 
-      // Track usage
-      const usage = completion.usage;
-      if (usage) {
-        const inputTokens = usage.input_tokens || 0;
-        const outputTokens = usage.output_tokens || 0;
-        const costData = calculateOpenAICost(refinementModelUsed, inputTokens, outputTokens);
-        
-        await usageTrackingService.storeUsageRecord({
-          tenantId,
-          serviceType: 'openai_template_refine',
-          model: refinementModelUsed,
-          inputTokens,
-          outputTokens,
-          costUsd: costData.cost_usd,
-        });
-      }
+      await this.trackUsage({
+        tenantId,
+        jobId,
+        serviceType: 'openai_template_refine',
+        modelUsed: refinementModelUsed,
+        usage: (completion as any).usage,
+      });
 
       // Validate response has output_text
       if (!completion.output_text) {
@@ -278,8 +348,7 @@ Return ONLY the modified HTML code, no markdown formatting, no explanations.`;
         firstChars: htmlContent.substring(0, 100),
       });
       
-      // Clean up markdown code blocks if present
-      const cleanedHtml = this.cleanMarkdownCodeBlocks(htmlContent);
+      const cleanedHtml = stripMarkdownCodeFences(htmlContent);
 
       // Extract placeholder tags (disabled - no longer using placeholder syntax)
       const placeholderTags: string[] = [];
@@ -304,6 +373,7 @@ Return ONLY the modified HTML code, no markdown formatting, no explanations.`;
     } catch (error: any) {
       logger.error('[Template Refinement] Error occurred', {
         tenantId,
+        jobId,
         errorMessage: error.message,
         errorName: error.name,
         errorStack: error.stack,
@@ -316,107 +386,69 @@ Return ONLY the modified HTML code, no markdown formatting, no explanations.`;
     }
   }
 
-  /**
-   * Generate template name and description.
-   */
-  private async generateTemplateMetadata(
-    description: string,
-    model: string,
-    tenantId: string
-  ): Promise<{ templateName: string; templateDescription: string }> {
-    const namePrompt = `Based on this template description: "${description}", generate:
-1. A short, descriptive template name (2-4 words max)
-2. A brief template description (1-2 sentences)
-
-Return JSON format: {"name": "...", "description": "..."}`;
-
-    logger.info('[Template Generation] Calling OpenAI for name/description generation...');
-    const nameStartTime = Date.now();
-    const openai = await getOpenAIClient();
-    const nameCompletionParams: any = {
-      model,
-      input: namePrompt,
-    };
-    // GPT-5 family only supports default temperature (1), don't set custom temperature
-    if (!model.startsWith('gpt-5')) {
-      nameCompletionParams.temperature = 0.5;
+  private buildContextSection(brandContext?: string, icpContext?: string): string {
+    let contextSection = '';
+    if (brandContext) {
+      contextSection += `\n\n## Brand Context\n${brandContext}`;
     }
-    const nameCompletion = await callResponsesWithTimeout(
-      () => openai.responses.create(nameCompletionParams),
-      'template name generation'
-    );
-
-    const nameDuration = Date.now() - nameStartTime;
-    const namingModelUsed = (nameCompletion as any).model || model;
-    logger.info('[Template Generation] Name/description generation completed', {
-      duration: `${nameDuration}ms`,
-      tokensUsed: nameCompletion.usage?.total_tokens,
-      modelUsed: namingModelUsed,
-    });
-
-    // Track usage for name/description generation
-    const nameUsage = nameCompletion.usage;
-    if (nameUsage) {
-      const inputTokens = nameUsage.input_tokens || 0;
-      const outputTokens = nameUsage.output_tokens || 0;
-      const costData = calculateOpenAICost(namingModelUsed, inputTokens, outputTokens);
-      
-      await usageTrackingService.storeUsageRecord({
-        tenantId,
-        serviceType: 'openai_template_generate',
-        model: namingModelUsed,
-        inputTokens,
-        outputTokens,
-        costUsd: costData.cost_usd,
-      });
+    if (icpContext) {
+      contextSection += `\n\n## Ideal Customer Profile (ICP) Document\n${icpContext}`;
     }
-
-    // Validate response has output_text
-    if (!nameCompletion.output_text) {
-      throw new ApiError('OpenAI Responses API returned empty response. output_text is missing for template name generation.', 500);
-    }
-    
-    const nameContent = nameCompletion.output_text;
-    let templateName = 'Generated Template';
-    let templateDescription = description;
-
-    try {
-      // Try to parse JSON response
-      const jsonMatch = nameContent.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        templateName = parsed.name || templateName;
-        templateDescription = parsed.description || templateDescription;
-        logger.info('[Template Generation] Parsed name/description from JSON', {
-          templateName,
-          templateDescriptionLength: templateDescription.length,
-        });
-      }
-    } catch (e) {
-      // If JSON parsing fails, use defaults
-      templateName = description.split(' ').slice(0, 3).join(' ') + ' Template';
-      logger.info('[Template Generation] JSON parsing failed, using fallback', {
-        error: e instanceof Error ? e.message : String(e),
-        fallbackName: templateName,
-      });
-    }
-
-    return { templateName, templateDescription };
+    return contextSection;
   }
 
-  /**
-   * Clean markdown code blocks from HTML content.
-   */
-  private cleanMarkdownCodeBlocks(content: string): string {
-    let cleaned = content.trim();
-    if (cleaned.startsWith('```html')) {
-      cleaned = cleaned.replace(/^```html\s*/i, '').replace(/\s*```$/i, '');
-      logger.info('[Template AI] Removed ```html markers');
-    } else if (cleaned.startsWith('```')) {
-      cleaned = cleaned.replace(/^```\s*/i, '').replace(/\s*```$/i, '');
-      logger.info('[Template AI] Removed ``` markers');
+  private async getOpenAI(): Promise<OpenAI> {
+    return this.deps.openai ?? (await getOpenAIClient());
+  }
+
+  private async trackUsage({
+    tenantId,
+    jobId,
+    serviceType,
+    modelUsed,
+    usage,
+  }: {
+    tenantId: string;
+    jobId?: string;
+    serviceType: UsageTrackingParams['serviceType'];
+    modelUsed: string;
+    usage?: { input_tokens?: number; output_tokens?: number } | null;
+  }): Promise<UsageInfo> {
+    let usageInfo: UsageInfo = {
+      service_type: serviceType,
+      model: modelUsed,
+      input_tokens: 0,
+      output_tokens: 0,
+      cost_usd: 0,
+    };
+
+    if (!usage) {
+      return usageInfo;
     }
-    return cleaned;
+
+    const inputTokens = usage.input_tokens || 0;
+    const outputTokens = usage.output_tokens || 0;
+    const costData = calculateOpenAICost(modelUsed, inputTokens, outputTokens);
+    usageInfo = {
+      service_type: serviceType,
+      model: modelUsed,
+      input_tokens: inputTokens,
+      output_tokens: outputTokens,
+      cost_usd: costData.cost_usd,
+    };
+
+    const store = this.deps.storeUsageRecord ?? usageTrackingService.storeUsageRecord.bind(usageTrackingService);
+    await store({
+      tenantId,
+      serviceType,
+      model: modelUsed,
+      inputTokens,
+      outputTokens,
+      costUsd: costData.cost_usd,
+      jobId,
+    });
+
+    return usageInfo;
   }
 }
 

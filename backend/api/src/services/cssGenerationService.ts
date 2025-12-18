@@ -1,5 +1,5 @@
 import { getOpenAIClient } from './openaiService';
-import { callResponsesWithTimeout } from '../utils/openaiHelpers';
+import { callResponsesWithTimeout, stripMarkdownCodeFences } from '../utils/openaiHelpers';
 import { calculateOpenAICost } from './costService';
 import { usageTrackingService } from './usageTrackingService';
 import { logger } from '../utils/logger';
@@ -129,8 +129,7 @@ Return ONLY the CSS code, no markdown formatting, no explanations.`;
         firstChars: cssContent.substring(0, 100),
       });
       
-      // Clean up markdown code blocks if present
-      const cleanedCss = this.cleanMarkdownCodeBlocks(cssContent);
+      const cleanedCss = stripMarkdownCodeFences(cssContent);
 
       const totalDuration = Date.now() - cssStartTime;
       logger.info('[Form CSS Generation] Success!', {
@@ -251,8 +250,7 @@ Return ONLY the modified CSS code, no markdown formatting, no explanations.`;
         firstChars: cssContent.substring(0, 100),
       });
       
-      // Clean up markdown code blocks if present
-      const cleanedCss = this.cleanMarkdownCodeBlocks(cssContent);
+      const cleanedCss = stripMarkdownCodeFences(cssContent);
 
       const totalDuration = Date.now() - refineStartTime;
       logger.info('[Form CSS Refinement] Success!', {
@@ -278,20 +276,6 @@ Return ONLY the modified CSS code, no markdown formatting, no explanations.`;
     }
   }
 
-  /**
-   * Clean markdown code blocks from CSS content.
-   */
-  private cleanMarkdownCodeBlocks(content: string): string {
-    let cleaned = content.trim();
-    if (cleaned.startsWith('```css')) {
-      cleaned = cleaned.replace(/^```css\s*/i, '').replace(/\s*```$/i, '');
-      logger.info('[CSS Generation] Removed ```css markers');
-    } else if (cleaned.startsWith('```')) {
-      cleaned = cleaned.replace(/^```\s*/i, '').replace(/\s*```$/i, '');
-      logger.info('[CSS Generation] Removed ``` markers');
-    }
-    return cleaned;
-  }
 }
 
 export const cssGenerationService = new CSSGenerationService();
