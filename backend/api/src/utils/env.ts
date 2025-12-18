@@ -64,6 +64,18 @@ export class EnvConfig {
   readonly errorWebhookHeaders: Record<string, string>;
   readonly errorWebhookTimeoutMs: number;
 
+  // Shell tool (ECS executor) configuration
+  readonly shellToolEnabled: boolean;
+  readonly shellToolIpLimitPerHour: number;
+  readonly shellToolMaxInFlight: number;
+  readonly shellToolQueueWaitMs: number;
+
+  readonly shellExecutorResultsBucket: string | undefined;
+  readonly shellExecutorClusterArn: string | undefined;
+  readonly shellExecutorTaskDefinitionArn: string | undefined;
+  readonly shellExecutorSubnetIds: string[];
+  readonly shellExecutorSecurityGroupId: string | undefined;
+
   constructor() {
     // DynamoDB Tables - required
     this.workflowsTable = this.getRequired('WORKFLOWS_TABLE');
@@ -170,6 +182,30 @@ export class EnvConfig {
     const parsedTimeout = timeoutRaw ? parseInt(timeoutRaw, 10) : NaN;
     this.errorWebhookTimeoutMs = Number.isFinite(parsedTimeout) ? Math.max(250, parsedTimeout) : 3000;
 
+    // Shell tool config (defaults are conservative; enable explicitly)
+    this.shellToolEnabled = (this.getOptional('SHELL_TOOL_ENABLED') || '').trim() === 'true';
+    const ipLimitRaw = (this.getOptional('SHELL_TOOL_IP_LIMIT_PER_HOUR') || '').trim();
+    const parsedIpLimit = ipLimitRaw ? parseInt(ipLimitRaw, 10) : NaN;
+    this.shellToolIpLimitPerHour = Number.isFinite(parsedIpLimit) ? Math.max(1, parsedIpLimit) : 10;
+
+    const maxInFlightRaw = (this.getOptional('SHELL_TOOL_MAX_IN_FLIGHT') || '').trim();
+    const parsedMaxInFlight = maxInFlightRaw ? parseInt(maxInFlightRaw, 10) : NaN;
+    this.shellToolMaxInFlight = Number.isFinite(parsedMaxInFlight) ? Math.max(1, parsedMaxInFlight) : 5;
+
+    const waitMsRaw = (this.getOptional('SHELL_TOOL_QUEUE_WAIT_MS') || '').trim();
+    const parsedWaitMs = waitMsRaw ? parseInt(waitMsRaw, 10) : NaN;
+    this.shellToolQueueWaitMs = Number.isFinite(parsedWaitMs) ? Math.max(0, parsedWaitMs) : 0;
+
+    this.shellExecutorResultsBucket = (this.getOptional('SHELL_EXECUTOR_RESULTS_BUCKET') || '').trim() || undefined;
+    this.shellExecutorClusterArn = (this.getOptional('SHELL_EXECUTOR_CLUSTER_ARN') || '').trim() || undefined;
+    this.shellExecutorTaskDefinitionArn = (this.getOptional('SHELL_EXECUTOR_TASK_DEFINITION_ARN') || '').trim() || undefined;
+    this.shellExecutorSecurityGroupId = (this.getOptional('SHELL_EXECUTOR_SECURITY_GROUP_ID') || '').trim() || undefined;
+    const subnetIdsRaw = (this.getOptional('SHELL_EXECUTOR_SUBNET_IDS') || '').trim();
+    this.shellExecutorSubnetIds = subnetIdsRaw
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
     // Validate critical configuration
     this.validate();
   }
@@ -214,6 +250,16 @@ export class EnvConfig {
 
     if (!this.stepFunctionsArn) {
       warnings.push('STEP_FUNCTIONS_ARN is not set - Step Functions execution will be disabled');
+    }
+
+    if (this.shellToolEnabled) {
+      if (!this.shellExecutorResultsBucket) warnings.push('SHELL_EXECUTOR_RESULTS_BUCKET is not set (shell tool enabled)');
+      if (!this.shellExecutorClusterArn) warnings.push('SHELL_EXECUTOR_CLUSTER_ARN is not set (shell tool enabled)');
+      if (!this.shellExecutorTaskDefinitionArn) warnings.push('SHELL_EXECUTOR_TASK_DEFINITION_ARN is not set (shell tool enabled)');
+      if (!this.shellExecutorSecurityGroupId) warnings.push('SHELL_EXECUTOR_SECURITY_GROUP_ID is not set (shell tool enabled)');
+      if (!this.shellExecutorSubnetIds || this.shellExecutorSubnetIds.length === 0) {
+        warnings.push('SHELL_EXECUTOR_SUBNET_IDS is not set (shell tool enabled)');
+      }
     }
 
     // Log warnings but don't fail

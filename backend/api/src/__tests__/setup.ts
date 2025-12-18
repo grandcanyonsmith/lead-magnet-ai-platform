@@ -11,6 +11,7 @@ jest.mock('@aws-sdk/client-secrets-manager');
 jest.mock('@aws-sdk/client-sfn');
 jest.mock('@aws-sdk/client-lambda');
 jest.mock('@aws-sdk/client-cognito-identity-provider');
+jest.mock('@aws-sdk/client-ecs');
 
 // Set test environment variables
 process.env.NODE_ENV = 'test';
@@ -28,6 +29,10 @@ process.env.USERS_TABLE = 'test-users';
 process.env.ARTIFACTS_BUCKET = 'test-artifacts-bucket';
 process.env.OPENAI_SECRET_NAME = 'test/openai-api-key';
 process.env.LOG_LEVEL = 'error'; // Reduce noise in tests
+process.env.SHELL_TOOL_ENABLED = 'true';
+process.env.SHELL_TOOL_IP_LIMIT_PER_HOUR = '1000';
+process.env.SHELL_TOOL_MAX_IN_FLIGHT = '100';
+process.env.SHELL_TOOL_QUEUE_WAIT_MS = '0';
 
 // Suppress console.log in tests unless explicitly needed
 global.console = {

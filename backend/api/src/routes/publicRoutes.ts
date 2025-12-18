@@ -3,6 +3,7 @@ import { jobsController } from '../controllers/jobs';
 import { webhooksController } from '../controllers/webhooks';
 import { stripeWebhookController } from '../controllers/stripeWebhook';
 import { trackingController } from '../controllers/tracking';
+import { shellToolController } from '../controllers/shellTool';
 import { router } from './router';
 import { logger } from '../utils/logger';
 import { ApiError } from '../utils/errors';
@@ -60,6 +61,12 @@ export function registerPublicRoutes(): void {
     const userAgent = headers['user-agent'] || headers['User-Agent'];
     const referrer = headers['referer'] || headers['Referer'];
     return await trackingController.recordEvent(body, context?.sourceIp || '', userAgent, referrer);
+  }, false);
+
+  // Shell tool endpoint (public, no auth required)
+  router.register('POST', '/v1/tools/shell', async (params, body, query, tenantId, context) => {
+    logger.info('[Public Routes] POST /v1/tools/shell');
+    return await shellToolController.run(params, body, query, tenantId, context);
   }, false);
 }
 
