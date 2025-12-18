@@ -57,6 +57,14 @@ export declare const STACK_NAMES: {
     readonly API: "leadmagnet-api";
 };
 /**
+ * ECS task definition family name for the shell executor.
+ *
+ * Important: This must remain stable across deployments.
+ * Other stacks/Lambdas should reference the task definition by family (or family:* IAM wildcard)
+ * rather than importing a specific TaskDefinition ARN revision via CloudFormation exports.
+ */
+export declare const SHELL_EXECUTOR_TASK_FAMILY: "leadmagnet-shell-executor";
+/**
  * Resource prefixes and naming patterns
  */
 export declare const RESOURCE_PREFIXES: {
