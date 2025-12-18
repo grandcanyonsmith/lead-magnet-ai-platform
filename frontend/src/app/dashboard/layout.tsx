@@ -9,7 +9,6 @@ import { OnboardingChecklist } from '@/components/OnboardingChecklist'
 import { TourProvider } from '@/components/TourProvider'
 import { TourId } from '@/lib/tours'
 import { NotificationBell } from '@/components/NotificationBell'
-import { UserMenu } from '@/components/UserMenu'
 import { SearchModal } from '@/components/SearchModal'
 import { ShortcutsHelpModal } from '@/components/ShortcutsHelpModal'
 import { ImpersonationBanner } from '@/components/ImpersonationBanner'
@@ -19,15 +18,16 @@ import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { Settings } from '@/types/settings'
 import { logger } from '@/utils/logger'
 import {
-  FiHome,
-  FiList,
-  FiBarChart2,
-  FiMenu,
-  FiX,
-  FiSearch,
-  FiChevronRight,
-  FiChevronUp,
-} from 'react-icons/fi'
+  HomeIcon,
+  QueueListIcon,
+  ChartBarIcon,
+  Bars3Icon,
+  XMarkIcon,
+  MagnifyingGlassIcon,
+  ChevronRightIcon,
+  ChevronUpIcon,
+} from '@heroicons/react/24/outline'
+import { Menu, MenuButton, MenuItem, MenuItems, Transition } from '@headlessui/react'
 
 export default function DashboardLayout({
   children,
@@ -43,7 +43,6 @@ export default function DashboardLayout({
   const [activeTourId, setActiveTourId] = useState<TourId | null>(null)
   const [searchOpen, setSearchOpen] = useState(false)
   const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false)
-  const [accountMenuOpen, setAccountMenuOpen] = useState(false)
 
   const loadSettings = useCallback(async () => {
     try {
@@ -112,9 +111,9 @@ export default function DashboardLayout({
   }
 
   const navItems = useMemo(() => [
-    { href: '/dashboard', label: 'Dashboard', icon: FiHome },
-    { href: '/dashboard/workflows', label: 'Lead Magnets', icon: FiList },
-    { href: '/dashboard/jobs', label: 'Generated Lead Magnets', icon: FiBarChart2 },
+    { href: '/dashboard', label: 'Dashboard', icon: HomeIcon },
+    { href: '/dashboard/workflows', label: 'Lead Magnets', icon: QueueListIcon },
+    { href: '/dashboard/jobs', label: 'Generated Lead Magnets', icon: ChartBarIcon },
   ], [])
 
   // Keyboard shortcuts
@@ -161,7 +160,7 @@ export default function DashboardLayout({
                 className="inline-flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-700 shadow-sm hover:bg-zinc-50 shrink-0"
                 aria-label="Open navigation"
               >
-                <FiMenu className="h-5 w-5" />
+                <Bars3Icon className="h-5 w-5" />
               </button>
               <div className="flex items-center gap-2 min-w-0">
                 <div className="h-8 w-8 sm:h-9 sm:w-9 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center shadow-sm shrink-0">
@@ -181,7 +180,7 @@ export default function DashboardLayout({
                 className="inline-flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-700 shadow-sm hover:bg-zinc-50"
                 aria-label="Open search"
               >
-                <FiSearch className="h-4 w-4 sm:h-5 sm:w-5" />
+                <MagnifyingGlassIcon className="h-4 w-4 sm:h-5 sm:w-5" />
               </button>
               <div className="scale-90 sm:scale-100">
                 <NotificationBell />
@@ -196,7 +195,6 @@ export default function DashboardLayout({
             className="fixed inset-0 bg-zinc-900/50 z-30 lg:hidden"
             onClick={() => {
               setSidebarOpen(false)
-              setAccountMenuOpen(false)
             }}
             aria-hidden="true"
           />
@@ -226,7 +224,7 @@ export default function DashboardLayout({
               className="inline-flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 shrink-0"
               aria-label="Close navigation"
             >
-              <FiX className="h-5 w-5" />
+              <XMarkIcon className="h-5 w-5" />
             </button>
           </div>
 
@@ -265,7 +263,7 @@ export default function DashboardLayout({
                   className="w-full flex items-center gap-2 sm:gap-3 rounded-xl px-2.5 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm font-medium text-zinc-700 hover:bg-zinc-100/70 transition"
                   aria-label="Open search"
                 >
-                  <FiSearch className="h-4 w-4 sm:h-5 sm:w-5 text-zinc-500 shrink-0" />
+                  <MagnifyingGlassIcon className="h-4 w-4 sm:h-5 sm:w-5 text-zinc-500 shrink-0" />
                   <span className="truncate">Search</span>
                   <kbd className="ml-auto hidden md:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] sm:text-[11px] font-semibold text-zinc-500 bg-white border border-zinc-200 rounded">
                     ⌘K
@@ -298,7 +296,7 @@ export default function DashboardLayout({
                         }`}
                       />
                       <span className="truncate">{item.label}</span>
-                      {isActive && <FiChevronRight className="ml-auto h-3 w-3 sm:h-4 sm:w-4 text-primary-500 shrink-0" />}
+                      {isActive && <ChevronRightIcon className="ml-auto h-3 w-3 sm:h-4 sm:w-4 text-primary-500 shrink-0" />}
                     </Link>
                   )
                 })}
@@ -307,71 +305,84 @@ export default function DashboardLayout({
           </div>
 
           <div className="mt-auto px-2 sm:px-3 py-2 sm:py-3 border-t border-zinc-200 bg-white shrink-0">
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setAccountMenuOpen((open) => !open)}
-                className="w-full flex items-center justify-between rounded-lg px-1.5 sm:px-2 py-1.5 sm:py-2 hover:bg-zinc-50 transition-colors"
-              >
-                <span className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
-                  <span className="h-7 w-7 sm:h-8 sm:w-8 rounded-md bg-zinc-200 flex items-center justify-center overflow-hidden shrink-0">
-                    <span className="text-[10px] sm:text-xs font-semibold text-zinc-700">
-                      {(user?.name || user?.email || 'U').slice(0, 1).toUpperCase()}
+            <Menu as="div" className="relative">
+              <MenuButton className="w-full flex items-center justify-between rounded-lg px-1.5 sm:px-2 py-1.5 sm:py-2 hover:bg-zinc-50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
+                {({ open }) => (
+                  <>
+                    <span className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
+                      <span className="h-7 w-7 sm:h-8 sm:w-8 rounded-md bg-zinc-200 flex items-center justify-center overflow-hidden shrink-0">
+                        <span className="text-[10px] sm:text-xs font-semibold text-zinc-700">
+                          {(user?.name || user?.email || 'U').slice(0, 1).toUpperCase()}
+                        </span>
+                      </span>
+                      <span className="min-w-0 flex-1 text-left">
+                        <span className="block truncate text-xs sm:text-sm font-medium text-zinc-900">
+                          {user?.name || user?.email || 'Account'}
+                        </span>
+                        {user?.email && (
+                          <span className="block truncate text-[10px] sm:text-xs text-zinc-500">{user.email}</span>
+                        )}
+                      </span>
                     </span>
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-xs sm:text-sm font-medium text-zinc-900">
-                      {user?.name || user?.email || 'Account'}
-                    </span>
-                    {user?.email && (
-                      <span className="block truncate text-[10px] sm:text-xs text-zinc-500">{user.email}</span>
-                    )}
-                  </span>
-                </span>
-                <FiChevronUp
-                  className={`h-3 w-3 sm:h-4 sm:w-4 text-zinc-400 transition-transform shrink-0 ${accountMenuOpen ? 'rotate-180' : ''}`}
-                />
-              </button>
+                    <ChevronUpIcon
+                      className={`h-3 w-3 sm:h-4 sm:w-4 text-zinc-400 transition-transform shrink-0 ${open ? 'rotate-180' : ''}`}
+                    />
+                  </>
+                )}
+              </MenuButton>
 
-              {accountMenuOpen && (
-                <>
-                  {/* Backdrop to close menu */}
-                  <div 
-                    className="fixed inset-0 z-[45]" 
-                    onClick={() => setAccountMenuOpen(false)}
-                  />
-                  <div className="absolute bottom-full left-0 right-0 mb-1.5 sm:mb-2 rounded-lg border border-zinc-200 bg-white shadow-lg ring-1 ring-black/5 z-[50]">
-                    <div className="px-2.5 sm:px-3 py-2 sm:py-2.5 flex items-center justify-between">
-                      <span className="text-xs sm:text-sm text-zinc-700">Notifications</span>
-                      <NotificationBell layer="account_menu" />
-                    </div>
-                    <hr className="border-t border-zinc-100" />
-                    <button
-                      className="w-full px-2.5 sm:px-3 py-2.5 sm:py-2.5 text-xs sm:text-sm text-zinc-700 hover:bg-zinc-50 text-left transition-colors"
-                      onClick={() => {
-                        setAccountMenuOpen(false)
-                        setSidebarOpen(false)
-                        router.push('/dashboard/settings')
-                      }}
-                    >
-                      Settings
-                    </button>
-                    <hr className="border-t border-zinc-100" />
-                    <button
-                      className="w-full px-2.5 sm:px-3 py-2.5 sm:py-2.5 text-xs sm:text-sm text-red-600 hover:bg-red-50 text-left transition-colors"
-                      onClick={() => {
-                        setAccountMenuOpen(false)
-                        setSidebarOpen(false)
-                        signOut()
-                        router.push('/auth/login')
-                      }}
-                    >
-                      Sign out
-                    </button>
+              <Transition
+                enter="transition duration-100 ease-out"
+                enterFrom="transform scale-95 opacity-0"
+                enterTo="transform scale-100 opacity-100"
+                leave="transition duration-75 ease-out"
+                leaveFrom="transform scale-100 opacity-100"
+                leaveTo="transform scale-95 opacity-0"
+              >
+                <MenuItems
+                  anchor="top start"
+                  className="absolute bottom-full left-0 right-0 mb-1.5 sm:mb-2 w-full rounded-lg border border-zinc-200 bg-white shadow-lg ring-1 ring-black/5 z-[50] focus:outline-none"
+                >
+                  <div className="px-2.5 sm:px-3 py-2 sm:py-2.5 flex items-center justify-between">
+                    <span className="text-xs sm:text-sm text-zinc-700">Notifications</span>
+                    <NotificationBell layer="account_menu" />
                   </div>
-                </>
-              )}
-            </div>
+                  <div className="h-px bg-zinc-100 my-1" />
+                  <MenuItem>
+                    {({ focus }) => (
+                      <button
+                        className={`${
+                          focus ? 'bg-zinc-50' : ''
+                        } w-full px-2.5 sm:px-3 py-2.5 sm:py-2.5 text-xs sm:text-sm text-zinc-700 text-left transition-colors`}
+                        onClick={() => {
+                          setSidebarOpen(false)
+                          router.push('/dashboard/settings')
+                        }}
+                      >
+                        Settings
+                      </button>
+                    )}
+                  </MenuItem>
+                  <div className="h-px bg-zinc-100 my-1" />
+                  <MenuItem>
+                    {({ focus }) => (
+                      <button
+                        className={`${
+                          focus ? 'bg-red-50' : ''
+                        } w-full px-2.5 sm:px-3 py-2.5 sm:py-2.5 text-xs sm:text-sm text-red-600 text-left transition-colors`}
+                        onClick={() => {
+                          setSidebarOpen(false)
+                          signOut()
+                          router.push('/auth/login')
+                        }}
+                      >
+                        Sign out
+                      </button>
+                    )}
+                  </MenuItem>
+                </MenuItems>
+              </Transition>
+            </Menu>
           </div>
         </aside>
 

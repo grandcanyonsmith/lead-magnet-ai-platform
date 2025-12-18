@@ -4,7 +4,15 @@ import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { isAuthenticated } from '@/lib/auth'
-import { FiActivity, FiCheckCircle, FiXCircle, FiClock, FiTrendingUp, FiFileText } from 'react-icons/fi'
+import {
+  ChartBarIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  ClockIcon,
+  ArrowTrendingUpIcon,
+  DocumentTextIcon,
+  BoltIcon
+} from '@heroicons/react/24/outline'
 import { AnalyticsResponse, AnalyticsOverview } from '@/types/analytics'
 import { logger } from '@/utils/logger'
 import { handleError } from '@/utils/error-handling'
@@ -68,37 +76,37 @@ export default function DashboardPage() {
     {
       label: 'Lead Magnets Generated',
       value: overview.total_jobs || 0,
-      icon: FiActivity,
+      icon: ChartBarIcon,
       color: 'blue',
     },
     {
       label: 'Completed Lead Magnets',
       value: overview.completed_jobs || 0,
-      icon: FiCheckCircle,
+      icon: CheckCircleIcon,
       color: 'green',
     },
     {
       label: 'Failed Lead Magnets',
       value: overview.failed_jobs || 0,
-      icon: FiXCircle,
+      icon: XCircleIcon,
       color: 'red',
     },
     {
       label: 'Pending Lead Magnets',
       value: overview.pending_jobs || 0,
-      icon: FiClock,
+      icon: ClockIcon,
       color: 'yellow',
     },
     {
       label: 'Success Rate',
       value: `${overview.success_rate || 0}%`,
-      icon: FiTrendingUp,
+      icon: ArrowTrendingUpIcon,
       color: 'purple',
     },
     {
       label: 'Avg Processing Time',
       value: `${overview.avg_processing_time_seconds || 0}s`,
-      icon: FiClock,
+      icon: ClockIcon,
       color: 'indigo',
     },
   ], [overview])
@@ -207,7 +215,7 @@ export default function DashboardPage() {
             className="flex items-center justify-center px-3 sm:px-4 py-2.5 sm:py-3 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg hover:from-primary-700 hover:to-primary-800 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 text-sm sm:text-base"
             aria-label="Create a new lead magnet workflow"
           >
-            <FiActivity className="w-4 h-4 sm:w-5 sm:h-5 mr-2" aria-hidden="true" />
+            <BoltIcon className="w-4 h-4 sm:w-5 sm:h-5 mr-2" aria-hidden="true" />
             Create Lead Magnet
           </a>
         </div>
