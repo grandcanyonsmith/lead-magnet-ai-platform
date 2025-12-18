@@ -79,8 +79,6 @@ def test_finalize_job_injects_tracking_script_for_html_final():
     finalize_job() must ensure the stored html_final deliverable contains the tracking script.
     """
 
-    os.environ.setdefault("API_URL", "https://api.example.com")
-
     artifact_service = Mock()
     artifact_service.store_artifact.return_value = "art_final_123"
     artifact_service.get_artifact_public_url.return_value = "https://cdn.example.com/final.html"
@@ -103,7 +101,7 @@ def test_finalize_job_injects_tracking_script_for_html_final():
     )
 
     job_id = "job_test_123"
-    job = {"job_id": job_id, "tenant_id": "tenant_test"}
+    job = {"job_id": job_id, "tenant_id": "tenant_test", "api_url": "https://api.example.com"}
     workflow = {"delivery_method": "none", "workflow_name": "Test Workflow"}
     submission = {"submitter_email": "test@example.com"}
 

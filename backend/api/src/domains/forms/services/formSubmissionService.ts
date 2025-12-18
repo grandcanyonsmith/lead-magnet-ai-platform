@@ -80,6 +80,7 @@ export class FormSubmissionService {
 
     // Create job record
     const jobId = `job_${ulid()}`;
+    const apiUrl = (env.apiGatewayUrl || env.apiUrl || '').replace(/\/$/, '');
     const job = {
       job_id: jobId,
       tenant_id: form.tenant_id,
@@ -88,6 +89,7 @@ export class FormSubmissionService {
       status: 'pending',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+      ...(apiUrl ? { api_url: apiUrl } : {}),
     };
 
     await db.put(JOBS_TABLE, job);

@@ -90,7 +90,8 @@ class JobCompletionService:
                     final_content = tracking_generator.inject_tracking_script(
                         html_content=final_content,
                         job_id=job_id,
-                        tenant_id=job.get('tenant_id', '')
+                        tenant_id=job.get('tenant_id', ''),
+                        api_url=job.get('api_url') or None
                     )
 
             final_start_time = datetime.utcnow()
@@ -324,14 +325,8 @@ class JobCompletionService:
         # Store usage record
         self.usage_service.store_usage_record(tenant_id, job_id, html_usage_info)
         
-        # Inject tracking script into HTML
-        from services.tracking_script_generator import TrackingScriptGenerator
-        tracking_generator = TrackingScriptGenerator()
-        final_content = tracking_generator.inject_tracking_script(
-            html_content=final_content,
-            job_id=job_id,
-            tenant_id=tenant_id
-        )
+        # NOTE: Tracking script injection is handled in finalize_job() where we have access
+        # to the full job record (including job-scoped api_url for cross-domain tracking).
         
         # CRITICAL: Reload execution_steps from S3 to ensure we have all workflow steps
         # that were saved during step processing. The execution_steps list passed as parameter
@@ -463,7 +458,8 @@ class JobCompletionService:
         final_content = tracking_generator.inject_tracking_script(
             html_content=final_content,
             job_id=job_id,
-            tenant_id=job['tenant_id']
+            tenant_id=job['tenant_id'],
+            api_url=job.get('api_url') or None
         )
         
         # Store HTML as final artifact

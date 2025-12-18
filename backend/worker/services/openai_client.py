@@ -44,25 +44,50 @@ class OpenAIClient:
         NOTE: Some image models (e.g., gpt-image-1.5) are supported via Images API,
         not via the Responses API image_generation tool.
         """
+        # The Images API has model-specific parameter support.
+        # - gpt-image-* models support output_format/output_compression/background and return b64_json.
+        #   They do NOT accept the legacy `response_format` param (OpenAI returns: Unknown parameter).
+        # - dalle-* models support legacy `response_format` ("url" | "b64_json") and do not support
+        #   output_format/output_compression/background.
+        is_gpt_image = isinstance(model, str) and model.strip().lower().startswith("gpt-image")
+
         params: Dict[str, Any] = {
             "model": model,
             "prompt": prompt,
             "n": n,
-            "size": size,
-            "quality": quality,
-            "response_format": response_format,
         }
 
-        if background is not None:
-            params["background"] = background
-        if output_format is not None:
-            params["output_format"] = output_format
-        if output_compression is not None:
-            params["output_compression"] = output_compression
+        # Optional/legacy: only send when not "auto" to avoid unsupported values on older models.
+        if size and size != "auto":
+            params["size"] = size
+        if quality and quality != "auto":
+            params["quality"] = quality
+
+        if is_gpt_image:
+            if background is not None:
+                params["background"] = background
+            if output_format is not None:
+                params["output_format"] = output_format
+            if output_compression is not None:
+                params["output_compression"] = output_compression
+        else:
+            # Legacy models (e.g., dalle-*) use response_format.
+            if response_format:
+                params["response_format"] = response_format
+
         if user is not None:
             params["user"] = user
 
-        return self.client.images.generate(**params)
+        try:
+            return self.client.images.generate(**params)
+        except Exception as e:
+            # Defensive fallback for real-world OpenAI param differences.
+            # If OpenAI rejects a param as unknown, retry once without it.
+            msg = str(e)
+            if "Unknown parameter: 'response_format'" in msg and "response_format" in params:
+                params.pop("response_format", None)
+                return self.client.images.generate(**params)
+            raise
     
     @staticmethod
     def build_input_text(context: str, previous_context: str = "") -> str:

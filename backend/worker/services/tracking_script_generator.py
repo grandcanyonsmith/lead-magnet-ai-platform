@@ -19,26 +19,31 @@ class TrackingScriptGenerator:
         # Get API URL from environment
         self.api_url = os.environ.get('API_URL') or os.environ.get('API_GATEWAY_URL') or ''
     
-    def generate_tracking_script(self, job_id: str, tenant_id: str) -> str:
+    def generate_tracking_script(self, job_id: str, tenant_id: str, api_url: Optional[str] = None) -> str:
         """
         Generate JavaScript tracking code to inject into HTML.
         
         Args:
             job_id: Job ID for the lead magnet
             tenant_id: Tenant ID
+            api_url: Optional API base URL override (preferred). Falls back to env/API_URL.
             
         Returns:
             JavaScript code as string
         """
-        if not self.api_url:
-            logger.warning("[TrackingScriptGenerator] API_URL not set, tracking script will not work")
-            return ""
+        effective_api_url = (api_url or self.api_url or '').strip()
+
+        if not effective_api_url:
+            # We can still inject a script that tries same-origin (/v1/tracking/event).
+            # This will work when the HTML is served from the API domain (e.g. /v1/jobs/:jobId/document),
+            # and safely no-op when served from a static CDN domain without the API.
+            logger.warning("[TrackingScriptGenerator] API_URL not set; tracking will fall back to same-origin")
         
         # Escape values to prevent XSS using json.dumps(), which handles
         # quotes, backslashes, newlines, tabs, unicode, etc.
         escaped_job_id = json.dumps(job_id)
         escaped_tenant_id = json.dumps(tenant_id)
-        escaped_api_url = json.dumps(self.api_url.rstrip("/"))
+        escaped_api_url = json.dumps(effective_api_url.rstrip("/"))
         
         # Generate tracking script
         script = f"""
@@ -55,6 +60,14 @@ class TrackingScriptGenerator:
         heartbeatInterval: 30000, // 30 seconds
         sessionTimeout: 1800000, // 30 minutes
     }};
+
+    function getTrackingEndpoint() {{
+        const base = (TRACKING_CONFIG.apiUrl || window.location.origin || '').replace(/\\/+$/, '');
+        if (!base || base === 'null') {{
+            return '';
+        }}
+        return base + '/v1/tracking/event';
+    }}
     
     // Session management
     let sessionId = localStorage.getItem('lm_session_id');
@@ -180,6 +193,11 @@ class TrackingScriptGenerator:
     }});
     
     function sendEvent(eventType, additionalData, synchronous) {{
+        const endpoint = getTrackingEndpoint();
+        if (!endpoint) {{
+            return;
+        }}
+
         const eventData = {{
             job_id: TRACKING_CONFIG.jobId,
             event_type: eventType,
@@ -191,24 +209,34 @@ class TrackingScriptGenerator:
             referrer: document.referrer || '',
             ...additionalData
         }};
-        
-        // Use sendBeacon for better reliability on page unload
-        if (synchronous && navigator.sendBeacon) {{
-            const blob = new Blob([JSON.stringify(eventData)], {{ type: 'application/json' }});
-            navigator.sendBeacon(TRACKING_CONFIG.apiUrl + '/v1/tracking/event', blob);
-        }} else {{
-            // Use fetch for normal events
-            fetch(TRACKING_CONFIG.apiUrl + '/v1/tracking/event', {{
+
+        const body = JSON.stringify(eventData);
+
+        // Prefer sendBeacon (no CORS preflight) especially for unload events.
+        if (navigator.sendBeacon) {{
+            try {{
+                // Sending a string uses text/plain; charset=UTF-8 (simple request, avoids preflight).
+                const ok = navigator.sendBeacon(endpoint, body);
+                if (ok) {{
+                    return;
+                }}
+            }} catch (_e) {{
+                // fall through
+            }}
+        }}
+
+        // Fallback: fire-and-forget fetch without CORS preflight.
+        try {{
+            fetch(endpoint, {{
                 method: 'POST',
-                headers: {{
-                    'Content-Type': 'application/json',
-                }},
-                body: JSON.stringify(eventData),
-                keepalive: true // Keep request alive even if page unloads
-            }}).catch(function(error) {{
-                // Silently fail - don't break the page if tracking fails
-                console.debug('Tracking error:', error);
-            }});
+                body,
+                // `no-cors` ensures the browser will send the request even if the endpoint
+                // is on a different domain and doesn't return CORS headers.
+                mode: 'no-cors',
+                keepalive: true,
+            }}).catch(function() {{}});
+        }} catch (_e) {{
+            // swallow
         }}
     }}
 }})();
@@ -216,7 +244,7 @@ class TrackingScriptGenerator:
 """
         return script.strip()
     
-    def inject_tracking_script(self, html_content: str, job_id: str, tenant_id: str) -> str:
+    def inject_tracking_script(self, html_content: str, job_id: str, tenant_id: str, api_url: Optional[str] = None) -> str:
         """
         Inject tracking script into HTML content.
         
@@ -224,11 +252,12 @@ class TrackingScriptGenerator:
             html_content: Original HTML content
             job_id: Job ID
             tenant_id: Tenant ID
+            api_url: Optional API base URL override (preferred). Falls back to env/API_URL.
             
         Returns:
             HTML content with tracking script injected
         """
-        tracking_script = self.generate_tracking_script(job_id, tenant_id)
+        tracking_script = self.generate_tracking_script(job_id, tenant_id, api_url=api_url)
         
         if not tracking_script:
             logger.warning("[TrackingScriptGenerator] No tracking script generated, returning original HTML")
