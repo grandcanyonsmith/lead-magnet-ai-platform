@@ -22,8 +22,7 @@ function decodeBase64ToString(base64: string): string {
   }
 
   // Node.js fallback (useful for unit tests / server environments)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const NodeBuffer = (globalThis as any).Buffer as
+  const NodeBuffer = (globalThis as unknown as { Buffer?: unknown }).Buffer as
     | { from(data: string, encoding: 'base64'): { toString(enc: 'utf-8'): string } }
     | undefined
   if (NodeBuffer) {

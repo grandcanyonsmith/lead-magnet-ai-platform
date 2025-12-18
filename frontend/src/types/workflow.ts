@@ -26,6 +26,7 @@ export type ToolType =
   | 'computer_use_preview'
   | 'file_search'
   | 'code_interpreter'
+  | 'shell'
 
 export type HTTPMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 export type HTTPBodyMode = 'auto' | 'custom'

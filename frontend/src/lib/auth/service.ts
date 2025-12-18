@@ -125,8 +125,7 @@ export class AuthService {
     }
 
     // Node fallback
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const NodeBuffer = (globalThis as any).Buffer as
+    const NodeBuffer = (globalThis as unknown as { Buffer?: unknown }).Buffer as
       | { from(data: Uint8Array): { toString(enc: 'base64'): string } }
       | undefined
     if (NodeBuffer) {
