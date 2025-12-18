@@ -7,6 +7,7 @@ import { StorageStack } from '../lib/storage-stack';
 import { WorkerStack } from '../lib/worker-stack';
 import { ComputeStack } from '../lib/compute-stack';
 import { ApiStack } from '../lib/api-stack';
+import { ShellExecutorStack } from '../lib/shell-executor-stack';
 import { STACK_NAMES, DEFAULT_REGION } from '../lib/config/constants';
 
 /**
@@ -87,6 +88,13 @@ function createStacks(app: cdk.App, env: cdk.Environment): void {
     description: 'ECR repository for Lambda container images',
   });
 
+  // Stack 4.5: Shell Executor (ECS Fargate + isolated VPC + result bucket)
+  const shellExecutorStack = new ShellExecutorStack(app, 'LeadMagnetShellExecutorStack', {
+    env,
+    stackName: STACK_NAMES.SHELL_EXECUTOR,
+    description: 'ECS Fargate shell executor + result bucket',
+  });
+
   // Stack 5: Compute (Step Functions + Lambda) - Application layer
   // Depends on: DatabaseStack, StorageStack, WorkerStack
   const computeStack = new ComputeStack(app, 'LeadMagnetComputeStack', {
@@ -111,6 +119,13 @@ function createStacks(app: cdk.App, env: cdk.Environment): void {
     stateMachineArn: computeStack.stateMachineArn,
     artifactsBucket: storageStack.artifactsBucket,
     cloudfrontDomain: storageStack.distribution.distributionDomainName,
+    shellExecutor: {
+      cluster: shellExecutorStack.cluster,
+      taskDefinition: shellExecutorStack.taskDefinition,
+      securityGroup: shellExecutorStack.securityGroup,
+      subnetIds: shellExecutorStack.subnetIds,
+      resultsBucket: shellExecutorStack.resultsBucket,
+    },
   });
 }
 
