@@ -49,10 +49,12 @@ export const isAuthenticated = async (): Promise<boolean> => {
 }
 
 export const getIdToken = async (): Promise<string | null> => {
+  // Prefer tokens stored by our app (set during sign-in). This is more resilient than
+  // relying on Cognito SDK session reconstruction, and supports mock/e2e auth flows.
+  const stored = authService.getTokenStorage().getIdToken()
+  if (stored) return stored
+
   const session = await authService.getSession()
-  if (!session) {
-    return null
-  }
-  return session.getIdToken().getJwtToken()
+  return session?.getIdToken().getJwtToken() ?? null
 }
 

@@ -10,10 +10,11 @@
     "lint": "next lint",
     "export": "next export",
     "postinstall": "npx browserslist@latest --update-db || true",
-    "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui",
-    "test:e2e:headed": "playwright test --headed",
-    "test:e2e:debug": "playwright test --debug"
+    "test:e2e": "playwright test -c e2e/playwright.config.ts --project=chromium",
+    "test:e2e:all": "playwright test -c e2e/playwright.config.ts",
+    "test:e2e:ui": "playwright test -c e2e/playwright.config.ts --project=chromium --ui",
+    "test:e2e:headed": "playwright test -c e2e/playwright.config.ts --project=chromium --headed",
+    "test:e2e:debug": "playwright test -c e2e/playwright.config.ts --project=chromium --debug"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",

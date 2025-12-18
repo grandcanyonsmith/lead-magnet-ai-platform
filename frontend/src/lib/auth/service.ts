@@ -13,6 +13,7 @@ import {
 import { AuthResponse, AuthUser } from '@/types/auth'
 import { LocalStorageTokenStorage } from './storage'
 import { logger } from '@/utils/logger'
+import { isJwtExpired } from '@/utils/jwt'
 
 // Initialize pool lazily to avoid build-time errors
 let userPool: CognitoUserPool | null = null
@@ -61,6 +62,10 @@ export class AuthService {
   }
 
   async signIn(email: string, password: string): Promise<AuthResponse> {
+    if (this.isMockAuthEnabled()) {
+      return this.mockSignIn(email, password)
+    }
+
     return new Promise((resolve) => {
       try {
         const pool = getUserPool()
@@ -100,6 +105,81 @@ export class AuthService {
         resolve({ success: false, error: errorMessage })
       }
     })
+  }
+
+  private isMockAuthEnabled(): boolean {
+    const mode = (process.env.NEXT_PUBLIC_AUTH_MODE || '').trim().toLowerCase()
+    return process.env.NODE_ENV !== 'production' && mode === 'mock'
+  }
+
+  private base64UrlEncodeJson(value: unknown): string {
+    const json = JSON.stringify(value)
+    const bytes = new TextEncoder().encode(json)
+
+    // Convert to binary string for btoa()
+    let binary = ''
+    for (const b of bytes) binary += String.fromCharCode(b)
+
+    if (typeof btoa === 'function') {
+      return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
+    }
+
+    // Node fallback
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const NodeBuffer = (globalThis as any).Buffer as
+      | { from(data: Uint8Array): { toString(enc: 'base64'): string } }
+      | undefined
+    if (NodeBuffer) {
+      return NodeBuffer.from(bytes).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
+    }
+
+    throw new Error('No base64 encoder available in this environment')
+  }
+
+  private createUnsignedJwt(payload: Record<string, unknown>): string {
+    const header = { alg: 'none', typ: 'JWT' }
+    return `${this.base64UrlEncodeJson(header)}.${this.base64UrlEncodeJson(payload)}.`
+  }
+
+  private async mockSignIn(email: string, password: string): Promise<AuthResponse> {
+    const expectedEmail = (process.env.NEXT_PUBLIC_MOCK_AUTH_EMAIL || 'test@example.com').trim()
+    const expectedPassword = process.env.NEXT_PUBLIC_MOCK_AUTH_PASSWORD || 'TestPass123!'
+
+    if (email !== expectedEmail || password !== expectedPassword) {
+      return { success: false, error: 'Invalid credentials' }
+    }
+
+    const now = Math.floor(Date.now() / 1000)
+    const exp = now + 60 * 60 // 1 hour
+
+    const basePayload = {
+      sub: 'mock-user',
+      email,
+      name: 'Test User',
+      iat: now,
+      exp,
+      'cognito:username': email,
+      'custom:role': 'USER',
+      'custom:customer_id': 'cust_test',
+    }
+
+    const idToken = this.createUnsignedJwt({
+      ...basePayload,
+      token_use: 'id',
+    })
+
+    const accessToken = this.createUnsignedJwt({
+      ...basePayload,
+      token_use: 'access',
+      scope: 'aws.cognito.signin.user.admin',
+    })
+
+    const refreshToken = `mock-refresh-${now}`
+
+    this.tokenStorage.setTokens(accessToken, idToken, refreshToken)
+    this.tokenStorage.setUsername(email)
+
+    return { success: true }
   }
 
   async signUp(
@@ -258,6 +338,13 @@ export class AuthService {
 
   async isAuthenticated(): Promise<boolean> {
     try {
+      // Prefer localStorage tokens (our app stores these on successful login).
+      // This makes auth checks more resilient (and enables deterministic e2e mock auth).
+      const storedIdToken = this.tokenStorage.getIdToken()
+      if (storedIdToken && !isJwtExpired(storedIdToken, 30)) {
+        return true
+      }
+
       getUserPool()
       if (!clientId) {
         return false
