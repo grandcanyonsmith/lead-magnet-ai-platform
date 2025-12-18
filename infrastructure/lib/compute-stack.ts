@@ -6,6 +6,8 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
+import * as ecs from 'aws-cdk-lib/aws-ecs';
+import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import { Construct } from 'constructs';
 import { TableMap, TableKey } from './types';
 import { createLambdaWithTables, grantSecretsAccess, grantDynamoDBPermissions, grantS3Permissions } from './utils/lambda-helpers';
@@ -17,6 +19,13 @@ export interface ComputeStackProps extends cdk.StackProps {
   artifactsBucket: s3.Bucket;
   cloudfrontDomain?: string;  // Optional CloudFront distribution domain
   ecrRepository?: ecr.IRepository;  // Optional ECR repository for container image
+  shellExecutor?: {
+    cluster: ecs.ICluster;
+    taskDefinition: ecs.ITaskDefinition;
+    securityGroup: ec2.ISecurityGroup;
+    subnetIds: string[];
+    resultsBucket: s3.IBucket;
+  };
 }
 
 export class ComputeStack extends cdk.Stack {
@@ -44,6 +53,13 @@ export class ComputeStack extends cdk.Stack {
           // Playwright environment variables
           // Set browsers path to match Dockerfile installation location
           [ENV_VAR_NAMES.PLAYWRIGHT_BROWSERS_PATH]: PLAYWRIGHT_BROWSERS_PATH,
+          ...(props.shellExecutor ? {
+            [ENV_VAR_NAMES.SHELL_EXECUTOR_RESULTS_BUCKET]: props.shellExecutor.resultsBucket.bucketName,
+            [ENV_VAR_NAMES.SHELL_EXECUTOR_CLUSTER_ARN]: props.shellExecutor.cluster.clusterArn,
+            [ENV_VAR_NAMES.SHELL_EXECUTOR_TASK_DEFINITION_ARN]: props.shellExecutor.taskDefinition.taskDefinitionArn,
+            [ENV_VAR_NAMES.SHELL_EXECUTOR_SECURITY_GROUP_ID]: props.shellExecutor.securityGroup.securityGroupId,
+            [ENV_VAR_NAMES.SHELL_EXECUTOR_SUBNET_IDS]: props.shellExecutor.subnetIds.join(','),
+          } : {}),
         };
         
         if (props.ecrRepository) {
@@ -104,6 +120,37 @@ export class ComputeStack extends cdk.Stack {
       this,
       [SECRET_NAMES.OPENAI_API_KEY, SECRET_NAMES.TWILIO_CREDENTIALS]
     );
+
+    // Shell executor permissions (if configured): allow job processor to run ECS tasks and poll the results bucket.
+    if (props.shellExecutor) {
+      props.shellExecutor.resultsBucket.grantReadWrite(this.jobProcessorLambda);
+
+      this.jobProcessorLambda.addToRolePolicy(
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: ['ecs:RunTask', 'ecs:DescribeTaskDefinition'],
+          resources: [props.shellExecutor.taskDefinition.taskDefinitionArn],
+        })
+      );
+      this.jobProcessorLambda.addToRolePolicy(
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: ['ecs:DescribeTasks', 'ecs:StopTask'],
+          resources: ['*'],
+        })
+      );
+
+      const execRoleArn = (props.shellExecutor.taskDefinition as any).executionRole?.roleArn;
+      if (execRoleArn) {
+        this.jobProcessorLambda.addToRolePolicy(
+          new iam.PolicyStatement({
+            effect: iam.Effect.ALLOW,
+            actions: ['iam:PassRole'],
+            resources: [execRoleArn],
+          })
+        );
+      }
+    }
 
     // Create IAM role for Step Functions
     const stateMachineRole = new iam.Role(this, 'StateMachineRole', {
