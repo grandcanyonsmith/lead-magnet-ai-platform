@@ -8,8 +8,6 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as logs from 'aws-cdk-lib/aws-logs';
-import * as ecs from 'aws-cdk-lib/aws-ecs';
-import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import { Construct } from 'constructs';
 import { TableMap } from './types';
 import { createLambdaRole, grantDynamoDBPermissions, grantS3Permissions, grantSecretsAccess } from './utils/lambda-helpers';
@@ -24,11 +22,12 @@ export interface ApiStackProps extends cdk.StackProps {
   artifactsBucket: s3.Bucket;
   cloudfrontDomain?: string;
   shellExecutor: {
-    cluster: ecs.ICluster;
-    taskDefinition: ecs.ITaskDefinition;
-    securityGroup: ec2.ISecurityGroup;
+    clusterArn: string;
+    taskDefinitionFamily: string;
+    executionRoleArn?: string;
+    securityGroupId: string;
     subnetIds: string[];
-    resultsBucket: s3.IBucket;
+    resultsBucketName: string;
   };
 }
 
@@ -50,14 +49,20 @@ export class ApiStack extends cdk.Stack {
     // Grant S3 permissions
     grantS3Permissions(lambdaRole, props.artifactsBucket);
     // Shell executor results bucket (presigned PUT + polling GET)
-    props.shellExecutor.resultsBucket.grantReadWrite(lambdaRole);
+    const shellResultsBucket = s3.Bucket.fromBucketName(this, 'ShellExecutorResultsBucket', props.shellExecutor.resultsBucketName);
+    shellResultsBucket.grantReadWrite(lambdaRole);
 
     // Allow API Lambda to run ECS tasks (shell executor) and pass the execution role.
+    const taskDefArnWildcard = cdk.Stack.of(this).formatArn({
+      service: 'ecs',
+      resource: 'task-definition',
+      resourceName: `${props.shellExecutor.taskDefinitionFamily}:*`,
+    });
     lambdaRole.addToPolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
         actions: ['ecs:RunTask', 'ecs:DescribeTaskDefinition'],
-        resources: [props.shellExecutor.taskDefinition.taskDefinitionArn],
+        resources: [taskDefArnWildcard],
       })
     );
     // DescribeTasks and StopTask don't support resource-level permissions reliably; scope to *.
@@ -69,7 +74,7 @@ export class ApiStack extends cdk.Stack {
       })
     );
     // Pass the task execution role to ECS so it can pull the image and write logs.
-    const execRoleArn = (props.shellExecutor.taskDefinition as any).executionRole?.roleArn;
+    const execRoleArn = props.shellExecutor.executionRoleArn;
     if (execRoleArn) {
       lambdaRole.addToPolicy(
         new iam.PolicyStatement({
@@ -136,10 +141,11 @@ export class ApiStack extends cdk.Stack {
         [ENV_VAR_NAMES.SHELL_TOOL_IP_LIMIT_PER_HOUR]: process.env.SHELL_TOOL_IP_LIMIT_PER_HOUR || '10',
         [ENV_VAR_NAMES.SHELL_TOOL_MAX_IN_FLIGHT]: process.env.SHELL_TOOL_MAX_IN_FLIGHT || '5',
         [ENV_VAR_NAMES.SHELL_TOOL_QUEUE_WAIT_MS]: process.env.SHELL_TOOL_QUEUE_WAIT_MS || '0',
-        [ENV_VAR_NAMES.SHELL_EXECUTOR_RESULTS_BUCKET]: props.shellExecutor.resultsBucket.bucketName,
-        [ENV_VAR_NAMES.SHELL_EXECUTOR_CLUSTER_ARN]: props.shellExecutor.cluster.clusterArn,
-        [ENV_VAR_NAMES.SHELL_EXECUTOR_TASK_DEFINITION_ARN]: props.shellExecutor.taskDefinition.taskDefinitionArn,
-        [ENV_VAR_NAMES.SHELL_EXECUTOR_SECURITY_GROUP_ID]: props.shellExecutor.securityGroup.securityGroupId,
+        [ENV_VAR_NAMES.SHELL_EXECUTOR_RESULTS_BUCKET]: props.shellExecutor.resultsBucketName,
+        [ENV_VAR_NAMES.SHELL_EXECUTOR_CLUSTER_ARN]: props.shellExecutor.clusterArn,
+        // ECS RunTask accepts either full ARN or family[:revision]. We intentionally use the stable family.
+        [ENV_VAR_NAMES.SHELL_EXECUTOR_TASK_DEFINITION_ARN]: props.shellExecutor.taskDefinitionFamily,
+        [ENV_VAR_NAMES.SHELL_EXECUTOR_SECURITY_GROUP_ID]: props.shellExecutor.securityGroupId,
         [ENV_VAR_NAMES.SHELL_EXECUTOR_SUBNET_IDS]: props.shellExecutor.subnetIds.join(','),
         // AWS_REGION is automatically set by Lambda runtime, don't set it manually
         [ENV_VAR_NAMES.LOG_LEVEL]: DEFAULT_LOG_LEVEL,

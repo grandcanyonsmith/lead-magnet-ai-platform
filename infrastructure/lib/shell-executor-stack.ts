@@ -5,7 +5,7 @@ import * as logs from 'aws-cdk-lib/aws-logs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import { Construct } from 'constructs';
-import { RESOURCE_PREFIXES } from './config/constants';
+import { RESOURCE_PREFIXES, SHELL_EXECUTOR_TASK_FAMILY } from './config/constants';
 
 export interface ShellExecutorStackProps extends cdk.StackProps {
   // No cross-stack dependencies required for the executor itself.
@@ -49,7 +49,7 @@ export class ShellExecutorStack extends cdk.Stack {
     this.cluster = new ecs.Cluster(this, 'ShellExecutorCluster', {
       vpc: this.vpc,
       containerInsights: true,
-      clusterName: 'leadmagnet-shell-executor',
+      clusterName: SHELL_EXECUTOR_TASK_FAMILY,
     });
 
     // Private, short-lived results bucket (executor uploads via presigned PUT).
@@ -87,7 +87,7 @@ export class ShellExecutorStack extends cdk.Stack {
     this.securityGroup.addEgressRule(ec2.Peer.ipv4(this.vpc.vpcCidrBlock), ec2.Port.tcp(53), 'Allow DNS TCP within VPC');
 
     const logGroup = new logs.LogGroup(this, 'ShellExecutorLogGroup', {
-      logGroupName: '/aws/ecs/leadmagnet-shell-executor',
+      logGroupName: `/aws/ecs/${SHELL_EXECUTOR_TASK_FAMILY}`,
       retention: logs.RetentionDays.ONE_WEEK,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
@@ -95,6 +95,7 @@ export class ShellExecutorStack extends cdk.Stack {
     this.taskDefinition = new ecs.FargateTaskDefinition(this, 'ShellExecutorTaskDef', {
       cpu: 512,
       memoryLimitMiB: 1024,
+      family: SHELL_EXECUTOR_TASK_FAMILY,
       // NOTE: CDK will create a task role by default. We will remove TaskRoleArn
       // from the synthesized CFN so tasks run without an attached IAM role.
     });
@@ -137,9 +138,10 @@ export class ShellExecutorStack extends cdk.Stack {
       exportName: 'ShellExecutorClusterArn',
     });
 
-    new cdk.CfnOutput(this, 'ShellExecutorTaskDefinitionArn', {
-      value: this.taskDefinition.taskDefinitionArn,
-      exportName: 'ShellExecutorTaskDefinitionArn',
+    // Export a stable identifier (family), NOT the revisioned TaskDefinition ARN.
+    new cdk.CfnOutput(this, 'ShellExecutorTaskDefinitionFamily', {
+      value: SHELL_EXECUTOR_TASK_FAMILY,
+      exportName: 'ShellExecutorTaskDefinitionFamily',
     });
 
     new cdk.CfnOutput(this, 'ShellExecutorSecurityGroupId', {

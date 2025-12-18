@@ -8,7 +8,7 @@ import { WorkerStack } from '../lib/worker-stack';
 import { ComputeStack } from '../lib/compute-stack';
 import { ApiStack } from '../lib/api-stack';
 import { ShellExecutorStack } from '../lib/shell-executor-stack';
-import { STACK_NAMES, DEFAULT_REGION } from '../lib/config/constants';
+import { STACK_NAMES, DEFAULT_REGION, SHELL_EXECUTOR_TASK_FAMILY } from '../lib/config/constants';
 
 /**
  * Validates required environment variables
@@ -106,11 +106,12 @@ function createStacks(app: cdk.App, env: cdk.Environment): void {
     cloudfrontDomain: storageStack.distribution.distributionDomainName,
     ecrRepository: workerStack.ecrRepository,
     shellExecutor: {
-      cluster: shellExecutorStack.cluster,
-      taskDefinition: shellExecutorStack.taskDefinition,
-      securityGroup: shellExecutorStack.securityGroup,
+      clusterArn: shellExecutorStack.cluster.clusterArn,
+      taskDefinitionFamily: SHELL_EXECUTOR_TASK_FAMILY,
+      executionRoleArn: shellExecutorStack.taskDefinition.executionRole.roleArn,
+      securityGroupId: shellExecutorStack.securityGroup.securityGroupId,
       subnetIds: shellExecutorStack.subnetIds,
-      resultsBucket: shellExecutorStack.resultsBucket,
+      resultsBucketName: shellExecutorStack.resultsBucket.bucketName,
     },
   });
 
@@ -127,11 +128,12 @@ function createStacks(app: cdk.App, env: cdk.Environment): void {
     artifactsBucket: storageStack.artifactsBucket,
     cloudfrontDomain: storageStack.distribution.distributionDomainName,
     shellExecutor: {
-      cluster: shellExecutorStack.cluster,
-      taskDefinition: shellExecutorStack.taskDefinition,
-      securityGroup: shellExecutorStack.securityGroup,
+      clusterArn: shellExecutorStack.cluster.clusterArn,
+      taskDefinitionFamily: SHELL_EXECUTOR_TASK_FAMILY,
+      executionRoleArn: shellExecutorStack.taskDefinition.executionRole.roleArn,
+      securityGroupId: shellExecutorStack.securityGroup.securityGroupId,
       subnetIds: shellExecutorStack.subnetIds,
-      resultsBucket: shellExecutorStack.resultsBucket,
+      resultsBucketName: shellExecutorStack.resultsBucket.bucketName,
     },
   });
 }
