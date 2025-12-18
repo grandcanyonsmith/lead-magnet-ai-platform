@@ -63,6 +63,15 @@ export const STACK_NAMES = {
 } as const;
 
 /**
+ * ECS task definition family name for the shell executor.
+ *
+ * Important: This must remain stable across deployments.
+ * Other stacks/Lambdas should reference the task definition by family (or family:* IAM wildcard)
+ * rather than importing a specific TaskDefinition ARN revision via CloudFormation exports.
+ */
+export const SHELL_EXECUTOR_TASK_FAMILY = STACK_NAMES.SHELL_EXECUTOR;
+
+/**
  * Resource prefixes and naming patterns
  */
 export const RESOURCE_PREFIXES = {
