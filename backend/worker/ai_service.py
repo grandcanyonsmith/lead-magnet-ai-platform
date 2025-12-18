@@ -13,6 +13,8 @@ from services.image_handler import ImageHandler
 from services.html_generator import HTMLGenerator
 from services.openai_client import OpenAIClient
 from services.cua_loop_service import CUALoopService
+from services.shell_executor_service import ShellExecutorService
+from services.shell_loop_service import ShellLoopService
 from utils.decimal_utils import convert_decimals_to_float
 
 logger = logging.getLogger(__name__)
@@ -28,6 +30,8 @@ class AIService:
         self.image_handler = ImageHandler(self.s3_service)
         self.html_generator = HTMLGenerator(self.openai_client)
         self.cua_loop_service = CUALoopService(self.image_handler)
+        self.shell_executor_service = ShellExecutorService()
+        self.shell_loop_service = ShellLoopService(self.shell_executor_service)
     
     def generate_report(
         self,
@@ -240,6 +244,71 @@ class AIService:
             except Exception as e:
                 logger.error(f"[AI Service] Error in CUA loop: {e}", exc_info=True)
                 # Fall through to regular error handling
+                raise
+
+        # Shell tool loop (developer-executed tool; OpenAI will return shell_call items until we respond)
+        has_shell = any(
+            isinstance(t, dict) and t.get("type") == "shell"
+            for t in (validated_tools or [])
+        )
+
+        if has_shell:
+            logger.info("[AI Service] Using shell tool loop", extra={
+                "model": model,
+                "tool_choice": normalized_tool_choice,
+            })
+
+            try:
+                # Build initial API params (first request)
+                params = self.openai_client.build_api_params(
+                    model=model,
+                    instructions=instructions,
+                    input_text=input_text,
+                    tools=validated_tools,
+                    tool_choice=normalized_tool_choice,
+                    has_computer_use=False,
+                    reasoning_level=None,
+                    previous_image_urls=previous_image_urls if has_image_generation else None,
+                    job_id=job_id,
+                    tenant_id=tenant_id,
+                    reasoning_effort=reasoning_effort,
+                )
+
+                final_response = self.shell_loop_service.run_shell_loop(
+                    openai_client=self.openai_client,
+                    model=model,
+                    instructions=instructions,
+                    input_text=input_text,
+                    tools=validated_tools or [],
+                    tool_choice=normalized_tool_choice,
+                    params=params,
+                    reasoning_effort=reasoning_effort,
+                    max_iterations=25,
+                    max_duration_seconds=300,
+                    tenant_id=tenant_id,
+                    job_id=job_id,
+                )
+
+                # Process final response as usual (usage/cost, raw_api_response serialization, etc.)
+                return self.openai_client.process_api_response(
+                    response=final_response,
+                    model=model,
+                    instructions=instructions,
+                    input_text=input_text,
+                    previous_context=previous_context,
+                    context=context,
+                    tools=validated_tools or [],
+                    tool_choice=normalized_tool_choice,
+                    params=params,
+                    image_handler=self.image_handler,
+                    tenant_id=tenant_id,
+                    job_id=job_id,
+                    step_name=getattr(self, "_current_step_name", None),
+                    step_instructions=getattr(self, "_current_step_instructions", None) or instructions,
+                )
+
+            except Exception as e:
+                logger.error(f"[AI Service] Error in shell loop: {e}", exc_info=True)
                 raise
         
         # Regular API call flow (non-CUA)
