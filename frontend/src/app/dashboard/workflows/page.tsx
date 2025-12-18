@@ -1,14 +1,37 @@
 'use client'
 
-import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
+import { useEffect, useState, useRef, useMemo, useCallback, Fragment } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { useSettings } from '@/hooks/api/useSettings'
 import { buildPublicFormUrl } from '@/utils/url'
 import { openJobDocumentInNewTab } from '@/utils/jobs/openJobDocument'
-import { FiPlus, FiEdit, FiTrash2, FiEye, FiExternalLink, FiCopy, FiCheck, FiMoreVertical, FiLoader, FiCheckCircle, FiXCircle, FiClock, FiList, FiFileText, FiArrowLeft, FiFolder, FiFolderPlus, FiMove, FiX } from 'react-icons/fi'
+import {
+  PlusIcon,
+  PencilIcon,
+  TrashIcon,
+  EyeIcon,
+  ArrowTopRightOnSquareIcon,
+  ClipboardIcon,
+  CheckIcon,
+  EllipsisVerticalIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  ClockIcon,
+  ListBulletIcon,
+  DocumentTextIcon,
+  ArrowLeftIcon,
+  FolderIcon,
+  FolderPlusIcon,
+  FolderArrowDownIcon,
+  XMarkIcon,
+  MagnifyingGlassIcon,
+  ArrowPathIcon
+} from '@heroicons/react/24/outline'
+import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild, Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react'
 import { Folder } from '@/types'
 import toast from 'react-hot-toast'
+import clsx from 'clsx'
 
 export default function WorkflowsPage() {
   const router = useRouter()
@@ -17,12 +40,11 @@ export default function WorkflowsPage() {
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null)
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [workflowJobs, setWorkflowJobs] = useState<Record<string, any[]>>({})
   const [loadingJobs, setLoadingJobs] = useState<Record<string, boolean>>({})
   const [openingDocumentJobId, setOpeningDocumentJobId] = useState<string | null>(null)
-  const menuRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  
   // Folder modal state
   const [showCreateFolderModal, setShowCreateFolderModal] = useState(false)
   const [showMoveFolderModal, setShowMoveFolderModal] = useState<string | null>(null)
@@ -30,6 +52,7 @@ export default function WorkflowsPage() {
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null)
   const [editingFolderName, setEditingFolderName] = useState('')
   const [folderActionLoading, setFolderActionLoading] = useState(false)
+  
   // Track which workflow IDs we've already loaded jobs for
   const loadedWorkflowIdsRef = useRef<Set<string>>(new Set())
   // Ref to track the latest workflows and workflowJobs for polling
@@ -454,52 +477,6 @@ export default function WorkflowsPage() {
     }
   }, [hasProcessingJobs]) // Only recreate interval when processing status changes
 
-  // Close menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
-      if (openMenuId) {
-        const target = event.target as HTMLElement
-        if (!target) {
-          setOpenMenuId(null)
-          return
-        }
-        
-        // Check if click is on a menu item using data attribute (more reliable than refs)
-        const menuItem = target.closest('[data-menu-item="true"]')
-        const menuContainer = target.closest('[data-menu-id]')
-        
-        // If click is on a menu item or inside a menu container for the open menu, don't close
-        if (menuItem || (menuContainer && menuContainer.getAttribute('data-menu-id') === openMenuId)) {
-          return // Don't close menu - let the button's onClick handle it
-        }
-        
-        // Also check refs for backward compatibility (mobile and desktop use different ref keys)
-        const mobileMenuElement = menuRefs.current[`mobile-${openMenuId}`]
-        const desktopMenuElement = menuRefs.current[openMenuId]
-        const menuElement = mobileMenuElement || desktopMenuElement
-        
-        if (menuElement) {
-          // Check if target is inside the menu element
-          if (menuElement.contains(target)) {
-            return
-          }
-        }
-        
-        // Click is outside menu - close it
-        setOpenMenuId(null)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    document.addEventListener('touchstart', handleClickOutside)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-      document.removeEventListener('touchstart', handleClickOutside)
-    }
-  }, [openMenuId])
-
-  // loadWorkflows is defined above with useCallback
-
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this lead magnet? This will also delete its associated form.')) {
       return
@@ -553,23 +530,16 @@ export default function WorkflowsPage() {
     }
   }
 
-  const formatUrl = (url: string) => {
-    if (url.length > 40) {
-      return url.substring(0, 37) + '...'
-    }
-    return url
-  }
-
   const getJobStatusIcon = (status: string) => {
     switch (status) {
       case 'completed':
-        return <FiCheckCircle className="w-3 h-3 text-green-600" />
+        return <CheckCircleIcon className="w-3.5 h-3.5 text-green-600" />
       case 'failed':
-        return <FiXCircle className="w-3 h-3 text-red-600" />
+        return <XCircleIcon className="w-3.5 h-3.5 text-red-600" />
       case 'processing':
-        return <FiLoader className="w-3 h-3 text-blue-600 animate-spin" />
+        return <ArrowPathIcon className="w-3.5 h-3.5 text-blue-600 animate-spin" />
       default:
-        return <FiClock className="w-3 h-3 text-yellow-600" />
+        return <ClockIcon className="w-3.5 h-3.5 text-yellow-600" />
     }
   }
 
@@ -604,19 +574,20 @@ export default function WorkflowsPage() {
     })
   }, [workflows, currentFolderId, searchQuery])
 
-  // Workflows in root (no folder) for count
-  const rootWorkflowCount = useMemo(() => {
-    return workflows.filter(w => !w.folder_id).length
-  }, [workflows])
-
   if (loading) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
         <div className="h-8 bg-gray-200 rounded w-48 animate-pulse"></div>
-        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex gap-2">
+            <div className="h-10 w-32 bg-gray-200 rounded-lg animate-pulse"></div>
+            <div className="h-10 w-40 bg-gray-200 rounded-lg animate-pulse"></div>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-16 bg-gray-100 rounded animate-pulse"></div>
+              <div key={i} className="h-16 bg-gray-100 rounded-lg animate-pulse"></div>
             ))}
           </div>
         </div>
@@ -625,86 +596,83 @@ export default function WorkflowsPage() {
   }
 
   return (
-    <div>
+    <div className="max-w-7xl mx-auto">
+      {/* Header Section */}
+      <div className="mb-6 sm:mb-8">
+        {currentFolderId && (
       <button
-        onClick={() => {
-          if (currentFolderId) {
-            setCurrentFolderId(null)
-          } else {
-            router.back()
-          }
-        }}
-        className="flex items-center text-gray-600 hover:text-gray-900 mb-4 py-2 touch-target"
-      >
-        <FiArrowLeft className="w-4 h-4 mr-2" />
-        {currentFolderId ? 'Back to All Lead Magnets' : 'Back'}
+            onClick={() => setCurrentFolderId(null)}
+            className="group flex items-center text-sm font-medium text-gray-500 hover:text-gray-900 mb-4 transition-colors"
+          >
+            <ArrowLeftIcon className="w-4 h-4 mr-1 group-hover:-translate-x-0.5 transition-transform" />
+            Back to All Lead Magnets
       </button>
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6">
-        <div className="mb-2 sm:mb-0">
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-1">
+        )}
+        
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
             {currentFolder ? currentFolder.folder_name : 'Lead Magnets'}
           </h1>
-          <p className="text-sm sm:text-base text-gray-600">
-            {currentFolder ? `${filteredWorkflows.length} lead magnet${filteredWorkflows.length !== 1 ? 's' : ''} in this folder` : 'Manage your AI lead magnets and their forms'}
+            <p className="mt-1 text-sm text-gray-500">
+              {currentFolder 
+                ? `${filteredWorkflows.length} lead magnet${filteredWorkflows.length !== 1 ? 's' : ''} in this folder` 
+                : 'Manage your AI lead magnets and their forms'}
           </p>
         </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+          
+          <div className="flex items-center gap-3 w-full sm:w-auto">
           <button
             onClick={() => setShowCreateFolderModal(true)}
-            className="flex items-center justify-center px-3 py-2 sm:py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all text-sm sm:text-base"
+              className="flex items-center justify-center px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 text-sm"
           >
-            <FiFolderPlus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-            <span className="hidden sm:inline">New Folder</span>
-            <span className="sm:hidden">Folder</span>
+              <FolderPlusIcon className="w-5 h-5 mr-2 text-gray-400" />
+              New Folder
           </button>
           <button
             onClick={() => router.push('/dashboard/workflows/new')}
-            className="flex items-center justify-center px-3 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg hover:from-primary-700 hover:to-primary-800 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 text-sm sm:text-base flex-1 sm:flex-none"
+              className="flex items-center justify-center px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 text-sm flex-1 sm:flex-none"
           >
-            <FiPlus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+              <PlusIcon className="w-5 h-5 mr-2" />
             Create Lead Magnet
           </button>
+          </div>
         </div>
       </div>
 
       {/* Search Bar */}
       {workflows.length > 0 && (
-        <div className="mb-4 sm:mb-6">
-          <div className="relative">
+        <div className="mb-6">
+          <div className="relative max-w-lg">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+            </div>
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search lead magnets by name, description, or form..."
-              className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              placeholder="Search lead magnets..."
+              className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm transition-shadow shadow-sm"
             />
-            <svg
-              className="absolute left-3 top-2.5 w-5 h-5 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
           </div>
         </div>
       )}
 
       {/* Folders Section - Only show when not inside a folder */}
       {!currentFolderId && folders.length > 0 && (
-        <div className="mb-6">
-          <h2 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-            <FiFolder className="w-4 h-4" />
+        <div className="mb-8">
+          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+            <FolderIcon className="w-4 h-4" />
             Folders
           </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {folders.map((folder) => (
               <div
                 key={folder.folder_id}
                 className="relative group"
               >
                 {editingFolderId === folder.folder_id ? (
-                  <div className="bg-white rounded-lg border-2 border-primary-500 p-3 shadow-sm">
+                  <div className="bg-white rounded-xl border-2 border-primary-500 p-3 shadow-sm">
                     <input
                       type="text"
                       value={editingFolderName}
@@ -716,516 +684,162 @@ export default function WorkflowsPage() {
                           setEditingFolderName('')
                         }
                       }}
-                      className="w-full text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                      className="w-full text-sm border-0 border-b border-gray-200 p-0 pb-1 focus:ring-0 focus:border-primary-500 bg-transparent"
                       autoFocus
                       disabled={folderActionLoading}
                     />
-                    <div className="flex gap-1 mt-2">
-                      <button
-                        onClick={() => handleRenameFolder(folder.folder_id)}
-                        className="text-xs bg-primary-600 text-white px-2 py-1 rounded hover:bg-primary-700 disabled:opacity-50"
-                        disabled={folderActionLoading}
-                      >
-                        Save
-                      </button>
+                    <div className="flex gap-2 mt-2 justify-end">
                       <button
                         onClick={() => {
                           setEditingFolderId(null)
                           setEditingFolderName('')
                         }}
-                        className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200"
+                        className="text-xs text-gray-500 hover:text-gray-700"
                         disabled={folderActionLoading}
                       >
                         Cancel
                       </button>
+                      <button
+                        onClick={() => handleRenameFolder(folder.folder_id)}
+                        className="text-xs text-primary-600 hover:text-primary-700 font-medium disabled:opacity-50"
+                        disabled={folderActionLoading}
+                      >
+                        Save
+                      </button>
                     </div>
                   </div>
                 ) : (
-                  <button
+                  <div
                     onClick={() => setCurrentFolderId(folder.folder_id)}
-                    className="w-full bg-white rounded-lg border border-gray-200 p-3 hover:border-primary-300 hover:shadow-md transition-all text-left group"
+                    className="group/card cursor-pointer w-full bg-white rounded-xl border border-gray-200 p-4 hover:border-primary-200 hover:shadow-md transition-all relative"
                   >
-                    <div className="flex items-center gap-2 mb-1">
-                      <FiFolder className="w-5 h-5 text-primary-600" />
-                      <span className="text-sm font-medium text-gray-900 truncate flex-1">{folder.folder_name}</span>
-                    </div>
-                    <span className="text-xs text-gray-500">
-                      {folder.workflow_count || 0} item{(folder.workflow_count || 0) !== 1 ? 's' : ''}
-                    </span>
-                  </button>
-                )}
-                {/* Folder actions dropdown */}
-                {editingFolderId !== folder.folder_id && (
-                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="flex gap-1">
+                    <div className="flex items-start justify-between mb-2">
+                      <FolderIcon className="w-8 h-8 text-primary-100 fill-primary-50 group-hover/card:text-primary-200 transition-colors" />
+                      <Menu as="div" className="relative">
+                        <MenuButton 
+                          onClick={(e) => e.stopPropagation()}
+                          className="p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 opacity-0 group-hover/card:opacity-100 transition-opacity focus:outline-none"
+                        >
+                          <EllipsisVerticalIcon className="w-4 h-4" />
+                        </MenuButton>
+                        <Transition
+                          as={Fragment}
+                          enter="transition ease-out duration-100"
+                          enterFrom="transform opacity-0 scale-95"
+                          enterTo="transform opacity-100 scale-100"
+                          leave="transition ease-in duration-75"
+                          leaveFrom="transform opacity-100 scale-100"
+                          leaveTo="transform opacity-0 scale-95"
+                        >
+                          <MenuItems className="absolute right-0 mt-1 w-36 origin-top-right bg-white rounded-lg shadow-lg ring-1 ring-black/5 focus:outline-none z-10">
+                            <div className="py-1">
+                              <MenuItem>
+                                {({ active }) => (
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
                           setEditingFolderId(folder.folder_id)
                           setEditingFolderName(folder.folder_name)
                         }}
-                        className="p-1 bg-white rounded shadow text-gray-600 hover:text-primary-600"
-                        title="Rename folder"
-                      >
-                        <FiEdit className="w-3 h-3" />
+                                    className={clsx(
+                                      active ? 'bg-gray-50' : '',
+                                      'flex w-full items-center px-4 py-2 text-xs text-gray-700'
+                                    )}
+                                  >
+                                    <PencilIcon className="mr-2 h-3.5 w-3.5 text-gray-400" />
+                                    Rename
                       </button>
+                                )}
+                              </MenuItem>
+                              <MenuItem>
+                                {({ active }) => (
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
                           handleDeleteFolder(folder.folder_id)
                         }}
-                        className="p-1 bg-white rounded shadow text-gray-600 hover:text-red-600"
-                        title="Delete folder"
-                      >
-                        <FiTrash2 className="w-3 h-3" />
+                                    className={clsx(
+                                      active ? 'bg-red-50' : '',
+                                      'flex w-full items-center px-4 py-2 text-xs text-red-600'
+                                    )}
+                                  >
+                                    <TrashIcon className="mr-2 h-3.5 w-3.5 text-red-400" />
+                                    Delete
                       </button>
-                    </div>
-                  </div>
                 )}
+                              </MenuItem>
               </div>
+                          </MenuItems>
+                        </Transition>
+                      </Menu>
+          </div>
+                    <div className="font-medium text-gray-900 truncate text-sm mb-0.5">{folder.folder_name}</div>
+                    <div className="text-xs text-gray-500">
+                      {folder.workflow_count || 0} item{(folder.workflow_count || 0) !== 1 ? 's' : ''}
+          </div>
+        </div>
+      )}
+            </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Create Folder Modal */}
-      {showCreateFolderModal && (
-        <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Create New Folder</h2>
-              <button
-                onClick={() => {
-                  setShowCreateFolderModal(false)
-                  setNewFolderName('')
-                }}
-                className="p-1 text-gray-400 hover:text-gray-600"
-              >
-                <FiX className="w-5 h-5" />
-              </button>
-            </div>
-            <input
-              type="text"
-              value={newFolderName}
-              onChange={(e) => setNewFolderName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleCreateFolder()
-                if (e.key === 'Escape') {
-                  setShowCreateFolderModal(false)
-                  setNewFolderName('')
-                }
-              }}
-              placeholder="Folder name"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent mb-4"
-              autoFocus
-              disabled={folderActionLoading}
-            />
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => {
-                  setShowCreateFolderModal(false)
-                  setNewFolderName('')
-                }}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                disabled={folderActionLoading}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleCreateFolder}
-                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
-                disabled={!newFolderName.trim() || folderActionLoading}
-              >
-                {folderActionLoading ? 'Creating...' : 'Create Folder'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Move to Folder Modal */}
-      {showMoveFolderModal && (
-        <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Move to Folder</h2>
-              <button
-                onClick={() => setShowMoveFolderModal(null)}
-                className="p-1 text-gray-400 hover:text-gray-600"
-              >
-                <FiX className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              <button
-                onClick={() => handleMoveToFolder(showMoveFolderModal, null)}
-                className="w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors flex items-center gap-3"
-                disabled={folderActionLoading}
-              >
-                <FiFolder className="w-5 h-5 text-gray-400" />
-                <span className="text-sm font-medium text-gray-700">Root (No folder)</span>
-              </button>
-              {folders.map((folder) => (
-                <button
-                  key={folder.folder_id}
-                  onClick={() => handleMoveToFolder(showMoveFolderModal, folder.folder_id)}
-                  className="w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors flex items-center gap-3"
-                  disabled={folderActionLoading}
-                >
-                  <FiFolder className="w-5 h-5 text-primary-600" />
-                  <span className="text-sm font-medium text-gray-700">{folder.folder_name}</span>
-                </button>
-              ))}
-            </div>
-            {folderActionLoading && (
-              <div className="flex justify-center mt-4">
-                <FiLoader className="w-5 h-5 animate-spin text-primary-600" />
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
+      {/* Main Content Area */}
       {filteredWorkflows.length === 0 && workflows.length > 0 ? (
-        <div className="bg-white rounded-lg shadow p-6 sm:p-12 text-center">
-          <p className="text-gray-600 mb-4 text-sm sm:text-base">No lead magnets match your search</p>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center max-w-lg mx-auto mt-12">
+          <div className="mx-auto h-12 w-12 text-gray-300 mb-4">
+            <MagnifyingGlassIcon className="h-full w-full" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No matching lead magnets</h3>
+          <p className="text-gray-500 mb-6">Try adjusting your search query or filters.</p>
           <button
             onClick={() => setSearchQuery('')}
-            className="inline-flex items-center px-3 sm:px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm sm:text-base"
+            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
           >
             Clear search
           </button>
         </div>
       ) : workflows.length === 0 ? (
-        <div className="bg-white rounded-lg shadow p-6 sm:p-12 text-center">
-          <p className="text-gray-600 mb-4 text-sm sm:text-base">No lead magnets yet</p>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center max-w-lg mx-auto mt-12">
+          <div className="mx-auto h-12 w-12 bg-primary-100 rounded-xl flex items-center justify-center mb-4">
+            <PlusIcon className="h-6 w-6 text-primary-600" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No lead magnets yet</h3>
+          <p className="text-gray-500 mb-6">Get started by creating your first AI-powered lead magnet workflow.</p>
           <button
             onClick={() => router.push('/dashboard/workflows/new')}
-            className="inline-flex items-center px-3 sm:px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm sm:text-base"
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
           >
-            <FiPlus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-            Create your first lead magnet
+            <PlusIcon className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
+            Create Lead Magnet
           </button>
         </div>
       ) : (
-        <>
-          {/* Mobile Card View */}
-          <div className="block md:hidden space-y-3">
-            {filteredWorkflows.map((workflow) => {
-              const formUrl = workflow.form ? publicUrlFor(workflow.form) : null
-              return (
-                <div key={workflow.workflow_id} className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex-1 min-w-0">
-                      <a
-                        href={`/dashboard/workflows/${workflow.workflow_id}`}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          router.push(`/dashboard/workflows/${workflow.workflow_id}`)
-                        }}
-                        className="text-base font-semibold text-primary-600 hover:text-primary-900 truncate block transition-colors"
-                      >
-                        {workflow.workflow_name}
-                      </a>
-                      {workflow.workflow_description && (
-                        <p className="text-xs text-gray-500 mt-1 line-clamp-2">{workflow.workflow_description}</p>
-                      )}
-                    </div>
-                    <div className="relative ml-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setOpenMenuId(openMenuId === workflow.workflow_id ? null : workflow.workflow_id)
-                        }}
-                        onTouchStart={(e) => {
-                          e.stopPropagation()
-                          setOpenMenuId(openMenuId === workflow.workflow_id ? null : workflow.workflow_id)
-                        }}
-                        className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all touch-target"
-                        aria-label="Actions"
-                      >
-                        <FiMoreVertical className="w-4 h-4" />
-                      </button>
-                      {openMenuId === workflow.workflow_id && (
-                        <div
-                          ref={(el) => { menuRefs.current[`mobile-${workflow.workflow_id}`] = el; }}
-                          data-menu-id={workflow.workflow_id}
-                          className="absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-200 z-10"
-                          onMouseDown={(e) => e.stopPropagation()}
-                          onTouchStart={(e) => e.stopPropagation()}
-                        >
-                          <div className="py-1">
-                            <button
-                              data-menu-item="true"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                e.preventDefault()
-                                setOpenMenuId(null)
-                                if (typeof window !== 'undefined') {
-                                  window.location.href = `/dashboard/workflows/${workflow.workflow_id}`
-                                } else {
-                                  router.push(`/dashboard/workflows/${workflow.workflow_id}`)
-                                }
-                              }}
-                              onTouchEnd={(e) => {
-                                e.stopPropagation()
-                                e.preventDefault()
-                                setOpenMenuId(null)
-                                if (typeof window !== 'undefined') {
-                                  window.location.href = `/dashboard/workflows/${workflow.workflow_id}`
-                                } else {
-                                  router.push(`/dashboard/workflows/${workflow.workflow_id}`)
-                                }
-                              }}
-                              className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 active:bg-gray-100 flex items-center touch-target"
-                            >
-                              <FiEye className="w-3 h-3 mr-2" />
-                              View
-                            </button>
-                            <button
-                              data-menu-item="true"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                e.preventDefault()
-                                setOpenMenuId(null)
-                                if (typeof window !== 'undefined') {
-                                  window.location.href = `/dashboard/workflows/${workflow.workflow_id}/edit`
-                                } else {
-                                  router.push(`/dashboard/workflows/${workflow.workflow_id}/edit`)
-                                }
-                              }}
-                              onTouchEnd={(e) => {
-                                e.stopPropagation()
-                                e.preventDefault()
-                                setOpenMenuId(null)
-                                if (typeof window !== 'undefined') {
-                                  window.location.href = `/dashboard/workflows/${workflow.workflow_id}/edit`
-                                } else {
-                                  router.push(`/dashboard/workflows/${workflow.workflow_id}/edit`)
-                                }
-                              }}
-                              className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 active:bg-gray-100 flex items-center touch-target"
-                            >
-                              <FiEdit className="w-3 h-3 mr-2" />
-                              Edit
-                            </button>
-                            <button
-                              data-menu-item="true"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                e.preventDefault()
-                                setOpenMenuId(null)
-                                handleDelete(workflow.workflow_id)
-                              }}
-                              onTouchEnd={(e) => {
-                                e.stopPropagation()
-                                e.preventDefault()
-                                setOpenMenuId(null)
-                                handleDelete(workflow.workflow_id)
-                              }}
-                              className="w-full text-left px-3 py-2 text-xs text-red-600 hover:bg-red-50 active:bg-red-50 flex items-center touch-target"
-                            >
-                              <FiTrash2 className="w-3 h-3 mr-2" />
-                              Delete
-                            </button>
-                            <button
-                              data-menu-item="true"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                e.preventDefault()
-                                setOpenMenuId(null)
-                                setShowMoveFolderModal(workflow.workflow_id)
-                              }}
-                              onTouchEnd={(e) => {
-                                e.stopPropagation()
-                                e.preventDefault()
-                                setOpenMenuId(null)
-                                setShowMoveFolderModal(workflow.workflow_id)
-                              }}
-                              className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 active:bg-gray-100 flex items-center touch-target border-t border-gray-100"
-                            >
-                              <FiMove className="w-3 h-3 mr-2" />
-                              Move to Folder
-                            </button>
-                            {formUrl && (
-                              <button
-                                data-menu-item="true"
-                                onClick={async (e) => {
-                                  e.stopPropagation()
-                                  e.preventDefault()
-                                  await copyToClipboard(formUrl, workflow.workflow_id)
-                                  // Small delay to show feedback before closing
-                                  setTimeout(() => setOpenMenuId(null), 100)
-                                }}
-                                onTouchEnd={async (e) => {
-                                  e.stopPropagation()
-                                  e.preventDefault()
-                                  await copyToClipboard(formUrl, workflow.workflow_id)
-                                  // Small delay to show feedback before closing
-                                  setTimeout(() => setOpenMenuId(null), 100)
-                                }}
-                                className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 active:bg-gray-100 flex items-center touch-target"
-                              >
-                                {copiedUrl === workflow.workflow_id ? (
-                                  <>
-                                    <FiCheck className="w-3 h-3 mr-2 text-green-600" />
-                                    Copied!
-                                  </>
-                                ) : (
-                                  <>
-                                    <FiCopy className="w-3 h-3 mr-2" />
-                                    Copy Form URL
-                                  </>
-                                )}
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2.5 text-xs">
-                    {/* Form Link - Consolidated */}
-                    {workflow.form && formUrl ? (
-                      <div className="flex items-center gap-2">
-                        <a
-                          href={formUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-primary-600 hover:text-primary-900 font-medium truncate flex-1 min-w-0 flex items-center gap-1.5"
-                          title={formUrl}
-                        >
-                          <FiExternalLink className="w-3 h-3 flex-shrink-0" />
-                          <span className="truncate">{workflow.form.form_name}</span>
-                        </a>
-                      </div>
-                    ) : workflow.form ? (
-                      <div className="text-gray-400 italic text-xs">No form URL</div>
-                    ) : null}
-
-                    {/* Metadata - Two Column Grid */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="flex items-center gap-1.5">
-                        <FiList className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                        <div className="flex gap-1 flex-wrap">
-                          <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-                            {workflow.steps?.length || 0} step{workflow.steps?.length !== 1 ? 's' : ''}
-                          </span>
-                          {workflow.template_id && (
-                            <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-800">
-                              Template
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1.5">
-                        <FiClock className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                        <span className="text-gray-600 text-xs">{new Date(workflow.created_at).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-
-                    {/* Generated Documents - Simplified */}
-                    <div className="pt-1.5">
-                      {loadingJobs[workflow.workflow_id] ? (
-                        <div className="text-xs text-gray-500 flex items-center gap-1.5">
-                          <FiLoader className="w-3 h-3 animate-spin" />
-                          <span>Loading...</span>
-                        </div>
-                      ) : (() => {
-                        const jobs = workflowJobs[workflow.workflow_id] || []
-                        const processingJobs = jobs.filter((j: any) => j.status === 'processing' || j.status === 'pending')
-                        const completedJobs = jobs.filter((j: any) => j.status === 'completed')
-
-                        if (processingJobs.length > 0) {
-                          return (
-                            <div className="text-xs text-blue-600 flex items-center gap-1.5">
-                              <FiLoader className="w-3 h-3 animate-spin" />
-                              <span>Processing...</span>
-                            </div>
-                          )
-                        } else if (completedJobs.length > 0) {
-                          const mostRecentJob = completedJobs[0]
-                          return (
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                                <FiFileText className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                                <span className="text-gray-600 text-xs">
-                                  {completedJobs.length} document{completedJobs.length !== 1 ? 's' : ''}
-                                </span>
-                                {mostRecentJob.output_url && (
-                                  <button
-                                    type="button"
-                                    className="text-primary-600 hover:text-primary-900 flex-shrink-0"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      openJobDocument(mostRecentJob.job_id, mostRecentJob.output_url)
-                                    }}
-                                    title="Open most recent document"
-                                    aria-label="Open most recent document"
-                                  >
-                                    {openingDocumentJobId === mostRecentJob.job_id ? (
-                                      <FiLoader className="w-3 h-3 animate-spin" />
-                                    ) : (
-                                      <FiExternalLink className="w-3 h-3" />
-                                    )}
-                                  </button>
-                                )}
-                              </div>
-                              {completedJobs.length > 1 && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    router.push(`/dashboard/jobs?workflow_id=${workflow.workflow_id}`)
-                                  }}
-                                  className="text-xs text-primary-600 hover:text-primary-900 flex-shrink-0"
-                                >
-                                  View all
-                                </button>
-                              )}
-                            </div>
-                          )
-                        } else {
-                          return (
-                            <div className="text-xs text-gray-400 italic flex items-center gap-1.5">
-                              <FiFileText className="w-3.5 h-3.5" />
-                              <span>No documents yet</span>
-                            </div>
-                          )
-                        }
-                      })()}
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           {/* Desktop Table View */}
-          <div className="hidden md:block bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50/50">
                 <tr>
-                  <th className="px-3 md:px-4 lg:px-6 py-3 md:py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Lead Magnet Name
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Lead Magnet
                   </th>
-                  <th className="px-3 md:px-4 lg:px-6 py-3 md:py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Form
                   </th>
-                  <th className="hidden xl:table-cell px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <th scope="col" className="hidden xl:table-cell px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Last Updated
                   </th>
-                  <th className="px-3 md:px-4 lg:px-6 py-3 md:py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Generated Documents
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Documents
                   </th>
-                  <th className="px-3 md:px-4 lg:px-6 py-3 md:py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Actions
+                  <th scope="col" className="relative px-6 py-4">
+                    <span className="sr-only">Actions</span>
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-100">
+              <tbody className="bg-white divide-y divide-gray-200">
                 {filteredWorkflows.map((workflow) => {
                   const formUrl = workflow.form ? publicUrlFor(workflow.form) : null
                   const jobs = workflowJobs[workflow.workflow_id] || []
@@ -1233,211 +847,202 @@ export default function WorkflowsPage() {
                   const completedJobs = jobs.filter((j: any) => j.status === 'completed')
 
                   return (
-                    <tr key={workflow.workflow_id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-3 md:px-4 lg:px-6 py-3 md:py-4">
-                        <a
-                          href={`/dashboard/workflows/${workflow.workflow_id}`}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            router.push(`/dashboard/workflows/${workflow.workflow_id}`)
-                          }}
-                          className="text-xs md:text-sm font-semibold text-primary-600 hover:text-primary-900 transition-colors"
-                        >
+                    <tr 
+                      key={workflow.workflow_id} 
+                      className="hover:bg-gray-50/50 transition-colors cursor-pointer group"
+                      onClick={() => router.push(`/dashboard/workflows/${workflow.workflow_id}`)}
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex items-center">
+                          <div className="flex-shrink-0 h-10 w-10 bg-primary-50 rounded-lg flex items-center justify-center text-primary-600">
+                            <DocumentTextIcon className="h-6 w-6" />
+                          </div>
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-gray-900 group-hover:text-primary-600 transition-colors">
                           {workflow.workflow_name}
-                        </a>
+                            </div>
                         {workflow.workflow_description && (
-                          <div className="text-xs md:text-sm text-gray-500 mt-1 line-clamp-1">{workflow.workflow_description}</div>
+                              <div className="text-sm text-gray-500 truncate max-w-xs">{workflow.workflow_description}</div>
                         )}
+                          </div>
+                        </div>
                       </td>
-                      <td className="px-3 md:px-4 lg:px-6 py-3 md:py-4">
+                      <td className="px-6 py-4 text-sm text-gray-500">
                         {workflow.form ? (
                           formUrl ? (
                             <a
                               href={formUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-xs md:text-sm text-primary-600 hover:text-primary-900 font-medium flex items-center gap-1.5"
-                              title={formUrl}
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex items-center gap-1.5 text-primary-600 hover:text-primary-700 font-medium transition-colors"
                             >
-                              <span className="truncate">{workflow.form.form_name}</span>
-                              <FiExternalLink className="w-3 h-3 flex-shrink-0" />
+                              <span className="truncate max-w-[150px]">{workflow.form.form_name}</span>
+                              <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5 flex-shrink-0" />
                             </a>
                           ) : (
-                            <div className="text-xs md:text-sm text-gray-900">{workflow.form.form_name}</div>
+                            <span className="text-gray-900">{workflow.form.form_name}</span>
                           )
                         ) : (
-                          <span className="text-xs md:text-sm text-gray-400 italic">No form</span>
+                          <span className="text-gray-400 italic">No form attached</span>
                         )}
                       </td>
-                      <td className="hidden xl:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {new Date(workflow.created_at).toLocaleDateString()}
+                      <td className="hidden xl:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <div className="flex items-center gap-1.5">
+                          <ClockIcon className="w-4 h-4 text-gray-400" />
+                          {formatRelativeTime(workflow.updated_at || workflow.created_at)}
+                        </div>
                       </td>
-                      <td className="px-3 md:px-4 lg:px-6 py-3 md:py-4">
+                      <td className="px-6 py-4">
                         {loadingJobs[workflow.workflow_id] ? (
-                          <div className="text-xs text-gray-500 flex items-center">
-                            <FiLoader className="w-3 h-3 mr-1 animate-spin" />
-                            Loading...
+                          <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                            <ArrowPathIcon className="w-3 h-3 mr-1 animate-spin" />
+                            Loading
                           </div>
                         ) : processingJobs.length > 0 ? (
-                          <div className="text-xs text-blue-600 flex items-center">
-                            <FiLoader className="w-3 h-3 mr-1 animate-spin" />
-                            Processing...
+                          <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            <ArrowPathIcon className="w-3 h-3 mr-1 animate-spin" />
+                            Processing ({processingJobs.length})
                           </div>
                         ) : completedJobs.length > 0 ? (
-                          <div className="space-y-1">
-                            {completedJobs.slice(0, 2).map((job: any) => (
-                              <div key={job.job_id} className="flex items-center gap-2 text-xs">
-                                {getJobStatusIcon(job.status)}
-                                <span className="text-gray-600">{formatRelativeTime(job.created_at)}</span>
-                                {job.output_url && (
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2">
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    {completedJobs.length} generated
+                                </span>
+                                {completedJobs[0]?.output_url && (
                                   <button
-                                    type="button"
-                                    className="text-primary-600 hover:text-primary-900"
                                     onClick={(e) => {
                                       e.stopPropagation()
-                                      openJobDocument(job.job_id, job.output_url)
-                                    }}
-                                    title="Open document"
-                                    aria-label="Open document"
-                                  >
-                                    {openingDocumentJobId === job.job_id ? (
-                                      <FiLoader className="w-3 h-3 animate-spin" />
-                                    ) : (
-                                      <FiExternalLink className="w-3 h-3" />
-                                    )}
+                                            openJobDocument(completedJobs[0].job_id, completedJobs[0].output_url)
+                                        }}
+                                        className="text-xs text-primary-600 hover:text-primary-700 font-medium hover:underline"
+                                    >
+                                        View latest
                                   </button>
                                 )}
                               </div>
-                            ))}
-                            {completedJobs.length > 2 && (
-                              <button
-                                onClick={() => router.push(`/dashboard/jobs?workflow_id=${workflow.workflow_id}`)}
-                                className="text-xs text-primary-600 hover:text-primary-900"
-                              >
-                                View all {completedJobs.length}
-                              </button>
-                            )}
                           </div>
                         ) : (
-                          <span className="text-xs text-gray-400 italic">No documents yet</span>
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                            No documents
+                          </span>
                         )}
                       </td>
-                      <td className="px-3 md:px-4 lg:px-6 py-3 md:py-4 whitespace-nowrap text-right">
-                        <div className="relative inline-block">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setOpenMenuId(openMenuId === workflow.workflow_id ? null : workflow.workflow_id)
-                            }}
-                            onTouchStart={(e) => {
-                              e.stopPropagation()
-                              setOpenMenuId(openMenuId === workflow.workflow_id ? null : workflow.workflow_id)
-                            }}
-                            className="p-1.5 md:p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all touch-target"
-                            title="Actions"
+                      <td className="px-6 py-4 text-right text-sm font-medium">
+                        <Menu as="div" className="relative inline-block text-left">
+                          <MenuButton 
+                            onClick={(e) => e.stopPropagation()}
+                            className="p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 focus:outline-none transition-colors"
                           >
-                            <FiMoreVertical className="w-4 h-4 md:w-5 md:h-5" />
-                          </button>
-                          {openMenuId === workflow.workflow_id && (
-                            <div
-                              ref={(el) => { menuRefs.current[workflow.workflow_id] = el; }}
-                              data-menu-id={workflow.workflow_id}
-                              className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10"
-                              onMouseDown={(e) => e.stopPropagation()}
-                              onTouchStart={(e) => e.stopPropagation()}
-                            >
-                              <div className="py-1">
+                            <EllipsisVerticalIcon className="w-5 h-5" aria-hidden="true" />
+                          </MenuButton>
+                          <Transition
+                            as={Fragment}
+                            enter="transition ease-out duration-100"
+                            enterFrom="transform opacity-0 scale-95"
+                            enterTo="transform opacity-100 scale-100"
+                            leave="transition ease-in duration-75"
+                            leaveFrom="transform opacity-100 scale-100"
+                            leaveTo="transform opacity-0 scale-95"
+                          >
+                            <MenuItems className="absolute right-0 mt-2 w-48 origin-top-right divide-y divide-gray-100 rounded-lg bg-white shadow-lg ring-1 ring-black/5 focus:outline-none z-20">
+                              <div className="px-1 py-1">
+                                <MenuItem>
+                                  {({ active }) => (
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation()
-                                    e.preventDefault()
                                     router.push(`/dashboard/workflows/${workflow.workflow_id}`)
-                                    setOpenMenuId(null)
-                                  }}
-                                  onTouchStart={(e) => {
-                                    e.stopPropagation()
-                                  }}
-                                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 active:bg-gray-100 flex items-center touch-target"
-                                >
-                                  <FiEye className="w-4 h-4 mr-2" />
-                                  View
+                                      }}
+                                      className={clsx(
+                                        active ? 'bg-primary-50 text-primary-700' : 'text-gray-700',
+                                        'group flex w-full items-center rounded-md px-2 py-2 text-sm'
+                                      )}
+                                    >
+                                      <EyeIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+                                      View Details
                                 </button>
+                                  )}
+                                </MenuItem>
+                                <MenuItem>
+                                  {({ active }) => (
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation()
-                                    e.preventDefault()
                                     router.push(`/dashboard/workflows/${workflow.workflow_id}/edit`)
-                                    setOpenMenuId(null)
-                                  }}
-                                  onTouchStart={(e) => {
-                                    e.stopPropagation()
-                                  }}
-                                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 active:bg-gray-100 flex items-center touch-target"
-                                >
-                                  <FiEdit className="w-4 h-4 mr-2" />
-                                  Edit
+                                      }}
+                                      className={clsx(
+                                        active ? 'bg-primary-50 text-primary-700' : 'text-gray-700',
+                                        'group flex w-full items-center rounded-md px-2 py-2 text-sm'
+                                      )}
+                                    >
+                                      <PencilIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+                                      Edit Lead Magnet
                                 </button>
+                                  )}
+                                </MenuItem>
+                              </div>
+                              <div className="px-1 py-1">
+                                <MenuItem>
+                                  {({ active }) => (
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation()
-                                    e.preventDefault()
-                                    setOpenMenuId(null)
-                                    handleDelete(workflow.workflow_id)
-                                  }}
-                                  onTouchStart={(e) => {
-                                    e.stopPropagation()
-                                  }}
-                                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 active:bg-red-50 flex items-center touch-target"
-                                >
-                                  <FiTrash2 className="w-4 h-4 mr-2" />
-                                  Delete
+                                        setShowMoveFolderModal(workflow.workflow_id)
+                                      }}
+                                      className={clsx(
+                                        active ? 'bg-gray-50' : 'text-gray-700',
+                                        'group flex w-full items-center rounded-md px-2 py-2 text-sm'
+                                      )}
+                                    >
+                                      <FolderArrowDownIcon className="mr-2 h-4 w-4 text-gray-400" aria-hidden="true" />
+                                      Move to Folder
                                 </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    e.preventDefault()
-                                    setOpenMenuId(null)
-                                    setShowMoveFolderModal(workflow.workflow_id)
-                                  }}
-                                  onTouchStart={(e) => {
-                                    e.stopPropagation()
-                                  }}
-                                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 active:bg-gray-100 flex items-center touch-target border-t border-gray-100"
-                                >
-                                  <FiMove className="w-4 h-4 mr-2" />
-                                  Move to Folder
-                                </button>
+                                  )}
+                                </MenuItem>
                                 {formUrl && (
-                                  <button
-                                    onClick={async (e) => {
-                                      e.stopPropagation()
-                                      e.preventDefault()
-                                      await copyToClipboard(formUrl, workflow.workflow_id)
-                                      // Small delay to show feedback before closing
-                                      setTimeout(() => setOpenMenuId(null), 100)
-                                    }}
-                                    onTouchStart={(e) => {
-                                      e.stopPropagation()
-                                    }}
-                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 active:bg-gray-100 flex items-center touch-target"
-                                  >
-                                    {copiedUrl === workflow.workflow_id ? (
-                                      <>
-                                        <FiCheck className="w-4 h-4 mr-2 text-green-600" />
-                                        Copied!
-                                      </>
-                                    ) : (
-                                      <>
-                                        <FiCopy className="w-4 h-4 mr-2" />
-                                        Copy Form URL
-                                      </>
+                                  <MenuItem>
+                                    {({ active }) => (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                          copyToClipboard(formUrl, workflow.workflow_id)
+                                        }}
+                                        className={clsx(
+                                          active ? 'bg-gray-50' : 'text-gray-700',
+                                          'group flex w-full items-center rounded-md px-2 py-2 text-sm'
+                                        )}
+                                      >
+                                        <ClipboardIcon className="mr-2 h-4 w-4 text-gray-400" aria-hidden="true" />
+                                        Copy Form Link
+                                </button>
                                     )}
-                                  </button>
+                                  </MenuItem>
                                 )}
                               </div>
-                            </div>
-                          )}
-                        </div>
+                              <div className="px-1 py-1">
+                                <MenuItem>
+                                  {({ active }) => (
+                                  <button
+                                      onClick={(e) => {
+                                      e.stopPropagation()
+                                        handleDelete(workflow.workflow_id)
+                                      }}
+                                      className={clsx(
+                                        active ? 'bg-red-50 text-red-700' : 'text-red-600',
+                                        'group flex w-full items-center rounded-md px-2 py-2 text-sm'
+                                      )}
+                                    >
+                                      <TrashIcon className="mr-2 h-4 w-4 text-red-400" aria-hidden="true" />
+                                      Delete
+                                  </button>
+                                )}
+                                </MenuItem>
+                              </div>
+                            </MenuItems>
+                          </Transition>
+                        </Menu>
                       </td>
                     </tr>
                   )
@@ -1446,9 +1051,149 @@ export default function WorkflowsPage() {
             </table>
           </div>
         </div>
-        </>
       )}
+
+      {/* Create Folder Modal */}
+      <Transition appear show={showCreateFolderModal} as={Fragment}>
+        <Dialog as="div" className="relative z-[100]" onClose={() => setShowCreateFolderModal(false)}>
+          <TransitionChild
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-black/25 backdrop-blur-sm" />
+          </TransitionChild>
+
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4 text-center">
+              <TransitionChild
+                as={Fragment}
+                enter="ease-out duration-300"
+                enterFrom="opacity-0 scale-95"
+                enterTo="opacity-100 scale-100"
+                leave="ease-in duration-200"
+                leaveFrom="opacity-100 scale-100"
+                leaveTo="opacity-0 scale-95"
+              >
+                <DialogPanel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
+                  <DialogTitle
+                    as="h3"
+                    className="text-lg font-medium leading-6 text-gray-900 flex items-center justify-between"
+                  >
+                    Create New Folder
+                    <button 
+                      onClick={() => setShowCreateFolderModal(false)}
+                      className="text-gray-400 hover:text-gray-500"
+                    >
+                      <XMarkIcon className="h-5 w-5" />
+                    </button>
+                  </DialogTitle>
+                  <div className="mt-4">
+                    <input
+                      type="text"
+                      value={newFolderName}
+                      onChange={(e) => setNewFolderName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleCreateFolder()
+                      }}
+                      placeholder="Folder name (e.g., Marketing, Sales)"
+                      className="w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                      autoFocus
+                    />
+                  </div>
+
+                  <div className="mt-6 flex justify-end gap-3">
+                    <button
+                      type="button"
+                      className="inline-flex justify-center rounded-lg border border-transparent bg-gray-100 px-4 py-2 text-sm font-medium text-gray-900 hover:bg-gray-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
+                      onClick={() => setShowCreateFolderModal(false)}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      className="inline-flex justify-center rounded-lg border border-transparent bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={handleCreateFolder}
+                      disabled={!newFolderName.trim() || folderActionLoading}
+                    >
+                      {folderActionLoading ? 'Creating...' : 'Create Folder'}
+                    </button>
+                  </div>
+                </DialogPanel>
+              </TransitionChild>
+            </div>
+          </div>
+        </Dialog>
+      </Transition>
+
+      {/* Move to Folder Modal */}
+      <Transition appear show={!!showMoveFolderModal} as={Fragment}>
+        <Dialog as="div" className="relative z-[100]" onClose={() => setShowMoveFolderModal(null)}>
+          <TransitionChild
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-black/25 backdrop-blur-sm" />
+          </TransitionChild>
+
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4 text-center">
+              <TransitionChild
+                as={Fragment}
+                enter="ease-out duration-300"
+                enterFrom="opacity-0 scale-95"
+                enterTo="opacity-100 scale-100"
+                leave="ease-in duration-200"
+                leaveFrom="opacity-100 scale-100"
+                leaveTo="opacity-0 scale-95"
+              >
+                <DialogPanel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
+                  <DialogTitle
+                    as="h3"
+                    className="text-lg font-medium leading-6 text-gray-900 flex items-center justify-between"
+                  >
+                    Move to Folder
+                    <button 
+                      onClick={() => setShowMoveFolderModal(null)}
+                      className="text-gray-400 hover:text-gray-500"
+                    >
+                      <XMarkIcon className="h-5 w-5" />
+                    </button>
+                  </DialogTitle>
+                  <div className="mt-4 max-h-64 overflow-y-auto space-y-2">
+                    <button
+                      onClick={() => showMoveFolderModal && handleMoveToFolder(showMoveFolderModal, null)}
+                      className="w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors flex items-center gap-3 group"
+                    >
+                      <FolderIcon className="w-5 h-5 text-gray-400 group-hover:text-gray-600" />
+                      <span className="text-sm font-medium text-gray-700">Root (No folder)</span>
+                    </button>
+                    {folders.map((folder) => (
+                      <button
+                        key={folder.folder_id}
+                        onClick={() => showMoveFolderModal && handleMoveToFolder(showMoveFolderModal, folder.folder_id)}
+                        className="w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors flex items-center gap-3 group"
+                      >
+                        <FolderIcon className="w-5 h-5 text-primary-200 group-hover:text-primary-400" />
+                        <span className="text-sm font-medium text-gray-700">{folder.folder_name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </DialogPanel>
+              </TransitionChild>
+            </div>
+          </div>
+        </Dialog>
+      </Transition>
     </div>
   )
 }
-
