@@ -16,6 +16,7 @@ interface StepEditModalProps {
 
 const AI_MODELS: AIModel[] = [
   'gpt-5',
+  'gpt-5.1-codex',
   'gpt-5.2',
   'gpt-4.1',
   'gpt-4o',

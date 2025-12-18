@@ -23,6 +23,7 @@ export interface WorkflowAIEditResponse {
 
 const AVAILABLE_MODELS = [
   'gpt-5',
+  'gpt-5.1',
   'gpt-5.2',
   'gpt-4o',
   'gpt-4o-mini',
@@ -34,6 +35,7 @@ const AVAILABLE_TOOLS = [
   'code_interpreter',
   'computer_use_preview',
   'image_generation',
+  'shell',
 ];
 
 const WORKFLOW_AI_SYSTEM_PROMPT = `You are an AI assistant that helps users restructure and optimize their entire workflow configuration for an AI-powered lead magnet generation platform.
@@ -48,6 +50,7 @@ Available Tools:
 - code_interpreter: For data analysis, calculations, file processing
 - computer_use_preview: For browser automation and UI interaction
 - image_generation: For generating images with DALL-E
+- shell: For running shell commands (executed via AWS shell executor)
 
 You must respond with a JSON object that follows this schema:
 {
