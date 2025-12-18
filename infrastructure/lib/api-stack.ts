@@ -129,6 +129,10 @@ export class ApiStack extends cdk.Stack {
       },
     });
 
+    // Provide the API base URL to the Lambda itself so it can persist it onto Jobs for downstream
+    // worker-side tracking injection (avoids cyclic cross-stack dependency with ComputeStack).
+    this.apiFunction.addEnvironment(ENV_VAR_NAMES.API_GATEWAY_URL, this.api.url!);
+
     // NOTE: We intentionally do NOT associate an AWS WAFv2 WebACL with the API Gateway HTTP API here.
     // In practice, WAFv2 WebACLAssociation can fail for HTTP API $default stages due to ARN validation
     // (e.g., arn:aws:apigateway:region::/apis/<apiId>/stages/$default) depending on AWS/WAF support.

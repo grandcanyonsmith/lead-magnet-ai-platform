@@ -399,6 +399,7 @@ class JobsController {
 
     // Create new job record
     const newJobId = `job_${ulid()}`;
+    const apiUrl = (env.apiGatewayUrl || env.apiUrl || '').replace(/\/$/, '');
     const newJob = {
       job_id: newJobId,
       tenant_id: originalJob.tenant_id,
@@ -407,6 +408,8 @@ class JobsController {
       status: 'pending',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+      // Preserve job-scoped api_url when resubmitting so downstream tracking injection works.
+      ...(originalJob.api_url ? { api_url: originalJob.api_url } : apiUrl ? { api_url: apiUrl } : {}),
     };
 
     await db.put(JOBS_TABLE, newJob);
