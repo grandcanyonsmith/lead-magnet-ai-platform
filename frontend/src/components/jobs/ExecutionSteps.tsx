@@ -11,6 +11,8 @@ import { ImagePreview } from './ImagePreview'
 import { getStepStatus, getPreviousSteps, getFormSubmission } from './utils'
 import { Artifact } from '@/types/artifact'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
+import { SubmissionSummary } from '@/components/jobs/detail/SubmissionSummary'
+import type { FormSubmission } from '@/types/form'
 
 interface ExecutionStepsProps {
   steps: MergedStep[]
@@ -20,6 +22,9 @@ interface ExecutionStepsProps {
   onToggleStep: (stepOrder: number) => void
   onCopy: (text: string) => void
   jobStatus?: string
+  submission?: FormSubmission | null
+  onResubmit?: () => void
+  resubmitting?: boolean
   onRerunStep?: (stepIndex: number) => Promise<void>
   rerunningStep?: number | null
   onEditStep?: (stepIndex: number) => void
@@ -37,6 +42,9 @@ export function ExecutionSteps({
   onToggleStep,
   onCopy,
   jobStatus,
+  submission,
+  onResubmit,
+  resubmitting,
   onRerunStep,
   rerunningStep,
   onEditStep,
@@ -55,7 +63,12 @@ export function ExecutionSteps({
 
   // Compute form submission once (must be before early return)
   const formSubmission = useMemo(
-    () => getFormSubmission(sortedSteps),
+    () => submission?.form_data ?? getFormSubmission(sortedSteps),
+    [submission?.form_data, sortedSteps]
+  )
+
+  const stepsForTimeline = useMemo(
+    () => sortedSteps.filter((step) => step.step_type !== 'form_submission'),
     [sortedSteps]
   )
 
@@ -108,11 +121,25 @@ export function ExecutionSteps({
             {/* Vertical timeline line */}
             <div className="absolute left-4 sm:left-6 top-4 bottom-4 w-px bg-gray-200" />
 
-            {sortedSteps.map((step, index) => {
+            {submission?.form_data && onResubmit && typeof resubmitting === 'boolean' && (
+              <div key="form-submission" className="relative pb-8">
+                <div className="absolute left-[-5px] top-6 h-2.5 w-2.5 rounded-full ring-4 ring-white bg-green-500" />
+                <div className="ml-6">
+                  <SubmissionSummary
+                    submission={submission}
+                    onResubmit={onResubmit}
+                    resubmitting={resubmitting}
+                    className="mb-0"
+                  />
+                </div>
+              </div>
+            )}
+
+            {stepsForTimeline.map((step, index) => {
               const stepOrder = step.step_order ?? 0
               const isExpanded = expandedSteps.has(stepOrder)
               const stepStatus = getStepStatusForStep(step)
-              const isLast = index === sortedSteps.length - 1
+              const isLast = index === stepsForTimeline.length - 1
 
               return (
                 <div key={stepOrder} className="relative pb-8 last:pb-0">

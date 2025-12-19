@@ -462,8 +462,8 @@ export function StepInputOutput({
             /* For completed/in-progress steps, show Input and Output side by side on desktop, stacked on mobile */
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-3">
               {/* Input Section */}
-              <div className="border border-blue-200 rounded-lg overflow-hidden bg-white shadow-sm">
-                <div className="bg-blue-50/60 px-3 py-2 md:px-3 md:py-1.5 border-b border-blue-200">
+              <div className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
+                <div className="bg-gray-50 px-3 py-2 md:px-3 md:py-1.5 border-b border-gray-200">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm md:text-xs font-semibold text-gray-700">Input</span>
                     <div className="flex items-center gap-1.5">
@@ -474,7 +474,7 @@ export function StepInputOutput({
                             const workflowStepIndex = step.step_order - 1
                             onEditStep(workflowStepIndex)
                           }}
-                          className="flex items-center gap-1 px-1.5 py-1 text-xs font-medium text-primary-600 hover:text-primary-800 hover:bg-primary-50 rounded transition-colors"
+                          className="flex items-center gap-1 px-1.5 py-1 text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded transition-colors"
                           title="Edit workflow step"
                         >
                           <FiEdit className="w-3 h-3" />
@@ -497,7 +497,7 @@ export function StepInputOutput({
                           }
                           onCopy(text)
                         }}
-                        className="text-xs text-gray-500 hover:text-gray-700 active:text-gray-900 flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100 active:bg-gray-200 touch-target min-h-[44px] sm:min-h-0"
+                        className="text-xs text-gray-500 hover:text-gray-700 active:text-gray-900 flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-200 active:bg-gray-300 touch-target min-h-[44px] sm:min-h-0"
                       >
                         <FiCopy className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                         <span className="hidden sm:inline">Copy</span>
@@ -505,7 +505,7 @@ export function StepInputOutput({
                     </div>
                   </div>
                 </div>
-                <div ref={inputScrollRef} className="p-3 md:p-2.5 bg-blue-50/20 max-h-[350px] md:max-h-72 overflow-y-auto scrollbar-hide-until-hover">
+                <div ref={inputScrollRef} className="p-3 md:p-2.5 bg-white max-h-[350px] md:max-h-72 overflow-y-auto scrollbar-hide-until-hover">
                   {/* Previous Steps Context */}
                   {renderPreviousStepsContext(previousSteps, formSubmission, step.step_order ?? 0)}
                   
@@ -518,8 +518,8 @@ export function StepInputOutput({
               </div>
 
               {/* Output Section */}
-              <div className="border border-green-200 rounded-lg overflow-hidden bg-white shadow-sm">
-                <div className="bg-green-50/60 px-3 py-2 md:px-3 md:py-1.5 border-b border-green-200">
+              <div className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
+                <div className="bg-gray-50 px-3 py-2 md:px-3 md:py-1.5 border-b border-gray-200">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm md:text-xs font-semibold text-gray-700">Output</span>
                     <div className="flex items-center gap-1.5">
@@ -533,7 +533,7 @@ export function StepInputOutput({
                               : JSON.stringify(formatted.content, null, 2)
                           onCopy(text)
                         }}
-                        className="text-xs text-gray-500 hover:text-gray-700 active:text-gray-900 flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100 active:bg-gray-200 touch-target min-h-[44px] sm:min-h-0"
+                        className="text-xs text-gray-500 hover:text-gray-700 active:text-gray-900 flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-200 active:bg-gray-300 touch-target min-h-[44px] sm:min-h-0"
                       >
                         <FiCopy className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                         <span className="hidden sm:inline">Copy</span>
@@ -541,7 +541,7 @@ export function StepInputOutput({
                     </div>
                   </div>
                 </div>
-                <div ref={outputScrollRef} className="p-3 md:p-2.5 bg-green-50/20 max-h-[350px] md:max-h-72 overflow-y-auto scrollbar-hide-until-hover">
+                <div ref={outputScrollRef} className="p-3 md:p-2.5 bg-white max-h-[350px] md:max-h-72 overflow-y-auto scrollbar-hide-until-hover">
                   {usedImageGeneration ? (
                     /* For image generation steps, only show the image URL, not markdown preview */
                     renderImageSection()
