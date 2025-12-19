@@ -5,8 +5,23 @@ import { useRouter, useParams } from 'next/navigation'
 import { api } from '@/lib/api'
 import { useSettings } from '@/hooks/api/useSettings'
 import { buildPublicFormUrl } from '@/utils/url'
-import { FiArrowLeft, FiEdit, FiTrash2, FiClock, FiExternalLink, FiLink, FiSettings, FiFileText, FiCalendar } from 'react-icons/fi'
+import { 
+  ArrowLeftIcon, 
+  PencilIcon, 
+  TrashIcon, 
+  ClockIcon, 
+  ArrowTopRightOnSquareIcon, 
+  LinkIcon, 
+  Cog6ToothIcon, 
+  DocumentTextIcon, 
+  CalendarIcon,
+  ChevronRightIcon,
+  FingerPrintIcon,
+  IdentificationIcon,
+  ChatBubbleLeftRightIcon
+} from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
+import clsx from 'clsx'
 
 export default function WorkflowDetailPage() {
   const router = useRouter()
@@ -102,20 +117,19 @@ export default function WorkflowDetailPage() {
     setError(null)
     
     try {
-      // Generate a valid slug (lowercase, alphanumeric and hyphens only)
+      // Generate a valid slug
       const baseSlug = workflow.workflow_name
         .toLowerCase()
         .trim()
-        .replace(/[^a-z0-9\s-]/g, '') // Remove special chars
-        .replace(/\s+/g, '-') // Replace spaces with hyphens
-        .replace(/-+/g, '-') // Replace multiple hyphens with single
-        .replace(/^-|-$/g, '') // Remove leading/trailing hyphens
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
       
-      // Create an empty form - user will add their own fields
       const formData = {
         workflow_id: workflowId,
         form_name: `${workflow.workflow_name} Form`,
-        public_slug: baseSlug || `form-${workflowId.slice(-8)}`, // Fallback if slug is empty
+        public_slug: baseSlug || `form-${workflowId.slice(-8)}`,
         form_fields_schema: {
           fields: [],
         },
@@ -125,8 +139,6 @@ export default function WorkflowDetailPage() {
       }
       
       await api.createForm(formData)
-      
-      // Reload workflow to get the new form
       await loadWorkflow()
     } catch (error: any) {
       console.error('Failed to create form:', error)
@@ -137,147 +149,163 @@ export default function WorkflowDetailPage() {
     }
   }
 
-
   if (loading) {
     return (
-      <div className="text-center py-12">
-        <p className="text-gray-600">Loading workflow...</p>
+      <div className="max-w-7xl mx-auto space-y-8 animate-pulse">
+        <div className="flex justify-between items-end">
+          <div className="space-y-3">
+            <div className="h-8 bg-gray-200 rounded w-64"></div>
+            <div className="h-4 bg-gray-100 rounded w-96"></div>
+          </div>
+          <div className="flex gap-2">
+            <div className="h-10 bg-gray-200 rounded-lg w-24"></div>
+            <div className="h-10 bg-gray-200 rounded-lg w-24"></div>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 h-96 bg-white border border-gray-200 rounded-xl"></div>
+          <div className="h-96 bg-white border border-gray-200 rounded-xl"></div>
+        </div>
       </div>
     )
   }
 
   if (error && !workflow) {
     return (
-      <div>
-        <div className="mb-6">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
-          >
-            <FiArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </button>
-        </div>
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-          {error}
+      <div className="max-w-3xl mx-auto mt-12">
+        <button
+          onClick={() => router.back()}
+          className="group flex items-center text-sm font-medium text-gray-500 hover:text-gray-900 mb-6 transition-colors"
+        >
+          <ArrowLeftIcon className="w-4 h-4 mr-1 group-hover:-translate-x-0.5 transition-transform" />
+          Back
+        </button>
+        <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-xl shadow-sm flex items-start gap-3">
+          <TrashIcon className="h-5 w-5 shrink-0 mt-0.5" />
+          <div>
+            <h3 className="font-bold">Error loading workflow</h3>
+            <p className="mt-1 text-sm">{error}</p>
+          </div>
         </div>
       </div>
     )
   }
 
-  if (!workflow) {
-    return null
-  }
+  if (!workflow) return null
 
   return (
-    <div className="overflow-x-hidden">
-      <div className="mb-4 sm:mb-6">
+    <div className="max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="mb-8">
         <button
           onClick={() => router.back()}
-          className="flex items-center text-gray-600 hover:text-gray-900 mb-3 sm:mb-4 text-sm sm:text-base py-2 touch-target"
+          className="group flex items-center text-sm font-medium text-gray-500 hover:text-gray-900 mb-4 transition-colors"
         >
-          <FiArrowLeft className="w-4 h-4 mr-2" />
-          Back
+          <ArrowLeftIcon className="w-4 h-4 mr-1 group-hover:-translate-x-0.5 transition-transform" />
+          Back to Workflows
         </button>
-        {error && (
-          <div className="mb-3 sm:mb-4 bg-red-50 border border-red-200 text-red-700 px-3 sm:px-4 py-2 sm:py-3 rounded-lg text-sm sm:text-base">
-            {error}
-          </div>
-        )}
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-0">
-          <div className="flex-1">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{workflow.workflow_name}</h1>
-            {workflow.workflow_description && (
-              <p className="text-sm sm:text-base text-gray-600 mt-1">{workflow.workflow_description}</p>
+        
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight truncate">
+              {workflow.workflow_name}
+            </h1>
+            {workflow.workflow_description ? (
+              <p className="mt-2 text-sm text-gray-500 leading-relaxed max-w-3xl">
+                {workflow.workflow_description}
+              </p>
+            ) : (
+              <p className="mt-2 text-sm text-gray-400 italic">No description provided</p>
             )}
           </div>
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          
+          <div className="flex items-center gap-3 shrink-0">
             <button
               onClick={() => router.push(`/dashboard/workflows/${workflowId}/edit`)}
-              className="flex items-center justify-center px-4 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm sm:text-base touch-target"
+              className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-gray-700 font-bold rounded-lg hover:bg-gray-50 transition-all shadow-sm text-sm"
             >
-              <FiEdit className="w-4 h-4 mr-2" />
+              <PencilIcon className="w-4 h-4 mr-2" />
               Edit
             </button>
             <button
               onClick={handleDelete}
-              className="flex items-center justify-center px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm sm:text-base touch-target"
+              className="inline-flex items-center justify-center px-4 py-2 bg-red-50 text-red-600 border border-red-100 font-bold rounded-lg hover:bg-red-100 transition-all text-sm"
             >
-              <FiTrash2 className="w-4 h-4 mr-2" />
+              <TrashIcon className="w-4 h-4 mr-2" />
               Delete
             </button>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        {/* Workflow Details */}
-        <div className="min-w-0 bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
-          <div className="flex items-center gap-2 mb-6">
-            <FiSettings className="w-5 h-5 text-gray-600" />
-            <h2 className="text-lg font-semibold text-gray-900">Workflow Details</h2>
-          </div>
-          
-          <div className="space-y-5">
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Template ID</label>
-              <div className="bg-gray-50 rounded-lg p-2.5 border border-gray-200">
-                <p className="text-xs font-mono text-gray-900 break-all">{workflow.template_id || '-'}</p>
-                {workflow.template_version && (
-                  <p className="text-xs text-gray-500 mt-1">Version {workflow.template_version}</p>
-                )}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Main Content: Info & Form */}
+        <div className="lg:col-span-2 space-y-8">
+          {/* Form Status Card */}
+          <section className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <IdentificationIcon className="h-5 w-5 text-gray-400" />
+                <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Public Form</h2>
               </div>
+              {workflow.form && (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800">
+                  Active
+                </span>
+              )}
             </div>
-
-            <div className="pb-4 border-b border-gray-100">
-              <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-                <FiFileText className="w-3.5 h-3.5" />
-                Form
-              </label>
+            
+            <div className="p-6">
               {workflow.form ? (
-                <div className="space-y-3">
-                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                    <p className="text-sm font-semibold text-gray-900 break-words">{workflow.form.form_name || 'Form'}</p>
+                <div className="space-y-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <h3 className="text-lg font-bold text-gray-900">{workflow.form.form_name}</h3>
+                      <p className="text-sm text-gray-500 mt-1 truncate">
+                        {workflow.form.public_slug && buildPublicFormUrl(workflow.form.public_slug, settings?.custom_domain)}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    {workflow.form.public_slug && (
-                      <a
-                        href={buildPublicFormUrl(workflow.form.public_slug, settings?.custom_domain)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors touch-target"
-                      >
-                        <FiExternalLink className="w-4 h-4 mr-1.5" />
-                        View Form
-                      </a>
-                    )}
-                    {workflow.form.form_id && (
-                      <button
-                        onClick={() => router.push(`/dashboard/forms/${workflow.form.form_id}/edit`)}
-                        className="inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors touch-target"
-                      >
-                        <FiEdit className="w-4 h-4 mr-1.5" />
-                        Edit Form
-                      </button>
-                    )}
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <a
+                      href={workflow.form.public_slug ? buildPublicFormUrl(workflow.form.public_slug, settings?.custom_domain) : '#'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 px-4 py-2.5 bg-primary-600 text-white font-bold rounded-xl hover:bg-primary-700 transition-all shadow-md active:scale-[0.98]"
+                    >
+                      <ArrowTopRightOnSquareIcon className="w-5 h-5" />
+                      View Public Form
+                    </a>
+                    <button
+                      onClick={() => router.push(`/dashboard/forms/${workflow.form.form_id}/edit`)}
+                      className="flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-all shadow-sm active:scale-[0.98]"
+                    >
+                      <PencilIcon className="w-5 h-5 text-gray-400" />
+                      Configure Fields
+                    </button>
                   </div>
                 </div>
               ) : (
-                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 text-center">
-                  <p className="text-sm text-gray-600 mb-3">No form attached to this lead magnet yet.</p>
+                <div className="py-8 text-center bg-gray-50/50 rounded-xl border-2 border-dashed border-gray-200">
+                  <div className="mx-auto h-12 w-12 text-gray-300 mb-3">
+                    <LinkIcon className="h-full w-full" />
+                  </div>
+                  <h3 className="text-sm font-bold text-gray-900">No Form Linked</h3>
+                  <p className="mt-1 text-sm text-gray-500 mb-6">Create a form to start collecting leads for this magnet.</p>
                   <button
                     onClick={handleCreateForm}
                     disabled={creatingForm}
-                    className="inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-target"
+                    className="inline-flex items-center gap-2 px-6 py-2.5 bg-primary-600 text-white font-bold rounded-xl hover:bg-primary-700 transition-all shadow-md disabled:opacity-50"
                   >
                     {creatingForm ? (
                       <>
-                        <FiClock className="w-4 h-4 mr-2 animate-spin" />
-                        Creating...
+                        <ArrowPathIcon className="w-5 h-5 animate-spin" />
+                        Initializing...
                       </>
                     ) : (
                       <>
-                        <FiLink className="w-4 h-4 mr-2" />
+                        <PlusIcon className="w-5 h-5" />
                         Create Form
                       </>
                     )}
@@ -285,126 +313,161 @@ export default function WorkflowDetailPage() {
                 </div>
               )}
             </div>
+          </section>
 
-            {workflow.delivery_webhook_url && (
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Webhook URL</label>
-                <div className="bg-gray-50 rounded-lg p-2.5 border border-gray-200">
-                  <p className="text-xs font-mono text-gray-900 break-all">{workflow.delivery_webhook_url}</p>
-                </div>
-              </div>
-            )}
-
-            {workflow.delivery_phone && (
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Delivery Phone</label>
-                <p className="text-sm font-medium text-gray-900 break-words">{workflow.delivery_phone}</p>
-              </div>
-            )}
-
-            <div className="pt-4 border-t border-gray-100">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-                <FiCalendar className="w-3.5 h-3.5" />
-                Timeline
-              </div>
-              <div className="space-y-3">
+          {/* Configuration Summary */}
+          <section className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50 flex items-center gap-2">
+              <Cog6ToothIcon className="h-5 w-5 text-gray-400" />
+              <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Asset Configuration</h2>
+            </div>
+            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+              <div className="space-y-6">
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Created</label>
-                  <p className="text-sm font-medium text-gray-900">
-                    {workflow.created_at ? new Date(workflow.created_at).toLocaleString() : '-'}
-                  </p>
+                  <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <FingerPrintIcon className="h-3.5 w-3.5" />
+                    Internal IDs
+                  </h4>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-[10px] text-gray-400 mb-0.5">Template ID</p>
+                      <p className="text-xs font-mono text-gray-700 bg-gray-50 px-2 py-1 rounded inline-block">
+                        {workflow.template_id || 'None'}
+                      </p>
+                    </div>
+                    {workflow.template_version && (
+                      <div>
+                        <p className="text-[10px] text-gray-400 mb-0.5">Template Version</p>
+                        <p className="text-sm font-medium text-gray-900">v{workflow.template_version}</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                {workflow.updated_at && (
+
+                {workflow.delivery_webhook_url && (
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Last Updated</label>
-                    <p className="text-sm font-medium text-gray-900">{new Date(workflow.updated_at).toLocaleString()}</p>
+                    <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                      <LinkIcon className="h-3.5 w-3.5" />
+                      External Integration
+                    </h4>
+                    <p className="text-[10px] text-gray-400 mb-0.5">Webhook Endpoint</p>
+                    <p className="text-xs font-mono text-gray-700 bg-blue-50/50 px-2 py-1 rounded break-all leading-relaxed border border-blue-100">
+                      {workflow.delivery_webhook_url}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-6 border-t md:border-t-0 md:border-l border-gray-100 pt-6 md:pt-0 md:pl-8">
+                <div>
+                  <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <CalendarIcon className="h-3.5 w-3.5" />
+                    Timeline
+                  </h4>
+                  <div className="space-y-4 mt-3">
+                    <div className="relative pl-4 border-l-2 border-gray-100 py-0.5">
+                      <div className="absolute -left-1.5 top-1.5 h-3 w-3 rounded-full bg-gray-200 border-2 border-white" />
+                      <p className="text-[10px] text-gray-400 uppercase font-bold">Created</p>
+                      <p className="text-sm font-medium text-gray-900 mt-0.5">
+                        {workflow.created_at ? new Date(workflow.created_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '—'}
+                      </p>
+                    </div>
+                    <div className="relative pl-4 border-l-2 border-primary-100 py-0.5">
+                      <div className="absolute -left-1.5 top-1.5 h-3 w-3 rounded-full bg-primary-500 border-2 border-white shadow-sm" />
+                      <p className="text-[10px] text-primary-500 uppercase font-bold">Last Updated</p>
+                      <p className="text-sm font-medium text-gray-900 mt-0.5">
+                        {workflow.updated_at ? new Date(workflow.updated_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '—'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {workflow.delivery_phone && (
+                  <div>
+                    <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                      <ChatBubbleLeftRightIcon className="h-3.5 w-3.5" />
+                      SMS Alerts
+                    </h4>
+                    <p className="text-sm font-medium text-gray-900 bg-gray-50 px-3 py-2 rounded-lg inline-block">
+                      {workflow.delivery_phone}
+                    </p>
                   </div>
                 )}
               </div>
             </div>
-          </div>
+          </section>
         </div>
 
-      </div>
-
-      {/* Recent Jobs */}
-      <div className="mt-4 sm:mt-6 bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
-        <div className="flex items-center gap-2 mb-6">
-          <FiClock className="w-5 h-5 text-gray-600" />
-          <h2 className="text-lg font-semibold text-gray-900">Recent Jobs</h2>
-        </div>
-        {jobs.length === 0 ? (
-          <p className="text-gray-500 text-sm">No jobs found for this workflow</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Job ID</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Submission</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {jobs.map((job) => {
+        {/* Sidebar: Recent Runs */}
+        <div className="space-y-6">
+          <section className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden sticky top-8">
+            <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ClockIcon className="h-5 w-5 text-gray-400" />
+                <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Recent Runs</h2>
+              </div>
+              <button 
+                onClick={() => router.push(`/dashboard/jobs?workflow_id=${workflowId}`)}
+                className="text-xs font-bold text-primary-600 hover:text-primary-700 transition-colors flex items-center gap-0.5 group"
+              >
+                View all
+                <ChevronRightIcon className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+              </button>
+            </div>
+            
+            <div className="divide-y divide-gray-100">
+              {jobs.length === 0 ? (
+                <div className="px-6 py-12 text-center">
+                  <div className="h-10 w-10 text-gray-200 mx-auto mb-3">
+                    <DocumentTextIcon className="h-full w-full" />
+                  </div>
+                  <p className="text-sm text-gray-400 font-medium tracking-tight">No generation history yet</p>
+                </div>
+              ) : (
+                jobs.map((job) => {
                   const duration = job.completed_at
-                    ? Math.round(
-                        (new Date(job.completed_at).getTime() - new Date(job.created_at).getTime()) / 1000
-                      )
+                    ? Math.round((new Date(job.completed_at).getTime() - new Date(job.created_at).getTime()) / 1000)
                     : null
-                  const submission = submissions[job.job_id]
-
+                  
                   return (
-                    <tr key={job.job_id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <button
-                          onClick={() => router.push(`/dashboard/jobs/${job.job_id}`)}
-                          className="text-xs font-mono text-gray-900 hover:text-primary-600 transition-colors text-left"
-                        >
-                          {job.job_id}
-                        </button>
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
-                        {new Date(job.created_at).toLocaleString()}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
-                        {duration !== null ? `${duration}s` : '-'}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
-                        {submission && submission.submission_data ? (
-                          <div className="max-w-xs">
-                            <div className="grid grid-cols-2 gap-2 text-xs">
-                              {Object.entries(submission.submission_data).slice(0, 4).map(([key, value]: [string, any]) => (
-                                <div key={key} className="truncate">
-                                  <span className="font-medium text-gray-500">{key}:</span>{' '}
-                                  <span className="text-gray-900">{String(value).substring(0, 20)}{String(value).length > 20 ? '...' : ''}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="text-gray-400">-</span>
+                    <div 
+                      key={job.job_id} 
+                      onClick={() => router.push(`/dashboard/jobs/${job.job_id}`)}
+                      className="group p-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-mono text-gray-400 group-hover:text-primary-500 transition-colors">
+                          {job.job_id.slice(-8).toUpperCase()}
+                        </span>
+                        <div className={clsx(
+                          "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-tight shadow-sm",
+                          job.status === 'completed' ? "bg-green-100 text-green-700" :
+                          job.status === 'failed' ? "bg-red-100 text-red-700" :
+                          "bg-blue-100 text-blue-700"
+                        )}>
+                          {job.status}
+                        </div>
+                      </div>
+                      <div className="flex items-end justify-between gap-4">
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium text-gray-600 line-clamp-1">
+                            {job.created_at ? new Date(job.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
+                          </p>
+                        </div>
+                        {duration !== null && (
+                          <span className="text-[10px] font-bold text-gray-400 shrink-0">
+                            {duration}s
+                          </span>
                         )}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-right text-sm">
-                        <button
-                          onClick={() => router.push(`/dashboard/jobs/${job.job_id}`)}
-                          className="text-primary-600 hover:text-primary-700 hover:bg-primary-50 px-3 py-1.5 rounded-lg transition-colors"
-                        >
-                          View
-                        </button>
-                      </td>
-                    </tr>
+                      </div>
+                    </div>
                   )
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+                })
+              )}
+            </div>
+          </section>
+        </div>
       </div>
     </div>
   )
 }
-

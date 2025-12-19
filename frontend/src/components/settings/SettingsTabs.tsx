@@ -4,8 +4,15 @@
 
 'use client'
 
-import { ReactNode } from 'react'
-import { FiSettings, FiImage, FiSend, FiDollarSign } from 'react-icons/fi'
+import { ReactNode, Fragment } from 'react'
+import { 
+  Cog6ToothIcon, 
+  PhotoIcon, 
+  PaperAirplaneIcon, 
+  CurrencyDollarIcon 
+} from '@heroicons/react/24/outline'
+import { Tab, TabGroup, TabList, TabPanel, TabPanels } from '@headlessui/react'
+import clsx from 'clsx'
 
 export type SettingsTab = 'general' | 'branding' | 'delivery' | 'billing'
 
@@ -16,47 +23,51 @@ interface SettingsTabsProps {
 }
 
 export function SettingsTabs({ activeTab, onTabChange, children }: SettingsTabsProps) {
-  const tabs: { id: SettingsTab; label: string; icon: typeof FiSettings }[] = [
-    { id: 'general', label: 'General', icon: FiSettings },
-    { id: 'branding', label: 'Branding', icon: FiImage },
-    { id: 'delivery', label: 'Delivery', icon: FiSend },
-    { id: 'billing', label: 'Billing & Usage', icon: FiDollarSign },
+  const tabs = [
+    { id: 'general', label: 'General', icon: Cog6ToothIcon },
+    { id: 'branding', label: 'Branding', icon: PhotoIcon },
+    { id: 'delivery', label: 'Delivery', icon: PaperAirplaneIcon },
+    { id: 'billing', label: 'Billing & Usage', icon: CurrencyDollarIcon },
   ]
 
-  return (
-    <div>
-      {/* Tabs */}
-      <div className="mb-6 border-b border-gray-200 overflow-x-auto">
-        <nav className="flex space-x-4 sm:space-x-8 min-w-max" role="tablist" aria-label="Settings sections">
-          {tabs.map((tab) => {
-            const Icon = tab.icon
-            return (
-              <button
-                key={tab.id}
-                onClick={() => onTabChange(tab.id)}
-                role="tab"
-                aria-selected={activeTab === tab.id}
-                aria-controls={`tabpanel-${tab.id}`}
-                id={`tab-${tab.id}`}
-                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors touch-target ${
-                  activeTab === tab.id
-                    ? 'border-primary-500 text-primary-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <Icon className="inline w-4 h-4 mr-2" aria-hidden="true" />
-                {tab.label}
-              </button>
-            )
-          })}
-        </nav>
-      </div>
+  const selectedIndex = tabs.findIndex(tab => tab.id === activeTab)
 
-      {/* Tab Content */}
-      <div role="tabpanel" id={`tabpanel-${activeTab}`} aria-labelledby={`tab-${activeTab}`}>
-        {children}
-      </div>
-    </div>
+  return (
+    <TabGroup 
+      selectedIndex={selectedIndex} 
+      onChange={(index) => onTabChange(tabs[index].id as SettingsTab)}
+    >
+      <TabList className="flex space-x-1 border-b border-gray-200 mb-8 overflow-x-auto scrollbar-hide">
+        {tabs.map((tab) => (
+          <Tab key={tab.id} as={Fragment}>
+            {({ selected }) => (
+              <button
+                className={clsx(
+                  'group relative flex items-center gap-2 py-4 px-4 text-sm font-bold transition-all focus:outline-none whitespace-nowrap',
+                  selected
+                    ? 'text-primary-600'
+                    : 'text-gray-400 hover:text-gray-600'
+                )}
+              >
+                <tab.icon className={clsx(
+                  'h-5 w-5 transition-colors',
+                  selected ? 'text-primary-600' : 'text-gray-400 group-hover:text-gray-500'
+                )} />
+                {tab.label}
+                {selected && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600" />
+                )}
+              </button>
+            )}
+          </Tab>
+        ))}
+      </TabList>
+      <TabPanels>
+        {/* We keep the children approach from the original component to minimize changes to the parent */}
+        <TabPanel className="focus:outline-none">
+          {children}
+        </TabPanel>
+      </TabPanels>
+    </TabGroup>
   )
 }
-
