@@ -78,6 +78,21 @@ function ensureWorkspace() {
   return dir;
 }
 
+function maybeLinkAwsConfig(workspaceDir) {
+  // Developer convenience: when running the executor locally, you can mount your host
+  // AWS config dir into /home/runner/.aws. The executor runs commands with HOME=/workspace,
+  // so we symlink /workspace/.aws -> /home/runner/.aws when present.
+  try {
+    const src = '/home/runner/.aws';
+    const dst = `${workspaceDir}/.aws`;
+    if (!fs.existsSync(dst) && fs.existsSync(src)) {
+      fs.symlinkSync(src, dst, 'dir');
+    }
+  } catch {
+    // ignore (best-effort)
+  }
+}
+
 function collectLimited(stream, maxBytes) {
   let bufs = [];
   let size = 0;
@@ -190,6 +205,7 @@ async function uploadJson(url, jsonStr, contentType) {
 async function main() {
   const job = readJobRequest();
   const cwd = ensureWorkspace();
+  maybeLinkAwsConfig(cwd);
 
   const perCommandTimeoutMs = clampInt(job.timeout_ms || getEnv('SHELL_EXECUTOR_TIMEOUT_MS'), {
     min: 1_000,
