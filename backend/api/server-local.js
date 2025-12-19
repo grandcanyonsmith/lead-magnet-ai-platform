@@ -23,6 +23,12 @@ process.env.LAMBDA_FUNCTION_NAME = process.env.LAMBDA_FUNCTION_NAME || 'leadmagn
 process.env.AWS_ACCOUNT_ID = process.env.AWS_ACCOUNT_ID || '471112574622';
 process.env.STEP_FUNCTIONS_ARN = process.env.STEP_FUNCTIONS_ARN || 'arn:aws:states:us-east-1:471112574622:stateMachine:leadmagnet-job-processor';
 process.env.ARTIFACTS_BUCKET = process.env.ARTIFACTS_BUCKET || 'leadmagnet-artifacts-471112574622';
+process.env.SHELL_EXECUTOR_RESULTS_BUCKET = process.env.SHELL_EXECUTOR_RESULTS_BUCKET || 'leadmagnet-artifacts-shell-results-471112574622';
+process.env.SHELL_EXECUTOR_TASK_DEFINITION_ARN = process.env.SHELL_EXECUTOR_TASK_DEFINITION_ARN || 'leadmagnet-shell-executor';
+process.env.SHELL_EXECUTOR_CLUSTER_ARN = process.env.SHELL_EXECUTOR_CLUSTER_ARN || 'arn:aws:ecs:us-east-1:471112574622:cluster/leadmagnet-shell-executor';
+process.env.SHELL_EXECUTOR_SECURITY_GROUP_ID = process.env.SHELL_EXECUTOR_SECURITY_GROUP_ID || 'sg-01b137df0bd0d797c';
+process.env.SHELL_EXECUTOR_SUBNET_IDS = process.env.SHELL_EXECUTOR_SUBNET_IDS || 'subnet-0ecf31413d0908e66,subnet-04e3bee51e6d630ac';
+process.env.SHELL_TOOL_ENABLED = process.env.SHELL_TOOL_ENABLED || 'true';
 process.env.IS_LOCAL = process.env.IS_LOCAL || 'true';
 process.env.NODE_ENV = process.env.NODE_ENV || 'development';
 

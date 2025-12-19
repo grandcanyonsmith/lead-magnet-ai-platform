@@ -171,12 +171,20 @@ class ShellLoopService:
                 })
 
             # Build follow-up request
+            #
+            # IMPORTANT: If the original step set tool_choice="required", keep the tool available
+            # but relax tool_choice to "auto" for follow-ups. Otherwise the model can get stuck
+            # in an endless tool-call-only loop and never produce final output_text.
+            next_tool_choice = tool_choice
+            if isinstance(tool_choice, str) and tool_choice.strip().lower() == "required":
+                next_tool_choice = "auto"
+
             next_params = openai_client.build_api_params(
                 model=model,
                 instructions=instructions,
                 input_text="",  # will be replaced
                 tools=tools,
-                tool_choice=tool_choice,
+                tool_choice=next_tool_choice,
                 has_computer_use=False,
                 reasoning_effort=reasoning_effort,
             )

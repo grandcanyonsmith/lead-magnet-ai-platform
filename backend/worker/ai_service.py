@@ -284,7 +284,10 @@ class AIService:
                     params=params,
                     reasoning_effort=reasoning_effort,
                     max_iterations=25,
-                    max_duration_seconds=300,
+                    # Keep this below the 15-minute Lambda timeout (job processor) with buffer.
+                    # Shell commands themselves can be long-running; if you need > ~14 minutes,
+                    # you'll also need to move job processing off Lambda.
+                    max_duration_seconds=14 * 60,
                     tenant_id=tenant_id,
                     job_id=job_id,
                 )

@@ -86,7 +86,7 @@ export async function runShellToolLoop(args: RunShellToolLoopArgs): Promise<RunS
   let response = await callResponsesWithTimeout(
     () =>
       openai.responses.create({
-        model,
+        model: model, // Explicitly pass the model variable
         instructions,
         input: args.input,
         tools: [{ type: 'shell' }],
@@ -130,8 +130,8 @@ export async function runShellToolLoop(args: RunShellToolLoopArgs): Promise<RunS
       // eslint-disable-next-line no-await-in-loop
       const result = await runShellExecutorJob({
         commands,
-        timeoutMs: call.action.timeout_ms,
-        maxOutputLength: call.action.max_output_length,
+        timeoutMs: call.action.timeout_ms || 120000,
+        maxOutputLength: call.action.max_output_length || 4096,
       });
 
       toolOutputs.push({
