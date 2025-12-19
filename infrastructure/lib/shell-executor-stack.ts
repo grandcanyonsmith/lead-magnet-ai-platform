@@ -199,23 +199,6 @@ export class ShellExecutorStack extends cdk.Stack {
       comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
     });
-
-    // Legacy export: needed to unblock deployment because dependent stacks still reference it.
-    // The previous implicit export was named "leadmagnet-shell-executor:ExportsOutputFnGetAttShellExecutorResultsBucket1A1277A8ArnCD053499".
-    // We add it back explicitly here and force the Logical ID to match to ensure a clean update.
-    const legacyExport = new cdk.CfnOutput(this, 'LegacyBucketArnExport', {
-      value: this.resultsBucket.bucketArn,
-      exportName: 'leadmagnet-shell-executor:ExportsOutputFnGetAttShellExecutorResultsBucket1A1277A8ArnCD053499',
-    });
-    legacyExport.overrideLogicalId('ExportsOutputFnGetAttShellExecutorResultsBucket1A1277A8ArnCD053499');
-
-    // Legacy export for Task Definition: needed to unblock deployment because dependent stacks still reference it.
-    // The previous implicit export was named "leadmagnet-shell-executor:ExportsOutputRefShellExecutorTaskDefAABA514D73CAD401".
-    const legacyTaskDefExport = new cdk.CfnOutput(this, 'LegacyTaskDefExport', {
-      value: this.taskDefinition.taskDefinitionArn,
-      exportName: 'leadmagnet-shell-executor:ExportsOutputRefShellExecutorTaskDefAABA514D73CAD401',
-    });
-    legacyTaskDefExport.overrideLogicalId('ExportsOutputRefShellExecutorTaskDefAABA514D73CAD401');
   }
 }
 

@@ -1,5 +1,6 @@
-import { FiRefreshCw } from 'react-icons/fi'
+import { ArrowPathIcon } from '@heroicons/react/24/outline'
 import type { ReactNode } from 'react'
+import clsx from 'clsx'
 
 export interface SummaryCard {
   label: string
@@ -42,21 +43,24 @@ export function SummarySection({
   onClearFilters,
 }: SummarySectionProps) {
   return (
-    <div className="mb-4 sm:mb-6 space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start">
+    <div className="mb-6 space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-end">
         <div>
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Generated Lead Magnets</h1>
-          <p className="text-sm sm:text-base text-gray-600 mt-1">Track generation progress, errors, and delivery status.</p>
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs sm:text-sm text-gray-500">
-            <span>{lastRefreshedLabel ? `Last refreshed ${lastRefreshedLabel}` : 'Waiting for first refresh'}</span>
-            <span className="hidden sm:inline text-gray-300">•</span>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">Generated Lead Magnets</h1>
+          <p className="text-sm text-gray-500 mt-1 max-w-2xl">Track generation progress, errors, and delivery status for all your AI-powered assets.</p>
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-xs font-medium text-gray-400">
+            <span className="flex items-center gap-1.5">
+              <span className={clsx("h-1.5 w-1.5 rounded-full", refreshing ? "bg-primary-500 animate-pulse" : "bg-gray-300")} />
+              {lastRefreshedLabel ? `Refreshed ${lastRefreshedLabel}` : 'Waiting for refresh'}
+            </span>
+            <span className="h-3 w-px bg-gray-200" />
             <span>{jobCount} {jobCount === 1 ? 'job' : 'jobs'} visible</span>
             {hasProcessingJobs && (
               <>
-                <span className="hidden sm:inline text-gray-300">•</span>
-                <span className="inline-flex items-center gap-1 text-primary-700 font-medium">
-                  <span className="h-2 w-2 rounded-full bg-primary-500 animate-pulse" />
-                  Auto-refreshing every 5s
+                <span className="h-3 w-px bg-gray-200" />
+                <span className="inline-flex items-center gap-1.5 text-primary-600">
+                  <ArrowPathIcon className="h-3 w-3 animate-spin" />
+                  Auto-refreshing
                 </span>
               </>
             )}
@@ -66,29 +70,33 @@ export function SummarySection({
           type="button"
           onClick={onRefresh}
           disabled={refreshing}
-          className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-all hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
         >
-          <FiRefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin text-primary-600' : ''}`} />
-          {refreshing ? 'Refreshing...' : 'Refresh data'}
+          <ArrowPathIcon className={clsx("h-4 w-4 transition-transform", refreshing && "animate-spin")} />
+          {refreshing ? 'Updating...' : 'Refresh'}
         </button>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {summaryCards.map((card) => (
-          <div key={card.label} className={`rounded-2xl border ${card.accentClass} p-4 shadow-sm`}>
-            <div className="flex items-start justify-between gap-3">
+          <div key={card.label} className={clsx("relative overflow-hidden rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition-all hover:shadow-md")}>
+            <div className="flex items-start justify-between">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{card.label}</p>
-                <p className="mt-1 text-2xl font-semibold text-gray-900">{card.value}</p>
-                {card.subtext && <p className="mt-1 text-sm text-gray-600">{card.subtext}</p>}
+                <p className="text-xs font-bold uppercase tracking-wider text-gray-400">{card.label}</p>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <p className="text-2xl font-bold text-gray-900">{card.value}</p>
+                </div>
+                {card.subtext && <p className="mt-1 text-xs text-gray-500 font-medium">{card.subtext}</p>}
               </div>
-              <span className="rounded-full bg-white/80 p-3 shadow-sm">{card.icon}</span>
+              <div className={clsx("rounded-lg p-2.5 shadow-sm ring-1 ring-inset ring-gray-200/50", card.accentClass.split(' ')[1] || 'bg-gray-50')}>
+                {card.icon}
+              </div>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Quick status filters">
+      <div className="flex flex-wrap items-center gap-2 pb-2 border-b border-gray-100" role="group" aria-label="Quick status filters">
         {quickFilters.map((filter) => {
           const isActive = activeFilter === filter.value
           return (
@@ -96,25 +104,30 @@ export function SummarySection({
               key={filter.value}
               type="button"
               onClick={() => onQuickFilterChange(filter.value)}
-              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+              className={clsx(
+                "inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold transition-all border",
                 isActive
-                  ? 'border-primary-600 bg-primary-600 text-white shadow-sm'
-                  : 'border-gray-200 bg-white text-gray-700 hover:border-primary-200 hover:text-primary-700'
-              }`}
+                  ? "border-primary-600 bg-primary-600 text-white shadow-sm"
+                  : "border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:text-gray-700"
+              )}
               title={filter.description}
             >
               <span>{filter.label}</span>
-              <span className={`text-xs font-semibold ${isActive ? 'text-white/80' : 'text-gray-500'}`}>{filter.count}</span>
+              <span className={clsx("ml-1 rounded-full px-1.5 py-0.5 text-[10px]", isActive ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500")}>
+                {filter.count}
+              </span>
             </button>
           )
         })}
-        <button
-          type="button"
-          onClick={onClearFilters}
-          className="inline-flex items-center gap-2 rounded-full border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 hover:border-gray-300 hover:text-gray-900"
-        >
-          Clear filters
-        </button>
+        {activeFilter !== 'all' && (
+          <button
+            type="button"
+            onClick={onClearFilters}
+            className="text-xs font-bold text-primary-600 hover:text-primary-700 px-2 py-1.5 transition-colors"
+          >
+            Reset filters
+          </button>
+        )}
       </div>
     </div>
   )
