@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
-import { CheckIcon, CloudArrowUpIcon } from '@heroicons/react/24/outline'
+import { CheckIcon, CloudArrowUpIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
 import { useSettings, useUpdateSettings } from '@/hooks/api/useSettings'
 import { Settings } from '@/types'
 import { LoadingState } from '@/components/ui/LoadingState'
