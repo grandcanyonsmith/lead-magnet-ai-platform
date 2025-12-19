@@ -3,7 +3,8 @@
 import React, { useState, useRef, useMemo, ReactNode } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { FiChevronDown, FiChevronUp, FiCopy } from 'react-icons/fi'
+import { Tab, TabGroup, TabList, TabPanel, TabPanels } from '@headlessui/react'
+import { ClipboardDocumentIcon } from '@heroicons/react/24/outline'
 import { toast } from 'react-hot-toast'
 
 import { useJobDetail } from '@/hooks/useJobDetail'
@@ -95,7 +96,7 @@ export default function JobDetailClient() {
     steps: mergedSteps,
   })
 
-  const [activeTab, setActiveTab] = useState<TabKey>('execution')
+  const [selectedIndex, setSelectedIndex] = useState(0)
 
   const { previewItem, openPreview, closePreview } =
     usePreviewModal<ArtifactGalleryItem>()
@@ -289,7 +290,7 @@ export default function JobDetailClient() {
           lastRefreshedLabel={lastRefreshedLabel}
           onRefresh={refreshJob}
           refreshing={refreshing}
-          onSelectArtifacts={() => setActiveTab('artifacts')}
+          onSelectArtifacts={() => setSelectedIndex(1)}
         />
 
         {submission?.form_data && (
@@ -353,8 +354,8 @@ export default function JobDetailClient() {
         {/* Tabs */}
         <JobTabs
           job={job}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
+          selectedIndex={selectedIndex}
+          setSelectedIndex={setSelectedIndex}
           mergedSteps={mergedSteps}
           artifactGalleryItems={artifactGalleryItems}
           expandedSteps={expandedSteps}
@@ -420,17 +421,14 @@ function getJobDuration(job?: Job | null): JobDurationInfo | null {
       job?.status === 'processing',
   }
 }
-
-type TabKey = 'execution' | 'artifacts' | 'tracking' | 'raw'
-
 // ---------------------------------------------------------------------------
 // Job Tabs Component
 // ---------------------------------------------------------------------------
 
 interface JobTabsProps {
   job: Job
-  activeTab: TabKey
-  setActiveTab: (tab: TabKey) => void
+  selectedIndex: number
+  setSelectedIndex: (index: number) => void
   mergedSteps: MergedStep[]
   artifactGalleryItems: ArtifactGalleryItem[]
   expandedSteps: Set<number>
@@ -449,8 +447,8 @@ interface JobTabsProps {
 
 function JobTabs({
   job,
-  activeTab,
-  setActiveTab,
+  selectedIndex,
+  setSelectedIndex,
   mergedSteps,
   artifactGalleryItems,
   expandedSteps,
@@ -466,74 +464,69 @@ function JobTabs({
   rerunningStep,
   openPreview,
 }: JobTabsProps) {
-  const tabs: { id: TabKey; label: string }[] = [
-    { id: 'execution', label: 'Execution' },
-    { id: 'artifacts', label: 'Artifacts' },
-    { id: 'tracking', label: 'Tracking' },
-    { id: 'raw', label: 'Raw JSON' },
+  const tabs = [
+    { name: 'Execution', id: 'execution' },
+    { name: 'Artifacts', id: 'artifacts' },
+    { name: 'Tracking', id: 'tracking' },
+    { name: 'Raw JSON', id: 'raw' },
   ]
 
   return (
-    <div className="mt-6">
-      {/* Tab Navigation */}
-      <div className="border-b border-gray-200">
-        <nav className="flex space-x-8" role="tablist">
+    <div className="mt-8">
+      <TabGroup selectedIndex={selectedIndex} onChange={setSelectedIndex}>
+        <TabList className="flex space-x-8 border-b border-gray-200">
           {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              role="tab"
-              aria-selected={activeTab === tab.id}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === tab.id
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+            <Tab
+              key={tab.name}
+              className={({ selected }) =>
+                `whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium outline-none transition-colors ${
+                  selected
+                    ? 'border-primary-500 text-primary-600'
+                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                }`
+              }
             >
-              {tab.label}
-            </button>
+              {tab.name}
+            </Tab>
           ))}
-        </nav>
-      </div>
-
-      {/* Tab Content */}
-      <div className="mt-6" role="tabpanel">
-        {activeTab === 'execution' && (
-          <ExecutionSteps
-            steps={mergedSteps}
-            expandedSteps={expandedSteps}
-            showExecutionSteps={showExecutionSteps}
-            onToggleShow={() => setShowExecutionSteps(!showExecutionSteps)}
-            onToggleStep={toggleStep}
-            onCopy={onCopy}
-            jobStatus={job.status}
-            onEditStep={onEditStep}
-            canEdit={true}
-            imageArtifactsByStep={imageArtifactsByStep}
-            loadingImageArtifacts={loadingArtifacts}
-            onRerunStepClick={onRerunStepClick}
-            rerunningStep={rerunningStep}
-          />
-        )}
-
-        {activeTab === 'artifacts' && (
-          <div id="job-tab-panel-artifacts">
-            <ArtifactGallery
-              items={artifactGalleryItems}
-              loading={loadingArtifacts}
-              onPreview={openPreview}
+        </TabList>
+        <TabPanels className="mt-6">
+          <TabPanel>
+            <ExecutionSteps
+              steps={mergedSteps}
+              expandedSteps={expandedSteps}
+              showExecutionSteps={showExecutionSteps}
+              onToggleShow={() => setShowExecutionSteps(!showExecutionSteps)}
+              onToggleStep={toggleStep}
+              onCopy={onCopy}
+              jobStatus={job.status}
+              onEditStep={onEditStep}
+              canEdit={true}
+              imageArtifactsByStep={imageArtifactsByStep}
+              loadingImageArtifacts={loadingArtifacts}
+              onRerunStepClick={onRerunStepClick}
+              rerunningStep={rerunningStep}
             />
-          </div>
-        )}
-
-        {activeTab === 'tracking' && (
-          <div id="job-tab-panel-tracking">
-            <JobTrackingStats jobId={job.job_id} />
-          </div>
-        )}
-
-        {activeTab === 'raw' && <RawJsonPanel data={job} />}
-      </div>
+          </TabPanel>
+          <TabPanel>
+            <div id="job-tab-panel-artifacts">
+              <ArtifactGallery
+                items={artifactGalleryItems}
+                loading={loadingArtifacts}
+                onPreview={openPreview}
+              />
+            </div>
+          </TabPanel>
+          <TabPanel>
+            <div id="job-tab-panel-tracking">
+              <JobTrackingStats jobId={job.job_id} />
+            </div>
+          </TabPanel>
+          <TabPanel>
+            <RawJsonPanel data={job} />
+          </TabPanel>
+        </TabPanels>
+      </TabGroup>
     </div>
   )
 }

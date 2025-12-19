@@ -1,14 +1,13 @@
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import {
-  FiActivity,
-  FiClock,
-  FiExternalLink,
-  FiImage,
-  FiLayers,
-  FiRefreshCw,
-  FiCopy,
-} from 'react-icons/fi'
+  ChartBarIcon,
+  ClockIcon,
+  PhotoIcon,
+  QueueListIcon,
+  ArrowPathIcon,
+  ArrowTopRightOnSquareIcon,
+} from '@heroicons/react/24/outline'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { formatRelativeTime, formatDuration } from '@/utils/date'
 import type { Job, JobStepSummary } from '@/types/job'
@@ -63,19 +62,6 @@ export function JobOverviewSection({
   const completedLabel = job.completed_at ? formatRelativeTime(job.completed_at) : null
   const isAutoUpdating = job.status === 'processing'
 
-  const handleCopyJobId = async () => {
-    try {
-      if (typeof navigator !== 'undefined' && navigator.clipboard) {
-        await navigator.clipboard.writeText(job.job_id)
-        toast.success('Job ID copied')
-      } else {
-        throw new Error('Clipboard API not available')
-      }
-    } catch {
-      toast.error('Unable to copy job ID')
-    }
-  }
-
   const handleRefresh = () => {
     onRefresh?.()
   }
@@ -98,8 +84,8 @@ export function JobOverviewSection({
 
   return (
     <section className="mb-4 sm:mb-6">
-      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6 space-y-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm ring-1 ring-black/[0.02] p-4 sm:p-6 space-y-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-2">
             <div className="flex items-center gap-2 flex-wrap text-xs font-medium uppercase tracking-wide text-gray-600">
               <StatusBadge status={job.status} />
@@ -122,40 +108,48 @@ export function JobOverviewSection({
               type="button"
               onClick={handleRefresh}
               disabled={refreshing}
-              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
-              <FiRefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin text-primary-600' : ''}`} />
+              <ArrowPathIcon className={`h-4 w-4 ${refreshing ? 'animate-spin text-primary-600' : ''}`} />
               {refreshing ? 'Refreshing...' : 'Refresh data'}
             </button>
           </div>
         </div>
 
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-4 shadow-sm">
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm flex h-full flex-col">
             <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Step Progress</p>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Step progress</p>
                 <p className="text-lg font-semibold text-gray-900">
                   {stepsSummary.completed}/{stepsSummary.total || '--'}
                 </p>
                 <p className="text-sm text-gray-600">{stepStatusCopy}</p>
               </div>
-              <span className="inline-flex rounded-full bg-blue-100 p-3 text-blue-700">
-                <FiActivity className="h-5 w-5" aria-hidden="true" />
+              <span className="inline-flex rounded-2xl bg-primary-50 p-3 text-primary-700 ring-1 ring-primary-100">
+                <ChartBarIcon className="h-5 w-5" aria-hidden="true" />
               </span>
             </div>
-            <div className="mt-3 h-2 w-full rounded-full bg-white">
-              <span
-                className="block h-full rounded-full bg-primary-500 transition-all"
-                style={{ width: `${progressPercent}%` }}
-                aria-label={`Step progress ${progressPercent}%`}
-              />
+            <div className="mt-auto pt-4">
+              <div className="h-2.5 w-full rounded-full bg-gray-100 ring-1 ring-black/[0.02] overflow-hidden">
+                <span
+                  className="block h-full rounded-full bg-primary-600 transition-all"
+                  style={{ width: `${progressPercent}%` }}
+                  aria-label={`Step progress ${progressPercent}%`}
+                />
+              </div>
+              <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
+                <span>{progressPercent}%</span>
+                <span>
+                  {stepsSummary.total ? `${stepsSummary.total} steps` : 'No steps'}
+                </span>
+              </div>
             </div>
           </div>
 
-          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm flex h-full flex-col">
             <div className="flex items-start justify-between gap-3">
-              <div>
+              <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Runtime</p>
                 <p className="text-lg font-semibold text-gray-900">
                   {jobDuration?.label || (effectiveStartTime ? 'Initializing...' : (isAutoUpdating ? 'Starting...' : 'Not started'))}
@@ -168,45 +162,45 @@ export function JobOverviewSection({
                       : (isAutoUpdating ? 'Processing started' : 'Waiting for worker')}
                 </p>
               </div>
-              <span className="inline-flex rounded-full bg-orange-100 p-3 text-orange-700">
-                <FiClock className="h-5 w-5" aria-hidden="true" />
+              <span className="inline-flex rounded-2xl bg-amber-50 p-3 text-amber-700 ring-1 ring-amber-100">
+                <ClockIcon className="h-5 w-5" aria-hidden="true" />
               </span>
             </div>
             {jobDuration?.isLive && (
-              <span className="mt-3 inline-flex items-center gap-1 rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">
+              <span className="mt-auto inline-flex items-center gap-2 rounded-full bg-green-50 px-3 py-1.5 text-xs font-semibold text-green-700 ring-1 ring-green-100">
                 <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
                 Live
               </span>
             )}
           </div>
 
-          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm flex h-full flex-col">
             <div className="flex items-start justify-between gap-3">
-              <div>
+              <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Artifacts</p>
                 <p className="text-lg font-semibold text-gray-900">{artifactCount}</p>
                 <p className="text-sm text-gray-600">
                   {artifactCount ? 'Artifacts ready to review' : 'Generated assets will appear here'}
                 </p>
               </div>
-              <span className="inline-flex rounded-full bg-purple-100 p-3 text-purple-700">
-                <FiImage className="h-5 w-5" aria-hidden="true" />
+              <span className="inline-flex rounded-2xl bg-purple-50 p-3 text-purple-700 ring-1 ring-purple-100">
+                <PhotoIcon className="h-5 w-5" aria-hidden="true" />
               </span>
             </div>
             <button
               type="button"
               onClick={handleViewArtifacts}
               disabled={artifactCount === 0}
-              className="mt-3 inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+              className="mt-auto inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
-              <FiExternalLink className="h-4 w-4" aria-hidden="true" />
+              <ArrowTopRightOnSquareIcon className="h-4 w-4" aria-hidden="true" />
               Open gallery
             </button>
           </div>
 
-          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm flex h-full flex-col">
             <div className="flex items-start justify-between gap-3">
-              <div>
+              <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Workflow</p>
                 <p className="text-lg font-semibold text-gray-900">
                   {workflow?.workflow_name || 'Workflow template'}
@@ -215,20 +209,20 @@ export function JobOverviewSection({
                   {workflow?.steps?.length ? `${workflow.steps.length} configured steps` : 'Workflow metadata unavailable'}
                 </p>
               </div>
-              <span className="inline-flex rounded-full bg-indigo-100 p-3 text-indigo-700">
-                <FiLayers className="h-5 w-5" aria-hidden="true" />
+              <span className="inline-flex rounded-2xl bg-indigo-50 p-3 text-indigo-700 ring-1 ring-indigo-100">
+                <QueueListIcon className="h-5 w-5" aria-hidden="true" />
               </span>
             </div>
             {workflow?.workflow_id ? (
               <Link
                 href={`/dashboard/workflows/${workflow.workflow_id}`}
-                className="mt-3 inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
+                className="mt-auto inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
-                <FiExternalLink className="h-4 w-4" aria-hidden="true" />
+                <ArrowTopRightOnSquareIcon className="h-4 w-4" aria-hidden="true" />
                 View template
               </Link>
             ) : (
-              <p className="mt-3 text-sm text-gray-500">Workflow details not available for this job</p>
+              <p className="mt-auto text-sm text-gray-500">Workflow details not available for this job</p>
             )}
           </div>
         </div>
