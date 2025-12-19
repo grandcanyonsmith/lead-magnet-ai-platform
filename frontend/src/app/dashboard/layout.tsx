@@ -391,8 +391,8 @@ export default function DashboardLayout({
           <ImpersonationBanner />
 
           {/* Page content */}
-          <main className="p-3 sm:p-4 md:p-6 lg:p-8 bg-zinc-50 min-h-screen">
-            <div className="w-full lg:rounded-lg lg:bg-white lg:p-6 xl:p-8 lg:shadow-sm lg:ring-1 lg:ring-zinc-950/5">
+          <main className="p-3 sm:p-4 md:p-6 lg:p-8 bg-gray-100 min-h-screen">
+            <div className="w-full lg:rounded-xl lg:bg-white lg:p-6 xl:p-8 lg:shadow-md lg:ring-1 lg:ring-gray-200">
               <div className="mx-auto max-w-6xl w-full">
                 {children}
               </div>

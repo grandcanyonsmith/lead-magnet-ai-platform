@@ -146,7 +146,7 @@ export function TechnicalDetails({ job, form, submission }: TechnicalDetailsProp
   }, [job?.job_id, showTechnicalDetails])
 
   return (
-    <div className="mt-4 sm:mt-6 bg-white rounded-lg shadow p-4 sm:p-6">
+    <div className="mt-4 sm:mt-6 bg-white rounded-2xl border border-gray-300 shadow p-4 sm:p-6 ring-1 ring-black/[0.04]">
       <div className="flex items-center justify-between mb-4">
         <button
           onClick={() => setShowTechnicalDetails(!showTechnicalDetails)}
@@ -350,7 +350,7 @@ export function TechnicalDetails({ job, form, submission }: TechnicalDetailsProp
                     return (
                       <div 
                         key={artifact.artifact_id} 
-                        className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow"
+                        className="border border-gray-300 rounded-lg overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow"
                       >
                         <div className="aspect-video bg-gray-100">
                           {artifactUrl ? (

@@ -496,7 +496,7 @@ function JobTabs({
   return (
     <div className="mt-8">
       <TabGroup selectedIndex={selectedIndex} onChange={setSelectedIndex}>
-        <TabList className="flex space-x-8 border-b border-gray-200">
+        <TabList className="flex space-x-8 border-b border-gray-300">
           {tabs.map((tab) => (
             <Tab
               key={tab.name}
