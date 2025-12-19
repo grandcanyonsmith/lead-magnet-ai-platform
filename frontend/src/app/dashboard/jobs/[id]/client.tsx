@@ -32,7 +32,6 @@ import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 
 import FlowchartSidePanel from '@/app/dashboard/workflows/components/FlowchartSidePanel'
 import { JobOverviewSection, JobDurationInfo } from '@/components/jobs/detail/JobOverviewSection'
-import { SubmissionSummary } from '@/components/jobs/detail/SubmissionSummary'
 import { JobTrackingStats } from '@/components/tracking/JobTrackingStats'
 
 import type {
@@ -309,14 +308,6 @@ export default function JobDetailClient() {
           onSelectArtifacts={() => setSelectedIndex(1)}
         />
 
-        {submission?.form_data && (
-          <SubmissionSummary
-            submission={submission}
-            onResubmit={handleResubmitClick}
-            resubmitting={resubmitting}
-          />
-        )}
-
         <ResubmitModal
           isOpen={showResubmitModal}
           onClose={() => setShowResubmitModal(false)}
@@ -381,6 +372,9 @@ export default function JobDetailClient() {
           executionStepsError={executionStepsError}
           imageArtifactsByStep={imageArtifactsByStep}
           loadingArtifacts={loadingArtifacts}
+          submission={submission}
+          onResubmit={handleResubmitClick}
+          resubmitting={resubmitting}
           onCopy={copyToClipboard}
           onEditStep={handleEditStep}
           onRerunStepClick={handleRerunStepClick}
@@ -460,6 +454,9 @@ interface JobTabsProps {
   executionStepsError: string | null
   imageArtifactsByStep: Map<number, Artifact[]>
   loadingArtifacts: boolean
+  submission?: FormSubmission | null
+  onResubmit?: () => void
+  resubmitting?: boolean
   onCopy: (text: string) => void
   onEditStep: (stepIndex: number) => void
   onRerunStepClick: (stepIndex: number) => void
@@ -480,6 +477,9 @@ function JobTabs({
   executionStepsError,
   imageArtifactsByStep,
   loadingArtifacts,
+  submission,
+  onResubmit,
+  resubmitting,
   onCopy,
   onEditStep,
   onRerunStepClick,
@@ -522,6 +522,9 @@ function JobTabs({
               onToggleStep={toggleStep}
               onCopy={onCopy}
               jobStatus={job.status}
+              submission={submission}
+              onResubmit={onResubmit}
+              resubmitting={resubmitting}
               onEditStep={onEditStep}
               canEdit={true}
               imageArtifactsByStep={imageArtifactsByStep}

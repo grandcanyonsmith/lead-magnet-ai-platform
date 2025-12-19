@@ -8,6 +8,7 @@ interface SubmissionSummaryProps {
   submission: FormSubmission
   onResubmit: () => void
   resubmitting: boolean
+  className?: string
 }
 
 function JsonValue({ value, depth = 0 }: { value: any; depth?: number }) {
@@ -146,7 +147,12 @@ function FormFieldValue({ value }: { value: any }) {
   )
 }
 
-export function SubmissionSummary({ submission, onResubmit, resubmitting }: SubmissionSummaryProps) {
+export function SubmissionSummary({
+  submission,
+  onResubmit,
+  resubmitting,
+  className = '',
+}: SubmissionSummaryProps) {
   const submittedLabel = submission.created_at ? formatRelativeTime(submission.created_at) : null
   const entries = Object.entries(submission.form_data || {})
   
@@ -171,7 +177,7 @@ export function SubmissionSummary({ submission, onResubmit, resubmitting }: Subm
   }
 
   return (
-    <section className="mb-4 sm:mb-6">
+    <section className={`mb-4 sm:mb-6 ${className}`}>
       <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
         <div className="flex flex-col gap-3 p-4 sm:p-6 md:flex-row md:items-center md:justify-between bg-gradient-to-r from-gray-50 to-white">
           <div>
