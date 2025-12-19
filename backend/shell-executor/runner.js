@@ -193,20 +193,22 @@ async function main() {
 
   const perCommandTimeoutMs = clampInt(job.timeout_ms || getEnv('SHELL_EXECUTOR_TIMEOUT_MS'), {
     min: 1_000,
-    max: 10 * 60 * 1000,
-    fallback: 120_000,
+    // NOTE: Keep in mind the caller (often Lambda) may have a shorter timeout.
+    // This cap is for the executor task itself.
+    max: 20 * 60 * 1000,
+    fallback: 1_200_000,
   });
 
   // Keep these bounded to prevent memory blowups in the runner.
   const maxStdoutBytes = clampInt(getEnv('SHELL_EXECUTOR_MAX_STDOUT_BYTES'), {
     min: 1_024,
-    max: 5 * 1024 * 1024,
-    fallback: 1 * 1024 * 1024,
+    max: 10 * 1024 * 1024,
+    fallback: 10 * 1024 * 1024,
   });
   const maxStderrBytes = clampInt(getEnv('SHELL_EXECUTOR_MAX_STDERR_BYTES'), {
     min: 1_024,
-    max: 5 * 1024 * 1024,
-    fallback: 1 * 1024 * 1024,
+    max: 10 * 1024 * 1024,
+    fallback: 10 * 1024 * 1024,
   });
 
   const startedAt = nowIso();

@@ -38,12 +38,25 @@ def main():
         'JOBS_TABLE': 'leadmagnet-jobs',
         'ARTIFACTS_TABLE': 'leadmagnet-artifacts',
         'TEMPLATES_TABLE': 'leadmagnet-templates',
+        # Shell Executor Config (Required for Shell Tool)
+        'SHELL_EXECUTOR_RESULTS_BUCKET': 'leadmagnet-artifacts-shell-results-471112574622',
+        'SHELL_EXECUTOR_TASK_DEFINITION_ARN': 'leadmagnet-shell-executor', # Family name is sufficient usually
+        'SHELL_EXECUTOR_CLUSTER_ARN': 'arn:aws:ecs:us-east-1:471112574622:cluster/leadmagnet-shell-executor',
+        'SHELL_EXECUTOR_SECURITY_GROUP_ID': 'sg-01b137df0bd0d797c',
+        'SHELL_EXECUTOR_SUBNET_IDS': 'subnet-0ecf31413d0908e66,subnet-04e3bee51e6d630ac',
     }
     
     for key, value in defaults.items():
         if not os.environ.get(key):
             os.environ[key] = value
             print(f"⚠️  Set {key}={value} (default)")
+
+    # Warn about missing shell executor variables that can't be defaulted easily
+    # (None left that are critical, but we keep the check just in case)
+    shell_vars = []
+    for var in shell_vars:
+        if not os.environ.get(var):
+            print(f"⚠️  Missing {var} - Shell tool steps will fail without this!")
     
     print("=" * 80)
     print(f"Running Worker Manually for Job: {job_id}")

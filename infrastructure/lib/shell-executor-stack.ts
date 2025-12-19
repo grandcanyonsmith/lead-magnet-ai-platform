@@ -1,6 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
+import * as ecrAssets from 'aws-cdk-lib/aws-ecr-assets';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
@@ -108,17 +109,24 @@ export class ShellExecutorStack extends cdk.Stack {
     this.taskDefinition.addVolume({ name: 'workspace' });
 
     const container = this.taskDefinition.addContainer('runner', {
-      image: ecs.ContainerImage.fromAsset('../backend/shell-executor'),
+      // IMPORTANT: Force-build an x86_64 (linux/amd64) image. Without this, Docker
+      // may build an ARM64 image on Apple Silicon, which will fail on x86_64
+      // Fargate with: "exec /usr/local/bin/node: exec format error".
+      image: ecs.ContainerImage.fromAsset('../backend/shell-executor', {
+        platform: ecrAssets.Platform.LINUX_AMD64,
+      }),
       logging: ecs.LogDriver.awsLogs({
         streamPrefix: 'shell-executor',
         logGroup,
       }),
-      readonlyRootFilesystem: true,
+      // Allow writing to /tmp and other standard paths. We still mount /workspace,
+      // drop ALL Linux capabilities, remove taskRoleArn, and restrict egress.
+      readonlyRootFilesystem: false,
       environment: {
         // Defaults; job request can override via timeout_ms.
-        SHELL_EXECUTOR_TIMEOUT_MS: '120000',
-        SHELL_EXECUTOR_MAX_STDOUT_BYTES: String(1024 * 1024),
-        SHELL_EXECUTOR_MAX_STDERR_BYTES: String(1024 * 1024),
+        SHELL_EXECUTOR_TIMEOUT_MS: String(1_200_000), // 20 minutes
+        SHELL_EXECUTOR_MAX_STDOUT_BYTES: String(10 * 1024 * 1024), // 10MB
+        SHELL_EXECUTOR_MAX_STDERR_BYTES: String(10 * 1024 * 1024), // 10MB
       },
     });
 
