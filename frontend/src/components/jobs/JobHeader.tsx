@@ -1,7 +1,9 @@
 'use client'
 
+import { useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { FiArrowLeft } from 'react-icons/fi'
+import { ArrowLeftIcon, ClipboardDocumentIcon } from '@heroicons/react/24/outline'
+import { toast } from 'react-hot-toast'
 import type { Job } from '@/types/job'
 
 interface JobHeaderProps {
@@ -14,20 +16,20 @@ interface JobHeaderProps {
 export function JobHeader({ error, job }: JobHeaderProps) {
   const router = useRouter()
 
-  const totalCost = (() => {
+  const totalCost = useMemo(() => {
     if (!job?.execution_steps || !Array.isArray(job.execution_steps)) {
       return null
     }
-    
+
     // Filter to only AI generation steps (which have cost)
     const aiSteps = job.execution_steps.filter(
-      step => step.step_type === 'ai_generation' || step.step_type === 'workflow_step'
+      (step) => step.step_type === 'ai_generation' || step.step_type === 'workflow_step'
     )
-    
+
     if (aiSteps.length === 0) {
       return null
     }
-    
+
     const sum = aiSteps.reduce((acc: number, step) => {
       const cost = step.usage_info?.cost_usd
       if (cost === undefined || cost === null) {
@@ -38,49 +40,92 @@ export function JobHeader({ error, job }: JobHeaderProps) {
       }
       if (typeof cost === 'string') {
         const parsed = parseFloat(cost)
-        return acc + (isNaN(parsed) ? 0 : parsed)
+        return acc + (Number.isNaN(parsed) ? 0 : parsed)
       }
       return acc
     }, 0)
-    
+
     // Only show cost if at least one step has usage_info with cost_usd
-    const hasCostData = aiSteps.some(step => {
+    const hasCostData = aiSteps.some((step) => {
       const cost = step.usage_info?.cost_usd
-      return cost !== undefined && cost !== null && (typeof cost === 'number' ? cost > 0 : parseFloat(String(cost)) > 0)
+      if (cost === undefined || cost === null) return false
+      return typeof cost === 'number'
+        ? cost > 0
+        : parseFloat(String(cost)) > 0
     })
-    
+
     // If no steps have cost data, return null to hide the display
     if (!hasCostData) {
       return null
     }
-    
+
     return sum
-  })()
+  }, [job?.execution_steps])
+
+  const handleCopyJobId = async () => {
+    if (!job?.job_id) return
+    try {
+      await navigator.clipboard.writeText(job.job_id)
+      toast.success('Job ID copied')
+    } catch {
+      toast.error('Unable to copy job ID')
+    }
+  }
 
   return (
-    <div className="mb-6">
+    <div className="mb-8">
       <button
         onClick={() => router.back()}
-        className="flex items-center text-gray-600 hover:text-gray-900 mb-4 py-2 touch-target"
+        className="group inline-flex items-center gap-2 rounded-lg px-2 py-2 text-sm font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors touch-target min-h-[44px] sm:min-h-0"
       >
-        <FiArrowLeft className="w-4 h-4 mr-2" />
-        Back
+        <ArrowLeftIcon className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+        Back to Generated Lead Magnets
       </button>
       {error && (
-        <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 shadow-sm">
           {error}
         </div>
       )}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-0">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Lead Magnet Details</h1>
-          <p className="text-sm sm:text-base text-gray-600 mt-1">View details and status of your generated lead magnet</p>
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
+            Lead Magnet Details
+          </h1>
+          <p className="mt-2 text-sm text-gray-500 leading-relaxed">
+            View progress, artifacts, and step-level details for this generation.
+          </p>
+
+          {job?.job_id && (
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Job ID
+              </span>
+              <code className="max-w-full break-all rounded-lg border border-gray-200 bg-gray-50 px-2 py-1 text-xs text-gray-700">
+                {job.job_id}
+              </code>
+              <button
+                type="button"
+                onClick={handleCopyJobId}
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors touch-target min-h-[44px] sm:min-h-0"
+              >
+                <ClipboardDocumentIcon className="h-4 w-4" />
+                Copy
+              </button>
+            </div>
+          )}
         </div>
+
         {totalCost !== null && (
-          <div className="sm:text-right">
-            <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 inline-block">
-              <div className="text-xs font-medium uppercase tracking-wide text-gray-500 mb-1">Total Cost</div>
-              <div className="text-lg sm:text-xl font-semibold text-gray-900">${totalCost.toFixed(4)}</div>
+          <div className="flex items-start justify-end">
+            <div className="inline-flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-[0_1px_2px_rgba(16,24,40,0.06)]">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                  Total cost
+                </p>
+                <p className="text-lg font-semibold text-gray-900">
+                  ${totalCost.toFixed(4)}
+                </p>
+              </div>
             </div>
           </div>
         )}

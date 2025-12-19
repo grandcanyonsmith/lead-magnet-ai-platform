@@ -5,7 +5,13 @@
 
 import { MergedStep, StepStatus } from '@/types/job'
 import { formatDurationMs } from '@/utils/jobFormatting'
-import { FiEdit2, FiRefreshCw, FiLoader, FiCheckCircle, FiCircle, FiXCircle } from 'react-icons/fi'
+import {
+  PencilSquareIcon,
+  ArrowPathIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+} from '@heroicons/react/24/outline'
+import { CheckCircleIcon as CheckCircleIconSolid } from '@heroicons/react/24/solid'
 import { Tooltip } from '@/components/ui/Tooltip'
 
 const STEP_TYPE_COLORS: Record<string, string> = {
@@ -51,17 +57,17 @@ function getToolName(tool: Tool): string {
 
 // Render status icon inline
 function renderStatusIcon(status: StepStatus) {
-  const iconClass = 'w-3.5 h-3.5 flex-shrink-0'
+  const iconClass = 'w-5 h-5 flex-shrink-0'
   switch (status) {
     case 'completed':
-      return <FiCheckCircle className={`${iconClass} text-green-600`} />
+      return <CheckCircleIconSolid className={`${iconClass} text-green-600`} />
     case 'in_progress':
-      return <FiLoader className={`${iconClass} text-yellow-500 animate-spin`} />
+      return <ArrowPathIcon className={`${iconClass} text-blue-600 animate-spin`} />
     case 'failed':
-      return <FiXCircle className={`${iconClass} text-red-600`} />
+      return <XCircleIcon className={`${iconClass} text-red-600`} />
     case 'pending':
     default:
-      return <FiCircle className={`${iconClass} text-gray-400`} />
+      return <div className={`${iconClass} rounded-full border-2 border-gray-300`} />
   }
 }
 
@@ -126,13 +132,16 @@ export function StepHeader({
 
   return (
     <div className="flex flex-col gap-4 p-4 sm:p-5">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-start gap-3">
-          <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-base font-semibold text-white ${stepNumberBg}`}>
-            {step.step_order ?? 0}
-          </div>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex items-start gap-4">
           <div className="min-w-0 space-y-1">
             <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+              {statusBadge && (
+                <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold ${statusBadge.className}`}>
+                  {renderStatusIcon(status)}
+                  {statusBadge.label}
+                </span>
+              )}
               {typeHelp ? (
                 <Tooltip content={typeHelp} position="top">
                   <span className={`px-2 py-0.5 rounded-full border ${stepTypeColor}`}>
@@ -144,32 +153,21 @@ export function StepHeader({
                   {typeLabel}
                 </span>
               )}
-              {statusBadge && (
-                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${statusBadge.className}`}>
-                  {renderStatusIcon(status)}
-                  {statusBadge.label}
-                </span>
-              )}
-              {isInProgress && (
-                <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold bg-blue-100 text-blue-700 border border-blue-200 animate-pulse">
-                  Processing
-                </span>
-              )}
             </div>
             <h3 className={`text-base sm:text-lg font-semibold break-words ${isPending ? 'text-gray-500' : 'text-gray-900'}`}>
               {step.step_name || 'Untitled step'}
             </h3>
-            <div className="flex flex-wrap gap-3 text-xs text-gray-600 font-medium">
-              {step.model && <span>Model: {step.model}</span>}
+            <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-gray-500">
+              {step.model && <span>Model: <span className="font-medium text-gray-700">{step.model}</span></span>}
               {step.duration_ms !== undefined && (
-                <span>Duration: {formatDurationMs(step.duration_ms)}</span>
+                <span>Duration: <span className="font-medium text-gray-700">{formatDurationMs(step.duration_ms)}</span></span>
               )}
               {step.usage_info?.cost_usd !== undefined && (
                 <span>
-                  Cost: $
+                  Cost: <span className="font-medium text-gray-700">$
                   {typeof step.usage_info.cost_usd === 'number'
                     ? step.usage_info.cost_usd.toFixed(4)
-                    : parseFloat(String(step.usage_info.cost_usd) || '0').toFixed(4)}
+                    : parseFloat(String(step.usage_info.cost_usd) || '0').toFixed(4)}</span>
                 </span>
               )}
             </div>
@@ -255,7 +253,7 @@ export function StepHeader({
                       : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                   }`}
                 >
-                  <FiEdit2 className="w-4 h-4" />
+                  <PencilSquareIcon className="w-5 h-5" />
                 </button>
               </Tooltip>
             )}
@@ -315,9 +313,9 @@ export function StepHeader({
                     aria-label="Rerun this step"
                   >
                     {rerunningStep === step.step_order - 1 ? (
-                      <FiLoader className="w-4 h-4 animate-spin" />
+                      <ArrowPathIcon className="w-5 h-5 animate-spin" />
                     ) : (
-                      <FiRefreshCw className="w-4 h-4" />
+                      <ArrowPathIcon className="w-5 h-5" />
                     )}
                   </button>
                 </Tooltip>
