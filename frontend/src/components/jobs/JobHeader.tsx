@@ -94,25 +94,6 @@ export function JobHeader({ error, job }: JobHeaderProps) {
           <p className="mt-2 text-sm text-gray-500 leading-relaxed">
             View progress, artifacts, and step-level details for this generation.
           </p>
-
-          {job?.job_id && (
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                Job ID
-              </span>
-              <code className="max-w-full break-all rounded-lg border border-gray-200 bg-gray-50 px-2 py-1 text-xs text-gray-700">
-                {job.job_id}
-              </code>
-              <button
-                type="button"
-                onClick={handleCopyJobId}
-                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors touch-target min-h-[44px] sm:min-h-0"
-              >
-                <ClipboardDocumentIcon className="h-4 w-4" />
-                Copy
-              </button>
-            </div>
-          )}
         </div>
 
         {totalCost !== null && (

@@ -2,8 +2,18 @@
 
 import { useEffect, useCallback, useState } from 'react'
 import React from 'react'
-import { FiX, FiMonitor, FiTablet, FiSmartphone } from 'react-icons/fi'
+import {
+  XMarkIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ArrowTopRightOnSquareIcon,
+  ArrowDownTrayIcon,
+  ClipboardDocumentIcon,
+  MagnifyingGlassPlusIcon,
+  MagnifyingGlassMinusIcon,
+} from '@heroicons/react/24/outline'
 import { PreviewRenderer } from '@/components/artifacts/PreviewRenderer'
+import { toast } from 'react-hot-toast'
 
 interface FullScreenPreviewModalProps {
   isOpen: boolean
@@ -12,6 +22,11 @@ interface FullScreenPreviewModalProps {
   objectUrl?: string
   fileName?: string
   artifactId?: string
+  // Navigation
+  onNext?: () => void
+  onPrevious?: () => void
+  hasNext?: boolean
+  hasPrevious?: boolean
 }
 
 type ViewMode = 'desktop' | 'tablet' | 'mobile'
@@ -23,105 +38,229 @@ export const FullScreenPreviewModal = React.memo(function FullScreenPreviewModal
   objectUrl,
   fileName,
   artifactId,
+  onNext,
+  onPrevious,
+  hasNext,
+  hasPrevious,
 }: FullScreenPreviewModalProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('desktop')
-  
-  // Reset view mode when modal opens
+  const [zoom, setZoom] = useState(1)
+
+  // Reset state when content changes
   useEffect(() => {
     if (isOpen) {
       setViewMode('desktop')
+      setZoom(1)
     }
-  }, [isOpen])
+  }, [isOpen, objectUrl])
 
-  // Handle ESC key to close modal
-  const handleEscape = useCallback((e: KeyboardEvent) => {
-    if (e.key === 'Escape' && isOpen) {
-      onClose()
-    }
-  }, [isOpen, onClose])
+  // Handle keyboard navigation
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (!isOpen) return
+
+      if (e.key === 'Escape') {
+        onClose()
+      } else if (e.key === 'ArrowRight' && hasNext && onNext) {
+        onNext()
+      } else if (e.key === 'ArrowLeft' && hasPrevious && onPrevious) {
+        onPrevious()
+      }
+    },
+    [isOpen, onClose, hasNext, onNext, hasPrevious, onPrevious]
+  )
 
   useEffect(() => {
     if (isOpen) {
-      document.addEventListener('keydown', handleEscape)
-      // Prevent body scroll when modal is open
+      document.addEventListener('keydown', handleKeyDown)
       document.body.style.overflow = 'hidden'
     }
 
     return () => {
-      document.removeEventListener('keydown', handleEscape)
-      // Always restore body overflow in cleanup, even if isOpen is false
+      document.removeEventListener('keydown', handleKeyDown)
       if (isOpen) {
         document.body.style.overflow = 'unset'
       }
     }
-  }, [isOpen, handleEscape])
+  }, [isOpen, handleKeyDown])
+
+  const handleCopy = async () => {
+    if (!objectUrl) return
+    try {
+      await navigator.clipboard.writeText(objectUrl)
+      toast.success('Link copied to clipboard')
+    } catch {
+      toast.error('Failed to copy link')
+    }
+  }
+
+  const handleZoomIn = () => setZoom((z) => Math.min(z + 0.25, 3))
+  const handleZoomOut = () => setZoom((z) => Math.max(z - 0.25, 0.5))
 
   if (!isOpen) return null
 
-  const isHtml = contentType === 'text/html' || contentType === 'application/xhtml+xml'
+  const isHtml =
+    contentType === 'text/html' || contentType === 'application/xhtml+xml'
   const isMarkdown = contentType === 'text/markdown'
+  const isImage = contentType?.startsWith('image/')
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-sm"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-label={fileName ? `Preview: ${fileName}` : 'Full screen preview'}
     >
-      {/* Preview container */}
+      {/* Navigation Buttons */}
+      {hasPrevious && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onPrevious?.()
+          }}
+          className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-3 text-white backdrop-blur-md transition-all hover:bg-white/20 hover:scale-110 active:scale-95 z-50"
+          aria-label="Previous item"
+        >
+          <ChevronLeftIcon className="h-8 w-8" />
+        </button>
+      )}
+
+      {hasNext && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onNext?.()
+          }}
+          className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-3 text-white backdrop-blur-md transition-all hover:bg-white/20 hover:scale-110 active:scale-95 z-50"
+          aria-label="Next item"
+        >
+          <ChevronRightIcon className="h-8 w-8" />
+        </button>
+      )}
+
+      {/* Main Container */}
       <div
-        className={`relative w-[95vw] h-[95vh] bg-black rounded-lg shadow-2xl m-4 flex flex-col ${
-          isMarkdown 
-            ? 'overflow-hidden' 
-            : isHtml 
-            ? 'overflow-hidden' 
-            : 'overflow-hidden'
-        }`}
+        className="relative flex h-full w-full flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header with file name and close button */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 bg-gray-900/80 backdrop-blur-sm border-b border-gray-700/50 rounded-t-lg shrink-0">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            {fileName && (
-              <h2 className="text-sm sm:text-base font-semibold text-white truncate">
-                {fileName}
-              </h2>
-            )}
-            {!fileName && (
-              <h2 className="text-sm sm:text-base font-semibold text-white/70">
-                Preview
-              </h2>
+        {/* Header */}
+        <div className="flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent px-6 py-4">
+          <div className="flex flex-col min-w-0">
+            <h2 className="text-lg font-semibold text-white truncate max-w-xl">
+              {fileName || 'Preview'}
+            </h2>
+            {contentType && (
+              <p className="text-xs text-white/60 font-mono">{contentType}</p>
             )}
           </div>
-          <button
-            onClick={onClose}
-            className="ml-4 p-2 sm:p-2.5 bg-white/20 hover:bg-white/30 active:bg-white/40 text-white rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/50 shadow-lg border border-white/20 shrink-0"
-            aria-label="Close preview"
-          >
-            <FiX className="w-5 h-5 sm:w-6 sm:h-6" aria-hidden="true" />
-          </button>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onClose}
+              className="rounded-full bg-white/10 p-2 text-white hover:bg-white/20 transition-colors"
+            >
+              <XMarkIcon className="h-6 w-6" />
+            </button>
+          </div>
         </div>
 
-        {/* Content area */}
-        <div className={`flex-1 min-h-0 ${
-          isMarkdown 
-            ? 'overflow-auto' 
-            : isHtml 
-            ? 'overflow-hidden' 
-            : 'overflow-hidden flex items-center justify-center'
-        }`}>
-          <div className={`w-full ${isHtml ? 'h-full' : ''}`}>
+        {/* Content */}
+        <div className="flex-1 flex items-center justify-center min-h-0 p-2 sm:p-8 overflow-hidden">
+          <div
+            className={`relative flex justify-center ${
+              isHtml || isImage ? 'items-center' : 'items-start'
+            } ${
+              isHtml 
+                ? 'h-full w-full bg-white rounded-lg overflow-hidden' 
+                : isImage
+                ? 'h-full w-full overflow-hidden'
+                : 'h-full w-full overflow-y-auto pt-4 sm:pt-0'
+            }`}
+            style={
+              isImage
+                ? {
+                    transform: `scale(${zoom})`,
+                    transition: 'transform 0.2s ease-out',
+                  }
+                : undefined
+            }
+          >
             <PreviewRenderer
               contentType={contentType}
               objectUrl={objectUrl}
               fileName={fileName}
-              className={isHtml ? "w-full h-full" : "max-w-full max-h-full w-auto h-auto"}
+              className={
+                isHtml
+                  ? 'h-full w-full'
+                  : isImage
+                  ? 'max-h-full max-w-full object-contain shadow-2xl rounded-lg'
+                  : 'w-full h-auto min-h-full bg-white rounded-lg p-6 sm:p-12 shadow-xl text-gray-900 mb-20'
+              }
               artifactId={artifactId}
               isFullScreen={true}
               viewMode={isHtml ? viewMode : undefined}
               onViewModeChange={isHtml ? setViewMode : undefined}
             />
+          </div>
+        </div>
+
+        {/* Floating Toolbar */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-50">
+          <div className="flex items-center gap-1 rounded-2xl bg-gray-900/90 p-2 text-white shadow-xl backdrop-blur-md ring-1 ring-white/10">
+            {isImage && (
+              <>
+                <div className="flex items-center border-r border-white/10 px-2">
+                  <button
+                    onClick={handleZoomOut}
+                    className="p-2 hover:text-primary-400 transition-colors rounded-lg hover:bg-white/5"
+                    title="Zoom Out"
+                  >
+                    <MagnifyingGlassMinusIcon className="h-5 w-5" />
+                  </button>
+                  <span className="min-w-[3rem] text-center text-xs font-medium tabular-nums">
+                    {Math.round(zoom * 100)}%
+                  </span>
+                  <button
+                    onClick={handleZoomIn}
+                    className="p-2 hover:text-primary-400 transition-colors rounded-lg hover:bg-white/5"
+                    title="Zoom In"
+                  >
+                    <MagnifyingGlassPlusIcon className="h-5 w-5" />
+                  </button>
+                </div>
+                <div className="h-6 w-px bg-white/10 mx-1" />
+              </>
+            )}
+
+            {objectUrl && (
+              <>
+                <button
+                  onClick={() => window.open(objectUrl, '_blank')}
+                  className="p-2 hover:text-primary-400 transition-colors rounded-lg hover:bg-white/5"
+                  title="Open in new tab"
+                >
+                  <ArrowTopRightOnSquareIcon className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={handleCopy}
+                  className="p-2 hover:text-primary-400 transition-colors rounded-lg hover:bg-white/5"
+                  title="Copy Link"
+                >
+                  <ClipboardDocumentIcon className="h-5 w-5" />
+                </button>
+                <a
+                  href={objectUrl}
+                  download={fileName || 'download'}
+                  className="p-2 hover:text-primary-400 transition-colors rounded-lg hover:bg-white/5"
+                  title="Download"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <ArrowDownTrayIcon className="h-5 w-5" />
+                </a>
+              </>
+            )}
           </div>
         </div>
       </div>
