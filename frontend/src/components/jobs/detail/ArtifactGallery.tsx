@@ -32,7 +32,7 @@ export function ArtifactGallery({
         {[...Array(4)].map((_, i) => (
           <div
             key={i}
-            className="animate-pulse rounded-2xl border border-gray-200 bg-white p-4"
+            className="animate-pulse rounded-2xl border border-gray-300 bg-white p-4"
           >
             <div className="aspect-[4/3] w-full rounded-xl bg-gray-100" />
             <div className="mt-4 space-y-2">
@@ -47,7 +47,7 @@ export function ArtifactGallery({
 
   if (!items.length) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-300 bg-gray-50/50 py-16 text-center">
+      <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-300 bg-gray-50 py-16 text-center">
         <div className="rounded-full bg-gray-100 p-3">
           <PhotoIcon className="h-6 w-6 text-gray-400" />
         </div>
@@ -125,7 +125,7 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
     fileName.endsWith('.md')
 
   return (
-    <div className="group relative flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all hover:shadow-md hover:border-gray-300">
+    <div className="group relative flex flex-col overflow-hidden rounded-2xl border border-gray-300 bg-white shadow transition-all hover:shadow-md hover:border-gray-400">
       {/* Preview Area */}
       <div className="aspect-[4/3] bg-gray-50 relative overflow-hidden group/preview">
         {artifactUrl && item.kind !== 'jobOutput' ? (

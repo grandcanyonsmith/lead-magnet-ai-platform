@@ -98,7 +98,7 @@ export function JobHeader({ error, job }: JobHeaderProps) {
 
         {totalCost !== null && (
           <div className="flex items-start justify-end">
-            <div className="inline-flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-[0_1px_2px_rgba(16,24,40,0.06)]">
+            <div className="inline-flex items-center gap-3 rounded-2xl border border-gray-300 bg-white px-4 py-3 shadow">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
                   Total cost

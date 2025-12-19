@@ -83,7 +83,7 @@ export function ExecutionSteps({
 
   return (
     <ErrorBoundary>
-      <div className="mt-4 sm:mt-6 bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-6 ring-1 ring-black/[0.02]">
+      <div className="mt-4 sm:mt-6 bg-white rounded-2xl border border-gray-300 shadow p-4 sm:p-6 ring-1 ring-black/[0.04]">
         <button
           onClick={onToggleShow}
           className="flex items-center justify-between w-full text-left mb-6 touch-target min-h-[48px] sm:min-h-0 group"
@@ -156,7 +156,7 @@ export function ExecutionSteps({
                     }`}
                   />
 
-                  <div className="ml-6 rounded-xl border border-gray-200 bg-white shadow-sm transition-all hover:shadow-md hover:border-gray-300">
+                  <div className="ml-6 rounded-xl border border-gray-300 bg-white shadow transition-all hover:shadow-md hover:border-gray-400">
                     <StepHeader
                       step={step}
                       status={stepStatus}
@@ -187,7 +187,7 @@ export function ExecutionSteps({
                           </DisclosureButton>
                           <DisclosurePanel static>
                             {open && (
-                              <div className="border-t border-gray-100 bg-gray-50/30">
+                              <div className="border-t border-gray-200 bg-gray-50">
                                 <StepInputOutput
                                   step={step}
                                   status={stepStatus}
@@ -316,7 +316,7 @@ export function ExecutionSteps({
                                   // Render unique files
                                   if (filesToShow.length > 0) {
                                     return (
-                                      <div className="px-3 sm:px-4 pb-3 sm:pb-4 bg-gray-50/30">
+                                      <div className="px-3 sm:px-4 pb-3 sm:pb-4 bg-gray-50">
                                         {filesToShow.map((file) => {
                                           if (file.type === 'imageArtifact') {
                                             return (
