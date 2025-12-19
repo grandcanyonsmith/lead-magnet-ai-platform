@@ -164,8 +164,6 @@ export function ExecutionSteps({
                                 <StepInputOutput
                                   step={step}
                                   status={stepStatus}
-                                  isExpanded={true}
-                                  onToggle={() => {}}
                                   onCopy={onCopy}
                                   previousSteps={getPreviousSteps(step, sortedSteps)}
                                   formSubmission={formSubmission}

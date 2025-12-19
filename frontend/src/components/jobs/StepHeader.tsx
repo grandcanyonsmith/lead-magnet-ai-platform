@@ -72,34 +72,29 @@ function renderStatusIcon(status: StepStatus) {
 }
 
 // Render tool badges inline
-function renderToolBadges(tools?: string[] | unknown[], toolChoice?: string) {
+function renderToolBadges(tools?: string[] | unknown[]) {
   if (!tools || !Array.isArray(tools) || tools.length === 0) {
     return (
-      <span className="px-2 py-0.5 text-xs bg-gray-50 text-gray-600 rounded border border-gray-200">
+      <span className="px-1.5 py-0.5 text-[10px] font-medium text-gray-400">
         None
       </span>
     )
   }
 
   return (
-    <>
-      <div className="flex flex-wrap gap-1">
-        {tools.map((tool, toolIdx) => {
-          const toolName = getToolName(tool as Tool)
-          return (
-            <span
-              key={toolIdx}
-              className="px-2 py-0.5 text-xs bg-blue-50 text-blue-700 rounded border border-blue-200 whitespace-nowrap"
-            >
-              {toolName}
-            </span>
-          )
-        })}
-      </div>
-      {toolChoice && (
-        <span className="text-gray-500">({toolChoice})</span>
-      )}
-    </>
+    <div className="flex flex-wrap gap-1">
+      {tools.map((tool, toolIdx) => {
+        const toolName = getToolName(tool as Tool)
+        return (
+          <span
+            key={toolIdx}
+            className="px-1.5 py-0.5 text-[10px] font-semibold bg-primary-50 text-primary-700 rounded-md border border-primary-100 whitespace-nowrap"
+          >
+            {toolName}
+          </span>
+        )
+      })}
+    </div>
   )
 }
 
@@ -135,95 +130,51 @@ export function StepHeader({
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex items-start gap-4">
           <div className="min-w-0 space-y-1">
-            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-              {statusBadge && (
-                <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold ${statusBadge.className}`}>
-                  {renderStatusIcon(status)}
-                  {statusBadge.label}
+            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold tabular-nums text-gray-500">
+              {isCompleted && (step.duration_ms !== undefined || step.usage_info) && (
+                <div className="inline-flex items-center gap-1.5 rounded-full bg-gray-50 px-2 py-0.5 border border-gray-200">
+                  {step.duration_ms !== undefined && formatDurationMs(step.duration_ms)}
+                  {step.usage_info?.cost_usd !== undefined && (
+                    <>
+                      <span className="text-gray-300">•</span>
+                      <span>
+                        $
+                        {typeof step.usage_info.cost_usd === 'number'
+                          ? step.usage_info.cost_usd.toFixed(4)
+                          : parseFloat(String(step.usage_info.cost_usd) || '0').toFixed(4)}
+                      </span>
+                    </>
+                  )}
+                </div>
+              )}
+              {step.model && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-purple-50/50 px-2 py-0.5 text-[11px] font-medium text-purple-700 border border-purple-100/50">
+                  {step.model}
                 </span>
               )}
-              {typeHelp ? (
-                <Tooltip content={typeHelp} position="top">
-                  <span className={`px-2 py-0.5 rounded-full border ${stepTypeColor}`}>
-                    {typeLabel}
-                  </span>
-                </Tooltip>
-              ) : (
-                <span className={`px-2 py-0.5 rounded-full border ${stepTypeColor}`}>
-                  {typeLabel}
+              {((step.input?.tools && step.input.tools.length > 0) || (step.tools && step.tools.length > 0)) && (
+                <div className="flex items-center gap-1.5">
+                  {renderToolBadges(step.input?.tools || step.tools)}
+                </div>
+              )}
+              {isInProgress && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700 border border-blue-200 animate-pulse">
+                  Processing...
+                </span>
+              )}
+              {status === 'failed' && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-700 border border-red-200">
+                  Failed
                 </span>
               )}
             </div>
             <h3 className={`text-base sm:text-lg font-semibold break-words ${isPending ? 'text-gray-500' : 'text-gray-900'}`}>
-              {step.step_name || 'Untitled step'}
+              {step.step_name || `Step ${step.step_order ?? 0}`}
             </h3>
-            <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-gray-500">
-              {step.model && <span>Model: <span className="font-medium text-gray-700">{step.model}</span></span>}
-              {step.duration_ms !== undefined && (
-                <span>Duration: <span className="font-medium text-gray-700">{formatDurationMs(step.duration_ms)}</span></span>
-              )}
-              {step.usage_info?.cost_usd !== undefined && (
-                <span>
-                  Cost: <span className="font-medium text-gray-700">$
-                  {typeof step.usage_info.cost_usd === 'number'
-                    ? step.usage_info.cost_usd.toFixed(4)
-                    : parseFloat(String(step.usage_info.cost_usd) || '0').toFixed(4)}</span>
-                </span>
-              )}
-            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 self-end lg:self-auto">
-          {isCompleted && (step.duration_ms !== undefined || step.usage_info) && (
-            <Tooltip
-              content={
-                <div className="text-left space-y-1">
-                  {step.duration_ms !== undefined && (
-                    <div>Duration: {formatDurationMs(step.duration_ms)}</div>
-                  )}
-                  {step.usage_info && (
-                    <>
-                      {step.usage_info.total_tokens ? (
-                        <div>Tokens: {step.usage_info.total_tokens.toLocaleString()}</div>
-                      ) : (step.usage_info.input_tokens || step.usage_info.output_tokens ||
-                           step.usage_info.prompt_tokens || step.usage_info.completion_tokens) ? (
-                        <div>
-                          Tokens:{' '}
-                          {(
-                            (step.usage_info.input_tokens || step.usage_info.prompt_tokens || 0) +
-                            (step.usage_info.output_tokens || step.usage_info.completion_tokens || 0)
-                          ).toLocaleString()}
-                        </div>
-                      ) : null}
-                      {step.usage_info?.cost_usd !== undefined && (
-                        <div>
-                          Cost: $
-                          {typeof step.usage_info.cost_usd === 'number'
-                            ? step.usage_info.cost_usd.toFixed(4)
-                            : parseFloat(String(step.usage_info.cost_usd) || '0').toFixed(4)}
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              }
-              position="top"
-            >
-              <div className="px-2 py-1 text-xs font-medium text-gray-600 bg-gray-50 rounded-full border border-gray-200 cursor-help">
-                {step.duration_ms !== undefined && formatDurationMs(step.duration_ms)}
-                {step.usage_info?.cost_usd !== undefined && (
-                  <span className="ml-1.5">
-                    • $
-                    {typeof step.usage_info.cost_usd === 'number'
-                      ? step.usage_info.cost_usd.toFixed(4)
-                      : parseFloat(String(step.usage_info.cost_usd) || '0').toFixed(4)}
-                  </span>
-                )}
-              </div>
-            </Tooltip>
-          )}
-
+        <div className="flex items-center gap-3 self-end lg:self-auto">
           {/* Action Buttons */}
           <div className="flex items-center gap-1">
             {/* Edit Step Button - Only for workflow template steps */}

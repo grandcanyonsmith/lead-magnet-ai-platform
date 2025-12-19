@@ -142,6 +142,22 @@ export default function JobDetailClient() {
     previewItem?.artifact?.artifact_name ||
     previewItem?.label
 
+  // Navigation handlers
+  const currentPreviewIndex = useMemo(() => {
+    if (!previewItem) return -1
+    return artifactGalleryItems.findIndex((item) => item.id === previewItem.id)
+  }, [previewItem, artifactGalleryItems])
+
+  const handleNextPreview = () => {
+    if (currentPreviewIndex === -1 || currentPreviewIndex === artifactGalleryItems.length - 1) return
+    openPreview(artifactGalleryItems[currentPreviewIndex + 1])
+  }
+
+  const handlePreviousPreview = () => {
+    if (currentPreviewIndex <= 0) return
+    openPreview(artifactGalleryItems[currentPreviewIndex - 1])
+  }
+
   // ---------------------------------------------------------------------------
   // Handlers
   // ---------------------------------------------------------------------------
@@ -383,6 +399,10 @@ export default function JobDetailClient() {
             objectUrl={previewObjectUrl}
             fileName={previewFileName}
             artifactId={previewItem?.artifact?.artifact_id}
+            onNext={handleNextPreview}
+            onPrevious={handlePreviousPreview}
+            hasNext={currentPreviewIndex < artifactGalleryItems.length - 1}
+            hasPrevious={currentPreviewIndex > 0}
           />
         )}
       </div>
@@ -418,9 +438,11 @@ function getJobDuration(job?: Job | null): JobDurationInfo | null {
     isLive:
       !job?.completed_at &&
       !job?.failed_at &&
+      !job?.error_message &&
       job?.status === 'processing',
   }
 }
+
 // ---------------------------------------------------------------------------
 // Job Tabs Component
 // ---------------------------------------------------------------------------
@@ -567,7 +589,7 @@ function RawJsonPanel({ data }: { data: unknown }) {
           onClick={handleCopy}
           className="inline-flex items-center gap-2 rounded-lg border border-gray-700 px-3 py-1.5 text-xs font-semibold hover:bg-gray-800"
         >
-          <FiCopy className="h-4 w-4" />
+          <ClipboardDocumentIcon className="h-4 w-4" />
           Copy JSON
         </button>
       </div>

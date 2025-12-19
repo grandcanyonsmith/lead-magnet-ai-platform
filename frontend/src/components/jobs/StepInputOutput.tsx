@@ -17,8 +17,6 @@ import { ArtifactPreview } from './ArtifactPreview'
 interface StepInputOutputProps {
   step: MergedStep
   status: StepStatus
-  isExpanded: boolean
-  onToggle: () => void
   onCopy: (text: string) => void
   previousSteps: ExecutionStep[]
   formSubmission: Record<string, unknown> | null | undefined
@@ -66,7 +64,7 @@ function hasImageGeneration(
 }
 
 // Render tool badges inline
-function renderToolBadges(tools?: string[] | unknown[], toolChoice?: string, showLabel: boolean = true) {
+function renderToolBadges(tools?: string[] | unknown[], showLabel: boolean = true) {
   if (!tools || !Array.isArray(tools) || tools.length === 0) {
     return showLabel ? (
       <span className="px-2 py-0.5 text-xs bg-gray-50 text-gray-600 rounded border border-gray-200">
@@ -76,24 +74,19 @@ function renderToolBadges(tools?: string[] | unknown[], toolChoice?: string, sho
   }
 
   return (
-    <>
-      <div className="flex flex-wrap gap-1">
-        {tools.map((tool, toolIdx) => {
-          const toolName = getToolName(tool as Tool)
-          return (
-            <span
-              key={toolIdx}
-              className="px-2 py-0.5 text-xs bg-blue-50 text-blue-700 rounded border border-blue-200 whitespace-nowrap"
-            >
-              {toolName}
-            </span>
-          )
-        })}
-      </div>
-      {toolChoice && (
-        <span className="text-gray-500">({toolChoice})</span>
-      )}
-    </>
+    <div className="flex flex-wrap gap-1">
+      {tools.map((tool, toolIdx) => {
+        const toolName = getToolName(tool as Tool)
+        return (
+          <span
+            key={toolIdx}
+            className="px-2 py-0.5 text-xs bg-blue-50 text-blue-700 rounded border border-blue-200 whitespace-nowrap"
+          >
+            {toolName}
+          </span>
+        )
+      })}
+    </div>
   )
 }
 
@@ -236,8 +229,6 @@ function renderPreviousStepsContext(previousSteps: ExecutionStep[], formSubmissi
 export function StepInputOutput({
   step,
   status,
-  isExpanded,
-  onToggle,
   onCopy,
   previousSteps,
   formSubmission,
@@ -341,22 +332,9 @@ export function StepInputOutput({
               </span>
             )}
             {hasTools && (
-              <>
-                {tools.map((tool, toolIdx) => {
-                  const toolName = getToolName(tool as Tool)
-                  return (
-                    <span
-                      key={toolIdx}
-                      className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 border border-blue-200 whitespace-nowrap"
-                    >
-                      {toolName}
-                    </span>
-                  )
-                })}
-                {toolChoice && toolChoice !== 'auto' && (
-                  <span className="text-xs text-gray-500">({toolChoice})</span>
-                )}
-              </>
+              <div className="flex items-center gap-1.5">
+                {renderToolBadges(step.input?.tools || step.tools)}
+              </div>
             )}
           </div>
         )}
@@ -449,24 +427,9 @@ export function StepInputOutput({
   const usedImageGeneration = hasImageGeneration(step, imageArtifacts)
 
   return (
-    <div className="px-3 sm:px-3 pb-3 sm:pb-3 pt-0 border-t border-gray-200">
-      <button
-        onClick={onToggle}
-        className="flex items-center justify-between w-full text-left text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50/50 active:text-gray-900 active:bg-gray-50 rounded-md transition-colors touch-target py-2 md:py-1.5 min-h-[44px] md:min-h-0 px-2"
-      >
-        <span className="font-medium">
-          {isCompleted ? 'Details' : isPending ? 'Configuration' : 'Details'}
-        </span>
-        {isExpanded ? (
-          <FiChevronUp className="w-5 h-5 flex-shrink-0 ml-2" />
-        ) : (
-          <FiChevronDown className="w-5 h-5 flex-shrink-0 ml-2" />
-        )}
-      </button>
-
-      {isExpanded && (
-        <div className="mt-3 md:mt-2">
-          {isPending ? (
+    <div className="px-3 sm:px-3 pb-3 sm:pb-3 pt-3 border-t border-gray-100">
+      <div className="mt-0">
+        {isPending ? (
             /* For pending steps, show configuration only */
             <div className="border border-gray-300 rounded-lg overflow-hidden bg-white shadow-sm">
               <div className="bg-slate-50 px-3 py-2 md:py-1.5 border-b border-gray-300 flex items-center justify-between">
@@ -491,12 +454,6 @@ export function StepInputOutput({
                   <div>
                     <span className="text-xs font-semibold text-gray-600 uppercase">Instructions</span>
                     <pre className="text-sm text-gray-700 mt-1 whitespace-pre-wrap font-sans bg-gray-50 p-2.5 rounded border border-gray-200">{step.instructions}</pre>
-                  </div>
-                )}
-                {step.tool_choice && step.tool_choice !== 'auto' && (
-                  <div>
-                    <span className="text-xs font-semibold text-gray-600 uppercase">Tool Choice</span>
-                    <p className="text-sm text-gray-700 mt-1 font-mono">{step.tool_choice}</p>
                   </div>
                 )}
               </div>
@@ -603,19 +560,11 @@ export function StepInputOutput({
                       {renderImageSection()}
                     </>
                   )}
-                  
-                  {/* Show main artifact (step output) */}
-                  {step.artifact_id && (
-                    <div className="mt-3 pt-3 border-t border-gray-200">
-                      <ArtifactPreview artifactId={step.artifact_id} />
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
           )}
-        </div>
-      )}
+      </div>
     </div>
   )
 }
