@@ -107,6 +107,7 @@ class LeadMagnetHtmlEditorController {
     const selectedOuterHtml =
       typeof body?.selected_outer_html === 'string' ? body.selected_outer_html : null;
     const pageUrl = typeof body?.page_url === 'string' ? body.page_url : null;
+    const model = typeof body?.model === 'string' ? body.model : null;
 
     const { patchedHtml, summary } = await patchHtmlWithOpenAI({
       html,
@@ -114,6 +115,7 @@ class LeadMagnetHtmlEditorController {
       selector,
       selectedOuterHtml,
       pageUrl,
+      model,
     });
 
     logger.info('[LeadMagnetHtmlEditor] Patched HTML', {
