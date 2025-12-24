@@ -51,7 +51,7 @@ function extractInjectedBlocks(html: string): string[] {
 }
 
 function ensureInjectedBlocks(patchedHtml: string, blocks: string[]): string {
-  let html = patchedHtml;
+  const html = patchedHtml;
   const toInject: string[] = [];
 
   for (const block of blocks) {
