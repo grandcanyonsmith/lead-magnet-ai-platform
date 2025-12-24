@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { isAuthenticated, useAuth } from '@/lib/auth'
@@ -27,7 +27,6 @@ import {
   ChevronRightIcon,
   ChevronUpIcon,
 } from '@heroicons/react/24/outline'
-import { Menu, MenuButton, MenuItem, MenuItems, Transition } from '@headlessui/react'
 
 export default function DashboardLayout({
   children,
@@ -43,6 +42,10 @@ export default function DashboardLayout({
   const [activeTourId, setActiveTourId] = useState<TourId | null>(null)
   const [searchOpen, setSearchOpen] = useState(false)
   const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false)
+  
+  // Custom user menu state to avoid Headless UI auto-closing issues with nested interactions
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const userMenuRef = useRef<HTMLDivElement>(null)
 
   const loadSettings = useCallback(async () => {
     try {
@@ -73,6 +76,23 @@ export default function DashboardLayout({
     }
     checkAuth()
   }, [router, loadSettings])
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false)
+      }
+    }
+
+    if (userMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [userMenuOpen])
 
   const handleStartTour = (tourId: TourId) => {
     setActiveTourId(tourId)
@@ -240,16 +260,6 @@ export default function DashboardLayout({
                 <span className="text-sm font-semibold text-zinc-900 truncate">Lead Magnet AI</span>
               </span>
             </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-zinc-600">Views</span>
-                <ViewSwitcher />
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-zinc-600">Impersonation</span>
-                <UserImpersonation />
-              </div>
-            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto min-h-0">
@@ -305,84 +315,84 @@ export default function DashboardLayout({
           </div>
 
           <div className="mt-auto px-2 sm:px-3 py-2 sm:py-3 border-t border-zinc-200 bg-white shrink-0">
-            <Menu as="div" className="relative">
-              <MenuButton className="w-full flex items-center justify-between rounded-lg px-1.5 sm:px-2 py-1.5 sm:py-2 hover:bg-zinc-50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
-                {({ open }) => (
-                  <>
-                    <span className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
-                      <span className="h-7 w-7 sm:h-8 sm:w-8 rounded-md bg-zinc-200 flex items-center justify-center overflow-hidden shrink-0">
-                        <span className="text-[10px] sm:text-xs font-semibold text-zinc-700">
-                          {(user?.name || user?.email || 'U').slice(0, 1).toUpperCase()}
-                        </span>
-                      </span>
-                      <span className="min-w-0 flex-1 text-left">
-                        <span className="block truncate text-xs sm:text-sm font-medium text-zinc-900">
-                          {user?.name || user?.email || 'Account'}
-                        </span>
-                        {user?.email && (
-                          <span className="block truncate text-[10px] sm:text-xs text-zinc-500">{user.email}</span>
-                        )}
-                      </span>
-                    </span>
-                    <ChevronUpIcon
-                      className={`h-3 w-3 sm:h-4 sm:w-4 text-zinc-400 transition-transform shrink-0 ${open ? 'rotate-180' : ''}`}
-                    />
-                  </>
-                )}
-              </MenuButton>
-
-              <Transition
-                enter="transition duration-100 ease-out"
-                enterFrom="transform scale-95 opacity-0"
-                enterTo="transform scale-100 opacity-100"
-                leave="transition duration-75 ease-out"
-                leaveFrom="transform scale-100 opacity-100"
-                leaveTo="transform scale-95 opacity-0"
+            <div className="relative" ref={userMenuRef}>
+              <button
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                className="w-full flex items-center justify-between rounded-lg px-1.5 sm:px-2 py-1.5 sm:py-2 hover:bg-zinc-50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
               >
-                <MenuItems
-                  anchor="top start"
-                  className="w-[var(--button-width)] rounded-lg border border-zinc-200 bg-white shadow-lg ring-1 ring-black/5 z-[50] focus:outline-none"
-                >
+                <span className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
+                  <span className="h-7 w-7 sm:h-8 sm:w-8 rounded-md bg-zinc-200 flex items-center justify-center overflow-hidden shrink-0">
+                    <span className="text-[10px] sm:text-xs font-semibold text-zinc-700">
+                      {(user?.name || user?.email || 'U').slice(0, 1).toUpperCase()}
+                    </span>
+                  </span>
+                  <span className="min-w-0 flex-1 text-left">
+                    <span className="block truncate text-xs sm:text-sm font-medium text-zinc-900">
+                      {user?.name || user?.email || 'Account'}
+                    </span>
+                    {user?.email && (
+                      <span className="block truncate text-[10px] sm:text-xs text-zinc-500">{user.email}</span>
+                    )}
+                  </span>
+                </span>
+                <ChevronUpIcon
+                  className={`h-3 w-3 sm:h-4 sm:w-4 text-zinc-400 transition-transform shrink-0 ${userMenuOpen ? 'rotate-180' : ''}`}
+                />
+              </button>
+
+              {userMenuOpen && (
+                <div className="absolute bottom-full left-0 mb-2 w-[260px] sm:w-[280px] rounded-lg border border-zinc-200 bg-white shadow-lg ring-1 ring-black/5 z-[50]">
                   <div className="px-2.5 sm:px-3 py-2 sm:py-2.5 flex items-center justify-between">
                     <span className="text-xs sm:text-sm text-zinc-700">Notifications</span>
                     <NotificationBell layer="account_menu" />
                   </div>
+                  
+                  {role === 'SUPER_ADMIN' && (
+                    <>
+                      <div className="h-px bg-zinc-100 my-1" />
+                      <div className="px-2.5 sm:px-3 py-2">
+                        <div className="mb-1.5 text-xs font-medium text-zinc-500 uppercase tracking-wider">Views</div>
+                        <ViewSwitcher />
+                      </div>
+                    </>
+                  )}
+
+                  {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
+                    <>
+                      <div className="h-px bg-zinc-100 my-1" />
+                      <div className="px-2.5 sm:px-3 py-2">
+                        <div className="mb-1.5 text-xs font-medium text-zinc-500 uppercase tracking-wider">Impersonation</div>
+                        <UserImpersonation />
+                      </div>
+                    </>
+                  )}
+
                   <div className="h-px bg-zinc-100 my-1" />
-                  <MenuItem>
-                    {({ focus }) => (
-                      <button
-                        className={`${
-                          focus ? 'bg-zinc-50' : ''
-                        } w-full px-2.5 sm:px-3 py-2.5 sm:py-2.5 text-xs sm:text-sm text-zinc-700 text-left transition-colors`}
-                        onClick={() => {
-                          setSidebarOpen(false)
-                          router.push('/dashboard/settings')
-                        }}
-                      >
-                        Settings
-                      </button>
-                    )}
-                  </MenuItem>
+                  <button
+                    className="w-full px-2.5 sm:px-3 py-2.5 sm:py-2.5 text-xs sm:text-sm text-zinc-700 text-left hover:bg-zinc-50 transition-colors"
+                    onClick={() => {
+                      setSidebarOpen(false)
+                      setUserMenuOpen(false)
+                      router.push('/dashboard/settings')
+                    }}
+                  >
+                    Settings
+                  </button>
                   <div className="h-px bg-zinc-100 my-1" />
-                  <MenuItem>
-                    {({ focus }) => (
-                      <button
-                        className={`${
-                          focus ? 'bg-red-50' : ''
-                        } w-full px-2.5 sm:px-3 py-2.5 sm:py-2.5 text-xs sm:text-sm text-red-600 text-left transition-colors`}
-                        onClick={() => {
-                          setSidebarOpen(false)
-                          signOut()
-                          router.push('/auth/login')
-                        }}
-                      >
-                        Sign out
-                      </button>
-                    )}
-                  </MenuItem>
-                </MenuItems>
-              </Transition>
-            </Menu>
+                  <button
+                    className="w-full px-2.5 sm:px-3 py-2.5 sm:py-2.5 text-xs sm:text-sm text-red-600 text-left hover:bg-red-50 transition-colors rounded-b-lg"
+                    onClick={() => {
+                      setSidebarOpen(false)
+                      setUserMenuOpen(false)
+                      signOut()
+                      router.push('/auth/login')
+                    }}
+                  >
+                    Sign out
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </aside>
 

@@ -63,10 +63,11 @@ export function SettingsTabs({ activeTab, onTabChange, children }: SettingsTabsP
         ))}
       </TabList>
       <TabPanels>
-        {/* We keep the children approach from the original component to minimize changes to the parent */}
-        <TabPanel className="focus:outline-none">
-          {children}
-        </TabPanel>
+        {tabs.map((tab) => (
+          <TabPanel key={tab.id} className="focus:outline-none">
+            {children}
+          </TabPanel>
+        ))}
       </TabPanels>
     </TabGroup>
   )

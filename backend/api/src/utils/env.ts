@@ -34,6 +34,7 @@ export class EnvConfig {
   // S3 Configuration
   readonly artifactsBucket: string | undefined;
   readonly cloudfrontDomain: string;
+  readonly cloudfrontDistributionId: string;
 
   // Application Configuration
   readonly isLocal: boolean;
@@ -105,6 +106,7 @@ export class EnvConfig {
     // S3 Configuration
     this.artifactsBucket = this.getOptional('ARTIFACTS_BUCKET');
     this.cloudfrontDomain = (this.getOptional('CLOUDFRONT_DOMAIN') || '').trim();
+    this.cloudfrontDistributionId = (this.getOptional('CLOUDFRONT_DISTRIBUTION_ID') || '').trim();
 
     // Application Configuration
     this.isLocal = this.getWithDefault('IS_LOCAL', 'false') === 'true';

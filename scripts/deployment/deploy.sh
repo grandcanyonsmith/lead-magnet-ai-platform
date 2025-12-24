@@ -50,7 +50,7 @@ echo ""
 print_subsection "Step 3: Building and deploying worker Docker image"
 cd backend/worker
 aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPO
-docker build -t $ECR_REPO:latest .
+docker build --platform linux/amd64 --provenance=false -t $ECR_REPO:latest .
 docker push $ECR_REPO:latest
 
 # IMPORTANT: Lambda container images do NOT auto-refresh when a tag is updated in ECR.

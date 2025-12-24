@@ -94,6 +94,17 @@ class JobCompletionService:
                         api_url=job.get('api_url') or None
                     )
 
+                # Guarantee editor overlay injection for editMode=true visual editing.
+                if 'Lead Magnet Editor Overlay' not in final_content:
+                    from services.editor_overlay_generator import EditorOverlayGenerator
+                    editor_generator = EditorOverlayGenerator()
+                    final_content = editor_generator.inject_editor_overlay(
+                        html_content=final_content,
+                        job_id=job_id,
+                        tenant_id=job.get('tenant_id', ''),
+                        api_url=job.get('api_url') or None
+                    )
+
             final_start_time = datetime.utcnow()
             final_artifact_id = self.artifact_service.store_artifact(
                 tenant_id=job['tenant_id'],
@@ -456,6 +467,16 @@ class JobCompletionService:
         from services.tracking_script_generator import TrackingScriptGenerator
         tracking_generator = TrackingScriptGenerator()
         final_content = tracking_generator.inject_tracking_script(
+            html_content=final_content,
+            job_id=job_id,
+            tenant_id=job['tenant_id'],
+            api_url=job.get('api_url') or None
+        )
+
+        # Inject editor overlay into HTML (dormant unless ?editMode=true)
+        from services.editor_overlay_generator import EditorOverlayGenerator
+        editor_generator = EditorOverlayGenerator()
+        final_content = editor_generator.inject_editor_overlay(
             html_content=final_content,
             job_id=job_id,
             tenant_id=job['tenant_id'],

@@ -5,7 +5,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { FiDollarSign, FiActivity, FiFileText, FiExternalLink, FiCreditCard, FiAlertCircle } from 'react-icons/fi'
+import { 
+  CurrencyDollarIcon, 
+  ChartBarIcon, 
+  DocumentTextIcon, 
+  ArrowTopRightOnSquareIcon, 
+  CreditCardIcon, 
+  ExclamationCircleIcon 
+} from '@heroicons/react/24/outline'
 import { useUsage } from '@/hooks/api/useSettings'
 import { DateRangePicker } from './DateRangePicker'
 import { LoadingState } from '@/components/ui/LoadingState'
@@ -135,275 +142,290 @@ export function BillingUsage() {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      {/* Subscription Status Header */}
-      <div className="mb-6 pb-6 border-b border-gray-200">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Billing & Usage</h3>
-            <p className="text-sm text-gray-600">Track your subscription and API usage</p>
+    <div className="space-y-6">
+      {/* Subscription Section */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-50 rounded-lg">
+              <CreditCardIcon className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Billing & Subscription</h3>
+              <p className="text-sm text-gray-600">Manage your subscription plan and payment methods.</p>
+            </div>
           </div>
+          
           {subscription?.has_subscription && (
             <button
               onClick={handleManageSubscription}
               disabled={portalLoading}
-              className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-50 font-medium text-sm"
             >
               {portalLoading ? (
                 <>
-                  <svg
-                    className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
                   Loading...
                 </>
               ) : (
                 <>
-                  <FiCreditCard className="w-4 h-4 mr-2" />
-                  Manage Subscription
-                  <FiExternalLink className="w-4 h-4 ml-2" />
+                  Manage Billing
+                  <ArrowTopRightOnSquareIcon className="w-4 h-4 ml-2 text-gray-400" />
                 </>
               )}
             </button>
           )}
         </div>
 
-        {/* Subscription Status Card */}
-        {subscriptionLoading ? (
-          <div className="bg-gray-50 rounded-lg p-4">
-            <p className="text-sm text-gray-600">Loading subscription...</p>
-          </div>
-        ) : subscriptionError ? (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-sm text-red-800">{subscriptionError}</p>
-          </div>
-        ) : subscription ? (
-          <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center">
-                <FiCreditCard className="w-5 h-5 text-primary-600 mr-2" />
-                <span className="font-semibold text-gray-900">Subscription Status</span>
-              </div>
-              <span className={`px-3 py-1 rounded-full text-xs font-medium ${getSubscriptionStatusColor(subscription.status)}`}>
-                {getSubscriptionStatusLabel(subscription.status)}
-              </span>
+        <div className="p-6">
+          {subscriptionLoading ? (
+            <div className="animate-pulse space-y-4">
+              <div className="h-4 bg-gray-100 rounded w-1/4"></div>
+              <div className="h-20 bg-gray-50 rounded-lg"></div>
             </div>
-
-            {!subscription.has_subscription && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-3">
-                <div className="flex items-start">
-                  <FiAlertCircle className="w-5 h-5 text-yellow-600 mt-0.5 mr-2 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium text-yellow-900 mb-1">
-                      No active subscription
-                    </p>
-                    <p className="text-xs text-yellow-800 mb-2">
-                      Start a subscription to use Lead Magnet AI&apos;s features
-                    </p>
-                    <button
-                      onClick={() => router.push('/setup-billing')}
-                      className="text-xs bg-yellow-600 text-white px-3 py-1 rounded hover:bg-yellow-700 transition-colors"
-                    >
-                      Start Subscription
-                    </button>
+          ) : subscriptionError ? (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+              <ExclamationCircleIcon className="w-5 h-5 text-red-600 mt-0.5" />
+              <p className="text-sm text-red-800">{subscriptionError}</p>
+            </div>
+          ) : subscription ? (
+            <div className="bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-xl p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <p className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-1">Status</p>
+                  <div className="flex items-center gap-2">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${getSubscriptionStatusColor(subscription.status)}`}>
+                      {getSubscriptionStatusLabel(subscription.status)}
+                    </span>
                   </div>
                 </div>
-              </div>
-            )}
-
-            {subscription.has_subscription && subscription.usage && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between text-sm mb-1">
-                  <span className="text-gray-600">Current Period Tokens</span>
-                  <span className="font-medium text-gray-900">
-                    {(typeof subscription.usage.total_tokens === 'number' ? subscription.usage.total_tokens : 0).toLocaleString()} tokens
-                  </span>
-                </div>
-                <p className="text-xs text-gray-600">
-                  {(typeof subscription.usage.units_1k === 'number' ? subscription.usage.units_1k : 0).toLocaleString()} × 1k-token units reported to Stripe
-                </p>
-                <div className="flex flex-wrap items-center text-sm gap-2">
-                  <span className="text-gray-600">Est. billable (2×):</span>
-                  <span className="font-semibold text-gray-900">
-                    ${(typeof subscription.usage.total_upcharge_cost === 'number' ? subscription.usage.total_upcharge_cost : 0).toFixed(2)}
-                  </span>
-                  <span className="text-gray-500">
-                    Actual cost: ${(typeof subscription.usage.total_actual_cost === 'number' ? subscription.usage.total_actual_cost : 0).toFixed(2)}
-                  </span>
-                </div>
-
                 {subscription.current_period_end && (
-                  <p className="text-xs text-gray-600">
-                    Current period ends: {new Date(subscription.current_period_end * 1000).toLocaleDateString()}
-                  </p>
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-1">Renews</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {new Date(subscription.current_period_end * 1000).toLocaleDateString(undefined, {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </p>
+                  </div>
                 )}
               </div>
-            )}
-          </div>
-        ) : null}
-      </div>
 
-      {/* Date Range Selector */}
-      <div className="mb-6 pb-6 border-b">
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-4">
-          <div className="flex-1">
-            <DateRangePicker
-              startDate={startDate}
-              endDate={endDate}
-              onStartDateChange={setStartDate}
-              onEndDateChange={setEndDate}
-            />
-          </div>
-          {usage && (
-            <div className="flex-shrink-0">
-              <ExportButton usage={usage} startDate={startDate} endDate={endDate} />
+              {!subscription.has_subscription && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+                  <div className="flex items-start">
+                    <ExclamationCircleIcon className="w-5 h-5 text-amber-600 mt-0.5 mr-3 flex-shrink-0" />
+                    <div>
+                      <h4 className="text-sm font-medium text-amber-900">No active subscription</h4>
+                      <p className="text-sm text-amber-800 mt-1 mb-3">
+                        Subscribe now to unlock full access to Lead Magnet AI features.
+                      </p>
+                      <button
+                        onClick={() => router.push('/setup-billing')}
+                        className="text-sm bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition-colors font-medium shadow-sm"
+                      >
+                        Start Subscription
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {subscription.has_subscription && subscription.usage && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-6 border-t border-gray-200">
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1">Period Usage</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {(typeof subscription.usage.total_tokens === 'number' ? subscription.usage.total_tokens : 0).toLocaleString()}
+                      <span className="text-sm font-normal text-gray-500 ml-1">tokens</span>
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1">Reported Units</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {(typeof subscription.usage.units_1k === 'number' ? subscription.usage.units_1k : 0).toLocaleString()}
+                      <span className="text-sm font-normal text-gray-500 ml-1">× 1k</span>
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1">Est. Cost</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      ${(typeof subscription.usage.total_upcharge_cost === 'number' ? subscription.usage.total_upcharge_cost : 0).toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+          ) : null}
         </div>
       </div>
 
-      {loading ? (
-        <LoadingState message="Loading usage data..." />
-      ) : error ? (
-        <ErrorState message={error} onRetry={refetch} />
-      ) : usage ? (
-        <>
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div className="bg-blue-50 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <FiDollarSign className="w-6 h-6 text-blue-600" />
-                <span className="text-xs text-blue-600 font-medium">Upcharge</span>
+      {/* Usage Analytics Section */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="p-6 border-b border-gray-100 bg-gray-50/50">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-50 rounded-lg">
+                <ChartBarIcon className="w-5 h-5 text-purple-600" />
               </div>
-              <div className="text-2xl font-bold text-blue-900">
-                ${(usage.openai?.total_upcharge || 0).toFixed(2)}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Usage Analytics</h3>
+                <p className="text-sm text-gray-600">Track API consumption and costs over time.</p>
               </div>
-              <div className="text-xs text-blue-600 mt-1">Total Cost</div>
             </div>
-
-            <div className="bg-green-50 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <FiDollarSign className="w-6 h-6 text-green-600" />
-                <span className="text-xs text-green-600 font-medium">Actual</span>
-              </div>
-              <div className="text-2xl font-bold text-green-900">
-                ${(usage.openai?.total_actual || 0).toFixed(2)}
-              </div>
-              <div className="text-xs text-green-600 mt-1">Before Upcharge</div>
-            </div>
-
-            <div className="bg-purple-50 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <FiActivity className="w-6 h-6 text-purple-600" />
-              </div>
-              <div className="text-2xl font-bold text-purple-900">
-                {usage.summary?.total_tokens?.toLocaleString() || 0}
-              </div>
-              <div className="text-xs text-purple-600 mt-1">Total Tokens</div>
-            </div>
-
-            <div className="bg-orange-50 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <FiFileText className="w-6 h-6 text-orange-600" />
-              </div>
-              <div className="text-2xl font-bold text-orange-900">
-                {usage.summary?.total_calls || 0}
-              </div>
-              <div className="text-xs text-orange-600 mt-1">API Calls</div>
+            
+            <div className="flex items-center gap-2">
+              <DateRangePicker
+                startDate={startDate}
+                endDate={endDate}
+                onStartDateChange={setStartDate}
+                onEndDateChange={setEndDate}
+              />
+              {usage && (
+                <ExportButton usage={usage} startDate={startDate} endDate={endDate} />
+              )}
             </div>
           </div>
+        </div>
 
-          {/* Usage Charts */}
-          {usage.openai?.by_service && Object.keys(usage.openai.by_service).length > 0 && (
-            <UsageCharts usage={usage} />
-          )}
+        <div className="p-6">
+          {loading ? (
+            <LoadingState message="Loading usage data..." />
+          ) : error ? (
+            <ErrorState message={error} onRetry={refetch} />
+          ) : usage ? (
+            <div className="space-y-8">
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-blue-50/50 rounded-xl p-5 border border-blue-100">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-1.5 bg-blue-100 rounded-md">
+                      <CurrencyDollarIcon className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <span className="text-sm font-medium text-blue-900">Total Upcharge</span>
+                  </div>
+                  <p className="text-2xl font-bold text-blue-900">
+                    ${(usage.openai?.total_upcharge || 0).toFixed(2)}
+                  </p>
+                  <p className="text-xs text-blue-600 mt-1">Billable amount</p>
+                </div>
 
-          {/* Breakdown Table */}
-          {usage.openai?.by_service && Object.keys(usage.openai.by_service).length > 0 ? (
-            <div className="overflow-x-auto -mx-6 px-6">
-              <div className="block md:hidden mb-4">
-                <p className="text-sm text-gray-600">Scroll horizontally to view all columns</p>
+                <div className="bg-green-50/50 rounded-xl p-5 border border-green-100">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-1.5 bg-green-100 rounded-md">
+                      <CurrencyDollarIcon className="w-4 h-4 text-green-600" />
+                    </div>
+                    <span className="text-sm font-medium text-green-900">Actual Cost</span>
+                  </div>
+                  <p className="text-2xl font-bold text-green-900">
+                    ${(usage.openai?.total_actual || 0).toFixed(2)}
+                  </p>
+                  <p className="text-xs text-green-600 mt-1">Provider cost</p>
+                </div>
+
+                <div className="bg-purple-50/50 rounded-xl p-5 border border-purple-100">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-1.5 bg-purple-100 rounded-md">
+                      <ChartBarIcon className="w-4 h-4 text-purple-600" />
+                    </div>
+                    <span className="text-sm font-medium text-purple-900">Total Tokens</span>
+                  </div>
+                  <p className="text-2xl font-bold text-purple-900">
+                    {usage.summary?.total_tokens?.toLocaleString() || 0}
+                  </p>
+                  <p className="text-xs text-purple-600 mt-1">Input + Output</p>
+                </div>
+
+                <div className="bg-orange-50/50 rounded-xl p-5 border border-orange-100">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-1.5 bg-orange-100 rounded-md">
+                      <DocumentTextIcon className="w-4 h-4 text-orange-600" />
+                    </div>
+                    <span className="text-sm font-medium text-orange-900">API Calls</span>
+                  </div>
+                  <p className="text-2xl font-bold text-orange-900">
+                    {usage.summary?.total_calls || 0}
+                  </p>
+                  <p className="text-xs text-orange-600 mt-1">Requests made</p>
+                </div>
               </div>
-              <table className="min-w-full divide-y divide-gray-200" role="table" aria-label="Usage breakdown by service">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Service
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Calls
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Input Tokens
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Output Tokens
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actual Cost
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Upcharge Cost
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {Object.values(usage.openai.by_service).map((service: ServiceUsage) => (
-                    <tr key={service.service_type}>
-                      <th scope="row" className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {formatServiceName(service.service_type)}
-                      </th>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
-                        {service.calls.toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
-                        {service.input_tokens.toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
-                        {service.output_tokens.toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
-                        ${service.actual_cost.toFixed(4)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 text-right">
-                        ${service.upcharge_cost.toFixed(4)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+
+              {/* Usage Charts */}
+              {usage.openai?.by_service && Object.keys(usage.openai.by_service).length > 0 && (
+                <div className="bg-white border border-gray-200 rounded-xl p-6">
+                  <h4 className="text-base font-semibold text-gray-900 mb-6">Usage Breakdown</h4>
+                  <UsageCharts usage={usage} />
+                </div>
+              )}
+
+              {/* Detailed Table */}
+              <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-200 bg-gray-50/50">
+                  <h4 className="text-base font-semibold text-gray-900">Service Details</h4>
+                </div>
+                
+                {usage.openai?.by_service && Object.keys(usage.openai.by_service).length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service</th>
+                          <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Calls</th>
+                          <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Input Tokens</th>
+                          <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Output Tokens</th>
+                          <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actual Cost</th>
+                          <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-900 uppercase tracking-wider">Upcharge Cost</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {Object.values(usage.openai.by_service).map((service: ServiceUsage) => (
+                          <tr key={service.service_type} className="hover:bg-gray-50/50 transition-colors">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {formatServiceName(service.service_type)}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 text-right">
+                              {service.calls.toLocaleString()}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 text-right">
+                              {service.input_tokens.toLocaleString()}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 text-right">
+                              {service.output_tokens.toLocaleString()}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 text-right font-mono">
+                              ${service.actual_cost.toFixed(4)}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 text-right font-mono bg-gray-50/30">
+                              ${service.upcharge_cost.toFixed(4)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="text-center py-12 text-gray-500">
+                    <DocumentTextIcon className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+                    <p className="text-lg font-medium text-gray-900 mb-1">No usage data found</p>
+                    <p className="text-sm">No API calls were recorded for the selected date range.</p>
+                  </div>
+                )}
+              </div>
             </div>
           ) : (
-            <div className="text-center py-12 text-gray-500">
-              <p className="text-lg font-medium mb-2">No usage data found</p>
-              <p className="text-sm">No OpenAI API calls were recorded for the selected date range.</p>
-              <p className="text-sm mt-2">
-                Try generating a template, form CSS, or workflow instruction to see usage data.
-              </p>
+            <div className="text-center py-16 text-gray-500 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+              <ChartBarIcon className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+              <p className="text-lg font-medium text-gray-900">Select a date range</p>
+              <p className="text-sm mt-1">Choose a start and end date above to view your usage statistics.</p>
             </div>
           )}
-        </>
-      ) : (
-        <div className="text-center py-12 text-gray-500">
-          <p>Select a date range to view usage data</p>
         </div>
-      )}
+      </div>
     </div>
   )
 }

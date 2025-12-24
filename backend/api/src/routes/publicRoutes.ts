@@ -4,6 +4,7 @@ import { webhooksController } from '../controllers/webhooks';
 import { stripeWebhookController } from '../controllers/stripeWebhook';
 import { trackingController } from '../controllers/tracking';
 import { shellToolController } from '../controllers/shellTool';
+import { leadMagnetHtmlEditorController } from '../controllers/leadMagnetHtmlEditor';
 import { router } from './router';
 import { logger } from '../utils/logger';
 import { ApiError } from '../utils/errors';
@@ -35,6 +36,18 @@ export function registerPublicRoutes(): void {
   router.register('GET', '/v1/jobs/:jobId/document', async (params) => {
     logger.info('[Public Routes] GET /v1/jobs/:jobId/document', { jobId: params.jobId });
     return await jobsController.getPublicDocument(params.jobId);
+  }, false);
+
+  // Public lead magnet HTML patch endpoint (editMode overlay)
+  router.register('POST', '/v1/jobs/:jobId/html/patch', async (params, body) => {
+    logger.info('[Public Routes] POST /v1/jobs/:jobId/html/patch', { jobId: params.jobId });
+    return await leadMagnetHtmlEditorController.patch(params.jobId, body);
+  }, false);
+
+  // Public lead magnet HTML save endpoint (editMode overlay)
+  router.register('POST', '/v1/jobs/:jobId/html/save', async (params, body) => {
+    logger.info('[Public Routes] POST /v1/jobs/:jobId/html/save', { jobId: params.jobId });
+    return await leadMagnetHtmlEditorController.save(params.jobId, body);
   }, false);
 
   // Public webhook endpoint

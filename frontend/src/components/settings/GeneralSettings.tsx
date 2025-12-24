@@ -26,57 +26,71 @@ const AI_MODEL_OPTIONS = [
   { value: 'o4-mini-deep-research', label: 'O4-Mini-Deep-Research' },
 ]
 
+import { BuildingOfficeIcon } from '@heroicons/react/24/outline'
+
 export function GeneralSettings({ settings, onChange, errors }: GeneralSettingsProps) {
   return (
-    <div className="bg-white rounded-lg shadow p-6 space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">General Information</h3>
-        <p className="text-sm text-gray-600 mb-6">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="p-6 border-b border-gray-100 bg-gray-50/50">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="p-2 bg-blue-50 rounded-lg">
+            <BuildingOfficeIcon className="w-5 h-5 text-blue-600" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900">General Information</h3>
+        </div>
+        <p className="text-sm text-gray-600 ml-12">
           Configure your organization details and default AI model preferences.
         </p>
       </div>
 
-      <div className="space-y-6">
-        <FormField
-          label="Organization Name"
-          name="organization_name"
-          type="text"
-          value={settings.organization_name || ''}
-          onChange={(value) => onChange('organization_name', value)}
-          error={errors?.organization_name}
-          dataTour="organization-name"
-        />
+      <div className="p-8 space-y-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField
+            label="Organization Name"
+            name="organization_name"
+            type="text"
+            value={settings.organization_name || ''}
+            onChange={(value) => onChange('organization_name', value)}
+            error={errors?.organization_name}
+            dataTour="organization-name"
+            placeholder="Acme Corp"
+          />
 
-        <FormField
-          label="Contact Email"
-          name="contact_email"
-          type="email"
-          value={settings.contact_email || ''}
-          onChange={(value) => onChange('contact_email', value)}
-          error={errors?.contact_email}
-          helpText="Email address for notifications and support"
-          dataTour="contact-email"
-        />
+          <FormField
+            label="Contact Email"
+            name="contact_email"
+            type="email"
+            value={settings.contact_email || ''}
+            onChange={(value) => onChange('contact_email', value)}
+            error={errors?.contact_email}
+            helpText="Email address for notifications and support"
+            dataTour="contact-email"
+            placeholder="contact@example.com"
+          />
+        </div>
 
-        <FormField
-          label="Website URL"
-          name="website_url"
-          type="url"
-          value={settings.website_url || ''}
-          onChange={(value) => onChange('website_url', value)}
-          error={errors?.website_url}
-          helpText="Your organization's website URL"
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField
+            label="Website URL"
+            name="website_url"
+            type="url"
+            value={settings.website_url || ''}
+            onChange={(value) => onChange('website_url', value)}
+            error={errors?.website_url}
+            helpText="Your organization's website URL"
+            placeholder="https://example.com"
+          />
 
-        <FormField
-          label="Default AI Model"
-          name="default_ai_model"
-          type="text"
-          value={settings.default_ai_model || 'gpt-5.1-codex'}
-          onChange={(value) => onChange('default_ai_model', value)}
-          options={AI_MODEL_OPTIONS}
-          helpText="Default AI model used for generating lead magnets"
-        />
+          <FormField
+            label="Default AI Model"
+            name="default_ai_model"
+            type="text"
+            value={settings.default_ai_model || 'gpt-5.1-codex'}
+            onChange={(value) => onChange('default_ai_model', value)}
+            options={AI_MODEL_OPTIONS}
+            helpText="Default AI model used for generating lead magnets"
+          />
+        </div>
       </div>
     </div>
   )
