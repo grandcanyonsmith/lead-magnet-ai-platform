@@ -45,6 +45,7 @@ export function useTemplateEdit(workflowName: string, templateId: string | null,
   const [refining, setRefining] = useState(false)
   const [generationStatus, setGenerationStatus] = useState<string | null>(null)
   const [editPrompt, setEditPrompt] = useState('')
+  const [selectedSelectors, setSelectedSelectors] = useState<string[]>([])
 
   // Load template if templateId is provided
   useEffect(() => {
@@ -209,6 +210,7 @@ export function useTemplateEdit(workflowName: string, templateId: string | null,
       const result = await api.refineTemplateWithAI({
         current_html: currentHtml,
         edit_prompt: editPrompt.trim(),
+        selectors: selectedSelectors,
         model: 'gpt-5' as AIModel,
       })
 
@@ -230,6 +232,7 @@ export function useTemplateEdit(workflowName: string, templateId: string | null,
       }
       
       setEditPrompt('')
+      setSelectedSelectors([]) // Clear selection after refine
       
       setTimeout(() => {
         setGenerationStatus(null)
@@ -277,6 +280,7 @@ export function useTemplateEdit(workflowName: string, templateId: string | null,
     handleRefine,
     insertPlaceholder,
     loadTemplate,
+<<<<<<< Current (Your changes)
     handleUndo,
     handleRedo,
     canUndo: historyIndex > 0,
@@ -284,5 +288,9 @@ export function useTemplateEdit(workflowName: string, templateId: string | null,
     history,
     historyIndex,
     jumpToHistory,
+=======
+    selectedSelectors,
+    setSelectedSelectors,
+>>>>>>> Incoming (Background Agent changes)
   }
 }

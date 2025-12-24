@@ -184,6 +184,7 @@ class TemplatesController {
       current_html: body.current_html,
       edit_prompt: body.edit_prompt,
       model: body.model,
+      selectors: body.selectors,
       tenantId,
     });
 
