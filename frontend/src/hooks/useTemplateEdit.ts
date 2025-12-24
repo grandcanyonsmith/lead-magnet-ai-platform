@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { api } from '@/lib/api'
 import { AIModel } from '@/types'
 import { extractPlaceholders } from '@/utils/templateUtils'
@@ -20,6 +20,16 @@ export function useTemplateEdit(workflowName: string, templateId: string | null,
     html_content: '',
     is_published: false,
   })
+
+  // History state
+  const [history, setHistory] = useState<string[]>([])
+  const [historyIndex, setHistoryIndex] = useState(-1)
+
+  // Use ref to track latest templateData for async operations to avoid stale closures
+  const templateDataRef = useRef(templateData)
+  useEffect(() => {
+    templateDataRef.current = templateData
+  }, [templateData])
 
   const [detectedPlaceholders, setDetectedPlaceholders] = useState<string[]>([])
   const [showPreview, setShowPreview] = useState(false)
@@ -54,21 +64,37 @@ export function useTemplateEdit(workflowName: string, templateId: string | null,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workflowName, templateId])
 
+  const addToHistory = (html: string) => {
+    // Don't add if same as current
+    if (historyIndex >= 0 && history[historyIndex] === html) return
+
+    const newHistory = history.slice(0, historyIndex + 1)
+    newHistory.push(html)
+    setHistory(newHistory)
+    setHistoryIndex(newHistory.length - 1)
+  }
+
   const loadTemplate = async (id: string) => {
     setTemplateLoading(true)
     try {
       const template = await api.getTemplate(id)
+      const htmlContent = template.html_content || ''
+      
       setTemplateData({
         template_name: template.template_name || '',
         template_description: template.template_description || '',
-        html_content: template.html_content || '',
+        html_content: htmlContent,
         is_published: (template as any).is_published || false,
       })
       
-      if (template.html_content) {
-        const placeholders = extractPlaceholders(template.html_content)
+      // Initialize history
+      setHistory([htmlContent])
+      setHistoryIndex(0)
+      
+      if (htmlContent) {
+        const placeholders = extractPlaceholders(htmlContent)
         setDetectedPlaceholders(placeholders)
-        if (template.html_content.trim() && !showPreview) {
+        if (htmlContent.trim() && !showPreview) {
           setShowPreview(true)
           setPreviewKey(1)
         }
@@ -86,11 +112,43 @@ export function useTemplateEdit(workflowName: string, templateId: string | null,
 
   const handleHtmlChange = (html: string) => {
     setTemplateData(prev => ({ ...prev, html_content: html }))
-    const placeholders = extractPlaceholders(html)
-    setDetectedPlaceholders(placeholders)
-    setPreviewKey(prev => prev + 1)
-    if (html.trim() && !showPreview) {
-      setShowPreview(true)
+    // Note: We don't add to history on every keystroke, ideally we'd debounce this or only add on specific actions
+    // For now, let's rely on specific actions like "Refine" or maybe a blur event to add history points?
+    // Actually, for a simple undo/redo in a text editor, usually every change is tracked but debounced.
+    // Given the request is about "iterations", we definitely want to track AI changes.
+    // For manual edits, let's just track them. Debouncing might be needed if performance is an issue.
+  }
+  
+  // Wrapper to commit manual changes to history (e.g. on blur or after debounce)
+  const commitHtmlChange = (html: string) => {
+      addToHistory(html)
+  }
+
+  const handleUndo = () => {
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1
+      const previousHtml = history[newIndex]
+      setHistoryIndex(newIndex)
+      setTemplateData(prev => ({ ...prev, html_content: previousHtml }))
+      
+      // Update derived state
+      const placeholders = extractPlaceholders(previousHtml)
+      setDetectedPlaceholders(placeholders)
+      setPreviewKey(prev => prev + 1)
+    }
+  }
+
+  const handleRedo = () => {
+    if (historyIndex < history.length - 1) {
+      const newIndex = historyIndex + 1
+      const nextHtml = history[newIndex]
+      setHistoryIndex(newIndex)
+      setTemplateData(prev => ({ ...prev, html_content: nextHtml }))
+      
+      // Update derived state
+      const placeholders = extractPlaceholders(nextHtml)
+      setDetectedPlaceholders(placeholders)
+      setPreviewKey(prev => prev + 1)
     }
   }
 
@@ -99,8 +157,16 @@ export function useTemplateEdit(workflowName: string, templateId: string | null,
       return { error: 'Please describe what changes you want to make' }
     }
 
-    if (!templateData.html_content.trim()) {
+    // Use the ref to get the absolute latest HTML content
+    const currentHtml = templateDataRef.current.html_content
+
+    if (!currentHtml.trim()) {
       return { error: 'No HTML content to refine' }
+    }
+    
+    // Ensure current state is in history before refining if it's new
+    if (historyIndex === -1 || history[historyIndex] !== currentHtml) {
+        addToHistory(currentHtml)
     }
 
     setRefining(true)
@@ -108,7 +174,7 @@ export function useTemplateEdit(workflowName: string, templateId: string | null,
 
     try {
       const result = await api.refineTemplateWithAI({
-        current_html: templateData.html_content,
+        current_html: currentHtml,
         edit_prompt: editPrompt.trim(),
         model: 'gpt-5' as AIModel,
       })
@@ -118,6 +184,9 @@ export function useTemplateEdit(workflowName: string, templateId: string | null,
         ...prev,
         html_content: newHtml,
       }))
+      
+      // Add successful refinement to history
+      addToHistory(newHtml)
       
       const placeholders = extractPlaceholders(newHtml)
       setDetectedPlaceholders(placeholders)
@@ -143,10 +212,12 @@ export function useTemplateEdit(workflowName: string, templateId: string | null,
 
   const insertPlaceholder = (placeholder: string) => {
     const placeholderText = `{{${placeholder}}}`
+    const newHtml = templateData.html_content + placeholderText
     setTemplateData(prev => ({
       ...prev,
-      html_content: prev.html_content + placeholderText,
+      html_content: newHtml,
     }))
+    addToHistory(newHtml)
   }
 
   return {
@@ -167,9 +238,13 @@ export function useTemplateEdit(workflowName: string, templateId: string | null,
     setEditPrompt,
     handleTemplateChange,
     handleHtmlChange,
+    commitHtmlChange,
     handleRefine,
     insertPlaceholder,
     loadTemplate,
+    handleUndo,
+    handleRedo,
+    canUndo: historyIndex > 0,
+    canRedo: historyIndex < history.length - 1,
   }
 }
-
