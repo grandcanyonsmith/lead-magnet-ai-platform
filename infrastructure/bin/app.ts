@@ -134,6 +134,7 @@ function createStacks(app: cdk.App, env: cdk.Environment): void {
     stateMachineArn: computeStack.stateMachineArn,
     artifactsBucket: storageStack.artifactsBucket,
     cloudfrontDomain: storageStack.distribution.distributionDomainName,
+    cloudfrontDistributionId: storageStack.distribution.distributionId,
     shellExecutor: {
       clusterArn: shellExecutorStack.cluster.clusterArn,
       taskDefinitionFamily: SHELL_EXECUTOR_TASK_FAMILY,
