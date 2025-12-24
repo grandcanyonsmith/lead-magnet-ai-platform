@@ -112,7 +112,7 @@ export function PreviewCard({ artifact }: PreviewCardProps) {
 
       <div className="p-4">
         <h3 className="font-semibold text-gray-900 truncate mb-2 group-hover:text-primary-600 transition-colors">
-          {artifact.file_name || artifact.artifact_name || artifact.artifact_id}
+          {artifact.file_name || artifact.artifact_name || 'Artifact'}
         </h3>
 
         <div className="space-y-1.5 text-sm text-gray-600">

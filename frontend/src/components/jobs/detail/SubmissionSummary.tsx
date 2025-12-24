@@ -155,6 +155,7 @@ export function SubmissionSummary({
 }: SubmissionSummaryProps) {
   const submittedLabel = submission.created_at ? formatRelativeTime(submission.created_at) : null
   const entries = Object.entries(submission.form_data || {})
+  const [showAnswers, setShowAnswers] = useState(false)
   
   // Extract name if available for display
   const nameField = entries.find(([key]) => 
@@ -188,8 +189,21 @@ export function SubmissionSummary({
             {submittedLabel && (
               <p className="text-sm text-gray-500 mt-1">Submitted {submittedLabel}</p>
             )}
+            {entries.length > 0 && !showAnswers && (
+              <p className="text-xs text-gray-500 mt-1">
+                {entries.length} field{entries.length === 1 ? '' : 's'} (collapsed)
+              </p>
+            )}
           </div>
           <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setShowAnswers((v) => !v)}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 hover:border-gray-400"
+            >
+              {showAnswers ? <FiChevronUp className="h-4 w-4" /> : <FiChevronDown className="h-4 w-4" />}
+              {showAnswers ? 'Hide answers' : 'View answers'}
+            </button>
             <button
               type="button"
               onClick={handleCopyAll}
@@ -209,32 +223,34 @@ export function SubmissionSummary({
             </button>
           </div>
         </div>
-        <div className="border-t border-gray-100 bg-white">
-          {entries.length === 0 ? (
-            <p className="px-4 py-6 text-sm text-gray-500">No submission data available</p>
-          ) : (
-            <dl className="divide-y divide-gray-100">
-              {entries.map(([key, value]) => {
-                const isComplex = typeof value !== 'string' || 
-                  (value.trim().startsWith('{') || value.trim().startsWith('['))
-                
-                return (
-                  <div 
-                    key={key} 
-                    className={`px-4 py-4 sm:px-6 sm:py-5 transition-colors hover:bg-gray-50 ${isComplex ? 'bg-gray-50/50' : ''}`}
-                  >
-                    <dt className="text-sm font-semibold text-gray-800 mb-2 capitalize">
-                      {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                    </dt>
-                    <dd>
-                      <FormFieldValue value={value} />
-                    </dd>
-                  </div>
-                )
-              })}
-            </dl>
-          )}
-        </div>
+        {showAnswers && (
+          <div className="border-t border-gray-100 bg-white">
+            {entries.length === 0 ? (
+              <p className="px-4 py-6 text-sm text-gray-500">No submission data available</p>
+            ) : (
+              <dl className="divide-y divide-gray-100">
+                {entries.map(([key, value]) => {
+                  const isComplex = typeof value !== 'string' || 
+                    (value.trim().startsWith('{') || value.trim().startsWith('['))
+                  
+                  return (
+                    <div 
+                      key={key} 
+                      className={`px-4 py-4 sm:px-6 sm:py-5 transition-colors hover:bg-gray-50 ${isComplex ? 'bg-gray-50/50' : ''}`}
+                    >
+                      <dt className="text-sm font-semibold text-gray-800 mb-2 capitalize">
+                        {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                      </dt>
+                      <dd>
+                        <FormFieldValue value={value} />
+                      </dd>
+                    </div>
+                  )
+                })}
+              </dl>
+            )}
+          </div>
+        )}
       </div>
     </section>
   )

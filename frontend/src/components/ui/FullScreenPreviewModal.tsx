@@ -99,9 +99,16 @@ export const FullScreenPreviewModal = React.memo(function FullScreenPreviewModal
 
   if (!isOpen) return null
 
+  const fileNameLower = (fileName || '').toLowerCase()
   const isHtml =
-    contentType === 'text/html' || contentType === 'application/xhtml+xml'
-  const isMarkdown = contentType === 'text/markdown'
+    (contentType || '').startsWith('text/html') ||
+    contentType === 'application/xhtml+xml' ||
+    fileNameLower.endsWith('.html') ||
+    fileNameLower.endsWith('.htm')
+  const isMarkdown =
+    (contentType || '').startsWith('text/markdown') ||
+    fileNameLower.endsWith('.md') ||
+    fileNameLower.endsWith('.markdown')
   const isImage = contentType?.startsWith('image/')
 
   return (
@@ -171,8 +178,8 @@ export const FullScreenPreviewModal = React.memo(function FullScreenPreviewModal
             className={`relative flex justify-center ${
               isHtml || isImage ? 'items-center' : 'items-start'
             } ${
-              isHtml 
-                ? 'h-full w-full bg-white rounded-lg overflow-hidden' 
+              isHtml || isMarkdown
+                ? 'h-full w-full bg-white rounded-lg overflow-hidden'
                 : isImage
                 ? 'h-full w-full overflow-hidden'
                 : 'h-full w-full overflow-y-auto pt-4 sm:pt-0'
@@ -191,7 +198,7 @@ export const FullScreenPreviewModal = React.memo(function FullScreenPreviewModal
               objectUrl={objectUrl}
               fileName={fileName}
               className={
-                isHtml
+                isHtml || isMarkdown
                   ? 'h-full w-full'
                   : isImage
                   ? 'max-h-full max-w-full object-contain shadow-2xl rounded-lg'
@@ -199,8 +206,8 @@ export const FullScreenPreviewModal = React.memo(function FullScreenPreviewModal
               }
               artifactId={artifactId}
               isFullScreen={true}
-              viewMode={isHtml ? viewMode : undefined}
-              onViewModeChange={isHtml ? setViewMode : undefined}
+              viewMode={isHtml || isMarkdown ? viewMode : undefined}
+              onViewModeChange={isHtml || isMarkdown ? setViewMode : undefined}
             />
           </div>
         </div>

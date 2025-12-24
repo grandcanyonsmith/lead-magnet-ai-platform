@@ -2,6 +2,19 @@ import type { Artifact } from '@/types/artifact'
 import type { ArtifactGalleryItem, Job, MergedStep } from '@/types/job'
 import { formatStepLabel } from './steps'
 
+function normalizeUrlKey(url: string | null | undefined): string | null {
+  const raw = (url || '').trim()
+  if (!raw) return null
+  try {
+    const parsed = new URL(raw)
+    // Ignore query strings (e.g., presigned URLs) and normalize to host+path.
+    return `${parsed.hostname}${parsed.pathname}`
+  } catch {
+    // If it's not a valid URL, fall back to raw string match.
+    return raw
+  }
+}
+
 interface BuildArtifactGalleryItemsArgs {
   job?: Job | null
   artifacts?: Artifact[] | null
@@ -99,8 +112,18 @@ export function buildArtifactGalleryItems({
     const completionTimestamp = job.completed_at ? new Date(job.completed_at).getTime() : Number.MAX_SAFE_INTEGER - 1
     
     // Try to find the actual final artifact so the editor has a stable artifact_id to load.
-    // Prefer html_final/markdown_final, otherwise heuristics on filename/content type, otherwise URL match.
-    const finalArtifactCandidate = [...(artifacts ?? [])].reverse().find((a) => {
+    // Prefer URL match (exact output), then html_final/markdown_final, then filename/content-type heuristics.
+    // Note: backend returns artifacts sorted by created_at DESC (newest first), so we do NOT reverse.
+    const jobOutputKey = normalizeUrlKey(job.output_url)
+    const matchingArtifactByUrl = jobOutputKey
+      ? (artifacts ?? []).find((a) => {
+          const publicKey = normalizeUrlKey(a.public_url)
+          const objectKey = normalizeUrlKey(a.object_url)
+          return publicKey === jobOutputKey || objectKey === jobOutputKey
+        })
+      : undefined
+
+    const finalArtifactCandidate = (artifacts ?? []).find((a) => {
       const artifactType = String(a.artifact_type || '').toLowerCase()
       const contentType = String(a.content_type || '').toLowerCase()
       const name = String(a.file_name || a.artifact_name || '').toLowerCase()
@@ -112,9 +135,7 @@ export function buildArtifactGalleryItems({
       )
     })
 
-    const matchingArtifact =
-      finalArtifactCandidate ||
-      artifacts?.find((a) => a.public_url === job.output_url || a.object_url === job.output_url)
+    const matchingArtifact = matchingArtifactByUrl || finalArtifactCandidate
 
     items.push({
       id: 'job-output-url',
