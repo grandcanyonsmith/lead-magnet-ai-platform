@@ -8,6 +8,7 @@ import {
   CodeBracketIcon,
   PhotoIcon,
   DocumentIcon,
+  PencilSquareIcon,
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 import { PreviewRenderer } from '@/components/artifacts/PreviewRenderer'
@@ -85,6 +86,29 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
     item.label ||
     'Artifact'
   const [openingJobOutput, setOpeningJobOutput] = useState(false)
+
+  const isHtml =
+    item.artifact?.content_type === 'text/html' ||
+    fileName.toLowerCase().endsWith('.html')
+
+  const withEditMode = (url: string) => {
+    try {
+      const base = typeof window !== 'undefined' ? window.location.origin : 'https://example.com'
+      const u = new URL(url, base)
+      u.searchParams.set('editMode', 'true')
+      return u.toString()
+    } catch (_e) {
+      // Fallback for malformed URLs
+      return url + (url.includes('?') ? '&' : '?') + 'editMode=true'
+    }
+  }
+
+  // Prefer public_url for editMode because presigned S3 URLs can break if query params change.
+  const editModeUrl = (() => {
+    const baseUrl = item.artifact?.public_url || artifactUrl
+    if (!baseUrl) return null
+    return withEditMode(baseUrl)
+  })()
 
   const handleCopy = async (value: string, successMessage: string) => {
     try {
@@ -219,6 +243,18 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
                   className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
                 >
                   <ArrowTopRightOnSquareIcon className="h-4 w-4" />
+                </a>
+              </Tooltip>
+            )}
+            {isHtml && editModeUrl && (
+              <Tooltip content="Open in edit mode" position="top">
+                <a
+                  href={editModeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                >
+                  <PencilSquareIcon className="h-4 w-4" />
                 </a>
               </Tooltip>
             )}
