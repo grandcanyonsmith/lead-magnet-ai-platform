@@ -63,7 +63,7 @@ function applyHunk(
   lines: string[], 
   hunkLines: string[], 
   oldStart: number, 
-  oldLength: number, 
+  _oldLength: number, 
   offset: number
 ): { newLines: string[], delta: number } {
   // Extract context (lines starting with ' ') and deletions (lines starting with '-')
@@ -109,15 +109,12 @@ function applyHunk(
       // If oldLength == 0, oldStart is the line number *before* the insertion point.
       // e.g. @@ -0,0 ... @@ -> Insert at 0
       // e.g. @@ -1,0 ... @@ -> Insert at 1 (after line 1)
-      // Index = oldStart
+      // Unified diffs are 1-indexed, so we subtract 1.
+      // Special case: oldStart=0 (start of file) -> -1, clamped to 0.
       
-      // If oldLength > 0 (weird for empty preImage, implies we are deleting nothing? 
-      // but preImage is empty, so we ARE deleting nothing).
-      
-      let insertionIndex = oldStart + offset;
+      let insertionIndex = Math.max(0, oldStart - 1 + offset);
       
       // Handle bounds safely
-      if (insertionIndex < 0) insertionIndex = 0;
       if (insertionIndex > lines.length) insertionIndex = lines.length;
       
       const newLines = [...lines];
