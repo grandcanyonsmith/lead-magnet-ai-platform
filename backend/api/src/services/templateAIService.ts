@@ -289,15 +289,16 @@ Requirements:
 ${shouldRemovePlaceholders 
   ? '1. REMOVE all placeholder syntax {{PLACEHOLDER_NAME}} and replace with actual content or remove the elements containing them'
   : '1. Keep all placeholder syntax {{PLACEHOLDER_NAME}} exactly as they are'}
-2. Apply the requested changes while maintaining the overall structure
-3. Ensure the HTML remains valid and well-formed
-4. Keep modern, clean CSS styling
-5. Maintain responsiveness and mobile-friendliness
+2. Apply the requested changes while maintaining the overall structure.
+3. Ensure the HTML remains valid and well-formed.
+4. Keep modern, clean CSS styling.
+5. Maintain responsiveness and mobile-friendliness.
+6. **IMPORTANT:** If the user request implies a global change (like "change background color", "change font", "dark mode"), apply it to the <body>, <html>, or root CSS variables so it affects the ENTIRE page, unless the user specifically asks to limit it to a section.
 ${shouldRemovePlaceholders 
-  ? '6. Use real values instead of placeholders - replace {{TITLE}} with actual text, {{COLORS}} with real color values (e.g., #2d8659 for green), etc.'
+  ? '7. Use real values instead of placeholders - replace {{TITLE}} with actual text, {{COLORS}} with real color values (e.g., #2d8659 for green), etc.'
   : ''}
 
-Return ONLY the modified HTML code, no markdown formatting, no explanations.`;
+Return the FULL, COMPLETE HTML document with all modifications applied. Do not output partial snippets.`;
 
       logger.info('[Template Refinement] Calling OpenAI for refinement...', {
         model,
