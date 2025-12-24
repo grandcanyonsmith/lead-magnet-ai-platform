@@ -41,11 +41,11 @@ export function FormField({
 }: FormFieldProps) {
   const inputId = `field-${name}`
 
-  const baseInputClasses = `w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+  const baseInputClasses = `w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all duration-200 ${
     error
-      ? 'border-red-300 focus:ring-red-500'
-      : 'border-gray-300 focus:ring-primary-500'
-  } ${disabled || readOnly ? 'bg-gray-50 cursor-not-allowed' : 'bg-white'} ${className}`
+      ? 'border-red-300 focus:ring-red-500 bg-red-50/30'
+      : 'border-gray-200 focus:border-primary-500 focus:ring-primary-500/20 hover:border-gray-300'
+  } ${disabled || readOnly ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'bg-white text-gray-900 shadow-sm'} ${className}`
 
   const renderInput = () => {
     if (type === 'textarea') {

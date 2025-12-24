@@ -18,6 +18,8 @@ interface DeliverySettingsProps {
   errors?: Record<string, string>
 }
 
+import { ServerStackIcon, GlobeAltIcon, PhoneIcon } from '@heroicons/react/24/outline'
+
 export function DeliverySettings({
   settings,
   onChange,
@@ -53,59 +55,68 @@ export function DeliverySettings({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-6 space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Delivery Settings</h3>
-        <p className="text-sm text-gray-600 mb-6">
-          Configure webhook endpoints and delivery preferences for your lead magnets.
-        </p>
-      </div>
-
-      <div className="space-y-6">
-        <div>
-          <FormField
-            label={
-              <>
-                Your Webhook URL
-                <span className="ml-2 text-xs text-gray-500" title="Public webhook endpoint for triggering workflows">
-                  ℹ️
-                </span>
-              </>
-            }
-            name="webhook_url"
-            type="text"
-            value={settings.webhook_url || ''}
-            onChange={() => {}} // Read-only
-            readOnly
-            helpText="Public webhook endpoint for triggering workflows. POST requests to this URL with workflow_id/workflow_name and form_data will trigger workflow execution."
-            className="font-mono text-sm"
-          />
-          <div className="flex gap-2 mt-2">
-            <button
-              type="button"
-              onClick={handleCopyWebhookUrl}
-              disabled={!settings.webhook_url}
-              className="flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <FiCopy className="w-4 h-4 mr-2" />
-              Copy
-            </button>
-            <button
-              type="button"
-              onClick={handleRegenerateToken}
-              disabled={isRegenerating || !settings.webhook_url}
-              className="flex items-center px-4 py-2 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <FiRefreshCw className={`w-4 h-4 mr-2 ${isRegenerating ? 'animate-spin' : ''}`} />
-              Regenerate
-            </button>
+    <div className="space-y-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="p-6 border-b border-gray-100 bg-gray-50/50">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-green-50 rounded-lg">
+              <ServerStackIcon className="w-5 h-5 text-green-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900">Webhook Integration</h3>
           </div>
-          {settings.webhook_url && (
-            <>
-              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-xs font-medium text-blue-900 mb-1">Example Usage:</p>
-                <pre className="text-xs text-blue-800 overflow-x-auto">
-                  {`curl -X POST "${settings.webhook_url}" \\
+          <p className="text-sm text-gray-600 ml-12">
+            Configure webhook endpoints to receive form submissions and trigger automation.
+          </p>
+        </div>
+
+        <div className="p-8 space-y-8">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <label className="block text-sm font-medium text-gray-700">
+                Your Webhook URL
+              </label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleCopyWebhookUrl}
+                  disabled={!settings.webhook_url}
+                  className="text-xs flex items-center px-3 py-1.5 bg-white border border-gray-200 text-gray-700 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  <FiCopy className="w-3.5 h-3.5 mr-1.5" />
+                  Copy URL
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRegenerateToken}
+                  disabled={isRegenerating || !settings.webhook_url}
+                  className="text-xs flex items-center px-3 py-1.5 bg-white border border-gray-200 text-red-600 rounded-md hover:bg-red-50 transition-colors disabled:opacity-50"
+                >
+                  <FiRefreshCw className={`w-3.5 h-3.5 mr-1.5 ${isRegenerating ? 'animate-spin' : ''}`} />
+                  Regenerate
+                </button>
+              </div>
+            </div>
+            
+            <div className="relative">
+              <input
+                type="text"
+                value={settings.webhook_url || ''}
+                readOnly
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+              />
+            </div>
+            <p className="mt-2 text-sm text-gray-500">
+              POST requests to this URL with <code>workflow_id</code> and <code>form_data</code> will trigger workflow execution.
+            </p>
+
+            {settings.webhook_url && (
+              <div className="mt-6 border border-gray-200 rounded-lg overflow-hidden">
+                <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 flex justify-between items-center">
+                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Example Usage</span>
+                </div>
+                <div className="bg-gray-900 p-4 overflow-x-auto">
+                  <pre className="text-xs text-blue-300 font-mono">
+{`curl -X POST "${settings.webhook_url}" \\
   -H "Content-Type: application/json" \\
   -d '{
     "workflow_id": "wf_xxxxx",
@@ -115,59 +126,69 @@ export function DeliverySettings({
       "phone": "+14155551234"
     }
   }'`}
-                </pre>
+                  </pre>
+                </div>
               </div>
-              <WebhookTester webhookUrl={settings.webhook_url} />
-            </>
-          )}
+            )}
+            
+            {settings.webhook_url && (
+              <div className="mt-6">
+                 <WebhookTester webhookUrl={settings.webhook_url} />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="p-6 border-b border-gray-100 bg-gray-50/50">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-blue-50 rounded-lg">
+              <GlobeAltIcon className="w-5 h-5 text-blue-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900">Delivery Configuration</h3>
+          </div>
+          <p className="text-sm text-gray-600 ml-12">
+            Set up external integrations and domain settings.
+          </p>
         </div>
 
-        <FormField
-          label={
-            <>
-              GHL Webhook URL
-              <span className="ml-2 text-xs text-gray-500" title="Your GoHighLevel webhook endpoint for SMS/Email delivery">
-                ℹ️
-              </span>
-            </>
-          }
-          name="ghl_webhook_url"
-          type="url"
-          value={settings.ghl_webhook_url || ''}
-          onChange={(value) => onChange('ghl_webhook_url', value)}
-          error={errors?.ghl_webhook_url}
-          helpText="Your GoHighLevel webhook endpoint for SMS/Email delivery"
-          placeholder="https://api.gohighlevel.com/webhook/..."
-        />
+        <div className="p-8 space-y-6">
+          <FormField
+            label="GHL Webhook URL"
+            name="ghl_webhook_url"
+            type="url"
+            value={settings.ghl_webhook_url || ''}
+            onChange={(value) => onChange('ghl_webhook_url', value)}
+            error={errors?.ghl_webhook_url}
+            helpText="Your GoHighLevel webhook endpoint for SMS/Email delivery"
+            placeholder="https://api.gohighlevel.com/webhook/..."
+          />
 
-        <FormField
-          label={
-            <>
-              Custom Domain
-              <span className="ml-2 text-xs text-gray-500" title="Use your own domain for public forms">
-                ℹ️
-              </span>
-            </>
-          }
-          name="custom_domain"
-          type="text"
-          value={settings.custom_domain || ''}
-          onChange={(value) => onChange('custom_domain', value)}
-          error={errors?.custom_domain}
-          placeholder="forms.yourdomain.com or https://forms.yourdomain.com"
-          helpText="Point a CNAME for your domain to this app and enter it here so share links use your domain."
-        />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              label="Custom Domain"
+              name="custom_domain"
+              type="text"
+              value={settings.custom_domain || ''}
+              onChange={(value) => onChange('custom_domain', value)}
+              error={errors?.custom_domain}
+              placeholder="forms.yourdomain.com"
+              helpText="CNAME your domain to this app to use custom links."
+            />
 
-        <FormField
-          label="Lead Phone Number Field"
-          name="lead_phone_field"
-          type="text"
-          value={settings.lead_phone_field || ''}
-          onChange={(value) => onChange('lead_phone_field', value)}
-          error={errors?.lead_phone_field}
-          helpText='Phone number field name from your form (e.g., "phone" or "phone_number")'
-          placeholder="phone"
-        />
+            <FormField
+              label="Lead Phone Field"
+              name="lead_phone_field"
+              type="text"
+              value={settings.lead_phone_field || ''}
+              onChange={(value) => onChange('lead_phone_field', value)}
+              error={errors?.lead_phone_field}
+              helpText='Field name in your form (e.g., "phone")'
+              placeholder="phone"
+            />
+          </div>
+        </div>
       </div>
     </div>
   )
