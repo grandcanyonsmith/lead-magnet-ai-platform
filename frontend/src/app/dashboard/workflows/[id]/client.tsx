@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import { api } from '@/lib/api'
 import { useSettings } from '@/hooks/api/useSettings'
 import { buildPublicFormUrl } from '@/utils/url'
+import { openJobDocumentInNewTab } from '@/utils/jobs/openJobDocument'
 import { 
   ArrowLeftIcon, 
   PencilIcon, 
@@ -24,6 +25,28 @@ import {
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
+
+const formatRelativeTime = (dateString: string) => {
+  if (!dateString) return '—'
+  const date = new Date(dateString)
+  const now = new Date()
+  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+
+  if (seconds < 60) return `${seconds}s ago`
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  return `${days}d ago`
+}
+
+const formatDuration = (seconds: number) => {
+  if (seconds < 60) return `${seconds}s`
+  const minutes = Math.floor(seconds / 60)
+  const remainingSeconds = seconds % 60
+  return `${minutes}m ${remainingSeconds}s`
+}
 
 export default function WorkflowDetailPage() {
   const router = useRouter()
@@ -427,40 +450,68 @@ export default function WorkflowDetailPage() {
                 </div>
               ) : (
                 jobs.map((job) => {
-                  const duration = job.completed_at
+                  const submission = submissions[job.job_id]
+                  const submitterName = submission?.submission_data?.name || submission?.submitter_name || submission?.submitter_email || job.job_id.slice(-8).toUpperCase()
+                  
+                  const durationSeconds = job.completed_at
                     ? Math.round((new Date(job.completed_at).getTime() - new Date(job.created_at).getTime()) / 1000)
                     : null
                   
+                  const handleViewAsset = async (e: React.MouseEvent) => {
+                    e.stopPropagation()
+                    if (!job.output_url) return
+                    await openJobDocumentInNewTab(job.job_id, { fallbackUrl: job.output_url })
+                  }
+
                   return (
                     <div 
                       key={job.job_id} 
                       onClick={() => router.push(`/dashboard/jobs/${job.job_id}`)}
-                      className="group p-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                      className="group p-4 hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-100 last:border-0"
                     >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-mono text-gray-400 group-hover:text-primary-500 transition-colors">
-                          {job.job_id.slice(-8).toUpperCase()}
-                        </span>
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="min-w-0 pr-2">
+                          <h3 className="text-sm font-bold text-gray-900 truncate" title={submitterName}>
+                            {submitterName}
+                          </h3>
+                          {/* Use job.step_count if available, otherwise just hide or use placeholder if needed */}
+                          {/* Assuming job.status implies completion state */}
+                        </div>
                         <div className={clsx(
-                          "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-tight shadow-sm",
+                          "px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide flex-shrink-0",
                           job.status === 'completed' ? "bg-green-100 text-green-700" :
                           job.status === 'failed' ? "bg-red-100 text-red-700" :
                           "bg-blue-100 text-blue-700"
                         )}>
-                          {job.status}
+                          {job.status === 'completed' ? 'Ready' : job.status}
                         </div>
                       </div>
-                      <div className="flex items-end justify-between gap-4">
-                        <div className="min-w-0">
-                          <p className="text-xs font-medium text-gray-600 line-clamp-1">
-                            {job.created_at ? new Date(job.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
-                          </p>
-                        </div>
-                        {duration !== null && (
-                          <span className="text-[10px] font-bold text-gray-400 shrink-0">
-                            {duration}s
+
+                      <div className="flex items-center justify-between">
+                        <div className="flex flex-col">
+                          <span className="text-xs font-medium text-gray-900">
+                            {job.created_at ? formatRelativeTime(job.created_at) : '—'}
                           </span>
-                        )}
+                          <span className="text-[10px] text-gray-400 mt-0.5">
+                            {job.created_at ? new Date(job.created_at).toLocaleDateString() : ''}
+                          </span>
+                        </div>
+
+                        <div className="flex flex-col items-end gap-2">
+                          <span className="text-xs font-mono text-gray-500">
+                            {durationSeconds ? formatDuration(durationSeconds) : '—'}
+                          </span>
+                          
+                          {job.status === 'completed' && (
+                            <button
+                              onClick={handleViewAsset}
+                              className="text-xs font-bold text-primary-600 hover:text-primary-700 flex items-center gap-1 group/link"
+                            >
+                              <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5" />
+                              <span className="group-hover/link:underline">View asset</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )

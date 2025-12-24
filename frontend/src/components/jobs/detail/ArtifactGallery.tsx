@@ -8,12 +8,14 @@ import {
   CodeBracketIcon,
   PhotoIcon,
   DocumentIcon,
+  PencilSquareIcon,
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 import { PreviewRenderer } from '@/components/artifacts/PreviewRenderer'
 import { openJobDocumentInNewTab } from '@/utils/jobs/openJobDocument'
 import type { ArtifactGalleryItem } from '@/types/job'
 import { Tooltip } from '@/components/ui/Tooltip'
+import Link from 'next/link'
 
 interface ArtifactGalleryProps {
   items: ArtifactGalleryItem[]
@@ -85,6 +87,10 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
     item.label ||
     'Artifact'
   const [openingJobOutput, setOpeningJobOutput] = useState(false)
+
+  const isHtml =
+    item.artifact?.content_type === 'text/html' ||
+    fileName.toLowerCase().endsWith('.html')
 
   const handleCopy = async (value: string, successMessage: string) => {
     try {
@@ -222,6 +228,16 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
                 </a>
               </Tooltip>
             )}
+            {isHtml && item.jobId && (
+              <Tooltip content="Open in AI Editor" position="top">
+                <Link
+                  href={`/dashboard/editor?jobId=${item.jobId}&artifactId=${item.artifact?.artifact_id || ''}&url=${encodeURIComponent(artifactUrl || '')}`}
+                  className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                >
+                  <PencilSquareIcon className="h-4 w-4" />
+                </Link>
+              </Tooltip>
+            )}
             {artifactUrl && (
               <Tooltip content="Copy Link" position="top">
                 <button
@@ -250,3 +266,4 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
     </div>
   )
 }
+

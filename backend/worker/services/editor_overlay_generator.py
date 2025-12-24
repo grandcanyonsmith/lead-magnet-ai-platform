@@ -47,6 +47,47 @@ class EditorOverlayGenerator:
     color: #111827;
   }}
 
+  /* Always-visible edit shortcut (shows when editMode is NOT enabled) */
+  #lm-edit-mode-fab {{
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 2147483646;
+    width: 44px;
+    height: 44px;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(17,24,39,0.92);
+    color: white;
+    border: 1px solid rgba(255,255,255,0.12);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }}
+
+  #lm-edit-mode-fab:hover {{
+    background: #111827;
+    transform: translateY(-1px);
+  }}
+
+  #lm-edit-mode-fab:active {{
+    transform: translateY(0px);
+  }}
+
+  #lm-edit-mode-fab:focus-visible {{
+    outline: 3px solid rgba(124,58,237,0.9);
+    outline-offset: 2px;
+  }}
+
+  #lm-edit-mode-fab svg {{
+    width: 18px;
+    height: 18px;
+    display: block;
+  }}
+
   #lm-editor-overlay-tab {{
     display: inline-flex;
     align-items: center;
@@ -220,7 +261,44 @@ class EditorOverlayGenerator:
     }}
   }}
 
-  if (!isEditModeEnabled()) return;
+  function enableEditMode() {{
+    try {{
+      const url = new URL(window.location.href);
+      url.searchParams.set('editMode', 'true');
+      window.location.assign(url.toString());
+    }} catch (_e) {{
+      // Fallback: naive append
+      const hasQuery = (window.location.search || '').length > 1;
+      window.location.href = window.location.href + (hasQuery ? '&' : '?') + 'editMode=true';
+    }}
+  }}
+
+  function mountEditFab() {{
+    try {{
+      if (document.getElementById('lm-edit-mode-fab')) return;
+      const btn = document.createElement('button');
+      btn.id = 'lm-edit-mode-fab';
+      btn.type = 'button';
+      btn.title = 'Edit this lead magnet';
+      btn.setAttribute('aria-label', 'Edit this lead magnet');
+      btn.innerHTML =
+        '<svg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">' +
+        '<path d=\"M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z\" fill=\"currentColor\"/>' +
+        '<path d=\"M20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z\" fill=\"currentColor\"/>' +
+        '</svg>';
+      btn.addEventListener('click', function(e) {{
+        try {{ e.preventDefault(); e.stopPropagation(); }} catch (_e) {{}}
+        enableEditMode();
+      }}, true);
+      (document.body || document.documentElement).appendChild(btn);
+    }} catch (_e) {{}}
+  }}
+
+  const editModeEnabled = isEditModeEnabled();
+  if (!editModeEnabled) {{
+    mountEditFab();
+    return;
+  }}
   if (document.getElementById('lm-editor-overlay-root')) return;
 
   function apiBase() {{
