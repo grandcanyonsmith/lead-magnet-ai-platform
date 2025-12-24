@@ -73,7 +73,7 @@ export async function patchHtmlWithOpenAI(args: PatchHtmlArgs): Promise<PatchHtm
 You have access to a file named "index.html".
 You will receive:
 - The content of "index.html" (WITHOUT any editing overlays).
-- Optionally, a CSS selector and the selected element's outerHTML context.
+- Optionally, a CSS selector and the selected element's outerHTML context indicating what the user was looking at.
 - A user request describing changes.
 
 Your task:
@@ -82,7 +82,11 @@ Your task:
 - Ensure the HTML remains valid and well-formed.
 - AFTER issuing the patch, provide a brief summary of changes in the text response.
 
-Do NOT output the full HTML in the text response. Only use the tool to edit the file.`;
+IMPORTANT:
+- The user may have selected a specific element (provided as context), but your edits are NOT restricted to that element.
+- You may modify ANY part of the file as needed to fulfill the request.
+- If the user asks to "delete this section" or makes a broad request, apply the change to the appropriate scope, even if it is larger than the selected element.
+- Do NOT output the full HTML in the text response. Only use the tool to edit the file.`;
 
   const inputParts: string[] = [];
   inputParts.push(`The user has the following files:
@@ -117,7 +121,6 @@ ${cleanedHtml}
         instructions,
         input: inputParts.join('\n'),
         tools: [{ type: 'apply_patch' }],
-        temperature: 0.2,
       }),
     'HTML Patch OpenAI call',
     300000 // 5 minutes
