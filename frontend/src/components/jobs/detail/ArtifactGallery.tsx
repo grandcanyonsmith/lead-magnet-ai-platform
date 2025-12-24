@@ -15,6 +15,7 @@ import { PreviewRenderer } from '@/components/artifacts/PreviewRenderer'
 import { openJobDocumentInNewTab } from '@/utils/jobs/openJobDocument'
 import type { ArtifactGalleryItem } from '@/types/job'
 import { Tooltip } from '@/components/ui/Tooltip'
+import Link from 'next/link'
 
 interface ArtifactGalleryProps {
   items: ArtifactGalleryItem[]
@@ -246,16 +247,14 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
                 </a>
               </Tooltip>
             )}
-            {isHtml && editModeUrl && (
-              <Tooltip content="Open in edit mode" position="top">
-                <a
-                  href={editModeUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
+            {isHtml && item.jobId && (
+              <Tooltip content="Open in AI Editor" position="top">
+                <Link
+                  href={`/dashboard/editor?jobId=${item.jobId}&artifactId=${item.artifact?.artifact_id || ''}&url=${encodeURIComponent(artifactUrl || '')}`}
                   className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
                 >
                   <PencilSquareIcon className="h-4 w-4" />
-                </a>
+                </Link>
               </Tooltip>
             )}
             {artifactUrl && (

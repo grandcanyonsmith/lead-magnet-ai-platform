@@ -8,6 +8,7 @@ type PatchHtmlArgs = {
   selector?: string | null;
   selectedOuterHtml?: string | null;
   pageUrl?: string | null;
+  model?: string;
 };
 
 export type PatchHtmlResult = {
@@ -91,8 +92,8 @@ Input HTML is provided below.`;
   inputParts.push(`User request:\n${prompt}\n`);
   inputParts.push(`index.html:\n${cleanedHtml}`);
 
-  // Use gpt-4o for speed and reliability
-  const model = 'gpt-5.1-codex';
+  // Use provided model or default to gpt-5.1-codex
+  const model = args.model || 'gpt-5.1-codex';
 
   logger.info('[HtmlPatchService] Calling OpenAI to patch HTML (Full Document Mode)', {
     model,
