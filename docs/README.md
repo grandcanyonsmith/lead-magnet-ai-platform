@@ -1,6 +1,6 @@
 # Lead Magnet AI Platform - Documentation
 
-> **Last Updated**: 2025-01-27  
+> **Last Updated**: 2025-12-23
 > **Status**: Current  
 > **Target Audience**: Developers, Operators, AI Models
 
@@ -19,6 +19,10 @@ Essential guides for new users and developers.
   - Platform URLs and access
   - Test commands and verification
   - First workflow creation
+- **[Local Development Guide](./LOCAL_DEVELOPMENT.md)** - Set up your local environment
+  - Prerequisites and installation
+  - Running services locally (ports 3000/3001)
+  - Local testing
 
 #### Architecture
 Technical architecture and system design documentation.
@@ -28,6 +32,13 @@ Technical architecture and system design documentation.
   - Project structure
   - Database schema
   - Security and monitoring
+- **[API Contracts](./contracts/README.md)** - Human-readable API definitions
+  - Endpoint definitions
+  - Request/Response shapes
+  - Client mapping
+- **[Authentication](./AUTHENTICATION.md)** - Auth flows and security
+  - User pools and identity
+  - Role-based access
 - **[Flow Diagram](./FLOW_DIAGRAM.md)** - Visual process flow diagrams
   - Complete form submission flow
   - Job processing workflow
@@ -41,6 +52,9 @@ Deployment guides and infrastructure setup.
   - Infrastructure deployment
   - CI/CD configuration
   - Post-deployment tasks
+- **[Lambda Build Options](./LAMBDA_BUILD_OPTIONS.md)** - Deep dive into Lambda packaging
+  - Docker builds vs Zip bundles
+  - Layer configurations
 
 #### Operations
 Operational documentation for running and maintaining the platform.
@@ -53,10 +67,15 @@ Operational documentation for running and maintaining the platform.
   - Log event troubleshooting
   - API error handling
   - Best practices
+- **[GitHub Secrets Setup](./GITHUB_SECRETS_SETUP.md)** - CI/CD secrets management
 
 #### Development
 Development-specific documentation.
 
+- **[Testing Guide](./testing/README.md)** - Comprehensive testing index
+  - E2E suites and scripts
+  - Manual testing playbooks
+  - Unit test locations
 - **[AI Service Refactoring](./AI_SERVICE_REFACTORING.md)** - AI service architecture and refactoring details
   - Helper methods documentation
   - Code metrics and improvements
@@ -125,10 +144,9 @@ See [Contributing Guide](./CONTRIBUTING.md) for documentation contribution guide
 ## Related Documentation
 
 - [Root README](../readme.md) - Project overview
-- [Local Development Guide](../LOCAL_DEVELOPMENT.md) - Local setup
+- [Local Development Guide](./LOCAL_DEVELOPMENT.md) - Local setup
 - [Frontend Test Guide](./testing/FRONTEND_TEST_GUIDE.md) - Frontend testing
 
 ---
 
 **Note**: This documentation is optimized for both human readers and AI model consumption. All documents follow consistent formatting standards and include comprehensive cross-references.
-

@@ -19,8 +19,8 @@ It is the authoritative reference for AI assistants and engineers when wiring ne
 | Jobs & Execution | `backend/api/src/routes/jobRoutes.ts` | `jobsController`, `executionStepsController`, `jobRerunController` | `frontend/src/lib/api/jobs.client.ts` |
 | Templates | `backend/api/src/routes/templateRoutes.ts` | `templatesController` | `frontend/src/lib/api/templates.client.ts` |
 | Notifications | `backend/api/src/routes/adminRoutes.ts` | `notificationsController` | `frontend/src/lib/api/notifications.client.ts` |
-| Settings & Analytics | `backend/api/src/routes/settings.ts`, `routes/adminRoutes.ts` | `settingsController`, `analyticsController` | `frontend/src/lib/api/settings.client.ts`, `analytics.client.ts` |
-| Webhook Logs | `backend/api/src/routes/webhookRoutes.ts` | `webhookLogsController` | `frontend/src/lib/api/webhookLogs.client.ts` |
+| Settings & Analytics | `backend/api/src/routes/settings.ts` (controller), `routes/adminRoutes.ts` | `settingsController`, `analyticsController` | `frontend/src/lib/api/settings.client.ts`, `analytics.client.ts` |
+| Webhook Logs | `backend/api/src/routes/adminRoutes.ts` | `webhookLogsController` | `frontend/src/lib/api/webhookLogs.client.ts` |
 
 The companion machine-readable mapping that ties these endpoints to request/response types lives in `frontend/src/lib/api/contracts.ts`.
 

@@ -1,4 +1,3 @@
-import { logger } from './logger';
 
 export function applyDiff(original: string, diff: string): string {
   if (!diff) return original;
