@@ -236,7 +236,9 @@ export function useTemplateEdit(workflowName: string, templateId: string | null,
 
   const insertPlaceholder = (placeholder: string) => {
     const placeholderText = `{{${placeholder}}}`
-    const newHtml = templateData.html_content + placeholderText
+    // Use ref to get latest state to avoid race conditions
+    const currentHtml = templateDataRef.current.html_content
+    const newHtml = currentHtml + placeholderText
     setTemplateData(prev => ({
       ...prev,
       html_content: newHtml,
