@@ -277,75 +277,23 @@ Return JSON format: {"name": "...", "description": "..."}`;
     try {
       const selector = selectors && selectors.length > 0 ? selectors.join(', ') : undefined;
 
-<<<<<<< Current (Your changes)
       // Check if user wants to remove placeholders
       const shouldRemovePlaceholders = edit_prompt.toLowerCase().includes('remove placeholder') || 
                                        edit_prompt.toLowerCase().includes('no placeholder') ||
                                        edit_prompt.toLowerCase().includes('dont use placeholder') ||
                                        edit_prompt.toLowerCase().includes('don\'t use placeholder');
       
-      const prompt = `You are an expert HTML template designer. Modify the following HTML template based on these instructions: "${edit_prompt}"
-
-Current HTML:
-${current_html}
-
-Requirements:
-${shouldRemovePlaceholders 
-  ? '1. REMOVE all placeholder syntax {{PLACEHOLDER_NAME}} and replace with actual content or remove the elements containing them'
-  : '1. Keep all placeholder syntax {{PLACEHOLDER_NAME}} exactly as they are'}
-2. Apply the requested changes while maintaining the overall structure.
-3. Ensure the HTML remains valid and well-formed.
-4. Keep modern, clean CSS styling.
-5. Maintain responsiveness and mobile-friendliness.
-6. **IMPORTANT:** If the user request implies a global change (like "change background color", "change font", "dark mode"), apply it to the <body>, <html>, or root CSS variables so it affects the ENTIRE page, unless the user specifically asks to limit it to a section.
-${shouldRemovePlaceholders 
-  ? '7. Use real values instead of placeholders - replace {{TITLE}} with actual text, {{COLORS}} with real color values (e.g., #2d8659 for green), etc.'
-  : ''}
-
-Return the FULL, COMPLETE HTML document with all modifications applied. Do not output partial snippets.`;
-
-      logger.info('[Template Refinement] Calling OpenAI for refinement...', {
-        model,
-        promptLength: prompt.length,
-      });
-
-      const refineStartTime = Date.now();
-      const completionParams: any = {
-        model,
-        instructions: shouldRemovePlaceholders 
-          ? 'You are an expert HTML template designer. Return only valid HTML code without markdown formatting. REMOVE all placeholder syntax {{PLACEHOLDER_NAME}} and replace with actual content or real values (e.g., replace {{BRAND_COLORS}} with actual color codes like #2d8659).'
-          : 'You are an expert HTML template designer. Return only valid HTML code without markdown formatting. Preserve all placeholder syntax {{PLACEHOLDER_NAME}} exactly.',
-        input: prompt,
-      };
-      // GPT-5 family only supports default temperature (1), don't set custom temperature
-      if (!model.startsWith('gpt-5')) {
-        completionParams.temperature = 0.7;
+      let augmentedPrompt = edit_prompt;
+      if (shouldRemovePlaceholders) {
+        augmentedPrompt += "\n\nIMPORTANT: REMOVE all placeholder syntax {{PLACEHOLDER_NAME}} and replace with actual content or real values.";
+      } else {
+        augmentedPrompt += "\n\nIMPORTANT: Keep all placeholder syntax {{PLACEHOLDER_NAME}} exactly as they are unless specifically asked to remove them.";
       }
-      const completion = await callResponsesWithTimeout(
-        () => openai.responses.create(completionParams),
-        'template refinement'
-      );
 
-      const refineDuration = Date.now() - refineStartTime;
-      const refinementModelUsed = (completion as any).model || model;
-      logger.info('[Template Refinement] Refinement completed', {
-        duration: `${refineDuration}ms`,
-        tokensUsed: completion.usage?.total_tokens,
-        model: refinementModelUsed,
-      });
-
-      await this.trackUsage({
-        tenantId,
-        jobId,
-        serviceType: 'openai_template_refine',
-        modelUsed: refinementModelUsed,
-        usage: (completion as any).usage,
-=======
       const result = await patchHtmlWithOpenAI({
         html: current_html,
-        prompt: edit_prompt,
+        prompt: augmentedPrompt,
         selector,
->>>>>>> Incoming (Background Agent changes)
       });
 
       const cleanedHtml = result.patchedHtml;
@@ -447,4 +395,3 @@ Return the FULL, COMPLETE HTML document with all modifications applied. Do not o
 }
 
 export const templateAIService = new TemplateAIService();
-
