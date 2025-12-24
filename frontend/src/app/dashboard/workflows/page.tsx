@@ -26,7 +26,9 @@ import {
   FolderArrowDownIcon,
   XMarkIcon,
   MagnifyingGlassIcon,
-  ArrowPathIcon
+  ArrowPathIcon,
+  ChevronUpIcon,
+  ChevronDownIcon
 } from '@heroicons/react/24/outline'
 import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild, Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react'
 import { Folder } from '@/types'
@@ -44,6 +46,10 @@ export default function WorkflowsPage() {
   const [workflowJobs, setWorkflowJobs] = useState<Record<string, any[]>>({})
   const [loadingJobs, setLoadingJobs] = useState<Record<string, boolean>>({})
   const [openingDocumentJobId, setOpeningDocumentJobId] = useState<string | null>(null)
+  
+  // Sorting state
+  const [sortField, setSortField] = useState<string>('last_generated')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
   
   // Folder modal state
   const [showCreateFolderModal, setShowCreateFolderModal] = useState(false)
@@ -91,14 +97,6 @@ export default function WorkflowsPage() {
       // Get all workflows including drafts - don't filter by status
       const data = await api.getWorkflows()
       const workflowsList = data.workflows || []
-      // Ensure we include all statuses: 'active', 'inactive', and 'draft'
-      // No status filtering - show all workflows regardless of status
-      // Sort by updated_at DESC (most recently updated first), fallback to created_at
-      workflowsList.sort((a: any, b: any) => {
-        const dateA = new Date(a.updated_at || a.created_at || 0).getTime()
-        const dateB = new Date(b.updated_at || b.created_at || 0).getTime()
-        return dateB - dateA // DESC order
-      })
       setWorkflows(workflowsList)
       // Reset loaded workflow IDs when workflows are reloaded
       loadedWorkflowIdsRef.current.clear()
@@ -544,6 +542,7 @@ export default function WorkflowsPage() {
   }
 
   const formatRelativeTime = (dateString: string) => {
+    if (!dateString) return '-'
     const date = new Date(dateString)
     const now = new Date()
     const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
@@ -557,9 +556,18 @@ export default function WorkflowsPage() {
     return `${days}d ago`
   }
 
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDirection('desc') // Default to desc for new field
+    }
+  }
+
   // Filter workflows based on search query and current folder
   const filteredWorkflows = useMemo(() => {
-    return workflows.filter((workflow) => {
+    let filtered = workflows.filter((workflow) => {
       // Filter by folder
       const workflowFolderId = workflow.folder_id || null
       if (workflowFolderId !== currentFolderId) return false
@@ -572,7 +580,51 @@ export default function WorkflowsPage() {
       const formName = (workflow.form?.form_name || '').toLowerCase()
       return name.includes(query) || description.includes(query) || formName.includes(query)
     })
-  }, [workflows, currentFolderId, searchQuery])
+
+    // Sort workflows
+    return filtered.sort((a, b) => {
+      let valA: any = ''
+      let valB: any = ''
+
+      switch (sortField) {
+        case 'name':
+          valA = (a.workflow_name || '').toLowerCase()
+          valB = (b.workflow_name || '').toLowerCase()
+          break
+        case 'form':
+          valA = (a.form?.form_name || '').toLowerCase()
+          valB = (b.form?.form_name || '').toLowerCase()
+          break
+        case 'created_at':
+          valA = new Date(a.created_at || 0).getTime()
+          valB = new Date(b.created_at || 0).getTime()
+          break
+        case 'updated_at':
+          valA = new Date(a.updated_at || 0).getTime()
+          valB = new Date(b.updated_at || 0).getTime()
+          break
+        case 'last_generated': {
+          const jobsA = workflowJobs[a.workflow_id] || []
+          const completedA = jobsA.filter((j: any) => j.status === 'completed')
+          const latestA = completedA.length > 0 ? completedA[0].created_at : ''
+          valA = latestA ? new Date(latestA).getTime() : 0
+
+          const jobsB = workflowJobs[b.workflow_id] || []
+          const completedB = jobsB.filter((j: any) => j.status === 'completed')
+          const latestB = completedB.length > 0 ? completedB[0].created_at : ''
+          valB = latestB ? new Date(latestB).getTime() : 0
+          break
+        }
+        default:
+          valA = 0
+          valB = 0
+      }
+
+      if (valA < valB) return sortDirection === 'asc' ? -1 : 1
+      if (valA > valB) return sortDirection === 'asc' ? 1 : -1
+      return 0
+    })
+  }, [workflows, currentFolderId, searchQuery, sortField, sortDirection, workflowJobs])
 
   if (loading) {
     return (
@@ -766,7 +818,7 @@ export default function WorkflowsPage() {
                                     <TrashIcon className="mr-2 h-3.5 w-3.5 text-red-400" />
                                     Delete
                       </button>
-                )}
+                                )}
                               </MenuItem>
               </div>
                           </MenuItems>
@@ -822,14 +874,65 @@ export default function WorkflowsPage() {
               <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50/50">
                 <tr>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Lead Magnet
+                  <th 
+                    scope="col" 
+                    className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100/50 transition-colors select-none"
+                    onClick={() => handleSort('name')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Lead Magnet
+                      {sortField === 'name' && (
+                        sortDirection === 'asc' ? <ChevronUpIcon className="w-3.5 h-3.5" /> : <ChevronDownIcon className="w-3.5 h-3.5" />
+                      )}
+                    </div>
                   </th>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Form
+                  <th 
+                    scope="col" 
+                    className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100/50 transition-colors select-none"
+                    onClick={() => handleSort('form')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Form
+                      {sortField === 'form' && (
+                        sortDirection === 'asc' ? <ChevronUpIcon className="w-3.5 h-3.5" /> : <ChevronDownIcon className="w-3.5 h-3.5" />
+                      )}
+                    </div>
                   </th>
-                  <th scope="col" className="hidden xl:table-cell px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Last Updated
+                  <th 
+                    scope="col" 
+                    className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100/50 transition-colors select-none"
+                    onClick={() => handleSort('created_at')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Created At
+                      {sortField === 'created_at' && (
+                        sortDirection === 'asc' ? <ChevronUpIcon className="w-3.5 h-3.5" /> : <ChevronDownIcon className="w-3.5 h-3.5" />
+                      )}
+                    </div>
+                  </th>
+                  <th 
+                    scope="col" 
+                    className="hidden xl:table-cell px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100/50 transition-colors select-none"
+                    onClick={() => handleSort('updated_at')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Last Updated
+                      {sortField === 'updated_at' && (
+                        sortDirection === 'asc' ? <ChevronUpIcon className="w-3.5 h-3.5" /> : <ChevronDownIcon className="w-3.5 h-3.5" />
+                      )}
+                    </div>
+                  </th>
+                  <th 
+                    scope="col" 
+                    className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100/50 transition-colors select-none"
+                    onClick={() => handleSort('last_generated')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Last Generated
+                      {sortField === 'last_generated' && (
+                        sortDirection === 'asc' ? <ChevronUpIcon className="w-3.5 h-3.5" /> : <ChevronDownIcon className="w-3.5 h-3.5" />
+                      )}
+                    </div>
                   </th>
                   <th scope="col" className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Documents
@@ -845,6 +948,7 @@ export default function WorkflowsPage() {
                   const jobs = workflowJobs[workflow.workflow_id] || []
                   const processingJobs = jobs.filter((j: any) => j.status === 'processing' || j.status === 'pending')
                   const completedJobs = jobs.filter((j: any) => j.status === 'completed')
+                  const latestJob = completedJobs.length > 0 ? completedJobs[0] : null
 
                   return (
                     <tr 
@@ -887,11 +991,25 @@ export default function WorkflowsPage() {
                           <span className="text-gray-400 italic">No form attached</span>
                         )}
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <div className="flex items-center gap-1.5">
+                          {formatRelativeTime(workflow.created_at)}
+                        </div>
+                      </td>
                       <td className="hidden xl:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <div className="flex items-center gap-1.5">
                           <ClockIcon className="w-4 h-4 text-gray-400" />
                           {formatRelativeTime(workflow.updated_at || workflow.created_at)}
                         </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {latestJob ? (
+                          <div className="flex items-center gap-1.5 text-gray-900">
+                             {formatRelativeTime(latestJob.created_at)}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 text-xs">-</span>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         {loadingJobs[workflow.workflow_id] ? (
