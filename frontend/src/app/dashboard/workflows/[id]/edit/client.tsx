@@ -80,6 +80,10 @@ export default function EditWorkflowPage() {
     handleRedo,
     canUndo,
     canRedo,
+    history,
+    historyIndex,
+    jumpToHistory,
+    commitHtmlChange,
   } = templateEdit
 
   const { settings } = useSettings()
@@ -385,6 +389,10 @@ export default function EditWorkflowPage() {
           onRedo={handleRedo}
           canUndo={canUndo}
           canRedo={canRedo}
+          history={history}
+          historyIndex={historyIndex}
+          onJumpToHistory={jumpToHistory}
+          onCommitChange={commitHtmlChange}
         />
       )}
 
