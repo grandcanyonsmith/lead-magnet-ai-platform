@@ -1,3 +1,4 @@
+import { patchHtmlWithOpenAI } from './htmlPatchService';
 import OpenAI from 'openai';
 import { getOpenAIClient } from './openaiService';
 import { callResponsesWithTimeout, stripMarkdownCodeFences } from '../utils/openaiHelpers';
@@ -29,6 +30,7 @@ export interface TemplateRefinementRequest {
   model?: string;
   tenantId: string;
   jobId?: string;
+  selectors?: string[];
 }
 
 export type StoreUsageRecordFn = (params: UsageTrackingParams) => Promise<void>;
@@ -252,7 +254,7 @@ Return JSON format: {"name": "...", "description": "..."}`;
     html_content: string;
     placeholder_tags: string[];
   }> {
-    const { current_html, edit_prompt, model = 'gpt-5', tenantId, jobId } = request;
+    const { current_html, edit_prompt, model = 'gpt-5', tenantId, jobId, selectors } = request;
 
     if (!current_html || !current_html.trim()) {
       throw new ApiError('Current HTML content is required', 400);
@@ -268,12 +270,14 @@ Return JSON format: {"name": "...", "description": "..."}`;
       jobId,
       currentHtmlLength: current_html.length,
       editPromptLength: edit_prompt.length,
+      selectorsCount: selectors?.length,
       timestamp: new Date().toISOString(),
     });
 
     try {
-      const openai = await this.getOpenAI();
+      const selector = selectors && selectors.length > 0 ? selectors.join(', ') : undefined;
 
+<<<<<<< Current (Your changes)
       // Check if user wants to remove placeholders
       const shouldRemovePlaceholders = edit_prompt.toLowerCase().includes('remove placeholder') || 
                                        edit_prompt.toLowerCase().includes('no placeholder') ||
@@ -289,15 +293,16 @@ Requirements:
 ${shouldRemovePlaceholders 
   ? '1. REMOVE all placeholder syntax {{PLACEHOLDER_NAME}} and replace with actual content or remove the elements containing them'
   : '1. Keep all placeholder syntax {{PLACEHOLDER_NAME}} exactly as they are'}
-2. Apply the requested changes while maintaining the overall structure
-3. Ensure the HTML remains valid and well-formed
-4. Keep modern, clean CSS styling
-5. Maintain responsiveness and mobile-friendliness
+2. Apply the requested changes while maintaining the overall structure.
+3. Ensure the HTML remains valid and well-formed.
+4. Keep modern, clean CSS styling.
+5. Maintain responsiveness and mobile-friendliness.
+6. **IMPORTANT:** If the user request implies a global change (like "change background color", "change font", "dark mode"), apply it to the <body>, <html>, or root CSS variables so it affects the ENTIRE page, unless the user specifically asks to limit it to a section.
 ${shouldRemovePlaceholders 
-  ? '6. Use real values instead of placeholders - replace {{TITLE}} with actual text, {{COLORS}} with real color values (e.g., #2d8659 for green), etc.'
+  ? '7. Use real values instead of placeholders - replace {{TITLE}} with actual text, {{COLORS}} with real color values (e.g., #2d8659 for green), etc.'
   : ''}
 
-Return ONLY the modified HTML code, no markdown formatting, no explanations.`;
+Return the FULL, COMPLETE HTML document with all modifications applied. Do not output partial snippets.`;
 
       logger.info('[Template Refinement] Calling OpenAI for refinement...', {
         model,
@@ -335,34 +340,23 @@ Return ONLY the modified HTML code, no markdown formatting, no explanations.`;
         serviceType: 'openai_template_refine',
         modelUsed: refinementModelUsed,
         usage: (completion as any).usage,
+=======
+      const result = await patchHtmlWithOpenAI({
+        html: current_html,
+        prompt: edit_prompt,
+        selector,
+>>>>>>> Incoming (Background Agent changes)
       });
 
-      // Validate response has output_text
-      if (!completion.output_text) {
-        throw new ApiError('OpenAI Responses API returned empty response. output_text is missing for template refinement.', 500);
-      }
-      
-      const htmlContent = completion.output_text;
-      logger.info('[Template Refinement] Refined HTML received', {
-        htmlLength: htmlContent.length,
-        firstChars: htmlContent.substring(0, 100),
-      });
-      
-      const cleanedHtml = stripMarkdownCodeFences(htmlContent);
+      const cleanedHtml = result.patchedHtml;
 
-      // Extract placeholder tags (disabled - no longer using placeholder syntax)
+      // Placeholder extraction disabled
       const placeholderTags: string[] = [];
-      logger.info('[Template Refinement] Extracted placeholders', {
-        placeholderCount: placeholderTags.length,
-        placeholders: placeholderTags,
-      });
 
-      const totalDuration = Date.now() - refineStartTime;
       logger.info('[Template Refinement] Success!', {
         tenantId,
         htmlLength: cleanedHtml.length,
-        placeholderCount: placeholderTags.length,
-        totalDuration: `${totalDuration}ms`,
+        summary: result.summary,
         timestamp: new Date().toISOString(),
       });
 
