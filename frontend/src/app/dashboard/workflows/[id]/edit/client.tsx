@@ -54,6 +54,7 @@ export default function EditWorkflowPage() {
     removeField,
     moveFieldUp,
     moveFieldDown,
+    
   } = formEdit
 
   // Template edit hook
@@ -75,6 +76,10 @@ export default function EditWorkflowPage() {
     setTemplateViewMode,
     setDevicePreviewSize,
     setEditPrompt,
+    handleUndo,
+    handleRedo,
+    canUndo,
+    canRedo,
   } = templateEdit
 
   const { settings } = useSettings()
@@ -376,6 +381,10 @@ export default function EditWorkflowPage() {
           onSubmit={handleSubmit}
           onCancel={() => router.back()}
           submitting={submitting}
+          onUndo={handleUndo}
+          onRedo={handleRedo}
+          canUndo={canUndo}
+          canRedo={canRedo}
         />
       )}
 

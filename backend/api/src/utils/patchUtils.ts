@@ -13,6 +13,7 @@ export function applyDiff(original: string, diff: string): string {
   const diffLines = diff.split(/\r?\n/);
   
   let resultLines = [...lines];
+  let runningOffset = 0;
   
   // Parse hunks
   let i = 0;
@@ -21,8 +22,15 @@ export function applyDiff(original: string, diff: string): string {
     
     if (line.startsWith('@@')) {
       // Hunk header
-      // Parse optional line numbers if present, e.g. @@ -1,5 +1,5 @@
-      // But we will primarily rely on context matching if we can
+      // Parse line numbers: @@ -oldStart,oldLength +newStart,newLength @@
+      const match = line.match(/^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/);
+      let oldStart = 0;
+      let oldLength = 1; // Default to 1 if omitted (standard diff behavior)
+      
+      if (match) {
+        oldStart = parseInt(match[1]);
+        oldLength = match[2] ? parseInt(match[2]) : 1;
+      }
       
       i++; // Move to first line of hunk
       
@@ -35,7 +43,9 @@ export function applyDiff(original: string, diff: string): string {
       
       // Now try to apply this hunk
       try {
-        resultLines = applyHunk(resultLines, hunkLines);
+        const { newLines, delta } = applyHunk(resultLines, hunkLines, oldStart, oldLength, runningOffset);
+        resultLines = newLines;
+        runningOffset += delta;
       } catch (err) {
          // Re-throw with more context
          throw new Error(`Failed to apply hunk starting at diff line ${i - hunkLines.length}: ${err instanceof Error ? err.message : String(err)}`);
@@ -49,7 +59,13 @@ export function applyDiff(original: string, diff: string): string {
   return resultLines.join('\n');
 }
 
-function applyHunk(lines: string[], hunkLines: string[]): string[] {
+function applyHunk(
+  lines: string[], 
+  hunkLines: string[], 
+  oldStart: number, 
+  oldLength: number, 
+  offset: number
+): { newLines: string[], delta: number } {
   // Extract context (lines starting with ' ') and deletions (lines starting with '-')
   // to find the match in the original file.
   
@@ -77,19 +93,40 @@ function applyHunk(lines: string[], hunkLines: string[]): string[] {
     }
   }
 
-  if (preImage.length === 0) {
-      // Pure insertion? Where?
-      // If no context, usually implies top of file or we need line numbers.
-      // But let's assume LLM provides context.
-      // If pure insertion with no context, we can't locate it without line numbers.
-      // We will append to end? Or prepend?
-      // For now, if no pre-image, assume append? Or error?
-      // Let's fallback to searching for an insertion point?
-      // Actually, standard diffs usually have context.
-      return lines; 
+  // Construct post-image (what we want to insert/keep)
+  const postImage: string[] = [];
+  for (const line of hunkLines) {
+    if (line.startsWith(' ') || line.startsWith('+')) {
+      postImage.push(line.substring(1));
+    }
   }
 
-  // Find the pre-image in the lines
+  if (preImage.length === 0) {
+      // Pure insertion (no context).
+      // We must rely on line numbers from the header.
+      
+      // Calculate insertion index
+      // If oldLength == 0, oldStart is the line number *before* the insertion point.
+      // e.g. @@ -0,0 ... @@ -> Insert at 0
+      // e.g. @@ -1,0 ... @@ -> Insert at 1 (after line 1)
+      // Index = oldStart
+      
+      // If oldLength > 0 (weird for empty preImage, implies we are deleting nothing? 
+      // but preImage is empty, so we ARE deleting nothing).
+      
+      let insertionIndex = oldStart + offset;
+      
+      // Handle bounds safely
+      if (insertionIndex < 0) insertionIndex = 0;
+      if (insertionIndex > lines.length) insertionIndex = lines.length;
+      
+      const newLines = [...lines];
+      newLines.splice(insertionIndex, 0, ...postImage);
+      
+      return { newLines, delta: postImage.length };
+  }
+
+  // Find the pre-image in the lines using context matching
   const matchIndex = findSubArray(lines, preImage);
   
   if (matchIndex === -1) {
@@ -100,22 +137,12 @@ function applyHunk(lines: string[], hunkLines: string[]): string[] {
   // Construct the new lines
   const newLines = [...lines];
   
-  // Remove the matched segment (pre-image)
-  // But wait, the pre-image includes deletions AND context. 
-  // We want to replace the pre-image with the post-image (context + insertions).
-  
-  // Let's build the post-image
-  const postImage: string[] = [];
-  for (const line of hunkLines) {
-    if (line.startsWith(' ') || line.startsWith('+')) {
-      postImage.push(line.substring(1));
-    }
-  }
-  
   // Replace lines[matchIndex ... matchIndex + preImage.length] with postImage
   newLines.splice(matchIndex, preImage.length, ...postImage);
   
-  return newLines;
+  const delta = postImage.length - preImage.length;
+  
+  return { newLines, delta };
 }
 
 function findSubArray(haystack: string[], needle: string[]): number {
@@ -134,4 +161,3 @@ function findSubArray(haystack: string[], needle: string[]): number {
   
   return -1;
 }
-

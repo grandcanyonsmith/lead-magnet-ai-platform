@@ -1,6 +1,6 @@
 'use client'
 
-import { FiSave, FiEye, FiCode, FiCopy, FiMonitor, FiTablet, FiSmartphone, FiZap } from 'react-icons/fi'
+import { FiSave, FiEye, FiCode, FiCopy, FiMonitor, FiTablet, FiSmartphone, FiZap, FiRotateCcw, FiRotateCw } from 'react-icons/fi'
 import { TemplateData } from '@/hooks/useTemplateEdit'
 import { extractPlaceholders, formatHTML, getPreviewHtml, getDevicePreviewWidth } from '@/utils/templateUtils'
 
@@ -25,6 +25,10 @@ interface TemplateTabProps {
   onSubmit: (e: React.FormEvent) => void
   onCancel: () => void
   submitting: boolean
+  onUndo?: () => void
+  onRedo?: () => void
+  canUndo?: boolean
+  canRedo?: boolean
 }
 
 export function TemplateTab({
@@ -48,6 +52,10 @@ export function TemplateTab({
   onSubmit,
   onCancel,
   submitting,
+  onUndo,
+  onRedo,
+  canUndo = false,
+  canRedo = false,
 }: TemplateTabProps) {
   const handleRefine = async () => {
     const result = await onRefine()
@@ -107,6 +115,31 @@ export function TemplateTab({
                 <FiEye className="w-5 h-5 text-gray-500" />
                 <span className="text-sm font-medium text-gray-700">View Mode</span>
               </div>
+              
+              {/* Undo/Redo Controls */}
+              {(onUndo || onRedo) && (
+                <div className="flex items-center space-x-2 border-r border-gray-300 pr-4 mr-2">
+                  <button
+                    type="button"
+                    onClick={onUndo}
+                    disabled={!canUndo}
+                    className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                    title="Undo"
+                  >
+                    <FiRotateCcw className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onRedo}
+                    disabled={!canRedo}
+                    className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                    title="Redo"
+                  >
+                    <FiRotateCw className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+              
               <div className="flex items-center space-x-2">
                 <button
                   type="button"
@@ -396,4 +429,3 @@ export function TemplateTab({
     </form>
   )
 }
-
