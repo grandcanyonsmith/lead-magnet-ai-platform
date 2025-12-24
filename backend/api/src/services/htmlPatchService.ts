@@ -108,7 +108,8 @@ ${cleanedHtml}
     hasSelectedOuterHtml: Boolean(selectedOuterHtml),
   });
 
-  // Wrap in a 25s timeout to fail before API Gateway (30s) does.
+  // Wrap in a 5-minute timeout as requested.
+  // Note: Ensure the Lambda function timeout is configured to > 5 minutes.
   const response = await callResponsesWithTimeout(
     () =>
       (openai as any).responses.create({
@@ -119,7 +120,7 @@ ${cleanedHtml}
         temperature: 0.2,
       }),
     'HTML Patch OpenAI call',
-    25000 // 25 seconds
+    300000 // 5 minutes
   );
 
   let currentHtml = cleanedHtml;
