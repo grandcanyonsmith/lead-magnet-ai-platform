@@ -1,6 +1,7 @@
 import { logger } from '../utils/logger';
-import { callResponsesWithTimeout, stripMarkdownCodeFences } from '../utils/openaiHelpers';
+import { callResponsesWithTimeout } from '../utils/openaiHelpers';
 import { getOpenAIClient } from './openaiService';
+import { applyDiff } from '../utils/patchUtils';
 
 type PatchHtmlArgs = {
   html: string;
@@ -54,27 +55,39 @@ function injectBlocksBeforeBodyClose(html: string, blocks: string[]): string {
   return html + insertion;
 }
 
-function parsePatchOutput(outputText: string): { summary: string; html: string } {
-  const cleaned = stripMarkdownCodeFences(String(outputText || '')).trim();
+function stripDiffCodeFences(diff: string): string {
+  let cleaned = String(diff || '').trim();
+  cleaned = cleaned.replace(/^```diff\s*/i, '');
+  cleaned = cleaned.replace(/^```\s*/i, '');
+  cleaned = cleaned.replace(/\s*```$/i, '');
+  return cleaned.trim();
+}
+
+function parsePatchOutput(outputText: string): { summary: string; diff: string } {
+  const raw = String(outputText || '').trim();
 
   // Preferred format:
   // SUMMARY:
   // ...
-  // HTML:
-  // <full html>
-  const match = cleaned.match(/^\s*SUMMARY:\s*([\s\S]*?)\nHTML:\s*\n?([\s\S]*)$/i);
+  // DIFF:
+  // --- a/index.html
+  // +++ b/index.html
+  // @@ ...
+  const match = raw.match(/^\s*SUMMARY:\s*([\s\S]*?)\nDIFF:\s*\n?([\s\S]*)$/i);
   if (match) {
-    return {
-      summary: (match[1] || '').trim() || 'Patched HTML.',
-      html: (match[2] || '').trim(),
-    };
+    const summary = (match[1] || '').trim() || 'Patched HTML.';
+    const diff = stripDiffCodeFences(match[2] || '');
+    return { summary, diff };
   }
 
-  // Fallback: treat all output as HTML.
-  return {
-    summary: 'Patched HTML.',
-    html: cleaned,
-  };
+  // Fallback: try to extract a diff from anywhere in the output.
+  const startIdx = raw.search(/(^|\n)---\s+a\/index\.html/i);
+  if (startIdx >= 0) {
+    const diff = stripDiffCodeFences(raw.slice(startIdx));
+    return { summary: 'Patched HTML.', diff };
+  }
+
+  return { summary: 'Patched HTML.', diff: '' };
 }
 
 export async function patchHtmlWithOpenAI(args: PatchHtmlArgs): Promise<PatchHtmlResult> {
@@ -99,24 +112,27 @@ You will receive:
 - A user request describing changes.
 
 Your task:
-- Rewrite the FULL HTML document to apply the requested changes.
-- Preserve everything else as-is as much as possible.
-- Do not include markdown code fences.
-- Do not include explanations outside the required output format.
+- Produce a UNIFIED DIFF patch that updates the HTML to satisfy the user request.
+- Make the smallest possible change to fulfill the request.
+- Preserve formatting and unrelated content as much as possible.
+- Do NOT include any markdown code fences.
 
 Output EXACTLY in this format:
 
 SUMMARY:
 <1-3 bullet points describing what changed>
-HTML:
-<the full updated HTML document>`;
+DIFF:
+--- a/index.html
++++ b/index.html
+@@ ... @@
+ ...`;
 
   const inputParts: string[] = [];
   if (pageUrl) inputParts.push(`Page URL:\n${pageUrl}\n`);
   if (selector) inputParts.push(`Selected selector:\n${selector}\n`);
   if (selectedOuterHtml) inputParts.push(`Selected outerHTML (may be truncated):\n${selectedOuterHtml}\n`);
   inputParts.push(`User request:\n${prompt}\n`);
-  inputParts.push(`HTML document:\n${cleanedHtml}`);
+  inputParts.push(`index.html:\n${cleanedHtml}`);
 
   // Use gpt-4o for speed to stay within API Gateway's 30s limit.
   // Codex-style models are slower and can trigger 503 Gateway timeouts on large documents.
@@ -137,15 +153,20 @@ HTML:
         model,
         instructions,
         input: inputParts.join('\n'),
-        temperature: 0.2,
       }),
     'HTML Patch OpenAI call',
-    25000
+    2500000 // 2500 seconds
   );
-
+  console.log('response', response);
   const outputText = String((response as any)?.output_text || '');
   const parsed = parsePatchOutput(outputText);
-  const patchedWithBlocks = injectBlocksBeforeBodyClose(parsed.html, injectedBlocks);
+
+  if (!parsed.diff || !parsed.diff.includes('@@')) {
+    throw new Error('AI patch response did not include a valid unified diff.');
+  }
+
+  const patchedHtml = applyDiff(cleanedHtml, parsed.diff);
+  const patchedWithBlocks = injectBlocksBeforeBodyClose(patchedHtml, injectedBlocks);
 
   return {
     summary: parsed.summary,
