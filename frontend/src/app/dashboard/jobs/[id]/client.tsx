@@ -488,7 +488,6 @@ function JobTabs({
 }: JobTabsProps) {
   const tabs = [
     { name: 'Execution', id: 'execution' },
-    { name: 'Artifacts', id: 'artifacts' },
     { name: 'Tracking', id: 'tracking' },
     { name: 'Raw JSON', id: 'raw' },
   ]
@@ -514,32 +513,33 @@ function JobTabs({
         </TabList>
         <TabPanels className="mt-6">
           <TabPanel>
-            <ExecutionSteps
-              steps={mergedSteps}
-              expandedSteps={expandedSteps}
-              showExecutionSteps={showExecutionSteps}
-              onToggleShow={() => setShowExecutionSteps(!showExecutionSteps)}
-              onToggleStep={toggleStep}
-              onCopy={onCopy}
-              jobStatus={job.status}
-              submission={submission}
-              onResubmit={onResubmit}
-              resubmitting={resubmitting}
-              onEditStep={onEditStep}
-              canEdit={true}
-              imageArtifactsByStep={imageArtifactsByStep}
-              loadingImageArtifacts={loadingArtifacts}
-              onRerunStepClick={onRerunStepClick}
-              rerunningStep={rerunningStep}
-            />
-          </TabPanel>
-          <TabPanel>
-            <div id="job-tab-panel-artifacts">
-              <ArtifactGallery
-                items={artifactGalleryItems}
-                loading={loadingArtifacts}
-                onPreview={openPreview}
+            <div className="space-y-8">
+              <ExecutionSteps
+                steps={mergedSteps}
+                expandedSteps={expandedSteps}
+                showExecutionSteps={showExecutionSteps}
+                onToggleShow={() => setShowExecutionSteps(!showExecutionSteps)}
+                onToggleStep={toggleStep}
+                onCopy={onCopy}
+                jobStatus={job.status}
+                submission={submission}
+                onResubmit={onResubmit}
+                resubmitting={resubmitting}
+                onEditStep={onEditStep}
+                canEdit={true}
+                imageArtifactsByStep={imageArtifactsByStep}
+                loadingImageArtifacts={loadingArtifacts}
+                onRerunStepClick={onRerunStepClick}
+                rerunningStep={rerunningStep}
               />
+
+              <div id="job-tab-panel-artifacts">
+                <ArtifactGallery
+                  items={artifactGalleryItems}
+                  loading={loadingArtifacts}
+                  onPreview={openPreview}
+                />
+              </div>
             </div>
           </TabPanel>
           <TabPanel>

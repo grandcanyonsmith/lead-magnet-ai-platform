@@ -454,39 +454,98 @@ export function PreviewRenderer({ contentType, objectUrl, fileName, className = 
 
     if (effectiveContentType === 'text/markdown') {
       if (isFullScreen) {
-        // Full-screen markdown rendering with scrolling
+        // Full-screen markdown rendering with scrolling + view mode support (desktop/tablet/mobile)
         return (
-          <div className="relative w-full bg-white">
-            {isInView ? (
-              markdownError ? (
-                <div className="flex items-center justify-center min-h-[95vh] bg-gray-50">
-                  <div className="text-center">
-                    <FiFileText className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                    <p className="text-xs text-gray-500">Failed to load markdown</p>
+          <div className="relative w-full h-full bg-white flex flex-col">
+            {/* Header with view mode switcher */}
+            {onViewModeChange && (
+              <div className="flex items-center justify-between px-4 py-3 bg-gray-100 border-b border-gray-200">
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => onViewModeChange('desktop')}
+                    className={`p-2 rounded-lg transition-colors ${
+                      viewMode === 'desktop'
+                        ? 'bg-gray-700 text-white'
+                        : 'bg-white text-gray-700 hover:bg-gray-200'
+                    }`}
+                    aria-label="Desktop view"
+                    title="Desktop view"
+                  >
+                    <FiMonitor className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => onViewModeChange('tablet')}
+                    className={`p-2 rounded-lg transition-colors ${
+                      viewMode === 'tablet'
+                        ? 'bg-gray-700 text-white'
+                        : 'bg-white text-gray-700 hover:bg-gray-200'
+                    }`}
+                    aria-label="Tablet view"
+                    title="Tablet view"
+                  >
+                    <FiTablet className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => onViewModeChange('mobile')}
+                    className={`p-2 rounded-lg transition-colors ${
+                      viewMode === 'mobile'
+                        ? 'bg-gray-700 text-white'
+                        : 'bg-white text-gray-700 hover:bg-gray-200'
+                    }`}
+                    aria-label="Mobile view"
+                    title="Mobile view"
+                  >
+                    <FiSmartphone className="w-5 h-5" />
+                  </button>
+                </div>
+                {fileName && (
+                  <div className="text-sm font-medium text-gray-700 truncate max-w-md">
+                    {fileName}
                   </div>
-                </div>
-              ) : markdownContent ? (
-                <div className="p-8 prose prose-lg max-w-none">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {markdownContent}
-                  </ReactMarkdown>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center min-h-[95vh] bg-black">
-                  <div className="text-center">
-                    <FiFileText className="w-12 h-12 text-white/50 mx-auto mb-2 animate-pulse" />
-                    <p className="text-xs text-white/70">Loading markdown...</p>
-                  </div>
-                </div>
-              )
-            ) : (
-              <div className="flex items-center justify-center min-h-[95vh] bg-black">
-                <div className="text-center">
-                  <FiFileText className="w-12 h-12 text-white/50 mx-auto mb-2" />
-                  <p className="text-xs text-white/70">Markdown File</p>
-                </div>
+                )}
               </div>
             )}
+
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              {isInView ? (
+                markdownError ? (
+                  <div className="flex items-center justify-center h-full bg-gray-50">
+                    <div className="text-center">
+                      <FiFileText className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                      <p className="text-xs text-gray-500">Failed to load markdown</p>
+                    </div>
+                  </div>
+                ) : markdownContent ? (
+                  <div
+                    className={`transition-all duration-300 ${
+                      viewMode === 'tablet' ? 'w-[768px] max-w-[768px] mx-auto' : 
+                      viewMode === 'mobile' ? 'w-[375px] max-w-[375px] mx-auto' : 
+                      'w-full'
+                    }`}
+                  >
+                    <div className="p-8 prose prose-lg max-w-none">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {markdownContent}
+                      </ReactMarkdown>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-full bg-black">
+                    <div className="text-center">
+                      <FiFileText className="w-12 h-12 text-white/50 mx-auto mb-2 animate-pulse" />
+                      <p className="text-xs text-white/70">Loading markdown...</p>
+                    </div>
+                  </div>
+                )
+              ) : (
+                <div className="flex items-center justify-center h-full bg-black">
+                  <div className="text-center">
+                    <FiFileText className="w-12 h-12 text-white/50 mx-auto mb-2" />
+                    <p className="text-xs text-white/70">Markdown File</p>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )
       }
