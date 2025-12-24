@@ -12,6 +12,12 @@ export interface TemplateData {
   is_published: boolean
 }
 
+interface HistoryItem {
+  html: string
+  label: string
+  timestamp: number
+}
+
 export function useTemplateEdit(workflowName: string, templateId: string | null, workflowTemplateId?: string) {
   const [templateLoading, setTemplateLoading] = useState(false)
   const [templateData, setTemplateData] = useState<TemplateData>({
@@ -22,7 +28,7 @@ export function useTemplateEdit(workflowName: string, templateId: string | null,
   })
 
   // History state
-  const [history, setHistory] = useState<string[]>([])
+  const [history, setHistory] = useState<HistoryItem[]>([])
   const [historyIndex, setHistoryIndex] = useState(-1)
 
   // Use ref to track latest templateData for async operations to avoid stale closures
@@ -64,12 +70,16 @@ export function useTemplateEdit(workflowName: string, templateId: string | null,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workflowName, templateId])
 
-  const addToHistory = (html: string) => {
+  const addToHistory = (html: string, label: string = 'Edit') => {
     // Don't add if same as current
-    if (historyIndex >= 0 && history[historyIndex] === html) return
+    if (historyIndex >= 0 && history[historyIndex].html === html) return
 
     const newHistory = history.slice(0, historyIndex + 1)
-    newHistory.push(html)
+    newHistory.push({
+      html,
+      label,
+      timestamp: Date.now()
+    })
     setHistory(newHistory)
     setHistoryIndex(newHistory.length - 1)
   }
@@ -88,7 +98,12 @@ export function useTemplateEdit(workflowName: string, templateId: string | null,
       })
       
       // Initialize history
-      setHistory([htmlContent])
+      const initialHistoryItem = {
+        html: htmlContent,
+        label: 'Initial Load',
+        timestamp: Date.now()
+      }
+      setHistory([initialHistoryItem])
       setHistoryIndex(0)
       
       if (htmlContent) {
@@ -112,27 +127,36 @@ export function useTemplateEdit(workflowName: string, templateId: string | null,
 
   const handleHtmlChange = (html: string) => {
     setTemplateData(prev => ({ ...prev, html_content: html }))
-    // Note: We don't add to history on every keystroke, ideally we'd debounce this or only add on specific actions
-    // For now, let's rely on specific actions like "Refine" or maybe a blur event to add history points?
-    // Actually, for a simple undo/redo in a text editor, usually every change is tracked but debounced.
-    // Given the request is about "iterations", we definitely want to track AI changes.
-    // For manual edits, let's just track them. Debouncing might be needed if performance is an issue.
+    // Note: We don't add to history on every keystroke
   }
   
   // Wrapper to commit manual changes to history (e.g. on blur or after debounce)
   const commitHtmlChange = (html: string) => {
-      addToHistory(html)
+      addToHistory(html, 'Manual Edit')
+  }
+  
+  const jumpToHistory = (index: number) => {
+      if (index >= 0 && index < history.length) {
+          const item = history[index]
+          setHistoryIndex(index)
+          setTemplateData(prev => ({ ...prev, html_content: item.html }))
+          
+          // Update derived state
+          const placeholders = extractPlaceholders(item.html)
+          setDetectedPlaceholders(placeholders)
+          setPreviewKey(prev => prev + 1)
+      }
   }
 
   const handleUndo = () => {
     if (historyIndex > 0) {
       const newIndex = historyIndex - 1
-      const previousHtml = history[newIndex]
+      const item = history[newIndex]
       setHistoryIndex(newIndex)
-      setTemplateData(prev => ({ ...prev, html_content: previousHtml }))
+      setTemplateData(prev => ({ ...prev, html_content: item.html }))
       
       // Update derived state
-      const placeholders = extractPlaceholders(previousHtml)
+      const placeholders = extractPlaceholders(item.html)
       setDetectedPlaceholders(placeholders)
       setPreviewKey(prev => prev + 1)
     }
@@ -141,12 +165,12 @@ export function useTemplateEdit(workflowName: string, templateId: string | null,
   const handleRedo = () => {
     if (historyIndex < history.length - 1) {
       const newIndex = historyIndex + 1
-      const nextHtml = history[newIndex]
+      const item = history[newIndex]
       setHistoryIndex(newIndex)
-      setTemplateData(prev => ({ ...prev, html_content: nextHtml }))
+      setTemplateData(prev => ({ ...prev, html_content: item.html }))
       
       // Update derived state
-      const placeholders = extractPlaceholders(nextHtml)
+      const placeholders = extractPlaceholders(item.html)
       setDetectedPlaceholders(placeholders)
       setPreviewKey(prev => prev + 1)
     }
@@ -165,8 +189,8 @@ export function useTemplateEdit(workflowName: string, templateId: string | null,
     }
     
     // Ensure current state is in history before refining if it's new
-    if (historyIndex === -1 || history[historyIndex] !== currentHtml) {
-        addToHistory(currentHtml)
+    if (historyIndex === -1 || history[historyIndex].html !== currentHtml) {
+        addToHistory(currentHtml, 'Before Refine')
     }
 
     setRefining(true)
@@ -186,7 +210,7 @@ export function useTemplateEdit(workflowName: string, templateId: string | null,
       }))
       
       // Add successful refinement to history
-      addToHistory(newHtml)
+      addToHistory(newHtml, `AI: ${editPrompt.substring(0, 30)}${editPrompt.length > 30 ? '...' : ''}`)
       
       const placeholders = extractPlaceholders(newHtml)
       setDetectedPlaceholders(placeholders)
@@ -217,7 +241,7 @@ export function useTemplateEdit(workflowName: string, templateId: string | null,
       ...prev,
       html_content: newHtml,
     }))
-    addToHistory(newHtml)
+    addToHistory(newHtml, `Inserted ${placeholder}`)
   }
 
   return {
@@ -246,5 +270,8 @@ export function useTemplateEdit(workflowName: string, templateId: string | null,
     handleRedo,
     canUndo: historyIndex > 0,
     canRedo: historyIndex < history.length - 1,
+    history,
+    historyIndex,
+    jumpToHistory,
   }
 }
