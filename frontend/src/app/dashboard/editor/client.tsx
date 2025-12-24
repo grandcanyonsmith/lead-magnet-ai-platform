@@ -80,6 +80,7 @@ export default function EditorClient() {
   const [prompt, setPrompt] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [hasError, setHasError] = useState(false)
   const [htmlContent, setHtmlContent] = useState('')
   const [selectedElement, setSelectedElement] = useState<string | null>(null)
   const [isSelectionMode, setIsSelectionMode] = useState(false)
@@ -100,18 +101,20 @@ export default function EditorClient() {
 
   // Load HTML
   useEffect(() => {
+    let isMounted = true
+
     const loadContent = async () => {
       // 1. Try fetching via Artifact ID (best for auth/CORS)
       if (artifactId) {
         try {
-            const content = await api.artifacts.getArtifactContent(artifactId)
-            if (content) {
-                setHtmlContent(content)
-                addToHistory(content)
-                return
-            }
+          const content = await api.artifacts.getArtifactContent(artifactId)
+          if (content && isMounted) {
+            setHtmlContent(content)
+            addToHistory(content)
+            return
+          }
         } catch (err) {
-            console.error('Failed to load artifact content:', err)
+          console.error('Failed to load artifact content:', err)
         }
       }
 
@@ -121,12 +124,16 @@ export default function EditorClient() {
           const res = await fetch(initialUrl)
           if (res.ok) {
             const content = await res.text()
-            setHtmlContent(content)
-            addToHistory(content)
+            if (isMounted) {
+              setHtmlContent(content)
+              addToHistory(content)
+            }
             return
+          } else {
+            console.warn(`Failed to fetch URL ${initialUrl}: ${res.status} ${res.statusText}`)
           }
         } catch (err) {
-            console.error('Failed to load initial URL', err)
+          console.error('Failed to load initial URL', err)
         }
       }
 
@@ -134,18 +141,29 @@ export default function EditorClient() {
       if (jobId) {
         try {
           const content = await api.jobs.getJobDocument(jobId)
-          if (content) {
+          if (content && isMounted) {
             setHtmlContent(content)
             addToHistory(content)
+            return
           }
         } catch (err) {
           console.error('Failed to load job document:', err)
-          toast.error('Failed to load content')
         }
       }
+
+      // If we got here, all methods failed
+      if (isMounted) {
+        setHasError(true)
+        toast.error('Failed to load content')
+      }
     }
+
     loadContent()
-  }, [jobId, initialUrl, artifactId])
+
+    return () => {
+      isMounted = false
+    }
+  }, [jobId, initialUrl, artifactId]) // Removed htmlContent from deps to avoid loop
 
   // Inject script when HTML changes or iframe loads
   const getPreviewContent = useCallback(() => {
@@ -337,6 +355,16 @@ export default function EditorClient() {
                     title="Preview"
                     sandbox="allow-scripts allow-same-origin"
                   />
+                ) : hasError ? (
+                   <div className="flex flex-col w-full h-full items-center justify-center text-gray-500 bg-[#0c0d10] p-4 text-center">
+                       <p className="text-red-400 font-medium mb-2">Failed to load content</p>
+                       <button 
+                          onClick={() => window.location.reload()}
+                          className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-md text-xs text-white transition-colors"
+                       >
+                          Refresh Page
+                       </button>
+                   </div>
                 ) : (
                    <div className="flex w-full h-full items-center justify-center text-gray-500 bg-[#0c0d10]">
                        <FiRotateCw className="h-5 w-5 animate-spin mr-2" />

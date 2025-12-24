@@ -92,25 +92,6 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
     item.artifact?.content_type === 'text/html' ||
     fileName.toLowerCase().endsWith('.html')
 
-  const withEditMode = (url: string) => {
-    try {
-      const base = typeof window !== 'undefined' ? window.location.origin : 'https://example.com'
-      const u = new URL(url, base)
-      u.searchParams.set('editMode', 'true')
-      return u.toString()
-    } catch (_e) {
-      // Fallback for malformed URLs
-      return url + (url.includes('?') ? '&' : '?') + 'editMode=true'
-    }
-  }
-
-  // Prefer public_url for editMode because presigned S3 URLs can break if query params change.
-  const editModeUrl = (() => {
-    const baseUrl = item.artifact?.public_url || artifactUrl
-    if (!baseUrl) return null
-    return withEditMode(baseUrl)
-  })()
-
   const handleCopy = async (value: string, successMessage: string) => {
     try {
       if (typeof navigator !== 'undefined' && navigator.clipboard) {
@@ -285,3 +266,4 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
     </div>
   )
 }
+
