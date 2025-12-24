@@ -1,12 +1,15 @@
-# Workflow Generation E2E Testing
+# Workflow Generation E2E Testing Scripts
 
 ## Overview
-This directory contains end-to-end test scripts for the async workflow generation flow with webhook completion.
+
+This document details the specific scripts for testing the async workflow generation flow with webhook completion. 
+For the broader testing guide, see [docs/testing/README.md](../docs/testing/README.md).
 
 ## Test Scripts
 
+These scripts are located in `scripts/` (root of scripts directory):
+
 ### 1. Bash Script (`test-workflow-generation-e2e.sh`)
-A bash script that tests the complete workflow generation flow.
 
 **Usage:**
 ```bash
@@ -21,7 +24,6 @@ export AUTH_TOKEN=your_auth_token
 ```
 
 ### 2. Node.js Script (`test-workflow-generation-e2e.js`)
-A Node.js script with the same functionality.
 
 **Usage:**
 ```bash
@@ -35,7 +37,7 @@ export AUTH_TOKEN=your_auth_token
 node scripts/test-workflow-generation-e2e.js
 ```
 
-## What the Tests Verify
+## Verification Scope
 
 1. **Job Creation**: Submits a workflow generation request and verifies a job is created
 2. **Job Status**: Checks that the job status is tracked correctly
@@ -52,31 +54,10 @@ node scripts/test-workflow-generation-e2e.js
 4. Frontend webhook endpoint receives completion and stores it
 5. Frontend polls webhook endpoint and navigates to edit page when complete
 
-## Manual Testing Steps
+## Manual Verification
 
-1. **Start the services:**
-   - Backend API (usually on port 3001)
-   - Frontend (usually on port 3000)
-
-2. **Open the frontend:**
-   - Navigate to `/dashboard/workflows/new`
-
-3. **Submit a workflow generation:**
-   - Enter a description (e.g., "A course idea validator...")
-   - Click "Generate Lead Magnet"
-   - You should see "Creating your lead magnet..." screen
-
-4. **Wait for completion:**
-   - The page should automatically navigate to `/dashboard/workflows/{workflowId}/edit`
-   - The workflow should have a "Draft" badge
-
-5. **Verify the workflow:**
-   - Check that all generated data is present (steps, template, form fields)
-   - Verify the workflow can be edited and saved
-
-## Troubleshooting
-
-- **Job stuck in pending**: Check backend logs for Lambda execution issues
-- **Webhook not received**: Verify the webhook URL is correctly formatted
-- **Workflow not created**: Check backend logs for draft workflow service errors
-- **Navigation not working**: Check browser console for JavaScript errors
+1. **Start Services**: Backend (3001) + Frontend (3000)
+2. **Navigate**: `/dashboard/workflows/new`
+3. **Submit**: Enter description, click "Generate"
+4. **Wait**: Screen should transition from "Creating..." to Edit page automatically
+5. **Verify**: Check for "Draft" badge and populated steps/template

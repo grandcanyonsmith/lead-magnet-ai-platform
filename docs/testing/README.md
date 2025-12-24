@@ -9,11 +9,10 @@ Use this index to pick the right level of coverage before shipping. Everything u
 | `FRONTEND_TEST_GUIDE.md` | How to run the Playwright/Next lint suites for the dashboard. | `npm run lint`, `npx playwright test` |
 | `TEST_WORKFLOW_GENERATION_E2E.md` | End-to-end workflow generation with webhook callbacks (both Node & Bash harnesses plus optional manual flow). | `node scripts/test-workflow-generation-e2e.js`, `./scripts/test-workflow-generation-e2e.sh` |
 | `TEST_STEP_RERUN.md` | Verifies that rerunning a single job step only reprocesses that step while preserving context. | `python3 scripts/testing/test-step-rerun.py <job_id> <step_index>` |
-| `TEST_WEBHOOK_ARTIFACTS.md` | Programmatic verification that webhook payloads include the expected artifact bundle. | `./scripts/test-webhook-artifacts-now.sh` |
-| `VERIFY_WEBHOOK_ARTIFACTS.md` | Smoke test to confirm artifacts land in S3 + webhook recipients after deploys. | `./verify-webhook-artifacts.sh` (see doc for env vars) |
-| `TEST_QUICK_EDIT.md` | Scripted quick-edit regression that exercises `/admin/jobs/:id/quick-edit-step`. | `node scripts/test-quick-edit.js` |
+| `WEBHOOK_TESTING.md` | Verification of webhook delivery and payload integrity. | `./scripts/testing/test-webhook.sh` |
+| `TEST_QUICK_EDIT.md` | Scripted quick-edit regression that exercises `/admin/jobs/:id/quick-edit-step`. | `./scripts/testing/test-quick-edit.sh` |
 
-> **Tip:** `scripts/test-e2e.sh` chains the most common API + UI happy-paths. Run it before every release along with the domain-specific suites above.
+> **Tip:** `scripts/testing/test-e2e.sh` chains the most common API + UI happy-paths. Run it before every release along with the domain-specific suites above.
 
 ## Manual Scenario Guides
 
@@ -30,13 +29,13 @@ These walkthroughs document how to validate UI/UX changes and production behavio
 | `QUICK_EDIT_TESTING.md` | Manual drill for confirm-in-place edits (pairs nicely with the quick edit script). |
 | `TEST_IMAGE_IMPROVEMENTS_SUMMARY.md` | Results + checklist for the image artifact improvments rollout. |
 | `WEBHOOK_TESTING.md` | Manual webhook validation flow (headers, retries, payload shape). |
-| `TEST_WEBHOOK_ARTIFACTS.md` (manual section) | Contains observation checklist when co-monitoring webhook artifacts with the script. |
+| `TEST_WEBHOOK_ARTIFACTS.md` | Checklist for ensuring artifacts are correctly bundled in webhook payloads. |
 
 ### How to Use
 
 1. **Pick the domain** you touched (workflows, forms, jobs, templates, notifications, settings).
 2. **Run the matching automated suite** from the first table.
 3. **Spot-check the manual guide** that mirrors your change (UI behaviour, webhook payloads, device-specific layouts).
-4. Record results directly inside the Markdown files or link them in the PR description for auditability.
+4. **Record results** directly inside the Markdown files or link them in the PR description for auditability.
 
 When you add a new test playbook, drop the `.md` file into this directory and extend the relevant table here so the rest of the team—and AI assistants—can find it.

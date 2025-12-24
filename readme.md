@@ -1,7 +1,7 @@
 # 🚀 Lead Magnet AI Platform
 
 [![Deployed](https://img.shields.io/badge/status-deployed-success)](https://czp5b77azd.execute-api.us-east-1.amazonaws.com)
-[![Tests](https://img.shields.io/badge/tests-passing-success)](./scripts/test-e2e.sh)
+[![Tests](https://img.shields.io/badge/tests-passing-success)](./scripts/testing/test-e2e.sh)
 [![AWS](https://img.shields.io/badge/AWS-deployed-orange)](https://aws.amazon.com)
 
 A production-ready SaaS platform that helps business owners create and manage AI-powered lead magnets at scale. **Automated, personalized lead magnets without manual work - increases conversion significantly.**
@@ -125,7 +125,7 @@ When creating a lead magnet, you can choose:
            │                 │              │       │
     ┌──────▼──────┐   ┌──────▼──────┐  ┌───▼──────▼───┐
     │  DynamoDB   │   │    Step     │  │ Lambda Worker │
-    │  (8 tables) │   │  Functions  │  │   (Python)    │
+    │  (9 tables) │   │  Functions  │  │   (Python)    │
     └─────────────┘   └──────┬──────┘  └──────┬───────┘
                              │                 │
                       ┌──────▼─────────────────▼──┐
@@ -153,7 +153,7 @@ When creating a lead magnet, you can choose:
 
 **Infrastructure:**
 - AWS CDK (TypeScript) - Infrastructure as Code
-- DynamoDB (8 tables) - Multi-tenant data storage
+- DynamoDB (9 tables) - Multi-tenant data storage
 - API Gateway (HTTP API) - RESTful API endpoints
 - Step Functions - Workflow orchestration for job processing
 - Lambda Functions - Serverless compute (Node.js API + Python Worker)
@@ -186,9 +186,8 @@ lead-magnent-ai/
 │   └── src/            # React/Next.js source files
 ├── .github/workflows/  # CI/CD pipelines
 ├── scripts/            # Helper scripts
-│   ├── deploy.sh       # Main deployment script
-│   ├── destroy.sh      # Cleanup script
-│   ├── test-e2e.sh     # End-to-end tests
+│   ├── deployment/     # Deployment scripts
+│   ├── testing/        # Test scripts
 │   └── *.py            # Utility scripts
 └── docs/              # Documentation files
 ```
@@ -201,28 +200,28 @@ lead-magnent-ai/
 |----------|-----|
 | API | https://czp5b77azd.execute-api.us-east-1.amazonaws.com |
 | Test Form | https://czp5b77azd.execute-api.us-east-1.amazonaws.com/v1/forms/test-form |
-| Dashboard | http://localhost:3002 (local dev) |
+| Dashboard | http://localhost:3000 (local dev) |
 
 ## 🧪 Testing
 
 **Run E2E tests:**
 ```bash
-./scripts/test-e2e.sh
+./scripts/testing/test-e2e.sh
 ```
 
 **Test results:** ✅ ALL TESTS PASSING (100%)
 
 **Available Scripts:**
-- `scripts/deploy.sh` - Deploy entire platform (infrastructure + backend + frontend)
-- `scripts/destroy.sh` - Remove all AWS resources
-- `scripts/test-e2e.sh` - Run end-to-end tests
-- `scripts/build-lambda-worker.sh` - Build and push worker Docker image
-- `scripts/confirm-users.sh` - Confirm Cognito users
+- `scripts/deployment/deploy.sh` - Deploy entire platform (infrastructure + backend + frontend)
+- `scripts/deployment/destroy.sh` - Remove all AWS resources
+- `scripts/testing/test-e2e.sh` - Run end-to-end tests
+- `scripts/deployment/build-lambda-worker.sh` - Build and push worker Docker image
+- `scripts/admin/confirm-users.sh` - Confirm Cognito users
 - `scripts/setup-github-secrets.sh` - Configure GitHub Actions secrets
-- `scripts/find-lead-magnet-jobs.py` - Find and list lead magnet jobs
-- `scripts/fix-workflow-tools.py` - Fix workflow tool configuration issues
-- `scripts/get-job-output.py` - Retrieve job output from DynamoDB
-- `scripts/import-workflow-from-job.py` - Import workflow from job output
+- `scripts/utils/find-lead-magnet-jobs.py` - Find and list lead magnet jobs
+- `scripts/workflows/fix-workflow-tools.py` - Fix workflow tool configuration issues
+- `scripts/jobs/get-job-output.py` - Retrieve job output from DynamoDB
+- `scripts/workflows/import-workflow-from-job.py` - Import workflow from job output
 
 ## 💰 Business Model
 
@@ -250,11 +249,11 @@ lead-magnent-ai/
 - **[Flow Diagram](./docs/FLOW_DIAGRAM.md)** - Complete process flow diagram
 
 **Additional Guides:**
-- **[Local Development](./LOCAL_DEVELOPMENT.md)** - Local development setup
+- **[Local Development](./docs/LOCAL_DEVELOPMENT.md)** - Local development setup
 - **[Frontend Test Guide](./docs/testing/FRONTEND_TEST_GUIDE.md)** - Frontend testing guide
-- **[GitHub Secrets Setup](./GITHUB_SECRETS_SETUP.md)** - GitHub Actions secrets configuration
-- **[Quick GitHub Setup](./QUICK_GITHUB_SETUP.md)** - Quick GitHub repository setup
-- **[Lambda Build Options](./LAMBDA_BUILD_OPTIONS.md)** - Lambda build and deployment options
+- **[GitHub Secrets Setup](./docs/GITHUB_SECRETS_SETUP.md)** - GitHub Actions secrets configuration
+- **[Quick GitHub Setup](./docs/QUICK_GITHUB_SETUP.md)** - Quick GitHub repository setup
+- **[Lambda Build Options](./docs/LAMBDA_BUILD_OPTIONS.md)** - Lambda build and deployment options
 
 For complete documentation, see the [Documentation Index](./docs/README.md).
 
@@ -290,7 +289,7 @@ MIT License
 - **Documentation:** See [Documentation Index](./docs/README.md) for complete documentation
 - **Issues:** Open an issue on GitHub
 - **Logs:** Check CloudWatch logs
-- **Local Development:** See [LOCAL_DEVELOPMENT.md](./LOCAL_DEVELOPMENT.md)
+- **Local Development:** See [LOCAL_DEVELOPMENT.md](./docs/LOCAL_DEVELOPMENT.md)
 - **Deployment Help:** See [Deployment Guide](./docs/DEPLOYMENT.md)
 
 ## 🎉 Status
@@ -308,5 +307,3 @@ MIT License
 **Built with ❤️ using AWS, OpenAI, Next.js, and TypeScript**
 
 *For complete documentation, see the [Documentation Index](./docs/README.md)*
-
-a
