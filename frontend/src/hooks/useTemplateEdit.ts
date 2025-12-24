@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { api } from '@/lib/api'
 import { AIModel } from '@/types'
 import { extractPlaceholders } from '@/utils/templateUtils'
@@ -20,6 +20,12 @@ export function useTemplateEdit(workflowName: string, templateId: string | null,
     html_content: '',
     is_published: false,
   })
+
+  // Use ref to track latest templateData for async operations to avoid stale closures
+  const templateDataRef = useRef(templateData)
+  useEffect(() => {
+    templateDataRef.current = templateData
+  }, [templateData])
 
   const [detectedPlaceholders, setDetectedPlaceholders] = useState<string[]>([])
   const [showPreview, setShowPreview] = useState(false)
@@ -99,7 +105,10 @@ export function useTemplateEdit(workflowName: string, templateId: string | null,
       return { error: 'Please describe what changes you want to make' }
     }
 
-    if (!templateData.html_content.trim()) {
+    // Use the ref to get the absolute latest HTML content
+    const currentHtml = templateDataRef.current.html_content
+
+    if (!currentHtml.trim()) {
       return { error: 'No HTML content to refine' }
     }
 
@@ -108,7 +117,7 @@ export function useTemplateEdit(workflowName: string, templateId: string | null,
 
     try {
       const result = await api.refineTemplateWithAI({
-        current_html: templateData.html_content,
+        current_html: currentHtml,
         edit_prompt: editPrompt.trim(),
         model: 'gpt-5' as AIModel,
       })
@@ -172,4 +181,3 @@ export function useTemplateEdit(workflowName: string, templateId: string | null,
     loadTemplate,
   }
 }
-
