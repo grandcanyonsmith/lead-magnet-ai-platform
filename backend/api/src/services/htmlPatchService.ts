@@ -1,5 +1,5 @@
 import { logger } from '../utils/logger';
-import { stripMarkdownCodeFences } from '../utils/openaiHelpers';
+import { stripMarkdownCodeFences, callResponsesWithTimeout } from '../utils/openaiHelpers';
 import { getOpenAIClient } from './openaiService';
 
 type PatchHtmlArgs = {
@@ -118,20 +118,28 @@ HTML:
   inputParts.push(`User request:\n${prompt}\n`);
   inputParts.push(`HTML document:\n${cleanedHtml}`);
 
+  // Use gpt-4o for speed to stay within API Gateway's 30s limit.
+  const model = 'gpt-5.2';
+
   logger.info('[HtmlPatchService] Calling OpenAI to patch HTML', {
-    model: 'gpt-5.2',
+    model,
     promptLength: prompt.length,
     htmlLength: cleanedHtml.length,
     hasSelector: Boolean(selector),
     hasSelectedOuterHtml: Boolean(selectedOuterHtml),
   });
 
-  const response = await (openai as any).responses.create({
-    model: 'gpt-5.2',
-    instructions,
-    input: inputParts.join('\n'),
-    temperature: 0.2,
-  });
+  // Wrap in a timeout to fail before API Gateway (30s) does.
+  const response = await callResponsesWithTimeout(
+    () =>
+      (openai as any).responses.create({
+        model,
+        instructions,
+        input: inputParts.join('\n'),
+      }),
+    'HTML Patch OpenAI call',
+    2800000 // 2800 seconds
+  );
 
   const outputText = String((response as any)?.output_text || '');
   const parsed = parsePatchOutput(outputText);
