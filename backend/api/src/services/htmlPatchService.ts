@@ -1,5 +1,5 @@
 import { logger } from '../utils/logger';
-import { stripMarkdownCodeFences, callResponsesWithTimeout } from '../utils/openaiHelpers';
+import { stripMarkdownCodeFences } from '../utils/openaiHelpers';
 import { getOpenAIClient } from './openaiService';
 import { applyDiff } from '../utils/patchUtils';
 
@@ -86,7 +86,7 @@ IMPORTANT:
 - The user may have selected a specific element (provided as context), but your edits are NOT restricted to that element.
 - You may modify ANY part of the file as needed to fulfill the request.
 - If the user asks to "delete this section" or makes a broad request, apply the change to the appropriate scope, even if it is larger than the selected element.
-- **GLOBAL CHANGES:** If the user request implies a global change (e.g., "change background color", "change font"), apply it to the `body` tag, `html` tag, or global CSS, ensuring it affects the ENTIRE page. Do not limit it to the selected element unless explicitly requested.
+- **GLOBAL CHANGES:** If the user request implies a global change (e.g., "change background color", "change font"), apply it to the \`body\` tag, \`html\` tag, or global CSS, ensuring it affects the ENTIRE page. Do not limit it to the selected element unless explicitly requested.
 - Do NOT output the full HTML in the text response. Only use the tool to edit the file.`;
 
   const inputParts: string[] = [];
@@ -102,8 +102,8 @@ ${cleanedHtml}
   if (selectedOuterHtml) inputParts.push(`Selected outerHTML (may be truncated):\n${selectedOuterHtml}\n`);
   inputParts.push(`User request:\n${prompt}\n`);
 
-  // Use gpt-5.1 for apply_patch support
-  const model = 'gpt-5.1';
+  // Use gpt-5.1-codex for apply_patch support
+  const model = 'gpt-5.1-codex';
 
   logger.info('[HtmlPatchService] Calling OpenAI to patch HTML', {
     model,
@@ -113,19 +113,14 @@ ${cleanedHtml}
     hasSelectedOuterHtml: Boolean(selectedOuterHtml),
   });
 
-  // Wrap in a 5-minute timeout as requested.
-  // Note: Ensure the Lambda function timeout is configured to > 5 minutes.
-  const response = await callResponsesWithTimeout(
-    () =>
-      (openai as any).responses.create({
-        model,
-        instructions,
-        input: inputParts.join('\n'),
-        tools: [{ type: 'apply_patch' }],
-      }),
-    'HTML Patch OpenAI call',
-    300000 // 5 minutes
-  );
+  // Direct call without timeout and with priority service tier
+  const response = await (openai as any).responses.create({
+    model,
+    instructions,
+    input: inputParts.join('\n'),
+    tools: [{ type: 'apply_patch' }],
+    service_tier: 'priority',
+  });
 
   let currentHtml = cleanedHtml;
   let summary = 'Patched HTML.';
