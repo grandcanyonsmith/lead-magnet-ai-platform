@@ -97,6 +97,12 @@ export function buildArtifactGalleryItems({
 
   if (job?.output_url && !seen.has(job.output_url)) {
     const completionTimestamp = job.completed_at ? new Date(job.completed_at).getTime() : Number.MAX_SAFE_INTEGER - 1
+    
+    // Try to find the artifact that matches this URL to provide ID for editing
+    const matchingArtifact = artifacts?.find(a => 
+      a.public_url === job.output_url || a.object_url === job.output_url
+    )
+
     items.push({
       id: 'job-output-url',
       kind: 'jobOutput',
@@ -105,6 +111,7 @@ export function buildArtifactGalleryItems({
       label: 'Final Deliverable',
       description: 'Download the generated lead magnet document.',
       sortOrder: completionTimestamp,
+      artifact: matchingArtifact,
     })
     seen.add(job.output_url)
   }
