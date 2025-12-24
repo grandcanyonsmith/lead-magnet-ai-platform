@@ -110,7 +110,7 @@ export function BrandingSettings({ settings, onChange, errors }: BrandingSetting
             <h3 className="text-lg font-semibold text-gray-900">Brand Intelligence</h3>
           </div>
           <p className="text-sm text-gray-600 ml-12">
-            Train the AI on your brand's voice, values, and target audience.
+            Train the AI on your brand&apos;s voice, values, and target audience.
           </p>
         </div>
 
