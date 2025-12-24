@@ -1,5 +1,5 @@
 import { logger } from '../utils/logger';
-import { stripMarkdownCodeFences } from '../utils/openaiHelpers';
+import { callResponsesWithTimeout } from '../utils/openaiHelpers';
 import { getOpenAIClient } from './openaiService';
 import { applyDiff } from '../utils/patchUtils';
 
@@ -55,6 +55,41 @@ function injectBlocksBeforeBodyClose(html: string, blocks: string[]): string {
   return html + insertion;
 }
 
+function stripDiffCodeFences(diff: string): string {
+  let cleaned = String(diff || '').trim();
+  cleaned = cleaned.replace(/^```diff\s*/i, '');
+  cleaned = cleaned.replace(/^```\s*/i, '');
+  cleaned = cleaned.replace(/\s*```$/i, '');
+  return cleaned.trim();
+}
+
+function parsePatchOutput(outputText: string): { summary: string; diff: string } {
+  const raw = String(outputText || '').trim();
+
+  // Preferred format:
+  // SUMMARY:
+  // ...
+  // DIFF:
+  // --- a/index.html
+  // +++ b/index.html
+  // @@ ...
+  const match = raw.match(/^\s*SUMMARY:\s*([\s\S]*?)\nDIFF:\s*\n?([\s\S]*)$/i);
+  if (match) {
+    const summary = (match[1] || '').trim() || 'Patched HTML.';
+    const diff = stripDiffCodeFences(match[2] || '');
+    return { summary, diff };
+  }
+
+  // Fallback: try to extract a diff from anywhere in the output.
+  const startIdx = raw.search(/(^|\n)---\s+a\/index\.html/i);
+  if (startIdx >= 0) {
+    const diff = stripDiffCodeFences(raw.slice(startIdx));
+    return { summary: 'Patched HTML.', diff };
+  }
+
+  return { summary: 'Patched HTML.', diff: '' };
+}
+
 export async function patchHtmlWithOpenAI(args: PatchHtmlArgs): Promise<PatchHtmlResult> {
   const prompt = (args.prompt || '').trim();
   if (!prompt) {
@@ -70,40 +105,38 @@ export async function patchHtmlWithOpenAI(args: PatchHtmlArgs): Promise<PatchHtm
   const openai = await getOpenAIClient();
 
   const instructions = `You are an expert HTML editor.
-You have access to a file named "index.html".
+
 You will receive:
-- The content of "index.html" (WITHOUT any editing overlays).
-- Optionally, a CSS selector and the selected element's outerHTML context indicating what the user was looking at.
+- A complete HTML document (WITHOUT any editing overlays).
+- Optionally, a CSS selector and the selected element's outerHTML.
 - A user request describing changes.
 
 Your task:
-- Analyze the user request.
-- Use the 'apply_patch' tool to modify "index.html" to fulfill the request.
-- Ensure the HTML remains valid and well-formed.
-- AFTER issuing the patch, provide a brief summary of changes in the text response.
+- Produce a UNIFIED DIFF patch that updates the HTML to satisfy the user request.
+- Make the smallest possible change to fulfill the request.
+- Preserve formatting and unrelated content as much as possible.
+- Do NOT include any markdown code fences.
 
-IMPORTANT:
-- The user may have selected a specific element (provided as context), but your edits are NOT restricted to that element.
-- You may modify ANY part of the file as needed to fulfill the request.
-- If the user asks to "delete this section" or makes a broad request, apply the change to the appropriate scope, even if it is larger than the selected element.
-- **GLOBAL CHANGES:** If the user request implies a global change (e.g., "change background color", "change font"), apply it to the \`body\` tag, \`html\` tag, or global CSS, ensuring it affects the ENTIRE page. Do not limit it to the selected element unless explicitly requested.
-- Do NOT output the full HTML in the text response. Only use the tool to edit the file.`;
+Output EXACTLY in this format:
+
+SUMMARY:
+<1-3 bullet points describing what changed>
+DIFF:
+--- a/index.html
++++ b/index.html
+@@ ... @@
+ ...`;
 
   const inputParts: string[] = [];
-  inputParts.push(`The user has the following files:
-<BEGIN_FILES>
-===== index.html
-${cleanedHtml}
-<END_FILES>
-`);
-
   if (pageUrl) inputParts.push(`Page URL:\n${pageUrl}\n`);
   if (selector) inputParts.push(`Selected selector:\n${selector}\n`);
   if (selectedOuterHtml) inputParts.push(`Selected outerHTML (may be truncated):\n${selectedOuterHtml}\n`);
   inputParts.push(`User request:\n${prompt}\n`);
+  inputParts.push(`index.html:\n${cleanedHtml}`);
 
-  // Use gpt-5.1-codex for apply_patch support
-  const model = 'gpt-5.1-codex';
+  // Use gpt-4o for speed to stay within API Gateway's 30s limit.
+  // Codex-style models are slower and can trigger 503 Gateway timeouts on large documents.
+  const model = 'gpt-4o';
 
   logger.info('[HtmlPatchService] Calling OpenAI to patch HTML', {
     model,
@@ -113,68 +146,30 @@ ${cleanedHtml}
     hasSelectedOuterHtml: Boolean(selectedOuterHtml),
   });
 
-  // Direct call without timeout and with priority service tier
-  const response = await (openai as any).responses.create({
-    model,
-    instructions,
-    input: inputParts.join('\n'),
-    tools: [{ type: 'apply_patch' }],
-    service_tier: 'priority',
-  });
+  // Wrap in a 25s timeout to fail before API Gateway (30s) does.
+  const response = await callResponsesWithTimeout(
+    () =>
+      (openai as any).responses.create({
+        model,
+        instructions,
+        input: inputParts.join('\n'),
+      }),
+    'HTML Patch OpenAI call',
+    2500000 // 2500 seconds
+  );
+  console.log('response', response);
+  const outputText = String((response as any)?.output_text || '');
+  const parsed = parsePatchOutput(outputText);
 
-  let currentHtml = cleanedHtml;
-  let summary = 'Patched HTML.';
-
-  // Handle patch calls
-  const outputItems = (response as any).output || [];
-  const patchCalls = outputItems.filter((item: any) => item.type === 'apply_patch_call');
-
-  if (patchCalls.length > 0) {
-    logger.info('[HtmlPatchService] Received patch calls', { count: patchCalls.length });
-    
-    for (const call of patchCalls) {
-      const { operation } = call;
-      if (operation.path === 'index.html' && operation.type === 'update_file') {
-        try {
-          logger.debug('[HtmlPatchService] Applying patch', { diffLength: operation.diff?.length });
-          currentHtml = applyDiff(currentHtml, operation.diff);
-        } catch (err) {
-          logger.error('[HtmlPatchService] Failed to apply patch', {
-            error: err instanceof Error ? err.message : String(err),
-            diffSnippet: operation.diff?.substring(0, 100)
-          });
-          // In a real agent loop, we would report failure back to model.
-          // Here we just log and continue (or throw).
-          // Throwing is safer so we don't return broken state.
-          throw new Error('Failed to apply AI patch: ' + (err instanceof Error ? err.message : String(err)));
-        }
-      }
-    }
-  } else {
-    logger.warn('[HtmlPatchService] No patch calls received from model');
-    // Fallback: Check if model outputted HTML directly in text (unlikely given instructions but possible)
-    const textOutput = outputItems.find((item: any) => item.type === 'message')?.content || '';
-    if (textOutput.includes('<html') || textOutput.includes('<!DOCTYPE')) {
-         // Attempt to extract HTML if model hallucinated and ignored tools
-         // Use the old parser logic or similar
-         const match = textOutput.match(/HTML:\s*\n?([\s\S]*)$/i);
-         if (match) {
-             currentHtml = match[1].trim();
-         }
-    }
+  if (!parsed.diff || !parsed.diff.includes('@@')) {
+    throw new Error('AI patch response did not include a valid unified diff.');
   }
 
-  // Extract summary from text message
-  const messageItem = outputItems.find((item: any) => item.type === 'message');
-  if (messageItem && messageItem.content) {
-      // Clean up summary
-      summary = stripMarkdownCodeFences(messageItem.content).trim();
-  }
-
-  const patchedWithBlocks = injectBlocksBeforeBodyClose(currentHtml, injectedBlocks);
+  const patchedHtml = applyDiff(cleanedHtml, parsed.diff);
+  const patchedWithBlocks = injectBlocksBeforeBodyClose(patchedHtml, injectedBlocks);
 
   return {
-    summary,
+    summary: parsed.summary,
     patchedHtml: patchedWithBlocks,
   };
 }

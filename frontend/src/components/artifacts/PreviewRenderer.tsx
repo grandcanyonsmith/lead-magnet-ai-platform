@@ -66,6 +66,39 @@ function extractHtmlFromCodeBlocks(text: string): string {
   return text
 }
 
+function shouldRewriteEditorOverlayApiUrl(): boolean {
+  if (typeof window === 'undefined') return false
+  const host = window.location.hostname
+  return host === 'localhost' || host === '127.0.0.1'
+}
+
+function getLocalApiUrlFallback(): string {
+  if (typeof window === 'undefined') return 'http://localhost:3001'
+  try {
+    const origin = window.location.origin || 'http://localhost:3000'
+    // If the dashboard is running on :3000, the local API is typically :3001.
+    return origin.replace(/:\d+$/, ':3001')
+  } catch {
+    return 'http://localhost:3001'
+  }
+}
+
+function rewriteLeadMagnetEditorOverlayApiUrl(html: string, apiUrl: string): string {
+  if (!html || !html.includes('Lead Magnet Editor Overlay')) return html
+
+  // Only rewrite the apiUrl inside the injected CFG block.
+  // Example:
+  // const CFG = {
+  //   jobId: "...",
+  //   tenantId: "...",
+  //   apiUrl: "https://...",
+  // };
+  return html.replace(
+    /(const CFG = \{\s*[\s\S]*?apiUrl:\s*)"[^"]*"/,
+    `$1"${apiUrl}"`
+  )
+}
+
 export function PreviewRenderer({ contentType, objectUrl, fileName, className = '', artifactId, isFullScreen = false, viewMode, onViewModeChange }: PreviewRendererProps) {
   const [imageLoaded, setImageLoaded] = useState(false)
   const [imageError, setImageError] = useState(false)
@@ -166,7 +199,17 @@ export function PreviewRenderer({ contentType, objectUrl, fileName, className = 
             throw new Error('No artifact ID or URL provided')
           }
           // Extract HTML from markdown code blocks if present
-          const extractedHtml = extractHtmlFromCodeBlocks(text)
+          let extractedHtml = extractHtmlFromCodeBlocks(text)
+
+          // Local dev: artifacts may contain an injected editor overlay pointing at the production API.
+          // When previewing inside the local dashboard, rewrite it to use the local API so
+          // "Preview AI patch" works without hitting API Gateway.
+          if (shouldRewriteEditorOverlayApiUrl()) {
+            const localApiUrl =
+              process.env.NEXT_PUBLIC_API_URL?.trim() || getLocalApiUrlFallback()
+            extractedHtml = rewriteLeadMagnetEditorOverlayApiUrl(extractedHtml, localApiUrl)
+          }
+
           setHtmlContent(extractedHtml)
           setHtmlError(false) // Clear any previous error on success
         } catch (err: any) {
