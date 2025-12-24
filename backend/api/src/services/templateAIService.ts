@@ -1,3 +1,4 @@
+import { patchHtmlWithOpenAI } from './htmlPatchService';
 import OpenAI from 'openai';
 import { getOpenAIClient } from './openaiService';
 import { callResponsesWithTimeout, stripMarkdownCodeFences } from '../utils/openaiHelpers';
@@ -29,6 +30,7 @@ export interface TemplateRefinementRequest {
   model?: string;
   tenantId: string;
   jobId?: string;
+  selectors?: string[];
 }
 
 export type StoreUsageRecordFn = (params: UsageTrackingParams) => Promise<void>;
@@ -252,7 +254,7 @@ Return JSON format: {"name": "...", "description": "..."}`;
     html_content: string;
     placeholder_tags: string[];
   }> {
-    const { current_html, edit_prompt, model = 'gpt-5', tenantId, jobId } = request;
+    const { current_html, edit_prompt, model = 'gpt-5', tenantId, jobId, selectors } = request;
 
     if (!current_html || !current_html.trim()) {
       throw new ApiError('Current HTML content is required', 400);
@@ -268,12 +270,14 @@ Return JSON format: {"name": "...", "description": "..."}`;
       jobId,
       currentHtmlLength: current_html.length,
       editPromptLength: edit_prompt.length,
+      selectorsCount: selectors?.length,
       timestamp: new Date().toISOString(),
     });
 
     try {
-      const openai = await this.getOpenAI();
+      const selector = selectors && selectors.length > 0 ? selectors.join(', ') : undefined;
 
+<<<<<<< Current (Your changes)
       // Check if user wants to remove placeholders
       const shouldRemovePlaceholders = edit_prompt.toLowerCase().includes('remove placeholder') || 
                                        edit_prompt.toLowerCase().includes('no placeholder') ||
@@ -336,34 +340,23 @@ Return the FULL, COMPLETE HTML document with all modifications applied. Do not o
         serviceType: 'openai_template_refine',
         modelUsed: refinementModelUsed,
         usage: (completion as any).usage,
+=======
+      const result = await patchHtmlWithOpenAI({
+        html: current_html,
+        prompt: edit_prompt,
+        selector,
+>>>>>>> Incoming (Background Agent changes)
       });
 
-      // Validate response has output_text
-      if (!completion.output_text) {
-        throw new ApiError('OpenAI Responses API returned empty response. output_text is missing for template refinement.', 500);
-      }
-      
-      const htmlContent = completion.output_text;
-      logger.info('[Template Refinement] Refined HTML received', {
-        htmlLength: htmlContent.length,
-        firstChars: htmlContent.substring(0, 100),
-      });
-      
-      const cleanedHtml = stripMarkdownCodeFences(htmlContent);
+      const cleanedHtml = result.patchedHtml;
 
-      // Extract placeholder tags (disabled - no longer using placeholder syntax)
+      // Placeholder extraction disabled
       const placeholderTags: string[] = [];
-      logger.info('[Template Refinement] Extracted placeholders', {
-        placeholderCount: placeholderTags.length,
-        placeholders: placeholderTags,
-      });
 
-      const totalDuration = Date.now() - refineStartTime;
       logger.info('[Template Refinement] Success!', {
         tenantId,
         htmlLength: cleanedHtml.length,
-        placeholderCount: placeholderTags.length,
-        totalDuration: `${totalDuration}ms`,
+        summary: result.summary,
         timestamp: new Date().toISOString(),
       });
 
