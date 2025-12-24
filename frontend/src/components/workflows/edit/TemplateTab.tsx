@@ -33,6 +33,7 @@ interface TemplateTabProps {
   history?: Array<{ label: string; timestamp: number }>
   historyIndex?: number
   onJumpToHistory?: (index: number) => void
+  onCommitChange?: (html: string) => void
 }
 
 export function TemplateTab({
@@ -63,6 +64,7 @@ export function TemplateTab({
   history = [],
   historyIndex = -1,
   onJumpToHistory,
+  onCommitChange,
 }: TemplateTabProps) {
   const [showHistoryDropdown, setShowHistoryDropdown] = useState(false)
   const historyDropdownRef = useRef<HTMLDivElement>(null)
@@ -315,6 +317,7 @@ export function TemplateTab({
                   <textarea
                     value={templateData.html_content}
                     onChange={(e) => onHtmlChange(e.target.value)}
+                    onBlur={() => onCommitChange?.(templateData.html_content)}
                     className="flex-1 px-3 py-2 border-0 focus:outline-none focus:ring-0 font-mono text-sm leading-6 resize-none w-full h-full"
                     placeholder="Enter your HTML here..."
                     spellCheck={false}

@@ -83,6 +83,7 @@ export default function EditWorkflowPage() {
     history,
     historyIndex,
     jumpToHistory,
+    commitHtmlChange,
   } = templateEdit
 
   const { settings } = useSettings()
@@ -391,6 +392,7 @@ export default function EditWorkflowPage() {
           history={history}
           historyIndex={historyIndex}
           onJumpToHistory={jumpToHistory}
+          onCommitChange={commitHtmlChange}
         />
       )}
 
