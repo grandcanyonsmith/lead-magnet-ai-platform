@@ -118,8 +118,7 @@ Your task:
             input: snippetInputParts.join('\n'),
             service_tier: 'priority',
           }),
-        'HTML Patch OpenAI call',
-        25000
+        'HTML Patch OpenAI call'
       );
 
       const snippetOutputText = String((snippetResponse as any)?.output_text || '');
@@ -185,7 +184,8 @@ Input HTML is provided below.`;
     hasSelectedOuterHtml: Boolean(selectedOuterHtml),
   });
 
-  // Wrap in a 25s timeout to fail before API Gateway (30s) does.
+  // NOTE: No app-level timeout is enforced here. Upstream infrastructure (like API Gateway/Lambda)
+  // may still enforce request timeouts depending on deployment configuration.
   const response = await callResponsesWithTimeout(
     () =>
       (openai as any).responses.create({
@@ -194,8 +194,7 @@ Input HTML is provided below.`;
         input: inputParts.join('\n'),
         service_tier: 'priority',
       }),
-    'HTML Patch OpenAI call',
-    25000
+    'HTML Patch OpenAI call'
   );
 
   const outputText = String((response as any)?.output_text || '');
