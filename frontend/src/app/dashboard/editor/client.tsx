@@ -83,6 +83,7 @@ export default function EditorClient() {
   const [hasError, setHasError] = useState(false)
   const [htmlContent, setHtmlContent] = useState('')
   const [selectedElement, setSelectedElement] = useState<string | null>(null)
+  const [selectedOuterHtml, setSelectedOuterHtml] = useState<string | null>(null)
   const [isSelectionMode, setIsSelectionMode] = useState(false)
 
   // AI Configuration
@@ -230,6 +231,7 @@ export default function EditorClient() {
     const handleMessage = (e: MessageEvent) => {
         if (e.data.type === 'ELEMENT_SELECTED') {
             setSelectedElement(e.data.selector)
+            setSelectedOuterHtml(typeof e.data.outerHtml === 'string' ? e.data.outerHtml : null)
             setIsSelectionMode(false) // Turn off after selection
             toast.success(`Selected: ${e.data.selector}`, { icon: '🎯' })
         }
@@ -274,6 +276,10 @@ export default function EditorClient() {
 
   const handleSendMessage = async () => {
     if (!prompt.trim() || !jobId) return
+    if (!selectedOuterHtml) {
+      toast.error('Select an element first (faster + avoids timeouts)')
+      return
+    }
     setIsProcessing(true)
     
     try {
@@ -281,6 +287,8 @@ export default function EditorClient() {
             prompt: prompt,
             selector: selectedElement,
             model: aiModel,
+            selected_outer_html: selectedOuterHtml,
+            page_url: initialUrl || undefined,
         })
 
         if (res.patched_html) {
@@ -288,6 +296,7 @@ export default function EditorClient() {
             addToHistory(res.patched_html)
             setPrompt('')
             setSelectedElement(null)
+            setSelectedOuterHtml(null)
             toast.success('AI changes applied!')
         }
     } catch (err) {
@@ -445,6 +454,7 @@ export default function EditorClient() {
                         <button 
                             onClick={() => {
                                 setSelectedElement(null)
+                                setSelectedOuterHtml(null)
                                 setIsSelectionMode(false)
                             }} 
                             className="text-gray-500 hover:text-white"

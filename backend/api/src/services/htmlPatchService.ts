@@ -16,6 +16,11 @@ export type PatchHtmlResult = {
   patchedHtml: string;
 };
 
+function looksLikeHtmlFragment(html: string): boolean {
+  const trimmed = (html || '').trim();
+  return trimmed.startsWith('<') && trimmed.endsWith('>') && trimmed.length > 10;
+}
+
 function extractInjectedBlocks(html: string): { cleanedHtml: string; injectedBlocks: string[] } {
   const blocks: string[] = [];
   let cleaned = html;
@@ -69,6 +74,86 @@ export async function patchHtmlWithOpenAI(args: PatchHtmlArgs): Promise<PatchHtm
 
   const openai = await getOpenAIClient();
 
+  // Use provided model or default to gpt-5.1-codex
+  const model = args.model || 'gpt-5.1-codex';
+
+  // ------------------------------------------------------------
+  // Snippet mode: If a specific element was selected, ask the model
+  // to return ONLY the updated outerHTML for that element, then
+  // apply it to the document. This keeps responses fast and avoids
+  // full-document rewrites/timeouts.
+  // ------------------------------------------------------------
+  if (selectedOuterHtml) {
+    const snippetInstructions = `You are an expert HTML editor.
+
+You will receive:
+- A CSS selector (optional) and the selected element's outerHTML.
+- A user request describing changes.
+
+Your task:
+- Return ONLY the updated outerHTML for the selected element.
+- Do NOT return the full HTML document.
+- Preserve attributes and structure unless asked to change them.
+- Do NOT include any markdown code fences in your response. Just the raw HTML fragment.`;
+
+    const snippetInputParts: string[] = [];
+    if (pageUrl) snippetInputParts.push(`Page URL:\n${pageUrl}\n`);
+    if (selector) snippetInputParts.push(`Selected selector:\n${selector}\n`);
+    snippetInputParts.push(`Selected outerHTML:\n${selectedOuterHtml}\n`);
+    snippetInputParts.push(`User request:\n${prompt}\n`);
+
+    logger.info('[HtmlPatchService] Calling OpenAI to patch HTML (Selected Element Mode)', {
+      model,
+      promptLength: prompt.length,
+      selectedOuterHtmlLength: selectedOuterHtml.length,
+      hasSelector: Boolean(selector),
+    });
+
+    try {
+      const snippetResponse = await callResponsesWithTimeout(
+        () =>
+          (openai as any).responses.create({
+            model,
+            instructions: snippetInstructions,
+            input: snippetInputParts.join('\n'),
+            service_tier: 'priority',
+          }),
+        'HTML Patch OpenAI call',
+        25000
+      );
+
+      const snippetOutputText = String((snippetResponse as any)?.output_text || '');
+      const updatedOuterHtmlRaw = stripMarkdownCodeFences(snippetOutputText).trim();
+
+      // Basic sanity checks: must look like an element fragment and not a full document.
+      const isFullDoc = /<html[\s>]/i.test(updatedOuterHtmlRaw) || /<!doctype/i.test(updatedOuterHtmlRaw);
+      if (looksLikeHtmlFragment(updatedOuterHtmlRaw) && !isFullDoc) {
+        if (cleanedHtml.includes(selectedOuterHtml)) {
+          const patchedHtml = cleanedHtml.replace(selectedOuterHtml, updatedOuterHtmlRaw);
+          const patchedWithBlocks = injectBlocksBeforeBodyClose(patchedHtml, injectedBlocks);
+          return {
+            summary: 'Updated selected element based on your request.',
+            patchedHtml: patchedWithBlocks,
+          };
+        }
+
+        logger.warn('[HtmlPatchService] Selected outerHTML not found in document; falling back to full-document mode', {
+          selectedOuterHtmlLength: selectedOuterHtml.length,
+          cleanedHtmlLength: cleanedHtml.length,
+        });
+      } else {
+        logger.warn('[HtmlPatchService] Selected element mode returned non-fragment; falling back to full-document mode', {
+          outputLength: updatedOuterHtmlRaw.length,
+          isFullDoc,
+        });
+      }
+    } catch (error: any) {
+      logger.warn('[HtmlPatchService] Selected element mode failed; falling back to full-document mode', {
+        error: error?.message || String(error),
+      });
+    }
+  }
+
   const instructions = `You are an expert HTML editor.
 
 You will receive:
@@ -92,9 +177,6 @@ Input HTML is provided below.`;
   inputParts.push(`User request:\n${prompt}\n`);
   inputParts.push(`index.html:\n${cleanedHtml}`);
 
-  // Use provided model or default to gpt-5.1-codex
-  const model = args.model || 'gpt-5.1-codex';
-
   logger.info('[HtmlPatchService] Calling OpenAI to patch HTML (Full Document Mode)', {
     model,
     promptLength: prompt.length,
@@ -113,7 +195,7 @@ Input HTML is provided below.`;
         service_tier: 'priority',
       }),
     'HTML Patch OpenAI call',
-    2500000 // 2500 seconds (long timeout allowed here)
+    25000
   );
 
   const outputText = String((response as any)?.output_text || '');
