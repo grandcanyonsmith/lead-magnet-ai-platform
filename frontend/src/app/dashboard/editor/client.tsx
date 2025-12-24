@@ -104,55 +104,91 @@ export default function EditorClient() {
     let isMounted = true
 
     const loadContent = async () => {
+      if (isMounted) {
+        setHasError(false)
+      }
+
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'run-editor-load-2',hypothesisId:'H_load_order',location:'frontend/editor/client.tsx:loadContent:entry',message:'loadContent entry',data:{jobId,artifactIdPresent:Boolean(artifactId),hasInitialUrl:Boolean(initialUrl)},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+
       // 1. Try fetching via Artifact ID (best for auth/CORS)
       if (artifactId) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'run-editor-load-2',hypothesisId:'H_artifact_fetch',location:'frontend/editor/client.tsx:loadContent:artifact:start',message:'artifact content fetch start',data:{artifactId},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         try {
           const content = await api.artifacts.getArtifactContent(artifactId)
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'run-editor-load-2',hypothesisId:'H_artifact_fetch',location:'frontend/editor/client.tsx:loadContent:artifact:end',message:'artifact content fetch end',data:{ok:Boolean(content),contentLength:content?content.length:0,isMounted},timestamp:Date.now()})}).catch(()=>{});
+          // #endregion
           if (content && isMounted) {
             setHtmlContent(content)
             addToHistory(content)
             return
           }
         } catch (err) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'run-editor-load-2',hypothesisId:'H_artifact_fetch',location:'frontend/editor/client.tsx:loadContent:artifact:end',message:'artifact content fetch error',data:{error:String((err as any)?.message||err)},timestamp:Date.now()})}).catch(()=>{});
+          // #endregion
           console.error('Failed to load artifact content:', err)
         }
       }
 
-      // 2. Try fetching via URL (fallback)
+      // 2. Prefer server-proxied job document (avoids CloudFront/S3 404/CORS issues)
+      if (jobId) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'run-editor-load-2',hypothesisId:'H_jobdoc_fetch',location:'frontend/editor/client.tsx:loadContent:jobdoc:start',message:'job document fetch start',data:{jobId},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        try {
+          const content = await api.jobs.getJobDocument(jobId)
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'run-editor-load-2',hypothesisId:'H_jobdoc_fetch',location:'frontend/editor/client.tsx:loadContent:jobdoc:end',message:'job document fetch end',data:{ok:Boolean(content),contentLength:content?content.length:0,isMounted},timestamp:Date.now()})}).catch(()=>{});
+          // #endregion
+          if (content && isMounted) {
+            setHtmlContent(content)
+            addToHistory(content)
+            return
+          }
+        } catch (err) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'run-editor-load-2',hypothesisId:'H_jobdoc_fetch',location:'frontend/editor/client.tsx:loadContent:jobdoc:end',message:'job document fetch error',data:{error:String((err as any)?.message||err)},timestamp:Date.now()})}).catch(()=>{});
+          // #endregion
+          console.error('Failed to load job document:', err)
+        }
+      }
+
+      // 3. Last resort: fetch the URL directly (may 404 if CloudFront key is stale)
       if (initialUrl) {
         try {
           const res = await fetch(initialUrl)
-          if (res.ok) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'run-editor-load-2',hypothesisId:'H_url_fetch',location:'frontend/editor/client.tsx:loadContent:url:end',message:'initialUrl fetch end',data:{ok:res.ok,status:res.status},timestamp:Date.now()})}).catch(()=>{});
+          // #endregion
+          if (!res.ok) {
+            console.warn(`Failed to fetch URL ${initialUrl}: ${res.status} ${res.statusText}`)
+            // continue to failure handling below
+          } else {
             const content = await res.text()
             if (isMounted) {
               setHtmlContent(content)
               addToHistory(content)
             }
             return
-          } else {
-            console.warn(`Failed to fetch URL ${initialUrl}: ${res.status} ${res.statusText}`)
           }
         } catch (err) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'run-editor-load-2',hypothesisId:'H_url_fetch',location:'frontend/editor/client.tsx:loadContent:url:end',message:'initialUrl fetch error',data:{error:String((err as any)?.message||err)},timestamp:Date.now()})}).catch(()=>{});
+          // #endregion
           console.error('Failed to load initial URL', err)
-        }
-      }
-
-      // 3. Fallback to main job document
-      if (jobId) {
-        try {
-          const content = await api.jobs.getJobDocument(jobId)
-          if (content && isMounted) {
-            setHtmlContent(content)
-            addToHistory(content)
-            return
-          }
-        } catch (err) {
-          console.error('Failed to load job document:', err)
         }
       }
 
       // If we got here, all methods failed
       if (isMounted) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'run-editor-load-2',hypothesisId:'H_all_failed',location:'frontend/editor/client.tsx:loadContent:failed',message:'loadContent failed (all sources)',data:{jobId,artifactIdPresent:Boolean(artifactId),hasInitialUrl:Boolean(initialUrl)},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         setHasError(true)
         toast.error('Failed to load content')
       }
