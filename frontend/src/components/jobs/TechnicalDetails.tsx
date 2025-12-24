@@ -84,7 +84,7 @@ export function TechnicalDetails({ job, form, submission }: TechnicalDetailsProp
         parts.push('')
         for (const artifact of textArtifacts) {
           try {
-            const fileName = artifact.file_name || artifact.artifact_name || artifact.artifact_id
+            const fileName = artifact.file_name || artifact.artifact_name || 'Artifact'
             parts.push(`--- ${fileName} (${artifact.artifact_id}) ---`)
             const content = await api.getArtifactContent(artifact.artifact_id)
             parts.push(content)
@@ -93,7 +93,7 @@ export function TechnicalDetails({ job, form, submission }: TechnicalDetailsProp
             if (process.env.NODE_ENV === 'development') {
               console.error(`Failed to fetch content for artifact ${artifact.artifact_id}:`, err)
             }
-            const fileName = artifact.file_name || artifact.artifact_name || artifact.artifact_id
+            const fileName = artifact.file_name || artifact.artifact_name || 'Artifact'
             parts.push(`--- ${fileName} (${artifact.artifact_id}) ---`)
             parts.push(`[Error: Could not fetch content]`)
             parts.push('')
@@ -345,7 +345,7 @@ export function TechnicalDetails({ job, form, submission }: TechnicalDetailsProp
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
                   {artifacts.map((artifact) => {
                     const artifactUrl = artifact.object_url || artifact.public_url
-                    const fileName = artifact.file_name || artifact.artifact_name || artifact.artifact_id
+                    const fileName = artifact.file_name || artifact.artifact_name || 'Artifact'
                     
                     return (
                       <div 
@@ -373,15 +373,12 @@ export function TechnicalDetails({ job, form, submission }: TechnicalDetailsProp
                               <p className="text-xs font-medium text-gray-900 truncate" title={fileName}>
                                 {fileName}
                               </p>
-                              <p className="text-xs text-gray-500 font-mono truncate mt-0.5" title={artifact.artifact_id}>
-                                {artifact.artifact_id}
-                              </p>
                             </div>
                             <div className="flex items-center gap-1 flex-shrink-0">
                               <button
-                                onClick={() => copyToClipboard(artifact.artifact_id)}
+                                onClick={() => copyToClipboard(artifactUrl || artifact.artifact_id)}
                                 className="text-gray-500 hover:text-gray-700 p-1.5 touch-target"
-                                title="Copy Artifact ID"
+                                title={artifactUrl ? 'Copy Link' : 'Copy Artifact ID'}
                               >
                                 <FiCopy className="w-3.5 h-3.5" />
                               </button>
@@ -405,30 +402,16 @@ export function TechnicalDetails({ job, form, submission }: TechnicalDetailsProp
                   })}
                 </div>
               ) : (
-                // Fallback: show artifact IDs if we couldn't fetch details
-                <div className="space-y-2">
-                  {job.artifacts?.map((artifactId: string) => (
-                    <div key={artifactId} className="flex items-center space-x-2">
-                      <a
-                        href="/dashboard/artifacts"
-                        className="text-sm font-mono text-primary-600 hover:text-primary-900 hover:underline"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          router.push('/dashboard/artifacts')
-                        }}
-                      >
-                        {artifactId}
-                        <FiExternalLink className="w-3 h-3 ml-1 inline" />
-                      </a>
-                      <button
-                        onClick={() => copyToClipboard(artifactId)}
-                        className="text-gray-500 hover:text-gray-700 p-2 touch-target"
-                        title="Copy Artifact ID"
-                      >
-                        <FiCopy className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
+                // Fallback: avoid showing raw artifact IDs
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => router.push('/dashboard/artifacts')}
+                    className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 hover:border-gray-400"
+                  >
+                    <FiExternalLink className="w-4 h-4" />
+                    View artifacts{job.artifacts?.length ? ` (${job.artifacts.length})` : ''}
+                  </button>
                 </div>
               )}
             </div>

@@ -406,11 +406,6 @@ export function StepInputOutput({
                         >
                           {artifact.file_name || artifact.artifact_name || truncateUrl(artifactUrl)}
                         </a>
-                        {artifact.artifact_id && (
-                          <span className="text-xs text-gray-500 font-mono flex-shrink-0">
-                            {artifact.artifact_id.substring(0, 12)}...
-                          </span>
-                        )}
                       </div>
                     </div>
                   </div>
