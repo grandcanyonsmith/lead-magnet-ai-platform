@@ -86,6 +86,7 @@ IMPORTANT:
 - The user may have selected a specific element (provided as context), but your edits are NOT restricted to that element.
 - You may modify ANY part of the file as needed to fulfill the request.
 - If the user asks to "delete this section" or makes a broad request, apply the change to the appropriate scope, even if it is larger than the selected element.
+- **GLOBAL CHANGES:** If the user request implies a global change (e.g., "change background color", "change font"), apply it to the `body` tag, `html` tag, or global CSS, ensuring it affects the ENTIRE page. Do not limit it to the selected element unless explicitly requested.
 - Do NOT output the full HTML in the text response. Only use the tool to edit the file.`;
 
   const inputParts: string[] = [];
