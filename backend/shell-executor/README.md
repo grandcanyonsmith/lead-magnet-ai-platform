@@ -1,9 +1,11 @@
 # Shell Executor (ECS Task) — Local Dev
 
 The ECS shell executor image (`backend/shell-executor`) runs `runner.js`, which:
-- reads a job payload from `SHELL_EXECUTOR_JOB_B64` or `SHELL_EXECUTOR_JOB_JSON`
-- executes the requested shell commands
-- uploads a result JSON to a presigned S3 PUT URL
+- Reads a job payload from `SHELL_EXECUTOR_JOB_B64` or `SHELL_EXECUTOR_JOB_JSON`
+- Executes the requested shell commands
+- Uploads a result JSON to a presigned S3 PUT URL
+
+For full operational details, see the **[Shell Tool Runbook](../../docs/SHELL_TOOL_RUNBOOK.md)**.
 
 ## AWS CLI v2
 
@@ -16,7 +18,7 @@ When running this container locally, you can reuse your host AWS config/credenti
 The executor runs commands with `HOME=/workspace`, so it will look for credentials at `/workspace/.aws`.
 For convenience, the runner will also symlink `/workspace/.aws -> /home/runner/.aws` if you mount there.
 
-Example:
+### Example
 
 ```bash
 cd backend/shell-executor
@@ -35,8 +37,6 @@ Or use the helper script (recommended):
 ./run-local-with-aws.sh 'aws sts get-caller-identity'
 ```
 
-Notes:
+### Notes
 - `result_put_url` must be a valid presigned PUT URL for real runs (the example will fail upload).
 - **Do not** mount or embed long-lived credentials in production ECS tasks. Prefer IAM task roles or presigned URLs.
-
-

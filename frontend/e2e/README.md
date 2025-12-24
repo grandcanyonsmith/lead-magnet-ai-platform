@@ -4,7 +4,7 @@ This directory contains end-to-end tests for the frontend application using Play
 
 ## Setup
 
-1. Install dependencies:
+1. Install dependencies (from repo root):
 ```bash
 npm install
 ```
@@ -16,35 +16,40 @@ npx playwright install
 
 ## Running Tests
 
-### Run all tests
+You can run these tests via the `frontend` workspace scripts or directly from the repo root using the helper scripts.
+
+### Recommended (Repo Root)
+
 ```bash
+# Run all tests
+./scripts/testing/test-e2e.sh
+```
+
+### Direct (Frontend Workspace)
+
+Run these from the `frontend/` directory:
+
+```bash
+# Run all tests
 npm run test:e2e
-```
 
-### Run tests in UI mode (interactive)
-```bash
+# Run tests in UI mode (interactive)
 npm run test:e2e:ui
-```
 
-### Run tests in headed mode (see browser)
-```bash
+# Run tests in headed mode (see browser)
 npm run test:e2e:headed
-```
 
-### Run tests in debug mode
-```bash
-npm run test:e2e:debug
-```
-
-### Run specific test file
-```bash
+# Run specific test file
 npx playwright test tests/auth.spec.ts
 ```
 
-### Run tests for specific browser
-```bash
-npx playwright test --project=chromium
-```
+## Configuration
+
+Tests are configured in `playwright.config.ts`. Key settings:
+
+- **Base URL**: `http://localhost:3000` (override with `FRONTEND_URL`)
+- **Test directory**: `./tests`
+- **Browsers**: Chromium, Firefox, WebKit, Mobile Chrome, Mobile Safari
 
 ## Test Structure
 
@@ -61,58 +66,9 @@ npx playwright test --project=chromium
 - `fixtures/` - Test fixtures and helpers
   - `auth.ts` - Authentication helpers (login, logout)
 
-## Configuration
-
-Tests are configured in `playwright.config.ts`. Key settings:
-
-- Base URL: `http://localhost:3000` (or `FRONTEND_URL` env var)
-- Test directory: `./tests`
-- Retries: 2 on CI, 0 locally
-- Browsers: Chromium, Firefox, WebKit, Mobile Chrome, Mobile Safari
-
-## Environment Variables
-
-- `FRONTEND_URL` - Frontend URL (default: `http://localhost:3000`)
-- `CI` - Set to `true` in CI environments
-
-## Writing Tests
-
-### Using Page Objects
-
-```typescript
-import { test, expect } from '../fixtures/auth'
-import { DashboardPage } from '../pages/DashboardPage'
-
-test('should display dashboard', async ({ page }) => {
-  const dashboardPage = new DashboardPage(page)
-  await dashboardPage.goto()
-  await expect(dashboardPage.heading).toBeVisible()
-})
-```
-
-### Using Auth Fixtures
-
-```typescript
-import { test, expect } from '../fixtures/auth'
-
-test('should login', async ({ login }) => {
-  await login('user@example.com', 'password')
-  // User is now logged in
-})
-```
-
 ## Best Practices
 
-1. Use Page Object Models for maintainability
-2. Use fixtures for common operations (login, logout)
-3. Use descriptive test names
-4. Wait for elements explicitly
-5. Use accessibility selectors when possible
-6. Clean up test data after tests
-
-## Debugging
-
-- Use `npm run test:e2e:debug` to run tests in debug mode
-- Use `npm run test:e2e:ui` for interactive debugging
-- Check `test-results/` for screenshots and traces
-- View HTML report: `npx playwright show-report`
+1. Use **Page Object Models** for maintainability.
+2. Use **fixtures** for common operations (login, logout).
+3. Use **accessibility selectors** (`getByRole`, `getByLabel`) when possible.
+4. Clean up test data after tests.

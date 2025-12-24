@@ -12,24 +12,26 @@ This directory contains utility functions and helpers used throughout the API co
 - **`logger.ts`** - Centralized logging utility
 - **`errors.ts`** - Custom error classes for API responses
 - **`env.ts`** - Environment configuration management
+- **`response.ts`** - Standardized API response helpers
 
 ### Data & Storage
 
 - **`db.ts`** - DynamoDB service wrapper
 - **`cache.ts`** - In-memory caching utilities
 - **`pagination.ts`** - Pagination helpers for database queries
+- **`patchUtils.ts`** - Utilities for JSON patch operations
 
-### Authentication & Authorization
+### Authentication & Security
 
 - **`authContext.ts`** - Authentication context extraction from JWT claims
 - **`rbac.ts`** - Role-based access control helpers
 - **`webhookToken.ts`** - Webhook token generation and validation
+- **`webhookSignature.ts`** - Webhook signature verification
 
 ### Workflow Utilities
 
 - **`dependencyResolver.ts`** - Dependency graph resolution for workflow steps
 - **`executionStepsUtils.ts`** - Execution steps URL generation
-- _Workflow prompt, ICP, and configuration helpers now live under `../domains/workflows/services/workflow/` to stay closer to the domain services._
 
 ### Form Utilities
 
@@ -43,10 +45,6 @@ This directory contains utility functions and helpers used throughout the API co
 - **`timeout.ts`** - Timeout utilities for async operations
 - **`transformers.ts`** - Data transformation utilities
 - **`openaiHelpers.ts`** - OpenAI API call helpers with timeout
-
-### External Data
-
-- _Job processing utilities moved to `../domains/workflows/services/workflow/workflowJobProcessingService.ts`._
 
 ## Usage Patterns
 
@@ -128,32 +126,7 @@ import { WorkflowStep, PaginationParams } from './types';
 ## Error Patterns
 
 All utilities follow consistent error handling:
-
 - **Validation errors** throw `ValidationError` from `errors.ts`
 - **Network/transient errors** use retry logic from `errorHandling.ts`
 - **Timeout errors** use timeout utilities
 - **All errors** are logged using the `logger` utility
-
-## Testing
-
-Unit tests for utilities are located in `__tests__/` directory. Each utility module should have corresponding test files.
-
-## Best Practices
-
-1. **Always validate inputs** - Use validators before processing
-2. **Use type guards** - Leverage TypeScript type guards from validators
-3. **Handle errors gracefully** - Use safeReturn or try/catch as appropriate
-4. **Log operations** - Use logger for debugging and monitoring
-5. **Document functions** - Include JSDoc with examples for complex functions
-6. **Use consistent patterns** - Follow established patterns in existing utilities
-
-## Migration Notes
-
-When refactoring code to use these utilities:
-
-1. Replace inline validation with validators module functions
-2. Replace manual retry logic with `retryWithBackoff`
-3. Replace manual timeout handling with `withTimeout`
-4. Replace `any` types with proper types from `types.ts`
-5. Use async helpers for parallel/sequential operations
-
