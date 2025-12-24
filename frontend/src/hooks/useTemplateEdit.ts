@@ -280,7 +280,6 @@ export function useTemplateEdit(workflowName: string, templateId: string | null,
     handleRefine,
     insertPlaceholder,
     loadTemplate,
-<<<<<<< Current (Your changes)
     handleUndo,
     handleRedo,
     canUndo: historyIndex > 0,
@@ -288,9 +287,7 @@ export function useTemplateEdit(workflowName: string, templateId: string | null,
     history,
     historyIndex,
     jumpToHistory,
-=======
     selectedSelectors,
     setSelectedSelectors,
->>>>>>> Incoming (Background Agent changes)
   }
 }

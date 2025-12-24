@@ -45,6 +45,7 @@ export interface TemplateRefineRequest {
   current_html: string
   edit_prompt: string
   model?: string
+  selectors?: string[]
 }
 
 export interface TemplateRefineResponse {
