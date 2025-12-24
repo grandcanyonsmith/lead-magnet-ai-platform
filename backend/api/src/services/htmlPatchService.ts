@@ -119,7 +119,8 @@ HTML:
   inputParts.push(`HTML document:\n${cleanedHtml}`);
 
   // Use gpt-4o for speed to stay within API Gateway's 30s limit.
-  const model = 'gpt-5.2';
+  // Note: gpt-5.2 is significantly slower and reliably triggers 503 Gateway timeouts on large documents.
+  const model = 'gpt-4o';
 
   logger.info('[HtmlPatchService] Calling OpenAI to patch HTML', {
     model,
@@ -129,16 +130,17 @@ HTML:
     hasSelectedOuterHtml: Boolean(selectedOuterHtml),
   });
 
-  // Wrap in a timeout to fail before API Gateway (30s) does.
+  // Wrap in a 25s timeout to fail before API Gateway (30s) does.
   const response = await callResponsesWithTimeout(
     () =>
       (openai as any).responses.create({
         model,
         instructions,
         input: inputParts.join('\n'),
+        temperature: 0.2,
       }),
     'HTML Patch OpenAI call',
-    2800000 // 2800 seconds
+    25000 // 25 seconds
   );
 
   const outputText = String((response as any)?.output_text || '');
@@ -151,5 +153,3 @@ HTML:
     patchedHtml: patchedWithBlocks,
   };
 }
-
-
