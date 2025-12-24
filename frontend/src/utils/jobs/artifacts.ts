@@ -98,10 +98,23 @@ export function buildArtifactGalleryItems({
   if (job?.output_url && !seen.has(job.output_url)) {
     const completionTimestamp = job.completed_at ? new Date(job.completed_at).getTime() : Number.MAX_SAFE_INTEGER - 1
     
-    // Try to find the artifact that matches this URL to provide ID for editing
-    const matchingArtifact = artifacts?.find(a => 
-      a.public_url === job.output_url || a.object_url === job.output_url
-    )
+    // Try to find the actual final artifact so the editor has a stable artifact_id to load.
+    // Prefer html_final/markdown_final, otherwise heuristics on filename/content type, otherwise URL match.
+    const finalArtifactCandidate = [...(artifacts ?? [])].reverse().find((a) => {
+      const artifactType = String(a.artifact_type || '').toLowerCase()
+      const contentType = String(a.content_type || '').toLowerCase()
+      const name = String(a.file_name || a.artifact_name || '').toLowerCase()
+      return (
+        artifactType === 'html_final' ||
+        artifactType === 'markdown_final' ||
+        name === 'final.html' ||
+        (contentType === 'text/html' && name.endsWith('.html') && name.includes('final'))
+      )
+    })
+
+    const matchingArtifact =
+      finalArtifactCandidate ||
+      artifacts?.find((a) => a.public_url === job.output_url || a.object_url === job.output_url)
 
     items.push({
       id: 'job-output-url',
