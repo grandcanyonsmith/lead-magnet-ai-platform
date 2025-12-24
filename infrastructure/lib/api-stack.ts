@@ -21,6 +21,7 @@ export interface ApiStackProps extends cdk.StackProps {
   stateMachineArn: string;
   artifactsBucket: s3.Bucket;
   cloudfrontDomain?: string;
+  cloudfrontDistributionId?: string;
   shellExecutor: {
     clusterArn: string;
     taskDefinitionFamily: string;
@@ -101,6 +102,18 @@ export class ApiStack extends cdk.Stack {
       SECRET_NAMES.STRIPE_API_KEY,
     ]);
 
+    // Allow API Lambda to invalidate CloudFront paths (for saved lead magnet HTML updates).
+    if (props.cloudfrontDistributionId) {
+      const distributionArn = `arn:aws:cloudfront::${cdk.Stack.of(this).account}:distribution/${props.cloudfrontDistributionId}`;
+      lambdaRole.addToPolicy(
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: ['cloudfront:CreateInvalidation'],
+          resources: [distributionArn],
+        })
+      );
+    }
+
     // Grant Lambda invoke permissions for async workflow generation
     lambdaRole.addToPolicy(
       new iam.PolicyStatement({
@@ -135,6 +148,7 @@ export class ApiStack extends cdk.Stack {
         [ENV_VAR_NAMES.STEP_FUNCTIONS_ARN]: props.stateMachineArn,
         [ENV_VAR_NAMES.ARTIFACTS_BUCKET]: props.artifactsBucket.bucketName,
         [ENV_VAR_NAMES.CLOUDFRONT_DOMAIN]: props.cloudfrontDomain || '',
+        [ENV_VAR_NAMES.CLOUDFRONT_DISTRIBUTION_ID]: props.cloudfrontDistributionId || '',
         [ENV_VAR_NAMES.LAMBDA_FUNCTION_NAME]: FUNCTION_NAMES.API_HANDLER,
         // Shell tool configuration (defaults can be overridden at deploy time)
         [ENV_VAR_NAMES.SHELL_TOOL_ENABLED]: process.env.SHELL_TOOL_ENABLED || 'false',
