@@ -76,7 +76,6 @@ export default function EditWorkflowPage() {
     setTemplateViewMode,
     setDevicePreviewSize,
     setEditPrompt,
-<<<<<<< Current (Your changes)
     handleUndo,
     handleRedo,
     canUndo,
@@ -85,10 +84,8 @@ export default function EditWorkflowPage() {
     historyIndex,
     jumpToHistory,
     commitHtmlChange,
-=======
     selectedSelectors,
     setSelectedSelectors,
->>>>>>> Incoming (Background Agent changes)
   } = templateEdit
 
   const { settings } = useSettings()

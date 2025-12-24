@@ -51,6 +51,7 @@ export class TemplatesClient extends BaseApiClient {
       current_html: request.current_html,
       edit_prompt: request.edit_prompt,
       model: request.model || 'gpt-4o',
+      selectors: request.selectors,
     })
   }
 }

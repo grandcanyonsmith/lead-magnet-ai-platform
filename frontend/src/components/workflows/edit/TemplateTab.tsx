@@ -28,6 +28,14 @@ interface TemplateTabProps {
   onSubmit: (e: React.FormEvent) => void
   onCancel: () => void
   submitting: boolean
+  onUndo?: () => void
+  onRedo?: () => void
+  canUndo?: boolean
+  canRedo?: boolean
+  history?: any[]
+  historyIndex?: number
+  onJumpToHistory?: (index: number) => void
+  onCommitChange?: (html: string) => void
 }
 
 export function TemplateTab({
@@ -53,6 +61,14 @@ export function TemplateTab({
   onSubmit,
   onCancel,
   submitting,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
+  history,
+  historyIndex,
+  onJumpToHistory,
+  onCommitChange,
 }: TemplateTabProps) {
   const [isSelectMode, setIsSelectMode] = useState(false)
   const iframeRef = useRef<HTMLIFrameElement>(null)
