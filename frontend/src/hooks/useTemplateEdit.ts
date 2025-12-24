@@ -127,6 +127,15 @@ export function useTemplateEdit(workflowName: string, templateId: string | null,
 
   const handleHtmlChange = (html: string) => {
     setTemplateData(prev => ({ ...prev, html_content: html }))
+    
+    // Update derived state as user types
+    const placeholders = extractPlaceholders(html)
+    setDetectedPlaceholders(placeholders)
+    setPreviewKey(prev => prev + 1)
+    if (html.trim() && !showPreview) {
+      setShowPreview(true)
+    }
+    
     // Note: We don't add to history on every keystroke
   }
   
