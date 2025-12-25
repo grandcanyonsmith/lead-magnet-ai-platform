@@ -9,6 +9,22 @@ const HTML_PATCH_REQUESTS_TABLE = env.htmlPatchRequestsTable;
 const ARTIFACTS_BUCKET = env.artifactsBucket;
 const s3Client = new S3Client({ region: env.awsRegion });
 
+async function fetchHtmlFromS3Key(s3Key: string): Promise<string> {
+  if (!ARTIFACTS_BUCKET) {
+    throw new Error("ARTIFACTS_BUCKET environment variable is not configured");
+  }
+  const response = await s3Client.send(
+    new GetObjectCommand({
+      Bucket: ARTIFACTS_BUCKET,
+      Key: s3Key,
+    }),
+  );
+  if (!response.Body) {
+    throw new Error(`HTML not found at s3://${ARTIFACTS_BUCKET}/${s3Key}`);
+  }
+  return await response.Body.transformToString();
+}
+
 async function fetchFinalHtmlFromS3(tenantId: string, jobId: string): Promise<string> {
   if (!ARTIFACTS_BUCKET) {
     throw new Error("ARTIFACTS_BUCKET environment variable is not configured");
@@ -59,8 +75,17 @@ export async function handleHtmlPatchRequest(event: any): Promise<APIGatewayProx
       throw new Error(`Patch request ${patchId} not found`);
     }
 
-    // Fetch HTML from S3
-    const html = await fetchFinalHtmlFromS3(tenantId, jobId);
+    // Fetch HTML base:
+    // - Prefer the client-provided HTML snapshot (unsaved edits) if present
+    // - Fall back to the job's saved final.html
+    const inputS3Key =
+      typeof patchRequest.input_s3_key === "string" && patchRequest.input_s3_key.trim().length > 0
+        ? String(patchRequest.input_s3_key)
+        : null;
+
+    const html = inputS3Key
+      ? await fetchHtmlFromS3Key(inputS3Key)
+      : await fetchFinalHtmlFromS3(tenantId, jobId);
 
     // Process the patch
     const result = await patchHtmlWithOpenAI({
