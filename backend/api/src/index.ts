@@ -28,6 +28,21 @@ export const handler = async (
     }
   }
 
+  // Handle HTML patch request (async Lambda invocation)
+  if (event.source === 'html-patch-request' && event.patch_id) {
+    try {
+      const { handleHtmlPatchRequest } = await import('./controllers/htmlPatchHandler');
+      return await handleHtmlPatchRequest(event);
+    } catch (error: any) {
+      logger.error('Error processing HTML patch request', {
+        error: error.message,
+        patchId: event.patch_id,
+        stack: error.stack,
+      });
+      throw error;
+    }
+  }
+
   // Normal API Gateway request
   const apiEvent = event as APIGatewayProxyEventV2;
   logger.info('Incoming request', {

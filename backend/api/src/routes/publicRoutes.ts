@@ -68,7 +68,7 @@ export function registerPublicRoutes(): void {
     false,
   );
 
-  // Public lead magnet HTML patch endpoint (editMode overlay)
+  // Public lead magnet HTML patch endpoint (editMode overlay) - async
   router.register(
     "POST",
     "/v1/jobs/:jobId/html/patch",
@@ -77,6 +77,20 @@ export function registerPublicRoutes(): void {
         jobId: params.jobId,
       });
       return await leadMagnetHtmlEditorController.patch(params.jobId, body);
+    },
+    false,
+  );
+
+  // Public lead magnet HTML patch status endpoint
+  router.register(
+    "GET",
+    "/v1/jobs/:jobId/html/patch/:patchId/status",
+    async (params) => {
+      logger.info("[Public Routes] GET /v1/jobs/:jobId/html/patch/:patchId/status", {
+        jobId: params.jobId,
+        patchId: params.patchId,
+      });
+      return await leadMagnetHtmlEditorController.getPatchStatus(params.patchId);
     },
     false,
   );
