@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef, Fragment } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { api } from '@/lib/api'
+import { LeadMagnetsTabs } from '@/components/leadMagnets/LeadMagnetsTabs'
 import { 
   ClockIcon, 
   ArrowPathIcon, 
@@ -348,6 +349,18 @@ export default function JobsPage() {
       workflows={workflows}
     >
       <div className="max-w-7xl mx-auto">
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">Lead Magnets</h1>
+              <p className="mt-1 text-sm text-gray-500">
+                Review generated runs, statuses, errors, and delivery outcomes.
+              </p>
+              <LeadMagnetsTabs className="mt-3" />
+            </div>
+          </div>
+        </div>
+
         <SummarySection
           jobCount={totalJobs}
           lastRefreshedLabel={lastRefreshedLabel}

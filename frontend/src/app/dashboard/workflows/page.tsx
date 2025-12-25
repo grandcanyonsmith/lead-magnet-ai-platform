@@ -6,6 +6,7 @@ import { api } from '@/lib/api'
 import { useSettings } from '@/hooks/api/useSettings'
 import { buildPublicFormUrl } from '@/utils/url'
 import { openJobDocumentInNewTab } from '@/utils/jobs/openJobDocument'
+import { LeadMagnetsTabs } from '@/components/leadMagnets/LeadMagnetsTabs'
 import {
   PlusIcon,
   PencilIcon,
@@ -671,6 +672,7 @@ export default function WorkflowsPage() {
                 ? `${filteredWorkflows.length} lead magnet${filteredWorkflows.length !== 1 ? 's' : ''} in this folder` 
                 : 'Manage your AI lead magnets and their forms'}
           </p>
+            <LeadMagnetsTabs className="mt-3" />
         </div>
           
           <div className="flex items-center gap-3 w-full sm:w-auto">
