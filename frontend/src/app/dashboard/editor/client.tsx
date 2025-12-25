@@ -16,6 +16,7 @@ import {
 import { toast } from 'react-hot-toast'
 import Link from 'next/link'
 import { api } from '@/lib/api'
+import { ApiError } from '@/lib/api/errors'
 import type { Job } from '@/types/job'
 
 // Types
@@ -322,6 +323,12 @@ export default function EditorClient() {
 
   const handleSendMessage = useCallback(async () => {
     if (!prompt.trim() || !jobId) return
+    // If the document is very large, full-document rewrites are slow/unreliable.
+    // Encourage selection-driven edits (snippet mode).
+    if (!selectedOuterHtml && htmlState.html.length > 120_000) {
+      toast.error('This page is large—select an element first for faster, more reliable AI edits.')
+      return
+    }
     setIsProcessing(true)
 
     try {
@@ -342,7 +349,14 @@ export default function EditorClient() {
       }
     } catch (err) {
       console.error('AI generation failed:', err)
-      toast.error('Failed to generate changes')
+      const apiErr = err instanceof ApiError ? err : null
+      if (apiErr?.statusCode === 400) {
+        toast.error(apiErr.message)
+      } else if (apiErr?.statusCode === 503) {
+        toast.error('AI editing is temporarily unavailable. Please try again in a moment.')
+      } else {
+        toast.error(apiErr?.message || 'Failed to apply AI changes')
+      }
     } finally {
       setIsProcessing(false)
     }
@@ -566,7 +580,7 @@ export default function EditorClient() {
                     srcDoc={getPreviewContent()}
                     className="w-full h-full bg-white"
                     title="Preview"
-                    sandbox="allow-scripts allow-same-origin"
+                    sandbox="allow-scripts"
                   />
                 ) : hasError ? (
                    <div className="flex flex-col w-full h-full items-center justify-center text-gray-500 bg-[#0c0d10] p-4 text-center">

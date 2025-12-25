@@ -181,6 +181,7 @@ export const handleError = (
       statusCode: error.statusCode,
       body: {
         error: error.message,
+        message: error.message,
         code: error.code,
         ...(error.details && { details: error.details }),
         ...(context?.requestId && { requestId: context.requestId }),
@@ -226,10 +227,10 @@ export const handleError = (
       statusCode: 500,
       body: {
         error: 'Internal server error',
+        message: isDevelopment ? error.message : 'Internal server error',
         code: 'INTERNAL_ERROR',
         ...(context?.requestId && { requestId: context.requestId }),
         ...(isDevelopment && {
-          message: error.message,
           stack: error.stack,
         }),
       },
@@ -246,6 +247,7 @@ export const handleError = (
     statusCode: 500,
     body: {
       error: 'Unknown error occurred',
+      message: 'Unknown error occurred',
     },
   };
 };
@@ -263,6 +265,7 @@ export function createErrorResponse(
     statusCode,
     body: {
       error: message,
+      message,
       ...(code && { code }),
       ...(details && { details }),
     },
