@@ -1,11 +1,15 @@
-import { z } from 'zod';
-import { RouteResponse } from '../routes';
-import { ApiError, InternalServerError, ValidationError } from '../utils/errors';
-import { logger } from '../utils/logger';
-import { RequestContext } from '../routes/router';
-import { runShellToolLoop } from '../services/shellToolLoopService';
-import { shellAbuseControlService } from '../services/shellAbuseControlService';
-import { env } from '../utils/env';
+import { z } from "zod";
+import { RouteResponse } from "../routes";
+import {
+  ApiError,
+  InternalServerError,
+  ValidationError,
+} from "../utils/errors";
+import { logger } from "../utils/logger";
+import { RequestContext } from "../routes/router";
+import { runShellToolLoop } from "../services/shellToolLoopService";
+import { shellAbuseControlService } from "../services/shellAbuseControlService";
+import { env } from "../utils/env";
 
 const shellToolRequestSchema = z.object({
   input: z.string().min(1),
@@ -20,7 +24,7 @@ class ShellToolController {
     body: any,
     _query: Record<string, string | undefined>,
     _tenantId: string | undefined,
-    context?: RequestContext
+    context?: RequestContext,
   ): Promise<RouteResponse> {
     try {
       const parsed = shellToolRequestSchema.safeParse(body);
@@ -28,8 +32,8 @@ class ShellToolController {
         throw new ValidationError(parsed.error.message);
       }
 
-      const sourceIp = context?.sourceIp || 'unknown';
-      logger.info('[ShellTool] Request', { sourceIp });
+      const sourceIp = context?.sourceIp || "unknown";
+      logger.info("[ShellTool] Request", { sourceIp });
 
       // Abuse controls (fail closed for public RCE surface)
       await shellAbuseControlService.consumeIpToken({
@@ -63,11 +67,11 @@ class ShellToolController {
       };
     } catch (error: any) {
       if (error instanceof ApiError) throw error;
-      logger.error('[ShellTool] Error', {
+      logger.error("[ShellTool] Error", {
         error: error?.message || String(error),
         stack: error?.stack,
       });
-      throw new InternalServerError('Failed to run shell tool', {
+      throw new InternalServerError("Failed to run shell tool", {
         originalError: error?.message || String(error),
       });
     }
@@ -75,5 +79,3 @@ class ShellToolController {
 }
 
 export const shellToolController = new ShellToolController();
-
-

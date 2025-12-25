@@ -3,26 +3,30 @@
  * Provides consistent error UI across the app
  */
 
-import React from 'react'
-import { FiAlertCircle } from 'react-icons/fi'
+import React from "react";
+import { FiAlertCircle } from "react-icons/fi";
 
 interface ErrorStateProps {
-  title?: string
-  message: string
-  onRetry?: () => void
-  retryLabel?: string
-  className?: string
+  title?: string;
+  message: string;
+  onRetry?: () => void;
+  retryLabel?: string;
+  className?: string;
 }
 
 export const ErrorState = React.memo(function ErrorState({
-  title = 'Error',
+  title = "Error",
   message,
   onRetry,
-  retryLabel = 'Try Again',
-  className = '',
+  retryLabel = "Try Again",
+  className = "",
 }: ErrorStateProps) {
   return (
-    <div className={`bg-red-50 border border-red-200 rounded-lg p-6 ${className}`} role="alert" aria-live="polite">
+    <div
+      className={`bg-red-50 border border-red-200 rounded-lg p-6 ${className}`}
+      role="alert"
+      aria-live="polite"
+    >
       <div className="flex items-start">
         <div className="flex-shrink-0">
           <FiAlertCircle className="h-5 w-5 text-red-400" aria-hidden="true" />
@@ -44,6 +48,5 @@ export const ErrorState = React.memo(function ErrorState({
         </div>
       </div>
     </div>
-  )
-})
-
+  );
+});

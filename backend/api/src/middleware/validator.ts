@@ -2,10 +2,10 @@
  * Validation middleware for automatic request validation
  */
 
-import { APIGatewayProxyEventV2 } from 'aws-lambda';
-import { z, ZodSchema } from 'zod';
-import { ValidationError } from '../utils/errors';
-import { RouteResponse } from '../routes';
+import { APIGatewayProxyEventV2 } from "aws-lambda";
+import { z, ZodSchema } from "zod";
+import { ValidationError } from "../utils/errors";
+import { RouteResponse } from "../routes";
 
 /**
  * Validation configuration for a route
@@ -21,7 +21,7 @@ export interface ValidationConfig {
  */
 export function validateRequest(
   event: APIGatewayProxyEventV2,
-  config: ValidationConfig
+  config: ValidationConfig,
 ): {
   body?: any;
   query?: Record<string, string | undefined>;
@@ -40,14 +40,14 @@ export function validateRequest(
       result.body = config.body.parse(rawBody);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        throw new ValidationError('Invalid request body', {
+        throw new ValidationError("Invalid request body", {
           errors: error.errors.map((e) => ({
-            path: e.path.join('.'),
+            path: e.path.join("."),
             message: e.message,
           })),
         });
       }
-      throw new ValidationError('Invalid JSON in request body');
+      throw new ValidationError("Invalid JSON in request body");
     }
   }
 
@@ -57,14 +57,14 @@ export function validateRequest(
       result.query = config.query.parse(event.queryStringParameters || {});
     } catch (error) {
       if (error instanceof z.ZodError) {
-        throw new ValidationError('Invalid query parameters', {
+        throw new ValidationError("Invalid query parameters", {
           errors: error.errors.map((e) => ({
-            path: e.path.join('.'),
+            path: e.path.join("."),
             message: e.message,
           })),
         });
       }
-      throw new ValidationError('Invalid query parameters');
+      throw new ValidationError("Invalid query parameters");
     }
   }
 
@@ -78,14 +78,14 @@ export function validateRequest(
       result.params = config.params.parse(pathParams);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        throw new ValidationError('Invalid path parameters', {
+        throw new ValidationError("Invalid path parameters", {
           errors: error.errors.map((e) => ({
-            path: e.path.join('.'),
+            path: e.path.join("."),
             message: e.message,
           })),
         });
       }
-      throw new ValidationError('Invalid path parameters');
+      throw new ValidationError("Invalid path parameters");
     }
   }
 
@@ -103,8 +103,8 @@ export function createValidationMiddleware(config: ValidationConfig) {
       body: any,
       query: Record<string, string | undefined>,
       tenantId?: string,
-      context?: any
-    ) => Promise<RouteResponse>
+      context?: any,
+    ) => Promise<RouteResponse>,
   ): Promise<RouteResponse> => {
     // Validate request
     const validated = validateRequest(event, config);
@@ -118,7 +118,7 @@ export function createValidationMiddleware(config: ValidationConfig) {
       validated.body,
       validated.query || event.queryStringParameters || {},
       undefined, // tenantId would be extracted by router
-      undefined // context would be extracted by router
+      undefined, // context would be extracted by router
     );
   };
 }
@@ -138,4 +138,3 @@ export const querySchemas = {
     status: z.string().min(1),
   }),
 };
-

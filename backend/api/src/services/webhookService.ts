@@ -3,15 +3,15 @@
  * Handles sending webhook notifications for workflow generation completion.
  */
 
-import { logger } from '../utils/logger';
-import { retryWithBackoff } from '../utils/retry';
+import { logger } from "../utils/logger";
+import { retryWithBackoff } from "../utils/retry";
 
 const WEBHOOK_TIMEOUT_MS = 30000; // 30 seconds timeout for webhook requests
 const MAX_RETRY_ATTEMPTS = 3;
 
 export interface WorkflowGenerationWebhookPayload {
   job_id: string;
-  status: 'completed' | 'failed';
+  status: "completed" | "failed";
   workflow_id?: string;
   workflow?: any;
   error_message?: string;
@@ -21,21 +21,27 @@ export interface WorkflowGenerationWebhookPayload {
 
 /**
  * Send a webhook notification for workflow generation completion.
- * 
+ *
  * @param webhookUrl - The webhook URL to send the notification to
  * @param payload - The payload to send in the webhook
  * @returns Promise that resolves when webhook is sent successfully
  */
 export async function sendWorkflowGenerationWebhook(
   webhookUrl: string,
-  payload: WorkflowGenerationWebhookPayload
+  payload: WorkflowGenerationWebhookPayload,
 ): Promise<void> {
-  if (!webhookUrl || typeof webhookUrl !== 'string' || webhookUrl.trim().length === 0) {
-    logger.warn('[Webhook Service] Invalid webhook URL provided', { webhookUrl });
+  if (
+    !webhookUrl ||
+    typeof webhookUrl !== "string" ||
+    webhookUrl.trim().length === 0
+  ) {
+    logger.warn("[Webhook Service] Invalid webhook URL provided", {
+      webhookUrl,
+    });
     return;
   }
 
-  logger.info('[Webhook Service] Sending workflow generation webhook', {
+  logger.info("[Webhook Service] Sending workflow generation webhook", {
     webhookUrl,
     jobId: payload.job_id,
     status: payload.status,
@@ -44,10 +50,10 @@ export async function sendWorkflowGenerationWebhook(
   return retryWithBackoff(
     async () => {
       const fetchPromise = fetch(webhookUrl, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'LeadMagnet-AI/1.0',
+          "Content-Type": "application/json",
+          "User-Agent": "LeadMagnet-AI/1.0",
         },
         body: JSON.stringify(payload),
       });
@@ -55,25 +61,33 @@ export async function sendWorkflowGenerationWebhook(
       // Add timeout using Promise.race
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => {
-          reject(new Error(`Webhook request timed out after ${WEBHOOK_TIMEOUT_MS}ms`));
+          reject(
+            new Error(
+              `Webhook request timed out after ${WEBHOOK_TIMEOUT_MS}ms`,
+            ),
+          );
         }, WEBHOOK_TIMEOUT_MS);
       });
 
       const response = await Promise.race([fetchPromise, timeoutPromise]);
 
       if (!response.ok) {
-        const errorText = await response.text().catch(() => 'Unable to read response');
-        logger.warn('[Webhook Service] Webhook returned non-OK status', {
+        const errorText = await response
+          .text()
+          .catch(() => "Unable to read response");
+        logger.warn("[Webhook Service] Webhook returned non-OK status", {
           webhookUrl,
           jobId: payload.job_id,
           status: response.status,
           statusText: response.statusText,
           errorText: errorText.substring(0, 200), // Truncate long error messages
         });
-        throw new Error(`Webhook returned status ${response.status}: ${response.statusText}`);
+        throw new Error(
+          `Webhook returned status ${response.status}: ${response.statusText}`,
+        );
       }
 
-      logger.info('[Webhook Service] Webhook sent successfully', {
+      logger.info("[Webhook Service] Webhook sent successfully", {
         webhookUrl,
         jobId: payload.job_id,
         status: response.status,
@@ -83,17 +97,17 @@ export async function sendWorkflowGenerationWebhook(
       maxAttempts: MAX_RETRY_ATTEMPTS,
       initialDelayMs: 1000,
       onRetry: (attempt, error) => {
-        logger.debug('[Webhook Service] Retrying webhook send', {
+        logger.debug("[Webhook Service] Retrying webhook send", {
           attempt,
           webhookUrl,
           jobId: payload.job_id,
           error: error instanceof Error ? error.message : String(error),
         });
       },
-    }
+    },
   ).catch((error) => {
     // Log error but don't throw - webhook failures shouldn't fail the job
-    logger.error('[Webhook Service] Failed to send webhook after retries', {
+    logger.error("[Webhook Service] Failed to send webhook after retries", {
       webhookUrl,
       jobId: payload.job_id,
       error: error instanceof Error ? error.message : String(error),
@@ -101,4 +115,3 @@ export async function sendWorkflowGenerationWebhook(
     // Don't rethrow - webhook failures are non-critical
   });
 }
-

@@ -3,22 +3,22 @@
  * Provides reusable utilities for API interactions
  */
 
-import { ApiError } from '@/lib/api/errors'
+import { ApiError } from "@/lib/api/errors";
 
 /**
  * Extract error message from various error types
  */
 export function getErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
-    return error.message
+    return error.message;
   }
   if (error instanceof Error) {
-    return error.message
+    return error.message;
   }
-  if (typeof error === 'string') {
-    return error
+  if (typeof error === "string") {
+    return error;
   }
-  return 'An unexpected error occurred'
+  return "An unexpected error occurred";
 }
 
 /**
@@ -26,9 +26,9 @@ export function getErrorMessage(error: unknown): string {
  */
 export function isNetworkError(error: unknown): boolean {
   if (error instanceof ApiError) {
-    return error.statusCode === 0 || error.statusCode === undefined
+    return error.statusCode === 0 || error.statusCode === undefined;
   }
-  return false
+  return false;
 }
 
 /**
@@ -36,15 +36,17 @@ export function isNetworkError(error: unknown): boolean {
  */
 export function isAuthError(error: unknown): boolean {
   if (error instanceof ApiError) {
-    return error.statusCode === 401 || error.statusCode === 403
+    return error.statusCode === 401 || error.statusCode === 403;
   }
-  return false
+  return false;
 }
 
 /**
  * Format API response for display
  */
-export function formatApiResponse<T>(data: T | null | undefined, fallback: T): T {
-  return data ?? fallback
+export function formatApiResponse<T>(
+  data: T | null | undefined,
+  fallback: T,
+): T {
+  return data ?? fallback;
 }
-

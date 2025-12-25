@@ -3,11 +3,14 @@
  * Singleton service for managing OpenAI client instances with cached API key retrieval
  */
 
-import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
-import OpenAI from 'openai';
-import { ApiError } from '../utils/errors';
-import { logger } from '../utils/logger';
-import { env } from '../utils/env';
+import {
+  SecretsManagerClient,
+  GetSecretValueCommand,
+} from "@aws-sdk/client-secrets-manager";
+import OpenAI from "openai";
+import { ApiError } from "../utils/errors";
+import { logger } from "../utils/logger";
+import { env } from "../utils/env";
 
 const OPENAI_SECRET_NAME = env.openaiSecretName;
 const secretsClient = new SecretsManagerClient({ region: env.awsRegion });
@@ -36,51 +39,59 @@ export async function getOpenAIClient(): Promise<OpenAI> {
   if (directEnvKey && directEnvKey.trim().length > 0) {
     cachedApiKey = directEnvKey.trim();
     cachedClient = new OpenAI({ apiKey: cachedApiKey });
-    logger.info('[OpenAI Service] Client initialized from env var and cached');
+    logger.info("[OpenAI Service] Client initialized from env var and cached");
     return cachedClient;
   }
 
   try {
     const command = new GetSecretValueCommand({ SecretId: OPENAI_SECRET_NAME });
     const response = await secretsClient.send(command);
-    
+
     if (!response.SecretString) {
-      throw new ApiError('OpenAI API key not found in secret', 500);
+      throw new ApiError("OpenAI API key not found in secret", 500);
     }
 
     let apiKey: string;
-    
+
     // Try to parse as JSON first (if secret is stored as {"OPENAI_API_KEY": "..."} or {"apiKey": "..."})
     try {
       const parsed = JSON.parse(response.SecretString);
-      apiKey = parsed.OPENAI_API_KEY || parsed.apiKey || parsed.api_key || parsed.openai_api_key || response.SecretString;
+      apiKey =
+        parsed.OPENAI_API_KEY ||
+        parsed.apiKey ||
+        parsed.api_key ||
+        parsed.openai_api_key ||
+        response.SecretString;
     } catch {
       // If not JSON, use the secret string directly
       apiKey = response.SecretString;
     }
-    
+
     if (!apiKey || apiKey.trim().length === 0) {
-      throw new ApiError('OpenAI API key is empty', 500);
+      throw new ApiError("OpenAI API key is empty", 500);
     }
 
     // Cache the API key and create client
     cachedApiKey = apiKey;
     cachedClient = new OpenAI({ apiKey });
-    
-    logger.info('[OpenAI Service] Client initialized and cached');
-    
+
+    logger.info("[OpenAI Service] Client initialized and cached");
+
     return cachedClient;
   } catch (error: any) {
-    logger.error('[OpenAI Service] Error getting OpenAI client', { 
+    logger.error("[OpenAI Service] Error getting OpenAI client", {
       error: error.message,
-      secretName: OPENAI_SECRET_NAME 
+      secretName: OPENAI_SECRET_NAME,
     });
-    
+
     if (error instanceof ApiError) {
       throw error;
     }
-    
-    throw new ApiError(`Failed to initialize OpenAI client: ${error.message}`, 500);
+
+    throw new ApiError(
+      `Failed to initialize OpenAI client: ${error.message}`,
+      500,
+    );
   }
 }
 
@@ -90,6 +101,5 @@ export async function getOpenAIClient(): Promise<OpenAI> {
 export function clearOpenAIClientCache(): void {
   cachedClient = null;
   cachedApiKey = null;
-  logger.info('[OpenAI Service] Cache cleared');
+  logger.info("[OpenAI Service] Cache cleared");
 }
-

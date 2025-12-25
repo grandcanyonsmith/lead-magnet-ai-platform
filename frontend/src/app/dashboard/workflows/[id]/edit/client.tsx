@@ -1,27 +1,31 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { FiSettings, FiFileText, FiLayout } from 'react-icons/fi'
-import { api } from '@/lib/api'
-import { AIModel, Tool } from '@/types'
-import { useWorkflowEdit } from '@/hooks/useWorkflowEdit'
-import { useFormEdit } from '@/hooks/useFormEdit'
-import { useTemplateEdit } from '@/hooks/useTemplateEdit'
-import { WorkflowTab } from '@/components/workflows/edit/WorkflowTab'
-import { FormTab } from '@/components/workflows/edit/FormTab'
-import { TemplateTab } from '@/components/workflows/edit/TemplateTab'
-import { extractPlaceholders } from '@/utils/templateUtils'
-import { formatHTML } from '@/utils/templateUtils'
-import { useSettings } from '@/hooks/api/useSettings'
+import { useState, useEffect } from "react";
+import { FiSettings, FiFileText, FiLayout } from "react-icons/fi";
+import { api } from "@/lib/api";
+import { AIModel, Tool } from "@/types";
+import { useWorkflowEdit } from "@/hooks/useWorkflowEdit";
+import { useFormEdit } from "@/hooks/useFormEdit";
+import { useTemplateEdit } from "@/hooks/useTemplateEdit";
+import { WorkflowTab } from "@/components/workflows/edit/WorkflowTab";
+import { FormTab } from "@/components/workflows/edit/FormTab";
+import { TemplateTab } from "@/components/workflows/edit/TemplateTab";
+import { extractPlaceholders } from "@/utils/templateUtils";
+import { formatHTML } from "@/utils/templateUtils";
+import { useSettings } from "@/hooks/api/useSettings";
 
 export default function EditWorkflowPage() {
-  const [activeTab, setActiveTab] = useState<'workflow' | 'form' | 'template'>('workflow')
-  const [selectedStepIndex, setSelectedStepIndex] = useState<number | null>(null)
-  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false)
-  const [templateId, setTemplateId] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<"workflow" | "form" | "template">(
+    "workflow",
+  );
+  const [selectedStepIndex, setSelectedStepIndex] = useState<number | null>(
+    null,
+  );
+  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
+  const [templateId, setTemplateId] = useState<string | null>(null);
 
   // Main workflow hook
-  const workflowEdit = useWorkflowEdit()
+  const workflowEdit = useWorkflowEdit();
   const {
     workflowId,
     loading,
@@ -42,10 +46,10 @@ export default function EditWorkflowPage() {
     handleMoveStepUp,
     handleMoveStepDown,
     router,
-  } = workflowEdit
+  } = workflowEdit;
 
   // Form edit hook
-  const formEdit = useFormEdit(formData.workflow_name, formId, workflowForm)
+  const formEdit = useFormEdit(formData.workflow_name, formId, workflowForm);
   const {
     formFormData,
     handleFormChange,
@@ -54,11 +58,14 @@ export default function EditWorkflowPage() {
     removeField,
     moveFieldUp,
     moveFieldDown,
-    
-  } = formEdit
+  } = formEdit;
 
   // Template edit hook
-  const templateEdit = useTemplateEdit(formData.workflow_name, templateId, formData.template_id)
+  const templateEdit = useTemplateEdit(
+    formData.workflow_name,
+    templateId,
+    formData.template_id,
+  );
   const {
     templateLoading,
     templateData,
@@ -86,96 +93,107 @@ export default function EditWorkflowPage() {
     commitHtmlChange,
     selectedSelectors,
     setSelectedSelectors,
-  } = templateEdit
+  } = templateEdit;
 
-  const { settings } = useSettings()
+  const { settings } = useSettings();
 
   // Update templateId when formData.template_id changes
   useEffect(() => {
     if (formData.template_id) {
-      setTemplateId(formData.template_id)
+      setTemplateId(formData.template_id);
     }
-  }, [formData.template_id])
+  }, [formData.template_id]);
 
   // Switch away from template tab if no template
   useEffect(() => {
-    const hasTemplate = templateId || templateData.html_content.trim()
-    if (!hasTemplate && activeTab === 'template') {
-      setActiveTab('workflow')
+    const hasTemplate = templateId || templateData.html_content.trim();
+    if (!hasTemplate && activeTab === "template") {
+      setActiveTab("workflow");
     }
-  }, [templateId, templateData.html_content, activeTab])
+  }, [templateId, templateData.html_content, activeTab]);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
+    e.preventDefault();
+    setError(null);
 
     // Validation
     if (!formData.workflow_name.trim()) {
-      setError('Lead magnet name is required')
-      return
+      setError("Lead magnet name is required");
+      return;
     }
 
     // Validate steps
     if (steps.length === 0) {
-      setError('At least one workflow step is required')
-      return
+      setError("At least one workflow step is required");
+      return;
     }
 
     for (let i = 0; i < steps.length; i++) {
-      const step = steps[i]
+      const step = steps[i];
       if (!step.step_name.trim()) {
-        setError(`Step ${i + 1} name is required`)
-        return
+        setError(`Step ${i + 1} name is required`);
+        return;
       }
       // Only validate instructions for AI generation steps
-      if (step.step_type !== 'webhook' && (!step.instructions || !step.instructions.trim())) {
-        setError(`Step ${i + 1} instructions are required for AI generation steps`)
-        return
+      if (
+        step.step_type !== "webhook" &&
+        (!step.instructions || !step.instructions.trim())
+      ) {
+        setError(
+          `Step ${i + 1} instructions are required for AI generation steps`,
+        );
+        return;
       }
       // Validate HTTP URL for HTTP request steps
-      if (step.step_type === 'webhook' && (!step.webhook_url || !step.webhook_url.trim())) {
-        setError(`Step ${i + 1} HTTP URL is required for HTTP request steps`)
-        return
+      if (
+        step.step_type === "webhook" &&
+        (!step.webhook_url || !step.webhook_url.trim())
+      ) {
+        setError(`Step ${i + 1} HTTP URL is required for HTTP request steps`);
+        return;
       }
     }
 
     // Template validation - if template tab is accessible, ensure template exists
-    const hasTemplate = templateId || templateData.html_content.trim()
-    if (activeTab === 'template' && !hasTemplate) {
-      setError('Template HTML content is required')
-      return
+    const hasTemplate = templateId || templateData.html_content.trim();
+    if (activeTab === "template" && !hasTemplate) {
+      setError("Template HTML content is required");
+      return;
     }
 
-    setSubmitting(true)
+    setSubmitting(true);
 
     try {
       // Create or update template if template content exists
-      let finalTemplateId = templateId
+      let finalTemplateId = templateId;
       if (templateData.html_content.trim()) {
+        const placeholders = extractPlaceholders(templateData.html_content);
 
-        const placeholders = extractPlaceholders(templateData.html_content)
-        
         if (templateId) {
           // Update existing template
           await api.updateTemplate(templateId, {
             template_name: templateData.template_name.trim(),
-            template_description: templateData.template_description.trim() || undefined,
+            template_description:
+              templateData.template_description.trim() || undefined,
             html_content: templateData.html_content.trim(),
-            placeholder_tags: placeholders.length > 0 ? placeholders : undefined,
+            placeholder_tags:
+              placeholders.length > 0 ? placeholders : undefined,
             is_published: templateData.is_published,
-          })
-          finalTemplateId = templateId
+          });
+          finalTemplateId = templateId;
         } else {
           // Create new template
           const template = await api.createTemplate({
             template_name: templateData.template_name.trim(),
-            template_description: templateData.template_description.trim() || '',
+            template_description:
+              templateData.template_description.trim() || "",
             html_content: templateData.html_content.trim(),
-            placeholder_tags: placeholders.length > 0 ? placeholders : undefined,
+            placeholder_tags:
+              placeholders.length > 0 ? placeholders : undefined,
             is_published: templateData.is_published,
-          })
-          finalTemplateId = template.template_id
-          setTemplateId(template.template_id)
+          });
+          finalTemplateId = template.template_id;
+          setTemplateId(template.template_id);
         }
       }
 
@@ -185,21 +203,26 @@ export default function EditWorkflowPage() {
         workflow_description: formData.workflow_description.trim() || undefined,
         steps: steps.map((step, index: number) => {
           // Clean up tools if tool_choice is 'none'
-          const cleanedTools = step.tool_choice === 'none' ? [] : (step.tools || [])
-          
+          const cleanedTools =
+            step.tool_choice === "none" ? [] : step.tools || [];
+
           return {
             ...step,
             step_order: index,
             model: step.model as AIModel,
-            tools: cleanedTools.length > 0 ? cleanedTools as Tool[] : undefined,
-            tool_choice: step.tool_choice || 'auto',
-            depends_on: step.depends_on && step.depends_on.length > 0 ? step.depends_on : undefined,
-          }
+            tools:
+              cleanedTools.length > 0 ? (cleanedTools as Tool[]) : undefined,
+            tool_choice: step.tool_choice || "auto",
+            depends_on:
+              step.depends_on && step.depends_on.length > 0
+                ? step.depends_on
+                : undefined,
+          };
         }),
         // Legacy fields removed - all workflows must use steps format
         template_id: finalTemplateId || undefined,
         template_version: 0,
-      })
+      });
 
       // Update form if it exists
       if (formId) {
@@ -213,38 +236,40 @@ export default function EditWorkflowPage() {
           custom_css: formFormData.custom_css.trim() || undefined,
           thank_you_message: formFormData.thank_you_message.trim() || undefined,
           redirect_url: formFormData.redirect_url.trim() || undefined,
-        })
+        });
       }
 
-      router.push('/dashboard/workflows')
+      router.push("/dashboard/workflows");
     } catch (error: any) {
-      console.error('Failed to update:', error)
-      setError(error.response?.data?.message || error.message || 'Failed to update')
+      console.error("Failed to update:", error);
+      setError(
+        error.response?.data?.message || error.message || "Failed to update",
+      );
     } finally {
-      setSubmitting(false)
+      setSubmitting(false);
     }
-  }
+  };
 
   const handleRefineWithError = async () => {
-    const result = await handleRefine()
+    const result = await handleRefine();
     if (result.error) {
-      setError(result.error)
-      return result
+      setError(result.error);
+      return result;
     }
-    return result
-  }
+    return result;
+  };
 
   const handleFormatHtml = () => {
-    const formatted = formatHTML(templateData.html_content)
-    handleTemplateChange('html_content', formatted)
-  }
+    const formatted = formatHTML(templateData.html_content);
+    handleTemplateChange("html_content", formatted);
+  };
 
   if (loading) {
     return (
       <div className="text-center py-12">
         <p className="text-gray-600">Loading workflow...</p>
       </div>
-    )
+    );
   }
 
   return (
@@ -252,10 +277,14 @@ export default function EditWorkflowPage() {
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Edit Lead Magnet</h1>
-            <p className="text-gray-600">Update your AI lead magnet and form configuration</p>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Edit Lead Magnet
+            </h1>
+            <p className="text-gray-600">
+              Update your AI lead magnet and form configuration
+            </p>
           </div>
-          {workflowEdit.workflowStatus === 'draft' && (
+          {workflowEdit.workflowStatus === "draft" && (
             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
               Draft
             </span>
@@ -273,22 +302,22 @@ export default function EditWorkflowPage() {
       <div className="mb-6 border-b border-gray-200 overflow-x-auto">
         <nav className="flex space-x-4 sm:space-x-8 min-w-max">
           <button
-            onClick={() => setActiveTab('workflow')}
+            onClick={() => setActiveTab("workflow")}
             className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'workflow'
-                ? 'border-primary-500 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              activeTab === "workflow"
+                ? "border-primary-500 text-primary-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
             }`}
           >
             <FiSettings className="inline w-4 h-4 mr-2" />
             Lead Magnet Settings
           </button>
           <button
-            onClick={() => setActiveTab('form')}
+            onClick={() => setActiveTab("form")}
             className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'form'
-                ? 'border-primary-500 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              activeTab === "form"
+                ? "border-primary-500 text-primary-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
             }`}
           >
             <FiFileText className="inline w-4 h-4 mr-2" />
@@ -296,11 +325,11 @@ export default function EditWorkflowPage() {
           </button>
           {(templateId || templateData.html_content.trim()) && (
             <button
-              onClick={() => setActiveTab('template')}
+              onClick={() => setActiveTab("template")}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'template'
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                activeTab === "template"
+                  ? "border-primary-500 text-primary-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }`}
             >
               <FiLayout className="inline w-4 h-4 mr-2" />
@@ -310,9 +339,9 @@ export default function EditWorkflowPage() {
         </nav>
       </div>
 
-      {activeTab === 'workflow' && (
+      {activeTab === "workflow" && (
         <WorkflowTab
-          workflowId={workflowId || ''}
+          workflowId={workflowId || ""}
           formData={formData}
           steps={steps}
           submitting={submitting}
@@ -324,12 +353,12 @@ export default function EditWorkflowPage() {
           onStepClick={(index) => {
             if (index === -1 || index === null) {
               // Close panel
-              setSelectedStepIndex(null)
-              setIsSidePanelOpen(false)
+              setSelectedStepIndex(null);
+              setIsSidePanelOpen(false);
             } else {
               // Open panel with selected step
-              setSelectedStepIndex(index)
-              setIsSidePanelOpen(true)
+              setSelectedStepIndex(index);
+              setIsSidePanelOpen(true);
             }
           }}
           onStepsReorder={setSteps}
@@ -341,7 +370,7 @@ export default function EditWorkflowPage() {
         />
       )}
 
-      {activeTab === 'form' && formId && (
+      {activeTab === "form" && formId && (
         <FormTab
           formFormData={formFormData}
           workflowName={formData.workflow_name}
@@ -358,14 +387,18 @@ export default function EditWorkflowPage() {
         />
       )}
 
-      {activeTab === 'form' && !formId && (
+      {activeTab === "form" && !formId && (
         <div className="bg-white rounded-lg shadow p-12 text-center">
-          <p className="text-gray-600 mb-4">No form found for this lead magnet.</p>
-          <p className="text-sm text-gray-500">Forms are automatically created when you create a lead magnet.</p>
+          <p className="text-gray-600 mb-4">
+            No form found for this lead magnet.
+          </p>
+          <p className="text-sm text-gray-500">
+            Forms are automatically created when you create a lead magnet.
+          </p>
         </div>
       )}
 
-      {activeTab === 'template' && (
+      {activeTab === "template" && (
         <TemplateTab
           templateData={templateData}
           templateLoading={templateLoading}
@@ -399,7 +432,6 @@ export default function EditWorkflowPage() {
           onCommitChange={commitHtmlChange}
         />
       )}
-
     </div>
-  )
+  );
 }

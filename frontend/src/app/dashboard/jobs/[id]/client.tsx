@@ -1,65 +1,69 @@
-'use client'
+"use client";
 
-import React, { useState, useRef, useMemo, ReactNode } from 'react'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { Tab, TabGroup, TabList, TabPanel, TabPanels } from '@headlessui/react'
-import { ClipboardDocumentIcon } from '@heroicons/react/24/outline'
-import { toast } from 'react-hot-toast'
+import React, { useState, useRef, useMemo, ReactNode } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Tab, TabGroup, TabList, TabPanel, TabPanels } from "@headlessui/react";
+import { ClipboardDocumentIcon } from "@heroicons/react/24/outline";
+import { toast } from "react-hot-toast";
 
-import { useJobDetail } from '@/hooks/useJobDetail'
-import { useJobExecutionSteps } from '@/hooks/useJobExecutionSteps'
-import { useMergedSteps } from '@/hooks/useMergedSteps'
-import { useImageArtifacts } from '@/hooks/useImageArtifacts'
-import { usePreviewModal } from '@/hooks/usePreviewModal'
+import { useJobDetail } from "@/hooks/useJobDetail";
+import { useJobExecutionSteps } from "@/hooks/useJobExecutionSteps";
+import { useMergedSteps } from "@/hooks/useMergedSteps";
+import { useImageArtifacts } from "@/hooks/useImageArtifacts";
+import { usePreviewModal } from "@/hooks/usePreviewModal";
 
-import { api } from '@/lib/api'
-import { buildArtifactGalleryItems } from '@/utils/jobs/artifacts'
-import { summarizeStepProgress } from '@/utils/jobs/steps'
-import { formatRelativeTime, formatDuration } from '@/utils/date'
+import { api } from "@/lib/api";
+import { buildArtifactGalleryItems } from "@/utils/jobs/artifacts";
+import { summarizeStepProgress } from "@/utils/jobs/steps";
+import { formatRelativeTime, formatDuration } from "@/utils/date";
 
-import { JobHeader } from '@/components/jobs/JobHeader'
-import { ExecutionSteps } from '@/components/jobs/ExecutionSteps'
-import { TechnicalDetails } from '@/components/jobs/TechnicalDetails'
-import { ResubmitModal } from '@/components/jobs/ResubmitModal'
-import { RerunStepDialog } from '@/components/jobs/RerunStepDialog'
-import { ArtifactGallery } from '@/components/jobs/detail/ArtifactGallery'
-import { WorkflowImprovePanel } from '@/components/jobs/detail/WorkflowImprovePanel'
-import { FullScreenPreviewModal } from '@/components/ui/FullScreenPreviewModal'
-import { LoadingState } from '@/components/ui/LoadingState'
-import { ErrorState } from '@/components/ui/ErrorState'
-import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
+import { JobHeader } from "@/components/jobs/JobHeader";
+import { ExecutionSteps } from "@/components/jobs/ExecutionSteps";
+import { TechnicalDetails } from "@/components/jobs/TechnicalDetails";
+import { ResubmitModal } from "@/components/jobs/ResubmitModal";
+import { RerunStepDialog } from "@/components/jobs/RerunStepDialog";
+import { ArtifactGallery } from "@/components/jobs/detail/ArtifactGallery";
+import { WorkflowImprovePanel } from "@/components/jobs/detail/WorkflowImprovePanel";
+import { FullScreenPreviewModal } from "@/components/ui/FullScreenPreviewModal";
+import { LoadingState } from "@/components/ui/LoadingState";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 
-
-import FlowchartSidePanel from '@/app/dashboard/workflows/components/FlowchartSidePanel'
-import { JobOverviewSection, JobDurationInfo } from '@/components/jobs/detail/JobOverviewSection'
-import { JobTrackingStats } from '@/components/tracking/JobTrackingStats'
+import FlowchartSidePanel from "@/app/dashboard/workflows/components/FlowchartSidePanel";
+import {
+  JobOverviewSection,
+  JobDurationInfo,
+} from "@/components/jobs/detail/JobOverviewSection";
+import { JobTrackingStats } from "@/components/tracking/JobTrackingStats";
 
 import type {
   ArtifactGalleryItem,
   Job,
   JobStepSummary,
   MergedStep,
-} from '@/types/job'
-import type { WorkflowStep } from '@/types'
-import type { Workflow } from '@/types/workflow'
-import type { FormSubmission } from '@/types/form'
-import type { Artifact } from '@/types/artifact'
+} from "@/types/job";
+import type { WorkflowStep } from "@/types";
+import type { Workflow } from "@/types/workflow";
+import type { FormSubmission } from "@/types/form";
+import type { Artifact } from "@/types/artifact";
 
 // ---------------------------------------------------------------------------
 // Main Component
 // ---------------------------------------------------------------------------
 
 export default function JobDetailClient() {
-  const router = useRouter()
+  const router = useRouter();
 
-  const [showResubmitModal, setShowResubmitModal] = useState(false)
-  const [editingStepIndex, setEditingStepIndex] = useState<number | null>(null)
-  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false)
-  const [showRerunDialog, setShowRerunDialog] = useState(false)
-  const [stepIndexForRerun, setStepIndexForRerun] = useState<number | null>(null)
+  const [showResubmitModal, setShowResubmitModal] = useState(false);
+  const [editingStepIndex, setEditingStepIndex] = useState<number | null>(null);
+  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
+  const [showRerunDialog, setShowRerunDialog] = useState(false);
+  const [stepIndexForRerun, setStepIndexForRerun] = useState<number | null>(
+    null,
+  );
 
-  const latestStepUpdateRef = useRef<WorkflowStep | null>(null)
+  const latestStepUpdateRef = useRef<WorkflowStep | null>(null);
 
   const {
     job,
@@ -76,16 +80,16 @@ export default function JobDetailClient() {
     refreshJob,
     refreshing,
     lastLoadedAt,
-  } = useJobDetail()
+  } = useJobDetail();
 
   const {
     showExecutionSteps,
     setShowExecutionSteps,
     expandedSteps,
     toggleStep,
-  } = useJobExecutionSteps()
+  } = useJobExecutionSteps();
 
-  const mergedSteps = useMergedSteps({ job, workflow })
+  const mergedSteps = useMergedSteps({ job, workflow });
 
   const {
     imageArtifactsByStep,
@@ -94,12 +98,12 @@ export default function JobDetailClient() {
   } = useImageArtifacts({
     jobId: job?.job_id,
     steps: mergedSteps,
-  })
+  });
 
-  const [selectedIndex, setSelectedIndex] = useState(0)
+  const [selectedIndex, setSelectedIndex] = useState(0);
 
   const { previewItem, openPreview, closePreview } =
-    usePreviewModal<ArtifactGalleryItem>()
+    usePreviewModal<ArtifactGalleryItem>();
 
   const artifactGalleryItems = useMemo(
     () =>
@@ -108,171 +112,177 @@ export default function JobDetailClient() {
         artifacts: jobArtifacts,
         steps: mergedSteps,
       }),
-    [job, jobArtifacts, mergedSteps]
-  )
+    [job, jobArtifacts, mergedSteps],
+  );
 
   const stepsSummary = useMemo<JobStepSummary>(
     () => summarizeStepProgress(mergedSteps),
-    [mergedSteps]
-  )
+    [mergedSteps],
+  );
 
-  const jobDuration = useMemo(() => getJobDuration(job), [job])
+  const jobDuration = useMemo(() => getJobDuration(job), [job]);
 
   const lastUpdatedLabel = useMemo(
     () => (job?.updated_at ? formatRelativeTime(job.updated_at) : null),
-    [job?.updated_at]
-  )
+    [job?.updated_at],
+  );
 
   const lastRefreshedLabel = useMemo(
-    () => (lastLoadedAt ? formatRelativeTime(lastLoadedAt.toISOString()) : null),
-    [lastLoadedAt]
-  )
+    () =>
+      lastLoadedAt ? formatRelativeTime(lastLoadedAt.toISOString()) : null,
+    [lastLoadedAt],
+  );
 
   const previewObjectUrl =
     previewItem?.artifact?.object_url ||
     previewItem?.artifact?.public_url ||
-    previewItem?.url
+    previewItem?.url;
 
   const previewContentType =
     previewItem?.artifact?.content_type ||
-    (previewItem?.kind === 'imageUrl' ? 'image/png' : undefined)
+    (previewItem?.kind === "imageUrl" ? "image/png" : undefined);
 
   const previewFileName =
     previewItem?.artifact?.file_name ||
     previewItem?.artifact?.artifact_name ||
-    previewItem?.label
+    previewItem?.label;
 
   // Navigation handlers
   const currentPreviewIndex = useMemo(() => {
-    if (!previewItem) return -1
-    return artifactGalleryItems.findIndex((item) => item.id === previewItem.id)
-  }, [previewItem, artifactGalleryItems])
+    if (!previewItem) return -1;
+    return artifactGalleryItems.findIndex((item) => item.id === previewItem.id);
+  }, [previewItem, artifactGalleryItems]);
 
   const handleNextPreview = () => {
-    if (currentPreviewIndex === -1 || currentPreviewIndex === artifactGalleryItems.length - 1) return
-    openPreview(artifactGalleryItems[currentPreviewIndex + 1])
-  }
+    if (
+      currentPreviewIndex === -1 ||
+      currentPreviewIndex === artifactGalleryItems.length - 1
+    )
+      return;
+    openPreview(artifactGalleryItems[currentPreviewIndex + 1]);
+  };
 
   const handlePreviousPreview = () => {
-    if (currentPreviewIndex <= 0) return
-    openPreview(artifactGalleryItems[currentPreviewIndex - 1])
-  }
+    if (currentPreviewIndex <= 0) return;
+    openPreview(artifactGalleryItems[currentPreviewIndex - 1]);
+  };
 
   // ---------------------------------------------------------------------------
   // Handlers
   // ---------------------------------------------------------------------------
 
   const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
-  }
+    navigator.clipboard.writeText(text);
+  };
 
-  const handleResubmitClick = () => setShowResubmitModal(true)
+  const handleResubmitClick = () => setShowResubmitModal(true);
 
   const handleResubmitConfirm = async () => {
-    await handleResubmit()
-    setShowResubmitModal(false)
-  }
+    await handleResubmit();
+    setShowResubmitModal(false);
+  };
 
   const handleEditStep = (stepIndex: number) => {
-    setEditingStepIndex(stepIndex)
-    setIsSidePanelOpen(true)
-    latestStepUpdateRef.current = null
-  }
+    setEditingStepIndex(stepIndex);
+    setIsSidePanelOpen(true);
+    latestStepUpdateRef.current = null;
+  };
 
   const handleSaveStep = async (updatedStep: WorkflowStep) => {
     if (!workflow || editingStepIndex === null || !workflow.steps) {
-      toast.error('Unable to save: Workflow data not available')
-      return
+      toast.error("Unable to save: Workflow data not available");
+      return;
     }
 
     try {
-      const updatedSteps = [...workflow.steps]
-      const originalStep = updatedSteps[editingStepIndex]
+      const updatedSteps = [...workflow.steps];
+      const originalStep = updatedSteps[editingStepIndex];
 
       updatedSteps[editingStepIndex] = {
         ...originalStep,
         ...updatedStep,
-      }
+      };
 
       // Update workflow
       await api.updateWorkflow(workflow.workflow_id, {
         steps: updatedSteps,
-      })
+      });
 
-      toast.success('Step updated successfully')
+      toast.success("Step updated successfully");
 
-      setStepIndexForRerun(editingStepIndex)
+      setStepIndexForRerun(editingStepIndex);
 
-      setEditingStepIndex(null)
-      setIsSidePanelOpen(false)
+      setEditingStepIndex(null);
+      setIsSidePanelOpen(false);
 
-      setShowRerunDialog(true)
+      setShowRerunDialog(true);
 
-      router.refresh()
+      router.refresh();
     } catch (error: any) {
-      console.error('Failed to save step:', error)
-      toast.error('Failed to save step. Please try again.')
+      console.error("Failed to save step:", error);
+      toast.error("Failed to save step. Please try again.");
     }
-  }
+  };
 
   const handleCancelEdit = async () => {
     if (latestStepUpdateRef.current && editingStepIndex !== null) {
-      const currentStep = workflow?.steps?.[editingStepIndex]
+      const currentStep = workflow?.steps?.[editingStepIndex];
       const hasChanges =
         currentStep &&
-        JSON.stringify(currentStep) !== JSON.stringify(latestStepUpdateRef.current)
+        JSON.stringify(currentStep) !==
+          JSON.stringify(latestStepUpdateRef.current);
 
       if (hasChanges) {
-        await handleSaveStep(latestStepUpdateRef.current)
+        await handleSaveStep(latestStepUpdateRef.current);
       }
 
-      latestStepUpdateRef.current = null
+      latestStepUpdateRef.current = null;
     }
 
-    setEditingStepIndex(null)
-    setIsSidePanelOpen(false)
-  }
+    setEditingStepIndex(null);
+    setIsSidePanelOpen(false);
+  };
 
   const handleRerunStepClick = (stepIndex: number) => {
-    setStepIndexForRerun(stepIndex)
-    setShowRerunDialog(true)
-  }
+    setStepIndexForRerun(stepIndex);
+    setShowRerunDialog(true);
+  };
 
   const handleRerunOnly = async () => {
     if (stepIndexForRerun !== null) {
-      setShowRerunDialog(false)
-      await handleRerunStep(stepIndexForRerun, false)
-      setStepIndexForRerun(null)
+      setShowRerunDialog(false);
+      await handleRerunStep(stepIndexForRerun, false);
+      setStepIndexForRerun(null);
     }
-  }
+  };
 
   const handleRerunAndContinue = async () => {
     if (stepIndexForRerun !== null) {
-      setShowRerunDialog(false)
-      await handleRerunStep(stepIndexForRerun, true)
-      setStepIndexForRerun(null)
+      setShowRerunDialog(false);
+      await handleRerunStep(stepIndexForRerun, true);
+      setStepIndexForRerun(null);
     }
-  }
+  };
 
   const handleCloseRerunDialog = () => {
-    setShowRerunDialog(false)
-    setStepIndexForRerun(null)
-  }
+    setShowRerunDialog(false);
+    setStepIndexForRerun(null);
+  };
 
   // ---------------------------------------------------------------------------
   // Loading / Error States
   // ---------------------------------------------------------------------------
 
   if (loading) {
-    return <LoadingState />
+    return <LoadingState />;
   }
 
   if (error && !job) {
-    return <ErrorState message={error} />
+    return <ErrorState message={error} />;
   }
 
   if (!job) {
-    return null
+    return null;
   }
 
   // ---------------------------------------------------------------------------
@@ -282,9 +292,11 @@ export default function JobDetailClient() {
   const errorFallback = (
     <div className="border border-red-300 rounded-lg p-6 bg-red-50">
       <p className="text-red-800 font-medium">Error loading job details</p>
-      <p className="text-red-600 text-sm mt-1">Please refresh the page or try again.</p>
+      <p className="text-red-600 text-sm mt-1">
+        Please refresh the page or try again.
+      </p>
     </div>
-  )
+  );
 
   return (
     <ErrorBoundary fallback={errorFallback}>
@@ -329,16 +341,16 @@ export default function JobDetailClient() {
             isOpen={isSidePanelOpen}
             onClose={handleCancelEdit}
             onChange={(index, updatedStep) => {
-              latestStepUpdateRef.current = updatedStep
+              latestStepUpdateRef.current = updatedStep;
             }}
             onDelete={() =>
-              toast.error('Cannot delete steps from execution viewer.')
+              toast.error("Cannot delete steps from execution viewer.")
             }
             onMoveUp={() =>
-              toast.error('Cannot reorder steps from execution viewer.')
+              toast.error("Cannot reorder steps from execution viewer.")
             }
             onMoveDown={() =>
-              toast.error('Cannot reorder steps from execution viewer.')
+              toast.error("Cannot reorder steps from execution viewer.")
             }
             workflowId={workflow.workflow_id}
           />
@@ -410,7 +422,7 @@ export default function JobDetailClient() {
         )}
       </div>
     </ErrorBoundary>
-  )
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -419,21 +431,20 @@ export default function JobDetailClient() {
 
 function getJobDuration(job?: Job | null): JobDurationInfo | null {
   const shouldFallbackToCreatedAt =
-    job?.status === 'processing' ||
-    job?.status === 'completed' ||
-    job?.status === 'failed'
+    job?.status === "processing" ||
+    job?.status === "completed" ||
+    job?.status === "failed";
 
   const startTime =
-    job?.started_at ||
-    (shouldFallbackToCreatedAt ? job?.created_at : null)
+    job?.started_at || (shouldFallbackToCreatedAt ? job?.created_at : null);
 
-  if (!startTime) return null
+  if (!startTime) return null;
 
-  const start = new Date(startTime).getTime()
-  const endTime = job?.completed_at || job?.failed_at
-  const endTimestamp = endTime ? new Date(endTime).getTime() : Date.now()
+  const start = new Date(startTime).getTime();
+  const endTime = job?.completed_at || job?.failed_at;
+  const endTimestamp = endTime ? new Date(endTime).getTime() : Date.now();
 
-  const seconds = Math.max(0, Math.round((endTimestamp - start) / 1000))
+  const seconds = Math.max(0, Math.round((endTimestamp - start) / 1000));
 
   return {
     seconds,
@@ -442,8 +453,8 @@ function getJobDuration(job?: Job | null): JobDurationInfo | null {
       !job?.completed_at &&
       !job?.failed_at &&
       !job?.error_message &&
-      job?.status === 'processing',
-  }
+      job?.status === "processing",
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -451,27 +462,27 @@ function getJobDuration(job?: Job | null): JobDurationInfo | null {
 // ---------------------------------------------------------------------------
 
 interface JobTabsProps {
-  job: Job
-  selectedIndex: number
-  setSelectedIndex: (index: number) => void
-  mergedSteps: MergedStep[]
-  artifactGalleryItems: ArtifactGalleryItem[]
-  executionHeader?: ReactNode
-  expandedSteps: Set<number>
-  toggleStep: (stepOrder: number) => void
-  showExecutionSteps: boolean
-  setShowExecutionSteps: (show: boolean) => void
-  executionStepsError: string | null
-  imageArtifactsByStep: Map<number, Artifact[]>
-  loadingArtifacts: boolean
-  submission?: FormSubmission | null
-  onResubmit?: () => void
-  resubmitting?: boolean
-  onCopy: (text: string) => void
-  onEditStep: (stepIndex: number) => void
-  onRerunStepClick: (stepIndex: number) => void
-  rerunningStep: number | null
-  openPreview: (item: ArtifactGalleryItem) => void
+  job: Job;
+  selectedIndex: number;
+  setSelectedIndex: (index: number) => void;
+  mergedSteps: MergedStep[];
+  artifactGalleryItems: ArtifactGalleryItem[];
+  executionHeader?: ReactNode;
+  expandedSteps: Set<number>;
+  toggleStep: (stepOrder: number) => void;
+  showExecutionSteps: boolean;
+  setShowExecutionSteps: (show: boolean) => void;
+  executionStepsError: string | null;
+  imageArtifactsByStep: Map<number, Artifact[]>;
+  loadingArtifacts: boolean;
+  submission?: FormSubmission | null;
+  onResubmit?: () => void;
+  resubmitting?: boolean;
+  onCopy: (text: string) => void;
+  onEditStep: (stepIndex: number) => void;
+  onRerunStepClick: (stepIndex: number) => void;
+  rerunningStep: number | null;
+  openPreview: (item: ArtifactGalleryItem) => void;
 }
 
 function JobTabs({
@@ -498,10 +509,10 @@ function JobTabs({
   openPreview,
 }: JobTabsProps) {
   const tabs = [
-    { name: 'Execution', id: 'execution' },
-    { name: 'Tracking', id: 'tracking' },
-    { name: 'Raw JSON', id: 'raw' },
-  ]
+    { name: "Execution", id: "execution" },
+    { name: "Tracking", id: "tracking" },
+    { name: "Raw JSON", id: "raw" },
+  ];
 
   return (
     <div className="mt-8">
@@ -513,8 +524,8 @@ function JobTabs({
               className={({ selected }) =>
                 `whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium outline-none transition-colors ${
                   selected
-                    ? 'border-primary-500 text-primary-600'
-                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                    ? "border-primary-500 text-primary-600"
+                    : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
                 }`
               }
             >
@@ -565,7 +576,7 @@ function JobTabs({
         </TabPanels>
       </TabGroup>
     </div>
-  )
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -573,26 +584,26 @@ function JobTabs({
 // ---------------------------------------------------------------------------
 
 function RawJsonPanel({ data }: { data: unknown }) {
-  const hasData = Array.isArray(data) ? data.length > 0 : Boolean(data)
+  const hasData = Array.isArray(data) ? data.length > 0 : Boolean(data);
 
   if (!hasData) {
     return (
       <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50/80 p-4 text-sm text-gray-600">
         No raw JSON data is available for this run.
       </div>
-    )
+    );
   }
 
-  const jsonString = JSON.stringify(data, null, 2)
+  const jsonString = JSON.stringify(data, null, 2);
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(jsonString)
-      toast.success('Execution JSON copied')
+      await navigator.clipboard.writeText(jsonString);
+      toast.success("Execution JSON copied");
     } catch {
-      toast.error('Unable to copy JSON')
+      toast.error("Unable to copy JSON");
     }
-  }
+  };
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-gray-950 text-gray-100">
@@ -613,5 +624,5 @@ function RawJsonPanel({ data }: { data: unknown }) {
         {jsonString}
       </pre>
     </div>
-  )
+  );
 }

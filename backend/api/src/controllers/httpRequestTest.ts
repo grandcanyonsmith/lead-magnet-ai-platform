@@ -1,17 +1,24 @@
-import { z } from 'zod';
-import { RouteResponse } from '../routes';
-import { ApiError, InternalServerError, ValidationError } from '../utils/errors';
-import { logger } from '../utils/logger';
-import { RequestContext } from '../routes/router';
-import { getCustomerId } from '../utils/rbac';
+import { z } from "zod";
+import { RouteResponse } from "../routes";
+import {
+  ApiError,
+  InternalServerError,
+  ValidationError,
+} from "../utils/errors";
+import { logger } from "../utils/logger";
+import { RequestContext } from "../routes/router";
+import { getCustomerId } from "../utils/rbac";
 
 const httpRequestTestSchema = z.object({
   url: z.string().url(),
-  method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']).optional().default('POST'),
+  method: z
+    .enum(["GET", "POST", "PUT", "PATCH", "DELETE"])
+    .optional()
+    .default("POST"),
   headers: z.record(z.string()).optional().default({}),
   query_params: z.record(z.string()).optional().default({}),
-  content_type: z.string().optional().default('application/json'),
-  body: z.string().optional().default(''),
+  content_type: z.string().optional().default("application/json"),
+  body: z.string().optional().default(""),
   test_values: z.record(z.any()).optional().default({}),
   timeout_ms: z.number().int().min(1000).max(60000).optional().default(15000),
 });
@@ -19,12 +26,15 @@ const httpRequestTestSchema = z.object({
 function truncate(text: string, maxLen: number): string {
   if (!text) return text;
   if (text.length <= maxLen) return text;
-  return text.slice(0, maxLen) + '... (truncated)';
+  return text.slice(0, maxLen) + "... (truncated)";
 }
 
 function getPath(obj: any, path: string): any {
   if (!path) return undefined;
-  const parts = path.split('.').map((p) => p.trim()).filter(Boolean);
+  const parts = path
+    .split(".")
+    .map((p) => p.trim())
+    .filter(Boolean);
   let cur: any = obj;
   for (const part of parts) {
     if (cur === null || cur === undefined) return undefined;
@@ -34,7 +44,7 @@ function getPath(obj: any, path: string): any {
       cur = cur[idx];
       continue;
     }
-    if (typeof cur === 'object') {
+    if (typeof cur === "object") {
       cur = (cur as any)[part];
       continue;
     }
@@ -44,13 +54,13 @@ function getPath(obj: any, path: string): any {
 }
 
 function renderTemplate(template: string, vars: Record<string, any>): string {
-  if (!template) return '';
+  if (!template) return "";
   return template.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_match, rawKey) => {
-    const key = String(rawKey || '').trim();
-    if (!key) return '';
-    const value = key.includes('.') ? getPath(vars, key) : (vars as any)[key];
-    if (value === null || value === undefined) return '';
-    if (typeof value === 'string') return value;
+    const key = String(rawKey || "").trim();
+    if (!key) return "";
+    const value = key.includes(".") ? getPath(vars, key) : (vars as any)[key];
+    if (value === null || value === undefined) return "";
+    if (typeof value === "string") return value;
     try {
       return JSON.stringify(value);
     } catch {
@@ -65,7 +75,7 @@ class HttpRequestTestController {
     body: any,
     _query: Record<string, string | undefined>,
     _tenantId: string | undefined,
-    context?: RequestContext
+    context?: RequestContext,
   ): Promise<RouteResponse> {
     try {
       const tenantId = getCustomerId(context);
@@ -96,12 +106,14 @@ class HttpRequestTestController {
 
       // Build headers (preserve provided keys, but ensure content-type when a body is present)
       const headers: Record<string, string> = { ...(inputHeaders || {}) };
-      const hasContentTypeHeader = Object.keys(headers).some((k) => k.toLowerCase() === 'content-type');
+      const hasContentTypeHeader = Object.keys(headers).some(
+        (k) => k.toLowerCase() === "content-type",
+      );
       if (!hasContentTypeHeader && content_type) {
-        headers['Content-Type'] = content_type;
+        headers["Content-Type"] = content_type;
       }
 
-      const renderedBody = renderTemplate(rawBody || '', test_values || {});
+      const renderedBody = renderTemplate(rawBody || "", test_values || {});
 
       // Prepare fetch options
       const controller = new AbortController();
@@ -117,7 +129,7 @@ class HttpRequestTestController {
         };
 
         const methodUpper = method.toUpperCase();
-        const canHaveBody = !['GET', 'HEAD'].includes(methodUpper);
+        const canHaveBody = !["GET", "HEAD"].includes(methodUpper);
         if (canHaveBody && renderedBody) {
           fetchInit.body = renderedBody;
         }
@@ -146,8 +158,12 @@ class HttpRequestTestController {
 
       // Request body JSON (if applicable)
       let requestBodyJson: any = null;
-      const requestContentType = (headers['Content-Type'] || headers['content-type'] || '').toLowerCase();
-      if (renderedBody && requestContentType.includes('application/json')) {
+      const requestContentType = (
+        headers["Content-Type"] ||
+        headers["content-type"] ||
+        ""
+      ).toLowerCase();
+      if (renderedBody && requestContentType.includes("application/json")) {
         try {
           requestBodyJson = JSON.parse(renderedBody);
         } catch {
@@ -155,7 +171,7 @@ class HttpRequestTestController {
         }
       }
 
-      logger.info('[HttpRequestTest] Completed', {
+      logger.info("[HttpRequestTest] Completed", {
         tenantId,
         method,
         url: resolvedUrl,
@@ -187,10 +203,10 @@ class HttpRequestTestController {
       if (error instanceof ApiError) {
         throw error;
       }
-      logger.error('[HttpRequestTest] Error', {
+      logger.error("[HttpRequestTest] Error", {
         error: error instanceof Error ? error.message : String(error),
       });
-      throw new InternalServerError('Failed to test HTTP request', {
+      throw new InternalServerError("Failed to test HTTP request", {
         originalError: error instanceof Error ? error.message : String(error),
       });
     }
@@ -198,5 +214,3 @@ class HttpRequestTestController {
 }
 
 export const httpRequestTestController = new HttpRequestTestController();
-
-

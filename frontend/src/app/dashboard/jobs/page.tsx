@@ -1,52 +1,71 @@
-'use client'
+"use client";
 
-import React, { useEffect, useState, useCallback, useMemo, useRef, Fragment } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { api } from '@/lib/api'
-import { LeadMagnetsTabs } from '@/components/leadMagnets/LeadMagnetsTabs'
-import { 
-  ClockIcon, 
-  ArrowPathIcon, 
-  ExclamationTriangleIcon, 
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+  useRef,
+  Fragment,
+} from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { api } from "@/lib/api";
+import { LeadMagnetsTabs } from "@/components/leadMagnets/LeadMagnetsTabs";
+import {
+  ClockIcon,
+  ArrowPathIcon,
+  ExclamationTriangleIcon,
   ArrowTrendingUpIcon,
   MagnifyingGlassIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   FunnelIcon,
-  XMarkIcon
-} from '@heroicons/react/24/outline'
-import { Listbox, ListboxButton, ListboxOption, ListboxOptions, Transition } from '@headlessui/react'
-import { useJobFilters, useJobSorting } from '@/hooks/useJobFilters'
-import { JobFiltersProvider } from '@/contexts/JobFiltersContext'
-import { formatRelativeTime, formatDuration } from '@/utils/date'
-import { SummarySection, SummaryCard, StatusQuickFilter } from '@/components/jobs/list/SummarySection'
-import { JobsMobileList } from '@/components/jobs/list/MobileList'
-import { JobsDesktopTable } from '@/components/jobs/list/DesktopTable'
-import type { Job } from '@/types/job'
-import type { Workflow } from '@/types/workflow'
-import toast from 'react-hot-toast'
-import clsx from 'clsx'
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
+import {
+  Listbox,
+  ListboxButton,
+  ListboxOption,
+  ListboxOptions,
+  Transition,
+} from "@headlessui/react";
+import { useJobFilters, useJobSorting } from "@/hooks/useJobFilters";
+import { JobFiltersProvider } from "@/contexts/JobFiltersContext";
+import { formatRelativeTime, formatDuration } from "@/utils/date";
+import {
+  SummarySection,
+  SummaryCard,
+  StatusQuickFilter,
+} from "@/components/jobs/list/SummarySection";
+import { JobsMobileList } from "@/components/jobs/list/MobileList";
+import { JobsDesktopTable } from "@/components/jobs/list/DesktopTable";
+import type { Job } from "@/types/job";
+import type { Workflow } from "@/types/workflow";
+import toast from "react-hot-toast";
+import clsx from "clsx";
 
 export default function JobsPage() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const [jobs, setJobs] = useState<Job[]>([])
-  const [workflows, setWorkflows] = useState<Workflow[]>([])
-  const [workflowMap, setWorkflowMap] = useState<Record<string, string>>({})
-  const [workflowStepCounts, setWorkflowStepCounts] = useState<Record<string, number>>({})
-  const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize] = useState(20)
-  const [totalJobs, setTotalJobs] = useState(0)
-  const [hasMore, setHasMore] = useState(false)
-  const [lastLoadedAt, setLastLoadedAt] = useState<Date | null>(null)
-  const inFlightRequestsRef = useRef<Set<string>>(new Set())
-  const loadJobsRef = useRef<typeof loadJobs | null>(null)
-  const prevFiltersRef = useRef({ statusFilter: 'all', workflowFilter: 'all' })
-  const currentPageRef = useRef(currentPage)
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [workflows, setWorkflows] = useState<Workflow[]>([]);
+  const [workflowMap, setWorkflowMap] = useState<Record<string, string>>({});
+  const [workflowStepCounts, setWorkflowStepCounts] = useState<
+    Record<string, number>
+  >({});
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(20);
+  const [totalJobs, setTotalJobs] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [lastLoadedAt, setLastLoadedAt] = useState<Date | null>(null);
+  const inFlightRequestsRef = useRef<Set<string>>(new Set());
+  const loadJobsRef = useRef<typeof loadJobs | null>(null);
+  const prevFiltersRef = useRef({ statusFilter: "all", workflowFilter: "all" });
+  const currentPageRef = useRef(currentPage);
 
-  const filters = useJobFilters(jobs, workflowMap)
+  const filters = useJobFilters(jobs, workflowMap);
   const {
     statusFilter,
     workflowFilter,
@@ -55,61 +74,77 @@ export default function JobsPage() {
     setWorkflowFilter,
     setSearchQuery,
     filteredJobs,
-  } = filters
-  const sorting = useJobSorting(filteredJobs)
+  } = filters;
+  const sorting = useJobSorting(filteredJobs);
 
   const handleNavigate = useCallback(
     (jobId: string) => {
-      if (typeof window !== 'undefined') {
-        window.location.href = `/dashboard/jobs/${jobId}`
+      if (typeof window !== "undefined") {
+        window.location.href = `/dashboard/jobs/${jobId}`;
       } else {
-        router.push(`/dashboard/jobs/${jobId}`)
+        router.push(`/dashboard/jobs/${jobId}`);
       }
     },
-    [router]
-  )
+    [router],
+  );
 
   const statusCounts = useMemo(() => {
     return jobs.reduce(
       (acc, job) => {
         if (job.status in acc) {
-          acc[job.status as keyof typeof acc] += 1
+          acc[job.status as keyof typeof acc] += 1;
         }
-        return acc
+        return acc;
       },
-      { pending: 0, processing: 0, completed: 0, failed: 0 }
-    )
-  }, [jobs])
+      { pending: 0, processing: 0, completed: 0, failed: 0 },
+    );
+  }, [jobs]);
 
   const summaryStats = useMemo(() => {
-    const now = Date.now()
-    const oneDayMs = 24 * 60 * 60 * 1000
-    let completedLastDay = 0
-    let totalDuration = 0
-    let durationSamples = 0
-    let latestJobCreatedAt: string | null = null
+    const now = Date.now();
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    let completedLastDay = 0;
+    let totalDuration = 0;
+    let durationSamples = 0;
+    let latestJobCreatedAt: string | null = null;
 
     jobs.forEach((job) => {
-      const createdAt = job.created_at ? new Date(job.created_at).getTime() : null
-      if (createdAt && (!latestJobCreatedAt || createdAt > new Date(latestJobCreatedAt).getTime())) {
-        latestJobCreatedAt = job.created_at
+      const createdAt = job.created_at
+        ? new Date(job.created_at).getTime()
+        : null;
+      if (
+        createdAt &&
+        (!latestJobCreatedAt ||
+          createdAt > new Date(latestJobCreatedAt).getTime())
+      ) {
+        latestJobCreatedAt = job.created_at;
       }
 
-      if (job.status === 'completed' && createdAt && now - createdAt <= oneDayMs) {
-        completedLastDay += 1
+      if (
+        job.status === "completed" &&
+        createdAt &&
+        now - createdAt <= oneDayMs
+      ) {
+        completedLastDay += 1;
       }
 
       if (job.completed_at && job.created_at) {
         const durationSeconds = Math.max(
           0,
-          Math.round((new Date(job.completed_at).getTime() - new Date(job.created_at).getTime()) / 1000)
-        )
-        totalDuration += durationSeconds
-        durationSamples += 1
+          Math.round(
+            (new Date(job.completed_at).getTime() -
+              new Date(job.created_at).getTime()) /
+              1000,
+          ),
+        );
+        totalDuration += durationSeconds;
+        durationSamples += 1;
       }
-    })
+    });
 
-    const avgDurationSeconds = durationSamples ? Math.round(totalDuration / durationSamples) : 0
+    const avgDurationSeconds = durationSamples
+      ? Math.round(totalDuration / durationSamples)
+      : 0;
 
     return {
       activeJobs: statusCounts.processing + statusCounts.pending,
@@ -117,207 +152,247 @@ export default function JobsPage() {
       avgDurationSeconds,
       failedCount: statusCounts.failed,
       latestJobCreatedAt,
-    }
-  }, [jobs, statusCounts])
+    };
+  }, [jobs, statusCounts]);
 
   const lastRefreshedLabel = useMemo(
-    () => (lastLoadedAt ? formatRelativeTime(lastLoadedAt.toISOString()) : null),
-    [lastLoadedAt]
-  )
+    () =>
+      lastLoadedAt ? formatRelativeTime(lastLoadedAt.toISOString()) : null,
+    [lastLoadedAt],
+  );
 
   const statusQuickFilters = useMemo<StatusQuickFilter[]>(
     () => [
-      { label: 'All jobs', value: 'all', count: totalJobs, description: 'Show every run' },
-      { label: 'Queued', value: 'pending', count: statusCounts.pending, description: 'Waiting to process' },
-      { label: 'Generating', value: 'processing', count: statusCounts.processing, description: 'In progress' },
-      { label: 'Ready', value: 'completed', count: statusCounts.completed, description: 'Completed runs' },
-      { label: 'Errors', value: 'failed', count: statusCounts.failed, description: 'Failed runs' },
+      {
+        label: "All jobs",
+        value: "all",
+        count: totalJobs,
+        description: "Show every run",
+      },
+      {
+        label: "Queued",
+        value: "pending",
+        count: statusCounts.pending,
+        description: "Waiting to process",
+      },
+      {
+        label: "Generating",
+        value: "processing",
+        count: statusCounts.processing,
+        description: "In progress",
+      },
+      {
+        label: "Ready",
+        value: "completed",
+        count: statusCounts.completed,
+        description: "Completed runs",
+      },
+      {
+        label: "Errors",
+        value: "failed",
+        count: statusCounts.failed,
+        description: "Failed runs",
+      },
     ],
-    [totalJobs, statusCounts]
-  )
+    [totalJobs, statusCounts],
+  );
 
   const summaryCards = useMemo<SummaryCard[]>(
     () => [
       {
-        label: 'Active jobs',
+        label: "Active jobs",
         value: summaryStats.activeJobs.toString(),
         subtext: `${statusCounts.processing} running · ${statusCounts.pending} queued`,
-        icon: <ArrowPathIcon className="h-5 w-5 text-primary-600" />, 
-        accentClass: 'border-primary-100 bg-primary-50/70',
+        icon: <ArrowPathIcon className="h-5 w-5 text-primary-600" />,
+        accentClass: "border-primary-100 bg-primary-50/70",
       },
       {
-        label: 'Completed (24h)',
+        label: "Completed (24h)",
         value: summaryStats.completedLastDay.toString(),
-        subtext: summaryStats.latestJobCreatedAt ? `Last job ${formatRelativeTime(summaryStats.latestJobCreatedAt)}` : 'No jobs yet',
-        icon: <ArrowTrendingUpIcon className="h-5 w-5 text-emerald-600" />, 
-        accentClass: 'border-emerald-100 bg-emerald-50/80',
+        subtext: summaryStats.latestJobCreatedAt
+          ? `Last job ${formatRelativeTime(summaryStats.latestJobCreatedAt)}`
+          : "No jobs yet",
+        icon: <ArrowTrendingUpIcon className="h-5 w-5 text-emerald-600" />,
+        accentClass: "border-emerald-100 bg-emerald-50/80",
       },
       {
-        label: 'Avg processing time',
-        value: summaryStats.avgDurationSeconds ? formatDuration(summaryStats.avgDurationSeconds) : '—',
-        subtext: summaryStats.avgDurationSeconds ? 'Across completed jobs' : 'No completed jobs yet',
-        icon: <ClockIcon className="h-5 w-5 text-blue-600" />, 
-        accentClass: 'border-blue-100 bg-blue-50/80',
+        label: "Avg processing time",
+        value: summaryStats.avgDurationSeconds
+          ? formatDuration(summaryStats.avgDurationSeconds)
+          : "—",
+        subtext: summaryStats.avgDurationSeconds
+          ? "Across completed jobs"
+          : "No completed jobs yet",
+        icon: <ClockIcon className="h-5 w-5 text-blue-600" />,
+        accentClass: "border-blue-100 bg-blue-50/80",
       },
       {
-        label: 'Failures',
+        label: "Failures",
         value: summaryStats.failedCount.toString(),
-        subtext: jobs.length ? `${Math.round((summaryStats.failedCount / jobs.length) * 100)}% of this page` : 'No jobs yet',
-        icon: <ExclamationTriangleIcon className="h-5 w-5 text-red-600" />, 
-        accentClass: 'border-red-100 bg-red-50/80',
+        subtext: jobs.length
+          ? `${Math.round((summaryStats.failedCount / jobs.length) * 100)}% of this page`
+          : "No jobs yet",
+        icon: <ExclamationTriangleIcon className="h-5 w-5 text-red-600" />,
+        accentClass: "border-red-100 bg-red-50/80",
       },
     ],
-    [summaryStats, statusCounts, jobs.length]
-  )
+    [summaryStats, statusCounts, jobs.length],
+  );
 
   const handleQuickFilter = useCallback(
     (value: string) => {
-      setStatusFilter(value)
-      setCurrentPage(1)
+      setStatusFilter(value);
+      setCurrentPage(1);
     },
-    [setStatusFilter]
-  )
+    [setStatusFilter],
+  );
 
   const handleClearFilters = useCallback(() => {
-    setStatusFilter('all')
-    setWorkflowFilter('all')
-    setSearchQuery('')
-    setCurrentPage(1)
-  }, [setStatusFilter, setWorkflowFilter, setSearchQuery])
+    setStatusFilter("all");
+    setWorkflowFilter("all");
+    setSearchQuery("");
+    setCurrentPage(1);
+  }, [setStatusFilter, setWorkflowFilter, setSearchQuery]);
 
   // Initialize workflow filter from URL query parameter on mount
-  const hasInitializedFromUrlRef = useRef(false)
+  const hasInitializedFromUrlRef = useRef(false);
   useEffect(() => {
     if (!hasInitializedFromUrlRef.current) {
-      const workflowIdFromUrl = searchParams?.get('workflow_id')
+      const workflowIdFromUrl = searchParams?.get("workflow_id");
       if (workflowIdFromUrl) {
-        setWorkflowFilter(workflowIdFromUrl)
+        setWorkflowFilter(workflowIdFromUrl);
       }
-      hasInitializedFromUrlRef.current = true
+      hasInitializedFromUrlRef.current = true;
     }
-  }, [searchParams, setWorkflowFilter])
+  }, [searchParams, setWorkflowFilter]);
 
   useEffect(() => {
     const loadWorkflows = async () => {
       try {
-        const data = await api.getWorkflows()
-        setWorkflows(data.workflows || [])
-        const map: Record<string, string> = {}
-        const counts: Record<string, number> = {}
+        const data = await api.getWorkflows();
+        setWorkflows(data.workflows || []);
+        const map: Record<string, string> = {};
+        const counts: Record<string, number> = {};
         data.workflows?.forEach((wf: Workflow) => {
-          map[wf.workflow_id] = wf.workflow_name || wf.workflow_id
+          map[wf.workflow_id] = wf.workflow_name || wf.workflow_id;
           if (Array.isArray(wf.steps)) {
-            counts[wf.workflow_id] = wf.steps.length
+            counts[wf.workflow_id] = wf.steps.length;
           } else {
-            counts[wf.workflow_id] = 0
+            counts[wf.workflow_id] = 0;
           }
-        })
-        setWorkflowMap(map)
-        setWorkflowStepCounts(counts)
+        });
+        setWorkflowMap(map);
+        setWorkflowStepCounts(counts);
       } catch (error) {
-        if (process.env.NODE_ENV === 'development') {
-          console.error('Failed to load workflows:', error)
+        if (process.env.NODE_ENV === "development") {
+          console.error("Failed to load workflows:", error);
         }
-        toast.error('Failed to load workflows. Please try again.')
+        toast.error("Failed to load workflows. Please try again.");
       }
-    }
-    loadWorkflows()
-  }, [])
+    };
+    loadWorkflows();
+  }, []);
 
   const loadJobs = useCallback(
     async (showRefreshing = false, page?: number) => {
       // Use provided page or current page from ref
-      const targetPage = page ?? currentPageRef.current
+      const targetPage = page ?? currentPageRef.current;
       // Create a unique key for this load request to prevent duplicates
-      const loadKey = `${statusFilter}-${workflowFilter}-${targetPage}-${pageSize}`
+      const loadKey = `${statusFilter}-${workflowFilter}-${targetPage}-${pageSize}`;
 
       // Prevent duplicate calls with same parameters - atomic check-and-set
       if (inFlightRequestsRef.current.has(loadKey)) {
-        return
+        return;
       }
-      
+
       // Mark this request as in-flight immediately (atomic operation)
-      inFlightRequestsRef.current.add(loadKey)
-      
+      inFlightRequestsRef.current.add(loadKey);
+
       try {
-        if (showRefreshing) setRefreshing(true)
+        if (showRefreshing) setRefreshing(true);
 
         const params: any = {
           limit: pageSize,
           offset: (targetPage - 1) * pageSize,
+        };
+        if (statusFilter !== "all") {
+          params.status = statusFilter;
         }
-        if (statusFilter !== 'all') {
-          params.status = statusFilter
-        }
-        if (workflowFilter !== 'all') {
-          params.workflow_id = workflowFilter
+        if (workflowFilter !== "all") {
+          params.workflow_id = workflowFilter;
         }
 
-        const data = await api.getJobs(params)
-        
-        setJobs(data.jobs || [])
-        setTotalJobs(data.total || 0)
-        setHasMore(data.has_more || false)
-        setLastLoadedAt(new Date())
+        const data = await api.getJobs(params);
+
+        setJobs(data.jobs || []);
+        setTotalJobs(data.total || 0);
+        setHasMore(data.has_more || false);
+        setLastLoadedAt(new Date());
       } catch (error) {
-        if (process.env.NODE_ENV === 'development') {
-          console.error('Failed to load jobs:', error)
+        if (process.env.NODE_ENV === "development") {
+          console.error("Failed to load jobs:", error);
         }
-        toast.error('Failed to load jobs. Please try again.')
+        toast.error("Failed to load jobs. Please try again.");
       } finally {
-        setLoading(false)
-        setRefreshing(false)
+        setLoading(false);
+        setRefreshing(false);
         // Remove from in-flight set
-        inFlightRequestsRef.current.delete(loadKey)
+        inFlightRequestsRef.current.delete(loadKey);
       }
     },
-    [statusFilter, workflowFilter, pageSize]
-  )
+    [statusFilter, workflowFilter, pageSize],
+  );
 
   // Keep refs updated with latest values
   useEffect(() => {
-    loadJobsRef.current = loadJobs
-    currentPageRef.current = currentPage
-  }, [loadJobs, currentPage])
+    loadJobsRef.current = loadJobs;
+    currentPageRef.current = currentPage;
+  }, [loadJobs, currentPage]);
 
   // Single effect: Handle filter changes and page changes
   useEffect(() => {
-    const filtersChanged = prevFiltersRef.current.statusFilter !== statusFilter || prevFiltersRef.current.workflowFilter !== workflowFilter
-    
+    const filtersChanged =
+      prevFiltersRef.current.statusFilter !== statusFilter ||
+      prevFiltersRef.current.workflowFilter !== workflowFilter;
+
     if (filtersChanged) {
-      prevFiltersRef.current = { statusFilter, workflowFilter }
+      prevFiltersRef.current = { statusFilter, workflowFilter };
       if (currentPage !== 1) {
-        setCurrentPage(1)
-        return
+        setCurrentPage(1);
+        return;
       }
     } else {
-      prevFiltersRef.current = { statusFilter, workflowFilter }
+      prevFiltersRef.current = { statusFilter, workflowFilter };
     }
-    
+
     if (loadJobsRef.current) {
-      loadJobsRef.current(false, currentPage)
+      loadJobsRef.current(false, currentPage);
     }
-  }, [statusFilter, workflowFilter, currentPage, pageSize])
+  }, [statusFilter, workflowFilter, currentPage, pageSize]);
 
   // Poll for updates when there are processing jobs
   useEffect(() => {
-    const hasProcessingJobs = jobs.some((job) => job.status === 'processing' || job.status === 'pending')
+    const hasProcessingJobs = jobs.some(
+      (job) => job.status === "processing" || job.status === "pending",
+    );
     if (!hasProcessingJobs) {
-      return
+      return;
     }
 
     const interval = setInterval(() => {
       if (loadJobsRef.current) {
-        loadJobsRef.current(true, currentPageRef.current)
+        loadJobsRef.current(true, currentPageRef.current);
       }
-    }, 5000)
+    }, 5000);
 
     return () => {
-      clearInterval(interval)
-    }
-  }, [jobs])
+      clearInterval(interval);
+    };
+  }, [jobs]);
 
-  const hasProcessingJobs = jobs.some((job) => job.status === 'processing' || job.status === 'pending')
+  const hasProcessingJobs = jobs.some(
+    (job) => job.status === "processing" || job.status === "pending",
+  );
 
   if (loading) {
     return (
@@ -330,14 +405,24 @@ export default function JobsPage() {
           <div className="h-10 bg-gray-200 rounded-lg w-32"></div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map(i => <div key={i} className="h-32 bg-gray-50 border border-gray-100 rounded-xl"></div>)}
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className="h-32 bg-gray-50 border border-gray-100 rounded-xl"
+            ></div>
+          ))}
         </div>
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
           <div className="h-12 bg-gray-50 border-b border-gray-200"></div>
-          {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-20 border-b border-gray-100 last:border-0"></div>)}
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div
+              key={i}
+              className="h-20 border-b border-gray-100 last:border-0"
+            ></div>
+          ))}
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -352,7 +437,9 @@ export default function JobsPage() {
         <div className="mb-6 sm:mb-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">Lead Magnets</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
+                Lead Magnets
+              </h1>
               <p className="mt-1 text-sm text-gray-500">
                 Review generated runs, statuses, errors, and delivery outcomes.
               </p>
@@ -377,7 +464,10 @@ export default function JobsPage() {
         <div className="mb-6 flex flex-col md:flex-row gap-4 items-center">
           <div className="relative flex-1 w-full max-w-lg">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+              <MagnifyingGlassIcon
+                className="h-5 w-5 text-gray-400"
+                aria-hidden="true"
+              />
             </div>
             <input
               type="text"
@@ -390,24 +480,24 @@ export default function JobsPage() {
 
           <div className="flex items-center gap-3 w-full md:w-auto">
             <div className="relative inline-block w-full md:w-64">
-                <select
-                    value={workflowFilter}
-                    onChange={(e) => {
-                        setWorkflowFilter(e.target.value)
-                        setCurrentPage(1)
-                    }}
-                    className="appearance-none block w-full px-4 py-2.5 pr-10 border border-gray-300 rounded-lg bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 transition-all cursor-pointer shadow-sm"
-                >
-                    <option value="all">All Lead Magnets</option>
-                    {workflows.map((wf: Workflow) => (
-                        <option key={wf.workflow_id} value={wf.workflow_id}>
-                            {wf.workflow_name || wf.workflow_id}
-                        </option>
-                    ))}
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-400">
-                    <FunnelIcon className="h-4 w-4" />
-                </div>
+              <select
+                value={workflowFilter}
+                onChange={(e) => {
+                  setWorkflowFilter(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="appearance-none block w-full px-4 py-2.5 pr-10 border border-gray-300 rounded-lg bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 transition-all cursor-pointer shadow-sm"
+              >
+                <option value="all">All Lead Magnets</option>
+                {workflows.map((wf: Workflow) => (
+                  <option key={wf.workflow_id} value={wf.workflow_id}>
+                    {wf.workflow_name || wf.workflow_id}
+                  </option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-400">
+                <FunnelIcon className="h-4 w-4" />
+              </div>
             </div>
           </div>
         </div>
@@ -415,18 +505,27 @@ export default function JobsPage() {
         {sorting.sortedJobs.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center max-w-lg mx-auto mt-8">
             <div className="mx-auto h-12 w-12 text-gray-300 mb-4">
-                <ClockIcon className="h-full w-full" />
+              <ClockIcon className="h-full w-full" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No jobs found</h3>
-            <p className="text-gray-500 mb-6">Generated lead magnets will appear here once forms are submitted.</p>
-            {(statusFilter !== 'all' || workflowFilter !== 'all' || searchQuery !== '') && (
-                <button
-                    onClick={handleClearFilters}
-                    className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                >
-                    <XMarkIcon className="-ml-1 mr-2 h-5 w-5 text-gray-400" aria-hidden="true" />
-                    Reset all filters
-                </button>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              No jobs found
+            </h3>
+            <p className="text-gray-500 mb-6">
+              Generated lead magnets will appear here once forms are submitted.
+            </p>
+            {(statusFilter !== "all" ||
+              workflowFilter !== "all" ||
+              searchQuery !== "") && (
+              <button
+                onClick={handleClearFilters}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              >
+                <XMarkIcon
+                  className="-ml-1 mr-2 h-5 w-5 text-gray-400"
+                  aria-hidden="true"
+                />
+                Reset all filters
+              </button>
             )}
           </div>
         ) : (
@@ -449,75 +548,91 @@ export default function JobsPage() {
 
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-2">
               <div className="text-sm font-medium text-gray-500">
-                Showing <span className="text-gray-900">{(currentPage - 1) * pageSize + 1}</span> to <span className="text-gray-900">{Math.min(currentPage * pageSize, totalJobs)}</span> of <span className="text-gray-900">{totalJobs}</span> runs
+                Showing{" "}
+                <span className="text-gray-900">
+                  {(currentPage - 1) * pageSize + 1}
+                </span>{" "}
+                to{" "}
+                <span className="text-gray-900">
+                  {Math.min(currentPage * pageSize, totalJobs)}
+                </span>{" "}
+                of <span className="text-gray-900">{totalJobs}</span> runs
               </div>
               <div className="flex items-center gap-2">
-                <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
-                    <button
-                        onClick={() => {
-                            if (currentPage > 1) {
-                                setCurrentPage(currentPage - 1)
-                                window.scrollTo({ top: 0, behavior: 'smooth' })
-                            }
-                        }}
-                        disabled={currentPage === 1}
-                        className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        <span className="sr-only">Previous</span>
-                        <ChevronLeftIcon className="h-5 w-5" aria-hidden="true" />
-                    </button>
-                    
-                    {Array.from({ length: Math.min(5, Math.ceil(totalJobs / pageSize)) }, (_, i) => {
-                        const totalPages = Math.ceil(totalJobs / pageSize) || 1
-                        let displayPage = i + 1
+                <nav
+                  className="isolate inline-flex -space-x-px rounded-md shadow-sm"
+                  aria-label="Pagination"
+                >
+                  <button
+                    onClick={() => {
+                      if (currentPage > 1) {
+                        setCurrentPage(currentPage - 1);
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }
+                    }}
+                    disabled={currentPage === 1}
+                    className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span className="sr-only">Previous</span>
+                    <ChevronLeftIcon className="h-5 w-5" aria-hidden="true" />
+                  </button>
 
-                        if (totalPages > 5) {
-                            if (currentPage <= 3) {
-                                displayPage = i + 1
-                            } else if (currentPage >= totalPages - 2) {
-                                displayPage = totalPages - 4 + i
-                            } else {
-                                displayPage = currentPage - 2 + i
-                            }
+                  {Array.from(
+                    { length: Math.min(5, Math.ceil(totalJobs / pageSize)) },
+                    (_, i) => {
+                      const totalPages = Math.ceil(totalJobs / pageSize) || 1;
+                      let displayPage = i + 1;
+
+                      if (totalPages > 5) {
+                        if (currentPage <= 3) {
+                          displayPage = i + 1;
+                        } else if (currentPage >= totalPages - 2) {
+                          displayPage = totalPages - 4 + i;
+                        } else {
+                          displayPage = currentPage - 2 + i;
                         }
+                      }
 
-                        if (displayPage < 1 || displayPage > totalPages) {
-                            return null
-                        }
+                      if (displayPage < 1 || displayPage > totalPages) {
+                        return null;
+                      }
 
-                        return (
-                            <button
-                                key={displayPage}
-                                onClick={() => {
-                                    setCurrentPage(displayPage)
-                                    window.scrollTo({ top: 0, behavior: 'smooth' })
-                                }}
-                                aria-current={currentPage === displayPage ? 'page' : undefined}
-                                className={clsx(
-                                    "relative inline-flex items-center px-4 py-2 text-sm font-semibold focus:z-20",
-                                    currentPage === displayPage
-                                        ? "z-10 bg-primary-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
-                                        : "text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0"
-                                )}
-                            >
-                                {displayPage}
-                            </button>
-                        )
-                    })}
+                      return (
+                        <button
+                          key={displayPage}
+                          onClick={() => {
+                            setCurrentPage(displayPage);
+                            window.scrollTo({ top: 0, behavior: "smooth" });
+                          }}
+                          aria-current={
+                            currentPage === displayPage ? "page" : undefined
+                          }
+                          className={clsx(
+                            "relative inline-flex items-center px-4 py-2 text-sm font-semibold focus:z-20",
+                            currentPage === displayPage
+                              ? "z-10 bg-primary-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+                              : "text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0",
+                          )}
+                        >
+                          {displayPage}
+                        </button>
+                      );
+                    },
+                  )}
 
-                    <button
-                        onClick={() => {
-                            if (hasMore || currentPage * pageSize < totalJobs) {
-                                setCurrentPage(currentPage + 1)
-                                window.scrollTo({ top: 0, behavior: 'smooth' })
-                            }
-                        }}
-                        disabled={!hasMore && currentPage * pageSize >= totalJobs}
-                        className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        <span className="sr-only">Next</span>
-                        <ChevronRightIcon className="h-5 w-5" aria-hidden="true" />
-                    </button>
+                  <button
+                    onClick={() => {
+                      if (hasMore || currentPage * pageSize < totalJobs) {
+                        setCurrentPage(currentPage + 1);
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }
+                    }}
+                    disabled={!hasMore && currentPage * pageSize >= totalJobs}
+                    className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span className="sr-only">Next</span>
+                    <ChevronRightIcon className="h-5 w-5" aria-hidden="true" />
+                  </button>
                 </nav>
               </div>
             </div>
@@ -527,12 +642,12 @@ export default function JobsPage() {
         {hasProcessingJobs && (
           <div className="fixed bottom-6 right-6 z-30">
             <div className="bg-white rounded-full shadow-lg border border-primary-100 px-4 py-2 flex items-center gap-2 text-sm font-bold text-primary-700 animate-in slide-in-from-bottom-4 duration-300">
-                <ArrowPathIcon className="h-4 w-4 animate-spin" />
-                Updating progress...
+              <ArrowPathIcon className="h-4 w-4 animate-spin" />
+              Updating progress...
             </div>
           </div>
         )}
       </div>
     </JobFiltersProvider>
-  )
+  );
 }

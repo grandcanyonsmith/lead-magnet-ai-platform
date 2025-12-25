@@ -2,5 +2,4 @@
  * Re-export useAuth hook for convenience
  */
 
-export { useAuth } from '@/lib/auth/context'
-
+export { useAuth } from "@/lib/auth/context";

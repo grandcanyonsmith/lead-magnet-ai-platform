@@ -7,4 +7,3 @@ export interface RouteResponse {
   body: any;
   headers?: Record<string, string>;
 }
-

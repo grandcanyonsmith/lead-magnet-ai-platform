@@ -1,10 +1,10 @@
-import { db } from '../utils/db';
-import { RouteResponse } from '../routes';
-import { RequestContext } from '../routes/router';
-import { requireUser } from '../utils/rbac';
-import { ApiError } from '../utils/errors';
-import { logger } from '../utils/logger';
-import { env } from '../utils/env';
+import { db } from "../utils/db";
+import { RouteResponse } from "../routes";
+import { RequestContext } from "../routes/router";
+import { requireUser } from "../utils/rbac";
+import { ApiError } from "../utils/errors";
+import { logger } from "../utils/logger";
+import { env } from "../utils/env";
 
 const USERS_TABLE = env.usersTable;
 
@@ -22,7 +22,7 @@ class AuthController {
     _body: any,
     _query: Record<string, string | undefined>,
     _tenantId: string | undefined,
-    context?: RequestContext
+    context?: RequestContext,
   ): Promise<RouteResponse> {
     const auth = requireUser(context);
 
@@ -30,13 +30,15 @@ class AuthController {
       // Get real user
       const realUser = await db.get(USERS_TABLE, { user_id: auth.realUserId });
       if (!realUser) {
-        throw new ApiError('User not found', 404);
+        throw new ApiError("User not found", 404);
       }
 
       // Get acting user (if impersonating)
       let actingUser = realUser;
       if (auth.isImpersonating && auth.actingUserId !== auth.realUserId) {
-        const actingUserRecord = await db.get(USERS_TABLE, { user_id: auth.actingUserId });
+        const actingUserRecord = await db.get(USERS_TABLE, {
+          user_id: auth.actingUserId,
+        });
         if (actingUserRecord) {
           actingUser = actingUserRecord;
         }
@@ -74,14 +76,13 @@ class AuthController {
         throw error;
       }
 
-      logger.error('[Auth] Error getting user info', {
+      logger.error("[Auth] Error getting user info", {
         error: error instanceof Error ? error.message : String(error),
         realUserId: auth.realUserId,
       });
-      throw new ApiError('Failed to get user information', 500);
+      throw new ApiError("Failed to get user information", 500);
     }
   }
 }
 
 export const authController = new AuthController();
-

@@ -1,6 +1,6 @@
-'use client'
+"use client";
 
-import React, { useCallback, useMemo, useEffect, useState } from 'react'
+import React, { useCallback, useMemo, useEffect, useState } from "react";
 import ReactFlow, {
   Node,
   Edge,
@@ -16,53 +16,57 @@ import ReactFlow, {
   EdgeChange,
   ReactFlowProvider,
   MarkerType,
-} from 'reactflow'
-import 'reactflow/dist/style.css'
-import FlowchartNode from './FlowchartNode'
-import { WorkflowStep } from '@/types/workflow'
-import { FiPlus, FiMaximize2 } from 'react-icons/fi'
+} from "reactflow";
+import "reactflow/dist/style.css";
+import FlowchartNode from "./FlowchartNode";
+import { WorkflowStep } from "@/types/workflow";
+import { FiPlus, FiMaximize2 } from "react-icons/fi";
 
 const nodeTypes = {
   workflowStep: FlowchartNode,
-}
+};
 
 interface WorkflowFlowchartProps {
-  steps: WorkflowStep[]
-  onStepClick: (index: number) => void
-  onAddStep: () => void
-  onStepsReorder: (newSteps: WorkflowStep[]) => void
-  activeStepIndex?: number | null
+  steps: WorkflowStep[];
+  onStepClick: (index: number) => void;
+  onAddStep: () => void;
+  onStepsReorder: (newSteps: WorkflowStep[]) => void;
+  activeStepIndex?: number | null;
 }
 
-const NODE_SPACING = 320
-const START_NODE_X = 140
-const NODE_Y = 210
+const NODE_SPACING = 320;
+const START_NODE_X = 140;
+const NODE_Y = 210;
 
-const getBasePosition = (index: number) => START_NODE_X + index * NODE_SPACING
+const getBasePosition = (index: number) => START_NODE_X + index * NODE_SPACING;
 
 const getStepWarnings = (step: WorkflowStep, index: number): string[] => {
-  const warnings: string[] = []
+  const warnings: string[] = [];
 
   if (!step.step_name.trim()) {
-    warnings.push(`Step ${index + 1} is missing a name.`)
+    warnings.push(`Step ${index + 1} is missing a name.`);
   }
   if (!step.instructions.trim()) {
-    warnings.push(`Add synthesis instructions so the model knows what to do.`)
+    warnings.push(`Add synthesis instructions so the model knows what to do.`);
   }
-  if ((step.tools || []).some((tool) => {
-    return typeof tool === 'string' && tool === 'image_generation'
-  })) {
-    if (step.tool_choice !== 'required') {
-      warnings.push('Image generation works best when tool choice is set to "required".')
+  if (
+    (step.tools || []).some((tool) => {
+      return typeof tool === "string" && tool === "image_generation";
+    })
+  ) {
+    if (step.tool_choice !== "required") {
+      warnings.push(
+        'Image generation works best when tool choice is set to "required".',
+      );
     }
   }
-  return warnings
-}
+  return warnings;
+};
 
 type DragState = {
-  nodeId: string | null
-  targetIndex: number | null
-}
+  nodeId: string | null;
+  targetIndex: number | null;
+};
 
 function FlowchartContent({
   steps,
@@ -71,32 +75,36 @@ function FlowchartContent({
   onStepsReorder,
   activeStepIndex,
 }: WorkflowFlowchartProps) {
-  const { fitView } = useReactFlow()
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
-  const [dragState, setDragState] = useState<DragState>({ nodeId: null, targetIndex: null })
-  const [nodesState, setNodesState] = useState<Node[]>([])
-  const [edgesState, setEdgesState] = useState<Edge[]>([])
-  const [hasMounted, setHasMounted] = useState(false)
+  const { fitView } = useReactFlow();
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [dragState, setDragState] = useState<DragState>({
+    nodeId: null,
+    targetIndex: null,
+  });
+  const [nodesState, setNodesState] = useState<Node[]>([]);
+  const [edgesState, setEdgesState] = useState<Edge[]>([]);
+  const [hasMounted, setHasMounted] = useState(false);
 
   useEffect(() => {
-    const timeout = window.setTimeout(() => setHasMounted(true), 75)
-    return () => window.clearTimeout(timeout)
-  }, [])
+    const timeout = window.setTimeout(() => setHasMounted(true), 75);
+    return () => window.clearTimeout(timeout);
+  }, []);
 
   const highlightIndices = useMemo(() => {
-    const indices = new Set<number>()
-    if (typeof activeStepIndex === 'number') indices.add(activeStepIndex)
-    if (typeof hoveredIndex === 'number') indices.add(hoveredIndex)
-    if (typeof dragState.targetIndex === 'number') indices.add(dragState.targetIndex)
-    return indices
-  }, [activeStepIndex, hoveredIndex, dragState.targetIndex])
+    const indices = new Set<number>();
+    if (typeof activeStepIndex === "number") indices.add(activeStepIndex);
+    if (typeof hoveredIndex === "number") indices.add(hoveredIndex);
+    if (typeof dragState.targetIndex === "number")
+      indices.add(dragState.targetIndex);
+    return indices;
+  }, [activeStepIndex, hoveredIndex, dragState.targetIndex]);
 
   const nodes = useMemo<Node[]>(() => {
-    const workflowNodes: Node[] = []
+    const workflowNodes: Node[] = [];
 
     workflowNodes.push({
-      id: 'start',
-      type: 'default',
+      id: "start",
+      type: "default",
       position: { x: START_NODE_X - NODE_SPACING * 0.7, y: NODE_Y },
       data: {
         label: (
@@ -107,36 +115,40 @@ function FlowchartContent({
       },
       selectable: false,
       draggable: false,
-      style: { border: 'none', background: 'transparent' },
-    })
+      style: { border: "none", background: "transparent" },
+    });
 
     steps.forEach((step, index) => {
-      const nodeId = `step-${index}`
+      const nodeId = `step-${index}`;
       workflowNodes.push({
         id: nodeId,
-        type: 'workflowStep',
+        type: "workflowStep",
         position: { x: getBasePosition(index), y: NODE_Y },
         data: {
           step,
           index,
           onClick: () => onStepClick(index),
-          onHover: (isHovering: boolean) => setHoveredIndex(isHovering ? index : null),
+          onHover: (isHovering: boolean) =>
+            setHoveredIndex(isHovering ? index : null),
           isActive: activeStepIndex === index,
           isHovered: hoveredIndex === index,
-          isDropTarget: dragState.nodeId && dragState.nodeId !== nodeId && dragState.targetIndex === index,
+          isDropTarget:
+            dragState.nodeId &&
+            dragState.nodeId !== nodeId &&
+            dragState.targetIndex === index,
           isDragging: dragState.nodeId === nodeId,
           warnings: getStepWarnings(step, index),
           animateIn: hasMounted,
         },
         draggable: true,
-        dragHandle: '.flow-node-drag-handle',
-        style: { border: 'none', background: 'transparent' },
-      })
-    })
+        dragHandle: ".flow-node-drag-handle",
+        style: { border: "none", background: "transparent" },
+      });
+    });
 
     workflowNodes.push({
-      id: 'end',
-      type: 'default',
+      id: "end",
+      type: "default",
       position: { x: getBasePosition(steps.length), y: NODE_Y },
       data: {
         label: (
@@ -147,27 +159,41 @@ function FlowchartContent({
       },
       selectable: false,
       draggable: false,
-      style: { border: 'none', background: 'transparent' },
-    })
+      style: { border: "none", background: "transparent" },
+    });
 
-    return workflowNodes
-  }, [steps, onStepClick, activeStepIndex, hoveredIndex, dragState.nodeId, dragState.targetIndex, hasMounted])
+    return workflowNodes;
+  }, [
+    steps,
+    onStepClick,
+    activeStepIndex,
+    hoveredIndex,
+    dragState.nodeId,
+    dragState.targetIndex,
+    hasMounted,
+  ]);
 
   const edges = useMemo<Edge[]>(() => {
-    const workflowEdges: Edge[] = []
-    const makeEdge = (id: string, source: string, target: string, targetIndex?: number) => {
-      const isHighlighted = typeof targetIndex === 'number' && highlightIndices.has(targetIndex)
-      const color = isHighlighted ? '#2563eb' : '#CBD5F5'
+    const workflowEdges: Edge[] = [];
+    const makeEdge = (
+      id: string,
+      source: string,
+      target: string,
+      targetIndex?: number,
+    ) => {
+      const isHighlighted =
+        typeof targetIndex === "number" && highlightIndices.has(targetIndex);
+      const color = isHighlighted ? "#2563eb" : "#CBD5F5";
       workflowEdges.push({
         id,
         source,
         target,
-        type: 'smoothstep',
+        type: "smoothstep",
         animated: isHighlighted,
         style: {
           stroke: color,
           strokeWidth: isHighlighted ? 3 : 2,
-          transition: 'stroke 150ms ease, stroke-width 150ms ease',
+          transition: "stroke 150ms ease, stroke-width 150ms ease",
         },
         markerEnd: {
           type: MarkerType.ArrowClosed,
@@ -175,96 +201,114 @@ function FlowchartContent({
           width: 18,
           height: 18,
         },
-      })
-    }
+      });
+    };
 
     if (steps.length > 0) {
-      makeEdge('start-step-0', 'start', 'step-0', 0)
+      makeEdge("start-step-0", "start", "step-0", 0);
     }
 
     for (let i = 0; i < steps.length - 1; i++) {
-      makeEdge(`step-${i}-step-${i + 1}`, `step-${i}`, `step-${i + 1}`, i + 1)
+      makeEdge(`step-${i}-step-${i + 1}`, `step-${i}`, `step-${i + 1}`, i + 1);
     }
 
     if (steps.length > 0) {
-      makeEdge(`step-${steps.length - 1}-end`, `step-${steps.length - 1}`, 'end', steps.length - 1)
+      makeEdge(
+        `step-${steps.length - 1}-end`,
+        `step-${steps.length - 1}`,
+        "end",
+        steps.length - 1,
+      );
     }
 
-    return workflowEdges
-  }, [steps, highlightIndices])
+    return workflowEdges;
+  }, [steps, highlightIndices]);
 
   useEffect(() => {
-    setNodesState(nodes)
-  }, [nodes])
+    setNodesState(nodes);
+  }, [nodes]);
 
   useEffect(() => {
-    setEdgesState(edges)
-  }, [edges])
+    setEdgesState(edges);
+  }, [edges]);
 
   const onNodesChange = useCallback((changes: NodeChange[]) => {
-    setNodesState((current) => applyNodeChanges(changes, current))
-  }, [])
+    setNodesState((current) => applyNodeChanges(changes, current));
+  }, []);
 
   const onEdgesChange = useCallback((changes: EdgeChange[]) => {
-    setEdgesState((current) => applyEdgeChanges(changes, current))
-  }, [])
+    setEdgesState((current) => applyEdgeChanges(changes, current));
+  }, []);
 
   const onConnect = useCallback((params: Connection) => {
-    setEdgesState((current) => addEdge(params, current))
-  }, [])
+    setEdgesState((current) => addEdge(params, current));
+  }, []);
 
   const onNodeDrag = useCallback(
     (_event: React.MouseEvent, node: Node) => {
-      if (!node.id.startsWith('step-')) return
-      const stepIndex = parseInt(node.id.replace('step-', ''), 10)
-      if (Number.isNaN(stepIndex)) return
+      if (!node.id.startsWith("step-")) return;
+      const stepIndex = parseInt(node.id.replace("step-", ""), 10);
+      if (Number.isNaN(stepIndex)) return;
 
-      const newOrder = Math.round((node.position.x - START_NODE_X) / NODE_SPACING)
-      const clampedOrder = Math.max(0, Math.min(steps.length - 1, newOrder))
-      setDragState({ nodeId: node.id, targetIndex: clampedOrder })
+      const newOrder = Math.round(
+        (node.position.x - START_NODE_X) / NODE_SPACING,
+      );
+      const clampedOrder = Math.max(0, Math.min(steps.length - 1, newOrder));
+      setDragState({ nodeId: node.id, targetIndex: clampedOrder });
     },
-    [steps.length]
-  )
+    [steps.length],
+  );
 
   const onNodeDragStop = useCallback(
     (_event: React.MouseEvent, node: Node) => {
-      if (!node.id.startsWith('step-')) {
-        setDragState({ nodeId: null, targetIndex: null })
-        return
+      if (!node.id.startsWith("step-")) {
+        setDragState({ nodeId: null, targetIndex: null });
+        return;
       }
 
-      const stepIndex = parseInt(node.id.replace('step-', ''), 10)
-      if (Number.isNaN(stepIndex) || stepIndex < 0 || stepIndex >= steps.length) {
-        setDragState({ nodeId: null, targetIndex: null })
-        return
+      const stepIndex = parseInt(node.id.replace("step-", ""), 10);
+      if (
+        Number.isNaN(stepIndex) ||
+        stepIndex < 0 ||
+        stepIndex >= steps.length
+      ) {
+        setDragState({ nodeId: null, targetIndex: null });
+        return;
       }
 
-      const newOrder = Math.round((node.position.x - START_NODE_X) / NODE_SPACING)
-      const clampedOrder = Math.max(0, Math.min(steps.length - 1, newOrder))
+      const newOrder = Math.round(
+        (node.position.x - START_NODE_X) / NODE_SPACING,
+      );
+      const clampedOrder = Math.max(0, Math.min(steps.length - 1, newOrder));
 
       if (clampedOrder !== stepIndex) {
-        const newSteps = [...steps]
-        const [movedStep] = newSteps.splice(stepIndex, 1)
-        newSteps.splice(clampedOrder, 0, movedStep)
-        onStepsReorder(newSteps)
+        const newSteps = [...steps];
+        const [movedStep] = newSteps.splice(stepIndex, 1);
+        newSteps.splice(clampedOrder, 0, movedStep);
+        onStepsReorder(newSteps);
       }
 
       setNodesState((current) =>
         current.map((n) =>
-          n.id === node.id ? { ...n, position: { x: getBasePosition(clampedOrder), y: NODE_Y } } : n
-        )
-      )
-      setDragState({ nodeId: null, targetIndex: null })
+          n.id === node.id
+            ? {
+                ...n,
+                position: { x: getBasePosition(clampedOrder), y: NODE_Y },
+              }
+            : n,
+        ),
+      );
+      setDragState({ nodeId: null, targetIndex: null });
     },
-    [steps, onStepsReorder]
-  )
+    [steps, onStepsReorder],
+  );
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
-      fitView({ padding: 0.3, duration: 350 })
-    }, 120)
-    return () => window.clearTimeout(timeout)
-  }, [steps.length, fitView])
+      fitView({ padding: 0.3, duration: 350 });
+    }, 120);
+    return () => window.clearTimeout(timeout);
+  }, [steps.length, fitView]);
 
   return (
     <div className="relative h-[600px] w-full overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-primary-50/20 shadow-inner shadow-white/70">
@@ -291,7 +335,7 @@ function FlowchartContent({
         proOptions={{ hideAttribution: true }}
         defaultEdgeOptions={{
           animated: false,
-          style: { stroke: '#CBD5F5', strokeWidth: 2 },
+          style: { stroke: "#CBD5F5", strokeWidth: 2 },
         }}
         className="workflow-flow-canvas"
       >
@@ -305,11 +349,11 @@ function FlowchartContent({
           pannable
           zoomable
           nodeColor={(node) => {
-            if (node.id.startsWith('step-')) {
-              const index = parseInt(node.id.replace('step-', ''), 10)
-              return highlightIndices.has(index) ? '#2563eb' : '#cbd5f5'
+            if (node.id.startsWith("step-")) {
+              const index = parseInt(node.id.replace("step-", ""), 10);
+              return highlightIndices.has(index) ? "#2563eb" : "#cbd5f5";
             }
-            return '#e2e8f0'
+            return "#e2e8f0";
           }}
           maskColor="rgba(15, 23, 42, 0.08)"
         />
@@ -352,9 +396,12 @@ function FlowchartContent({
       {steps.length === 0 && (
         <div className="absolute inset-0 z-10 flex items-center justify-center">
           <div className="rounded-2xl border border-dashed border-primary-200 bg-white/90 px-10 py-12 text-center shadow-lg shadow-primary-100/50 backdrop-blur">
-            <p className="text-base font-semibold text-slate-700">No workflow steps yet</p>
+            <p className="text-base font-semibold text-slate-700">
+              No workflow steps yet
+            </p>
             <p className="mt-2 text-sm text-slate-500">
-              Build your automation by adding research, generation, and delivery steps.
+              Build your automation by adding research, generation, and delivery
+              steps.
             </p>
             <button
               onClick={onAddStep}
@@ -367,7 +414,7 @@ function FlowchartContent({
         </div>
       )}
     </div>
-  )
+  );
 }
 
 export default function WorkflowFlowchart(props: WorkflowFlowchartProps) {
@@ -377,6 +424,5 @@ export default function WorkflowFlowchart(props: WorkflowFlowchartProps) {
         <FlowchartContent {...props} />
       </ReactFlowProvider>
     </div>
-  )
+  );
 }
-

@@ -1,41 +1,41 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { FiX, FiSave, FiAlertCircle } from 'react-icons/fi'
-import { WorkflowStep, AIModel, ToolType, ToolChoice } from '@/types'
+import { useState, useEffect } from "react";
+import { FiX, FiSave, FiAlertCircle } from "react-icons/fi";
+import { WorkflowStep, AIModel, ToolType, ToolChoice } from "@/types";
 
 interface StepEditModalProps {
-  step: WorkflowStep | null
-  isOpen: boolean
-  onClose: () => void
-  onSave: (updatedStep: WorkflowStep) => Promise<void>
-  jobStatus?: string
-  allSteps?: WorkflowStep[] // All steps for dependency selection
-  currentStepIndex?: number // Array index of the current step being edited (for consistent dependency indexing)
+  step: WorkflowStep | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (updatedStep: WorkflowStep) => Promise<void>;
+  jobStatus?: string;
+  allSteps?: WorkflowStep[]; // All steps for dependency selection
+  currentStepIndex?: number; // Array index of the current step being edited (for consistent dependency indexing)
 }
 
 const AI_MODELS: AIModel[] = [
-  'gpt-5',
-  'gpt-5.1-codex',
-  'gpt-5.2',
-  'gpt-4.1',
-  'gpt-4o',
-  'gpt-4-turbo',
-  'gpt-3.5-turbo',
-  'computer-use-preview',
-  'o4-mini-deep-research',
-]
+  "gpt-5",
+  "gpt-5.1-codex",
+  "gpt-5.2",
+  "gpt-4.1",
+  "gpt-4o",
+  "gpt-4-turbo",
+  "gpt-3.5-turbo",
+  "computer-use-preview",
+  "o4-mini-deep-research",
+];
 
 const TOOL_TYPES: ToolType[] = [
-  'web_search',
-  'web_search',
-  'image_generation',
-  'computer_use_preview',
-  'file_search',
-  'code_interpreter',
-]
+  "web_search",
+  "web_search",
+  "image_generation",
+  "computer_use_preview",
+  "file_search",
+  "code_interpreter",
+];
 
-const TOOL_CHOICES: ToolChoice[] = ['auto', 'required', 'none']
+const TOOL_CHOICES: ToolChoice[] = ["auto", "required", "none"];
 
 export function StepEditModal({
   step,
@@ -47,16 +47,16 @@ export function StepEditModal({
   currentStepIndex,
 }: StepEditModalProps) {
   const [formData, setFormData] = useState<WorkflowStep>({
-    step_name: '',
-    instructions: '',
-    model: 'gpt-5',
+    step_name: "",
+    instructions: "",
+    model: "gpt-5",
     reasoning_effort: undefined,
     tools: [],
-    tool_choice: 'auto',
+    tool_choice: "auto",
     depends_on: [],
-  })
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Reset form when step changes or modal opens
   useEffect(() => {
@@ -69,70 +69,76 @@ export function StepEditModal({
         reasoning_effort: (step as any).reasoning_effort,
         step_order: step.step_order,
         tools: step.tools || [],
-        tool_choice: step.tool_choice || 'auto',
+        tool_choice: step.tool_choice || "auto",
         depends_on: step.depends_on || [],
-      })
-      setError(null)
+      });
+      setError(null);
     }
-  }, [step, isOpen])
+  }, [step, isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
+    e.preventDefault();
+
     if (!formData.step_name.trim()) {
-      setError('Step name is required')
-      return
-    }
-    
-    if (!formData.instructions.trim()) {
-      setError('Instructions are required')
-      return
+      setError("Step name is required");
+      return;
     }
 
-    setSaving(true)
-    setError(null)
+    if (!formData.instructions.trim()) {
+      setError("Instructions are required");
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
 
     try {
-      await onSave(formData)
-      onClose()
+      await onSave(formData);
+      onClose();
     } catch (err: any) {
-      setError(err.message || 'Failed to save step changes')
+      setError(err.message || "Failed to save step changes");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   const handleToolToggle = (tool: ToolType) => {
-    const currentTools = formData.tools || []
-    const toolStrings = currentTools.map(t => typeof t === 'string' ? t : t.type)
-    
+    const currentTools = formData.tools || [];
+    const toolStrings = currentTools.map((t) =>
+      typeof t === "string" ? t : t.type,
+    );
+
     if (toolStrings.includes(tool)) {
       // Remove the tool
       setFormData({
         ...formData,
-        tools: currentTools.filter(t => (typeof t === 'string' ? t : t.type) !== tool),
-      })
+        tools: currentTools.filter(
+          (t) => (typeof t === "string" ? t : t.type) !== tool,
+        ),
+      });
     } else {
       // Add the tool as a simple string
       // (structured configs like ComputerUseToolConfig should be configured separately if needed)
       setFormData({
         ...formData,
         tools: [...currentTools, tool],
-      })
+      });
     }
-  }
+  };
 
   const isToolSelected = (tool: ToolType) => {
-    const currentTools = formData.tools || []
-    const toolStrings = currentTools.map(t => typeof t === 'string' ? t : t.type)
-    return toolStrings.includes(tool)
-  }
+    const currentTools = formData.tools || [];
+    const toolStrings = currentTools.map((t) =>
+      typeof t === "string" ? t : t.type,
+    );
+    return toolStrings.includes(tool);
+  };
 
   if (!isOpen || !step) {
-    return null
+    return null;
   }
 
-  const isProcessing = jobStatus === 'processing'
+  const isProcessing = jobStatus === "processing";
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -162,7 +168,10 @@ export function StepEditModal({
               <FiAlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
               <div className="text-sm text-yellow-800">
                 <p className="font-medium">Job is currently processing</p>
-                <p className="mt-1">Changes will affect future jobs using this workflow template, not the current execution.</p>
+                <p className="mt-1">
+                  Changes will affect future jobs using this workflow template,
+                  not the current execution.
+                </p>
               </div>
             </div>
           )}
@@ -183,7 +192,9 @@ export function StepEditModal({
               <input
                 type="text"
                 value={formData.step_name}
-                onChange={(e) => setFormData({ ...formData, step_name: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, step_name: e.target.value })
+                }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 placeholder="e.g., Deep Research"
                 required
@@ -197,8 +208,10 @@ export function StepEditModal({
               </label>
               <input
                 type="text"
-                value={formData.step_description || ''}
-                onChange={(e) => setFormData({ ...formData, step_description: e.target.value })}
+                value={formData.step_description || ""}
+                onChange={(e) =>
+                  setFormData({ ...formData, step_description: e.target.value })
+                }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 placeholder="Brief description of this step"
               />
@@ -211,7 +224,9 @@ export function StepEditModal({
               </label>
               <textarea
                 value={formData.instructions}
-                onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, instructions: e.target.value })
+                }
                 rows={6}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 placeholder="Detailed instructions for this step..."
@@ -226,7 +241,9 @@ export function StepEditModal({
               </label>
               <select
                 value={formData.model}
-                onChange={(e) => setFormData({ ...formData, model: e.target.value as AIModel })}
+                onChange={(e) =>
+                  setFormData({ ...formData, model: e.target.value as AIModel })
+                }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               >
                 {AI_MODELS.map((model) => (
@@ -243,8 +260,13 @@ export function StepEditModal({
                 Reasoning Effort
               </label>
               <select
-                value={(formData as any).reasoning_effort || ''}
-                onChange={(e) => setFormData({ ...formData, reasoning_effort: e.target.value || undefined } as any)}
+                value={(formData as any).reasoning_effort || ""}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    reasoning_effort: e.target.value || undefined,
+                  } as any)
+                }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               >
                 <option value="">Default</option>
@@ -253,7 +275,8 @@ export function StepEditModal({
                 <option value="high">High</option>
               </select>
               <p className="mt-1 text-xs text-gray-500">
-                Optional. Controls how much reasoning the model uses (mainly for GPT-5 models).
+                Optional. Controls how much reasoning the model uses (mainly for
+                GPT-5 models).
               </p>
             </div>
 
@@ -286,8 +309,13 @@ export function StepEditModal({
                 Tool Choice
               </label>
               <select
-                value={formData.tool_choice || 'auto'}
-                onChange={(e) => setFormData({ ...formData, tool_choice: e.target.value as ToolChoice })}
+                value={formData.tool_choice || "auto"}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    tool_choice: e.target.value as ToolChoice,
+                  })
+                }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               >
                 {TOOL_CHOICES.map((choice) => (
@@ -308,32 +336,44 @@ export function StepEditModal({
                   Dependencies (optional)
                 </label>
                 <p className="text-xs text-gray-500 mb-2">
-                  Select which steps must complete before this step runs. Leave empty to auto-detect from step order.
+                  Select which steps must complete before this step runs. Leave
+                  empty to auto-detect from step order.
                 </p>
                 <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-3">
                   {allSteps.map((otherStep, otherIndex) => {
                     // Use provided currentStepIndex, or fallback to finding by step reference
                     // This ensures we use array indices consistently, not step_order values
-                    const editingIndex = currentStepIndex !== undefined 
-                      ? currentStepIndex
-                      : (step ? allSteps.findIndex(s => s === step) : -1)
-                    
+                    const editingIndex =
+                      currentStepIndex !== undefined
+                        ? currentStepIndex
+                        : step
+                          ? allSteps.findIndex((s) => s === step)
+                          : -1;
+
                     // Can't depend on itself - skip if this is the current step being edited
-                    if (otherIndex === editingIndex && editingIndex !== -1) return null
-                    
+                    if (otherIndex === editingIndex && editingIndex !== -1)
+                      return null;
+
                     // depends_on stores array indices (0, 1, 2, ...), not step_order values
-                    const isSelected = (formData.depends_on || []).includes(otherIndex)
+                    const isSelected = (formData.depends_on || []).includes(
+                      otherIndex,
+                    );
                     return (
-                      <label key={otherIndex} className="flex items-center space-x-2 cursor-pointer">
+                      <label
+                        key={otherIndex}
+                        className="flex items-center space-x-2 cursor-pointer"
+                      >
                         <input
                           type="checkbox"
                           checked={isSelected}
                           onChange={(e) => {
-                            const currentDeps = formData.depends_on || []
+                            const currentDeps = formData.depends_on || [];
                             const newDeps = e.target.checked
                               ? [...currentDeps, otherIndex]
-                              : currentDeps.filter((dep: number) => dep !== otherIndex)
-                            setFormData({ ...formData, depends_on: newDeps })
+                              : currentDeps.filter(
+                                  (dep: number) => dep !== otherIndex,
+                                );
+                            setFormData({ ...formData, depends_on: newDeps });
                           }}
                           className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                         />
@@ -341,12 +381,15 @@ export function StepEditModal({
                           Step {otherIndex + 1}: {otherStep.step_name}
                         </span>
                       </label>
-                    )
+                    );
                   })}
                 </div>
                 {formData.depends_on && formData.depends_on.length > 0 && (
                   <p className="mt-2 text-xs text-gray-600">
-                    Depends on: {formData.depends_on.map((dep: number) => `Step ${dep + 1}`).join(', ')}
+                    Depends on:{" "}
+                    {formData.depends_on
+                      .map((dep: number) => `Step ${dep + 1}`)
+                      .join(", ")}
                   </p>
                 )}
               </div>
@@ -368,12 +411,12 @@ export function StepEditModal({
                 className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
               >
                 <FiSave className="w-4 h-4" />
-                {saving ? 'Saving...' : 'Save Changes'}
+                {saving ? "Saving..." : "Save Changes"}
               </button>
             </div>
           </form>
         </div>
       </div>
     </div>
-  )
+  );
 }

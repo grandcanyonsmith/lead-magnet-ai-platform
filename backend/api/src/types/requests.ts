@@ -2,9 +2,9 @@
  * Common request/response type definitions
  */
 
-import { APIGatewayProxyEventV2 } from 'aws-lambda';
-import { RouteResponse } from '../routes';
-import { AuthContext } from '../utils/authContext';
+import { APIGatewayProxyEventV2 } from "aws-lambda";
+import { RouteResponse } from "../routes";
+import { AuthContext } from "../utils/authContext";
 
 /**
  * Standard request handler signature
@@ -14,7 +14,7 @@ export type RequestHandler = (
   body: any,
   query: Record<string, string | undefined>,
   tenantId?: string,
-  context?: RequestContext
+  context?: RequestContext,
 ) => Promise<RouteResponse>;
 
 /**
@@ -83,4 +83,3 @@ export interface ErrorResponse {
   details?: Record<string, any>;
   requestId?: string;
 }
-

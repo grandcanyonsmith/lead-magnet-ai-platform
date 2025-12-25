@@ -2,215 +2,214 @@
  * Workflow-related types
  */
 
-import { BaseEntity } from './common'
-import { FormField } from './form'
+import { BaseEntity } from "./common";
+import { FormField } from "./form";
 
-export type AIModel = 
-  | 'gpt-5.1'
-  | 'gpt-5.1-codex'
-  | 'gpt-5.2'
-  | 'gpt-5'
-  | 'gpt-4.1'
-  | 'gpt-4o'
-  | 'gpt-4-turbo'
-  | 'gpt-3.5-turbo'
-  | 'computer-use-preview'
-  | 'o4-mini-deep-research'
+export type AIModel =
+  | "gpt-5.1"
+  | "gpt-5.1-codex"
+  | "gpt-5.2"
+  | "gpt-5"
+  | "gpt-4.1"
+  | "gpt-4o"
+  | "gpt-4-turbo"
+  | "gpt-3.5-turbo"
+  | "computer-use-preview"
+  | "o4-mini-deep-research";
 
-export type ToolChoice = 'auto' | 'required' | 'none'
+export type ToolChoice = "auto" | "required" | "none";
 
-export type ReasoningEffort = 'low' | 'medium' | 'high'
+export type ReasoningEffort = "low" | "medium" | "high";
 
-export type ToolType = 
-  | 'web_search'
-  | 'image_generation'
-  | 'computer_use_preview'
-  | 'file_search'
-  | 'code_interpreter'
-  | 'shell'
+export type ToolType =
+  | "web_search"
+  | "image_generation"
+  | "computer_use_preview"
+  | "file_search"
+  | "code_interpreter"
+  | "shell";
 
-export type HTTPMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
-export type HTTPBodyMode = 'auto' | 'custom'
+export type HTTPMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+export type HTTPBodyMode = "auto" | "custom";
 
 export interface ComputerUseToolConfig {
-  type: 'computer_use_preview'
-  display_width: number
-  display_height: number
-  environment: 'browser' | 'mac' | 'windows' | 'ubuntu'
+  type: "computer_use_preview";
+  display_width: number;
+  display_height: number;
+  environment: "browser" | "mac" | "windows" | "ubuntu";
 }
 
 export interface ImageGenerationToolConfig {
-  type: 'image_generation'
-  model?: 'gpt-image-1.5' | string
-  size?: '1024x1024' | '1024x1536' | '1536x1024' | 'auto'
-  quality?: 'low' | 'medium' | 'high' | 'auto'
-  format?: 'png' | 'jpeg' | 'webp'
-  compression?: number // 0-100
-  background?: 'transparent' | 'opaque' | 'auto'
-  input_fidelity?: 'low' | 'high'
+  type: "image_generation";
+  model?: "gpt-image-1.5" | string;
+  size?: "1024x1024" | "1024x1536" | "1536x1024" | "auto";
+  quality?: "low" | "medium" | "high" | "auto";
+  format?: "png" | "jpeg" | "webp";
+  compression?: number; // 0-100
+  background?: "transparent" | "opaque" | "auto";
+  input_fidelity?: "low" | "high";
 }
 
-export type Tool = ToolType | ComputerUseToolConfig | ImageGenerationToolConfig
+export type Tool = ToolType | ComputerUseToolConfig | ImageGenerationToolConfig;
 
 export interface WorkflowStep {
-  step_name: string
-  step_description?: string
-  step_type?: 'ai_generation' | 'webhook' // Default: 'ai_generation'
-  model: AIModel
-  reasoning_effort?: ReasoningEffort
-  instructions: string
-  step_order?: number
-  tools?: Tool[]
-  tool_choice?: ToolChoice
-  depends_on?: number[] // Array of step indices this step depends on
+  step_name: string;
+  step_description?: string;
+  step_type?: "ai_generation" | "webhook"; // Default: 'ai_generation'
+  model: AIModel;
+  reasoning_effort?: ReasoningEffort;
+  instructions: string;
+  step_order?: number;
+  tools?: Tool[];
+  tool_choice?: ToolChoice;
+  depends_on?: number[]; // Array of step indices this step depends on
   // Webhook step fields
-  webhook_url?: string
-  webhook_method?: HTTPMethod
-  webhook_headers?: Record<string, string>
-  webhook_query_params?: Record<string, string>
-  webhook_content_type?: string
-  webhook_body_mode?: HTTPBodyMode
-  webhook_body?: string
-  webhook_save_response?: boolean
+  webhook_url?: string;
+  webhook_method?: HTTPMethod;
+  webhook_headers?: Record<string, string>;
+  webhook_query_params?: Record<string, string>;
+  webhook_content_type?: string;
+  webhook_body_mode?: HTTPBodyMode;
+  webhook_body?: string;
+  webhook_save_response?: boolean;
   webhook_data_selection?: {
-    include_submission: boolean
-    exclude_step_indices?: number[] // Steps to exclude (all included by default)
-    include_job_info: boolean
-  }
+    include_submission: boolean;
+    exclude_step_indices?: number[]; // Steps to exclude (all included by default)
+    include_job_info: boolean;
+  };
 }
 
-export type DeliveryMethod = 'webhook' | 'sms' | 'none'
+export type DeliveryMethod = "webhook" | "sms" | "none";
 
 export interface WorkflowDeliveryConfig {
-  delivery_method: DeliveryMethod
-  delivery_webhook_url: string
-  delivery_webhook_headers: Record<string, string>
-  delivery_sms_enabled: boolean
-  delivery_sms_message: string
-  delivery_sms_ai_generated: boolean
-  delivery_sms_ai_instructions: string
+  delivery_method: DeliveryMethod;
+  delivery_webhook_url: string;
+  delivery_webhook_headers: Record<string, string>;
+  delivery_sms_enabled: boolean;
+  delivery_sms_message: string;
+  delivery_sms_ai_generated: boolean;
+  delivery_sms_ai_instructions: string;
 }
 
 // Folder for organizing workflows
 export interface Folder {
-  folder_id: string
-  tenant_id: string
-  folder_name: string
-  parent_folder_id?: string | null  // For nested folders (future)
-  workflow_count?: number
-  created_at: string
-  updated_at: string
+  folder_id: string;
+  tenant_id: string;
+  folder_name: string;
+  parent_folder_id?: string | null; // For nested folders (future)
+  workflow_count?: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface FolderCreateRequest {
-  folder_name: string
-  parent_folder_id?: string | null
+  folder_name: string;
+  parent_folder_id?: string | null;
 }
 
 export interface FolderUpdateRequest {
-  folder_name?: string
-  parent_folder_id?: string | null
+  folder_name?: string;
+  parent_folder_id?: string | null;
 }
 
 export interface FolderListResponse {
-  folders: Folder[]
+  folders: Folder[];
 }
 
 export interface Workflow extends BaseEntity {
-  workflow_id: string
-  tenant_id: string
-  workflow_name: string
-  workflow_description: string
-  template_id: string
-  template_version: number
-  steps?: WorkflowStep[]
-  status: 'active' | 'inactive' | 'draft'
-  folder_id?: string | null  // Folder this workflow belongs to
+  workflow_id: string;
+  tenant_id: string;
+  workflow_name: string;
+  workflow_description: string;
+  template_id: string;
+  template_version: number;
+  steps?: WorkflowStep[];
+  status: "active" | "inactive" | "draft";
+  folder_id?: string | null; // Folder this workflow belongs to
   form?: {
-    form_id: string
-    form_name: string
-    public_slug: string
-    status: string
-  }
+    form_id: string;
+    form_name: string;
+    public_slug: string;
+    status: string;
+  };
   // Legacy fields (deprecated - kept for backward compatibility with existing database records)
   // All new workflows must use the steps format. These fields are ignored.
-  ai_model?: AIModel
-  ai_instructions?: string
-  rewrite_model?: AIModel
-  research_enabled?: boolean
-  html_enabled?: boolean
+  ai_model?: AIModel;
+  ai_instructions?: string;
+  rewrite_model?: AIModel;
+  research_enabled?: boolean;
+  html_enabled?: boolean;
 }
 
 export interface WorkflowCreateRequest {
-  workflow_name: string
-  workflow_description: string
-  template_id?: string
-  template_version?: number
-  steps?: WorkflowStep[]
+  workflow_name: string;
+  workflow_description: string;
+  template_id?: string;
+  template_version?: number;
+  steps?: WorkflowStep[];
   // Legacy fields (deprecated - kept for backward compatibility, but ignored)
-  ai_model?: AIModel
-  ai_instructions?: string
-  rewrite_model?: AIModel
-  research_enabled?: boolean
-  html_enabled?: boolean
-  delivery_method?: DeliveryMethod
-  delivery_webhook_url?: string
-  delivery_webhook_headers?: Record<string, string>
-  delivery_sms_enabled?: boolean
-  delivery_sms_message?: string
-  delivery_sms_ai_generated?: boolean
-  delivery_sms_ai_instructions?: string
+  ai_model?: AIModel;
+  ai_instructions?: string;
+  rewrite_model?: AIModel;
+  research_enabled?: boolean;
+  html_enabled?: boolean;
+  delivery_method?: DeliveryMethod;
+  delivery_webhook_url?: string;
+  delivery_webhook_headers?: Record<string, string>;
+  delivery_sms_enabled?: boolean;
+  delivery_sms_message?: string;
+  delivery_sms_ai_generated?: boolean;
+  delivery_sms_ai_instructions?: string;
 }
 
 export interface WorkflowUpdateRequest extends Partial<WorkflowCreateRequest> {}
 
 export interface WorkflowListResponse {
-  workflows: Workflow[]
-  total?: number
+  workflows: Workflow[];
+  total?: number;
 }
 
 export interface WorkflowGenerationRequest {
-  description: string
-  model?: AIModel
-  webhook_url?: string
+  description: string;
+  model?: AIModel;
+  webhook_url?: string;
 }
 
 export interface WorkflowGenerationResponse {
-  job_id: string
-  status: 'pending' | 'processing' | 'completed' | 'failed'
-  result?: WorkflowGenerationResult
-  error_message?: string
+  job_id: string;
+  status: "pending" | "processing" | "completed" | "failed";
+  result?: WorkflowGenerationResult;
+  error_message?: string;
 }
 
 export interface WorkflowGenerationResult {
   workflow: {
-    workflow_name?: string
-    workflow_description?: string
-    research_instructions?: string
-    steps?: WorkflowStep[]
-  }
+    workflow_name?: string;
+    workflow_description?: string;
+    research_instructions?: string;
+    steps?: WorkflowStep[];
+  };
   template: {
-    template_name?: string
-    template_description?: string
-    html_content?: string
-    placeholder_tags?: string[]
-  }
+    template_name?: string;
+    template_description?: string;
+    html_content?: string;
+    placeholder_tags?: string[];
+  };
   form: {
-    form_name?: string
-    public_slug?: string
+    form_name?: string;
+    public_slug?: string;
     form_fields_schema?: {
-      fields: FormField[]
-    }
-  }
+      fields: FormField[];
+    };
+  };
 }
 
 export interface WorkflowRefineInstructionsRequest {
-  current_instructions: string
-  edit_prompt: string
-  model?: AIModel
+  current_instructions: string;
+  edit_prompt: string;
+  model?: AIModel;
 }
 
 export interface WorkflowRefineInstructionsResponse {
-  refined_instructions: string
+  refined_instructions: string;
 }
-

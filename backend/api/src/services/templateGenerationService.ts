@@ -1,6 +1,6 @@
-import OpenAI from 'openai';
-import { calculateOpenAICost } from './costService';
-import { callResponsesWithTimeout } from '../utils/openaiHelpers';
+import OpenAI from "openai";
+import { calculateOpenAICost } from "./costService";
+import { callResponsesWithTimeout } from "../utils/openaiHelpers";
 
 export interface UsageInfo {
   service_type: string;
@@ -24,8 +24,8 @@ export class TemplateGenerationService {
       inputTokens: number,
       outputTokens: number,
       costUsd: number,
-      jobId?: string
-    ) => Promise<void>
+      jobId?: string,
+    ) => Promise<void>,
   ) {}
 
   /**
@@ -37,16 +37,16 @@ export class TemplateGenerationService {
     tenantId: string,
     jobId?: string,
     brandContext?: string,
-    icpContext?: string
+    icpContext?: string,
   ): Promise<{ htmlContent: string; usageInfo: UsageInfo }> {
-    let contextSection = '';
+    let contextSection = "";
     if (brandContext) {
       contextSection += `\n\n## Brand Context\n${brandContext}`;
     }
     if (icpContext) {
       contextSection += `\n\n## Ideal Customer Profile (ICP) Document\n${icpContext}`;
     }
-    
+
     const templatePrompt = `You are an expert HTML template designer for lead magnets. Create a professional HTML template for: "${description}"${contextSection}
 
 Requirements:
@@ -61,34 +61,40 @@ Requirements:
 
 Return ONLY the HTML code, no markdown formatting, no explanations.`;
 
-    console.log('[Template Generation Service] Calling OpenAI for template HTML generation...');
+    console.log(
+      "[Template Generation Service] Calling OpenAI for template HTML generation...",
+    );
     const templateStartTime = Date.now();
-    
+
     const templateCompletionParams: any = {
       model,
-      instructions: 'You are an expert HTML template designer. Return only valid HTML code without markdown formatting.',
+      instructions:
+        "You are an expert HTML template designer. Return only valid HTML code without markdown formatting.",
       input: templatePrompt,
     };
-    if (!model.startsWith('gpt-5')) {
+    if (!model.startsWith("gpt-5")) {
       templateCompletionParams.temperature = 0.7;
     }
     const templateCompletion = await callResponsesWithTimeout(
       () => this.openai.responses.create(templateCompletionParams),
-      'template HTML generation'
+      "template HTML generation",
     );
 
     const templateDuration = Date.now() - templateStartTime;
     const templateModelUsed = (templateCompletion as any).model || model;
-    console.log('[Template Generation Service] Template HTML generation completed', {
-      duration: `${templateDuration}ms`,
-      tokensUsed: templateCompletion.usage?.total_tokens,
-      modelUsed: templateModelUsed,
-    });
+    console.log(
+      "[Template Generation Service] Template HTML generation completed",
+      {
+        duration: `${templateDuration}ms`,
+        tokensUsed: templateCompletion.usage?.total_tokens,
+        modelUsed: templateModelUsed,
+      },
+    );
 
     // Track usage
     const templateUsage = templateCompletion.usage;
     let usageInfo: UsageInfo = {
-      service_type: 'openai_template_generate',
+      service_type: "openai_template_generate",
       model: templateModelUsed,
       input_tokens: 0,
       output_tokens: 0,
@@ -98,10 +104,14 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
     if (templateUsage) {
       const inputTokens = templateUsage.input_tokens || 0;
       const outputTokens = templateUsage.output_tokens || 0;
-      const costData = calculateOpenAICost(templateModelUsed, inputTokens, outputTokens);
-      
+      const costData = calculateOpenAICost(
+        templateModelUsed,
+        inputTokens,
+        outputTokens,
+      );
+
       usageInfo = {
-        service_type: 'openai_template_generate',
+        service_type: "openai_template_generate",
         model: templateModelUsed,
         input_tokens: inputTokens,
         output_tokens: outputTokens,
@@ -110,27 +120,31 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
 
       await this.storeUsageRecord(
         tenantId,
-        'openai_template_generate',
+        "openai_template_generate",
         templateModelUsed,
         inputTokens,
         outputTokens,
         costData.cost_usd,
-        jobId
+        jobId,
       );
     }
 
     // Validate response has output_text
     if (!templateCompletion.output_text) {
-      throw new Error('OpenAI Responses API returned empty response. output_text is missing for template HTML generation.');
+      throw new Error(
+        "OpenAI Responses API returned empty response. output_text is missing for template HTML generation.",
+      );
     }
-    
+
     let cleanedHtml = templateCompletion.output_text;
-    
+
     // Clean up markdown code blocks if present
-    if (cleanedHtml.startsWith('```html')) {
-      cleanedHtml = cleanedHtml.replace(/^```html\s*/i, '').replace(/\s*```$/i, '');
-    } else if (cleanedHtml.startsWith('```')) {
-      cleanedHtml = cleanedHtml.replace(/^```\s*/i, '').replace(/\s*```$/i, '');
+    if (cleanedHtml.startsWith("```html")) {
+      cleanedHtml = cleanedHtml
+        .replace(/^```html\s*/i, "")
+        .replace(/\s*```$/i, "");
+    } else if (cleanedHtml.startsWith("```")) {
+      cleanedHtml = cleanedHtml.replace(/^```\s*/i, "").replace(/\s*```$/i, "");
     }
 
     return { htmlContent: cleanedHtml.trim(), usageInfo };
@@ -145,48 +159,57 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
     tenantId: string,
     jobId?: string,
     brandContext?: string,
-    icpContext?: string
-  ): Promise<{ templateName: string; templateDescription: string; usageInfo: UsageInfo }> {
-    let contextSection = '';
+    icpContext?: string,
+  ): Promise<{
+    templateName: string;
+    templateDescription: string;
+    usageInfo: UsageInfo;
+  }> {
+    let contextSection = "";
     if (brandContext) {
       contextSection += `\n\n## Brand Context\n${brandContext}`;
     }
     if (icpContext) {
       contextSection += `\n\n## Ideal Customer Profile (ICP) Document\n${icpContext}`;
     }
-    
+
     const templateNamePrompt = `Based on this lead magnet: "${description}"${contextSection}, generate:
 1. A short, descriptive template name (2-4 words max)
 2. A brief template description (1-2 sentences)
 
 Return JSON format: {"name": "...", "description": "..."}`;
 
-    console.log('[Template Generation Service] Calling OpenAI for template name/description generation...');
+    console.log(
+      "[Template Generation Service] Calling OpenAI for template name/description generation...",
+    );
     const templateNameStartTime = Date.now();
-    
+
     const templateNameCompletionParams: any = {
       model,
       input: templateNamePrompt,
     };
-    if (!model.startsWith('gpt-5')) {
+    if (!model.startsWith("gpt-5")) {
       templateNameCompletionParams.temperature = 0.5;
     }
     const templateNameCompletion = await callResponsesWithTimeout(
       () => this.openai.responses.create(templateNameCompletionParams),
-      'template name generation'
+      "template name generation",
     );
 
     const templateNameDuration = Date.now() - templateNameStartTime;
     const templateNameModel = (templateNameCompletion as any).model || model;
-    console.log('[Template Generation Service] Template name/description generation completed', {
-      duration: `${templateNameDuration}ms`,
-      modelUsed: templateNameModel,
-    });
+    console.log(
+      "[Template Generation Service] Template name/description generation completed",
+      {
+        duration: `${templateNameDuration}ms`,
+        modelUsed: templateNameModel,
+      },
+    );
 
     // Track usage
     const templateNameUsage = templateNameCompletion.usage;
     let usageInfo: UsageInfo = {
-      service_type: 'openai_template_generate',
+      service_type: "openai_template_generate",
       model: templateNameModel,
       input_tokens: 0,
       output_tokens: 0,
@@ -196,10 +219,14 @@ Return JSON format: {"name": "...", "description": "..."}`;
     if (templateNameUsage) {
       const inputTokens = templateNameUsage.input_tokens || 0;
       const outputTokens = templateNameUsage.output_tokens || 0;
-      const costData = calculateOpenAICost(templateNameModel, inputTokens, outputTokens);
-      
+      const costData = calculateOpenAICost(
+        templateNameModel,
+        inputTokens,
+        outputTokens,
+      );
+
       usageInfo = {
-        service_type: 'openai_template_generate',
+        service_type: "openai_template_generate",
         model: templateNameModel,
         input_tokens: inputTokens,
         output_tokens: outputTokens,
@@ -208,23 +235,26 @@ Return JSON format: {"name": "...", "description": "..."}`;
 
       await this.storeUsageRecord(
         tenantId,
-        'openai_template_generate',
+        "openai_template_generate",
         templateNameModel,
         inputTokens,
         outputTokens,
         costData.cost_usd,
-        jobId
+        jobId,
       );
     }
 
     // Validate response has output_text
     if (!templateNameCompletion.output_text) {
-      throw new Error('OpenAI Responses API returned empty response. output_text is missing for template name generation.');
+      throw new Error(
+        "OpenAI Responses API returned empty response. output_text is missing for template name generation.",
+      );
     }
-    
+
     const templateNameContent = templateNameCompletion.output_text;
-    let templateName = 'Generated Template';
-    let templateDescription = 'A professional HTML template for displaying lead magnet content';
+    let templateName = "Generated Template";
+    let templateDescription =
+      "A professional HTML template for displaying lead magnet content";
 
     try {
       const jsonMatch = templateNameContent.match(/\{[\s\S]*\}/);
@@ -234,10 +264,12 @@ Return JSON format: {"name": "...", "description": "..."}`;
         templateDescription = parsed.description || templateDescription;
       }
     } catch (e) {
-      console.warn('[Template Generation Service] Failed to parse template name JSON, using defaults', e);
+      console.warn(
+        "[Template Generation Service] Failed to parse template name JSON, using defaults",
+        e,
+      );
     }
 
     return { templateName, templateDescription, usageInfo };
   }
 }
-

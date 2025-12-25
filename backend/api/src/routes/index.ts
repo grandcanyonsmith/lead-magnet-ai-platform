@@ -1,16 +1,16 @@
-import { APIGatewayProxyEventV2 } from 'aws-lambda';
-import { RouteResponse } from './routes';
-import { router } from './router';
-import { registerPublicRoutes } from './publicRoutes';
-import { registerWorkflowRoutes } from '@domains/workflows';
-import { registerFormRoutes } from '@domains/forms';
-import { registerTemplateRoutes } from './templateRoutes';
-import { registerJobRoutes } from './jobRoutes';
-import { registerAdminRoutes } from './adminRoutes';
-import { registerFileRoutes } from './fileRoutes';
-import { registerImpersonationRoutes } from '@domains/impersonation';
-import { registerAuthRoutes } from './authRoutes';
-import { registerFolderRoutes } from './folderRoutes';
+import { APIGatewayProxyEventV2 } from "aws-lambda";
+import { RouteResponse } from "./routes";
+import { router } from "./router";
+import { registerPublicRoutes } from "./publicRoutes";
+import { registerWorkflowRoutes } from "@domains/workflows";
+import { registerFormRoutes } from "@domains/forms";
+import { registerTemplateRoutes } from "./templateRoutes";
+import { registerJobRoutes } from "./jobRoutes";
+import { registerAdminRoutes } from "./adminRoutes";
+import { registerFileRoutes } from "./fileRoutes";
+import { registerImpersonationRoutes } from "@domains/impersonation";
+import { registerAuthRoutes } from "./authRoutes";
+import { registerFolderRoutes } from "./folderRoutes";
 
 // Re-export RouteResponse for use in other modules
 export type { RouteResponse };
@@ -33,8 +33,7 @@ registerFolderRoutes();
  */
 export const routerHandler = async (
   event: APIGatewayProxyEventV2,
-  tenantId?: string
+  tenantId?: string,
 ): Promise<RouteResponse> => {
   return await router.match(event, tenantId);
 };
-

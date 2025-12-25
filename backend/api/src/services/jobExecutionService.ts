@@ -1,14 +1,16 @@
-import { SFNClient, StartExecutionCommand } from '@aws-sdk/client-sfn';
-import { db } from '../utils/db';
-import { logger } from '../utils/logger';
-import { ApiError } from '../utils/errors';
-import { processJobLocally } from './jobProcessor';
-import { env } from '../utils/env';
+import { SFNClient, StartExecutionCommand } from "@aws-sdk/client-sfn";
+import { db } from "../utils/db";
+import { logger } from "../utils/logger";
+import { ApiError } from "../utils/errors";
+import { processJobLocally } from "./jobProcessor";
+import { env } from "../utils/env";
 
 const JOBS_TABLE = env.jobsTable;
 const STEP_FUNCTIONS_ARN = env.stepFunctionsArn;
 
-const sfnClient = STEP_FUNCTIONS_ARN ? new SFNClient({ region: env.awsRegion }) : null;
+const sfnClient = STEP_FUNCTIONS_ARN
+  ? new SFNClient({ region: env.awsRegion })
+  : null;
 
 export interface JobExecutionParams {
   jobId: string;
@@ -19,11 +21,11 @@ export interface JobExecutionParams {
 
 /**
  * Service for handling job execution via Step Functions or local processing.
- * 
+ *
  * Execution Path Selection:
  * - Step Functions (Production): When STEP_FUNCTIONS_ARN is set and not in local/dev mode
  * - Direct Processing (Local): When IS_LOCAL=true OR NODE_ENV=development OR STEP_FUNCTIONS_ARN not set
- * 
+ *
  * See docs/EXECUTION_PATHS.md for detailed explanation.
  */
 export class JobExecutionService {
@@ -36,14 +38,14 @@ export class JobExecutionService {
     try {
       // Check if we're in local development - process job directly
       if (env.isDevelopment() || !STEP_FUNCTIONS_ARN) {
-        logger.info('Local mode detected, processing job directly', { jobId });
-        
+        logger.info("Local mode detected, processing job directly", { jobId });
+
         // Import worker processor for local processing
         setImmediate(async () => {
           try {
             await processJobLocally(jobId, tenantId, workflowId, submissionId);
           } catch (error: any) {
-            logger.error('Error processing job in local mode', {
+            logger.error("Error processing job in local mode", {
               jobId,
               error: error.message,
               errorStack: error.stack,
@@ -52,13 +54,17 @@ export class JobExecutionService {
             });
             // Use the full error message if available (includes stderr/stdout from worker)
             // Only update if not already updated by processJobLocally
-            const errorMessage = error.message || 'Unknown error';
-            if (!errorMessage.includes('Worker execution failed')) {
-              await db.update(JOBS_TABLE, { job_id: jobId }, {
-                status: 'failed',
-                error_message: `Processing failed: ${errorMessage}`,
-                updated_at: new Date().toISOString(),
-              });
+            const errorMessage = error.message || "Unknown error";
+            if (!errorMessage.includes("Worker execution failed")) {
+              await db.update(
+                JOBS_TABLE,
+                { job_id: jobId },
+                {
+                  status: "failed",
+                  error_message: `Processing failed: ${errorMessage}`,
+                  updated_at: new Date().toISOString(),
+                },
+              );
             }
           }
         });
@@ -75,25 +81,31 @@ export class JobExecutionService {
         });
 
         await sfnClient!.send(command);
-        logger.info('Started Step Functions execution', { jobId, workflowId });
+        logger.info("Started Step Functions execution", { jobId, workflowId });
       }
     } catch (error: any) {
-      logger.error('Failed to start job processing', { 
+      logger.error("Failed to start job processing", {
         error: error.message,
         errorStack: error.stack,
         jobId,
         isLocal: env.isDevelopment(),
       });
       // Update job status to failed
-      await db.update(JOBS_TABLE, { job_id: jobId }, {
-        status: 'failed',
-        error_message: `Failed to start processing: ${error.message}`,
-        updated_at: new Date().toISOString(),
-      });
-      throw new ApiError(`Failed to start job processing: ${error.message}`, 500);
+      await db.update(
+        JOBS_TABLE,
+        { job_id: jobId },
+        {
+          status: "failed",
+          error_message: `Failed to start processing: ${error.message}`,
+          updated_at: new Date().toISOString(),
+        },
+      );
+      throw new ApiError(
+        `Failed to start job processing: ${error.message}`,
+        500,
+      );
     }
   }
 }
 
 export const jobExecutionService = new JobExecutionService();
-

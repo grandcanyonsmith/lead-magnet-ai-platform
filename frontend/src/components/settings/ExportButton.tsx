@@ -2,47 +2,51 @@
  * Export button component for usage data
  */
 
-'use client'
+"use client";
 
-import { FiDownload } from 'react-icons/fi'
-import { UsageResponse } from '@/types/usage'
-import { downloadCSV, downloadJSON, formatDateForFilename } from '@/utils/exportUtils'
-import { ServiceUsage } from '@/types/usage'
+import { FiDownload } from "react-icons/fi";
+import { UsageResponse } from "@/types/usage";
+import {
+  downloadCSV,
+  downloadJSON,
+  formatDateForFilename,
+} from "@/utils/exportUtils";
+import { ServiceUsage } from "@/types/usage";
 
 interface ExportButtonProps {
-  usage: UsageResponse
-  startDate: string
-  endDate: string
+  usage: UsageResponse;
+  startDate: string;
+  endDate: string;
 }
 
 export function ExportButton({ usage, startDate, endDate }: ExportButtonProps) {
   const handleExportCSV = () => {
     // Prepare data for CSV export
-    const services = Object.values(usage.openai.by_service)
+    const services = Object.values(usage.openai.by_service);
     const csvData = services.map((service: ServiceUsage) => ({
-      Service: service.service_type.replace(/openai_/g, '').replace(/_/g, ' '),
+      Service: service.service_type.replace(/openai_/g, "").replace(/_/g, " "),
       Calls: service.calls,
-      'Input Tokens': service.input_tokens,
-      'Output Tokens': service.output_tokens,
-      'Total Tokens': service.total_tokens,
-      'Actual Cost': service.actual_cost.toFixed(4),
-      'Upcharge Cost': service.upcharge_cost.toFixed(4),
-    }))
+      "Input Tokens": service.input_tokens,
+      "Output Tokens": service.output_tokens,
+      "Total Tokens": service.total_tokens,
+      "Actual Cost": service.actual_cost.toFixed(4),
+      "Upcharge Cost": service.upcharge_cost.toFixed(4),
+    }));
 
     // Add summary row
     csvData.push({
-      Service: 'TOTAL',
+      Service: "TOTAL",
       Calls: usage.summary.total_calls,
-      'Input Tokens': usage.summary.total_input_tokens,
-      'Output Tokens': usage.summary.total_output_tokens,
-      'Total Tokens': usage.summary.total_tokens,
-      'Actual Cost': usage.openai.total_actual.toFixed(4),
-      'Upcharge Cost': usage.openai.total_upcharge.toFixed(4),
-    })
+      "Input Tokens": usage.summary.total_input_tokens,
+      "Output Tokens": usage.summary.total_output_tokens,
+      "Total Tokens": usage.summary.total_tokens,
+      "Actual Cost": usage.openai.total_actual.toFixed(4),
+      "Upcharge Cost": usage.openai.total_upcharge.toFixed(4),
+    });
 
-    const filename = `usage-${startDate}_to_${endDate}.csv`
-    downloadCSV(csvData, filename)
-  }
+    const filename = `usage-${startDate}_to_${endDate}.csv`;
+    downloadCSV(csvData, filename);
+  };
 
   const handleExportJSON = () => {
     const exportData = {
@@ -55,21 +59,25 @@ export function ExportButton({ usage, startDate, endDate }: ExportButtonProps) {
         total_actual: usage.openai.total_actual,
         total_upcharge: usage.openai.total_upcharge,
       },
-      services: Object.values(usage.openai.by_service).map((service: ServiceUsage) => ({
-        service_type: service.service_type,
-        service_name: service.service_type.replace(/openai_/g, '').replace(/_/g, ' '),
-        calls: service.calls,
-        input_tokens: service.input_tokens,
-        output_tokens: service.output_tokens,
-        total_tokens: service.total_tokens,
-        actual_cost: service.actual_cost,
-        upcharge_cost: service.upcharge_cost,
-      })),
-    }
+      services: Object.values(usage.openai.by_service).map(
+        (service: ServiceUsage) => ({
+          service_type: service.service_type,
+          service_name: service.service_type
+            .replace(/openai_/g, "")
+            .replace(/_/g, " "),
+          calls: service.calls,
+          input_tokens: service.input_tokens,
+          output_tokens: service.output_tokens,
+          total_tokens: service.total_tokens,
+          actual_cost: service.actual_cost,
+          upcharge_cost: service.upcharge_cost,
+        }),
+      ),
+    };
 
-    const filename = `usage-${startDate}_to_${endDate}.json`
-    downloadJSON(exportData, filename)
-  }
+    const filename = `usage-${startDate}_to_${endDate}.json`;
+    downloadJSON(exportData, filename);
+  };
 
   return (
     <div className="flex gap-2">
@@ -92,6 +100,5 @@ export function ExportButton({ usage, startDate, endDate }: ExportButtonProps) {
         Export JSON
       </button>
     </div>
-  )
+  );
 }
-
