@@ -18,9 +18,181 @@ export type PatchHtmlResult = {
   patchedHtml: string;
 };
 
+type ParsedSimpleSelector = {
+  tag: string;
+  id: string | null;
+  classes: string[];
+};
+
+const VOID_ELEMENTS = new Set([
+  'area',
+  'base',
+  'br',
+  'col',
+  'embed',
+  'hr',
+  'img',
+  'input',
+  'link',
+  'meta',
+  'param',
+  'source',
+  'track',
+  'wbr',
+]);
+
 function looksLikeHtmlFragment(html: string): boolean {
   const trimmed = (html || '').trim();
   return trimmed.startsWith('<') && trimmed.endsWith('>') && trimmed.length > 10;
+}
+
+function parseSimpleSelector(selector: string | null): ParsedSimpleSelector | null {
+  const raw = (selector || '').trim();
+  if (!raw) return null;
+
+  // Our frontend selection script builds selectors like:
+  //   tagName + (#id?) + (.class1.class2...)
+  // Class tokens may include characters like ":" (Tailwind), so we parse by delimiters
+  // rather than using a restrictive regex.
+  let i = 0;
+  while (i < raw.length && raw[i] !== '#' && raw[i] !== '.') i++;
+  const tag = raw.slice(0, i).trim().toLowerCase();
+  if (!tag) return null;
+
+  let id: string | null = null;
+  const classes: string[] = [];
+
+  while (i < raw.length) {
+    const ch = raw[i];
+    if (ch === '#') {
+      i++;
+      const start = i;
+      while (i < raw.length && raw[i] !== '.' && raw[i] !== '#') i++;
+      const value = raw.slice(start, i).trim();
+      if (value) id = value;
+      continue;
+    }
+    if (ch === '.') {
+      i++;
+      const start = i;
+      while (i < raw.length && raw[i] !== '.' && raw[i] !== '#') i++;
+      const value = raw.slice(start, i).trim();
+      if (value) classes.push(value);
+      continue;
+    }
+    i++;
+  }
+
+  return { tag, id, classes };
+}
+
+function stripHtmlToText(html: string): string {
+  return String(html || '')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function findElementRangeBySelector(
+  html: string,
+  selector: ParsedSimpleSelector,
+  selectedOuterHtml?: string | null
+): { start: number; end: number; outerHtml: string } | null {
+  const tag = selector.tag.toLowerCase();
+  const re = new RegExp(`<${tag}\\b[^>]*>`, 'gi');
+
+  const candidates: Array<{ start: number; end: number; outerHtml: string }> = [];
+
+  const requiredClasses = selector.classes.filter(Boolean);
+  const requireId = selector.id && selector.id.trim().length > 0 ? selector.id.trim() : null;
+
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(html))) {
+    const start = match.index;
+    const openTag = match[0];
+
+    // Quick attribute checks (id/classes) on the opening tag.
+    if (requireId) {
+      const idMatch = openTag.match(/\bid\s*=\s*["']([^"']+)["']/i);
+      const idValue = idMatch?.[1] ? String(idMatch[1]) : '';
+      if (idValue !== requireId) {
+        continue;
+      }
+    }
+
+    if (requiredClasses.length > 0) {
+      const classMatch = openTag.match(/\bclass\s*=\s*["']([^"']*)["']/i);
+      const classValue = classMatch?.[1] ? String(classMatch[1]) : '';
+      const classTokens = classValue.split(/\s+/).filter(Boolean);
+      const hasAll = requiredClasses.every((c) => classTokens.includes(c));
+      if (!hasAll) {
+        continue;
+      }
+    }
+
+    const openEnd = start + openTag.length;
+    const isSelfClosing = openTag.endsWith('/>') || VOID_ELEMENTS.has(tag);
+    if (isSelfClosing) {
+      candidates.push({ start, end: openEnd, outerHtml: html.slice(start, openEnd) });
+      continue;
+    }
+
+    // Find the matching close tag by tracking nested tags of the same name.
+    const tagRe = new RegExp(`<\\/?${tag}\\b[^>]*>`, 'gi');
+    tagRe.lastIndex = openEnd;
+
+    let depth = 1;
+    let innerMatch: RegExpExecArray | null;
+    while ((innerMatch = tagRe.exec(html))) {
+      const token = innerMatch[0];
+      const isClose = token.startsWith('</');
+      const isTokenSelfClosing = !isClose && token.endsWith('/>');
+
+      if (isClose) {
+        depth -= 1;
+        if (depth === 0) {
+          const end = innerMatch.index + token.length;
+          candidates.push({ start, end, outerHtml: html.slice(start, end) });
+          break;
+        }
+        continue;
+      }
+
+      if (!isTokenSelfClosing) {
+        depth += 1;
+      }
+    }
+  }
+
+  if (candidates.length === 0) return null;
+  if (candidates.length === 1) return candidates[0];
+
+  // Best-effort disambiguation using selectedOuterHtml (if present).
+  const selectedText = selectedOuterHtml ? stripHtmlToText(selectedOuterHtml).slice(0, 80) : '';
+  const selectedLen = selectedOuterHtml ? selectedOuterHtml.length : 0;
+
+  let best = candidates[0];
+  let bestScore = Number.NEGATIVE_INFINITY;
+
+  for (const cand of candidates) {
+    let score = 0;
+    if (selectedLen > 0) {
+      score -= Math.abs(cand.outerHtml.length - selectedLen);
+    }
+    if (selectedText) {
+      const candText = stripHtmlToText(cand.outerHtml);
+      if (candText.includes(selectedText)) score += 10000;
+      else if (candText.includes(selectedText.slice(0, 40))) score += 5000;
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      best = cand;
+    }
+  }
+
+  return best;
 }
 
 function extractInjectedBlocks(html: string): { cleanedHtml: string; injectedBlocks: string[] } {
@@ -148,8 +320,7 @@ Your task:
                 ...(supportsReasoningEffort && reasoningEffort ? { reasoning: { effort: reasoningEffort } } : {}),
                 // NOTE: Avoid forcing priority tier here; it can be unavailable in some environments.
               }),
-            'HTML Patch OpenAI call (selected element)',
-            25000
+            'HTML Patch OpenAI call (selected element)'
           ),
         {
           maxAttempts: 2,
@@ -180,10 +351,28 @@ Your task:
           };
         }
 
-        logger.warn('[HtmlPatchService] Selected outerHTML not found in document; falling back to full-document mode', {
-          selectedOuterHtmlLength: selectedOuterHtml.length,
-          cleanedHtmlLength: cleanedHtml.length,
-        });
+        const parsed = parseSimpleSelector(selector);
+        if (parsed) {
+          const range = findElementRangeBySelector(cleanedHtml, parsed, selectedOuterHtml);
+          if (range) {
+            const patchedHtml =
+              cleanedHtml.slice(0, range.start) + updatedOuterHtmlRaw + cleanedHtml.slice(range.end);
+            const patchedWithBlocks = injectBlocksBeforeBodyClose(patchedHtml, injectedBlocks);
+            return {
+              summary: 'Updated selected element based on your request.',
+              patchedHtml: patchedWithBlocks,
+            };
+          }
+        }
+
+        logger.warn(
+          '[HtmlPatchService] Selected outerHTML not found (and selector match failed); falling back to full-document mode',
+          {
+            selector,
+            selectedOuterHtmlLength: selectedOuterHtml.length,
+            cleanedHtmlLength: cleanedHtml.length,
+          }
+        );
       } else {
         logger.warn('[HtmlPatchService] Selected element mode returned non-fragment; falling back to full-document mode', {
           outputLength: updatedOuterHtmlRaw.length,
@@ -228,8 +417,8 @@ Input HTML is provided below.`;
     hasSelectedOuterHtml: Boolean(selectedOuterHtml),
   });
 
-  // NOTE: No app-level timeout is enforced here. Upstream infrastructure (like API Gateway/Lambda)
-  // may still enforce request timeouts depending on deployment configuration.
+  // NOTE: We intentionally do NOT enforce an app-level timeout here. Upstream infrastructure
+  // (API Gateway/Lambda/ALB/etc.) may still enforce request timeouts depending on deployment.
   const response = await retryWithBackoff(
     () =>
       callResponsesWithTimeout(
@@ -241,8 +430,7 @@ Input HTML is provided below.`;
             ...(supportsReasoningEffort && reasoningEffort ? { reasoning: { effort: reasoningEffort } } : {}),
             // NOTE: Avoid forcing priority tier here; it can be unavailable in some environments.
           }),
-        'HTML Patch OpenAI call (full document)',
-        25000
+        'HTML Patch OpenAI call (full document)'
       ),
     {
       maxAttempts: 2,
