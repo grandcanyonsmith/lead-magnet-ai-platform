@@ -36,6 +36,7 @@ export declare const TABLE_NAMES: {
     readonly WEBHOOK_LOGS: "leadmagnet-webhook-logs";
     readonly TRACKING_EVENTS: "leadmagnet-tracking-events";
     readonly RATE_LIMITS: "leadmagnet-rate-limits";
+    readonly HTML_PATCH_REQUESTS: "leadmagnet-html-patch-requests";
 };
 /**
  * Lambda function names
@@ -148,6 +149,7 @@ export declare const ENV_VAR_NAMES: {
     readonly LOG_LEVEL: "LOG_LEVEL";
     readonly ARTIFACTS_BUCKET: "ARTIFACTS_BUCKET";
     readonly CLOUDFRONT_DOMAIN: "CLOUDFRONT_DOMAIN";
+    readonly CLOUDFRONT_DISTRIBUTION_ID: "CLOUDFRONT_DISTRIBUTION_ID";
     readonly STEP_FUNCTIONS_ARN: "STEP_FUNCTIONS_ARN";
     readonly API_GATEWAY_URL: "API_GATEWAY_URL";
     readonly LAMBDA_FUNCTION_NAME: "LAMBDA_FUNCTION_NAME";
