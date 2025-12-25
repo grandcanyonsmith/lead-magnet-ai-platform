@@ -103,7 +103,7 @@ export function TemplateEditor({ templateData, onChange }: TemplateEditorProps) 
                   srcDoc={previewHtml}
                   className="w-full h-full border-0"
                   title="HTML Preview"
-                  sandbox="allow-same-origin allow-scripts"
+                  sandbox="allow-scripts allow-popups"
                 />
               </div>
             )}

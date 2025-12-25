@@ -7,9 +7,23 @@ import { ApiError } from './errors'
 import { logger } from '@/utils/logger'
 
 // Default to production API URL so hosted builds work even if env vars are missing.
-// Local development overrides this via NEXT_PUBLIC_API_URL in .env.local.
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'https://czp5b77azd.execute-api.us-east-1.amazonaws.com'
+// For local dev on localhost, fall back to the local API automatically to avoid accidentally
+// calling production when NEXT_PUBLIC_API_URL isn't set.
+const API_URL = (() => {
+  const envUrl = (process.env.NEXT_PUBLIC_API_URL || '').trim()
+  if (envUrl) return envUrl
+
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname
+    if (host === 'localhost' || host === '127.0.0.1') {
+      // Typical local setup: Next.js on :3000, API on :3001.
+      const origin = window.location.origin || 'http://localhost:3000'
+      return origin.replace(/:\d+$/, ':3001')
+    }
+  }
+
+  return 'https://czp5b77azd.execute-api.us-east-1.amazonaws.com'
+})()
 
 export interface TokenProvider {
   getToken(): string | null
