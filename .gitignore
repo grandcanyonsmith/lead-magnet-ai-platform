@@ -95,6 +95,7 @@ backend/api/index.js
 # Frontend
 frontend/out/
 frontend/.next/
+frontend/.next-dev/
 
 # Temporary job outputs
 job_outputs/
