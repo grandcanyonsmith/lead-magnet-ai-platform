@@ -2,11 +2,11 @@
  * Rate limiting middleware
  */
 
-import { APIGatewayProxyEventV2 } from 'aws-lambda';
-import { RouteResponse } from '../routes';
-import { RateLimitError } from '../utils/errors';
-import { logger } from '../utils/logger';
-import { env } from '../utils/env';
+import { APIGatewayProxyEventV2 } from "aws-lambda";
+import { RouteResponse } from "../routes";
+import { RateLimitError } from "../utils/errors";
+import { logger } from "../utils/logger";
+import { env } from "../utils/env";
 
 /**
  * Rate limit configuration
@@ -40,15 +40,18 @@ setInterval(() => {
 /**
  * Generate rate limit key from request
  */
-function generateKey(event: APIGatewayProxyEventV2, config: RateLimitConfig): string {
+function generateKey(
+  event: APIGatewayProxyEventV2,
+  config: RateLimitConfig,
+): string {
   if (config.keyGenerator) {
     return config.keyGenerator(event);
   }
 
   // Default: use IP address or user ID
-  const sourceIp = event.requestContext?.http?.sourceIp || 'unknown';
+  const sourceIp = event.requestContext?.http?.sourceIp || "unknown";
   const userId = (event.requestContext as any)?.authorizer?.jwt?.claims?.sub;
-  
+
   return userId ? `user:${userId}` : `ip:${sourceIp}`;
 }
 
@@ -57,7 +60,7 @@ function generateKey(event: APIGatewayProxyEventV2, config: RateLimitConfig): st
  */
 function checkRateLimit(
   key: string,
-  config: RateLimitConfig
+  config: RateLimitConfig,
 ): { allowed: boolean; remaining: number; resetTime: number } {
   const now = Date.now();
   const entry = rateLimitStore.get(key);
@@ -97,7 +100,7 @@ function checkRateLimit(
 export function createRateLimiter(config: RateLimitConfig) {
   return async (
     event: APIGatewayProxyEventV2,
-    handler: () => Promise<RouteResponse>
+    handler: () => Promise<RouteResponse>,
   ): Promise<RouteResponse> => {
     // Skip rate limiting in development
     if (env.isDevelopment()) {
@@ -108,13 +111,13 @@ export function createRateLimiter(config: RateLimitConfig) {
     const result = checkRateLimit(key, config);
 
     if (!result.allowed) {
-      logger.warn('[Rate Limiter] Rate limit exceeded', {
+      logger.warn("[Rate Limiter] Rate limit exceeded", {
         key,
         path: event.rawPath,
         method: event.requestContext?.http?.method,
       });
 
-      throw new RateLimitError('Rate limit exceeded. Please try again later.', {
+      throw new RateLimitError("Rate limit exceeded. Please try again later.", {
         resetTime: new Date(result.resetTime).toISOString(),
         windowMs: config.windowMs,
         maxRequests: config.maxRequests,
@@ -141,9 +144,9 @@ export function createRateLimiter(config: RateLimitConfig) {
 
     // Add rate limit headers to response
     const headers = response.headers || {};
-    headers['X-RateLimit-Limit'] = String(config.maxRequests);
-    headers['X-RateLimit-Remaining'] = String(result.remaining);
-    headers['X-RateLimit-Reset'] = String(Math.ceil(result.resetTime / 1000));
+    headers["X-RateLimit-Limit"] = String(config.maxRequests);
+    headers["X-RateLimit-Remaining"] = String(result.remaining);
+    headers["X-RateLimit-Reset"] = String(Math.ceil(result.resetTime / 1000));
 
     return {
       ...response,
@@ -179,9 +182,8 @@ export const rateLimiters = {
     windowMs: 60 * 60 * 1000, // 1 hour
     maxRequests: 10,
     keyGenerator: (event) => {
-      const sourceIp = event.requestContext?.http?.sourceIp || 'unknown';
+      const sourceIp = event.requestContext?.http?.sourceIp || "unknown";
       return `form:${sourceIp}`;
     },
   }),
 };
-

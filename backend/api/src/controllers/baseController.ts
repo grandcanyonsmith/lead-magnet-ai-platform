@@ -1,8 +1,8 @@
-import { db } from '../utils/db';
-import { ApiError } from '../utils/errors';
-import { RouteResponse } from '../routes';
-import { logger } from '../utils/logger';
-import { env } from '../utils/env';
+import { db } from "../utils/db";
+import { ApiError } from "../utils/errors";
+import { RouteResponse } from "../routes";
+import { logger } from "../utils/logger";
+import { env } from "../utils/env";
 
 /**
  * Base controller class providing common CRUD patterns and utilities.
@@ -13,20 +13,28 @@ export abstract class BaseController {
    * Validate that a resource belongs to the specified tenant.
    * Throws ApiError if resource doesn't exist, is deleted, or doesn't belong to tenant.
    */
-  protected async validateTenantAccess<T extends { tenant_id: string; deleted_at?: string }>(
+  protected async validateTenantAccess<
+    T extends { tenant_id: string; deleted_at?: string },
+  >(
     tableName: string,
     key: Record<string, any>,
     tenantId: string,
-    resourceName: string = 'resource'
+    resourceName: string = "resource",
   ): Promise<T> {
-    const resource = await db.get(tableName, key) as T | undefined;
+    const resource = (await db.get(tableName, key)) as T | undefined;
 
     if (!resource || resource.deleted_at) {
-      throw new ApiError(`This ${resourceName} doesn't exist or has been removed`, 404);
+      throw new ApiError(
+        `This ${resourceName} doesn't exist or has been removed`,
+        404,
+      );
     }
 
     if (resource.tenant_id !== tenantId) {
-      throw new ApiError(`You don't have permission to access this ${resourceName}`, 403);
+      throw new ApiError(
+        `You don't have permission to access this ${resourceName}`,
+        403,
+      );
     }
 
     return resource;
@@ -62,7 +70,10 @@ export abstract class BaseController {
   /**
    * Standard list response helper with count.
    */
-  protected listResponse<T>(items: T[], resourceName: string = 'items'): RouteResponse {
+  protected listResponse<T>(
+    items: T[],
+    resourceName: string = "items",
+  ): RouteResponse {
     return {
       statusCode: 200,
       body: {
@@ -82,7 +93,9 @@ export abstract class BaseController {
   /**
    * Sort items by created_at in descending order (most recent first).
    */
-  protected sortByCreatedAtDesc<T extends { created_at?: string }>(items: T[]): T[] {
+  protected sortByCreatedAtDesc<T extends { created_at?: string }>(
+    items: T[],
+  ): T[] {
     return [...items].sort((a, b) => {
       const dateA = new Date(a.created_at || 0).getTime();
       const dateB = new Date(b.created_at || 0).getTime();
@@ -93,15 +106,23 @@ export abstract class BaseController {
   /**
    * Parse limit from query params with default.
    */
-  protected parseLimit(queryParams: Record<string, any>, defaultLimit: number = 50): number {
+  protected parseLimit(
+    queryParams: Record<string, any>,
+    defaultLimit: number = 50,
+  ): number {
     return queryParams.limit ? parseInt(queryParams.limit, 10) : defaultLimit;
   }
 
   /**
    * Parse offset from query params with default.
    */
-  protected parseOffset(queryParams: Record<string, any>, defaultOffset: number = 0): number {
-    return queryParams.offset ? parseInt(queryParams.offset, 10) : defaultOffset;
+  protected parseOffset(
+    queryParams: Record<string, any>,
+    defaultOffset: number = 0,
+  ): number {
+    return queryParams.offset
+      ? parseInt(queryParams.offset, 10)
+      : defaultOffset;
   }
 
   /**
@@ -111,9 +132,14 @@ export abstract class BaseController {
     tableName: string,
     key: Record<string, any>,
     tenantId: string,
-    resourceName: string = 'resource'
+    resourceName: string = "resource",
   ): Promise<RouteResponse> {
-    const resource = await this.validateTenantAccess<T>(tableName, key, tenantId, resourceName);
+    const resource = await this.validateTenantAccess<T>(
+      tableName,
+      key,
+      tenantId,
+      resourceName,
+    );
     return this.success(resource);
   }
 
@@ -130,13 +156,13 @@ export abstract class BaseController {
       statusFilter?: string;
       statusIndexName?: string;
       resourceName?: string;
-    } = {}
+    } = {},
   ): Promise<RouteResponse> {
     const {
       limit = 50,
       statusFilter,
       statusIndexName,
-      resourceName = 'items',
+      resourceName = "items",
     } = options;
 
     const parsedLimit = this.parseLimit(queryParams, limit);
@@ -147,20 +173,20 @@ export abstract class BaseController {
         const result = await db.query(
           tableName,
           statusIndexName,
-          'tenant_id = :tenant_id AND #status = :status',
-          { ':tenant_id': tenantId, ':status': statusFilter },
-          { '#status': 'status' },
-          parsedLimit
+          "tenant_id = :tenant_id AND #status = :status",
+          { ":tenant_id": tenantId, ":status": statusFilter },
+          { "#status": "status" },
+          parsedLimit,
         );
         items = result.items as T[];
       } else {
         const result = await db.query(
           tableName,
           indexName,
-          'tenant_id = :tenant_id',
-          { ':tenant_id': tenantId },
+          "tenant_id = :tenant_id",
+          { ":tenant_id": tenantId },
           undefined,
-          parsedLimit
+          parsedLimit,
         );
         items = result.items as T[];
       }
@@ -174,8 +200,8 @@ export abstract class BaseController {
 
       // Return empty array if table doesn't exist or permissions issue
       if (
-        dbError.name === 'ResourceNotFoundException' ||
-        dbError.name === 'AccessDeniedException'
+        dbError.name === "ResourceNotFoundException" ||
+        dbError.name === "AccessDeniedException"
       ) {
         items = [];
       } else {
@@ -187,7 +213,9 @@ export abstract class BaseController {
     const activeItems = this.filterDeleted(items);
 
     // Sort by created_at DESC
-    const sortedItems = this.sortByCreatedAtDesc(activeItems as Array<T & { created_at?: string }>);
+    const sortedItems = this.sortByCreatedAtDesc(
+      activeItems as Array<T & { created_at?: string }>,
+    );
 
     return this.listResponse(sortedItems, resourceName);
   }
@@ -197,9 +225,9 @@ export abstract class BaseController {
    */
   protected async create<T extends { tenant_id: string }>(
     tableName: string,
-    data: Omit<T, 'tenant_id' | 'created_at' | 'updated_at'>,
+    data: Omit<T, "tenant_id" | "created_at" | "updated_at">,
     tenantId: string,
-    generateId: () => string
+    generateId: () => string,
   ): Promise<RouteResponse> {
     const id = generateId();
     const idField = this.getIdFieldName(tableName);
@@ -223,19 +251,15 @@ export abstract class BaseController {
     key: Record<string, any>,
     updates: Partial<T>,
     tenantId: string,
-    resourceName: string = 'resource'
+    resourceName: string = "resource",
   ): Promise<RouteResponse> {
     // Validate tenant access first
     await this.validateTenantAccess<T>(tableName, key, tenantId, resourceName);
 
-    const updated = await db.update(
-      tableName,
-      key,
-      {
-        ...updates,
-        updated_at: new Date().toISOString(),
-      } as any
-    );
+    const updated = await db.update(tableName, key, {
+      ...updates,
+      updated_at: new Date().toISOString(),
+    } as any);
 
     return this.success(updated);
   }
@@ -247,7 +271,7 @@ export abstract class BaseController {
     tableName: string,
     key: Record<string, any>,
     tenantId: string,
-    resourceName: string = 'resource'
+    resourceName: string = "resource",
   ): Promise<RouteResponse> {
     // Validate tenant access first
     await this.validateTenantAccess(tableName, key, tenantId, resourceName);
@@ -266,10 +290,10 @@ export abstract class BaseController {
    */
   private getIdFieldName(tableName: string): string {
     // Remove 'leadmagnet-' prefix if present
-    const cleanName = tableName.replace(/^leadmagnet-/, '');
+    const cleanName = tableName.replace(/^leadmagnet-/, "");
 
     // Convert plural to singular and add '_id'
-    const singular = cleanName.replace(/s$/, '');
+    const singular = cleanName.replace(/s$/, "");
     return `${singular}_id`;
   }
 
@@ -280,4 +304,3 @@ export abstract class BaseController {
     return env;
   }
 }
-

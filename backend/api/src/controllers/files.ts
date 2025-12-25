@@ -1,13 +1,17 @@
-import { db } from '../utils/db';
-import { RouteResponse } from '../routes';
-import { RequestContext } from '../routes/router';
-import { getCustomerId, getActingUserId } from '../utils/rbac';
-import { s3Service } from '../services/s3Service';
-import { uploadFileToOpenAI, searchFilesSimple, deleteFileFromOpenAI } from '../services/openaiFileService';
-import { ApiError } from '../utils/errors';
-import { logger } from '../utils/logger';
-import { ulid } from 'ulid';
-import { env } from '../utils/env';
+import { db } from "../utils/db";
+import { RouteResponse } from "../routes";
+import { RequestContext } from "../routes/router";
+import { getCustomerId, getActingUserId } from "../utils/rbac";
+import { s3Service } from "../services/s3Service";
+import {
+  uploadFileToOpenAI,
+  searchFilesSimple,
+  deleteFileFromOpenAI,
+} from "../services/openaiFileService";
+import { ApiError } from "../utils/errors";
+import { logger } from "../utils/logger";
+import { ulid } from "ulid";
+import { env } from "../utils/env";
 
 const FILES_TABLE = env.filesTable;
 
@@ -25,35 +29,35 @@ class FilesController {
     body: any,
     _query: Record<string, string | undefined>,
     _tenantId: string | undefined,
-    context?: RequestContext
+    context?: RequestContext,
   ): Promise<RouteResponse> {
     const customerId = getCustomerId(context);
 
     // Validate request
     if (!body.file || !body.filename) {
-      throw new ApiError('File and filename are required', 400);
+      throw new ApiError("File and filename are required", 400);
     }
 
     // Parse file data (assuming base64 encoded or buffer)
     let fileBuffer: Buffer;
-    if (typeof body.file === 'string') {
+    if (typeof body.file === "string") {
       // Base64 encoded
-      fileBuffer = Buffer.from(body.file, 'base64');
+      fileBuffer = Buffer.from(body.file, "base64");
     } else if (Buffer.isBuffer(body.file)) {
       fileBuffer = body.file;
     } else {
-      throw new ApiError('Invalid file format', 400);
+      throw new ApiError("Invalid file format", 400);
     }
 
     const filename = body.filename as string;
-    const category = (body.category as string) || 'uploads';
-    const fileType = (body.fileType as string) || 'document';
-    const contentType = body.contentType || 'application/octet-stream';
+    const category = (body.category as string) || "uploads";
+    const fileType = (body.fileType as string) || "document";
+    const contentType = body.contentType || "application/octet-stream";
 
     // Validate file size (max 10MB)
     const maxSize = 10 * 1024 * 1024; // 10MB
     if (fileBuffer.length > maxSize) {
-      throw new ApiError('File size exceeds maximum allowed size (10MB)', 400);
+      throw new ApiError("File size exceeds maximum allowed size (10MB)", 400);
     }
 
     try {
@@ -63,7 +67,7 @@ class FilesController {
         fileBuffer,
         filename,
         category,
-        contentType
+        contentType,
       );
 
       // 2. Upload to OpenAI for indexing
@@ -72,12 +76,15 @@ class FilesController {
         openaiFileId = await uploadFileToOpenAI(
           fileBuffer,
           filename,
-          customerId
+          customerId,
         );
       } catch (error) {
-        logger.warn('[Files] Error uploading to OpenAI, continuing without indexing', {
-          error: error instanceof Error ? error.message : String(error),
-        });
+        logger.warn(
+          "[Files] Error uploading to OpenAI, continuing without indexing",
+          {
+            error: error instanceof Error ? error.message : String(error),
+          },
+        );
         // Continue without OpenAI indexing
       }
 
@@ -115,7 +122,7 @@ class FilesController {
         },
       };
     } catch (error) {
-      logger.error('[Files] Error uploading file', {
+      logger.error("[Files] Error uploading file", {
         error: error instanceof Error ? error.message : String(error),
         customerId,
         filename,
@@ -125,7 +132,7 @@ class FilesController {
         throw error;
       }
 
-      throw new ApiError('Failed to upload file', 500);
+      throw new ApiError("Failed to upload file", 500);
     }
   }
 
@@ -138,22 +145,22 @@ class FilesController {
     _body: any,
     query: Record<string, string | undefined>,
     _tenantId: string | undefined,
-    context?: RequestContext
+    context?: RequestContext,
   ): Promise<RouteResponse> {
     const customerId = getCustomerId(context);
 
-    const limit = parseInt(query.limit || '50', 10);
+    const limit = parseInt(query.limit || "50", 10);
     const fileType = query.fileType;
 
     try {
       // Query files by customer_id
       const result = await db.query(
         FILES_TABLE,
-        'gsi_customer_id',
-        'customer_id = :customer_id',
-        { ':customer_id': customerId },
+        "gsi_customer_id",
+        "customer_id = :customer_id",
+        { ":customer_id": customerId },
         undefined,
-        limit
+        limit,
       );
 
       let files = result.items || [];
@@ -163,7 +170,7 @@ class FilesController {
         files = files.filter((file: any) => file.file_type === fileType);
       }
 
-      logger.debug('[Files] Listed files', {
+      logger.debug("[Files] Listed files", {
         customerId,
         count: files.length,
         fileType,
@@ -184,11 +191,11 @@ class FilesController {
         },
       };
     } catch (error) {
-      logger.error('[Files] Error listing files', {
+      logger.error("[Files] Error listing files", {
         error: error instanceof Error ? error.message : String(error),
         customerId,
       });
-      throw new ApiError('Failed to list files', 500);
+      throw new ApiError("Failed to list files", 500);
     }
   }
 
@@ -201,31 +208,34 @@ class FilesController {
     _body: any,
     _query: Record<string, string | undefined>,
     _tenantId: string | undefined,
-    context?: RequestContext
+    context?: RequestContext,
   ): Promise<RouteResponse> {
     const customerId = getCustomerId(context);
 
     const fileId = params.fileId;
     if (!fileId) {
-      throw new ApiError('File ID is required', 400);
+      throw new ApiError("File ID is required", 400);
     }
 
     try {
       const file = await db.get(FILES_TABLE, { file_id: fileId });
 
       if (!file) {
-        throw new ApiError('File not found', 404);
+        throw new ApiError("File not found", 404);
       }
 
       // Verify customer access
       if (file.customer_id !== customerId) {
-        throw new ApiError('You do not have permission to access this file', 403);
+        throw new ApiError(
+          "You do not have permission to access this file",
+          403,
+        );
       }
 
       // Generate presigned URL for download
       const downloadUrl = await s3Service.getFileUrl(file.s3_key);
 
-      logger.debug('[Files] Retrieved file', {
+      logger.debug("[Files] Retrieved file", {
         fileId,
         customerId,
       });
@@ -248,12 +258,12 @@ class FilesController {
         throw error;
       }
 
-      logger.error('[Files] Error getting file', {
+      logger.error("[Files] Error getting file", {
         error: error instanceof Error ? error.message : String(error),
         fileId,
         customerId,
       });
-      throw new ApiError('Failed to get file', 500);
+      throw new ApiError("Failed to get file", 500);
     }
   }
 
@@ -266,25 +276,28 @@ class FilesController {
     _body: any,
     _query: Record<string, string | undefined>,
     _tenantId: string | undefined,
-    context?: RequestContext
+    context?: RequestContext,
   ): Promise<RouteResponse> {
     const customerId = getCustomerId(context);
 
     const fileId = params.fileId;
     if (!fileId) {
-      throw new ApiError('File ID is required', 400);
+      throw new ApiError("File ID is required", 400);
     }
 
     try {
       const file = await db.get(FILES_TABLE, { file_id: fileId });
 
       if (!file) {
-        throw new ApiError('File not found', 404);
+        throw new ApiError("File not found", 404);
       }
 
       // Verify customer access
       if (file.customer_id !== customerId) {
-        throw new ApiError('You do not have permission to delete this file', 403);
+        throw new ApiError(
+          "You do not have permission to delete this file",
+          403,
+        );
       }
 
       // Delete from S3
@@ -301,7 +314,7 @@ class FilesController {
       return {
         statusCode: 200,
         body: {
-          message: 'File deleted successfully',
+          message: "File deleted successfully",
         },
       };
     } catch (error) {
@@ -309,12 +322,12 @@ class FilesController {
         throw error;
       }
 
-      logger.error('[Files] Error deleting file', {
+      logger.error("[Files] Error deleting file", {
         error: error instanceof Error ? error.message : String(error),
         fileId,
         customerId,
       });
-      throw new ApiError('Failed to delete file', 500);
+      throw new ApiError("Failed to delete file", 500);
     }
   }
 
@@ -327,12 +340,12 @@ class FilesController {
     body: any,
     _query: Record<string, string | undefined>,
     _tenantId: string | undefined,
-    context?: RequestContext
+    context?: RequestContext,
   ): Promise<RouteResponse> {
     const customerId = getCustomerId(context);
 
-    if (!body.query || typeof body.query !== 'string') {
-      throw new ApiError('Query is required', 400);
+    if (!body.query || typeof body.query !== "string") {
+      throw new ApiError("Query is required", 400);
     }
 
     const query = body.query as string;
@@ -341,11 +354,11 @@ class FilesController {
       // Get all files for this customer
       const result = await db.query(
         FILES_TABLE,
-        'gsi_customer_id',
-        'customer_id = :customer_id',
-        { ':customer_id': customerId },
+        "gsi_customer_id",
+        "customer_id = :customer_id",
+        { ":customer_id": customerId },
         undefined,
-        100 // Limit to 100 files for search
+        100, // Limit to 100 files for search
       );
 
       const files = result.items || [];
@@ -357,14 +370,18 @@ class FilesController {
         return {
           statusCode: 200,
           body: {
-            response: 'No indexed files available to search.',
+            response: "No indexed files available to search.",
             fileIds: [],
           },
         };
       }
 
       // Search files using OpenAI
-      const searchResult = await searchFilesSimple(customerId, query, openaiFileIds);
+      const searchResult = await searchFilesSimple(
+        customerId,
+        query,
+        openaiFileIds,
+      );
 
       return {
         statusCode: 200,
@@ -375,15 +392,14 @@ class FilesController {
         },
       };
     } catch (error) {
-      logger.error('[Files] Error searching files', {
+      logger.error("[Files] Error searching files", {
         error: error instanceof Error ? error.message : String(error),
         customerId,
         query,
       });
-      throw new ApiError('Failed to search files', 500);
+      throw new ApiError("Failed to search files", 500);
     }
   }
 }
 
 export const filesController = new FilesController();
-

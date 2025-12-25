@@ -1,6 +1,6 @@
-import { RouteResponse } from '../routes';
-import { createSharedArtifactCopies } from '../services/workflowSharingService';
-import { logger } from '../utils/logger';
+import { RouteResponse } from "../routes";
+import { createSharedArtifactCopies } from "../services/workflowSharingService";
+import { logger } from "../utils/logger";
 
 /**
  * Controller for workflow sharing operations
@@ -16,7 +16,7 @@ class WorkflowSharingController {
     _params: Record<string, string>,
     body: any,
     _query: Record<string, string | undefined>,
-    tenantId: string | undefined
+    tenantId: string | undefined,
   ): Promise<RouteResponse> {
     const { artifact_id, job_id, tenant_id } = body;
 
@@ -24,7 +24,7 @@ class WorkflowSharingController {
       return {
         statusCode: 400,
         body: JSON.stringify({
-          error: 'Missing required fields: artifact_id and job_id are required',
+          error: "Missing required fields: artifact_id and job_id are required",
         }),
       };
     }
@@ -35,30 +35,32 @@ class WorkflowSharingController {
       return {
         statusCode: 400,
         body: JSON.stringify({
-          error: 'Missing tenant_id',
+          error: "Missing tenant_id",
         }),
       };
     }
 
     try {
       // Share artifact asynchronously (non-blocking)
-      createSharedArtifactCopies(artifact_id, job_id, effectiveTenantId).catch((error: any) => {
-        logger.error('[WorkflowSharing] Error sharing artifact', {
-          error: error.message,
-          artifact_id,
-          job_id,
-        });
-      });
+      createSharedArtifactCopies(artifact_id, job_id, effectiveTenantId).catch(
+        (error: any) => {
+          logger.error("[WorkflowSharing] Error sharing artifact", {
+            error: error.message,
+            artifact_id,
+            job_id,
+          });
+        },
+      );
 
       return {
         statusCode: 202,
         body: JSON.stringify({
-          message: 'Artifact sharing initiated',
+          message: "Artifact sharing initiated",
           artifact_id,
         }),
       };
     } catch (error: any) {
-      logger.error('[WorkflowSharing] Error in shareArtifact endpoint', {
+      logger.error("[WorkflowSharing] Error in shareArtifact endpoint", {
         error: error.message,
         artifact_id,
         job_id,
@@ -66,7 +68,7 @@ class WorkflowSharingController {
       return {
         statusCode: 500,
         body: JSON.stringify({
-          error: 'Failed to initiate artifact sharing',
+          error: "Failed to initiate artifact sharing",
         }),
       };
     }
@@ -74,4 +76,3 @@ class WorkflowSharingController {
 }
 
 export const workflowSharingController = new WorkflowSharingController();
-

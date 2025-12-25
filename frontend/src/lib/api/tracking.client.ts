@@ -3,17 +3,17 @@
  * Client for tracking-related API endpoints.
  */
 
-import { api } from './index';
+import { api } from "./index";
 
 const sendDebugLog = (payload: Record<string, unknown>) => {
   // Avoid mixed-content/CORS when served over HTTPS (production)
-  if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
+  if (typeof window !== "undefined" && window.location.protocol === "https:") {
     return;
   }
   // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  fetch("http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   }).catch(() => {});
   // #endregion
@@ -34,7 +34,12 @@ export interface TrackingEvent {
   event_id: string;
   job_id: string;
   tenant_id: string;
-  event_type: 'click' | 'page_view' | 'session_start' | 'session_end' | 'heartbeat';
+  event_type:
+    | "click"
+    | "page_view"
+    | "session_start"
+    | "session_end"
+    | "heartbeat";
   ip_address: string;
   user_agent?: string;
   referrer?: string;
@@ -74,17 +79,17 @@ export async function trackEvent(event: {
   referrer?: string;
 }): Promise<{ event_id: string; success: boolean }> {
   sendDebugLog({
-    sessionId: 'debug-session',
-    runId: 'run-tracking',
-    hypothesisId: 'C',
-    location: 'tracking.client.ts:63',
-    message: 'trackEvent called',
+    sessionId: "debug-session",
+    runId: "run-tracking",
+    hypothesisId: "C",
+    location: "tracking.client.ts:63",
+    message: "trackEvent called",
     data: { eventType: event.event_type, jobId: event.job_id },
     timestamp: Date.now(),
   });
   return api.post<{ event_id: string; success: boolean }>(
-    '/v1/tracking/event',
-    event
+    "/v1/tracking/event",
+    event,
   );
 }
 
@@ -93,11 +98,11 @@ export async function trackEvent(event: {
  */
 export async function getJobStats(jobId: string): Promise<TrackingStats> {
   sendDebugLog({
-    sessionId: 'debug-session',
-    runId: 'run-tracking',
-    hypothesisId: 'D',
-    location: 'tracking.client.ts:75',
-    message: 'getJobStats called',
+    sessionId: "debug-session",
+    runId: "run-tracking",
+    hypothesisId: "D",
+    location: "tracking.client.ts:75",
+    message: "getJobStats called",
     data: { jobId },
     timestamp: Date.now(),
   });
@@ -112,27 +117,30 @@ export async function getJobEvents(
   options?: {
     limit?: number;
     lastEvaluatedKey?: any;
-  }
+  },
 ): Promise<TrackingEventsResponse> {
   sendDebugLog({
-    sessionId: 'debug-session',
-    runId: 'run-tracking',
-    hypothesisId: 'E',
-    location: 'tracking.client.ts:90',
-    message: 'getJobEvents called',
+    sessionId: "debug-session",
+    runId: "run-tracking",
+    hypothesisId: "E",
+    location: "tracking.client.ts:90",
+    message: "getJobEvents called",
     data: { jobId, hasLimit: !!options?.limit },
     timestamp: Date.now(),
   });
   const params = new URLSearchParams();
   if (options?.limit) {
-    params.append('limit', options.limit.toString());
+    params.append("limit", options.limit.toString());
   }
   if (options?.lastEvaluatedKey) {
-    params.append('lastEvaluatedKey', encodeURIComponent(JSON.stringify(options.lastEvaluatedKey)));
+    params.append(
+      "lastEvaluatedKey",
+      encodeURIComponent(JSON.stringify(options.lastEvaluatedKey)),
+    );
   }
 
   const queryString = params.toString();
-  const url = `/admin/tracking/jobs/${jobId}/events${queryString ? `?${queryString}` : ''}`;
+  const url = `/admin/tracking/jobs/${jobId}/events${queryString ? `?${queryString}` : ""}`;
 
   return api.get<TrackingEventsResponse>(url);
 }

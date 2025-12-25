@@ -1,7 +1,7 @@
-'use client'
+"use client";
 
-import { useRouter } from 'next/navigation'
-import { ReactNode, useState } from 'react'
+import { useRouter } from "next/navigation";
+import { ReactNode, useState } from "react";
 import {
   FiClock,
   FiDollarSign,
@@ -10,163 +10,186 @@ import {
   FiLayers,
   FiLoader,
   FiRefreshCw,
-} from 'react-icons/fi'
-import { toast } from 'react-hot-toast'
-import { formatDurationSeconds, formatRelativeTime } from '@/utils/jobFormatting'
-import { openJobDocumentInNewTab } from '@/utils/jobs/openJobDocument'
-import { SectionCard } from '@/components/ui/SectionCard'
-import { StatPill } from '@/components/ui/StatPill'
-import { KeyValueItem, KeyValueList } from '@/components/ui/KeyValueList'
-import { StatusBadge } from '@/components/ui/StatusBadge'
-import type { Job } from '@/types/job'
-import type { Workflow } from '@/types/workflow'
-import type { FormSubmission } from '@/types/form'
+} from "react-icons/fi";
+import { toast } from "react-hot-toast";
+import {
+  formatDurationSeconds,
+  formatRelativeTime,
+} from "@/utils/jobFormatting";
+import { openJobDocumentInNewTab } from "@/utils/jobs/openJobDocument";
+import { SectionCard } from "@/components/ui/SectionCard";
+import { StatPill } from "@/components/ui/StatPill";
+import { KeyValueItem, KeyValueList } from "@/components/ui/KeyValueList";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import type { Job } from "@/types/job";
+import type { Workflow } from "@/types/workflow";
+import type { FormSubmission } from "@/types/form";
 
 interface JobDetailsProps {
-  job: Job
-  workflow: Workflow | null
-  hideContainer?: boolean
-  submission?: FormSubmission | null
-  onRerun?: () => void
-  rerunning?: boolean
+  job: Job;
+  workflow: Workflow | null;
+  hideContainer?: boolean;
+  submission?: FormSubmission | null;
+  onRerun?: () => void;
+  rerunning?: boolean;
 }
 
-export function JobDetails({ job, workflow, hideContainer = false, submission, onRerun, rerunning = false }: JobDetailsProps) {
-  const router = useRouter()
-  const [loadingDocument, setLoadingDocument] = useState(false)
+export function JobDetails({
+  job,
+  workflow,
+  hideContainer = false,
+  submission,
+  onRerun,
+  rerunning = false,
+}: JobDetailsProps) {
+  const router = useRouter();
+  const [loadingDocument, setLoadingDocument] = useState(false);
 
-  const createdAt = new Date(job.created_at)
-  const completedAt = job.completed_at ? new Date(job.completed_at) : null
+  const createdAt = new Date(job.created_at);
+  const completedAt = job.completed_at ? new Date(job.completed_at) : null;
   const durationSeconds =
     job.completed_at && job.created_at
       ? Math.round((completedAt!.getTime() - createdAt.getTime()) / 1000)
-      : null
+      : null;
 
   const totalCost = (() => {
     if (!job.execution_steps || !Array.isArray(job.execution_steps)) {
-      return null
+      return null;
     }
-    
+
     // Filter to only AI generation steps (which have cost)
     const aiSteps = job.execution_steps.filter(
-      step => step.step_type === 'ai_generation' || step.step_type === 'workflow_step'
-    )
-    
+      (step) =>
+        step.step_type === "ai_generation" ||
+        step.step_type === "workflow_step",
+    );
+
     if (aiSteps.length === 0) {
-      return null
+      return null;
     }
-    
+
     const sum = aiSteps.reduce((sum: number, step) => {
-      const cost = step.usage_info?.cost_usd
+      const cost = step.usage_info?.cost_usd;
       if (cost === undefined || cost === null) {
-        return sum
+        return sum;
       }
-      if (typeof cost === 'number') {
-        return sum + cost
+      if (typeof cost === "number") {
+        return sum + cost;
       }
-      if (typeof cost === 'string') {
-        const parsed = parseFloat(cost)
-        return sum + (isNaN(parsed) ? 0 : parsed)
+      if (typeof cost === "string") {
+        const parsed = parseFloat(cost);
+        return sum + (isNaN(parsed) ? 0 : parsed);
       }
-      return sum
-    }, 0)
-    
+      return sum;
+    }, 0);
+
     // Only show cost if at least one step has usage_info with cost_usd > 0
-    const hasCostData = aiSteps.some(step => {
-      const cost = step.usage_info?.cost_usd
-      return cost !== undefined && cost !== null && (typeof cost === 'number' ? cost > 0 : parseFloat(String(cost)) > 0)
-    })
-    
+    const hasCostData = aiSteps.some((step) => {
+      const cost = step.usage_info?.cost_usd;
+      return (
+        cost !== undefined &&
+        cost !== null &&
+        (typeof cost === "number" ? cost > 0 : parseFloat(String(cost)) > 0)
+      );
+    });
+
     // If no steps have cost data, return null to hide the display
     if (!hasCostData) {
-      return null
+      return null;
     }
-    
-    return sum
-  })()
+
+    return sum;
+  })();
 
   const stepsCount =
-    workflow?.steps?.length ?? job.execution_steps?.length ?? null
+    workflow?.steps?.length ?? job.execution_steps?.length ?? null;
 
-  const hasDocument = Boolean(job.output_url)
+  const hasDocument = Boolean(job.output_url);
 
   const handleCopyValue = async (value: string) => {
     try {
-      if (typeof navigator !== 'undefined' && navigator.clipboard) {
-        await navigator.clipboard.writeText(value)
+      if (typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(value);
       } else {
-        const textarea = document.createElement('textarea')
-        textarea.value = value
-        document.body.appendChild(textarea)
-        textarea.select()
-        document.execCommand('copy')
-        document.body.removeChild(textarea)
+        const textarea = document.createElement("textarea");
+        textarea.value = value;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
       }
-      toast.success('Copied to clipboard')
+      toast.success("Copied to clipboard");
     } catch {
-      toast.error('Unable to copy automatically. Please copy manually.')
+      toast.error("Unable to copy automatically. Please copy manually.");
     }
-  }
+  };
 
   const handleViewDocument = async () => {
-    if (!hasDocument || loadingDocument) return
+    if (!hasDocument || loadingDocument) return;
 
-    setLoadingDocument(true)
+    setLoadingDocument(true);
 
     try {
-      await openJobDocumentInNewTab(job.job_id, { successToast: 'Document opened in new tab' })
+      await openJobDocumentInNewTab(job.job_id, {
+        successToast: "Document opened in new tab",
+      });
     } finally {
-      setLoadingDocument(false)
+      setLoadingDocument(false);
     }
-  }
+  };
 
   const stats = [
     {
-      label: 'Processing Time',
-      value: durationSeconds !== null ? formatDurationSeconds(durationSeconds) : 'In progress',
-      tone: durationSeconds !== null ? 'neutral' : 'warning',
+      label: "Processing Time",
+      value:
+        durationSeconds !== null
+          ? formatDurationSeconds(durationSeconds)
+          : "In progress",
+      tone: durationSeconds !== null ? "neutral" : "warning",
       icon: <FiClock className="h-4 w-4" />,
       helperText:
         durationSeconds !== null
           ? `Completed ${formatRelativeTime(job.completed_at!)}`
-          : 'We will calculate duration once this job finishes.',
+          : "We will calculate duration once this job finishes.",
     },
     totalCost !== null && totalCost >= 0
       ? {
-          label: 'Total Cost',
+          label: "Total Cost",
           value: `$${totalCost.toFixed(4)}`,
-          tone: totalCost > 5 ? 'warning' : 'neutral',
+          tone: totalCost > 5 ? "warning" : "neutral",
           icon: <FiDollarSign className="h-4 w-4" />,
-          helperText: 'Aggregated from every execution step.',
+          helperText: "Aggregated from every execution step.",
         }
       : null,
     stepsCount !== null
       ? {
-          label: 'Execution Steps',
-          value: `${stepsCount} ${stepsCount === 1 ? 'step' : 'steps'}`,
-          tone: 'neutral' as const,
+          label: "Execution Steps",
+          value: `${stepsCount} ${stepsCount === 1 ? "step" : "steps"}`,
+          tone: "neutral" as const,
           icon: <FiLayers className="h-4 w-4" />,
           helperText: workflow?.steps
-            ? 'Loaded from the workflow definition.'
-            : 'Pulled from the job execution log.',
+            ? "Loaded from the workflow definition."
+            : "Pulled from the job execution log.",
         }
       : null,
   ].filter(Boolean) as Array<{
-    label: string
-    value: string
-    tone: 'neutral' | 'positive' | 'warning' | 'danger'
-    icon: ReactNode
-    helperText?: string
-  }>
+    label: string;
+    value: string;
+    tone: "neutral" | "positive" | "warning" | "danger";
+    icon: ReactNode;
+    helperText?: string;
+  }>;
 
   const infoItems: KeyValueItem[] = [
     job.workflow_id
       ? {
-          label: 'Workflow',
+          label: "Workflow",
           value: workflow ? (
             <button
               type="button"
-              onClick={() => router.push(`/dashboard/workflows/${job.workflow_id}`)}
+              onClick={() =>
+                router.push(`/dashboard/workflows/${job.workflow_id}`)
+              }
               className="inline-flex items-center gap-1.5 font-medium text-primary-600 transition hover:text-primary-800"
             >
               {workflow.workflow_name || job.workflow_id}
@@ -175,50 +198,58 @@ export function JobDetails({ job, workflow, hideContainer = false, submission, o
           ) : (
             <span className="font-medium text-gray-900">{job.workflow_id}</span>
           ),
-          helperText: workflow ? 'Opens the workflow in a new view.' : undefined,
+          helperText: workflow
+            ? "Opens the workflow in a new view."
+            : undefined,
         }
       : null,
     {
-      label: 'Created',
+      label: "Created",
       value: formatRelativeTime(job.created_at),
       helperText: createdAt.toLocaleString(),
     },
     completedAt
       ? {
-          label: 'Completed',
+          label: "Completed",
           value: formatRelativeTime(job.completed_at!),
           helperText: completedAt.toLocaleString(),
         }
       : null,
     job.submission_id
       ? {
-          label: 'Submission ID',
+          label: "Submission ID",
           value: <span className="font-mono text-sm">{job.submission_id}</span>,
-          helperText: 'Form submission tied to this job.',
+          helperText: "Form submission tied to this job.",
           copyValue: job.submission_id,
         }
       : null,
     job.execution_steps_s3_key
       ? {
-          label: 'Execution Log Key',
-          value: <span className="font-mono text-xs break-all">{job.execution_steps_s3_key}</span>,
-          helperText: 'Raw execution data location.',
+          label: "Execution Log Key",
+          value: (
+            <span className="font-mono text-xs break-all">
+              {job.execution_steps_s3_key}
+            </span>
+          ),
+          helperText: "Raw execution data location.",
           copyValue: job.execution_steps_s3_key,
         }
       : null,
-  ].filter(Boolean) as KeyValueItem[]
+  ].filter(Boolean) as KeyValueItem[];
 
   const documentDescription = hasDocument
-    ? 'Open the generated asset in a new browser tab.'
-    : job.status === 'failed'
-      ? 'This job failed before a document could be generated.'
-      : 'We will attach a document as soon as the workflow finishes.'
+    ? "Open the generated asset in a new browser tab."
+    : job.status === "failed"
+      ? "This job failed before a document could be generated."
+      : "We will attach a document as soon as the workflow finishes.";
 
   const documentAction = (
     <div className="rounded-2xl border border-dashed border-primary-200 bg-primary-50/60 px-4 py-4 sm:px-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <p className="text-sm font-medium text-gray-900">Lead magnet document</p>
+          <p className="text-sm font-medium text-gray-900">
+            Lead magnet document
+          </p>
           <p className="text-xs text-gray-600">{documentDescription}</p>
         </div>
         <button
@@ -235,23 +266,31 @@ export function JobDetails({ job, workflow, hideContainer = false, submission, o
           ) : (
             <>
               <FiFileText className="h-4 w-4" aria-hidden="true" />
-              {hasDocument ? 'View document' : job.status === 'failed' ? 'Unavailable' : 'Preparing'}
+              {hasDocument
+                ? "View document"
+                : job.status === "failed"
+                  ? "Unavailable"
+                  : "Preparing"}
             </>
           )}
         </button>
       </div>
     </div>
-  )
+  );
 
   const content = (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 rounded-2xl border border-gray-100 bg-gray-50/60 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Job status</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+            Job status
+          </p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <StatusBadge status={job.status} />
             {job.failed_at && (
-              <span className="text-xs font-medium text-red-700">Failed {formatRelativeTime(job.failed_at)}</span>
+              <span className="text-xs font-medium text-red-700">
+                Failed {formatRelativeTime(job.failed_at)}
+              </span>
             )}
             {job.completed_at && (
               <span className="text-xs font-medium text-gray-500">
@@ -269,13 +308,17 @@ export function JobDetails({ job, workflow, hideContainer = false, submission, o
               className="inline-flex items-center gap-2 rounded-lg border border-primary-600 bg-white px-3 py-2 text-sm font-semibold text-primary-700 transition-colors hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-60"
               title="Rerun this job with the same form submission data"
             >
-              <FiRefreshCw className={`h-4 w-4 ${rerunning ? 'animate-spin' : ''}`} />
-              {rerunning ? 'Rerunning...' : 'Rerun'}
+              <FiRefreshCw
+                className={`h-4 w-4 ${rerunning ? "animate-spin" : ""}`}
+              />
+              {rerunning ? "Rerunning..." : "Rerun"}
             </button>
           )}
           <div className="text-xs text-gray-500">
             Started {formatRelativeTime(job.created_at)}
-            <span className="ml-1 text-gray-400">({createdAt.toLocaleString()})</span>
+            <span className="ml-1 text-gray-400">
+              ({createdAt.toLocaleString()})
+            </span>
           </div>
         </div>
       </div>
@@ -301,7 +344,7 @@ export function JobDetails({ job, workflow, hideContainer = false, submission, o
         <KeyValueList items={infoItems} columns={2} onCopy={handleCopyValue} />
       )}
 
-      {job.status === 'failed' && job.error_message && (
+      {job.status === "failed" && job.error_message && (
         <div
           className="rounded-2xl border border-red-100 bg-red-50/70 p-4 text-sm text-red-900"
           role="alert"
@@ -309,17 +352,18 @@ export function JobDetails({ job, workflow, hideContainer = false, submission, o
         >
           <p className="font-semibold">Error details</p>
           <p className="mt-1">
-            {job.error_message.includes('Error') || job.error_message.includes('error')
+            {job.error_message.includes("Error") ||
+            job.error_message.includes("error")
               ? job.error_message
               : `Generation failed: ${job.error_message}`}
           </p>
         </div>
       )}
     </div>
-  )
+  );
 
   if (hideContainer) {
-    return content
+    return content;
   }
 
   return (
@@ -329,5 +373,5 @@ export function JobDetails({ job, workflow, hideContainer = false, submission, o
     >
       {content}
     </SectionCard>
-  )
+  );
 }

@@ -1,76 +1,79 @@
-'use client'
+"use client";
 
-import { useMemo } from 'react'
-import { useRouter } from 'next/navigation'
-import { ArrowLeftIcon, ClipboardDocumentIcon } from '@heroicons/react/24/outline'
-import { toast } from 'react-hot-toast'
-import type { Job } from '@/types/job'
+import { useMemo } from "react";
+import { useRouter } from "next/navigation";
+import {
+  ArrowLeftIcon,
+  ClipboardDocumentIcon,
+} from "@heroicons/react/24/outline";
+import { toast } from "react-hot-toast";
+import type { Job } from "@/types/job";
 
 interface JobHeaderProps {
-  error: string | null
-  resubmitting: boolean
-  onResubmit: () => void
-  job?: Job | null
+  error: string | null;
+  resubmitting: boolean;
+  onResubmit: () => void;
+  job?: Job | null;
 }
 
 export function JobHeader({ error, job }: JobHeaderProps) {
-  const router = useRouter()
+  const router = useRouter();
 
   const totalCost = useMemo(() => {
     if (!job?.execution_steps || !Array.isArray(job.execution_steps)) {
-      return null
+      return null;
     }
 
     // Filter to only AI generation steps (which have cost)
     const aiSteps = job.execution_steps.filter(
-      (step) => step.step_type === 'ai_generation' || step.step_type === 'workflow_step'
-    )
+      (step) =>
+        step.step_type === "ai_generation" ||
+        step.step_type === "workflow_step",
+    );
 
     if (aiSteps.length === 0) {
-      return null
+      return null;
     }
 
     const sum = aiSteps.reduce((acc: number, step) => {
-      const cost = step.usage_info?.cost_usd
+      const cost = step.usage_info?.cost_usd;
       if (cost === undefined || cost === null) {
-        return acc
+        return acc;
       }
-      if (typeof cost === 'number') {
-        return acc + cost
+      if (typeof cost === "number") {
+        return acc + cost;
       }
-      if (typeof cost === 'string') {
-        const parsed = parseFloat(cost)
-        return acc + (Number.isNaN(parsed) ? 0 : parsed)
+      if (typeof cost === "string") {
+        const parsed = parseFloat(cost);
+        return acc + (Number.isNaN(parsed) ? 0 : parsed);
       }
-      return acc
-    }, 0)
+      return acc;
+    }, 0);
 
     // Only show cost if at least one step has usage_info with cost_usd
     const hasCostData = aiSteps.some((step) => {
-      const cost = step.usage_info?.cost_usd
-      if (cost === undefined || cost === null) return false
-      return typeof cost === 'number'
-        ? cost > 0
-        : parseFloat(String(cost)) > 0
-    })
+      const cost = step.usage_info?.cost_usd;
+      if (cost === undefined || cost === null) return false;
+      return typeof cost === "number" ? cost > 0 : parseFloat(String(cost)) > 0;
+    });
 
     // If no steps have cost data, return null to hide the display
     if (!hasCostData) {
-      return null
+      return null;
     }
 
-    return sum
-  }, [job?.execution_steps])
+    return sum;
+  }, [job?.execution_steps]);
 
   const handleCopyJobId = async () => {
-    if (!job?.job_id) return
+    if (!job?.job_id) return;
     try {
-      await navigator.clipboard.writeText(job.job_id)
-      toast.success('Job ID copied')
+      await navigator.clipboard.writeText(job.job_id);
+      toast.success("Job ID copied");
     } catch {
-      toast.error('Unable to copy job ID')
+      toast.error("Unable to copy job ID");
     }
-  }
+  };
 
   return (
     <div className="mb-8">
@@ -92,7 +95,8 @@ export function JobHeader({ error, job }: JobHeaderProps) {
             Lead Magnet Details
           </h1>
           <p className="mt-2 text-sm text-gray-500 leading-relaxed">
-            View progress, artifacts, and step-level details for this generation.
+            View progress, artifacts, and step-level details for this
+            generation.
           </p>
         </div>
 
@@ -112,6 +116,5 @@ export function JobHeader({ error, job }: JobHeaderProps) {
         )}
       </div>
     </div>
-  )
+  );
 }
-

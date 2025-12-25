@@ -1,13 +1,13 @@
-type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+type LogLevel = "debug" | "info" | "warn" | "error";
 
 class Logger {
   // IMPORTANT: Do not import `env` here.
   // `env.ts` logs during module initialization and imports this logger, so importing `env`
   // would create a circular dependency (env -> logger -> env) that breaks in Jest/runtime.
-  private logLevel: LogLevel = (process.env.LOG_LEVEL as LogLevel) || 'info';
+  private logLevel: LogLevel = (process.env.LOG_LEVEL as LogLevel) || "info";
 
   private shouldLog(level: LogLevel): boolean {
-    const levels: LogLevel[] = ['debug', 'info', 'warn', 'error'];
+    const levels: LogLevel[] = ["debug", "info", "warn", "error"];
     return levels.indexOf(level) >= levels.indexOf(this.logLevel);
   }
 
@@ -34,7 +34,7 @@ class Logger {
             stack: meta.stack,
           };
         } else {
-          logEntry.meta = { error: 'Circular reference detected' };
+          logEntry.meta = { error: "Circular reference detected" };
         }
       }
     }
@@ -43,21 +43,20 @@ class Logger {
   }
 
   debug(message: string, meta?: any): void {
-    this.log('debug', message, meta);
+    this.log("debug", message, meta);
   }
 
   info(message: string, meta?: any): void {
-    this.log('info', message, meta);
+    this.log("info", message, meta);
   }
 
   warn(message: string, meta?: any): void {
-    this.log('warn', message, meta);
+    this.log("warn", message, meta);
   }
 
   error(message: string, meta?: any): void {
-    this.log('error', message, meta);
+    this.log("error", message, meta);
   }
 }
 
 export const logger = new Logger();
-

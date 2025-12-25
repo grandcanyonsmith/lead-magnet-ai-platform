@@ -3,7 +3,10 @@
  * Consolidates type definitions used across multiple utility modules.
  */
 
-import { WorkflowStep as ResourceWorkflowStep, FormField as ResourceFormField } from '../types/resources';
+import {
+  WorkflowStep as ResourceWorkflowStep,
+  FormField as ResourceFormField,
+} from "../types/resources";
 
 /**
  * Re-export WorkflowStep from resources as the canonical definition.
@@ -20,23 +23,25 @@ export type FormField = ResourceFormField;
  * Tool configuration for workflow steps.
  * Can be a simple string or a detailed configuration object.
  */
-export type ToolConfig = string | {
-  type: string;
-  display_width?: number;
-  display_height?: number;
-  environment?: 'browser' | 'mac' | 'windows' | 'ubuntu';
-  [key: string]: unknown;
-};
+export type ToolConfig =
+  | string
+  | {
+      type: string;
+      display_width?: number;
+      display_height?: number;
+      environment?: "browser" | "mac" | "windows" | "ubuntu";
+      [key: string]: unknown;
+    };
 
 /**
  * Tool choice options for workflow steps.
  */
-export type ToolChoice = 'auto' | 'required' | 'none';
+export type ToolChoice = "auto" | "required" | "none";
 
 /**
  * Step type options for workflow steps.
  */
-export type StepType = 'ai_generation' | 'webhook';
+export type StepType = "ai_generation" | "webhook";
 
 /**
  * Legacy workflow data structure (deprecated).
@@ -80,7 +85,7 @@ export interface ExecutionPlan {
 /**
  * Step status for workflow execution tracking.
  */
-export type StepStatus = 'completed' | 'running' | 'waiting' | 'ready';
+export type StepStatus = "completed" | "running" | "waiting" | "ready";
 
 /**
  * Validation result for workflow steps.
@@ -133,4 +138,3 @@ export interface AsyncResult<T> {
   data?: T;
   error?: Error;
 }
-

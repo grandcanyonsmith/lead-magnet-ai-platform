@@ -1,119 +1,124 @@
-'use client'
+"use client";
 
-import { useEffect, useState, useMemo } from 'react'
-import { api } from '@/lib/api'
-import { FiRefreshCw, FiInbox } from 'react-icons/fi'
-import { PreviewCard } from '@/components/artifacts/PreviewCard'
-import { FiltersBar } from '@/components/artifacts/FiltersBar'
-import { PaginationControls } from '@/components/artifacts/PaginationControls'
-import { logger } from '@/utils/logger'
+import { useEffect, useState, useMemo } from "react";
+import { api } from "@/lib/api";
+import { FiRefreshCw, FiInbox } from "react-icons/fi";
+import { PreviewCard } from "@/components/artifacts/PreviewCard";
+import { FiltersBar } from "@/components/artifacts/FiltersBar";
+import { PaginationControls } from "@/components/artifacts/PaginationControls";
+import { logger } from "@/utils/logger";
 
 type Artifact = {
-  artifact_id: string
-  job_id?: string
-  workflow_id?: string
-  artifact_type?: string
-  file_name?: string
-  artifact_name?: string
-  content_type?: string
-  size_bytes?: number
-  file_size_bytes?: number
-  s3_bucket?: string
-  s3_key?: string
-  object_url?: string
-  public_url?: string
-  created_at?: string
-}
+  artifact_id: string;
+  job_id?: string;
+  workflow_id?: string;
+  artifact_type?: string;
+  file_name?: string;
+  artifact_name?: string;
+  content_type?: string;
+  size_bytes?: number;
+  file_size_bytes?: number;
+  s3_bucket?: string;
+  s3_key?: string;
+  object_url?: string;
+  public_url?: string;
+  created_at?: string;
+};
 
-const ITEMS_PER_PAGE = 12
+const ITEMS_PER_PAGE = 12;
 
 export default function ArtifactsPage() {
-  const [artifacts, setArtifacts] = useState<Artifact[]>([])
-  const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedType, setSelectedType] = useState('')
-  const [currentPage, setCurrentPage] = useState(1)
+  const [artifacts, setArtifacts] = useState<Artifact[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedType, setSelectedType] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
-    loadArtifacts()
-  }, [])
+    loadArtifacts();
+  }, []);
 
   const loadArtifacts = async () => {
     try {
-      const data = await api.getArtifacts({ limit: 500 })
-      const artifactsList = data.artifacts || []
-      
+      const data = await api.getArtifacts({ limit: 500 });
+      const artifactsList = data.artifacts || [];
+
       // Don't sort here - sorting will be done in filteredArtifacts useMemo
       // to group by workflow/job, then by created_at
-      setArtifacts(artifactsList)
+      setArtifacts(artifactsList);
     } catch (error) {
-      logger.error('Failed to load artifacts', { error, context: 'ArtifactsPage' })
+      logger.error("Failed to load artifacts", {
+        error,
+        context: "ArtifactsPage",
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const refresh = async () => {
-    setRefreshing(true)
+    setRefreshing(true);
     try {
-      await loadArtifacts()
+      await loadArtifacts();
     } finally {
-      setRefreshing(false)
+      setRefreshing(false);
     }
-  }
+  };
 
   const artifactTypes = useMemo(() => {
-    const types = new Set<string>()
-    artifacts.forEach(a => {
-      if (a.artifact_type) types.add(a.artifact_type)
-    })
-    return Array.from(types).sort()
-  }, [artifacts])
+    const types = new Set<string>();
+    artifacts.forEach((a) => {
+      if (a.artifact_type) types.add(a.artifact_type);
+    });
+    return Array.from(types).sort();
+  }, [artifacts]);
 
   const filteredArtifacts = useMemo(() => {
-    const filtered = artifacts.filter(artifact => {
-      const matchesSearch = !searchQuery || 
-        (artifact.file_name || artifact.artifact_name || '')
+    const filtered = artifacts.filter((artifact) => {
+      const matchesSearch =
+        !searchQuery ||
+        (artifact.file_name || artifact.artifact_name || "")
           .toLowerCase()
           .includes(searchQuery.toLowerCase()) ||
-        artifact.artifact_id.toLowerCase().includes(searchQuery.toLowerCase())
-      
-      const matchesType = !selectedType || artifact.artifact_type === selectedType
-      
-      return matchesSearch && matchesType
-    })
-    
+        artifact.artifact_id.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesType =
+        !selectedType || artifact.artifact_type === selectedType;
+
+      return matchesSearch && matchesType;
+    });
+
     // Sort by created_at DESC (most recent first), then by workflow_id/job_id as secondary sort
     filtered.sort((a: Artifact, b: Artifact) => {
       // Primary sort: created_at DESC (most recent first)
-      const dateA = new Date(a.created_at || 0).getTime()
-      const dateB = new Date(b.created_at || 0).getTime()
-      
-      if (dateB !== dateA) {
-        return dateB - dateA
-      }
-      
-      // Secondary sort: by workflow_id/job_id for consistency when dates are the same
-      const groupA = a.workflow_id || a.job_id || `no-group-${a.artifact_id}`
-      const groupB = b.workflow_id || b.job_id || `no-group-${b.artifact_id}`
-      return groupA.localeCompare(groupB)
-    })
-    
-    return filtered
-  }, [artifacts, searchQuery, selectedType])
+      const dateA = new Date(a.created_at || 0).getTime();
+      const dateB = new Date(b.created_at || 0).getTime();
 
-  const totalPages = Math.ceil(filteredArtifacts.length / ITEMS_PER_PAGE)
-  
+      if (dateB !== dateA) {
+        return dateB - dateA;
+      }
+
+      // Secondary sort: by workflow_id/job_id for consistency when dates are the same
+      const groupA = a.workflow_id || a.job_id || `no-group-${a.artifact_id}`;
+      const groupB = b.workflow_id || b.job_id || `no-group-${b.artifact_id}`;
+      return groupA.localeCompare(groupB);
+    });
+
+    return filtered;
+  }, [artifacts, searchQuery, selectedType]);
+
+  const totalPages = Math.ceil(filteredArtifacts.length / ITEMS_PER_PAGE);
+
   const paginatedArtifacts = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
-    const endIndex = startIndex + ITEMS_PER_PAGE
-    return filteredArtifacts.slice(startIndex, endIndex)
-  }, [filteredArtifacts, currentPage])
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return filteredArtifacts.slice(startIndex, endIndex);
+  }, [filteredArtifacts, currentPage]);
 
   useEffect(() => {
-    setCurrentPage(1)
-  }, [searchQuery, selectedType])
+    setCurrentPage(1);
+  }, [searchQuery, selectedType]);
 
   if (loading) {
     return (
@@ -123,7 +128,7 @@ export default function ArtifactsPage() {
           <p className="text-gray-600">Loading downloads...</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -132,7 +137,8 @@ export default function ArtifactsPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Downloads</h1>
           <p className="text-gray-600 mt-1">
-            {filteredArtifacts.length} {filteredArtifacts.length === 1 ? 'file' : 'files'} available
+            {filteredArtifacts.length}{" "}
+            {filteredArtifacts.length === 1 ? "file" : "files"} available
           </p>
         </div>
         <button
@@ -140,7 +146,9 @@ export default function ArtifactsPage() {
           disabled={refreshing}
           className="inline-flex items-center px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <FiRefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+          <FiRefreshCw
+            className={`w-4 h-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
+          />
           Refresh
         </button>
       </div>
@@ -161,18 +169,18 @@ export default function ArtifactsPage() {
             <FiInbox className="w-8 h-8 text-gray-400" />
           </div>
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            {artifacts.length === 0 ? 'No downloads yet' : 'No matching files'}
+            {artifacts.length === 0 ? "No downloads yet" : "No matching files"}
           </h3>
           <p className="text-gray-600">
-            {artifacts.length === 0 
-              ? 'Generated files will appear here after you run workflows' 
-              : 'Try adjusting your search or filter criteria'}
+            {artifacts.length === 0
+              ? "Generated files will appear here after you run workflows"
+              : "Try adjusting your search or filter criteria"}
           </p>
           {(searchQuery || selectedType) && (
             <button
               onClick={() => {
-                setSearchQuery('')
-                setSelectedType('')
+                setSearchQuery("");
+                setSelectedType("");
               }}
               className="mt-4 text-primary-600 hover:text-primary-700 font-medium"
             >
@@ -198,5 +206,5 @@ export default function ArtifactsPage() {
         </>
       )}
     </div>
-  )
+  );
 }

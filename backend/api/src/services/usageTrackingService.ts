@@ -1,8 +1,8 @@
-import { ulid } from 'ulid';
-import { db } from '../utils/db';
-import { logger } from '../utils/logger';
-import { stripeService } from './stripeService';
-import { env } from '../utils/env';
+import { ulid } from "ulid";
+import { db } from "../utils/db";
+import { logger } from "../utils/logger";
+import { stripeService } from "./stripeService";
+import { env } from "../utils/env";
 
 export interface UsageRecord {
   usage_id: string;
@@ -44,7 +44,15 @@ export class UsageTrackingService {
    * Errors are logged but do not fail the request.
    */
   async storeUsageRecord(params: UsageTrackingParams): Promise<void> {
-    const { tenantId, serviceType, model, inputTokens, outputTokens, costUsd, jobId } = params;
+    const {
+      tenantId,
+      serviceType,
+      model,
+      inputTokens,
+      outputTokens,
+      costUsd,
+      jobId,
+    } = params;
 
     try {
       const usageId = `usage_${ulid()}`;
@@ -61,7 +69,7 @@ export class UsageTrackingService {
       };
 
       await db.put(this.usageRecordsTable, usageRecord);
-      logger.info('[Usage Tracking] Usage record stored in DynamoDB', {
+      logger.info("[Usage Tracking] Usage record stored in DynamoDB", {
         usageId,
         tenantId,
         serviceType,
@@ -75,7 +83,7 @@ export class UsageTrackingService {
       // Report usage to Stripe for metered billing (tokens per 1k, 2x pricing baked into Stripe price)
       // Use usage_id as part of the idempotency key to prevent duplicates
       try {
-        logger.info('[Usage Tracking] Calling stripeService.reportUsage', {
+        logger.info("[Usage Tracking] Calling stripeService.reportUsage", {
           tenantId,
           model,
           inputTokens,
@@ -93,14 +101,14 @@ export class UsageTrackingService {
           usageId,
         });
 
-        logger.info('[Usage Tracking] Stripe usage reporting completed', {
+        logger.info("[Usage Tracking] Stripe usage reporting completed", {
           tenantId,
           model,
           usageId,
         });
       } catch (stripeError: any) {
         // Log but don't fail - Stripe reporting is best effort
-        logger.error('[Usage Tracking] Stripe usage reporting failed', {
+        logger.error("[Usage Tracking] Stripe usage reporting failed", {
           error: stripeError.message,
           stack: stripeError.stack,
           tenantId,
@@ -110,7 +118,7 @@ export class UsageTrackingService {
       }
     } catch (error: any) {
       // Don't fail the request if usage tracking fails
-      logger.error('[Usage Tracking] Failed to store usage record', {
+      logger.error("[Usage Tracking] Failed to store usage record", {
         error: error.message,
         stack: error.stack,
         tenantId,
@@ -123,4 +131,3 @@ export class UsageTrackingService {
 
 // Export singleton instance for convenience
 export const usageTrackingService = new UsageTrackingService();
-

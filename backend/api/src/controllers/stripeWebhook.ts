@@ -3,14 +3,14 @@
  * Handles incoming webhook events from Stripe
  */
 
-import { APIGatewayProxyEventV2 } from 'aws-lambda';
-import Stripe from 'stripe';
-import { RouteResponse } from '../routes';
-import { ApiError } from '../utils/errors';
-import { logger } from '../utils/logger';
-import { stripeService } from '../services/stripeService';
-import { db } from '../utils/db';
-import { env } from '../utils/env';
+import { APIGatewayProxyEventV2 } from "aws-lambda";
+import Stripe from "stripe";
+import { RouteResponse } from "../routes";
+import { ApiError } from "../utils/errors";
+import { logger } from "../utils/logger";
+import { stripeService } from "../services/stripeService";
+import { db } from "../utils/db";
+import { env } from "../utils/env";
 
 const CUSTOMERS_TABLE = env.customersTable;
 
@@ -20,51 +20,51 @@ class StripeWebhookController {
    */
   async handleWebhook(event: APIGatewayProxyEventV2): Promise<RouteResponse> {
     try {
-      const signature = event.headers['stripe-signature'];
-      
+      const signature = event.headers["stripe-signature"];
+
       if (!signature) {
-        throw new ApiError('Missing Stripe signature', 400);
+        throw new ApiError("Missing Stripe signature", 400);
       }
 
       // Verify webhook signature
       const stripeEvent = await stripeService.verifyWebhookSignature(
-        event.body || '',
-        signature
+        event.body || "",
+        signature,
       );
 
-      logger.info('[Stripe Webhook] Received event', {
+      logger.info("[Stripe Webhook] Received event", {
         type: stripeEvent.type,
         id: stripeEvent.id,
       });
 
       // Route to appropriate handler based on event type
       switch (stripeEvent.type) {
-        case 'checkout.session.completed':
+        case "checkout.session.completed":
           await this.handleCheckoutCompleted(stripeEvent);
           break;
 
-        case 'customer.subscription.updated':
+        case "customer.subscription.updated":
           await this.handleSubscriptionUpdated(stripeEvent);
           break;
 
-        case 'customer.subscription.deleted':
+        case "customer.subscription.deleted":
           await this.handleSubscriptionDeleted(stripeEvent);
           break;
 
-        case 'invoice.finalized':
+        case "invoice.finalized":
           await this.handleInvoiceFinalized(stripeEvent);
           break;
 
-        case 'invoice.paid':
+        case "invoice.paid":
           await this.handleInvoicePaid(stripeEvent);
           break;
 
-        case 'invoice.payment_failed':
+        case "invoice.payment_failed":
           await this.handleInvoicePaymentFailed(stripeEvent);
           break;
 
         default:
-          logger.info('[Stripe Webhook] Unhandled event type', {
+          logger.info("[Stripe Webhook] Unhandled event type", {
             type: stripeEvent.type,
           });
       }
@@ -74,14 +74,14 @@ class StripeWebhookController {
         body: { received: true },
       };
     } catch (error: any) {
-      logger.error('[Stripe Webhook] Error processing webhook', {
+      logger.error("[Stripe Webhook] Error processing webhook", {
         error: error.message,
         stack: error.stack,
       });
 
       // Return 400 for signature verification errors, 500 for others
       const statusCode = error instanceof ApiError ? error.statusCode : 500;
-      
+
       return {
         statusCode,
         body: { error: error.message },
@@ -96,38 +96,45 @@ class StripeWebhookController {
   private async handleCheckoutCompleted(event: Stripe.Event): Promise<void> {
     const session = event.data.object as Stripe.Checkout.Session;
 
-    logger.info('[Stripe Webhook] Checkout completed', {
+    logger.info("[Stripe Webhook] Checkout completed", {
       sessionId: session.id,
       customerId: session.customer,
       subscriptionId: session.subscription,
     });
 
     if (!session.subscription || !session.customer) {
-      logger.warn('[Stripe Webhook] Missing subscription or customer in checkout session');
+      logger.warn(
+        "[Stripe Webhook] Missing subscription or customer in checkout session",
+      );
       return;
     }
 
     // Get customer_id from subscription metadata
-    const subscriptionId = typeof session.subscription === 'string' 
-      ? session.subscription 
-      : session.subscription.id;
+    const subscriptionId =
+      typeof session.subscription === "string"
+        ? session.subscription
+        : session.subscription.id;
 
-    const stripeCustomerId = typeof session.customer === 'string'
-      ? session.customer
-      : session.customer.id;
+    const stripeCustomerId =
+      typeof session.customer === "string"
+        ? session.customer
+        : session.customer.id;
 
     // Find customer by stripe_customer_id
     const customers = await db.query(
       CUSTOMERS_TABLE,
-      'gsi_stripe_customer_id',
-      'stripe_customer_id = :stripe_customer_id',
-      { ':stripe_customer_id': stripeCustomerId }
+      "gsi_stripe_customer_id",
+      "stripe_customer_id = :stripe_customer_id",
+      { ":stripe_customer_id": stripeCustomerId },
     );
 
     if (!customers.items || customers.items.length === 0) {
-      logger.error('[Stripe Webhook] Customer not found for Stripe customer ID', {
-        stripeCustomerId,
-      });
+      logger.error(
+        "[Stripe Webhook] Customer not found for Stripe customer ID",
+        {
+          stripeCustomerId,
+        },
+      );
       return;
     }
 
@@ -137,10 +144,10 @@ class StripeWebhookController {
     await stripeService.updateSubscriptionStatus(
       customer.customer_id,
       subscriptionId,
-      'active'
+      "active",
     );
 
-    logger.info('[Stripe Webhook] Activated subscription', {
+    logger.info("[Stripe Webhook] Activated subscription", {
       customerId: customer.customer_id,
       subscriptionId,
     });
@@ -153,28 +160,32 @@ class StripeWebhookController {
   private async handleSubscriptionUpdated(event: Stripe.Event): Promise<void> {
     const subscription = event.data.object as Stripe.Subscription;
 
-    logger.info('[Stripe Webhook] Subscription updated', {
+    logger.info("[Stripe Webhook] Subscription updated", {
       subscriptionId: subscription.id,
       status: subscription.status,
       customerId: subscription.customer,
     });
 
-    const stripeCustomerId = typeof subscription.customer === 'string'
-      ? subscription.customer
-      : subscription.customer.id;
+    const stripeCustomerId =
+      typeof subscription.customer === "string"
+        ? subscription.customer
+        : subscription.customer.id;
 
     // Find customer by stripe_customer_id
     const customers = await db.query(
       CUSTOMERS_TABLE,
-      'gsi_stripe_customer_id',
-      'stripe_customer_id = :stripe_customer_id',
-      { ':stripe_customer_id': stripeCustomerId }
+      "gsi_stripe_customer_id",
+      "stripe_customer_id = :stripe_customer_id",
+      { ":stripe_customer_id": stripeCustomerId },
     );
 
     if (!customers.items || customers.items.length === 0) {
-      logger.error('[Stripe Webhook] Customer not found for Stripe customer ID', {
-        stripeCustomerId,
-      });
+      logger.error(
+        "[Stripe Webhook] Customer not found for Stripe customer ID",
+        {
+          stripeCustomerId,
+        },
+      );
       return;
     }
 
@@ -183,7 +194,7 @@ class StripeWebhookController {
     await stripeService.updateSubscriptionStatus(
       customer.customer_id,
       subscription.id,
-      subscription.status
+      subscription.status,
     );
   }
 
@@ -194,27 +205,31 @@ class StripeWebhookController {
   private async handleSubscriptionDeleted(event: Stripe.Event): Promise<void> {
     const subscription = event.data.object as Stripe.Subscription;
 
-    logger.info('[Stripe Webhook] Subscription deleted', {
+    logger.info("[Stripe Webhook] Subscription deleted", {
       subscriptionId: subscription.id,
       customerId: subscription.customer,
     });
 
-    const stripeCustomerId = typeof subscription.customer === 'string'
-      ? subscription.customer
-      : subscription.customer.id;
+    const stripeCustomerId =
+      typeof subscription.customer === "string"
+        ? subscription.customer
+        : subscription.customer.id;
 
     // Find customer by stripe_customer_id
     const customers = await db.query(
       CUSTOMERS_TABLE,
-      'gsi_stripe_customer_id',
-      'stripe_customer_id = :stripe_customer_id',
-      { ':stripe_customer_id': stripeCustomerId }
+      "gsi_stripe_customer_id",
+      "stripe_customer_id = :stripe_customer_id",
+      { ":stripe_customer_id": stripeCustomerId },
     );
 
     if (!customers.items || customers.items.length === 0) {
-      logger.error('[Stripe Webhook] Customer not found for Stripe customer ID', {
-        stripeCustomerId,
-      });
+      logger.error(
+        "[Stripe Webhook] Customer not found for Stripe customer ID",
+        {
+          stripeCustomerId,
+        },
+      );
       return;
     }
 
@@ -223,7 +238,7 @@ class StripeWebhookController {
     await stripeService.updateSubscriptionStatus(
       customer.customer_id,
       subscription.id,
-      'canceled'
+      "canceled",
     );
   }
 
@@ -234,33 +249,37 @@ class StripeWebhookController {
   private async handleInvoicePaid(event: Stripe.Event): Promise<void> {
     const invoice = event.data.object as Stripe.Invoice;
 
-    logger.info('[Stripe Webhook] Invoice paid', {
+    logger.info("[Stripe Webhook] Invoice paid", {
       invoiceId: invoice.id,
       customerId: invoice.customer,
       amount: invoice.amount_paid,
     });
 
-    const stripeCustomerId = typeof invoice.customer === 'string'
-      ? invoice.customer
-      : invoice.customer?.id;
+    const stripeCustomerId =
+      typeof invoice.customer === "string"
+        ? invoice.customer
+        : invoice.customer?.id;
 
     if (!stripeCustomerId) {
-      logger.warn('[Stripe Webhook] No customer ID in invoice');
+      logger.warn("[Stripe Webhook] No customer ID in invoice");
       return;
     }
 
     // Find customer by stripe_customer_id
     const customers = await db.query(
       CUSTOMERS_TABLE,
-      'gsi_stripe_customer_id',
-      'stripe_customer_id = :stripe_customer_id',
-      { ':stripe_customer_id': stripeCustomerId }
+      "gsi_stripe_customer_id",
+      "stripe_customer_id = :stripe_customer_id",
+      { ":stripe_customer_id": stripeCustomerId },
     );
 
     if (!customers.items || customers.items.length === 0) {
-      logger.error('[Stripe Webhook] Customer not found for Stripe customer ID', {
-        stripeCustomerId,
-      });
+      logger.error(
+        "[Stripe Webhook] Customer not found for Stripe customer ID",
+        {
+          stripeCustomerId,
+        },
+      );
       return;
     }
 
@@ -280,32 +299,36 @@ class StripeWebhookController {
   private async handleInvoiceFinalized(event: Stripe.Event): Promise<void> {
     const invoice = event.data.object as Stripe.Invoice;
 
-    logger.info('[Stripe Webhook] Invoice finalized', {
+    logger.info("[Stripe Webhook] Invoice finalized", {
       invoiceId: invoice.id,
       customerId: invoice.customer,
       amountDue: invoice.amount_due,
     });
 
-    const stripeCustomerId = typeof invoice.customer === 'string'
-      ? invoice.customer
-      : invoice.customer?.id;
+    const stripeCustomerId =
+      typeof invoice.customer === "string"
+        ? invoice.customer
+        : invoice.customer?.id;
 
     if (!stripeCustomerId) {
-      logger.warn('[Stripe Webhook] No customer ID in invoice');
+      logger.warn("[Stripe Webhook] No customer ID in invoice");
       return;
     }
 
     const customers = await db.query(
       CUSTOMERS_TABLE,
-      'gsi_stripe_customer_id',
-      'stripe_customer_id = :stripe_customer_id',
-      { ':stripe_customer_id': stripeCustomerId }
+      "gsi_stripe_customer_id",
+      "stripe_customer_id = :stripe_customer_id",
+      { ":stripe_customer_id": stripeCustomerId },
     );
 
     if (!customers.items || customers.items.length === 0) {
-      logger.error('[Stripe Webhook] Customer not found for Stripe customer ID', {
-        stripeCustomerId,
-      });
+      logger.error(
+        "[Stripe Webhook] Customer not found for Stripe customer ID",
+        {
+          stripeCustomerId,
+        },
+      );
       return;
     }
 
@@ -325,48 +348,53 @@ class StripeWebhookController {
   private async handleInvoicePaymentFailed(event: Stripe.Event): Promise<void> {
     const invoice = event.data.object as Stripe.Invoice;
 
-    logger.warn('[Stripe Webhook] Invoice payment failed', {
+    logger.warn("[Stripe Webhook] Invoice payment failed", {
       invoiceId: invoice.id,
       customerId: invoice.customer,
       amount: invoice.amount_due,
     });
 
-    const stripeCustomerId = typeof invoice.customer === 'string'
-      ? invoice.customer
-      : invoice.customer?.id;
+    const stripeCustomerId =
+      typeof invoice.customer === "string"
+        ? invoice.customer
+        : invoice.customer?.id;
 
     if (!stripeCustomerId) {
-      logger.warn('[Stripe Webhook] No customer ID in invoice');
+      logger.warn("[Stripe Webhook] No customer ID in invoice");
       return;
     }
 
     // Find customer by stripe_customer_id
     const customers = await db.query(
       CUSTOMERS_TABLE,
-      'gsi_stripe_customer_id',
-      'stripe_customer_id = :stripe_customer_id',
-      { ':stripe_customer_id': stripeCustomerId }
+      "gsi_stripe_customer_id",
+      "stripe_customer_id = :stripe_customer_id",
+      { ":stripe_customer_id": stripeCustomerId },
     );
 
     if (!customers.items || customers.items.length === 0) {
-      logger.error('[Stripe Webhook] Customer not found for Stripe customer ID', {
-        stripeCustomerId,
-      });
+      logger.error(
+        "[Stripe Webhook] Customer not found for Stripe customer ID",
+        {
+          stripeCustomerId,
+        },
+      );
       return;
     }
 
     const customer = customers.items[0];
 
     // Get subscription ID from invoice
-    const subscriptionId = typeof invoice.subscription === 'string'
-      ? invoice.subscription
-      : invoice.subscription?.id;
+    const subscriptionId =
+      typeof invoice.subscription === "string"
+        ? invoice.subscription
+        : invoice.subscription?.id;
 
     if (subscriptionId) {
       await stripeService.updateSubscriptionStatus(
         customer.customer_id,
         subscriptionId,
-        'past_due'
+        "past_due",
       );
     }
   }

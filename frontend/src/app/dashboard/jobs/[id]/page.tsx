@@ -1,12 +1,11 @@
-import JobDetailClient from './client'
+import JobDetailClient from "./client";
 
 export async function generateStaticParams(): Promise<{ id: string }[]> {
   // Return at least one placeholder route to satisfy Next.js static export requirements
   // Actual routes will be handled client-side via CloudFront fallback
-  return [{ id: '_' }]
+  return [{ id: "_" }];
 }
 
 export default function JobDetailPage() {
-  return <JobDetailClient />
+  return <JobDetailClient />;
 }
-

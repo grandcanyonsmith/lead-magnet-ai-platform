@@ -4,7 +4,7 @@
  */
 
 // Re-export service functions for backward compatibility
-export { authService } from './service'
+export { authService } from "./service";
 export {
   signIn,
   signUp,
@@ -15,11 +15,10 @@ export {
   getSession,
   isAuthenticated,
   getIdToken,
-} from './legacy'
+} from "./legacy";
 
 // Re-export types
-export type { AuthResponse, AuthUser } from '@/types/auth'
+export type { AuthResponse, AuthUser } from "@/types/auth";
 
 // Re-export new components
-export { AuthProvider, useAuth } from './context'
-
+export { AuthProvider, useAuth } from "./context";

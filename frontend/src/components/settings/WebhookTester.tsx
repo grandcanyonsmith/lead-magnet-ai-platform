@@ -2,87 +2,87 @@
  * Webhook testing component
  */
 
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { FiSend, FiCheckCircle, FiXCircle, FiLoader } from 'react-icons/fi'
-import { toast } from 'react-hot-toast'
+import { useState } from "react";
+import { FiSend, FiCheckCircle, FiXCircle, FiLoader } from "react-icons/fi";
+import { toast } from "react-hot-toast";
 
 interface WebhookTesterProps {
-  webhookUrl: string
+  webhookUrl: string;
 }
 
 interface TestResult {
-  success: boolean
-  status?: number
-  statusText?: string
-  headers?: Record<string, string>
-  body?: unknown
-  error?: string
-  duration?: number
+  success: boolean;
+  status?: number;
+  statusText?: string;
+  headers?: Record<string, string>;
+  body?: unknown;
+  error?: string;
+  duration?: number;
 }
 
 export function WebhookTester({ webhookUrl }: WebhookTesterProps) {
-  const [testing, setTesting] = useState(false)
-  const [result, setResult] = useState<TestResult | null>(null)
+  const [testing, setTesting] = useState(false);
+  const [result, setResult] = useState<TestResult | null>(null);
   const [testPayload, setTestPayload] = useState(
     JSON.stringify(
       {
-        workflow_id: 'wf_test123',
+        workflow_id: "wf_test123",
         form_data: {
-          name: 'Test User',
-          email: 'test@example.com',
-          phone: '+14155551234',
+          name: "Test User",
+          email: "test@example.com",
+          phone: "+14155551234",
         },
       },
       null,
-      2
-    )
-  )
+      2,
+    ),
+  );
 
   const handleTest = async () => {
     if (!webhookUrl) {
-      toast.error('Webhook URL is required')
-      return
+      toast.error("Webhook URL is required");
+      return;
     }
 
-    setTesting(true)
-    setResult(null)
+    setTesting(true);
+    setResult(null);
 
-    const startTime = Date.now()
+    const startTime = Date.now();
 
     try {
-      let payload
+      let payload;
       try {
-        payload = JSON.parse(testPayload)
+        payload = JSON.parse(testPayload);
       } catch (e) {
-        toast.error('Invalid JSON payload')
-        setTesting(false)
-        return
+        toast.error("Invalid JSON payload");
+        setTesting(false);
+        return;
       }
 
       const response = await fetch(webhookUrl, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
-      })
+      });
 
-      const duration = Date.now() - startTime
+      const duration = Date.now() - startTime;
 
-      let responseBody: unknown
-      const contentType = response.headers.get('content-type')
-      if (contentType?.includes('application/json')) {
-        responseBody = await response.json()
+      let responseBody: unknown;
+      const contentType = response.headers.get("content-type");
+      if (contentType?.includes("application/json")) {
+        responseBody = await response.json();
       } else {
-        responseBody = await response.text()
+        responseBody = await response.text();
       }
 
-      const headers: Record<string, string> = {}
+      const headers: Record<string, string> = {};
       response.headers.forEach((value, key) => {
-        headers[key] = value
-      })
+        headers[key] = value;
+      });
 
       const testResult: TestResult = {
         success: response.ok,
@@ -91,29 +91,30 @@ export function WebhookTester({ webhookUrl }: WebhookTesterProps) {
         headers,
         body: responseBody,
         duration,
-      }
+      };
 
-      setResult(testResult)
+      setResult(testResult);
 
       if (response.ok) {
-        toast.success(`Webhook test successful (${response.status})`)
+        toast.success(`Webhook test successful (${response.status})`);
       } else {
-        toast.error(`Webhook test failed (${response.status})`)
+        toast.error(`Webhook test failed (${response.status})`);
       }
     } catch (error) {
-      const duration = Date.now() - startTime
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      
+      const duration = Date.now() - startTime;
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+
       setResult({
         success: false,
         error: errorMessage,
         duration,
-      })
-      toast.error(`Webhook test failed: ${errorMessage}`)
+      });
+      toast.error(`Webhook test failed: ${errorMessage}`);
     } finally {
-      setTesting(false)
+      setTesting(false);
     }
-  }
+  };
 
   return (
     <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
@@ -158,22 +159,30 @@ export function WebhookTester({ webhookUrl }: WebhookTesterProps) {
             {result.success ? (
               <>
                 <FiCheckCircle className="w-5 h-5 text-green-600" />
-                <span className="text-sm font-semibold text-green-600">Test Successful</span>
+                <span className="text-sm font-semibold text-green-600">
+                  Test Successful
+                </span>
               </>
             ) : (
               <>
                 <FiXCircle className="w-5 h-5 text-red-600" />
-                <span className="text-sm font-semibold text-red-600">Test Failed</span>
+                <span className="text-sm font-semibold text-red-600">
+                  Test Failed
+                </span>
               </>
             )}
             {result.duration && (
-              <span className="text-xs text-gray-500 ml-auto">({result.duration}ms)</span>
+              <span className="text-xs text-gray-500 ml-auto">
+                ({result.duration}ms)
+              </span>
             )}
           </div>
 
           {result.status !== undefined && (
             <div className="mb-3">
-              <span className="text-xs font-medium text-gray-700">Status: </span>
+              <span className="text-xs font-medium text-gray-700">
+                Status:{" "}
+              </span>
               <span className="text-xs font-mono">
                 {result.status} {result.statusText}
               </span>
@@ -188,7 +197,9 @@ export function WebhookTester({ webhookUrl }: WebhookTesterProps) {
 
           {result.headers && Object.keys(result.headers).length > 0 && (
             <div className="mb-3">
-              <span className="text-xs font-medium text-gray-700">Response Headers:</span>
+              <span className="text-xs font-medium text-gray-700">
+                Response Headers:
+              </span>
               <pre className="mt-1 p-2 bg-gray-50 rounded text-xs overflow-x-auto">
                 {JSON.stringify(result.headers, null, 2)}
               </pre>
@@ -197,9 +208,11 @@ export function WebhookTester({ webhookUrl }: WebhookTesterProps) {
 
           {result.body !== undefined && (
             <div>
-              <span className="text-xs font-medium text-gray-700">Response Body:</span>
+              <span className="text-xs font-medium text-gray-700">
+                Response Body:
+              </span>
               <pre className="mt-1 p-2 bg-gray-50 rounded text-xs overflow-x-auto">
-                {typeof result.body === 'string'
+                {typeof result.body === "string"
                   ? result.body
                   : JSON.stringify(result.body, null, 2)}
               </pre>
@@ -208,6 +221,5 @@ export function WebhookTester({ webhookUrl }: WebhookTesterProps) {
         </div>
       )}
     </div>
-  )
+  );
 }
-

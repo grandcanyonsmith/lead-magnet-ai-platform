@@ -1,12 +1,11 @@
-import EditFormClient from './client'
+import EditFormClient from "./client";
 
 export async function generateStaticParams(): Promise<{ id: string }[]> {
   // Return at least one placeholder route to satisfy Next.js static export requirements
   // Actual routes will be handled client-side via CloudFront fallback
-  return [{ id: '_' }]
+  return [{ id: "_" }];
 }
 
 export default function EditFormPage() {
-  return <EditFormClient />
+  return <EditFormClient />;
 }
-

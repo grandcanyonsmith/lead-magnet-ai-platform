@@ -1,14 +1,22 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, GetObjectCommandOutput } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { logger } from '../utils/logger';
-import { ApiError } from '../utils/errors';
-import { env } from '../utils/env';
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+  DeleteObjectCommand,
+  GetObjectCommandOutput,
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { logger } from "../utils/logger";
+import { ApiError } from "../utils/errors";
+import { env } from "../utils/env";
 
 const s3Client = new S3Client({ region: env.awsRegion });
 const BUCKET_NAME = env.artifactsBucket;
 
 if (!BUCKET_NAME) {
-  logger.warn('[S3Service] ARTIFACTS_BUCKET not set - file operations will fail');
+  logger.warn(
+    "[S3Service] ARTIFACTS_BUCKET not set - file operations will fail",
+  );
 }
 
 /**
@@ -28,20 +36,20 @@ export class S3Service {
     customerId: string,
     fileBuffer: Buffer,
     filename: string,
-    category: string = 'uploads',
-    contentType: string = 'application/octet-stream'
+    category: string = "uploads",
+    contentType: string = "application/octet-stream",
   ): Promise<string> {
     if (!BUCKET_NAME) {
-      throw new ApiError('S3 bucket not configured', 500);
+      throw new ApiError("S3 bucket not configured", 500);
     }
 
     // Sanitize filename to prevent path traversal
-    const sanitizedFilename = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
-    
+    const sanitizedFilename = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
+
     // Generate unique filename with timestamp
     const timestamp = Date.now();
     const uniqueFilename = `${timestamp}_${sanitizedFilename}`;
-    
+
     // Construct S3 key: customers/{customerId}/{category}/{filename}
     const s3Key = `customers/${customerId}/${category}/${uniqueFilename}`;
 
@@ -59,10 +67,10 @@ export class S3Service {
             category,
             uploadedAt: new Date().toISOString(),
           },
-        })
+        }),
       );
 
-      logger.info('[S3Service] File uploaded', {
+      logger.info("[S3Service] File uploaded", {
         s3Key,
         customerId,
         filename,
@@ -72,12 +80,12 @@ export class S3Service {
 
       return s3Key;
     } catch (error) {
-      logger.error('[S3Service] Error uploading file', {
+      logger.error("[S3Service] Error uploading file", {
         error: error instanceof Error ? error.message : String(error),
         s3Key,
         customerId,
       });
-      throw new ApiError('Failed to upload file', 500);
+      throw new ApiError("Failed to upload file", 500);
     }
   }
 
@@ -89,7 +97,7 @@ export class S3Service {
    */
   async getFileUrl(s3Key: string, expiresIn: number = 3600): Promise<string> {
     if (!BUCKET_NAME) {
-      throw new ApiError('S3 bucket not configured', 500);
+      throw new ApiError("S3 bucket not configured", 500);
     }
 
     try {
@@ -100,18 +108,18 @@ export class S3Service {
 
       const url = await getSignedUrl(s3Client, command, { expiresIn });
 
-      logger.debug('[S3Service] Generated presigned URL', {
+      logger.debug("[S3Service] Generated presigned URL", {
         s3Key,
         expiresIn,
       });
 
       return url;
     } catch (error) {
-      logger.error('[S3Service] Error generating presigned URL', {
+      logger.error("[S3Service] Error generating presigned URL", {
         error: error instanceof Error ? error.message : String(error),
         s3Key,
       });
-      throw new ApiError('Failed to generate file URL', 500);
+      throw new ApiError("Failed to generate file URL", 500);
     }
   }
 
@@ -120,9 +128,11 @@ export class S3Service {
    * @param s3Key - S3 object key
    * @returns File buffer and content type
    */
-  async getFile(s3Key: string): Promise<{ buffer: Buffer; contentType: string }> {
+  async getFile(
+    s3Key: string,
+  ): Promise<{ buffer: Buffer; contentType: string }> {
     if (!BUCKET_NAME) {
-      throw new ApiError('S3 bucket not configured', 500);
+      throw new ApiError("S3 bucket not configured", 500);
     }
 
     try {
@@ -134,7 +144,7 @@ export class S3Service {
       const response: GetObjectCommandOutput = await s3Client.send(command);
 
       if (!response.Body) {
-        throw new ApiError('File not found', 404);
+        throw new ApiError("File not found", 404);
       }
 
       // Convert stream to buffer
@@ -144,9 +154,9 @@ export class S3Service {
       }
       const buffer = Buffer.concat(chunks);
 
-      const contentType = response.ContentType || 'application/octet-stream';
+      const contentType = response.ContentType || "application/octet-stream";
 
-      logger.debug('[S3Service] Retrieved file', {
+      logger.debug("[S3Service] Retrieved file", {
         s3Key,
         size: buffer.length,
         contentType,
@@ -157,11 +167,11 @@ export class S3Service {
       if (error instanceof ApiError) {
         throw error;
       }
-      logger.error('[S3Service] Error retrieving file', {
+      logger.error("[S3Service] Error retrieving file", {
         error: error instanceof Error ? error.message : String(error),
         s3Key,
       });
-      throw new ApiError('Failed to retrieve file', 500);
+      throw new ApiError("Failed to retrieve file", 500);
     }
   }
 
@@ -171,7 +181,7 @@ export class S3Service {
    */
   async deleteFile(s3Key: string): Promise<void> {
     if (!BUCKET_NAME) {
-      throw new ApiError('S3 bucket not configured', 500);
+      throw new ApiError("S3 bucket not configured", 500);
     }
 
     try {
@@ -179,18 +189,18 @@ export class S3Service {
         new DeleteObjectCommand({
           Bucket: BUCKET_NAME,
           Key: s3Key,
-        })
+        }),
       );
 
-      logger.info('[S3Service] File deleted', {
+      logger.info("[S3Service] File deleted", {
         s3Key,
       });
     } catch (error) {
-      logger.error('[S3Service] Error deleting file', {
+      logger.error("[S3Service] Error deleting file", {
         error: error instanceof Error ? error.message : String(error),
         s3Key,
       });
-      throw new ApiError('Failed to delete file', 500);
+      throw new ApiError("Failed to delete file", 500);
     }
   }
 
@@ -208,4 +218,3 @@ export class S3Service {
 
 // Export singleton instance
 export const s3Service = new S3Service();
-

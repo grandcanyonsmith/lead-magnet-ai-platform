@@ -1,19 +1,19 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useState } from "react";
 
 export function usePreviewModal<T>() {
-  const [previewItem, setPreviewItem] = useState<T | null>(null)
+  const [previewItem, setPreviewItem] = useState<T | null>(null);
 
   const openPreview = useCallback((item: T) => {
-    setPreviewItem(item)
-  }, [])
+    setPreviewItem(item);
+  }, []);
 
   const closePreview = useCallback(() => {
-    setPreviewItem(null)
-  }, [])
+    setPreviewItem(null);
+  }, []);
 
   return {
     previewItem,
     openPreview,
     closePreview,
-  }
+  };
 }

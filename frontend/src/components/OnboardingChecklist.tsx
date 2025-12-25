@@ -1,8 +1,8 @@
-'use client'
+"use client";
 
 /**
  * OnboardingChecklist Component
- * 
+ *
  * A widget that guides users through the initial onboarding process.
  * Features:
  * - Progress tracking
@@ -12,13 +12,34 @@
  * - Persistent state
  */
 
-import { useMemo, useCallback, useRef, memo } from 'react'
-import { FiCheckCircle, FiCircle, FiX, FiList, FiChevronUp, FiChevronDown, FiArrowRight, FiRotateCcw } from 'react-icons/fi'
-import toast from 'react-hot-toast'
-import { OnboardingChecklistProps } from './OnboardingChecklist/types'
-import { CHECKLIST_ITEMS, DEFAULT_CHECKLIST_STATE, COMPLETION_MESSAGES, WIDGET_CONFIG } from './OnboardingChecklist/constants'
-import { calculateProgress, areAllItemsCompleted, getDefaultChecklist } from './OnboardingChecklist/utils'
-import { useWidgetState, useChecklistItemHandler } from './OnboardingChecklist/hooks'
+import { useMemo, useCallback, useRef, memo } from "react";
+import {
+  FiCheckCircle,
+  FiCircle,
+  FiX,
+  FiList,
+  FiChevronUp,
+  FiChevronDown,
+  FiArrowRight,
+  FiRotateCcw,
+} from "react-icons/fi";
+import toast from "react-hot-toast";
+import { OnboardingChecklistProps } from "./OnboardingChecklist/types";
+import {
+  CHECKLIST_ITEMS,
+  DEFAULT_CHECKLIST_STATE,
+  COMPLETION_MESSAGES,
+  WIDGET_CONFIG,
+} from "./OnboardingChecklist/constants";
+import {
+  calculateProgress,
+  areAllItemsCompleted,
+  getDefaultChecklist,
+} from "./OnboardingChecklist/utils";
+import {
+  useWidgetState,
+  useChecklistItemHandler,
+} from "./OnboardingChecklist/hooks";
 
 /**
  * Icon components for better maintainability
@@ -28,8 +49,8 @@ const MinimizeIcon = ({ isMinimized }: { isMinimized: boolean }) => {
     <FiChevronUp className="w-4 h-4" aria-hidden="true" />
   ) : (
     <FiChevronDown className="w-4 h-4" aria-hidden="true" />
-  )
-}
+  );
+};
 
 const LoadingSpinner = () => (
   <svg
@@ -53,10 +74,15 @@ const LoadingSpinner = () => (
       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
     />
   </svg>
-)
+);
 
-function OnboardingChecklistComponent({ settings, onStartTour, onDismiss, onItemClick }: OnboardingChecklistProps) {
-  const widgetRef = useRef<HTMLDivElement>(null)
+function OnboardingChecklistComponent({
+  settings,
+  onStartTour,
+  onDismiss,
+  onItemClick,
+}: OnboardingChecklistProps) {
+  const widgetRef = useRef<HTMLDivElement>(null);
   const {
     isOpen,
     isMinimized,
@@ -64,52 +90,58 @@ function OnboardingChecklistComponent({ settings, onStartTour, onDismiss, onItem
     handleDismiss,
     handleUndoDismiss,
     handleToggleMinimize,
-  } = useWidgetState()
+  } = useWidgetState();
 
   // Memoize checklist state
   const checklist = useMemo(
     () => settings.onboarding_checklist || getDefaultChecklist(),
-    [settings.onboarding_checklist]
-  )
+    [settings.onboarding_checklist],
+  );
 
   // Memoize completion calculations
-  const allCompleted = useMemo(() => areAllItemsCompleted(checklist), [checklist])
-  const progress = useMemo(() => calculateProgress(checklist), [checklist])
+  const allCompleted = useMemo(
+    () => areAllItemsCompleted(checklist),
+    [checklist],
+  );
+  const progress = useMemo(() => calculateProgress(checklist), [checklist]);
 
   // Error handler for toast notifications
   const handleError = useCallback((error: string) => {
     toast.error(error, {
       duration: 5000,
-      id: 'onboarding-checklist-error',
-    })
-  }, [])
+      id: "onboarding-checklist-error",
+    });
+  }, []);
 
   // Checklist item click handler
-  const { handleItemClick, itemState, clearError } = useChecklistItemHandler(onStartTour, handleError)
+  const { handleItemClick, itemState, clearError } = useChecklistItemHandler(
+    onStartTour,
+    handleError,
+  );
 
   // Handle item click with callback
   const onItemClickHandler = useCallback(
-    (item: typeof CHECKLIST_ITEMS[0]) => {
-      onItemClick?.(item.id)
-      handleItemClick(item)
-      setIsMinimized(true) // Minimize when navigating
+    (item: (typeof CHECKLIST_ITEMS)[0]) => {
+      onItemClick?.(item.id);
+      handleItemClick(item);
+      setIsMinimized(true); // Minimize when navigating
     },
-    [handleItemClick, onItemClick, setIsMinimized]
-  )
+    [handleItemClick, onItemClick, setIsMinimized],
+  );
 
   // Handle dismiss with callback
   const onDismissHandler = useCallback(() => {
-    handleDismiss()
-    onDismiss?.()
+    handleDismiss();
+    onDismiss?.();
     toast.success(
       (t) => (
         <div className="flex items-center gap-2">
           <span>Checklist dismissed.</span>
           <button
             onClick={() => {
-              handleUndoDismiss()
-              toast.dismiss(t.id)
-              toast.success('Checklist restored', { duration: 2000 })
+              handleUndoDismiss();
+              toast.dismiss(t.id);
+              toast.success("Checklist restored", { duration: 2000 });
             }}
             className="underline font-medium hover:no-underline"
             type="button"
@@ -120,29 +152,29 @@ function OnboardingChecklistComponent({ settings, onStartTour, onDismiss, onItem
       ),
       {
         duration: 5000,
-        id: 'onboarding-checklist-dismissed',
-      }
-    )
-  }, [handleDismiss, handleUndoDismiss, onDismiss])
+        id: "onboarding-checklist-dismissed",
+      },
+    );
+  }, [handleDismiss, handleUndoDismiss, onDismiss]);
 
   // Keyboard navigation handler
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent, action: () => void) => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault()
-        action()
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        action();
       }
     },
-    []
-  )
+    [],
+  );
 
   // Don't show if survey not completed or all items completed
   if (!settings.onboarding_survey_completed || allCompleted) {
-    return null
+    return null;
   }
 
   if (!isOpen) {
-    return null
+    return null;
   }
 
   return (
@@ -151,13 +183,16 @@ function OnboardingChecklistComponent({ settings, onStartTour, onDismiss, onItem
       role="complementary"
       aria-label="Onboarding checklist"
       className={`fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 z-50 bg-white rounded-lg shadow-xl border border-gray-200 transition-all duration-300 ${
-        isMinimized ? 'w-auto sm:w-64' : 'w-full sm:w-80'
+        isMinimized ? "w-auto sm:w-64" : "w-full sm:w-80"
       }`}
     >
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-primary-50 to-white">
         <div className="flex items-center">
-          <FiList className="w-5 h-5 text-primary-600 mr-2" aria-hidden="true" />
+          <FiList
+            className="w-5 h-5 text-primary-600 mr-2"
+            aria-hidden="true"
+          />
           <h3 className="font-semibold text-gray-900">Getting Started</h3>
         </div>
         <div className="flex items-center gap-2">
@@ -165,7 +200,7 @@ function OnboardingChecklistComponent({ settings, onStartTour, onDismiss, onItem
             onClick={handleToggleMinimize}
             onKeyDown={(e) => handleKeyDown(e, handleToggleMinimize)}
             className="text-gray-500 hover:text-gray-700 p-2 rounded hover:bg-gray-100 touch-target transition-colors"
-            aria-label={isMinimized ? 'Expand checklist' : 'Minimize checklist'}
+            aria-label={isMinimized ? "Expand checklist" : "Minimize checklist"}
             aria-expanded={!isMinimized}
             type="button"
           >
@@ -190,8 +225,12 @@ function OnboardingChecklistComponent({ settings, onStartTour, onDismiss, onItem
           {/* Progress indicator */}
           <div className="mb-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-600">Progress</span>
-              <span className="text-sm font-medium text-gray-600">{progress}%</span>
+              <span className="text-sm font-medium text-gray-600">
+                Progress
+              </span>
+              <span className="text-sm font-medium text-gray-600">
+                {progress}%
+              </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div
@@ -235,28 +274,30 @@ function OnboardingChecklistComponent({ settings, onStartTour, onDismiss, onItem
           {/* Checklist items */}
           <ul className="space-y-3" role="list">
             {CHECKLIST_ITEMS.map((item) => {
-              const completed = checklist[item.id] || false
-              const isUpdating = itemState.updating === item.id
+              const completed = checklist[item.id] || false;
+              const isUpdating = itemState.updating === item.id;
 
               return (
                 <li key={item.id} role="listitem">
                   <button
                     onClick={() => onItemClickHandler(item)}
-                    onKeyDown={(e) => handleKeyDown(e, () => onItemClickHandler(item))}
+                    onKeyDown={(e) =>
+                      handleKeyDown(e, () => onItemClickHandler(item))
+                    }
                     disabled={completed || isUpdating}
                     className={`w-full flex items-center justify-between p-3 rounded-lg transition-all ${
                       completed
-                        ? 'bg-green-50 text-green-700 cursor-default'
+                        ? "bg-green-50 text-green-700 cursor-default"
                         : isUpdating
-                        ? 'bg-gray-50 text-gray-500 cursor-wait'
-                        : 'bg-gray-50 hover:bg-primary-50 text-gray-700 hover:text-primary-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2'
+                          ? "bg-gray-50 text-gray-500 cursor-wait"
+                          : "bg-gray-50 hover:bg-primary-50 text-gray-700 hover:text-primary-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
                     }`}
                     aria-label={
                       completed
                         ? `${item.label} - Completed`
                         : isUpdating
-                        ? `${item.label} - Loading`
-                        : item.label
+                          ? `${item.label} - Loading`
+                          : item.label
                     }
                     aria-disabled={completed || isUpdating}
                     type="button"
@@ -284,13 +325,17 @@ function OnboardingChecklistComponent({ settings, onStartTour, onDismiss, onItem
                     {isUpdating && <LoadingSpinner />}
                   </button>
                 </li>
-              )
+              );
             })}
           </ul>
 
           {/* Completion message */}
           {allCompleted && (
-            <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200" role="status" aria-live="polite">
+            <div
+              className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200"
+              role="status"
+              aria-live="polite"
+            >
               <p className="text-sm text-green-700 font-medium text-center">
                 {COMPLETION_MESSAGES.ALL_COMPLETE}
               </p>
@@ -299,8 +344,8 @@ function OnboardingChecklistComponent({ settings, onStartTour, onDismiss, onItem
         </div>
       )}
     </div>
-  )
+  );
 }
 
 // Memoize component to prevent unnecessary re-renders
-export const OnboardingChecklist = memo(OnboardingChecklistComponent)
+export const OnboardingChecklist = memo(OnboardingChecklistComponent);

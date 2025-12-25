@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { api } from '@/lib/api';
+import { useState } from "react";
+import { api } from "@/lib/api";
 
 export interface WorkflowAIEditRequest {
   userPrompt: string;
@@ -29,7 +29,10 @@ export function useWorkflowAI(workflowId: string) {
       setProposal(response);
       return response;
     } catch (err: any) {
-      const errorMessage = err.response?.data?.error || err.message || 'Failed to generate workflow edit';
+      const errorMessage =
+        err.response?.data?.error ||
+        err.message ||
+        "Failed to generate workflow edit";
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {

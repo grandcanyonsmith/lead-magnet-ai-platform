@@ -1,73 +1,82 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { api } from '@/lib/api'
-import { useSettings } from '@/hooks/api/useSettings'
-import { buildPublicFormUrl } from '@/utils/url'
-import { FiArrowLeft, FiSave } from 'react-icons/fi'
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { api } from "@/lib/api";
+import { useSettings } from "@/hooks/api/useSettings";
+import { buildPublicFormUrl } from "@/utils/url";
+import { FiArrowLeft, FiSave } from "react-icons/fi";
 
 type FormField = {
-  field_id: string
-  field_type: 'text' | 'textarea' | 'email' | 'tel' | 'number' | 'select' | 'checkbox'
-  label: string
-  placeholder?: string
-  required: boolean
-  validation_regex?: string
-  max_length?: number
-  options?: string[]
-}
+  field_id: string;
+  field_type:
+    | "text"
+    | "textarea"
+    | "email"
+    | "tel"
+    | "number"
+    | "select"
+    | "checkbox";
+  label: string;
+  placeholder?: string;
+  required: boolean;
+  validation_regex?: string;
+  max_length?: number;
+  options?: string[];
+};
 
 export default function NewFormClient() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const { settings } = useSettings()
-  
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { settings } = useSettings();
+
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const [formFormData, setFormFormData] = useState({
-    workflow_id: '',
-    form_name: '',
-    public_slug: '',
+    workflow_id: "",
+    form_name: "",
+    public_slug: "",
     form_fields_schema: {
       fields: [] as FormField[],
     },
     rate_limit_enabled: true,
     rate_limit_per_hour: 10,
     captcha_enabled: false,
-    custom_css: '',
-    thank_you_message: '',
-    redirect_url: '',
-  })
+    custom_css: "",
+    thank_you_message: "",
+    redirect_url: "",
+  });
 
   useEffect(() => {
-    const workflowId = searchParams?.get('workflow_id')
+    const workflowId = searchParams?.get("workflow_id");
     if (workflowId) {
-      setFormFormData(prev => ({ ...prev, workflow_id: workflowId }))
+      setFormFormData((prev) => ({ ...prev, workflow_id: workflowId }));
     }
-  }, [searchParams])
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
+    e.preventDefault();
+    setError(null);
 
     if (!formFormData.form_name.trim()) {
-      setError('Form name is required')
-      return
+      setError("Form name is required");
+      return;
     }
 
     if (!formFormData.public_slug.trim()) {
-      setError('Public URL slug is required')
-      return
+      setError("Public URL slug is required");
+      return;
     }
 
     if (!formFormData.workflow_id.trim()) {
-      setError('Workflow ID is required. Please provide a workflow_id in the URL or select a workflow.')
-      return
+      setError(
+        "Workflow ID is required. Please provide a workflow_id in the URL or select a workflow.",
+      );
+      return;
     }
 
-    setSubmitting(true)
+    setSubmitting(true);
 
     try {
       await api.createForm({
@@ -81,37 +90,41 @@ export default function NewFormClient() {
         custom_css: formFormData.custom_css.trim() || undefined,
         thank_you_message: formFormData.thank_you_message.trim() || undefined,
         redirect_url: formFormData.redirect_url.trim() || undefined,
-      })
+      });
 
-      router.push('/dashboard/workflows')
+      router.push("/dashboard/workflows");
     } catch (error: any) {
-      console.error('Failed to create form:', error)
-      setError(error.response?.data?.message || error.message || 'Failed to create form')
+      console.error("Failed to create form:", error);
+      setError(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to create form",
+      );
     } finally {
-      setSubmitting(false)
+      setSubmitting(false);
     }
-  }
+  };
 
   const handleFormChange = (field: string, value: any) => {
-    setFormFormData(prev => ({ ...prev, [field]: value }))
-  }
+    setFormFormData((prev) => ({ ...prev, [field]: value }));
+  };
 
   const handleFieldChange = (index: number, field: string, value: any) => {
-    setFormFormData(prev => {
-      const newFields = [...prev.form_fields_schema.fields]
-      newFields[index] = { ...newFields[index], [field]: value }
+    setFormFormData((prev) => {
+      const newFields = [...prev.form_fields_schema.fields];
+      newFields[index] = { ...newFields[index], [field]: value };
       return {
         ...prev,
         form_fields_schema: {
           ...prev.form_fields_schema,
           fields: newFields,
         },
-      }
-    })
-  }
+      };
+    });
+  };
 
   const addField = () => {
-    setFormFormData(prev => ({
+    setFormFormData((prev) => ({
       ...prev,
       form_fields_schema: {
         ...prev.form_fields_schema,
@@ -119,29 +132,29 @@ export default function NewFormClient() {
           ...prev.form_fields_schema.fields,
           {
             field_id: `field_${Date.now()}`,
-            field_type: 'text',
-            label: '',
-            placeholder: '',
+            field_type: "text",
+            label: "",
+            placeholder: "",
             required: false,
           },
         ],
       },
-    }))
-  }
+    }));
+  };
 
   const removeField = (index: number) => {
-    setFormFormData(prev => {
-      const newFields = [...prev.form_fields_schema.fields]
-      newFields.splice(index, 1)
+    setFormFormData((prev) => {
+      const newFields = [...prev.form_fields_schema.fields];
+      newFields.splice(index, 1);
       return {
         ...prev,
         form_fields_schema: {
           ...prev.form_fields_schema,
           fields: newFields,
         },
-      }
-    })
-  }
+      };
+    });
+  };
 
   return (
     <div>
@@ -162,7 +175,10 @@ export default function NewFormClient() {
         <p className="text-gray-600 mt-1">Create a new lead capture form</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 space-y-6">
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white rounded-lg shadow p-6 space-y-6"
+      >
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Form Name <span className="text-red-500">*</span>
@@ -170,7 +186,7 @@ export default function NewFormClient() {
           <input
             type="text"
             value={formFormData.form_name}
-            onChange={(e) => handleFormChange('form_name', e.target.value)}
+            onChange={(e) => handleFormChange("form_name", e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
             placeholder="Lead Magnet Form"
             maxLength={200}
@@ -185,18 +201,28 @@ export default function NewFormClient() {
           <input
             type="text"
             value={formFormData.public_slug}
-            onChange={(e) => handleFormChange('public_slug', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
+            onChange={(e) =>
+              handleFormChange(
+                "public_slug",
+                e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"),
+              )
+            }
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono text-sm"
             placeholder="lead-magnet-form"
             pattern="[a-z0-9-]+"
             required
           />
           <p className="mt-1 text-xs text-gray-500">
-            URL-friendly identifier. Only lowercase letters, numbers, and hyphens allowed.
+            URL-friendly identifier. Only lowercase letters, numbers, and
+            hyphens allowed.
           </p>
           {formFormData.public_slug && (
             <p className="mt-1 text-xs text-primary-600">
-              Form URL: {buildPublicFormUrl(formFormData.public_slug, settings?.custom_domain)}
+              Form URL:{" "}
+              {buildPublicFormUrl(
+                formFormData.public_slug,
+                settings?.custom_domain,
+              )}
             </p>
           )}
         </div>
@@ -216,13 +242,20 @@ export default function NewFormClient() {
           </div>
           <div className="space-y-4">
             {formFormData.form_fields_schema.fields.map((field, index) => (
-              <div key={field.field_id || index} className="border border-gray-200 rounded-lg p-4 space-y-3">
+              <div
+                key={field.field_id || index}
+                className="border border-gray-200 rounded-lg p-4 space-y-3"
+              >
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Field Type</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Field Type
+                    </label>
                     <select
                       value={field.field_type}
-                      onChange={(e) => handleFieldChange(index, 'field_type', e.target.value)}
+                      onChange={(e) =>
+                        handleFieldChange(index, "field_type", e.target.value)
+                      }
                       className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500"
                     >
                       <option value="text">Text</option>
@@ -234,33 +267,52 @@ export default function NewFormClient() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Label</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Label
+                    </label>
                     <input
                       type="text"
                       value={field.label}
-                      onChange={(e) => handleFieldChange(index, 'label', e.target.value)}
+                      onChange={(e) =>
+                        handleFieldChange(index, "label", e.target.value)
+                      }
                       className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500"
                       placeholder="Field Label"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Placeholder</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Placeholder
+                  </label>
                   <input
                     type="text"
-                    value={field.placeholder || ''}
-                    onChange={(e) => handleFieldChange(index, 'placeholder', e.target.value)}
+                    value={field.placeholder || ""}
+                    onChange={(e) =>
+                      handleFieldChange(index, "placeholder", e.target.value)
+                    }
                     className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500"
                     placeholder="Placeholder text"
                   />
                 </div>
-                {field.field_type === 'select' && (
+                {field.field_type === "select" && (
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Options (comma-separated)</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Options (comma-separated)
+                    </label>
                     <input
                       type="text"
-                      value={field.options?.join(', ') || ''}
-                      onChange={(e) => handleFieldChange(index, 'options', e.target.value.split(',').map(o => o.trim()).filter(o => o))}
+                      value={field.options?.join(", ") || ""}
+                      onChange={(e) =>
+                        handleFieldChange(
+                          index,
+                          "options",
+                          e.target.value
+                            .split(",")
+                            .map((o) => o.trim())
+                            .filter((o) => o),
+                        )
+                      }
                       className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500"
                       placeholder="Option 1, Option 2, Option 3"
                     />
@@ -271,7 +323,9 @@ export default function NewFormClient() {
                     <input
                       type="checkbox"
                       checked={field.required}
-                      onChange={(e) => handleFieldChange(index, 'required', e.target.checked)}
+                      onChange={(e) =>
+                        handleFieldChange(index, "required", e.target.checked)
+                      }
                       className="mr-2"
                     />
                     <span className="text-xs text-gray-700">Required</span>
@@ -287,7 +341,9 @@ export default function NewFormClient() {
               </div>
             ))}
             {formFormData.form_fields_schema.fields.length === 0 && (
-              <p className="text-sm text-gray-500 text-center py-4">No custom fields. Name, email, and phone are always included.</p>
+              <p className="text-sm text-gray-500 text-center py-4">
+                No custom fields. Name, email, and phone are always included.
+              </p>
             )}
           </div>
         </div>
@@ -298,10 +354,14 @@ export default function NewFormClient() {
               <input
                 type="checkbox"
                 checked={formFormData.rate_limit_enabled}
-                onChange={(e) => handleFormChange('rate_limit_enabled', e.target.checked)}
+                onChange={(e) =>
+                  handleFormChange("rate_limit_enabled", e.target.checked)
+                }
                 className="mr-2"
               />
-              <span className="text-sm font-medium text-gray-700">Enable Rate Limiting</span>
+              <span className="text-sm font-medium text-gray-700">
+                Enable Rate Limiting
+              </span>
             </label>
           </div>
           {formFormData.rate_limit_enabled && (
@@ -312,7 +372,12 @@ export default function NewFormClient() {
               <input
                 type="number"
                 value={formFormData.rate_limit_per_hour}
-                onChange={(e) => handleFormChange('rate_limit_per_hour', parseInt(e.target.value) || 10)}
+                onChange={(e) =>
+                  handleFormChange(
+                    "rate_limit_per_hour",
+                    parseInt(e.target.value) || 10,
+                  )
+                }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                 min={1}
                 max={1000}
@@ -324,10 +389,14 @@ export default function NewFormClient() {
               <input
                 type="checkbox"
                 checked={formFormData.captcha_enabled}
-                onChange={(e) => handleFormChange('captcha_enabled', e.target.checked)}
+                onChange={(e) =>
+                  handleFormChange("captcha_enabled", e.target.checked)
+                }
                 className="mr-2"
               />
-              <span className="text-sm font-medium text-gray-700">Enable CAPTCHA</span>
+              <span className="text-sm font-medium text-gray-700">
+                Enable CAPTCHA
+              </span>
             </label>
           </div>
         </div>
@@ -338,7 +407,9 @@ export default function NewFormClient() {
           </label>
           <textarea
             value={formFormData.thank_you_message}
-            onChange={(e) => handleFormChange('thank_you_message', e.target.value)}
+            onChange={(e) =>
+              handleFormChange("thank_you_message", e.target.value)
+            }
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
             placeholder="Thank you! Your submission is being processed."
             rows={3}
@@ -352,7 +423,7 @@ export default function NewFormClient() {
           <input
             type="url"
             value={formFormData.redirect_url}
-            onChange={(e) => handleFormChange('redirect_url', e.target.value)}
+            onChange={(e) => handleFormChange("redirect_url", e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
             placeholder="https://example.com/thank-you"
           />
@@ -364,7 +435,7 @@ export default function NewFormClient() {
           </label>
           <textarea
             value={formFormData.custom_css}
-            onChange={(e) => handleFormChange('custom_css', e.target.value)}
+            onChange={(e) => handleFormChange("custom_css", e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono text-sm"
             placeholder="/* Custom CSS styles */"
             rows={6}
@@ -385,11 +456,10 @@ export default function NewFormClient() {
             className="flex items-center justify-center px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-target"
           >
             <FiSave className="w-5 h-5 mr-2" />
-            {submitting ? 'Creating...' : 'Create Form'}
+            {submitting ? "Creating..." : "Create Form"}
           </button>
         </div>
       </form>
     </div>
-  )
+  );
 }
-

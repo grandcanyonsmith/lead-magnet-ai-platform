@@ -1,7 +1,7 @@
-import { ulid } from 'ulid';
-import { db } from '../utils/db';
-import { env } from '../utils/env';
-import { logger } from '../utils/logger';
+import { ulid } from "ulid";
+import { db } from "../utils/db";
+import { env } from "../utils/env";
+import { logger } from "../utils/logger";
 
 const WEBHOOK_LOGS_TABLE = env.webhookLogsTable;
 
@@ -33,15 +33,17 @@ export class WebhookLogService {
     const createdAt = new Date().toISOString();
 
     // Stringify request/response bodies to avoid DynamoDB size limits
-    const requestBodyStr = typeof data.request_body === 'string' 
-      ? data.request_body 
-      : JSON.stringify(data.request_body || {});
-    
-    const responseBodyStr = data.response_body !== undefined
-      ? (typeof data.response_body === 'string' 
-          ? data.response_body 
-          : JSON.stringify(data.response_body))
-      : undefined;
+    const requestBodyStr =
+      typeof data.request_body === "string"
+        ? data.request_body
+        : JSON.stringify(data.request_body || {});
+
+    const responseBodyStr =
+      data.response_body !== undefined
+        ? typeof data.response_body === "string"
+          ? data.response_body
+          : JSON.stringify(data.response_body)
+        : undefined;
 
     const logEntry: any = {
       log_id: logId,
@@ -86,11 +88,14 @@ export class WebhookLogService {
 
     try {
       await db.put(WEBHOOK_LOGS_TABLE, logEntry);
-      logger.debug('[WebhookLogService] Logged webhook request', { logId, endpoint: data.endpoint });
+      logger.debug("[WebhookLogService] Logged webhook request", {
+        logId,
+        endpoint: data.endpoint,
+      });
       return logEntry;
     } catch (error: any) {
       // Don't throw - logging failures shouldn't break webhook processing
-      logger.error('[WebhookLogService] Failed to log webhook request', {
+      logger.error("[WebhookLogService] Failed to log webhook request", {
         error: error.message,
         errorStack: error.stack,
         logId,
@@ -102,4 +107,3 @@ export class WebhookLogService {
 }
 
 export const webhookLogService = new WebhookLogService();
-

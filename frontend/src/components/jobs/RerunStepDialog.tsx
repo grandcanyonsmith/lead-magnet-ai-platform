@@ -1,15 +1,15 @@
-'use client'
+"use client";
 
-import { FiAlertCircle, FiX, FiRefreshCw, FiPlay } from 'react-icons/fi'
+import { FiAlertCircle, FiX, FiRefreshCw, FiPlay } from "react-icons/fi";
 
 interface RerunStepDialogProps {
-  isOpen: boolean
-  onClose: () => void
-  onRerunOnly: () => void
-  onRerunAndContinue: () => void
-  stepNumber: number
-  stepName?: string
-  isRerunning: boolean
+  isOpen: boolean;
+  onClose: () => void;
+  onRerunOnly: () => void;
+  onRerunAndContinue: () => void;
+  stepNumber: number;
+  stepName?: string;
+  isRerunning: boolean;
 }
 
 export function RerunStepDialog({
@@ -21,7 +21,7 @@ export function RerunStepDialog({
   stepName,
   isRerunning,
 }: RerunStepDialogProps) {
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -110,5 +110,5 @@ export function RerunStepDialog({
         </div>
       </div>
     </div>
-  )
+  );
 }
