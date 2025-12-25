@@ -24,6 +24,7 @@ export class EnvConfig {
   readonly webhookLogsTable: string;
   readonly trackingEventsTable: string;
   readonly rateLimitsTable: string;
+  readonly htmlPatchRequestsTable: string;
 
   // AWS Configuration
   readonly awsRegion: string;
@@ -116,6 +117,10 @@ export class EnvConfig {
     this.rateLimitsTable = this.getWithDefault(
       "RATE_LIMITS_TABLE",
       "leadmagnet-rate-limits",
+    );
+    this.htmlPatchRequestsTable = this.getWithDefault(
+      "HTML_PATCH_REQUESTS_TABLE",
+      "leadmagnet-html-patch-requests",
     );
 
     // AWS Configuration

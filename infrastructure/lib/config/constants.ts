@@ -39,6 +39,7 @@ export const TABLE_NAMES = {
   WEBHOOK_LOGS: 'leadmagnet-webhook-logs',
   TRACKING_EVENTS: 'leadmagnet-tracking-events',
   RATE_LIMITS: 'leadmagnet-rate-limits',
+  HTML_PATCH_REQUESTS: 'leadmagnet-html-patch-requests',
 } as const;
 
 /**
