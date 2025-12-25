@@ -298,6 +298,24 @@ export class DatabaseStack extends cdk.Stack {
       }
     );
 
+    // Table 18: HTML Patch Requests (async HTML patching, TTL for cleanup)
+    const htmlPatchRequestsTable = createTableWithGSI(
+      this,
+      'HtmlPatchRequestsTable',
+      {
+        tableName: TABLE_NAMES.HTML_PATCH_REQUESTS,
+        partitionKey: { name: 'patch_id', type: dynamodb.AttributeType.STRING },
+        timeToLiveAttribute: 'ttl', // Auto-cleanup after 24 hours
+      },
+      [
+        {
+          indexName: 'gsi_job_id',
+          partitionKey: { name: 'job_id', type: dynamodb.AttributeType.STRING },
+          sortKey: { name: 'created_at', type: dynamodb.AttributeType.STRING },
+        },
+      ]
+    );
+
     // Table 18: Folders (legacy table - keep resource definition to maintain CloudFormation exports)
     // This table exists in DynamoDB and CloudFormation - keep the resource definition unchanged
     // CloudFormation will reference existing table without modifications
@@ -350,6 +368,7 @@ export class DatabaseStack extends cdk.Stack {
       [TableKey.WEBHOOK_LOGS]: webhookLogsTable,
       [TableKey.TRACKING_EVENTS]: trackingEventsTable,
       [TableKey.RATE_LIMITS]: rateLimitsTable,
+      [TableKey.HTML_PATCH_REQUESTS]: htmlPatchRequestsTable,
     };
 
     // CloudFormation outputs
