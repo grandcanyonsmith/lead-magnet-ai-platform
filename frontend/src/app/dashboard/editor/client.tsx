@@ -276,10 +276,6 @@ export default function EditorClient() {
 
   const handleSendMessage = async () => {
     if (!prompt.trim() || !jobId) return
-    if (!selectedOuterHtml) {
-      toast.error('Select an element first (faster + avoids timeouts)')
-      return
-    }
     setIsProcessing(true)
     
     try {
