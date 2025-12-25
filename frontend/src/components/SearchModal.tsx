@@ -95,7 +95,6 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
     const navItems: SearchResult[] = [
       { id: 'nav-dashboard', type: 'page', title: 'Dashboard', href: '/dashboard', subtitle: 'Overview' },
       { id: 'nav-workflows', type: 'page', title: 'Lead Magnets', href: '/dashboard/workflows', subtitle: 'Manage workflows' },
-      { id: 'nav-jobs', type: 'page', title: 'Generated Lead Magnets', href: '/dashboard/jobs', subtitle: 'View jobs' },
       { id: 'nav-artifacts', type: 'page', title: 'Downloads', href: '/dashboard/artifacts', subtitle: 'Downloaded files' },
       { id: 'nav-settings', type: 'page', title: 'Settings', href: '/dashboard/settings', subtitle: 'Account settings' },
     ]

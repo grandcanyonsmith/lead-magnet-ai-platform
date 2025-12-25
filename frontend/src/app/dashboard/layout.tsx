@@ -20,7 +20,6 @@ import { logger } from '@/utils/logger'
 import {
   HomeIcon,
   QueueListIcon,
-  ChartBarIcon,
   Bars3Icon,
   XMarkIcon,
   MagnifyingGlassIcon,
@@ -130,11 +129,18 @@ export default function DashboardLayout({
     setActiveTourId(null)
   }
 
-  const navItems = useMemo(() => [
-    { href: '/dashboard', label: 'Dashboard', icon: HomeIcon },
-    { href: '/dashboard/workflows', label: 'Lead Magnets', icon: QueueListIcon },
-    { href: '/dashboard/jobs', label: 'Generated Lead Magnets', icon: ChartBarIcon },
-  ], [])
+  const navItems = useMemo(
+    () => [
+      { href: '/dashboard', label: 'Dashboard', icon: HomeIcon, exact: true },
+      {
+        href: '/dashboard/workflows',
+        label: 'Lead Magnets',
+        icon: QueueListIcon,
+        activePrefixes: ['/dashboard/workflows', '/dashboard/jobs'],
+      },
+    ],
+    []
+  )
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
@@ -163,6 +169,8 @@ export default function DashboardLayout({
       </div>
     )
   }
+
+  const isEditorRoute = Boolean(pathname?.startsWith('/dashboard/editor'))
 
   return (
     <TourProvider
@@ -284,7 +292,11 @@ export default function DashboardLayout({
               <div className="space-y-1">
                 <p className="px-2 text-[10px] sm:text-xs font-semibold uppercase tracking-[0.08em] text-zinc-500">Main</p>
                 {navItems.map((item) => {
-                  const isActive = pathname === item.href || pathname?.startsWith(item.href + '/')
+                  const isActive = item.exact
+                    ? pathname === item.href
+                    : item.activePrefixes
+                      ? item.activePrefixes.some((prefix) => pathname === prefix || pathname?.startsWith(prefix + '/'))
+                      : pathname === item.href || pathname?.startsWith(item.href + '/')
                   const Icon = item.icon
                   return (
                     <Link
@@ -401,12 +413,20 @@ export default function DashboardLayout({
           <ImpersonationBanner />
 
           {/* Page content */}
-          <main className="p-3 sm:p-4 md:p-6 lg:p-8 bg-gray-100 min-h-screen">
-            <div className="w-full lg:rounded-xl lg:bg-white lg:p-6 xl:p-8 lg:shadow-md lg:ring-1 lg:ring-gray-200">
-              <div className="mx-auto max-w-6xl w-full">
-                {children}
+          <main
+            className={
+              isEditorRoute
+                ? 'p-0 bg-[#0c0d10] min-h-screen'
+                : 'p-3 sm:p-4 md:p-6 lg:p-8 bg-gray-100 min-h-screen'
+            }
+          >
+            {isEditorRoute ? (
+              <div className="w-full">{children}</div>
+            ) : (
+              <div className="w-full lg:rounded-xl lg:bg-white lg:p-6 xl:p-8 lg:shadow-md lg:ring-1 lg:ring-gray-200">
+                <div className="mx-auto max-w-6xl w-full">{children}</div>
               </div>
-            </div>
+            )}
           </main>
         </div>
       </div>

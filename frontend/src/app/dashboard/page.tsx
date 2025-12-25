@@ -256,7 +256,7 @@ export default function DashboardPage() {
           <p className="text-gray-600 text-xs sm:text-sm leading-relaxed">
             Monitor your generated lead magnets and form submissions in the{' '}
             <a href="/dashboard/jobs" className="text-primary-600 hover:text-primary-700 font-medium" aria-label="View generated lead magnets">
-              Generated Lead Magnets section
+              Generated tab
             </a>
             .
           </p>
