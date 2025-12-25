@@ -168,6 +168,7 @@ export const TABLE_ENV_VAR_MAP: Record<TableKey, string> = {
   webhookLogs: 'WEBHOOK_LOGS_TABLE',
   trackingEvents: 'TRACKING_EVENTS_TABLE',
   rateLimits: 'RATE_LIMITS_TABLE',
+  htmlPatchRequests: 'HTML_PATCH_REQUESTS_TABLE',
 } as const;
 
 /**
