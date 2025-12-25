@@ -88,7 +88,7 @@ export function BillingUsage() {
 
       const baseUrl = window.location.origin;
       const { portal_url } = await billingClient.createPortalSession(
-        `${baseUrl}/dashboard/settings?tab=billing`,
+        `${baseUrl}/dashboard/settings/billing`,
       );
 
       // Redirect to Stripe Customer Portal
