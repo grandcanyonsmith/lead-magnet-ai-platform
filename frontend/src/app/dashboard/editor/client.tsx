@@ -307,8 +307,10 @@ export default function EditorClient() {
   const getPreviewContent = useCallback(() => {
     if (!htmlState.html) return ''
     
-    // Remove legacy overlay script to prevent conflicts
-    let cleanContent = htmlState.html.replace(/<!--\s*Lead Magnet Editor Overlay\s*-->[\s\S]*?<\/script>/gi, '')
+    // Remove injected scripts (overlay + tracking) to prevent conflicts and sandbox errors.
+    let cleanContent = String(htmlState.html || '')
+      .replace(/<!--\s*Lead Magnet Editor Overlay\s*-->[\s\S]*?<\/script>\s*/gi, '')
+      .replace(/<!--\s*Lead Magnet Tracking Script\s*-->[\s\S]*?<\/script>\s*/gi, '')
     
     // Inject our script before closing body
     if (cleanContent.includes('</body>')) {
@@ -679,7 +681,7 @@ export default function EditorClient() {
                     srcDoc={getPreviewContent()}
                     className="w-full h-full bg-white"
                     title="Preview"
-                    sandbox="allow-scripts"
+                    sandbox="allow-scripts allow-popups"
                   />
                 ) : hasError ? (
                    <div className="flex flex-col w-full h-full items-center justify-center text-gray-500 bg-[#0c0d10] p-4 text-center">
