@@ -23,11 +23,61 @@ interface ArtifactGalleryProps {
   onPreview: (item: ArtifactGalleryItem) => void
 }
 
+function groupFinalHtmlArtifacts(items: ArtifactGalleryItem[]): ArtifactGalleryItem[] {
+  const groups = new Map<string, ArtifactGalleryItem[]>()
+  const passthrough: ArtifactGalleryItem[] = []
+
+  for (const item of items) {
+    const artifactType = String(item.artifact?.artifact_type || '').toLowerCase()
+    const fileName = String(item.artifact?.file_name || item.artifact?.artifact_name || '').toLowerCase()
+
+    // Group repeated html_final artifacts (commonly "final.html") into a single card.
+    if (item.kind === 'artifact' && artifactType === 'html_final' && fileName) {
+      const key = `${artifactType}:${fileName}`
+      const arr = groups.get(key) || []
+      arr.push(item)
+      groups.set(key, arr)
+      continue
+    }
+
+    passthrough.push(item)
+  }
+
+  const grouped: ArtifactGalleryItem[] = []
+  for (const [key, versions] of groups.entries()) {
+    if (versions.length <= 1) {
+      grouped.push(versions[0])
+      continue
+    }
+
+    const latest = versions.reduce(
+      (acc, cur) => ((cur.sortOrder ?? 0) > (acc.sortOrder ?? 0) ? cur : acc),
+      versions[0]
+    )
+    const versionNumber = versions.length
+    const baseDescription =
+      latest.description ||
+      latest.artifact?.artifact_type?.replace(/_/g, ' ') ||
+      latest.artifact?.file_name ||
+      'html final'
+
+    grouped.push({
+      ...latest,
+      id: `group-${key}`,
+      description: `${baseDescription} · v${versionNumber}`,
+    })
+  }
+
+  return [...passthrough, ...grouped].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+}
+
 export function ArtifactGallery({
   items,
   loading,
   onPreview,
 }: ArtifactGalleryProps) {
+  const displayItems = groupFinalHtmlArtifacts(items)
+
   if (loading && items.length === 0) {
     return (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -65,7 +115,7 @@ export function ArtifactGallery({
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {items.map((item) => (
+      {displayItems.map((item) => (
         <ArtifactCard key={item.id} item={item} onPreview={onPreview} />
       ))}
     </div>

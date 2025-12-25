@@ -24,6 +24,7 @@ import { TechnicalDetails } from '@/components/jobs/TechnicalDetails'
 import { ResubmitModal } from '@/components/jobs/ResubmitModal'
 import { RerunStepDialog } from '@/components/jobs/RerunStepDialog'
 import { ArtifactGallery } from '@/components/jobs/detail/ArtifactGallery'
+import { WorkflowImprovePanel } from '@/components/jobs/detail/WorkflowImprovePanel'
 import { FullScreenPreviewModal } from '@/components/ui/FullScreenPreviewModal'
 import { LoadingState } from '@/components/ui/LoadingState'
 import { ErrorState } from '@/components/ui/ErrorState'
@@ -365,6 +366,14 @@ export default function JobDetailClient() {
           setSelectedIndex={setSelectedIndex}
           mergedSteps={mergedSteps}
           artifactGalleryItems={artifactGalleryItems}
+          executionHeader={
+            <WorkflowImprovePanel
+              job={job}
+              workflow={workflow}
+              mergedSteps={mergedSteps}
+              artifacts={jobArtifacts}
+            />
+          }
           expandedSteps={expandedSteps}
           toggleStep={toggleStep}
           showExecutionSteps={showExecutionSteps}
@@ -447,6 +456,7 @@ interface JobTabsProps {
   setSelectedIndex: (index: number) => void
   mergedSteps: MergedStep[]
   artifactGalleryItems: ArtifactGalleryItem[]
+  executionHeader?: ReactNode
   expandedSteps: Set<number>
   toggleStep: (stepOrder: number) => void
   showExecutionSteps: boolean
@@ -470,6 +480,7 @@ function JobTabs({
   setSelectedIndex,
   mergedSteps,
   artifactGalleryItems,
+  executionHeader,
   expandedSteps,
   toggleStep,
   showExecutionSteps,
@@ -514,6 +525,7 @@ function JobTabs({
         <TabPanels className="mt-6">
           <TabPanel>
             <div className="space-y-8">
+              {executionHeader ? <div>{executionHeader}</div> : null}
               <ExecutionSteps
                 steps={mergedSteps}
                 expandedSteps={expandedSteps}
