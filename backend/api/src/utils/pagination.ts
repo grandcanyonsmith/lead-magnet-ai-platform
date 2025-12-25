@@ -1,14 +1,14 @@
-import { db } from './db';
+import { db } from "./db";
 
 /**
  * Pagination utilities for database queries.
  * Provides helpers for consistent pagination across controllers.
- * 
+ *
  * @module pagination
  */
 
-import { validatePaginationParams as validateParams } from './validators';
-import { ValidationError } from './errors';
+import { validatePaginationParams as validateParams } from "./validators";
+import { ValidationError } from "./errors";
 
 /**
  * Pagination parameters for queries.
@@ -31,15 +31,15 @@ export interface PaginatedResult<T> {
 
 /**
  * Parse pagination parameters from query string.
- * 
+ *
  * Validates and normalizes pagination parameters from query string.
  * Defaults: limit=20, offset=0, maxLimit=100
- * 
+ *
  * @param queryParams - Query parameters object
  * @param maxLimit - Maximum allowed limit (default: 100)
  * @returns Normalized pagination parameters
  * @throws {ValidationError} If parameters are invalid
- * 
+ *
  * @example
  * ```typescript
  * const params = parsePaginationParams({ limit: '50', offset: '10' });
@@ -48,7 +48,7 @@ export interface PaginatedResult<T> {
  */
 export function parsePaginationParams(
   queryParams: Record<string, unknown>,
-  maxLimit: number = 100
+  maxLimit: number = 100,
 ): PaginationParams {
   try {
     return validateParams(queryParams.limit, queryParams.offset, maxLimit);
@@ -56,21 +56,21 @@ export function parsePaginationParams(
     if (error instanceof ValidationError) {
       throw error;
     }
-    throw new ValidationError('Invalid pagination parameters');
+    throw new ValidationError("Invalid pagination parameters");
   }
 }
 
 /**
  * Create a paginated response.
- * 
+ *
  * Constructs a standardized paginated result object with metadata.
- * 
+ *
  * @param items - Array of items for current page
  * @param limit - Page size limit
  * @param offset - Offset from start
  * @param totalCount - Total number of items (optional, for accurate hasMore calculation)
  * @returns Paginated result object
- * 
+ *
  * @example
  * ```typescript
  * const result = createPaginatedResponse(items, 20, 0, 100);
@@ -81,24 +81,25 @@ export function createPaginatedResponse<T>(
   items: T[],
   limit: number,
   offset: number,
-  totalCount?: number
+  totalCount?: number,
 ): PaginatedResult<T> {
   if (!Array.isArray(items)) {
-    throw new ValidationError('items must be an array');
+    throw new ValidationError("items must be an array");
   }
 
-  if (typeof limit !== 'number' || limit < 1) {
-    throw new ValidationError('limit must be a positive number');
+  if (typeof limit !== "number" || limit < 1) {
+    throw new ValidationError("limit must be a positive number");
   }
 
-  if (typeof offset !== 'number' || offset < 0) {
-    throw new ValidationError('offset must be a non-negative number');
+  if (typeof offset !== "number" || offset < 0) {
+    throw new ValidationError("offset must be a non-negative number");
   }
 
   const count = totalCount !== undefined ? totalCount : items.length;
-  const hasMore = totalCount !== undefined 
-    ? offset + items.length < totalCount 
-    : items.length === limit;
+  const hasMore =
+    totalCount !== undefined
+      ? offset + items.length < totalCount
+      : items.length === limit;
 
   return {
     items,
@@ -119,7 +120,7 @@ export async function queryWithPagination<T>(
   keyCondition: string,
   expressionAttributeValues: Record<string, any>,
   expressionAttributeNames?: Record<string, string>,
-  paginationParams?: PaginationParams
+  paginationParams?: PaginationParams,
 ): Promise<PaginatedResult<T>> {
   const { limit = 20, offset = 0 } = paginationParams || {};
 
@@ -134,7 +135,7 @@ export async function queryWithPagination<T>(
     expressionAttributeValues,
     expressionAttributeNames,
     fetchLimit,
-    fetchOffset > 0 ? { offset: fetchOffset } : undefined
+    fetchOffset > 0 ? { offset: fetchOffset } : undefined,
   );
 
   const items = (result.items || []) as T[];
@@ -149,7 +150,7 @@ export async function queryWithPagination<T>(
  */
 export function paginateArray<T>(
   items: T[],
-  paginationParams?: PaginationParams
+  paginationParams?: PaginationParams,
 ): PaginatedResult<T> {
   const { limit = 20, offset = 0 } = paginationParams || {};
 
@@ -159,4 +160,3 @@ export function paginateArray<T>(
 
   return createPaginatedResponse(paginatedItems, limit, offset, items.length);
 }
-

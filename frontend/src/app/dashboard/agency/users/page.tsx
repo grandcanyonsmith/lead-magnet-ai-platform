@@ -1,58 +1,70 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@/lib/auth/context'
-import { api } from '@/lib/api'
-import { FiUsers, FiSearch, FiEdit2, FiShield, FiUser, FiUserCheck, FiLogIn, FiCopy, FiCheck } from 'react-icons/fi'
-import toast from 'react-hot-toast'
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth/context";
+import { api } from "@/lib/api";
+import {
+  FiUsers,
+  FiSearch,
+  FiEdit2,
+  FiShield,
+  FiUser,
+  FiUserCheck,
+  FiLogIn,
+  FiCopy,
+  FiCheck,
+} from "react-icons/fi";
+import toast from "react-hot-toast";
 
 interface User {
-  user_id: string
-  email: string
-  name: string
-  customer_id: string
-  role: string
-  created_at: string
+  user_id: string;
+  email: string;
+  name: string;
+  customer_id: string;
+  role: string;
+  created_at: string;
 }
 
 export default function AgencyUsersPage() {
-  const { role, viewMode, refreshAuth, setViewMode } = useAuth()
-  const router = useRouter()
-  const [users, setUsers] = useState<User[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [editingUser, setEditingUser] = useState<User | null>(null)
-  const [newRole, setNewRole] = useState<string>('')
-  const [isSaving, setIsSaving] = useState(false)
-  const [impersonatingUserId, setImpersonatingUserId] = useState<string | null>(null)
-  const [copiedCustomerId, setCopiedCustomerId] = useState<string | null>(null)
+  const { role, viewMode, refreshAuth, setViewMode } = useAuth();
+  const router = useRouter();
+  const [users, setUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [newRole, setNewRole] = useState<string>("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [impersonatingUserId, setImpersonatingUserId] = useState<string | null>(
+    null,
+  );
+  const [copiedCustomerId, setCopiedCustomerId] = useState<string | null>(null);
 
   const loadUsers = async () => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
-      const response = await api.get<{ users: User[] }>('/admin/agency/users', {
+      const response = await api.get<{ users: User[] }>("/admin/agency/users", {
         params: {
           q: searchTerm || undefined,
           limit: 100,
         },
-      })
-      setUsers(response.users || [])
+      });
+      setUsers(response.users || []);
     } catch (error) {
-      console.error('Error loading users:', error)
-      setUsers([])
+      console.error("Error loading users:", error);
+      setUsers([]);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    loadUsers()
+    loadUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm])
+  }, [searchTerm]);
 
   // Only show for SUPER_ADMIN in agency view
-  if (role !== 'SUPER_ADMIN' || viewMode !== 'agency') {
+  if (role !== "SUPER_ADMIN" || viewMode !== "agency") {
     return (
       <div className="max-w-4xl mx-auto">
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
@@ -61,91 +73,94 @@ export default function AgencyUsersPage() {
           </p>
         </div>
       </div>
-    )
+    );
   }
 
   const handleEditUser = (user: User) => {
-    setEditingUser(user)
-    setNewRole(user.role)
-  }
+    setEditingUser(user);
+    setNewRole(user.role);
+  };
 
   const handleSaveRole = async () => {
-    if (!editingUser || !newRole) return
+    if (!editingUser || !newRole) return;
 
-    setIsSaving(true)
+    setIsSaving(true);
     try {
       await api.put(`/admin/agency/users/${editingUser.user_id}`, {
         role: newRole,
-      })
-      await loadUsers()
-      setEditingUser(null)
-      setNewRole('')
-      toast.success('Role updated')
+      });
+      await loadUsers();
+      setEditingUser(null);
+      setNewRole("");
+      toast.success("Role updated");
     } catch (error) {
-      console.error('Error updating user role:', error)
-      toast.error('Failed to update user role')
+      console.error("Error updating user role:", error);
+      toast.error("Failed to update user role");
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   const getRoleIcon = (role: string) => {
     switch (role) {
-      case 'SUPER_ADMIN':
-        return <FiShield className="w-4 h-4 text-purple-600" />
-      case 'ADMIN':
-        return <FiUserCheck className="w-4 h-4 text-blue-600" />
+      case "SUPER_ADMIN":
+        return <FiShield className="w-4 h-4 text-purple-600" />;
+      case "ADMIN":
+        return <FiUserCheck className="w-4 h-4 text-blue-600" />;
       default:
-        return <FiUser className="w-4 h-4 text-gray-600" />
+        return <FiUser className="w-4 h-4 text-gray-600" />;
     }
-  }
+  };
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
-      case 'SUPER_ADMIN':
-        return 'bg-purple-100 text-purple-700'
-      case 'ADMIN':
-        return 'bg-blue-100 text-blue-700'
+      case "SUPER_ADMIN":
+        return "bg-purple-100 text-purple-700";
+      case "ADMIN":
+        return "bg-blue-100 text-blue-700";
       default:
-        return 'bg-gray-100 text-gray-700'
+        return "bg-gray-100 text-gray-700";
     }
-  }
+  };
 
   const handleImpersonate = async (user: User) => {
-    setImpersonatingUserId(user.user_id)
+    setImpersonatingUserId(user.user_id);
     try {
-      const response = await api.post<{ session_id: string }>('/admin/impersonate', {
-        targetUserId: user.user_id,
-      })
+      const response = await api.post<{ session_id: string }>(
+        "/admin/impersonate",
+        {
+          targetUserId: user.user_id,
+        },
+      );
 
-      localStorage.setItem('impersonation_session_id', response.session_id)
-      await refreshAuth()
+      localStorage.setItem("impersonation_session_id", response.session_id);
+      await refreshAuth();
 
       if (user.customer_id) {
-        setViewMode('subaccount', user.customer_id)
+        setViewMode("subaccount", user.customer_id);
       } else {
-        setViewMode('subaccount')
+        setViewMode("subaccount");
       }
 
-      router.push('/dashboard')
+      router.push("/dashboard");
     } catch (error) {
-      console.error('Error starting impersonation from agency table:', error)
-      toast.error('Failed to login as this user')
+      console.error("Error starting impersonation from agency table:", error);
+      toast.error("Failed to login as this user");
     } finally {
-      setImpersonatingUserId(null)
+      setImpersonatingUserId(null);
     }
-  }
+  };
 
   const handleCopyCustomerId = async (customerId: string) => {
     try {
-      await navigator.clipboard.writeText(customerId)
-      setCopiedCustomerId(customerId)
-      setTimeout(() => setCopiedCustomerId(null), 2000)
+      await navigator.clipboard.writeText(customerId);
+      setCopiedCustomerId(customerId);
+      setTimeout(() => setCopiedCustomerId(null), 2000);
     } catch (error) {
-      console.error('Failed to copy customer ID:', error)
-      toast.error('Failed to copy customer ID')
+      console.error("Failed to copy customer ID:", error);
+      toast.error("Failed to copy customer ID");
     }
-  }
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -154,7 +169,9 @@ export default function AgencyUsersPage() {
           <FiUsers className="w-5 h-5 sm:w-6 sm:h-6" />
           User Management
         </h1>
-        <p className="text-sm sm:text-base text-gray-600 mt-1">Manage users, roles, and permissions across all accounts</p>
+        <p className="text-sm sm:text-base text-gray-600 mt-1">
+          Manage users, roles, and permissions across all accounts
+        </p>
       </div>
 
       {/* Search */}
@@ -190,31 +207,42 @@ export default function AgencyUsersPage() {
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium text-gray-900 truncate">
-                    {user.name || 'Unknown'}
+                    {user.name || "Unknown"}
                   </div>
-                  <div className="text-sm text-gray-500 truncate mt-0.5">{user.email}</div>
+                  <div className="text-sm text-gray-500 truncate mt-0.5">
+                    {user.email}
+                  </div>
                 </div>
                 <span
                   className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ml-2 ${getRoleBadgeColor(
-                    user.role
+                    user.role,
                   )}`}
                 >
                   {getRoleIcon(user.role)}
-                  <span className="truncate max-w-[80px] sm:max-w-none">{user.role}</span>
+                  <span className="truncate max-w-[80px] sm:max-w-none">
+                    {user.role}
+                  </span>
                 </span>
               </div>
-              
+
               <div className="pt-2 border-t border-gray-100 space-y-2">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-gray-500">Customer ID:</span>
                   <div className="flex items-center gap-1.5 min-w-0 flex-1 justify-end ml-2">
-                    <span className="text-gray-900 font-mono truncate max-w-[140px]" title={user.customer_id}>
+                    <span
+                      className="text-gray-900 font-mono truncate max-w-[140px]"
+                      title={user.customer_id}
+                    >
                       {user.customer_id}
                     </span>
                     <button
                       onClick={() => handleCopyCustomerId(user.customer_id)}
                       className="flex-shrink-0 p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors touch-target"
-                      title={copiedCustomerId === user.customer_id ? 'Copied!' : 'Copy Customer ID'}
+                      title={
+                        copiedCustomerId === user.customer_id
+                          ? "Copied!"
+                          : "Copy Customer ID"
+                      }
                       aria-label="Copy Customer ID"
                     >
                       {copiedCustomerId === user.customer_id ? (
@@ -247,7 +275,9 @@ export default function AgencyUsersPage() {
                   className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-indigo-600 hover:text-indigo-900 hover:bg-indigo-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-target"
                 >
                   <FiLogIn className="w-4 h-4" />
-                  {impersonatingUserId === user.user_id ? 'Logging in...' : 'Log in as'}
+                  {impersonatingUserId === user.user_id
+                    ? "Logging in..."
+                    : "Log in as"}
                 </button>
               </div>
             </div>
@@ -289,18 +319,26 @@ export default function AgencyUsersPage() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
                         <div className="text-sm font-medium text-gray-900">
-                          {user.name || 'Unknown'}
+                          {user.name || "Unknown"}
                         </div>
-                        <div className="text-sm text-gray-500">{user.email}</div>
+                        <div className="text-sm text-gray-500">
+                          {user.email}
+                        </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
-                        <div className="text-sm text-gray-900 font-mono">{user.customer_id}</div>
+                        <div className="text-sm text-gray-900 font-mono">
+                          {user.customer_id}
+                        </div>
                         <button
                           onClick={() => handleCopyCustomerId(user.customer_id)}
                           className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors touch-target"
-                          title={copiedCustomerId === user.customer_id ? 'Copied!' : 'Copy Customer ID'}
+                          title={
+                            copiedCustomerId === user.customer_id
+                              ? "Copied!"
+                              : "Copy Customer ID"
+                          }
                           aria-label="Copy Customer ID"
                         >
                           {copiedCustomerId === user.customer_id ? (
@@ -314,7 +352,7 @@ export default function AgencyUsersPage() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeColor(
-                          user.role
+                          user.role,
                         )}`}
                       >
                         {getRoleIcon(user.role)}
@@ -339,7 +377,9 @@ export default function AgencyUsersPage() {
                           className="text-indigo-600 hover:text-indigo-900 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                           <FiLogIn className="w-4 h-4" />
-                          {impersonatingUserId === user.user_id ? 'Logging in...' : 'Log in as'}
+                          {impersonatingUserId === user.user_id
+                            ? "Logging in..."
+                            : "Log in as"}
                         </button>
                       </div>
                     </td>
@@ -355,7 +395,9 @@ export default function AgencyUsersPage() {
       {editingUser && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg p-4 sm:p-6 max-w-md w-full mx-auto shadow-xl">
-            <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">Edit User Role</h2>
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">
+              Edit User Role
+            </h2>
             <div className="mb-4">
               <p className="text-sm text-gray-600 mb-2">
                 <strong>User:</strong> {editingUser.name || editingUser.email}
@@ -384,12 +426,12 @@ export default function AgencyUsersPage() {
                 disabled={isSaving || newRole === editingUser.role}
                 className="flex-1 bg-primary-600 text-white px-4 py-2.5 sm:py-2 rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors touch-target font-medium"
               >
-                {isSaving ? 'Saving...' : 'Save'}
+                {isSaving ? "Saving..." : "Save"}
               </button>
               <button
                 onClick={() => {
-                  setEditingUser(null)
-                  setNewRole('')
+                  setEditingUser(null);
+                  setNewRole("");
                 }}
                 className="flex-1 bg-gray-200 text-gray-700 px-4 py-2.5 sm:py-2 rounded-lg hover:bg-gray-300 transition-colors touch-target font-medium"
               >
@@ -400,5 +442,5 @@ export default function AgencyUsersPage() {
         </div>
       )}
     </div>
-  )
+  );
 }

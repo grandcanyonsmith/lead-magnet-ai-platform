@@ -25,7 +25,7 @@ class SimpleCache {
    */
   get<T>(key: string): T | null {
     const entry = this.cache.get(key);
-    
+
     if (!entry) {
       return null;
     }
@@ -123,10 +123,10 @@ export const cache = new SimpleCache();
 export function generateCacheKey(
   path: string,
   queryParams?: Record<string, any>,
-  tenantId?: string
+  tenantId?: string,
 ): string {
   const parts = [path];
-  
+
   if (tenantId) {
     parts.push(`tenant:${tenantId}`);
   }
@@ -134,12 +134,12 @@ export function generateCacheKey(
   if (queryParams && Object.keys(queryParams).length > 0) {
     const sortedParams = Object.keys(queryParams)
       .sort()
-      .map(key => `${key}=${queryParams[key]}`)
-      .join('&');
+      .map((key) => `${key}=${queryParams[key]}`)
+      .join("&");
     parts.push(sortedParams);
   }
 
-  return parts.join('|');
+  return parts.join("|");
 }
 
 /**
@@ -147,11 +147,11 @@ export function generateCacheKey(
  * Automatically caches responses and serves cached data when available.
  */
 export function cacheMiddleware(
-  ttl: number = 5 * 60 * 1000 // 5 minutes default
+  ttl: number = 5 * 60 * 1000, // 5 minutes default
 ) {
   return async (event: any, tenantId?: string, next?: () => Promise<any>) => {
     // Only cache GET requests
-    if (event.requestContext?.http?.method !== 'GET') {
+    if (event.requestContext?.http?.method !== "GET") {
       if (next) {
         return await next();
       }
@@ -171,7 +171,7 @@ export function cacheMiddleware(
     // Execute handler and cache result
     if (next) {
       const response = await next();
-      
+
       // Only cache successful responses
       if (response && response.statusCode >= 200 && response.statusCode < 300) {
         cache.set(cacheKey, response, ttl);
@@ -183,4 +183,3 @@ export function cacheMiddleware(
     return;
   };
 }
-

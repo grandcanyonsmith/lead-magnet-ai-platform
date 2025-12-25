@@ -1,19 +1,26 @@
-'use client'
+"use client";
 
-import React, { useState } from 'react'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
-import { FiChevronDown, FiChevronUp } from 'react-icons/fi'
-import { extractImageUrls, extractImageUrlsFromObject } from '@/utils/imageUtils'
-import { InlineImage } from './InlineImage'
+import React, { useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { FiChevronDown, FiChevronUp } from "react-icons/fi";
+import {
+  extractImageUrls,
+  extractImageUrlsFromObject,
+} from "@/utils/imageUtils";
+import { InlineImage } from "./InlineImage";
 
-const MAX_PREVIEW_LENGTH = 1000
+const MAX_PREVIEW_LENGTH = 1000;
 
 interface StepContentProps {
-  formatted: { content: any, type: 'json' | 'markdown' | 'text' | 'html', structure?: 'ai_input' }
-  imageUrls?: string[] // Optional array of image URLs to render inline
+  formatted: {
+    content: any;
+    type: "json" | "markdown" | "text" | "html";
+    structure?: "ai_input";
+  };
+  imageUrls?: string[]; // Optional array of image URLs to render inline
 }
 
 /**
@@ -21,68 +28,68 @@ interface StepContentProps {
  * Splits text by image URLs and renders images inline
  */
 function renderTextWithImages(text: string): React.ReactNode {
-  const imageUrls = extractImageUrls(text)
-  
+  const imageUrls = extractImageUrls(text);
+
   if (imageUrls.length === 0) {
-    return <>{text}</>
+    return <>{text}</>;
   }
 
   // Split text by image URLs and render images inline
-  let remainingText = text
-  const parts: React.ReactNode[] = []
-  let partIndex = 0
+  let remainingText = text;
+  const parts: React.ReactNode[] = [];
+  let partIndex = 0;
 
   imageUrls.forEach((url, idx) => {
-    const urlIndex = remainingText.indexOf(url)
-    if (urlIndex === -1) return
+    const urlIndex = remainingText.indexOf(url);
+    if (urlIndex === -1) return;
 
     // Add text before the URL
     if (urlIndex > 0) {
       parts.push(
         <span key={`text-${partIndex++}`}>
           {remainingText.substring(0, urlIndex)}
-        </span>
-      )
+        </span>,
+      );
     }
 
     // Add the image
     parts.push(
       <div key={`image-${url}`} className="block">
         <InlineImage url={url} alt={`Image`} />
-      </div>
-    )
+      </div>,
+    );
 
     // Update remaining text
-    remainingText = remainingText.substring(urlIndex + url.length)
-  })
+    remainingText = remainingText.substring(urlIndex + url.length);
+  });
 
   // Add any remaining text
   if (remainingText.length > 0) {
-    parts.push(
-      <span key={`text-${partIndex}`}>
-        {remainingText}
-      </span>
-    )
+    parts.push(<span key={`text-${partIndex}`}>{remainingText}</span>);
   }
 
-  return <>{parts}</>
+  return <>{parts}</>;
 }
 
 // Inline expandable content component
 function ExpandableContent({
   content,
   renderContent,
-  maxLength = MAX_PREVIEW_LENGTH
+  maxLength = MAX_PREVIEW_LENGTH,
 }: {
-  content: string
-  renderContent: (displayContent: string, isExpanded: boolean) => React.ReactNode
-  maxLength?: number
+  content: string;
+  renderContent: (
+    displayContent: string,
+    isExpanded: boolean,
+  ) => React.ReactNode;
+  maxLength?: number;
 }) {
-  const [isExpanded, setIsExpanded] = useState(false)
-  const isLongContent = content.length > maxLength
-  const displayContent = isLongContent && !isExpanded
-    ? content.substring(0, maxLength) + '...'
-    : content
+  const [isExpanded, setIsExpanded] = useState(false);
+  const isLongContent = content.length > maxLength;
+  const displayContent =
+    isLongContent && !isExpanded
+      ? content.substring(0, maxLength) + "..."
+      : content;
 
   return (
     <div>
@@ -101,7 +108,10 @@ function ExpandableContent({
               <>
                 <FiChevronDown className="w-3 h-3" />
                 <span className="sm:inline">Show More</span>
-                <span className="hidden sm:inline"> ({content.length.toLocaleString()} chars)</span>
+                <span className="hidden sm:inline">
+                  {" "}
+                  ({content.length.toLocaleString()} chars)
+                </span>
               </>
             )}
           </button>
@@ -109,46 +119,54 @@ function ExpandableContent({
       )}
       {renderContent(displayContent, isExpanded)}
     </div>
-  )
+  );
 }
 
 export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
-  const [showRendered, setShowRendered] = useState(true)
-  
+  const [showRendered, setShowRendered] = useState(true);
+
   const getContentString = (): string => {
-    if (typeof formatted.content === 'string') {
-      return formatted.content
+    if (typeof formatted.content === "string") {
+      return formatted.content;
     }
-    return JSON.stringify(formatted.content, null, 2)
-  }
-  
-  const contentString = getContentString()
-  
+    return JSON.stringify(formatted.content, null, 2);
+  };
+
+  const contentString = getContentString();
+
   // Render inline images from imageUrls prop
   const renderInlineImages = () => {
     if (!imageUrls || !Array.isArray(imageUrls) || imageUrls.length === 0) {
-      return null
+      return null;
     }
-    
+
     // Debug: log when rendering images (development only)
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`[StepContent] Rendering ${imageUrls.length} inline images:`, imageUrls)
+    if (process.env.NODE_ENV === "development") {
+      console.log(
+        `[StepContent] Rendering ${imageUrls.length} inline images:`,
+        imageUrls,
+      );
     }
-    
+
     return (
       <div className="mt-5 md:mt-4 space-y-4 md:space-y-2">
-        <div className="text-sm md:text-xs font-medium text-gray-600 mb-3 md:mb-2">Generated Images:</div>
+        <div className="text-sm md:text-xs font-medium text-gray-600 mb-3 md:mb-2">
+          Generated Images:
+        </div>
         {imageUrls.map((url) => (
           <InlineImage key={`inline-image-${url}`} url={url} alt={`Image`} />
         ))}
       </div>
-    )
-  }
-  
+    );
+  };
+
   // Render metadata section for AI input structure
   const renderMetadata = () => {
-    if (formatted.structure !== 'ai_input' || typeof formatted.content !== 'object') {
-      return null
+    if (
+      formatted.structure !== "ai_input" ||
+      typeof formatted.content !== "object"
+    ) {
+      return null;
     }
 
     return (
@@ -156,41 +174,53 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <span className="text-xs font-semibold text-gray-700">Model:</span>
-            <span className="text-xs text-gray-900 ml-2 font-mono">{formatted.content.model}</span>
+            <span className="text-xs text-gray-900 ml-2 font-mono">
+              {formatted.content.model}
+            </span>
           </div>
           {formatted.content.tool_choice && (
             <div>
-              <span className="text-xs font-semibold text-gray-700">Tool Choice:</span>
-              <span className="text-xs text-gray-900 ml-2">{formatted.content.tool_choice}</span>
+              <span className="text-xs font-semibold text-gray-700">
+                Tool Choice:
+              </span>
+              <span className="text-xs text-gray-900 ml-2">
+                {formatted.content.tool_choice}
+              </span>
             </div>
           )}
         </div>
         {formatted.content.instructions && (
           <div>
-            <span className="text-xs font-semibold text-gray-700 block mb-2">Instructions:</span>
+            <span className="text-xs font-semibold text-gray-700 block mb-2">
+              Instructions:
+            </span>
             <div className="text-sm text-gray-900 whitespace-pre-wrap bg-gray-50 p-3 rounded-lg border border-gray-200 max-h-64 overflow-y-auto scrollbar-hide-until-hover">
               {formatted.content.instructions}
             </div>
           </div>
         )}
       </>
-    )
-  }
+    );
+  };
 
   // Render JSON content
   const renderJsonContent = () => {
-    const hasMetadata = formatted.structure === 'ai_input' && typeof formatted.content === 'object'
-    
+    const hasMetadata =
+      formatted.structure === "ai_input" &&
+      typeof formatted.content === "object";
+
     // Extract image URLs from the JSON object
-    const extractedImageUrls = extractImageUrlsFromObject(formatted.content)
-    
+    const extractedImageUrls = extractImageUrlsFromObject(formatted.content);
+
     return (
       <div className="space-y-4">
         {hasMetadata && renderMetadata()}
         <div>
           {hasMetadata && (
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-gray-700">Input:</span>
+              <span className="text-xs font-semibold text-gray-700">
+                Input:
+              </span>
             </div>
           )}
           <ExpandableContent
@@ -203,11 +233,11 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
                     style={vscDarkPlus}
                     customStyle={{
                       margin: 0,
-                      padding: '16px',
-                      fontSize: '13px',
-                      maxHeight: isExpanded ? 'none' : '400px',
-                      overflow: 'auto',
-                      lineHeight: '1.6',
+                      padding: "16px",
+                      fontSize: "13px",
+                      maxHeight: isExpanded ? "none" : "400px",
+                      overflow: "auto",
+                      lineHeight: "1.6",
                     }}
                     showLineNumbers={contentString.length > 500}
                   >
@@ -218,7 +248,11 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
                 {extractedImageUrls.length > 0 && (
                   <div className="mt-5 md:mt-4 space-y-4 md:space-y-2">
                     {extractedImageUrls.map((url) => (
-                      <InlineImage key={`json-image-${url}`} url={url} alt={`Image from JSON`} />
+                      <InlineImage
+                        key={`json-image-${url}`}
+                        url={url}
+                        alt={`Image from JSON`}
+                      />
                     ))}
                   </div>
                 )}
@@ -229,15 +263,16 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
           />
         </div>
       </div>
-    )
-  }
-  
+    );
+  };
+
   // Render HTML content
   const renderHtmlContent = () => {
-    const htmlContent = typeof formatted.content === 'string' 
-      ? formatted.content 
-      : JSON.stringify(formatted.content, null, 2)
-    
+    const htmlContent =
+      typeof formatted.content === "string"
+        ? formatted.content
+        : JSON.stringify(formatted.content, null, 2);
+
     return (
       <div className="space-y-3">
         <div className="flex items-center justify-between">
@@ -245,9 +280,9 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
             <button
               onClick={() => setShowRendered(true)}
               className={`px-3 py-2 sm:py-1.5 text-xs font-medium rounded touch-target min-h-[44px] sm:min-h-0 ${
-                showRendered 
-                  ? 'bg-blue-600 text-white' 
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                showRendered
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
             >
               Rendered
@@ -255,9 +290,9 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
             <button
               onClick={() => setShowRendered(false)}
               className={`px-3 py-2 sm:py-1.5 text-xs font-medium rounded touch-target min-h-[44px] sm:min-h-0 ${
-                !showRendered 
-                  ? 'bg-blue-600 text-white' 
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                !showRendered
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
             >
               Source
@@ -267,16 +302,16 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
 
         {showRendered ? (
           <>
-          <div className="border-2 border-gray-200 rounded-xl overflow-hidden bg-white">
-            <iframe
-              srcDoc={htmlContent}
-              className="w-full border-0"
-              style={{ height: '600px', minHeight: '600px' }}
-              sandbox="allow-popups"
-              referrerPolicy="no-referrer"
-              title="HTML Preview"
-            />
-          </div>
+            <div className="border-2 border-gray-200 rounded-xl overflow-hidden bg-white">
+              <iframe
+                srcDoc={htmlContent}
+                className="w-full border-0"
+                style={{ height: "600px", minHeight: "600px" }}
+                sandbox="allow-popups"
+                referrerPolicy="no-referrer"
+                title="HTML Preview"
+              />
+            </div>
             {/* Render images from imageUrls prop even when showing rendered HTML */}
             {renderInlineImages()}
           </>
@@ -291,11 +326,11 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
                     style={vscDarkPlus}
                     customStyle={{
                       margin: 0,
-                      padding: '16px',
-                      fontSize: '13px',
-                      maxHeight: '400px',
-                      overflow: 'auto',
-                      lineHeight: '1.6',
+                      padding: "16px",
+                      fontSize: "13px",
+                      maxHeight: "400px",
+                      overflow: "auto",
+                      lineHeight: "1.6",
                     }}
                     showLineNumbers={htmlContent.length > 500}
                   >
@@ -306,43 +341,55 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
             />
             {/* Extract and render images from HTML source */}
             {(() => {
-              const extractedUrls = extractImageUrls(htmlContent)
+              const extractedUrls = extractImageUrls(htmlContent);
               return extractedUrls.length > 0 || imageUrls.length > 0 ? (
                 <div className="mt-5 md:mt-4 space-y-4 md:space-y-2">
                   {extractedUrls.map((url) => (
-                    <InlineImage key={`html-image-${url}`} url={url} alt={`Image from HTML`} />
+                    <InlineImage
+                      key={`html-image-${url}`}
+                      url={url}
+                      alt={`Image from HTML`}
+                    />
                   ))}
                   {imageUrls.map((url) => (
-                    <InlineImage key={`html-prop-image-${url}`} url={url} alt={`Image`} />
+                    <InlineImage
+                      key={`html-prop-image-${url}`}
+                      url={url}
+                      alt={`Image`}
+                    />
                   ))}
                 </div>
-              ) : null
+              ) : null;
             })()}
           </>
         )}
       </div>
-    )
-  }
-  
+    );
+  };
+
   // Render Markdown content
   const renderMarkdownContent = () => {
-    const hasMetadata = formatted.structure === 'ai_input' && typeof formatted.content === 'object'
+    const hasMetadata =
+      formatted.structure === "ai_input" &&
+      typeof formatted.content === "object";
     const markdownText = hasMetadata
-      ? formatted.content.input || ''
-      : typeof formatted.content === 'string'
+      ? formatted.content.input || ""
+      : typeof formatted.content === "string"
         ? formatted.content
-        : formatted.content.input || JSON.stringify(formatted.content, null, 2)
-    
+        : formatted.content.input || JSON.stringify(formatted.content, null, 2);
+
     // Extract image URLs from markdown (ReactMarkdown handles markdown image syntax, but we also want plain URLs)
-    const extractedImageUrls = extractImageUrls(markdownText)
-    
+    const extractedImageUrls = extractImageUrls(markdownText);
+
     return (
       <div className="space-y-4">
         {hasMetadata && renderMetadata()}
         <div>
           {hasMetadata && (
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-gray-700">Input:</span>
+              <span className="text-xs font-semibold text-gray-700">
+                Input:
+              </span>
             </div>
           )}
           <ExpandableContent
@@ -358,7 +405,11 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
                 {extractedImageUrls.length > 0 && (
                   <div className="mt-5 md:mt-4 space-y-4 md:space-y-2">
                     {extractedImageUrls.map((url) => (
-                      <InlineImage key={`md-image-${url}`} url={url} alt={`Image from markdown`} />
+                      <InlineImage
+                        key={`md-image-${url}`}
+                        url={url}
+                        alt={`Image from markdown`}
+                      />
                     ))}
                   </div>
                 )}
@@ -369,9 +420,9 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
           />
         </div>
       </div>
-    )
-  }
-  
+    );
+  };
+
   // Render plain text content
   const renderTextContent = () => {
     return (
@@ -379,9 +430,12 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
         content={contentString}
         renderContent={(displayContent) => {
           // Check if there are image URLs in the text
-          const extractedUrls = extractImageUrls(displayContent)
-          
-          if (extractedUrls.length === 0 && (!imageUrls || imageUrls.length === 0)) {
+          const extractedUrls = extractImageUrls(displayContent);
+
+          if (
+            extractedUrls.length === 0 &&
+            (!imageUrls || imageUrls.length === 0)
+          ) {
             // No images in text or prop, render as plain text
             return (
               <>
@@ -391,9 +445,9 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
                 {/* Always check for images from prop */}
                 {renderInlineImages()}
               </>
-            )
+            );
           }
-          
+
           // Has images in text, render with inline images
           return (
             <div className="bg-gray-50 p-4 md:p-4 rounded-xl border border-gray-200 max-h-[500px] md:max-h-[600px] overflow-y-auto scrollbar-hide-until-hover">
@@ -403,19 +457,19 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
               {/* Render images from imageUrls prop */}
               {renderInlineImages()}
             </div>
-          )
+          );
         }}
       />
-    )
-  }
-  
+    );
+  };
+
   // Single return statement with conditional rendering
   return (
     <>
-      {formatted.type === 'json' && renderJsonContent()}
-      {formatted.type === 'html' && renderHtmlContent()}
-      {formatted.type === 'markdown' && renderMarkdownContent()}
-      {formatted.type === 'text' && renderTextContent()}
+      {formatted.type === "json" && renderJsonContent()}
+      {formatted.type === "html" && renderHtmlContent()}
+      {formatted.type === "markdown" && renderMarkdownContent()}
+      {formatted.type === "text" && renderTextContent()}
     </>
-  )
+  );
 }

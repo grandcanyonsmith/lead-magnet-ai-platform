@@ -9,7 +9,7 @@ export interface Workflow {
   workflow_name: string;
   workflow_description?: string;
   steps?: WorkflowStep[];
-  status: 'draft' | 'active' | 'archived';
+  status: "draft" | "active" | "archived";
   form_id?: string;
   created_at: string;
   updated_at: string;
@@ -23,7 +23,7 @@ export interface Workflow {
   html_enabled?: boolean;
   template_id?: string;
   template_version?: number;
-  delivery_method?: 'webhook' | 'sms' | 'none';
+  delivery_method?: "webhook" | "sms" | "none";
   delivery_webhook_url?: string;
   delivery_webhook_headers?: Record<string, string>;
   delivery_sms_enabled?: boolean;
@@ -35,14 +35,14 @@ export interface Workflow {
 export interface WorkflowStep {
   step_name: string;
   step_description?: string;
-  step_type?: 'ai_generation' | 'webhook'; // Default: 'ai_generation'
+  step_type?: "ai_generation" | "webhook"; // Default: 'ai_generation'
   model: string;
-  reasoning_effort?: 'low' | 'medium' | 'high';
+  reasoning_effort?: "low" | "medium" | "high";
   instructions: string;
   step_order: number;
   depends_on?: number[];
   tools?: (string | ToolConfig)[];
-  tool_choice?: 'auto' | 'required' | 'none';
+  tool_choice?: "auto" | "required" | "none";
   // Webhook step fields
   webhook_url?: string;
   webhook_headers?: Record<string, string>;
@@ -57,19 +57,19 @@ export interface ToolConfig {
   type: string;
   display_width?: number;
   display_height?: number;
-  environment?: 'browser' | 'mac' | 'windows' | 'ubuntu';
+  environment?: "browser" | "mac" | "windows" | "ubuntu";
   [key: string]: any;
 }
 
 export interface ImageGenerationToolConfig {
-  type: 'image_generation';
+  type: "image_generation";
   model?: string;
-  size?: '1024x1024' | '1024x1536' | '1536x1024' | 'auto';
-  quality?: 'low' | 'medium' | 'high' | 'auto';
-  format?: 'png' | 'jpeg' | 'webp';
+  size?: "1024x1024" | "1024x1536" | "1536x1024" | "auto";
+  quality?: "low" | "medium" | "high" | "auto";
+  format?: "png" | "jpeg" | "webp";
   compression?: number; // 0-100
-  background?: 'transparent' | 'opaque' | 'auto';
-  input_fidelity?: 'low' | 'high';
+  background?: "transparent" | "opaque" | "auto";
+  input_fidelity?: "low" | "high";
 }
 
 export interface Form {
@@ -79,7 +79,7 @@ export interface Form {
   form_name: string;
   public_slug: string;
   form_fields_schema: FormFieldsSchema;
-  status: 'draft' | 'active' | 'archived';
+  status: "draft" | "active" | "archived";
   captcha_enabled?: boolean;
   custom_css?: string;
   thank_you_message?: string;
@@ -96,7 +96,15 @@ export interface FormFieldsSchema {
 
 export interface FormField {
   field_id: string;
-  field_type: 'text' | 'email' | 'tel' | 'number' | 'textarea' | 'select' | 'checkbox' | 'radio';
+  field_type:
+    | "text"
+    | "email"
+    | "tel"
+    | "number"
+    | "textarea"
+    | "select"
+    | "checkbox"
+    | "radio";
   label: string;
   placeholder?: string;
   required: boolean;
@@ -109,7 +117,7 @@ export interface Job {
   tenant_id: string;
   workflow_id: string;
   submission_id?: string;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
+  status: "pending" | "processing" | "completed" | "failed";
   result?: any;
   error_message?: string;
   created_at: string;
@@ -191,4 +199,3 @@ export interface UsageRecord {
   cost_usd: number;
   created_at: string;
 }
-

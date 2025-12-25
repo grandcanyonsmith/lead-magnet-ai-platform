@@ -3,25 +3,25 @@
  * Provides consistent empty state UI across the app
  */
 
-import { FiInbox } from 'react-icons/fi'
+import { FiInbox } from "react-icons/fi";
 
 interface EmptyStateProps {
-  title?: string
-  message: string
+  title?: string;
+  message: string;
   action?: {
-    label: string
-    onClick: () => void
-  }
-  icon?: React.ReactNode
-  className?: string
+    label: string;
+    onClick: () => void;
+  };
+  icon?: React.ReactNode;
+  className?: string;
 }
 
 export function EmptyState({
-  title = 'No items found',
+  title = "No items found",
   message,
   action,
   icon,
-  className = '',
+  className = "",
 }: EmptyStateProps) {
   return (
     <div className={`text-center py-12 ${className}`}>
@@ -41,6 +41,5 @@ export function EmptyState({
         </div>
       )}
     </div>
-  )
+  );
 }
-

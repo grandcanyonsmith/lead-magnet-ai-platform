@@ -3,23 +3,30 @@
  * Handles storage and retrieval of lead magnet tracking events.
  */
 
-import { ulid } from 'ulid';
-import { db } from '../utils/db';
-import { logger } from '../utils/logger';
-import { env } from '../utils/env';
-import { ipGeolocationService } from './ipGeolocationService';
+import { ulid } from "ulid";
+import { db } from "../utils/db";
+import { logger } from "../utils/logger";
+import { env } from "../utils/env";
+import { ipGeolocationService } from "./ipGeolocationService";
 
 const TRACKING_EVENTS_TABLE = env.trackingEventsTable;
 
 if (!TRACKING_EVENTS_TABLE) {
-  logger.error('[Tracking Service] TRACKING_EVENTS_TABLE environment variable is not set');
+  logger.error(
+    "[Tracking Service] TRACKING_EVENTS_TABLE environment variable is not set",
+  );
 }
 
 export interface TrackingEvent {
   event_id: string;
   job_id: string;
   tenant_id: string;
-  event_type: 'click' | 'page_view' | 'session_start' | 'session_end' | 'heartbeat';
+  event_type:
+    | "click"
+    | "page_view"
+    | "session_start"
+    | "session_end"
+    | "heartbeat";
   ip_address: string;
   user_agent?: string;
   referrer?: string;
@@ -54,21 +61,25 @@ export class TrackingService {
   /**
    * Record a tracking event.
    */
-  async recordEvent(event: Omit<TrackingEvent, 'event_id' | 'created_at' | 'ttl'>): Promise<string> {
+  async recordEvent(
+    event: Omit<TrackingEvent, "event_id" | "created_at" | "ttl">,
+  ): Promise<string> {
     if (!TRACKING_EVENTS_TABLE) {
-      throw new Error('TRACKING_EVENTS_TABLE environment variable is not set');
+      throw new Error("TRACKING_EVENTS_TABLE environment variable is not set");
     }
 
     const eventId = `evt_${ulid()}`;
     const createdAt = new Date().toISOString();
-    
+
     // Set TTL to 1 year from now (Unix timestamp)
-    const ttl = Math.floor(Date.now() / 1000) + (365 * 24 * 60 * 60);
+    const ttl = Math.floor(Date.now() / 1000) + 365 * 24 * 60 * 60;
 
     // Get location from IP if not provided
     let location = event.location;
     if (!location && event.ip_address) {
-      location = await ipGeolocationService.getLocationFromIP(event.ip_address) || undefined;
+      location =
+        (await ipGeolocationService.getLocationFromIP(event.ip_address)) ||
+        undefined;
     }
 
     const trackingEvent: TrackingEvent = {
@@ -81,7 +92,7 @@ export class TrackingService {
 
     await db.put(TRACKING_EVENTS_TABLE, trackingEvent);
 
-    logger.info('[Tracking Service] Event recorded', {
+    logger.info("[Tracking Service] Event recorded", {
       eventId,
       jobId: event.job_id,
       eventType: event.event_type,
@@ -97,21 +108,23 @@ export class TrackingService {
    */
   async getJobStats(jobId: string, tenantId: string): Promise<TrackingStats> {
     if (!TRACKING_EVENTS_TABLE) {
-      throw new Error('TRACKING_EVENTS_TABLE environment variable is not set');
+      throw new Error("TRACKING_EVENTS_TABLE environment variable is not set");
     }
 
     // Query all events for this job using GSI
     const result = await db.query(
       TRACKING_EVENTS_TABLE,
-      'gsi_job_created', // indexName
-      'job_id = :jobId', // keyCondition
-      { ':jobId': jobId }, // expressionAttributeValues
+      "gsi_job_created", // indexName
+      "job_id = :jobId", // keyCondition
+      { ":jobId": jobId }, // expressionAttributeValues
       undefined, // expressionAttributeNames
-      undefined // limit (no limit for stats calculation)
+      undefined, // limit (no limit for stats calculation)
     );
 
     // Filter by tenant_id (safety check)
-    const tenantEvents = result.items.filter((e: any) => e.tenant_id === tenantId);
+    const tenantEvents = result.items.filter(
+      (e: any) => e.tenant_id === tenantId,
+    );
 
     // Calculate statistics
     const uniqueIPs = new Set<string>();
@@ -122,7 +135,10 @@ export class TrackingService {
     let totalPageViews = 0;
 
     // Group events by session
-    const sessions = new Map<string, { startTime?: string; endTime?: string; pageViews: number }>();
+    const sessions = new Map<
+      string,
+      { startTime?: string; endTime?: string; pageViews: number }
+    >();
 
     for (const event of tenantEvents) {
       const e = event as TrackingEvent;
@@ -138,12 +154,12 @@ export class TrackingService {
       }
 
       // Count clicks
-      if (e.event_type === 'click') {
+      if (e.event_type === "click") {
         totalClicks++;
       }
 
       // Count page views
-      if (e.event_type === 'page_view') {
+      if (e.event_type === "page_view") {
         totalPageViews++;
       }
 
@@ -153,35 +169,41 @@ export class TrackingService {
           sessions.set(e.session_id, { pageViews: 0 });
         }
         const session = sessions.get(e.session_id)!;
-        
-        if (e.event_type === 'session_start' && e.session_start_time) {
+
+        if (e.event_type === "session_start" && e.session_start_time) {
           session.startTime = e.session_start_time;
         }
-        if (e.event_type === 'session_end' && e.session_duration_seconds) {
+        if (e.event_type === "session_end" && e.session_duration_seconds) {
           session.endTime = e.created_at;
           sessionDurations.push(e.session_duration_seconds);
         }
-        if (e.event_type === 'page_view') {
+        if (e.event_type === "page_view") {
           session.pageViews++;
         }
       }
 
       // Track location breakdown
       if (e.location?.country) {
-        locationCounts[e.location.country] = (locationCounts[e.location.country] || 0) + 1;
+        locationCounts[e.location.country] =
+          (locationCounts[e.location.country] || 0) + 1;
       }
     }
 
     // Calculate average session duration
-    const avgSessionDuration = sessionDurations.length > 0
-      ? sessionDurations.reduce((a, b) => a + b, 0) / sessionDurations.length
-      : 0;
+    const avgSessionDuration =
+      sessionDurations.length > 0
+        ? sessionDurations.reduce((a, b) => a + b, 0) / sessionDurations.length
+        : 0;
 
     // Calculate average page views per session
-    const sessionPageViewCounts = Array.from(sessions.values()).map(s => s.pageViews);
-    const avgPageViewsPerSession = sessionPageViewCounts.length > 0
-      ? sessionPageViewCounts.reduce((a, b) => a + b, 0) / sessionPageViewCounts.length
-      : 0;
+    const sessionPageViewCounts = Array.from(sessions.values()).map(
+      (s) => s.pageViews,
+    );
+    const avgPageViewsPerSession =
+      sessionPageViewCounts.length > 0
+        ? sessionPageViewCounts.reduce((a, b) => a + b, 0) /
+          sessionPageViewCounts.length
+        : 0;
 
     return {
       total_clicks: totalClicks,
@@ -190,7 +212,8 @@ export class TrackingService {
       unique_visitors: uniqueIPs.size,
       average_session_duration_seconds: Math.round(avgSessionDuration),
       total_page_views: totalPageViews,
-      average_page_views_per_session: Math.round(avgPageViewsPerSession * 100) / 100,
+      average_page_views_per_session:
+        Math.round(avgPageViewsPerSession * 100) / 100,
       location_breakdown: locationCounts,
     };
   }
@@ -202,20 +225,20 @@ export class TrackingService {
     jobId: string,
     tenantId: string,
     limit: number = 100,
-    lastEvaluatedKey?: any
+    lastEvaluatedKey?: any,
   ): Promise<{ events: TrackingEvent[]; lastEvaluatedKey?: any }> {
     if (!TRACKING_EVENTS_TABLE) {
-      throw new Error('TRACKING_EVENTS_TABLE environment variable is not set');
+      throw new Error("TRACKING_EVENTS_TABLE environment variable is not set");
     }
 
     const result = await db.query(
       TRACKING_EVENTS_TABLE,
-      'gsi_job_created', // indexName
-      'job_id = :jobId', // keyCondition
-      { ':jobId': jobId }, // expressionAttributeValues
+      "gsi_job_created", // indexName
+      "job_id = :jobId", // keyCondition
+      { ":jobId": jobId }, // expressionAttributeValues
       undefined, // expressionAttributeNames
       limit, // limit
-      lastEvaluatedKey // exclusiveStartKey
+      lastEvaluatedKey, // exclusiveStartKey
     );
 
     // Filter by tenant_id and map to TrackingEvent

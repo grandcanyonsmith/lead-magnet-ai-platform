@@ -1,7 +1,7 @@
-import { Middleware } from '../types/api';
-import { RouteResponse } from '../routes';
-import { logger } from '../utils/logger';
-import { ApiError } from '../utils/errors';
+import { Middleware } from "../types/api";
+import { RouteResponse } from "../routes";
+import { logger } from "../utils/logger";
+import { ApiError } from "../utils/errors";
 
 /**
  * Middleware system for request processing.
@@ -12,12 +12,16 @@ import { ApiError } from '../utils/errors';
  * Request logging middleware.
  * Logs incoming requests for debugging and monitoring.
  */
-export const loggingMiddleware: Middleware = async (event, tenantId, next): Promise<RouteResponse | void> => {
+export const loggingMiddleware: Middleware = async (
+  event,
+  tenantId,
+  next,
+): Promise<RouteResponse | void> => {
   const startTime = Date.now();
   const method = event.requestContext.http.method;
   const path = event.rawPath;
 
-  logger.info('[Middleware] Request started', {
+  logger.info("[Middleware] Request started", {
     method,
     path,
     tenantId,
@@ -28,7 +32,7 @@ export const loggingMiddleware: Middleware = async (event, tenantId, next): Prom
     try {
       const response = await next();
       const duration = Date.now() - startTime;
-      logger.info('[Middleware] Request completed', {
+      logger.info("[Middleware] Request completed", {
         method,
         path,
         tenantId,
@@ -38,7 +42,7 @@ export const loggingMiddleware: Middleware = async (event, tenantId, next): Prom
       return response;
     } catch (error) {
       const duration = Date.now() - startTime;
-      logger.error('[Middleware] Request failed', {
+      logger.error("[Middleware] Request failed", {
         method,
         path,
         tenantId,
@@ -54,9 +58,13 @@ export const loggingMiddleware: Middleware = async (event, tenantId, next): Prom
  * Authentication middleware.
  * Validates that tenantId is present for protected routes.
  */
-export const authMiddleware: Middleware = async (_event, tenantId, next): Promise<RouteResponse | void> => {
+export const authMiddleware: Middleware = async (
+  _event,
+  tenantId,
+  next,
+): Promise<RouteResponse | void> => {
   if (!tenantId) {
-    throw new ApiError('Please sign in to access this page', 401);
+    throw new ApiError("Please sign in to access this page", 401);
   }
 
   if (next) {
@@ -68,7 +76,11 @@ export const authMiddleware: Middleware = async (_event, tenantId, next): Promis
  * Error handling middleware.
  * Catches and formats errors consistently.
  */
-export const errorMiddleware: Middleware = async (event, tenantId, next): Promise<RouteResponse | void> => {
+export const errorMiddleware: Middleware = async (
+  event,
+  tenantId,
+  next,
+): Promise<RouteResponse | void> => {
   if (!next) {
     return;
   }
@@ -83,14 +95,14 @@ export const errorMiddleware: Middleware = async (event, tenantId, next): Promis
 
     // Format unexpected errors
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error('[Middleware] Unexpected error', {
+    logger.error("[Middleware] Unexpected error", {
       error: errorMessage,
       stack: error instanceof Error ? error.stack : undefined,
       path: event.rawPath,
       tenantId,
     });
 
-    throw new ApiError('Internal server error', 500);
+    throw new ApiError("Internal server error", 500);
   }
 };
 
@@ -98,7 +110,11 @@ export const errorMiddleware: Middleware = async (event, tenantId, next): Promis
  * Body parsing middleware.
  * Ensures request body is parsed if present.
  */
-export const bodyParsingMiddleware: Middleware = async (_event, _tenantId, next): Promise<RouteResponse | void> => {
+export const bodyParsingMiddleware: Middleware = async (
+  _event,
+  _tenantId,
+  next,
+): Promise<RouteResponse | void> => {
   // Body is already parsed in routes/index.ts, but this middleware
   // can be used for additional validation or transformation
   if (next) {
@@ -121,16 +137,15 @@ export function composeMiddleware(...middlewares: Middleware[]): Middleware {
           return result;
         }
       }
-      
+
       // If no middleware handled it and we have a next handler, call it
       if (next) {
         return await next();
       }
-      
-      throw new ApiError('No handler found', 500);
+
+      throw new ApiError("No handler found", 500);
     };
 
     return await runNext();
   };
 }
-

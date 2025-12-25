@@ -1,14 +1,20 @@
-import { ApiError } from '../utils/errors';
-import { logger } from '../utils/logger';
-import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
-import { getOpenAIClient } from './openaiService';
-import { env } from '../utils/env';
+import { ApiError } from "../utils/errors";
+import { logger } from "../utils/logger";
+import {
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
+import { getOpenAIClient } from "./openaiService";
+import { env } from "../utils/env";
 
 const ARTIFACTS_BUCKET = env.artifactsBucket;
 const s3Client = new S3Client({ region: env.awsRegion });
 
 if (!ARTIFACTS_BUCKET) {
-  logger.warn('[Execution Steps Service] ARTIFACTS_BUCKET is not configured - execution steps operations may fail');
+  logger.warn(
+    "[Execution Steps Service] ARTIFACTS_BUCKET is not configured - execution steps operations may fail",
+  );
 }
 
 /**
@@ -22,65 +28,89 @@ export class ExecutionStepsService {
   async fetchFromS3(s3Key: string): Promise<any[]> {
     try {
       if (!ARTIFACTS_BUCKET) {
-        throw new ApiError('ARTIFACTS_BUCKET environment variable is not configured', 500);
+        throw new ApiError(
+          "ARTIFACTS_BUCKET environment variable is not configured",
+          500,
+        );
       }
 
       const command = new GetObjectCommand({
         Bucket: ARTIFACTS_BUCKET,
         Key: s3Key,
       });
-      
+
       const response = await s3Client.send(command);
-      
+
       if (!response.Body) {
         throw new ApiError(`S3 object body is empty for key: ${s3Key}`, 500);
       }
-      
+
       const bodyContents = await response.Body.transformToString();
-      
-      if (!bodyContents || bodyContents.trim() === '') {
+
+      if (!bodyContents || bodyContents.trim() === "") {
         throw new ApiError(`S3 object content is empty for key: ${s3Key}`, 500);
       }
-      
+
       let parsedData;
       try {
         parsedData = JSON.parse(bodyContents);
       } catch (parseError: any) {
-        logger.error('[Execution Steps Service] Failed to parse execution steps JSON', {
-          s3Key,
-          parseError: parseError.message,
-          contentLength: bodyContents.length,
-        });
-        throw new ApiError(`Failed to parse execution steps JSON from S3: ${parseError.message}`, 500);
+        logger.error(
+          "[Execution Steps Service] Failed to parse execution steps JSON",
+          {
+            s3Key,
+            parseError: parseError.message,
+            contentLength: bodyContents.length,
+          },
+        );
+        throw new ApiError(
+          `Failed to parse execution steps JSON from S3: ${parseError.message}`,
+          500,
+        );
       }
-      
+
       // Validate that parsed data is an array
       if (!Array.isArray(parsedData)) {
-        logger.error('[Execution Steps Service] Execution steps from S3 is not an array', {
-          s3Key,
-          dataType: typeof parsedData,
-          isArray: Array.isArray(parsedData),
-        });
-        throw new ApiError(`Execution steps from S3 is not an array. Expected array, got ${typeof parsedData}`, 500);
+        logger.error(
+          "[Execution Steps Service] Execution steps from S3 is not an array",
+          {
+            s3Key,
+            dataType: typeof parsedData,
+            isArray: Array.isArray(parsedData),
+          },
+        );
+        throw new ApiError(
+          `Execution steps from S3 is not an array. Expected array, got ${typeof parsedData}`,
+          500,
+        );
       }
-      
+
       // Empty array is valid, but log it for debugging
       if (parsedData.length === 0) {
-        logger.warn('[Execution Steps Service] Execution steps array is empty', { s3Key });
+        logger.warn(
+          "[Execution Steps Service] Execution steps array is empty",
+          { s3Key },
+        );
       }
-      
+
       return parsedData;
     } catch (error: any) {
       if (error instanceof ApiError) {
         throw error;
       }
-      
-      logger.error('[Execution Steps Service] Error fetching execution steps from S3', {
-        s3Key,
-        error: error.message,
-        errorStack: error.stack,
-      });
-      throw new ApiError(`Failed to fetch execution steps from S3: ${error.message}`, 500);
+
+      logger.error(
+        "[Execution Steps Service] Error fetching execution steps from S3",
+        {
+          s3Key,
+          error: error.message,
+          errorStack: error.stack,
+        },
+      );
+      throw new ApiError(
+        `Failed to fetch execution steps from S3: ${error.message}`,
+        500,
+      );
     }
   }
 
@@ -90,41 +120,53 @@ export class ExecutionStepsService {
   async saveToS3(s3Key: string, executionSteps: any[]): Promise<void> {
     try {
       if (!ARTIFACTS_BUCKET) {
-        throw new ApiError('ARTIFACTS_BUCKET environment variable is not configured', 500);
+        throw new ApiError(
+          "ARTIFACTS_BUCKET environment variable is not configured",
+          500,
+        );
       }
 
       // Validate executionSteps is an array
       if (!Array.isArray(executionSteps)) {
-        logger.error('[Execution Steps Service] Cannot save: execution steps is not an array', {
-          s3Key,
-          executionStepsType: typeof executionSteps,
-          isArray: Array.isArray(executionSteps),
-        });
-        throw new ApiError('Cannot save execution steps: expected array', 500);
+        logger.error(
+          "[Execution Steps Service] Cannot save: execution steps is not an array",
+          {
+            s3Key,
+            executionStepsType: typeof executionSteps,
+            isArray: Array.isArray(executionSteps),
+          },
+        );
+        throw new ApiError("Cannot save execution steps: expected array", 500);
       }
 
       let jsonBody: string;
       try {
         jsonBody = JSON.stringify(executionSteps, null, 2);
       } catch (stringifyError: any) {
-        logger.error('[Execution Steps Service] Failed to stringify execution steps for S3', {
-          s3Key,
-          stepsCount: executionSteps.length,
-          error: stringifyError.message,
-        });
-        throw new ApiError(`Failed to serialize execution steps: ${stringifyError.message}`, 500);
+        logger.error(
+          "[Execution Steps Service] Failed to stringify execution steps for S3",
+          {
+            s3Key,
+            stepsCount: executionSteps.length,
+            error: stringifyError.message,
+          },
+        );
+        throw new ApiError(
+          `Failed to serialize execution steps: ${stringifyError.message}`,
+          500,
+        );
       }
 
       const command = new PutObjectCommand({
         Bucket: ARTIFACTS_BUCKET,
         Key: s3Key,
         Body: jsonBody,
-        ContentType: 'application/json',
+        ContentType: "application/json",
       });
-      
+
       await s3Client.send(command);
-      logger.info('[Execution Steps Service] Saved execution steps to S3', { 
-        s3Key, 
+      logger.info("[Execution Steps Service] Saved execution steps to S3", {
+        s3Key,
         stepsCount: executionSteps.length,
         bodySize: jsonBody.length,
       });
@@ -132,13 +174,19 @@ export class ExecutionStepsService {
       if (error instanceof ApiError) {
         throw error;
       }
-      
-      logger.error('[Execution Steps Service] Error saving execution steps to S3', {
-        s3Key,
-        error: error.message,
-        errorStack: error.stack,
-      });
-      throw new ApiError(`Failed to save execution steps to S3: ${error.message}`, 500);
+
+      logger.error(
+        "[Execution Steps Service] Error saving execution steps to S3",
+        {
+          s3Key,
+          error: error.message,
+          errorStack: error.stack,
+        },
+      );
+      throw new ApiError(
+        `Failed to save execution steps to S3: ${error.message}`,
+        500,
+      );
     }
   }
 
@@ -149,7 +197,7 @@ export class ExecutionStepsService {
     s3Key: string,
     stepOrder: number,
     userPrompt: string,
-    save: boolean
+    save: boolean,
   ): Promise<{
     original_output: any;
     edited_output: any;
@@ -161,60 +209,84 @@ export class ExecutionStepsService {
     try {
       executionSteps = await this.fetchFromS3(s3Key);
     } catch (error: any) {
-      logger.error('[Execution Steps Service] Failed to fetch execution steps', {
-        s3Key,
-        error: error.message,
-      });
+      logger.error(
+        "[Execution Steps Service] Failed to fetch execution steps",
+        {
+          s3Key,
+          error: error.message,
+        },
+      );
       throw error;
     }
 
     // Find the step to edit
-    const stepIndex = executionSteps.findIndex((step: any) => step.step_order === stepOrder);
+    const stepIndex = executionSteps.findIndex(
+      (step: any) => step.step_order === stepOrder,
+    );
     if (stepIndex === -1) {
-      logger.warn('[Execution Steps Service] Step not found', {
+      logger.warn("[Execution Steps Service] Step not found", {
         s3Key,
         stepOrder,
         availableSteps: executionSteps.map((s: any) => s.step_order),
       });
-      throw new ApiError(`Step with order ${stepOrder} not found in execution steps`, 404);
+      throw new ApiError(
+        `Step with order ${stepOrder} not found in execution steps`,
+        404,
+      );
     }
 
     const step = executionSteps[stepIndex];
 
     // Validate step structure
-    if (!step || typeof step !== 'object') {
-      logger.error('[Execution Steps Service] Invalid step structure', {
+    if (!step || typeof step !== "object") {
+      logger.error("[Execution Steps Service] Invalid step structure", {
         s3Key,
         stepOrder,
         stepType: typeof step,
       });
-      throw new ApiError(`Step with order ${stepOrder} has invalid structure`, 500);
+      throw new ApiError(
+        `Step with order ${stepOrder} has invalid structure`,
+        500,
+      );
     }
 
     // Check if step has output to edit
-    if (step.output === null || step.output === undefined || step.output === '') {
-      throw new ApiError(`Step with order ${stepOrder} has no output to edit`, 400);
+    if (
+      step.output === null ||
+      step.output === undefined ||
+      step.output === ""
+    ) {
+      throw new ApiError(
+        `Step with order ${stepOrder} has no output to edit`,
+        400,
+      );
     }
 
     // Convert step output to string for processing
     let originalOutput: string;
     try {
-      if (typeof step.output === 'string') {
+      if (typeof step.output === "string") {
         originalOutput = step.output;
       } else {
         originalOutput = JSON.stringify(step.output, null, 2);
       }
     } catch (stringifyError: any) {
-      logger.error('[Execution Steps Service] Failed to stringify step output', {
-        s3Key,
-        stepOrder,
-        outputType: typeof step.output,
-        error: stringifyError.message,
-      });
-      throw new ApiError(`Step output is too large or contains circular references: ${stringifyError.message}`, 500);
+      logger.error(
+        "[Execution Steps Service] Failed to stringify step output",
+        {
+          s3Key,
+          stepOrder,
+          outputType: typeof step.output,
+          error: stringifyError.message,
+        },
+      );
+      throw new ApiError(
+        `Step output is too large or contains circular references: ${stringifyError.message}`,
+        500,
+      );
     }
 
-    logger.info('[Execution Steps Service] Starting AI edit', {
+    logger.info("[Execution Steps Service] Starting AI edit", {
       s3Key,
       stepOrder,
       stepName: step.step_name,
@@ -244,7 +316,7 @@ Guidelines:
       const userMessage = `Original Step Output:
 ${originalOutput}
 
-Step Name: ${step.step_name || 'Unknown'}
+Step Name: ${step.step_name || "Unknown"}
 Step Order: ${stepOrder}
 
 User Request: ${userPrompt}
@@ -253,10 +325,10 @@ Please generate the edited output based on the user's request. Return only the e
 
       // Call OpenAI
       const completion = await openai.chat.completions.create({
-        model: 'gpt-4o',
+        model: "gpt-4o",
         messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userMessage },
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userMessage },
         ],
         temperature: 0.7,
         max_tokens: 4000,
@@ -264,13 +336,13 @@ Please generate the edited output based on the user's request. Return only the e
 
       const editedOutput = completion.choices[0]?.message?.content;
       if (!editedOutput) {
-        throw new Error('No response from OpenAI');
+        throw new Error("No response from OpenAI");
       }
 
       // Parse edited output if original was JSON
       let parsedEditedOutput: any = editedOutput;
       try {
-        if (typeof step.output !== 'string') {
+        if (typeof step.output !== "string") {
           parsedEditedOutput = JSON.parse(editedOutput);
         }
       } catch {
@@ -279,9 +351,9 @@ Please generate the edited output based on the user's request. Return only the e
       }
 
       // Generate changes summary
-      const changesSummary = `Edited step output based on user prompt: "${userPrompt.substring(0, 100)}${userPrompt.length > 100 ? '...' : ''}"`;
+      const changesSummary = `Edited step output based on user prompt: "${userPrompt.substring(0, 100)}${userPrompt.length > 100 ? "..." : ""}"`;
 
-      logger.info('[Execution Steps Service] AI edit completed', {
+      logger.info("[Execution Steps Service] AI edit completed", {
         s3Key,
         stepOrder,
         originalLength: originalOutput.length,
@@ -300,7 +372,7 @@ Please generate the edited output based on the user's request. Return only the e
         // Save back to S3
         await this.saveToS3(s3Key, executionSteps);
 
-        logger.info('[Execution Steps Service] Changes saved', {
+        logger.info("[Execution Steps Service] Changes saved", {
           s3Key,
           stepOrder,
         });
@@ -316,7 +388,7 @@ Please generate the edited output based on the user's request. Return only the e
       if (error instanceof ApiError) {
         throw error;
       }
-      logger.error('[Execution Steps Service] Error during AI edit', {
+      logger.error("[Execution Steps Service] Error during AI edit", {
         s3Key,
         stepOrder,
         error: error.message,
@@ -328,4 +400,3 @@ Please generate the edited output based on the user's request. Return only the e
 }
 
 export const executionStepsService = new ExecutionStepsService();
-

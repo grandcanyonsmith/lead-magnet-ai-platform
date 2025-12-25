@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState } from "react";
 import {
   ClipboardDocumentIcon,
   ArrowTopRightOnSquareIcon,
@@ -9,66 +9,74 @@ import {
   PhotoIcon,
   DocumentIcon,
   PencilSquareIcon,
-} from '@heroicons/react/24/outline'
-import toast from 'react-hot-toast'
-import { PreviewRenderer } from '@/components/artifacts/PreviewRenderer'
-import { openJobDocumentInNewTab } from '@/utils/jobs/openJobDocument'
-import type { ArtifactGalleryItem } from '@/types/job'
-import { Tooltip } from '@/components/ui/Tooltip'
-import Link from 'next/link'
+} from "@heroicons/react/24/outline";
+import toast from "react-hot-toast";
+import { PreviewRenderer } from "@/components/artifacts/PreviewRenderer";
+import { openJobDocumentInNewTab } from "@/utils/jobs/openJobDocument";
+import type { ArtifactGalleryItem } from "@/types/job";
+import { Tooltip } from "@/components/ui/Tooltip";
+import Link from "next/link";
 
 interface ArtifactGalleryProps {
-  items: ArtifactGalleryItem[]
-  loading: boolean
-  onPreview: (item: ArtifactGalleryItem) => void
+  items: ArtifactGalleryItem[];
+  loading: boolean;
+  onPreview: (item: ArtifactGalleryItem) => void;
 }
 
-function groupFinalHtmlArtifacts(items: ArtifactGalleryItem[]): ArtifactGalleryItem[] {
-  const groups = new Map<string, ArtifactGalleryItem[]>()
-  const passthrough: ArtifactGalleryItem[] = []
+function groupFinalHtmlArtifacts(
+  items: ArtifactGalleryItem[],
+): ArtifactGalleryItem[] {
+  const groups = new Map<string, ArtifactGalleryItem[]>();
+  const passthrough: ArtifactGalleryItem[] = [];
 
   for (const item of items) {
-    const artifactType = String(item.artifact?.artifact_type || '').toLowerCase()
-    const fileName = String(item.artifact?.file_name || item.artifact?.artifact_name || '').toLowerCase()
+    const artifactType = String(
+      item.artifact?.artifact_type || "",
+    ).toLowerCase();
+    const fileName = String(
+      item.artifact?.file_name || item.artifact?.artifact_name || "",
+    ).toLowerCase();
 
     // Group repeated html_final artifacts (commonly "final.html") into a single card.
-    if (item.kind === 'artifact' && artifactType === 'html_final' && fileName) {
-      const key = `${artifactType}:${fileName}`
-      const arr = groups.get(key) || []
-      arr.push(item)
-      groups.set(key, arr)
-      continue
+    if (item.kind === "artifact" && artifactType === "html_final" && fileName) {
+      const key = `${artifactType}:${fileName}`;
+      const arr = groups.get(key) || [];
+      arr.push(item);
+      groups.set(key, arr);
+      continue;
     }
 
-    passthrough.push(item)
+    passthrough.push(item);
   }
 
-  const grouped: ArtifactGalleryItem[] = []
+  const grouped: ArtifactGalleryItem[] = [];
   for (const [key, versions] of groups.entries()) {
     if (versions.length <= 1) {
-      grouped.push(versions[0])
-      continue
+      grouped.push(versions[0]);
+      continue;
     }
 
     const latest = versions.reduce(
       (acc, cur) => ((cur.sortOrder ?? 0) > (acc.sortOrder ?? 0) ? cur : acc),
-      versions[0]
-    )
-    const versionNumber = versions.length
+      versions[0],
+    );
+    const versionNumber = versions.length;
     const baseDescription =
       latest.description ||
-      latest.artifact?.artifact_type?.replace(/_/g, ' ') ||
+      latest.artifact?.artifact_type?.replace(/_/g, " ") ||
       latest.artifact?.file_name ||
-      'html final'
+      "html final";
 
     grouped.push({
       ...latest,
       id: `group-${key}`,
       description: `${baseDescription} · v${versionNumber}`,
-    })
+    });
   }
 
-  return [...passthrough, ...grouped].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+  return [...passthrough, ...grouped].sort(
+    (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0),
+  );
 }
 
 export function ArtifactGallery({
@@ -76,7 +84,7 @@ export function ArtifactGallery({
   loading,
   onPreview,
 }: ArtifactGalleryProps) {
-  const displayItems = groupFinalHtmlArtifacts(items)
+  const displayItems = groupFinalHtmlArtifacts(items);
 
   if (loading && items.length === 0) {
     return (
@@ -94,7 +102,7 @@ export function ArtifactGallery({
           </div>
         ))}
       </div>
-    )
+    );
   }
 
   if (!items.length) {
@@ -110,7 +118,7 @@ export function ArtifactGallery({
           Artifacts will appear here once the job completes successfully.
         </p>
       </div>
-    )
+    );
   }
 
   return (
@@ -119,96 +127,97 @@ export function ArtifactGallery({
         <ArtifactCard key={item.id} item={item} onPreview={onPreview} />
       ))}
     </div>
-  )
+  );
 }
 
 interface ArtifactCardProps {
-  item: ArtifactGalleryItem
-  onPreview: (item: ArtifactGalleryItem) => void
+  item: ArtifactGalleryItem;
+  onPreview: (item: ArtifactGalleryItem) => void;
 }
 
 function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
   const artifactUrl =
-    item.artifact?.object_url || item.artifact?.public_url || item.url
+    item.artifact?.object_url || item.artifact?.public_url || item.url;
   const fileName =
     item.artifact?.file_name ||
     item.artifact?.artifact_name ||
     item.url ||
     item.label ||
-    'Artifact'
-  const [openingJobOutput, setOpeningJobOutput] = useState(false)
+    "Artifact";
+  const [openingJobOutput, setOpeningJobOutput] = useState(false);
 
-  const editorJobId = item.jobId || item.artifact?.job_id
-  const editorHref =
-    editorJobId
-      ? `/dashboard/editor?jobId=${editorJobId}&artifactId=${item.artifact?.artifact_id || ''}&url=${encodeURIComponent(artifactUrl || '')}`
-      : null
+  const editorJobId = item.jobId || item.artifact?.job_id;
+  const editorHref = editorJobId
+    ? `/dashboard/editor?jobId=${editorJobId}&artifactId=${item.artifact?.artifact_id || ""}&url=${encodeURIComponent(artifactUrl || "")}`
+    : null;
 
-  const normalizedFileName = fileName.toLowerCase()
-  const normalizedContentType = String(item.artifact?.content_type || '').toLowerCase()
+  const normalizedFileName = fileName.toLowerCase();
+  const normalizedContentType = String(
+    item.artifact?.content_type || "",
+  ).toLowerCase();
   const normalizedUrlPath = (() => {
     try {
-      return artifactUrl ? new URL(artifactUrl).pathname.toLowerCase() : ''
+      return artifactUrl ? new URL(artifactUrl).pathname.toLowerCase() : "";
     } catch {
-      return String(artifactUrl || '').toLowerCase()
+      return String(artifactUrl || "").toLowerCase();
     }
-  })()
+  })();
 
   const isHtml =
-    normalizedContentType.includes('text/html') ||
-    normalizedFileName.endsWith('.html') ||
-    normalizedFileName.endsWith('.htm') ||
-    normalizedUrlPath.endsWith('.html') ||
-    normalizedUrlPath.endsWith('.htm')
+    normalizedContentType.includes("text/html") ||
+    normalizedFileName.endsWith(".html") ||
+    normalizedFileName.endsWith(".htm") ||
+    normalizedUrlPath.endsWith(".html") ||
+    normalizedUrlPath.endsWith(".htm");
 
   const handleCopy = async (value: string, successMessage: string) => {
     try {
-      if (typeof navigator !== 'undefined' && navigator.clipboard) {
-        await navigator.clipboard.writeText(value)
+      if (typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(value);
       } else {
-        throw new Error('Clipboard API not available')
+        throw new Error("Clipboard API not available");
       }
-      toast.success(successMessage)
+      toast.success(successMessage);
     } catch {
-      toast.error('Unable to copy to clipboard')
+      toast.error("Unable to copy to clipboard");
     }
-  }
+  };
 
   const handleViewJobOutput = async () => {
-    if (!item.jobId || openingJobOutput) return
+    if (!item.jobId || openingJobOutput) return;
 
-    setOpeningJobOutput(true)
+    setOpeningJobOutput(true);
 
     try {
-      await openJobDocumentInNewTab(item.jobId)
+      await openJobDocumentInNewTab(item.jobId);
     } finally {
-      setOpeningJobOutput(false)
+      setOpeningJobOutput(false);
     }
-  }
+  };
 
   const isImage =
-    item.kind === 'imageUrl' ||
-    item.kind === 'imageArtifact' ||
-    item.artifact?.content_type?.startsWith('image/')
+    item.kind === "imageUrl" ||
+    item.kind === "imageArtifact" ||
+    item.artifact?.content_type?.startsWith("image/");
 
   const isCode =
-    item.artifact?.content_type === 'text/html' ||
-    item.artifact?.content_type === 'application/json' ||
-    item.artifact?.content_type === 'text/markdown' ||
-    fileName.endsWith('.html') ||
-    fileName.endsWith('.json') ||
-    fileName.endsWith('.md')
+    item.artifact?.content_type === "text/html" ||
+    item.artifact?.content_type === "application/json" ||
+    item.artifact?.content_type === "text/markdown" ||
+    fileName.endsWith(".html") ||
+    fileName.endsWith(".json") ||
+    fileName.endsWith(".md");
 
   return (
     <div className="group relative flex flex-col overflow-hidden rounded-2xl border border-gray-300 bg-white shadow transition-all hover:shadow-md hover:border-gray-400">
       {/* Preview Area */}
       <div className="aspect-[4/3] bg-gray-50 relative overflow-hidden group/preview">
-        {artifactUrl && item.kind !== 'jobOutput' ? (
+        {artifactUrl && item.kind !== "jobOutput" ? (
           <div className="relative h-full w-full">
             <PreviewRenderer
               contentType={
                 item.artifact?.content_type ||
-                (item.kind === 'imageUrl' ? 'image/png' : undefined)
+                (item.kind === "imageUrl" ? "image/png" : undefined)
               }
               objectUrl={artifactUrl}
               fileName={fileName}
@@ -225,7 +234,7 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
             className="flex h-full w-full cursor-pointer items-center justify-center bg-gray-50 text-gray-400"
             onClick={() => onPreview(item)}
           >
-            {item.kind === 'jobOutput' ? (
+            {item.kind === "jobOutput" ? (
               <DocumentIcon className="h-12 w-12" />
             ) : isCode ? (
               <CodeBracketIcon className="h-12 w-12" />
@@ -252,7 +261,7 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
         {/* Type Badge */}
         <div className="absolute left-3 top-3">
           <span className="inline-flex items-center rounded-md bg-white/90 px-2 py-1 text-xs font-medium text-gray-700 shadow-sm backdrop-blur-sm">
-            {isImage ? 'Image' : isCode ? 'Code' : 'Document'}
+            {isImage ? "Image" : isCode ? "Code" : "Document"}
           </span>
         </div>
       </div>
@@ -260,7 +269,10 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
       {/* Content Area */}
       <div className="flex flex-1 flex-col p-4">
         <div className="mb-4">
-          <h3 className="text-sm font-semibold text-gray-900 line-clamp-1" title={item.label}>
+          <h3
+            className="text-sm font-semibold text-gray-900 line-clamp-1"
+            title={item.label}
+          >
             {item.label}
           </h3>
           {item.description && (
@@ -278,7 +290,7 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
         {/* Footer Actions */}
         <div className="mt-auto flex items-center justify-between border-t border-gray-100 pt-3">
           <div className="flex items-center gap-1">
-            {item.kind === 'jobOutput' && item.jobId ? (
+            {item.kind === "jobOutput" && item.jobId ? (
               <button
                 type="button"
                 onClick={handleViewJobOutput}
@@ -323,14 +335,14 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
             {artifactUrl && (
               <Tooltip content="Copy Link" position="top">
                 <button
-                  onClick={() => handleCopy(artifactUrl, 'Link copied')}
+                  onClick={() => handleCopy(artifactUrl, "Link copied")}
                   className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
                 >
                   <ClipboardDocumentIcon className="h-4 w-4" />
                 </button>
               </Tooltip>
             )}
-            {item.kind === 'jobOutput' && item.url && (
+            {item.kind === "jobOutput" && item.url && (
               <Tooltip content="Download" position="top">
                 <a
                   href={item.url}
@@ -346,6 +358,5 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }
-

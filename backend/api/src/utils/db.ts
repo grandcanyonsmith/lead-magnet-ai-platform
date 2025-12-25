@@ -1,4 +1,4 @@
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import {
   DynamoDBDocumentClient,
   GetCommand,
@@ -7,8 +7,8 @@ import {
   DeleteCommand,
   QueryCommand,
   ScanCommand,
-} from '@aws-sdk/lib-dynamodb';
-import { env } from './env';
+} from "@aws-sdk/lib-dynamodb";
+import { env } from "./env";
 
 const client = new DynamoDBClient({
   region: env.awsRegion,
@@ -48,19 +48,25 @@ export class DynamoDBService {
   async update(
     tableName: string,
     key: Record<string, any>,
-    updates: Record<string, any>
+    updates: Record<string, any>,
   ) {
     // Validate inputs
-    if (!tableName || typeof tableName !== 'string' || tableName.trim().length === 0) {
-      throw new Error('Table name is required and must be a non-empty string');
+    if (
+      !tableName ||
+      typeof tableName !== "string" ||
+      tableName.trim().length === 0
+    ) {
+      throw new Error("Table name is required and must be a non-empty string");
     }
 
     if (!key || Object.keys(key).length === 0) {
-      throw new Error('Key is required and must be a non-empty object');
+      throw new Error("Key is required and must be a non-empty object");
     }
 
     if (!updates || Object.keys(updates).length === 0) {
-      throw new Error('Updates object is required and must contain at least one field to update');
+      throw new Error(
+        "Updates object is required and must contain at least one field to update",
+      );
     }
 
     // Filter out undefined values from updates
@@ -71,26 +77,28 @@ export class DynamoDBService {
         }
         return acc;
       },
-      {} as Record<string, any>
+      {} as Record<string, any>,
     );
 
     if (Object.keys(filteredUpdates).length === 0) {
-      throw new Error('Updates object must contain at least one non-undefined value');
+      throw new Error(
+        "Updates object must contain at least one non-undefined value",
+      );
     }
 
     try {
       const updateExpression = Object.keys(filteredUpdates)
         .map((k) => `#${k} = :${k}`)
-        .join(', ');
+        .join(", ");
 
       const expressionAttributeNames = Object.keys(filteredUpdates).reduce(
         (acc, k) => ({ ...acc, [`#${k}`]: k }),
-        {}
+        {},
       );
 
       const expressionAttributeValues = Object.keys(filteredUpdates).reduce(
         (acc, k) => ({ ...acc, [`:${k}`]: filteredUpdates[k] }),
-        {}
+        {},
       );
 
       const command = new UpdateCommand({
@@ -99,14 +107,16 @@ export class DynamoDBService {
         UpdateExpression: `SET ${updateExpression}`,
         ExpressionAttributeNames: expressionAttributeNames,
         ExpressionAttributeValues: expressionAttributeValues,
-        ReturnValues: 'ALL_NEW',
+        ReturnValues: "ALL_NEW",
       });
 
       const result = await docClient.send(command);
-      
+
       // Validate that we got a result back
       if (!result || !result.Attributes) {
-        throw new Error(`DynamoDB update operation completed but returned no attributes. Table: ${tableName}, Key: ${JSON.stringify(key)}`);
+        throw new Error(
+          `DynamoDB update operation completed but returned no attributes. Table: ${tableName}, Key: ${JSON.stringify(key)}`,
+        );
       }
 
       return result.Attributes;
@@ -114,7 +124,7 @@ export class DynamoDBService {
       // Re-throw with more context
       if (error instanceof Error) {
         throw new Error(
-          `Failed to update DynamoDB item: ${error.message}. Table: ${tableName}, Key: ${JSON.stringify(key)}, Updates: ${JSON.stringify(Object.keys(filteredUpdates))}`
+          `Failed to update DynamoDB item: ${error.message}. Table: ${tableName}, Key: ${JSON.stringify(key)}, Updates: ${JSON.stringify(Object.keys(filteredUpdates))}`,
         );
       }
       throw error;
@@ -137,8 +147,11 @@ export class DynamoDBService {
     expressionAttributeValues: Record<string, any>,
     expressionAttributeNames?: Record<string, string>,
     limit?: number,
-    exclusiveStartKey?: Record<string, any>
-  ): Promise<{ items: Record<string, any>[]; lastEvaluatedKey?: Record<string, any> }> {
+    exclusiveStartKey?: Record<string, any>,
+  ): Promise<{
+    items: Record<string, any>[];
+    lastEvaluatedKey?: Record<string, any>;
+  }> {
     const params: any = {
       TableName: tableName,
       KeyConditionExpression: keyCondition,
@@ -146,7 +159,10 @@ export class DynamoDBService {
     };
 
     // Only add ExpressionAttributeValues if not empty
-    if (expressionAttributeValues && Object.keys(expressionAttributeValues).length > 0) {
+    if (
+      expressionAttributeValues &&
+      Object.keys(expressionAttributeValues).length > 0
+    ) {
       params.ExpressionAttributeValues = expressionAttributeValues;
     }
 
@@ -154,7 +170,10 @@ export class DynamoDBService {
       params.IndexName = indexName;
     }
 
-    if (expressionAttributeNames && Object.keys(expressionAttributeNames).length > 0) {
+    if (
+      expressionAttributeNames &&
+      Object.keys(expressionAttributeNames).length > 0
+    ) {
       params.ExpressionAttributeNames = expressionAttributeNames;
     }
 
@@ -169,7 +188,7 @@ export class DynamoDBService {
     const command = new QueryCommand(params);
 
     const result = await docClient.send(command);
-    
+
     return {
       items: result.Items || [],
       lastEvaluatedKey: result.LastEvaluatedKey,
@@ -192,10 +211,9 @@ export class DynamoDBService {
  * Handles both array return format and paginated object format
  */
 export function normalizeQueryResult<T = any>(
-  result: T[] | { items: T[]; lastEvaluatedKey?: Record<string, any> }
+  result: T[] | { items: T[]; lastEvaluatedKey?: Record<string, any> },
 ): T[] {
   return Array.isArray(result) ? result : result.items;
 }
 
 export const db = new DynamoDBService();
-

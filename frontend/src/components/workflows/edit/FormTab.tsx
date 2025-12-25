@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 import {
   FiChevronDown,
@@ -10,33 +10,35 @@ import {
   FiSave,
   FiSettings,
   FiShield,
-} from 'react-icons/fi'
-import { SectionCard } from '@/components/ui/SectionCard'
-import { FormFormData, FormField } from '@/hooks/useFormEdit'
-import { getFieldTypeIcon } from '@/utils/formUtils'
-import { buildPublicFormUrl } from '@/utils/url'
+} from "react-icons/fi";
+import { SectionCard } from "@/components/ui/SectionCard";
+import { FormFormData, FormField } from "@/hooks/useFormEdit";
+import { getFieldTypeIcon } from "@/utils/formUtils";
+import { buildPublicFormUrl } from "@/utils/url";
 
 interface FormTabProps {
-  formFormData: FormFormData
-  workflowName: string
-  submitting: boolean
-  customDomain?: string
-  onFormChange: (field: string, value: any) => void
-  onFieldChange: (index: number, field: string, value: any) => void
-  onAddField: () => void
-  onRemoveField: (index: number) => void
-  onMoveFieldUp: (index: number) => void
-  onMoveFieldDown: (index: number) => void
-  onSubmit: (e: React.FormEvent) => void
-  onCancel: () => void
+  formFormData: FormFormData;
+  workflowName: string;
+  submitting: boolean;
+  customDomain?: string;
+  onFormChange: (field: string, value: any) => void;
+  onFieldChange: (index: number, field: string, value: any) => void;
+  onAddField: () => void;
+  onRemoveField: (index: number) => void;
+  onMoveFieldUp: (index: number) => void;
+  onMoveFieldDown: (index: number) => void;
+  onSubmit: (e: React.FormEvent) => void;
+  onCancel: () => void;
 }
 
 function FormPreview({ formFormData }: { formFormData: FormFormData }) {
-  const allFields = formFormData.form_fields_schema.fields
+  const allFields = formFormData.form_fields_schema.fields;
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-6">
-      <h3 className="text-lg font-semibold mb-4">{formFormData.form_name || 'Form Preview'}</h3>
+      <h3 className="text-lg font-semibold mb-4">
+        {formFormData.form_name || "Form Preview"}
+      </h3>
       <div className="space-y-4">
         {allFields.map((field) => (
           <div key={field.field_id}>
@@ -44,14 +46,14 @@ function FormPreview({ formFormData }: { formFormData: FormFormData }) {
               {field.label}
               {field.required && <span className="text-red-500 ml-1">*</span>}
             </label>
-            {field.field_type === 'textarea' ? (
+            {field.field_type === "textarea" ? (
               <textarea
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                placeholder={field.placeholder || ''}
+                placeholder={field.placeholder || ""}
                 rows={4}
                 disabled
               />
-            ) : field.field_type === 'select' && field.options ? (
+            ) : field.field_type === "select" && field.options ? (
               <select
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                 disabled
@@ -65,9 +67,17 @@ function FormPreview({ formFormData }: { formFormData: FormFormData }) {
               </select>
             ) : (
               <input
-                type={field.field_type === 'email' ? 'email' : field.field_type === 'tel' ? 'tel' : field.field_type === 'number' ? 'number' : 'text'}
+                type={
+                  field.field_type === "email"
+                    ? "email"
+                    : field.field_type === "tel"
+                      ? "tel"
+                      : field.field_type === "number"
+                        ? "number"
+                        : "text"
+                }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                placeholder={field.placeholder || ''}
+                placeholder={field.placeholder || ""}
                 disabled
               />
             )}
@@ -82,7 +92,7 @@ function FormPreview({ formFormData }: { formFormData: FormFormData }) {
         </button>
       </div>
     </div>
-  )
+  );
 }
 
 export function FormTab({
@@ -99,7 +109,7 @@ export function FormTab({
   onSubmit,
   onCancel,
 }: FormTabProps) {
-  const customFields = formFormData.form_fields_schema.fields
+  const customFields = formFormData.form_fields_schema.fields;
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_420px]">
@@ -111,7 +121,8 @@ export function FormTab({
         >
           <div className="rounded-2xl border border-blue-100/80 bg-blue-50/70 px-4 py-3 text-sm text-blue-900">
             <p>
-              <strong className="font-semibold">Heads up:</strong> this form name automatically mirrors your lead magnet name.
+              <strong className="font-semibold">Heads up:</strong> this form
+              name automatically mirrors your lead magnet name.
             </p>
           </div>
 
@@ -123,13 +134,15 @@ export function FormTab({
               <input
                 type="text"
                 value={formFormData.form_name}
-                onChange={(e) => onFormChange('form_name', e.target.value)}
+                onChange={(e) => onFormChange("form_name", e.target.value)}
                 className="mt-2 w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
                 placeholder="Lead Magnet Form"
                 maxLength={200}
                 required
               />
-              <p className="mt-2 text-xs text-gray-500">Automatically set to “{workflowName} Form”.</p>
+              <p className="mt-2 text-xs text-gray-500">
+                Automatically set to “{workflowName} Form”.
+              </p>
             </div>
 
             <div>
@@ -141,8 +154,8 @@ export function FormTab({
                 value={formFormData.public_slug}
                 onChange={(e) =>
                   onFormChange(
-                    'public_slug',
-                    e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-')
+                    "public_slug",
+                    e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"),
                   )
                 }
                 className="mt-2 w-full rounded-xl border border-gray-200 px-3 py-2.5 font-mono text-sm lowercase shadow-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
@@ -155,7 +168,8 @@ export function FormTab({
               </p>
               {formFormData.public_slug && (
                 <p className="mt-1 text-xs font-medium text-primary-600">
-                  Form URL: {buildPublicFormUrl(formFormData.public_slug, customDomain)}
+                  Form URL:{" "}
+                  {buildPublicFormUrl(formFormData.public_slug, customDomain)}
                 </p>
               )}
             </div>
@@ -178,7 +192,8 @@ export function FormTab({
           }
         >
           <p className="text-sm text-gray-500">
-            Add fields below to collect the information you need from your leads.
+            Add fields below to collect the information you need from your
+            leads.
           </p>
 
           <div className="mt-4 space-y-3">
@@ -209,7 +224,7 @@ export function FormTab({
                       disabled={index === 0}
                       className="rounded-full border border-gray-200 p-2 text-gray-500 transition hover:text-gray-900 disabled:cursor-not-allowed disabled:text-gray-300"
                       title="Move field up"
-                      aria-label={`Move ${field.label || 'field'} up`}
+                      aria-label={`Move ${field.label || "field"} up`}
                     >
                       <FiChevronUp className="h-4 w-4" />
                     </button>
@@ -219,7 +234,7 @@ export function FormTab({
                       disabled={index === customFields.length - 1}
                       className="rounded-full border border-gray-200 p-2 text-gray-500 transition hover:text-gray-900 disabled:cursor-not-allowed disabled:text-gray-300"
                       title="Move field down"
-                      aria-label={`Move ${field.label || 'field'} down`}
+                      aria-label={`Move ${field.label || "field"} down`}
                     >
                       <FiChevronDown className="h-4 w-4" />
                     </button>
@@ -228,7 +243,7 @@ export function FormTab({
                       onClick={() => onRemoveField(index)}
                       className="ml-1 rounded-full border border-red-100 p-2 text-red-600 transition hover:bg-red-50"
                       title="Remove field"
-                      aria-label={`Remove ${field.label || 'field'}`}
+                      aria-label={`Remove ${field.label || "field"}`}
                     >
                       <FiMinus className="h-4 w-4" />
                     </button>
@@ -242,7 +257,9 @@ export function FormTab({
                     </label>
                     <select
                       value={field.field_type}
-                      onChange={(e) => onFieldChange(index, 'field_type', e.target.value)}
+                      onChange={(e) =>
+                        onFieldChange(index, "field_type", e.target.value)
+                      }
                       className="mt-2 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
                     >
                       <option value="text">Text</option>
@@ -260,7 +277,9 @@ export function FormTab({
                     <input
                       type="text"
                       value={field.label}
-                      onChange={(e) => onFieldChange(index, 'label', e.target.value)}
+                      onChange={(e) =>
+                        onFieldChange(index, "label", e.target.value)
+                      }
                       className="mt-2 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
                       placeholder="Field label"
                     />
@@ -273,29 +292,31 @@ export function FormTab({
                   </label>
                   <input
                     type="text"
-                    value={field.placeholder || ''}
-                    onChange={(e) => onFieldChange(index, 'placeholder', e.target.value)}
+                    value={field.placeholder || ""}
+                    onChange={(e) =>
+                      onFieldChange(index, "placeholder", e.target.value)
+                    }
                     className="mt-2 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
                     placeholder="Placeholder text"
                   />
                 </div>
 
-                {field.field_type === 'select' && (
+                {field.field_type === "select" && (
                   <div className="mt-3">
                     <label className="block text-xs font-semibold uppercase tracking-wide text-gray-600">
                       Options (comma separated)
                     </label>
                     <input
                       type="text"
-                      value={field.options?.join(', ') || ''}
+                      value={field.options?.join(", ") || ""}
                       onChange={(e) =>
                         onFieldChange(
                           index,
-                          'options',
+                          "options",
                           e.target.value
-                            .split(',')
+                            .split(",")
                             .map((option) => option.trim())
-                            .filter((option) => option)
+                            .filter((option) => option),
                         )
                       }
                       className="mt-2 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
@@ -308,7 +329,9 @@ export function FormTab({
                   <input
                     type="checkbox"
                     checked={field.required}
-                    onChange={(e) => onFieldChange(index, 'required', e.target.checked)}
+                    onChange={(e) =>
+                      onFieldChange(index, "required", e.target.checked)
+                    }
                     className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                   />
                   Required field
@@ -319,7 +342,8 @@ export function FormTab({
             {customFields.length === 0 && (
               <div className="rounded-2xl border-2 border-dashed border-gray-200 px-4 py-10 text-center">
                 <p className="text-sm text-gray-600">
-                  No fields yet. Add fields to collect information from your leads.
+                  No fields yet. Add fields to collect information from your
+                  leads.
                 </p>
                 <button
                   type="button"
@@ -343,10 +367,14 @@ export function FormTab({
               <input
                 type="checkbox"
                 checked={formFormData.rate_limit_enabled}
-                onChange={(e) => onFormChange('rate_limit_enabled', e.target.checked)}
+                onChange={(e) =>
+                  onFormChange("rate_limit_enabled", e.target.checked)
+                }
                 className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
               />
-              <span className="text-sm font-medium text-gray-900">Enable rate limiting</span>
+              <span className="text-sm font-medium text-gray-900">
+                Enable rate limiting
+              </span>
             </label>
 
             {formFormData.rate_limit_enabled && (
@@ -358,7 +386,10 @@ export function FormTab({
                   type="number"
                   value={formFormData.rate_limit_per_hour}
                   onChange={(e) =>
-                    onFormChange('rate_limit_per_hour', parseInt(e.target.value, 10) || 10)
+                    onFormChange(
+                      "rate_limit_per_hour",
+                      parseInt(e.target.value, 10) || 10,
+                    )
                   }
                   className="mt-2 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
                   min={1}
@@ -371,10 +402,14 @@ export function FormTab({
               <input
                 type="checkbox"
                 checked={formFormData.captcha_enabled}
-                onChange={(e) => onFormChange('captcha_enabled', e.target.checked)}
+                onChange={(e) =>
+                  onFormChange("captcha_enabled", e.target.checked)
+                }
                 className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
               />
-              <span className="text-sm font-medium text-gray-900">Enable CAPTCHA</span>
+              <span className="text-sm font-medium text-gray-900">
+                Enable CAPTCHA
+              </span>
             </label>
           </div>
         </SectionCard>
@@ -391,7 +426,9 @@ export function FormTab({
               </label>
               <textarea
                 value={formFormData.thank_you_message}
-                onChange={(e) => onFormChange('thank_you_message', e.target.value)}
+                onChange={(e) =>
+                  onFormChange("thank_you_message", e.target.value)
+                }
                 className="mt-2 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
                 placeholder="Thank you! Your submission is being processed."
                 rows={3}
@@ -405,7 +442,7 @@ export function FormTab({
               <input
                 type="url"
                 value={formFormData.redirect_url}
-                onChange={(e) => onFormChange('redirect_url', e.target.value)}
+                onChange={(e) => onFormChange("redirect_url", e.target.value)}
                 className="mt-2 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
                 placeholder="https://example.com/thank-you"
               />
@@ -417,7 +454,7 @@ export function FormTab({
               </label>
               <textarea
                 value={formFormData.custom_css}
-                onChange={(e) => onFormChange('custom_css', e.target.value)}
+                onChange={(e) => onFormChange("custom_css", e.target.value)}
                 className="mt-2 w-full rounded-xl border border-gray-200 px-3 py-2 font-mono text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
                 placeholder="/* Custom CSS styles */"
                 rows={6}
@@ -440,7 +477,7 @@ export function FormTab({
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
           >
             <FiSave className="h-4 w-4" aria-hidden="true" />
-            {submitting ? 'Saving...' : 'Save changes'}
+            {submitting ? "Saving..." : "Save changes"}
           </button>
         </div>
       </form>
@@ -460,5 +497,5 @@ export function FormTab({
         </div>
       </div>
     </div>
-  )
+  );
 }

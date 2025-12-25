@@ -3,15 +3,15 @@
  * Provides functions for normalizing, sanitizing, and merging data structures.
  */
 
-import { isObject, isArray } from './validators';
+import { isObject, isArray } from "./validators";
 
 /**
  * Normalizes object keys to a consistent format (e.g., camelCase, snake_case).
- * 
+ *
  * @param obj - Object to normalize
  * @param format - Target key format ('camelCase' | 'snake_case' | 'kebab-case')
  * @returns Object with normalized keys
- * 
+ *
  * @example
  * ```typescript
  * const normalized = normalizeKeys(
@@ -22,7 +22,7 @@ import { isObject, isArray } from './validators';
  */
 export function normalizeKeys<T extends Record<string, unknown>>(
   obj: T,
-  format: 'camelCase' | 'snake_case' | 'kebab-case' = 'camelCase'
+  format: "camelCase" | "snake_case" | "kebab-case" = "camelCase",
 ): Record<string, unknown> {
   if (!isObject(obj)) {
     return obj;
@@ -34,28 +34,36 @@ export function normalizeKeys<T extends Record<string, unknown>>(
     let normalizedKey = key;
 
     switch (format) {
-      case 'camelCase':
-        normalizedKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase())
+      case "camelCase":
+        normalizedKey = key
+          .replace(/_([a-z])/g, (_, letter) => letter.toUpperCase())
           .replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
         break;
-      case 'snake_case':
-        normalizedKey = key.replace(/([A-Z])/g, '_$1')
-          .replace(/-/g, '_')
+      case "snake_case":
+        normalizedKey = key
+          .replace(/([A-Z])/g, "_$1")
+          .replace(/-/g, "_")
           .toLowerCase();
         break;
-      case 'kebab-case':
-        normalizedKey = key.replace(/([A-Z])/g, '-$1')
-          .replace(/_/g, '-')
+      case "kebab-case":
+        normalizedKey = key
+          .replace(/([A-Z])/g, "-$1")
+          .replace(/_/g, "-")
           .toLowerCase();
         break;
     }
 
     // Recursively normalize nested objects
     if (isObject(value)) {
-      result[normalizedKey] = normalizeKeys(value as Record<string, unknown>, format);
+      result[normalizedKey] = normalizeKeys(
+        value as Record<string, unknown>,
+        format,
+      );
     } else if (isArray(value)) {
-      result[normalizedKey] = (value as unknown[]).map(item =>
-        isObject(item) ? normalizeKeys(item as Record<string, unknown>, format) : item
+      result[normalizedKey] = (value as unknown[]).map((item) =>
+        isObject(item)
+          ? normalizeKeys(item as Record<string, unknown>, format)
+          : item,
       );
     } else {
       result[normalizedKey] = value;
@@ -67,11 +75,11 @@ export function normalizeKeys<T extends Record<string, unknown>>(
 
 /**
  * Sanitizes input by removing potentially dangerous characters and trimming whitespace.
- * 
+ *
  * @param input - Input to sanitize (string or object)
  * @param options - Sanitization options
  * @returns Sanitized input
- * 
+ *
  * @example
  * ```typescript
  * const sanitized = sanitizeInput('<script>alert("xss")</script>');
@@ -84,11 +92,11 @@ export function sanitizeInput(
     removeHtml?: boolean;
     trimWhitespace?: boolean;
     maxLength?: number;
-  } = {}
+  } = {},
 ): unknown {
   const { removeHtml = true, trimWhitespace = true, maxLength } = options;
 
-  if (typeof input === 'string') {
+  if (typeof input === "string") {
     let sanitized = input;
 
     if (trimWhitespace) {
@@ -97,12 +105,12 @@ export function sanitizeInput(
 
     if (removeHtml) {
       // Remove HTML tags (basic sanitization)
-      sanitized = sanitized.replace(/<[^>]*>/g, '');
+      sanitized = sanitized.replace(/<[^>]*>/g, "");
       // Decode HTML entities
       sanitized = sanitized
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&amp;/g, "&")
         .replace(/&quot;/g, '"')
         .replace(/&#39;/g, "'");
     }
@@ -123,7 +131,7 @@ export function sanitizeInput(
   }
 
   if (isArray(input)) {
-    return input.map(item => sanitizeInput(item, options));
+    return input.map((item) => sanitizeInput(item, options));
   }
 
   return input;
@@ -131,11 +139,11 @@ export function sanitizeInput(
 
 /**
  * Deep merges multiple objects, with later objects taking precedence.
- * 
+ *
  * @param target - Target object to merge into
  * @param sources - Source objects to merge
  * @returns Merged object
- * 
+ *
  * @example
  * ```typescript
  * const merged = deepMerge(
@@ -168,7 +176,7 @@ export function deepMerge<T extends Record<string, unknown>>(
         if (isObject(sourceValue) && isObject(targetValue)) {
           result[key] = deepMerge(
             targetValue as Record<string, unknown>,
-            sourceValue as Record<string, unknown>
+            sourceValue as Record<string, unknown>,
           ) as T[Extract<keyof T, string>];
         } else {
           result[key] = sourceValue as T[Extract<keyof T, string>];
@@ -182,11 +190,11 @@ export function deepMerge<T extends Record<string, unknown>>(
 
 /**
  * Picks specified keys from an object.
- * 
+ *
  * @param obj - Object to pick from
  * @param keys - Keys to pick
  * @returns Object with only specified keys
- * 
+ *
  * @example
  * ```typescript
  * const picked = pick({ a: 1, b: 2, c: 3 }, ['a', 'c']);
@@ -195,7 +203,7 @@ export function deepMerge<T extends Record<string, unknown>>(
  */
 export function pick<T extends Record<string, unknown>, K extends keyof T>(
   obj: T,
-  keys: K[]
+  keys: K[],
 ): Pick<T, K> {
   const result = {} as Pick<T, K>;
 
@@ -210,11 +218,11 @@ export function pick<T extends Record<string, unknown>, K extends keyof T>(
 
 /**
  * Omits specified keys from an object.
- * 
+ *
  * @param obj - Object to omit from
  * @param keys - Keys to omit
  * @returns Object without specified keys
- * 
+ *
  * @example
  * ```typescript
  * const omitted = omit({ a: 1, b: 2, c: 3 }, ['b']);
@@ -223,7 +231,7 @@ export function pick<T extends Record<string, unknown>, K extends keyof T>(
  */
 export function omit<T extends Record<string, unknown>, K extends keyof T>(
   obj: T,
-  keys: K[]
+  keys: K[],
 ): Omit<T, K> {
   const result = { ...obj };
 
@@ -236,18 +244,21 @@ export function omit<T extends Record<string, unknown>, K extends keyof T>(
 
 /**
  * Flattens a nested object into a single level with dot-notation keys.
- * 
+ *
  * @param obj - Object to flatten
  * @param prefix - Key prefix (used for recursion)
  * @returns Flattened object
- * 
+ *
  * @example
  * ```typescript
  * const flattened = flatten({ a: { b: { c: 1 } } });
  * // Returns: { 'a.b.c': 1 }
  * ```
  */
-export function flatten(obj: Record<string, unknown>, prefix: string = ''): Record<string, unknown> {
+export function flatten(
+  obj: Record<string, unknown>,
+  prefix: string = "",
+): Record<string, unknown> {
   const result: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(obj)) {
@@ -265,21 +276,23 @@ export function flatten(obj: Record<string, unknown>, prefix: string = ''): Reco
 
 /**
  * Unflattens a flat object with dot-notation keys into a nested structure.
- * 
+ *
  * @param obj - Flat object to unflatten
  * @returns Nested object
- * 
+ *
  * @example
  * ```typescript
  * const unflattened = unflatten({ 'a.b.c': 1 });
  * // Returns: { a: { b: { c: 1 } } }
  * ```
  */
-export function unflatten(obj: Record<string, unknown>): Record<string, unknown> {
+export function unflatten(
+  obj: Record<string, unknown>,
+): Record<string, unknown> {
   const result: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(obj)) {
-    const keys = key.split('.');
+    const keys = key.split(".");
     let current = result;
 
     for (let i = 0; i < keys.length - 1; i++) {
@@ -295,4 +308,3 @@ export function unflatten(obj: Record<string, unknown>): Record<string, unknown>
 
   return result;
 }
-

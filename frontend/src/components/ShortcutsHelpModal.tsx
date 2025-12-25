@@ -1,25 +1,33 @@
-'use client'
+"use client";
 
-import React from 'react'
-import { FiX, FiCommand } from 'react-icons/fi'
+import React from "react";
+import { FiX, FiCommand } from "react-icons/fi";
 
 interface ShortcutsHelpModalProps {
-  isOpen: boolean
-  onClose: () => void
+  isOpen: boolean;
+  onClose: () => void;
 }
 
-export const ShortcutsHelpModal: React.FC<ShortcutsHelpModalProps> = ({ isOpen, onClose }) => {
-  if (!isOpen) return null
+export const ShortcutsHelpModal: React.FC<ShortcutsHelpModalProps> = ({
+  isOpen,
+  onClose,
+}) => {
+  if (!isOpen) return null;
 
-  const isMac = typeof window !== 'undefined' && navigator.platform.toUpperCase().indexOf('MAC') >= 0
-  const modKey = isMac ? '⌘' : 'Ctrl'
+  const isMac =
+    typeof window !== "undefined" &&
+    navigator.platform.toUpperCase().indexOf("MAC") >= 0;
+  const modKey = isMac ? "⌘" : "Ctrl";
 
   const shortcuts = [
-    { keys: [`${modKey}K`], description: 'Open search' },
-    { keys: [`${modKey}/`], description: 'Show keyboard shortcuts' },
-    { keys: ['1', '2', '3', '4', '5'], description: 'Navigate to sidebar items' },
-    { keys: ['Esc'], description: 'Close modals or sidebar' },
-  ]
+    { keys: [`${modKey}K`], description: "Open search" },
+    { keys: [`${modKey}/`], description: "Show keyboard shortcuts" },
+    {
+      keys: ["1", "2", "3", "4", "5"],
+      description: "Navigate to sidebar items",
+    },
+    { keys: ["Esc"], description: "Close modals or sidebar" },
+  ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
@@ -38,7 +46,9 @@ export const ShortcutsHelpModal: React.FC<ShortcutsHelpModalProps> = ({ isOpen, 
               <FiCommand className="w-5 h-5 text-primary-600" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Keyboard Shortcuts</h2>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Keyboard Shortcuts
+              </h2>
               <p className="text-sm text-gray-500">Speed up your workflow</p>
             </div>
           </div>
@@ -55,8 +65,13 @@ export const ShortcutsHelpModal: React.FC<ShortcutsHelpModalProps> = ({ isOpen, 
         <div className="p-6">
           <div className="space-y-4">
             {shortcuts.map((shortcut, index) => (
-              <div key={index} className="flex items-center justify-between py-2">
-                <span className="text-sm text-gray-600">{shortcut.description}</span>
+              <div
+                key={index}
+                className="flex items-center justify-between py-2"
+              >
+                <span className="text-sm text-gray-600">
+                  {shortcut.description}
+                </span>
                 <div className="flex items-center gap-1.5">
                   {shortcut.keys.map((key, keyIndex) => (
                     <React.Fragment key={keyIndex}>
@@ -77,11 +92,14 @@ export const ShortcutsHelpModal: React.FC<ShortcutsHelpModalProps> = ({ isOpen, 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-lg">
           <p className="text-xs text-gray-500 text-center">
-            Press <kbd className="px-1.5 py-0.5 text-xs font-semibold text-gray-600 bg-white border border-gray-300 rounded">Esc</kbd> to close
+            Press{" "}
+            <kbd className="px-1.5 py-0.5 text-xs font-semibold text-gray-600 bg-white border border-gray-300 rounded">
+              Esc
+            </kbd>{" "}
+            to close
           </p>
         </div>
       </div>
     </div>
-  )
-}
-
+  );
+};
