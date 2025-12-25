@@ -108,8 +108,19 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ layer = 'glo
   }
 
   const formatTimeAgo = (dateString: string) => {
-    const date = new Date(dateString)
+    const normalizeTimestamp = (raw: string) => {
+      const s = String(raw || '').trim()
+      if (!s) return s
+
+      const hasTz = /([zZ]|[+-]\d{2}:?\d{2})$/.test(s)
+      // Trim fractional seconds to milliseconds (JS Date parsing is inconsistent with >3 digits)
+      const trimmedFraction = s.replace(/(\.\d{3})\d+/, '$1')
+      return hasTz ? trimmedFraction : `${trimmedFraction}Z`
+    }
+
+    const date = new Date(normalizeTimestamp(dateString))
     const now = new Date()
+    if (Number.isNaN(date.getTime())) return '—'
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
 
     if (diffInSeconds < 60) return 'Just now'

@@ -1,5 +1,6 @@
 import { logger } from '../utils/logger';
 import { callResponsesWithTimeout, stripMarkdownCodeFences } from '../utils/openaiHelpers';
+import { retryWithBackoff } from '../utils/errorHandling';
 import { getOpenAIClient } from './openaiService';
 
 type PatchHtmlArgs = {
@@ -77,6 +78,27 @@ export async function patchHtmlWithOpenAI(args: PatchHtmlArgs): Promise<PatchHtm
   // Use provided model or default to gpt-5.1-codex
   const model = args.model || 'gpt-5.1-codex';
 
+  const getStatus = (err: any): number | undefined => {
+    if (!err) return undefined;
+    const status =
+      typeof err.status === 'number'
+        ? err.status
+        : typeof err.statusCode === 'number'
+          ? err.statusCode
+          : typeof err.response?.status === 'number'
+            ? err.response.status
+            : undefined;
+    return typeof status === 'number' ? status : undefined;
+  };
+
+  const isRetryable = (err: any): boolean => {
+    const status = getStatus(err);
+    if (status === 429 || status === 503) return true;
+    if (typeof status === 'number' && status >= 500) return true;
+    const msg = String(err?.message || '').toLowerCase();
+    return msg.includes('timeout') || msg.includes('overloaded') || msg.includes('service unavailable');
+  };
+
   // ------------------------------------------------------------
   // Snippet mode: If a specific element was selected, ask the model
   // to return ONLY the updated outerHTML for that element, then
@@ -110,15 +132,31 @@ Your task:
     });
 
     try {
-      const snippetResponse = await callResponsesWithTimeout(
+      const snippetResponse = await retryWithBackoff(
         () =>
-          (openai as any).responses.create({
-            model,
-            instructions: snippetInstructions,
-            input: snippetInputParts.join('\n'),
-            service_tier: 'priority',
-          }),
-        'HTML Patch OpenAI call'
+          callResponsesWithTimeout(
+            () =>
+              (openai as any).responses.create({
+                model,
+                instructions: snippetInstructions,
+                input: snippetInputParts.join('\n'),
+                // NOTE: Avoid forcing priority tier here; it can be unavailable in some environments.
+              }),
+            'HTML Patch OpenAI call (selected element)',
+            25000
+          ),
+        {
+          maxAttempts: 2,
+          initialDelayMs: 750,
+          retryableErrors: isRetryable,
+          onRetry: (attempt, error) => {
+            logger.warn('[HtmlPatchService] Retrying selected-element OpenAI call', {
+              attempt,
+              status: getStatus(error),
+              error: error instanceof Error ? error.message : String(error),
+            });
+          },
+        }
       );
 
       const snippetOutputText = String((snippetResponse as any)?.output_text || '');
@@ -186,15 +224,31 @@ Input HTML is provided below.`;
 
   // NOTE: No app-level timeout is enforced here. Upstream infrastructure (like API Gateway/Lambda)
   // may still enforce request timeouts depending on deployment configuration.
-  const response = await callResponsesWithTimeout(
+  const response = await retryWithBackoff(
     () =>
-      (openai as any).responses.create({
-        model,
-        instructions,
-        input: inputParts.join('\n'),
-        service_tier: 'priority',
-      }),
-    'HTML Patch OpenAI call'
+      callResponsesWithTimeout(
+        () =>
+          (openai as any).responses.create({
+            model,
+            instructions,
+            input: inputParts.join('\n'),
+            // NOTE: Avoid forcing priority tier here; it can be unavailable in some environments.
+          }),
+        'HTML Patch OpenAI call (full document)',
+        25000
+      ),
+    {
+      maxAttempts: 2,
+      initialDelayMs: 750,
+      retryableErrors: isRetryable,
+      onRetry: (attempt, error) => {
+        logger.warn('[HtmlPatchService] Retrying full-document OpenAI call', {
+          attempt,
+          status: getStatus(error),
+          error: error instanceof Error ? error.message : String(error),
+        });
+      },
+    }
   );
 
   const outputText = String((response as any)?.output_text || '');
