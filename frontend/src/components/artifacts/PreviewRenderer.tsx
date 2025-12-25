@@ -99,6 +99,13 @@ function rewriteLeadMagnetEditorOverlayApiUrl(html: string, apiUrl: string): str
   )
 }
 
+function stripInjectedLeadMagnetScripts(html: string): string {
+  return String(html || '')
+    .replace(/<!--\s*Lead Magnet Editor Overlay\s*-->[\s\S]*?<\/script>\s*/gi, '')
+    .replace(/<!--\s*Lead Magnet Tracking Script\s*-->[\s\S]*?<\/script>\s*/gi, '')
+    .trim()
+}
+
 export function PreviewRenderer({ contentType, objectUrl, fileName, className = '', artifactId, isFullScreen = false, viewMode, onViewModeChange }: PreviewRendererProps) {
   const [imageLoaded, setImageLoaded] = useState(false)
   const [imageError, setImageError] = useState(false)
@@ -210,7 +217,8 @@ export function PreviewRenderer({ contentType, objectUrl, fileName, className = 
             extractedHtml = rewriteLeadMagnetEditorOverlayApiUrl(extractedHtml, localApiUrl)
           }
 
-          setHtmlContent(extractedHtml)
+          // Strip injected overlay/tracking scripts for in-dashboard preview to avoid sandbox issues.
+          setHtmlContent(stripInjectedLeadMagnetScripts(extractedHtml))
           setHtmlError(false) // Clear any previous error on success
         } catch (err: any) {
           if (process.env.NODE_ENV === 'development') {
@@ -393,7 +401,7 @@ export function PreviewRenderer({ contentType, objectUrl, fileName, className = 
                       srcDoc={htmlContent}
                       className="w-full h-full border-0"
                       title={fileName || 'HTML Preview'}
-                      sandbox="allow-same-origin allow-scripts allow-forms"
+                      sandbox="allow-scripts allow-forms allow-popups"
                       referrerPolicy="no-referrer"
                       style={{ display: 'block', height: '100%' }}
                     />
@@ -432,7 +440,7 @@ export function PreviewRenderer({ contentType, objectUrl, fileName, className = 
                 srcDoc={htmlContent}
                 className="w-full h-full border-0"
                 title={fileName || 'HTML Preview'}
-                sandbox="allow-same-origin allow-scripts"
+                sandbox="allow-scripts allow-popups"
                 referrerPolicy="no-referrer"
               />
             ) : (
