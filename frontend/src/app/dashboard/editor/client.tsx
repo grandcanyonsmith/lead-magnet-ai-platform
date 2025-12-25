@@ -1,17 +1,81 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
-import { FiMonitor, FiCode, FiArrowLeft, FiSave, FiClock, FiSettings, FiSend, FiSmartphone, FiMousePointer, FiRotateCcw, FiRotateCw, FiZap, FiCommand, FiTerminal, FiLayout, FiMaximize2, FiMinimize2, FiMoreHorizontal } from 'react-icons/fi'
+import { useState, useEffect, useRef, useCallback, useMemo, useReducer } from 'react'
+import { useSearchParams } from 'next/navigation'
+import {
+  FiMonitor,
+  FiCode,
+  FiArrowLeft,
+  FiSave,
+  FiSmartphone,
+  FiMousePointer,
+  FiRotateCcw,
+  FiRotateCw,
+  FiZap,
+} from 'react-icons/fi'
 import { toast } from 'react-hot-toast'
 import Link from 'next/link'
 import { api } from '@/lib/api'
+import type { Job } from '@/types/job'
 
 // Types
 type EditorMode = 'preview' | 'code'
 type DeviceMode = 'desktop' | 'mobile'
 type AISpeed = 'normal' | 'fast' | 'turbo'
-type AIReasoning = 'low' | 'medium' | 'high'
+
+type HistoryEntry = { html: string; timestamp: number }
+type HtmlState = {
+  html: string
+  history: HistoryEntry[]
+  historyIndex: number
+}
+type HtmlAction =
+  | { type: 'reset'; html: string }
+  | { type: 'set'; html: string }
+  | { type: 'commit'; html: string }
+  | { type: 'undo' }
+  | { type: 'redo' }
+
+const initialHtmlState: HtmlState = { html: '', history: [], historyIndex: -1 }
+
+function htmlReducer(state: HtmlState, action: HtmlAction): HtmlState {
+  switch (action.type) {
+    case 'reset': {
+      const entry: HistoryEntry = { html: action.html, timestamp: Date.now() }
+      return { html: action.html, history: [entry], historyIndex: 0 }
+    }
+    case 'set': {
+      return { ...state, html: action.html }
+    }
+    case 'commit': {
+      const base = state.history.slice(0, state.historyIndex + 1)
+      const lastHtml = base[base.length - 1]?.html
+      if (lastHtml === action.html) {
+        return { ...state, html: action.html }
+      }
+      const nextHistory: HistoryEntry[] = [...base, { html: action.html, timestamp: Date.now() }]
+      return { html: action.html, history: nextHistory, historyIndex: nextHistory.length - 1 }
+    }
+    case 'undo': {
+      if (state.historyIndex <= 0) return state
+      const newIndex = state.historyIndex - 1
+      return { ...state, html: state.history[newIndex].html, historyIndex: newIndex }
+    }
+    case 'redo': {
+      if (state.historyIndex >= state.history.length - 1) return state
+      const newIndex = state.historyIndex + 1
+      return { ...state, html: state.history[newIndex].html, historyIndex: newIndex }
+    }
+    default:
+      return state
+  }
+}
+
+function isTextInputTarget(target: EventTarget | null) {
+  if (!target || !(target instanceof HTMLElement)) return false
+  const tag = target.tagName.toLowerCase()
+  return tag === 'input' || tag === 'textarea' || target.isContentEditable
+}
 
 const SELECTION_SCRIPT = `
   window.__selectionMode = false;
@@ -69,7 +133,6 @@ const SELECTION_SCRIPT = `
 
 export default function EditorClient() {
   const searchParams = useSearchParams()
-  const router = useRouter()
   const jobId = searchParams.get('jobId')
   const initialUrl = searchParams.get('url')
   const artifactId = searchParams.get('artifactId')
@@ -81,24 +144,25 @@ export default function EditorClient() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [hasError, setHasError] = useState(false)
-  const [htmlContent, setHtmlContent] = useState('')
+  const [htmlState, dispatchHtml] = useReducer(htmlReducer, initialHtmlState)
   const [selectedElement, setSelectedElement] = useState<string | null>(null)
   const [selectedOuterHtml, setSelectedOuterHtml] = useState<string | null>(null)
   const [isSelectionMode, setIsSelectionMode] = useState(false)
+  const [job, setJob] = useState<Job | null>(null)
+  const [lastSavedHtml, setLastSavedHtml] = useState<string | null>(null)
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null)
 
   // AI Configuration
   const [aiSpeed, setAiSpeed] = useState<AISpeed>('normal')
-  const [aiReasoning, setAiReasoning] = useState<AIReasoning>('medium')
   const [aiModel, setAiModel] = useState<'gpt-4o' | 'gpt-5.2'>('gpt-4o')
   const [showAiSettings, setShowAiSettings] = useState(false)
 
-  // History
-  const [history, setHistory] = useState<{ html: string; timestamp: number }[]>([])
-  const [historyIndex, setHistoryIndex] = useState(-1)
-  const [showHistory, setShowHistory] = useState(false)
-
   // Refs
   const iframeRef = useRef<HTMLIFrameElement>(null)
+
+  const canUndo = htmlState.historyIndex > 0
+  const canRedo = htmlState.historyIndex >= 0 && htmlState.historyIndex < htmlState.history.length - 1
+  const isDirty = lastSavedHtml !== null && htmlState.html !== lastSavedHtml
 
   // Load HTML
   useEffect(() => {
@@ -109,52 +173,38 @@ export default function EditorClient() {
         setHasError(false)
       }
 
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'run-editor-load-2',hypothesisId:'H_load_order',location:'frontend/editor/client.tsx:loadContent:entry',message:'loadContent entry',data:{jobId,artifactIdPresent:Boolean(artifactId),hasInitialUrl:Boolean(initialUrl)},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
-
       // 1. Try fetching via Artifact ID (best for auth/CORS)
       if (artifactId) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'run-editor-load-2',hypothesisId:'H_artifact_fetch',location:'frontend/editor/client.tsx:loadContent:artifact:start',message:'artifact content fetch start',data:{artifactId},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         try {
           const content = await api.artifacts.getArtifactContent(artifactId)
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'run-editor-load-2',hypothesisId:'H_artifact_fetch',location:'frontend/editor/client.tsx:loadContent:artifact:end',message:'artifact content fetch end',data:{ok:Boolean(content),contentLength:content?content.length:0,isMounted},timestamp:Date.now()})}).catch(()=>{});
-          // #endregion
           if (content && isMounted) {
-            setHtmlContent(content)
-            addToHistory(content)
+            dispatchHtml({ type: 'reset', html: content })
+            setLastSavedHtml(content)
+            setLastSavedAt(Date.now())
+            setSelectedElement(null)
+            setSelectedOuterHtml(null)
+            setIsSelectionMode(false)
             return
           }
         } catch (err) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'run-editor-load-2',hypothesisId:'H_artifact_fetch',location:'frontend/editor/client.tsx:loadContent:artifact:end',message:'artifact content fetch error',data:{error:String((err as any)?.message||err)},timestamp:Date.now()})}).catch(()=>{});
-          // #endregion
           console.error('Failed to load artifact content:', err)
         }
       }
 
       // 2. Prefer server-proxied job document (avoids CloudFront/S3 404/CORS issues)
       if (jobId) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'run-editor-load-2',hypothesisId:'H_jobdoc_fetch',location:'frontend/editor/client.tsx:loadContent:jobdoc:start',message:'job document fetch start',data:{jobId},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         try {
           const content = await api.jobs.getJobDocument(jobId)
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'run-editor-load-2',hypothesisId:'H_jobdoc_fetch',location:'frontend/editor/client.tsx:loadContent:jobdoc:end',message:'job document fetch end',data:{ok:Boolean(content),contentLength:content?content.length:0,isMounted},timestamp:Date.now()})}).catch(()=>{});
-          // #endregion
           if (content && isMounted) {
-            setHtmlContent(content)
-            addToHistory(content)
+            dispatchHtml({ type: 'reset', html: content })
+            setLastSavedHtml(content)
+            setLastSavedAt(Date.now())
+            setSelectedElement(null)
+            setSelectedOuterHtml(null)
+            setIsSelectionMode(false)
             return
           }
         } catch (err) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'run-editor-load-2',hypothesisId:'H_jobdoc_fetch',location:'frontend/editor/client.tsx:loadContent:jobdoc:end',message:'job document fetch error',data:{error:String((err as any)?.message||err)},timestamp:Date.now()})}).catch(()=>{});
-          // #endregion
           console.error('Failed to load job document:', err)
         }
       }
@@ -163,33 +213,28 @@ export default function EditorClient() {
       if (initialUrl) {
         try {
           const res = await fetch(initialUrl)
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'run-editor-load-2',hypothesisId:'H_url_fetch',location:'frontend/editor/client.tsx:loadContent:url:end',message:'initialUrl fetch end',data:{ok:res.ok,status:res.status},timestamp:Date.now()})}).catch(()=>{});
-          // #endregion
           if (!res.ok) {
             console.warn(`Failed to fetch URL ${initialUrl}: ${res.status} ${res.statusText}`)
             // continue to failure handling below
           } else {
             const content = await res.text()
             if (isMounted) {
-              setHtmlContent(content)
-              addToHistory(content)
+              dispatchHtml({ type: 'reset', html: content })
+              setLastSavedHtml(content)
+              setLastSavedAt(Date.now())
+              setSelectedElement(null)
+              setSelectedOuterHtml(null)
+              setIsSelectionMode(false)
             }
             return
           }
         } catch (err) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'run-editor-load-2',hypothesisId:'H_url_fetch',location:'frontend/editor/client.tsx:loadContent:url:end',message:'initialUrl fetch error',data:{error:String((err as any)?.message||err)},timestamp:Date.now()})}).catch(()=>{});
-          // #endregion
           console.error('Failed to load initial URL', err)
         }
       }
 
       // If we got here, all methods failed
       if (isMounted) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'run-editor-load-2',hypothesisId:'H_all_failed',location:'frontend/editor/client.tsx:loadContent:failed',message:'loadContent failed (all sources)',data:{jobId,artifactIdPresent:Boolean(artifactId),hasInitialUrl:Boolean(initialUrl)},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         setHasError(true)
         toast.error('Failed to load content')
       }
@@ -200,21 +245,44 @@ export default function EditorClient() {
     return () => {
       isMounted = false
     }
-  }, [jobId, initialUrl, artifactId]) // Removed htmlContent from deps to avoid loop
+  }, [jobId, initialUrl, artifactId])
+
+  // Load job metadata for header context
+  useEffect(() => {
+    let isMounted = true
+
+    const loadJob = async () => {
+      if (!jobId) {
+        setJob(null)
+        return
+      }
+      try {
+        const data = await api.getJob(jobId)
+        if (isMounted) setJob(data)
+      } catch {
+        // Non-blocking: editor still works without metadata
+      }
+    }
+
+    loadJob()
+    return () => {
+      isMounted = false
+    }
+  }, [jobId])
 
   // Inject script when HTML changes or iframe loads
   const getPreviewContent = useCallback(() => {
-    if (!htmlContent) return ''
+    if (!htmlState.html) return ''
     
     // Remove legacy overlay script to prevent conflicts
-    let cleanContent = htmlContent.replace(/<!--\s*Lead Magnet Editor Overlay\s*-->[\s\S]*?<\/script>/gi, '')
+    let cleanContent = htmlState.html.replace(/<!--\s*Lead Magnet Editor Overlay\s*-->[\s\S]*?<\/script>/gi, '')
     
     // Inject our script before closing body
     if (cleanContent.includes('</body>')) {
         return cleanContent.replace('</body>', `<script>${SELECTION_SCRIPT}</script></body>`)
     }
     return cleanContent + `<script>${SELECTION_SCRIPT}</script>`
-  }, [htmlContent])
+  }, [htmlState.html])
 
   // Handle Selection Mode Toggle
   useEffect(() => {
@@ -240,141 +308,245 @@ export default function EditorClient() {
     return () => window.removeEventListener('message', handleMessage)
   }, [])
 
-  const addToHistory = (html: string) => {
-      setHistory(prev => {
-          const newHistory = prev.slice(0, historyIndex + 1)
-          newHistory.push({ html, timestamp: Date.now() })
-          return newHistory
-      })
-      setHistoryIndex(prev => prev + 1)
-  }
+  const handleUndo = useCallback(() => {
+    if (!canUndo) return
+    dispatchHtml({ type: 'undo' })
+    toast('Undone', { icon: '↩️', duration: 1000 })
+  }, [canUndo])
 
-  const handleUndo = () => {
-      if (historyIndex > 0) {
-          const newIndex = historyIndex - 1
-          setHistoryIndex(newIndex)
-          setHtmlContent(history[newIndex].html)
-          toast('Undone', { icon: '↩️', duration: 1000 })
-      }
-  }
+  const handleRedo = useCallback(() => {
+    if (!canRedo) return
+    dispatchHtml({ type: 'redo' })
+    toast('Redone', { icon: '↪️', duration: 1000 })
+  }, [canRedo])
 
-  const handleRedo = () => {
-      if (historyIndex < history.length - 1) {
-          const newIndex = historyIndex + 1
-          setHistoryIndex(newIndex)
-          setHtmlContent(history[newIndex].html)
-          toast('Redone', { icon: '↪️', duration: 1000 })
-      }
-  }
-  
-  const restoreVersion = (index: number) => {
-      setHistoryIndex(index)
-      setHtmlContent(history[index].html)
-      setShowHistory(false)
-      toast.success('Version restored')
-  }
-
-  const handleSendMessage = async () => {
+  const handleSendMessage = useCallback(async () => {
     if (!prompt.trim() || !jobId) return
     setIsProcessing(true)
-    
-    try {
-        const res = await api.post<{ patched_html: string; summary: string }>(`/v1/jobs/${jobId}/html/patch`, {
-            prompt: prompt,
-            selector: selectedElement,
-            model: aiModel,
-            selected_outer_html: selectedOuterHtml,
-            page_url: initialUrl || undefined,
-        })
 
-        if (res.patched_html) {
-            setHtmlContent(res.patched_html)
-            addToHistory(res.patched_html)
-            setPrompt('')
-            setSelectedElement(null)
-            setSelectedOuterHtml(null)
-            toast.success('AI changes applied!')
-        }
-    } catch (err) {
-        console.error('AI generation failed:', err)
-        toast.error('Failed to generate changes')
-    } finally {
-        setIsProcessing(false)
-    }
-  }
-  
-  const handleSave = async () => {
-      if (!jobId || !htmlContent) return
-      setIsSaving(true)
-      try {
-           await api.post(`/v1/jobs/${jobId}/html/save`, {
-               patched_html: htmlContent
-           })
-           toast.success('Changes saved successfully')
-      } catch (err) {
-          console.error('Save failed:', err)
-          toast.error('Failed to save changes')
-      } finally {
-          setIsSaving(false)
+    try {
+      const res = await api.post<{ patched_html: string; summary: string }>(`/v1/jobs/${jobId}/html/patch`, {
+        prompt: prompt,
+        selector: selectedElement,
+        model: aiModel,
+        selected_outer_html: selectedOuterHtml,
+        page_url: initialUrl || undefined,
+      })
+
+      if (res.patched_html) {
+        dispatchHtml({ type: 'commit', html: res.patched_html })
+        setPrompt('')
+        setSelectedElement(null)
+        setSelectedOuterHtml(null)
+        toast.success('AI changes applied!')
       }
-  }
+    } catch (err) {
+      console.error('AI generation failed:', err)
+      toast.error('Failed to generate changes')
+    } finally {
+      setIsProcessing(false)
+    }
+  }, [aiModel, initialUrl, jobId, prompt, selectedElement, selectedOuterHtml])
+  
+  const handleSave = useCallback(async () => {
+    if (!jobId || !htmlState.html) return
+    setIsSaving(true)
+    try {
+      await api.post(`/v1/jobs/${jobId}/html/save`, {
+        patched_html: htmlState.html,
+      })
+      setLastSavedHtml(htmlState.html)
+      setLastSavedAt(Date.now())
+      toast.success('Changes saved successfully')
+    } catch (err) {
+      console.error('Save failed:', err)
+      toast.error('Failed to save changes')
+    } finally {
+      setIsSaving(false)
+    }
+  }, [htmlState.html, jobId])
+
+  // Keyboard shortcuts: Cmd/Ctrl+S save, Cmd/Ctrl+Z undo, Cmd/Ctrl+Shift+Z redo
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsSelectionMode(false)
+        setShowAiSettings(false)
+        return
+      }
+
+      const isMeta = e.metaKey || e.ctrlKey
+      if (!isMeta) return
+
+      const key = e.key.toLowerCase()
+
+      if (key === 's') {
+        e.preventDefault()
+        handleSave()
+        return
+      }
+
+      // Don't override native undo/redo inside text inputs
+      if (isTextInputTarget(e.target)) return
+
+      if (key === 'z' && !e.shiftKey) {
+        e.preventDefault()
+        handleUndo()
+        return
+      }
+
+      if ((key === 'z' && e.shiftKey) || key === 'y') {
+        e.preventDefault()
+        handleRedo()
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [handleRedo, handleSave, handleUndo])
+
+  const headerTitle = useMemo(() => {
+    const workflowName = (job as any)?.workflow_name
+    if (typeof workflowName === 'string' && workflowName.trim()) return workflowName.trim()
+    if (job?.workflow_id) return job.workflow_id
+    return 'Lead Magnet Editor'
+  }, [job])
+
+  const headerMeta = useMemo(() => {
+    if (jobId) return `Job ${jobId.slice(0, 8)}`
+    if (artifactId) return `Artifact ${artifactId.slice(0, 8)}`
+    return null
+  }, [artifactId, jobId])
+
+  const saveStateLabel = useMemo(() => {
+    if (isSaving) return 'Saving…'
+    if (!lastSavedHtml) return 'Not saved'
+    if (isDirty) return 'Unsaved'
+    return 'Saved'
+  }, [isDirty, isSaving, lastSavedHtml])
+
+  const backHref = jobId ? `/dashboard/jobs/${jobId}` : '/dashboard/jobs'
+  const canSave = Boolean(jobId && htmlState.html && isDirty && !isSaving)
 
   return (
     <div className="flex h-screen flex-col bg-[#0c0d10] text-gray-200 font-sans selection:bg-purple-500/30 overflow-hidden">
       {/* Top Navigation Bar - Replicating Web Weaver */}
       <header className="h-14 flex items-center justify-between px-4 border-b border-white/5 bg-[#0c0d10] z-50">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-             <Link href={`/dashboard/jobs/${jobId}`} className="text-gray-400 hover:text-white transition-colors p-1.5 rounded-md hover:bg-white/5">
-                <FiArrowLeft className="w-4 h-4" />
-             </Link>
-             <span className="font-semibold text-sm text-gray-200">Course Creator 360 Inc</span>
+        <div className="flex items-center gap-4 min-w-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <Link
+              href={backHref}
+              className="text-gray-400 hover:text-white transition-colors p-1.5 rounded-md hover:bg-white/5"
+              aria-label="Back"
+            >
+              <FiArrowLeft className="w-4 h-4" />
+            </Link>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="font-semibold text-sm text-gray-200 truncate">{headerTitle}</span>
+                {headerMeta && <span className="text-[11px] font-mono text-gray-500 truncate">{headerMeta}</span>}
+              </div>
+              <div className="flex items-center gap-2 mt-0.5 text-[11px] text-gray-500">
+                <span className={`h-1.5 w-1.5 rounded-full ${isDirty ? 'bg-yellow-400' : 'bg-emerald-400'}`} />
+                <span>{saveStateLabel}</span>
+                {lastSavedAt && !isDirty && (
+                  <span className="hidden sm:inline">· {new Date(lastSavedAt).toLocaleTimeString()}</span>
+                )}
+              </div>
+            </div>
           </div>
-          
-          <div className="flex bg-[#1c1d21] rounded-lg p-1 border border-white/5">
-             <button 
-                onClick={() => setMode('preview')}
-                className={`flex items-center gap-2 px-3 py-1 text-xs font-medium rounded-md transition-all ${mode === 'preview' ? 'bg-[#2b2d31] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
-             >
-                <FiMonitor className="w-3.5 h-3.5" />
-                Preview
-             </button>
-             <button 
-                onClick={() => setMode('code')}
-                className={`flex items-center gap-2 px-3 py-1 text-xs font-medium rounded-md transition-all ${mode === 'code' ? 'bg-[#2b2d31] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
-             >
-                <FiCode className="w-3.5 h-3.5" />
-                Code
-             </button>
+
+          <div className="hidden sm:flex bg-[#1c1d21] rounded-lg p-1 border border-white/5">
+            <button
+              onClick={() => setMode('preview')}
+              className={`flex items-center gap-2 px-3 py-1 text-xs font-medium rounded-md transition-all ${
+                mode === 'preview'
+                  ? 'bg-[#2b2d31] text-white shadow-sm'
+                  : 'text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              <FiMonitor className="w-3.5 h-3.5" />
+              Preview
+            </button>
+            <button
+              onClick={() => setMode('code')}
+              className={`flex items-center gap-2 px-3 py-1 text-xs font-medium rounded-md transition-all ${
+                mode === 'code'
+                  ? 'bg-[#2b2d31] text-white shadow-sm'
+                  : 'text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              <FiCode className="w-3.5 h-3.5" />
+              Code
+            </button>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1 text-gray-500">
-                <button 
-                    onClick={() => setDevice('desktop')}
-                    className={`p-2 rounded-md hover:bg-white/5 transition-colors ${device === 'desktop' ? 'text-gray-200 bg-white/5' : ''}`}
-                >
-                    <FiMonitor className="w-4 h-4" />
-                </button>
-                <button 
-                    onClick={() => setDevice('mobile')}
-                    className={`p-2 rounded-md hover:bg-white/5 transition-colors ${device === 'mobile' ? 'text-gray-200 bg-white/5' : ''}`}
-                >
-                    <FiSmartphone className="w-4 h-4" />
-                </button>
-            </div>
-            
-            <div className="h-4 w-px bg-white/10" />
-            
-            <a 
-                href={initialUrl || '#'} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-white text-black rounded-md hover:bg-gray-200 transition-colors"
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleUndo}
+            disabled={!canUndo}
+            className="p-2 rounded-md hover:bg-white/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            title="Undo (Cmd/Ctrl+Z)"
+          >
+            <FiRotateCcw className="w-4 h-4" />
+          </button>
+          <button
+            onClick={handleRedo}
+            disabled={!canRedo}
+            className="p-2 rounded-md hover:bg-white/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            title="Redo (Cmd/Ctrl+Shift+Z)"
+          >
+            <FiRotateCw className="w-4 h-4" />
+          </button>
+
+          <button
+            onClick={handleSave}
+            disabled={!canSave}
+            className={`hidden sm:inline-flex items-center gap-2 px-3 py-2 rounded-md text-xs font-semibold transition-colors border ${
+              canSave
+                ? 'bg-white text-black hover:bg-gray-200 border-white/10'
+                : 'bg-white/5 text-gray-500 border-white/5 cursor-not-allowed'
+            }`}
+            title={jobId ? 'Save (Cmd/Ctrl+S)' : 'Saving requires a jobId'}
+          >
+            <FiSave className="w-3.5 h-3.5" />
+            {isSaving ? 'Saving…' : 'Save'}
+          </button>
+
+          <div className="hidden sm:block h-4 w-px bg-white/10 mx-1" />
+
+          <div className="flex items-center gap-1 text-gray-500">
+            <button
+              onClick={() => setDevice('desktop')}
+              className={`p-2 rounded-md hover:bg-white/5 transition-colors ${
+                device === 'desktop' ? 'text-gray-200 bg-white/5' : ''
+              }`}
+              title="Desktop preview"
             >
-                Visit <FiArrowLeft className="w-3 h-3 rotate-[135deg]" />
+              <FiMonitor className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setDevice('mobile')}
+              className={`p-2 rounded-md hover:bg-white/5 transition-colors ${
+                device === 'mobile' ? 'text-gray-200 bg-white/5' : ''
+              }`}
+              title="Mobile preview"
+            >
+              <FiSmartphone className="w-4 h-4" />
+            </button>
+          </div>
+
+          {initialUrl ? (
+            <a
+              href={initialUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden sm:inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold bg-white text-black rounded-md hover:bg-gray-200 transition-colors"
+            >
+              Visit <FiArrowLeft className="w-3 h-3 rotate-[135deg]" />
             </a>
+          ) : null}
         </div>
       </header>
 
@@ -388,7 +560,7 @@ export default function EditorClient() {
                         : 'w-full max-w-6xl h-full rounded-xl border border-white/5 bg-white overflow-hidden'
                 }`}
             >
-                {htmlContent ? (
+                {htmlState.html ? (
                   <iframe 
                     ref={iframeRef}
                     srcDoc={getPreviewContent()}
@@ -424,11 +596,11 @@ export default function EditorClient() {
         ) : (
             <div className="w-full h-full max-w-6xl rounded-xl border border-white/5 bg-[#15161a] overflow-hidden">
                 <textarea
-                    value={htmlContent}
+                    value={htmlState.html}
                     onChange={(e) => {
-                        setHtmlContent(e.target.value)
+                        dispatchHtml({ type: 'set', html: e.target.value })
                     }}
-                    onBlur={() => addToHistory(htmlContent)}
+                    onBlur={() => dispatchHtml({ type: 'commit', html: htmlState.html })}
                     className="w-full h-full bg-[#15161a] text-gray-300 font-mono text-sm p-4 resize-none focus:outline-none"
                     spellCheck={false}
                 />
@@ -436,133 +608,171 @@ export default function EditorClient() {
         )}
       </main>
 
-      {/* Bottom Floating Input Bar */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-full max-w-2xl z-50 px-4">
-         <div className="bg-[#15161a]/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl p-1.5 transition-all focus-within:ring-1 focus-within:ring-purple-500/50 ring-offset-2 ring-offset-[#0c0d10]">
+      <footer className="relative border-t border-white/5 bg-[#0c0d10] px-4 py-4">
+        <div className="mx-auto w-full max-w-3xl">
+          <div className="bg-[#15161a]/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl p-1.5 transition-all focus-within:ring-1 focus-within:ring-purple-500/50 ring-offset-2 ring-offset-[#0c0d10]">
             <div className="flex flex-col">
-                {/* Context & Selection (if any) */}
-                {selectedElement && (
-                    <div className="px-3 py-1.5 flex items-center justify-between border-b border-white/5 mb-1">
-                        <div className="flex items-center gap-2 text-xs text-purple-400">
-                            <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
-                            <span className="font-mono truncate max-w-[300px]">{selectedElement}</span>
-                        </div>
-                        <button 
-                            onClick={() => {
-                                setSelectedElement(null)
-                                setSelectedOuterHtml(null)
-                                setIsSelectionMode(false)
-                            }} 
-                            className="text-gray-500 hover:text-white"
-                        >
-                            <FiRotateCw className="w-3 h-3 rotate-45" />
-                        </button>
-                    </div>
-                )}
-
-                {/* Main Input Area */}
-                <div className="flex items-center gap-2 px-2">
-                    <button 
-                        onClick={() => setIsSelectionMode(!isSelectionMode)}
-                        className={`p-2 rounded-lg transition-colors ${isSelectionMode ? 'text-purple-400 bg-purple-500/10' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
-                        title="Select Element"
-                    >
-                        <FiMousePointer className="w-4 h-4" />
-                    </button>
-                    
-                    <button className="text-gray-400 hover:text-white p-2 hover:bg-white/5 rounded-lg">
-                        <FiLayout className="w-4 h-4" />
-                    </button>
-
-                    <div className="h-6 w-px bg-white/10" />
-
-                    <input 
-                        type="text" 
-                        value={prompt}
-                        onChange={(e) => setPrompt(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                        placeholder="Make lightweight changes, quickly..."
-                        className="flex-1 bg-transparent border-none focus:ring-0 text-sm text-white placeholder-gray-500 h-10"
-                        disabled={isProcessing}
-                    />
-
-                    <div className="flex items-center gap-1">
-                        <div className="flex items-center gap-1 bg-[#0c0d10] rounded-lg p-0.5 border border-white/5">
-                            <button className="px-2 py-1 text-[10px] font-medium text-gray-400 hover:text-white flex items-center gap-1">
-                                <FiCommand className="w-3 h-3" /> Agent
-                            </button>
-                            <button 
-                                onClick={() => setShowAiSettings(!showAiSettings)}
-                                className="px-2 py-1 text-[10px] font-medium bg-[#2b2d31] text-yellow-400 rounded-md flex items-center gap-1 border border-white/5"
-                            >
-                                <FiZap className="w-3 h-3" /> NORMAL
-                            </button>
-                        </div>
-                        
-                        <button 
-                            onClick={handleSendMessage}
-                            disabled={!prompt.trim() || isProcessing}
-                            className={`p-2 rounded-lg transition-all ${prompt.trim() && !isProcessing ? 'bg-white text-black hover:bg-gray-200' : 'bg-white/5 text-gray-500'}`}
-                        >
-                            {isProcessing ? <FiRotateCw className="w-4 h-4 animate-spin" /> : <FiArrowLeft className="w-4 h-4 rotate-90" />}
-                        </button>
-                    </div>
+              {/* Context & Selection (if any) */}
+              {selectedElement && (
+                <div className="px-3 py-1.5 flex items-center justify-between border-b border-white/5 mb-1">
+                  <div className="flex items-center gap-2 text-xs text-purple-400">
+                    <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
+                    <span className="font-mono truncate max-w-[300px]">{selectedElement}</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setSelectedElement(null)
+                      setSelectedOuterHtml(null)
+                      setIsSelectionMode(false)
+                    }}
+                    className="text-gray-500 hover:text-white"
+                    title="Clear selection"
+                  >
+                    <FiRotateCw className="w-3 h-3 rotate-45" />
+                  </button>
                 </div>
-            </div>
-         </div>
-         
-         {/* Settings Popover */}
-         {showAiSettings && (
-             <div className="absolute bottom-full right-4 mb-2 w-64 bg-[#15161a] border border-white/10 rounded-xl shadow-2xl p-4 animate-in slide-in-from-bottom-2 fade-in">
-                 <div className="flex flex-col gap-4">
-                     <div>
-                         <label className="text-[10px] uppercase font-bold text-gray-500 tracking-wider mb-2 block">Generation Settings</label>
-                         
-                         <div className="space-y-3">
-                             <div>
-                                 <div className="text-xs text-gray-400 mb-1.5">AI Model</div>
-                                 <div className="grid grid-cols-2 gap-1 bg-black/20 p-1 rounded-lg">
-                                     <button 
-                                        onClick={() => setAiModel('gpt-4o')}
-                                        className={`text-xs py-1.5 rounded-md transition-colors ${aiModel === 'gpt-4o' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-gray-300'}`}
-                                     >
-                                         GPT-4o
-                                     </button>
-                                     <button 
-                                        onClick={() => setAiModel('gpt-5.2')}
-                                        className={`text-xs py-1.5 rounded-md transition-colors ${aiModel === 'gpt-5.2' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-gray-300'}`}
-                                     >
-                                         GPT-5.2
-                                     </button>
-                                 </div>
-                             </div>
-                             
-                             <div>
-                                 <div className="text-xs text-gray-400 mb-1.5">Speed</div>
-                                 <div className="flex gap-1">
-                                     {(['normal', 'fast', 'turbo'] as const).map(s => (
-                                         <button 
-                                            key={s}
-                                            onClick={() => setAiSpeed(s)}
-                                            className={`flex-1 text-xs py-1.5 rounded-md border transition-colors ${aiSpeed === s ? 'border-purple-500/30 bg-purple-500/10 text-purple-300' : 'border-transparent bg-white/5 text-gray-500 hover:bg-white/10'}`}
-                                         >
-                                             {s.charAt(0).toUpperCase() + s.slice(1)}
-                                         </button>
-                                     ))}
-                                 </div>
-                             </div>
-                         </div>
-                     </div>
-                 </div>
-             </div>
-         )}
+              )}
 
-         {/* Bottom Action Footer */}
-         <div className="mt-2 flex justify-center gap-4 text-xs text-gray-500 font-medium opacity-0 group-hover:opacity-100 transition-opacity hover:opacity-100">
-             <button onClick={handleUndo} className="hover:text-gray-300 flex items-center gap-1"><FiRotateCcw /> Undo</button>
-             <button onClick={handleSave} className="hover:text-gray-300 flex items-center gap-1"><FiSave /> {isSaving ? 'Saving...' : 'Save Changes'}</button>
-         </div>
-      </div>
+              {/* Main Input Area */}
+              <div className="flex items-end gap-2 px-2">
+                <button
+                  onClick={() => setIsSelectionMode((v) => !v)}
+                  disabled={mode !== 'preview' || !htmlState.html}
+                  className={`p-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                    isSelectionMode ? 'text-purple-400 bg-purple-500/10' : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  }`}
+                  title={mode === 'preview' ? 'Select element' : 'Selection requires Preview mode'}
+                >
+                  <FiMousePointer className="w-4 h-4" />
+                </button>
+
+                <div className="h-9 w-px bg-white/10" />
+
+                <textarea
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault()
+                      handleSendMessage()
+                    }
+                  }}
+                  placeholder={jobId ? 'Describe the change you want (Shift+Enter for a new line)…' : 'Open this editor from a job to apply AI edits…'}
+                  className="flex-1 bg-transparent border-none focus:ring-0 text-sm text-white placeholder-gray-500 min-h-[44px] max-h-36 py-2 resize-none"
+                  disabled={isProcessing || !jobId}
+                  rows={1}
+                />
+
+                <div className="flex items-center gap-1 pb-2">
+                  <button
+                    onClick={() => setShowAiSettings((v) => !v)}
+                    className="px-2 py-1 text-[10px] font-semibold bg-[#2b2d31] text-yellow-300 rounded-md flex items-center gap-1 border border-white/5 hover:bg-white/10 transition-colors"
+                    title="AI settings"
+                  >
+                    <FiZap className="w-3 h-3" />
+                    {aiModel === 'gpt-4o' ? 'GPT-4o' : 'GPT-5.2'} · {aiSpeed.toUpperCase()}
+                  </button>
+
+                  <button
+                    onClick={handleSendMessage}
+                    disabled={!jobId || !prompt.trim() || isProcessing}
+                    className={`p-2 rounded-lg transition-all ${
+                      jobId && prompt.trim() && !isProcessing
+                        ? 'bg-white text-black hover:bg-gray-200'
+                        : 'bg-white/5 text-gray-500 cursor-not-allowed'
+                    }`}
+                    title={jobId ? 'Apply (Enter)' : 'Applying requires a jobId'}
+                  >
+                    {isProcessing ? (
+                      <FiRotateCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <FiArrowLeft className="w-4 h-4 rotate-90" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Settings Popover */}
+          {showAiSettings && (
+            <div className="absolute bottom-full right-4 mb-3 w-72 bg-[#15161a] border border-white/10 rounded-xl shadow-2xl p-4 animate-in slide-in-from-bottom-2 fade-in">
+              <div className="flex flex-col gap-4">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-gray-500 tracking-wider mb-2 block">
+                    Generation Settings
+                  </label>
+
+                  <div className="space-y-3">
+                    <div>
+                      <div className="text-xs text-gray-400 mb-1.5">AI Model</div>
+                      <div className="grid grid-cols-2 gap-1 bg-black/20 p-1 rounded-lg">
+                        <button
+                          onClick={() => setAiModel('gpt-4o')}
+                          className={`text-xs py-1.5 rounded-md transition-colors ${
+                            aiModel === 'gpt-4o' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-gray-300'
+                          }`}
+                        >
+                          GPT-4o
+                        </button>
+                        <button
+                          onClick={() => setAiModel('gpt-5.2')}
+                          className={`text-xs py-1.5 rounded-md transition-colors ${
+                            aiModel === 'gpt-5.2' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-gray-300'
+                          }`}
+                        >
+                          GPT-5.2
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-xs text-gray-400 mb-1.5">Speed</div>
+                      <div className="flex gap-1">
+                        {(['normal', 'fast', 'turbo'] as const).map((s) => (
+                          <button
+                            key={s}
+                            onClick={() => setAiSpeed(s)}
+                            className={`flex-1 text-xs py-1.5 rounded-md border transition-colors ${
+                              aiSpeed === s
+                                ? 'border-purple-500/30 bg-purple-500/10 text-purple-300'
+                                : 'border-transparent bg-white/5 text-gray-500 hover:bg-white/10'
+                            }`}
+                          >
+                            {s.charAt(0).toUpperCase() + s.slice(1)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="mt-2 flex items-center justify-between text-[11px] text-gray-500">
+            <div className="flex items-center gap-2">
+              <span>Enter to apply</span>
+              <span className="text-gray-700">·</span>
+              <span>Shift+Enter for a new line</span>
+              <span className="hidden sm:inline text-gray-700">·</span>
+              <span className="hidden sm:inline">Cmd/Ctrl+S to save</span>
+            </div>
+            <button
+              onClick={handleSave}
+              disabled={!canSave}
+              className={`sm:hidden inline-flex items-center gap-2 px-3 py-2 rounded-md text-xs font-semibold transition-colors border ${
+                canSave
+                  ? 'bg-white text-black hover:bg-gray-200 border-white/10'
+                  : 'bg-white/5 text-gray-500 border-white/5 cursor-not-allowed'
+              }`}
+            >
+              <FiSave className="w-3.5 h-3.5" />
+              {isSaving ? 'Saving…' : 'Save'}
+            </button>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }

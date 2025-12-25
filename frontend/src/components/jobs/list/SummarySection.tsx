@@ -46,8 +46,10 @@ export function SummarySection({
     <div className="mb-6 space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-end">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">Generated Lead Magnets</h1>
-          <p className="text-sm text-gray-500 mt-1 max-w-2xl">Track generation progress, errors, and delivery status for all your AI-powered assets.</p>
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 tracking-tight">Generated</h2>
+          <p className="text-sm text-gray-500 mt-1 max-w-2xl">
+            Track generation progress, errors, and delivery status for recent runs.
+          </p>
           <div className="mt-3 flex flex-wrap items-center gap-3 text-xs font-medium text-gray-400">
             <span className="flex items-center gap-1.5">
               <span className={clsx("h-1.5 w-1.5 rounded-full", refreshing ? "bg-primary-500 animate-pulse" : "bg-gray-300")} />

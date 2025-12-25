@@ -79,7 +79,7 @@ export function JobHeader({ error, job }: JobHeaderProps) {
         className="group inline-flex items-center gap-2 rounded-lg px-2 py-2 text-sm font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors touch-target min-h-[44px] sm:min-h-0"
       >
         <ArrowLeftIcon className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-        Back to Generated Lead Magnets
+        Back to Lead Magnets
       </button>
       {error && (
         <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 shadow-sm">
