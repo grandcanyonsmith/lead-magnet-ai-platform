@@ -395,8 +395,15 @@ class DynamoDBService:
     ):
         """Create a notification for the tenant."""
         try:
-            notification_id = f"notif_{ulid()}"
-            now = datetime.utcnow().isoformat()
+            # Make notifications idempotent when we have a related resource.
+            # Jobs can occasionally be finalized more than once (retries), and we don't want duplicate notifications.
+            if related_resource_id and related_resource_type:
+                notification_id = f"notif_{tenant_id}_{notification_type}_{related_resource_type}_{related_resource_id}"
+            else:
+                notification_id = f"notif_{ulid()}"
+
+            # Use an ISO timestamp that JS can reliably parse (milliseconds + UTC Z suffix).
+            now = datetime.utcnow().isoformat(timespec='milliseconds') + "Z"
             ttl = int(datetime.utcnow().timestamp()) + (90 * 24 * 60 * 60)  # 90 days
             
             notification = {
@@ -415,8 +422,28 @@ class DynamoDBService:
             if related_resource_type:
                 notification['related_resource_type'] = related_resource_type
             
-            self.notifications_table.put_item(Item=notification)
-            logger.debug(f"Created notification {notification_id} for tenant {tenant_id}")
+            if related_resource_id and related_resource_type:
+                # Only create if it doesn't already exist (idempotent).
+                # If it exists, don't overwrite (it could have been marked read).
+                from botocore.exceptions import ClientError  # local import to keep module light
+                try:
+                    self.notifications_table.put_item(
+                        Item=notification,
+                        ConditionExpression='attribute_not_exists(notification_id)'
+                    )
+                    logger.debug(f"Created notification {notification_id} for tenant {tenant_id}")
+                except ClientError as e:
+                    code = (e.response or {}).get('Error', {}).get('Code')
+                    if code == 'ConditionalCheckFailedException':
+                        logger.debug(
+                            f"Notification already exists (skipping): {notification_id}",
+                            extra={'tenant_id': tenant_id, 'type': notification_type, 'related_resource_id': related_resource_id}
+                        )
+                        return
+                    raise
+            else:
+                self.notifications_table.put_item(Item=notification)
+                logger.debug(f"Created notification {notification_id} for tenant {tenant_id}")
         except Exception as e:
             logger.error(f"Error creating notification: {e}")
             # Don't fail the job if notification creation fails

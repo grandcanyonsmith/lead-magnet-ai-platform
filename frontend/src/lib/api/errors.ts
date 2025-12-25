@@ -36,6 +36,9 @@ export class ApiError extends Error {
       } else if (errorData && typeof errorData === 'object') {
         if ('message' in errorData && typeof errorData.message === 'string') {
           message = errorData.message
+        } else if ('error' in errorData && typeof (errorData as any).error === 'string') {
+          // Backend often returns { error: "...", code: "..." }
+          message = (errorData as any).error
         }
         if ('code' in errorData && typeof errorData.code === 'string') {
           code = errorData.code

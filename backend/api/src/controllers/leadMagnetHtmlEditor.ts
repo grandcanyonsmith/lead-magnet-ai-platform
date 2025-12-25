@@ -109,14 +109,62 @@ class LeadMagnetHtmlEditorController {
     const pageUrl = typeof body?.page_url === 'string' ? body.page_url : null;
     const model = typeof body?.model === 'string' ? body.model : null;
 
-    const { patchedHtml, summary } = await patchHtmlWithOpenAI({
-      html,
-      prompt,
-      selector,
-      selectedOuterHtml,
-      pageUrl,
-      model,
-    });
+    // Guardrail: full-document rewrites can be slow/unreliable on large HTML.
+    // Encourage element selection (snippet mode) for better latency and fewer upstream failures.
+    const MAX_FULL_DOCUMENT_CHARS = 120_000;
+    if (!selectedOuterHtml && html.length > MAX_FULL_DOCUMENT_CHARS) {
+      throw new ApiError(
+        'This lead magnet is large. Select an element before applying an AI patch (faster + more reliable), or use Code mode for full-page edits.',
+        400,
+        'SELECTION_REQUIRED',
+        { htmlLength: html.length, maxFullDocumentChars: MAX_FULL_DOCUMENT_CHARS }
+      );
+    }
+
+    let patchedHtml: string;
+    let summary: string;
+
+    try {
+      const res = await patchHtmlWithOpenAI({
+        html,
+        prompt,
+        selector,
+        selectedOuterHtml,
+        pageUrl,
+        model,
+      });
+      patchedHtml = res.patchedHtml;
+      summary = res.summary;
+    } catch (error: any) {
+      // Preserve our explicit ApiErrors (validation/config issues).
+      if (error instanceof ApiError) {
+        throw error;
+      }
+
+      const upstreamStatus =
+        typeof error?.status === 'number'
+          ? error.status
+          : typeof error?.statusCode === 'number'
+            ? error.statusCode
+            : typeof error?.response?.status === 'number'
+              ? error.response.status
+              : undefined;
+
+      const upstreamMessage = error?.message ? String(error.message) : String(error);
+
+      // Convert transient upstream issues into a consistent, user-friendly error.
+      if (upstreamStatus === 429 || upstreamStatus === 503 || (typeof upstreamStatus === 'number' && upstreamStatus >= 500)) {
+        throw new ApiError(
+          'AI editing is temporarily unavailable. Please try again in a moment.',
+          503,
+          'SERVICE_UNAVAILABLE',
+          { upstreamStatus, upstreamMessage }
+        );
+      }
+
+      // Unknown failure – treat as internal error.
+      throw error;
+    }
 
     logger.info('[LeadMagnetHtmlEditor] Patched HTML', {
       jobId,
