@@ -1,10 +1,10 @@
-import OpenAI from 'openai';
-import { getOpenAIClient } from './openaiService';
-import { callResponsesWithTimeout } from '../utils/openaiHelpers';
-import { logger } from '../utils/logger';
-import { ApiError } from '../utils/errors';
-import { env } from '../utils/env';
-import { runShellExecutorJob } from './shellExecutorService';
+import OpenAI from "openai";
+import { getOpenAIClient } from "./openaiService";
+import { callResponsesWithTimeout } from "../utils/openaiHelpers";
+import { logger } from "../utils/logger";
+import { ApiError } from "../utils/errors";
+import { env } from "../utils/env";
+import { runShellExecutorJob } from "./shellExecutorService";
 
 type ShellCall = {
   call_id: string;
@@ -21,12 +21,14 @@ function extractShellCalls(response: any): ShellCall[] {
 
   const calls: ShellCall[] = [];
   for (const item of output) {
-    if (!item || typeof item !== 'object') continue;
-    if (item.type === 'shell_call' && item.call_id && item.action?.commands) {
+    if (!item || typeof item !== "object") continue;
+    if (item.type === "shell_call" && item.call_id && item.action?.commands) {
       calls.push({
         call_id: String(item.call_id),
         action: {
-          commands: Array.isArray(item.action.commands) ? item.action.commands.map(String) : [],
+          commands: Array.isArray(item.action.commands)
+            ? item.action.commands.map(String)
+            : [],
           timeout_ms: item.action.timeout_ms,
           max_output_length: item.action.max_output_length,
         },
@@ -35,7 +37,7 @@ function extractShellCalls(response: any): ShellCall[] {
     }
 
     // Some SDK versions represent tools as {type:"tool_call", tool_name:"shell", ...}
-    if (item.type === 'tool_call' && item.tool_name === 'shell') {
+    if (item.type === "tool_call" && item.tool_name === "shell") {
       const action = item.action || item.arguments || item.data?.action;
       const commands = action?.commands;
       if (item.call_id && Array.isArray(commands)) {
@@ -70,16 +72,20 @@ export type RunShellToolLoopResult = {
  * When the model emits `shell_call`, we execute via ECS Fargate and feed outputs back
  * via `shell_call_output` items until the model returns final text.
  */
-export async function runShellToolLoop(args: RunShellToolLoopArgs): Promise<RunShellToolLoopResult> {
+export async function runShellToolLoop(
+  args: RunShellToolLoopArgs,
+): Promise<RunShellToolLoopResult> {
   if (!env.shellToolEnabled) {
-    throw new ApiError('Shell tool is disabled', 404);
+    throw new ApiError("Shell tool is disabled", 404);
   }
 
-  const model = (args.model || 'gpt-5.1').trim() || 'gpt-5.1';
-  const maxSteps = Number.isFinite(args.maxSteps) ? Math.max(1, Math.min(25, Math.floor(args.maxSteps!))) : 10;
+  const model = (args.model || "gpt-5.1").trim() || "gpt-5.1";
+  const maxSteps = Number.isFinite(args.maxSteps)
+    ? Math.max(1, Math.min(25, Math.floor(args.maxSteps!)))
+    : 10;
   const instructions =
     args.instructions ||
-    'You may run shell commands to inspect the environment and gather information. Keep commands concise.';
+    "You may run shell commands to inspect the environment and gather information. Keep commands concise.";
 
   const openai: OpenAI = await getOpenAIClient();
 
@@ -89,19 +95,22 @@ export async function runShellToolLoop(args: RunShellToolLoopArgs): Promise<RunS
         model: model, // Explicitly pass the model variable
         instructions,
         input: args.input,
-        tools: [{ type: 'shell' }],
+        tools: [{ type: "shell" }],
       } as any),
-    'shell tool initial response'
+    "shell tool initial response",
   );
 
   for (let step = 0; step < maxSteps; step++) {
     const shellCalls = extractShellCalls(response);
     if (shellCalls.length === 0) {
-      const outputText = (response as any).output_text || '';
-      return { responseId: (response as any).id, outputText: String(outputText) };
+      const outputText = (response as any).output_text || "";
+      return {
+        responseId: (response as any).id,
+        outputText: String(outputText),
+      };
     }
 
-    logger.info('[ShellToolLoop] Executing shell calls', {
+    logger.info("[ShellToolLoop] Executing shell calls", {
       step,
       callCount: shellCalls.length,
       responseId: (response as any).id,
@@ -112,14 +121,14 @@ export async function runShellToolLoop(args: RunShellToolLoopArgs): Promise<RunS
       const commands = call.action.commands || [];
       if (commands.length === 0) {
         toolOutputs.push({
-          type: 'shell_call_output',
+          type: "shell_call_output",
           call_id: call.call_id,
           max_output_length: call.action.max_output_length,
           output: [
             {
-              stdout: '',
-              stderr: 'No commands provided',
-              outcome: { type: 'exit', exit_code: 1 },
+              stdout: "",
+              stderr: "No commands provided",
+              outcome: { type: "exit", exit_code: 1 },
             },
           ],
         });
@@ -135,9 +144,10 @@ export async function runShellToolLoop(args: RunShellToolLoopArgs): Promise<RunS
       });
 
       toolOutputs.push({
-        type: 'shell_call_output',
+        type: "shell_call_output",
         call_id: call.call_id,
-        max_output_length: result.max_output_length ?? call.action.max_output_length,
+        max_output_length:
+          result.max_output_length ?? call.action.max_output_length,
         output: result.output,
       });
     }
@@ -148,11 +158,9 @@ export async function runShellToolLoop(args: RunShellToolLoopArgs): Promise<RunS
           previous_response_id: (response as any).id,
           input: toolOutputs,
         } as any),
-      'shell tool follow-up response'
+      "shell tool follow-up response",
     );
   }
 
-  throw new ApiError('Shell tool loop exceeded max steps', 500);
+  throw new ApiError("Shell tool loop exceeded max steps", 500);
 }
-
-

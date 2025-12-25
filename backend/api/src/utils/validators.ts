@@ -3,25 +3,28 @@
  * Provides consistent validation logic across utility modules.
  */
 
-import { ValidationError } from './errors';
-import { WorkflowStep, ValidationResult } from './types';
+import { ValidationError } from "./errors";
+import { WorkflowStep, ValidationResult } from "./types";
 
 /**
  * Validates that a value is a non-empty string.
- * 
+ *
  * @param value - Value to validate
  * @param fieldName - Name of the field for error messages
  * @throws {ValidationError} If value is not a non-empty string
  */
-export function validateNonEmptyString(value: unknown, fieldName: string): asserts value is string {
-  if (typeof value !== 'string' || value.trim().length === 0) {
+export function validateNonEmptyString(
+  value: unknown,
+  fieldName: string,
+): asserts value is string {
+  if (typeof value !== "string" || value.trim().length === 0) {
     throw new ValidationError(`${fieldName} must be a non-empty string`);
   }
 }
 
 /**
  * Validates that a value is a valid number within a range.
- * 
+ *
  * @param value - Value to validate
  * @param fieldName - Name of the field for error messages
  * @param min - Minimum value (inclusive)
@@ -32,28 +35,33 @@ export function validateNumberRange(
   value: unknown,
   fieldName: string,
   min: number,
-  max: number
+  max: number,
 ): asserts value is number {
-  if (typeof value !== 'number' || isNaN(value) || value < min || value > max) {
-    throw new ValidationError(`${fieldName} must be a number between ${min} and ${max}`);
+  if (typeof value !== "number" || isNaN(value) || value < min || value > max) {
+    throw new ValidationError(
+      `${fieldName} must be a number between ${min} and ${max}`,
+    );
   }
 }
 
 /**
  * Validates that a value is a valid URL.
- * 
+ *
  * @param url - URL string to validate
  * @param fieldName - Name of the field for error messages
  * @throws {ValidationError} If value is not a valid URL
  */
-export function validateUrl(url: unknown, fieldName: string = 'URL'): asserts url is string {
-  if (typeof url !== 'string' || url.trim().length === 0) {
+export function validateUrl(
+  url: unknown,
+  fieldName: string = "URL",
+): asserts url is string {
+  if (typeof url !== "string" || url.trim().length === 0) {
     throw new ValidationError(`${fieldName} must be a non-empty string`);
   }
 
   try {
     const parsedUrl = new URL(url);
-    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+    if (!["http:", "https:"].includes(parsedUrl.protocol)) {
       throw new ValidationError(`${fieldName} must use HTTP or HTTPS protocol`);
     }
   } catch (error) {
@@ -67,36 +75,40 @@ export function validateUrl(url: unknown, fieldName: string = 'URL'): asserts ur
 /**
  * Validates that a value is a valid customer ID format.
  * Customer IDs should be non-empty strings, typically UUIDs or ULIDs.
- * 
+ *
  * @param customerId - Customer ID to validate
  * @throws {ValidationError} If value is not a valid customer ID
  */
-export function validateCustomerId(customerId: unknown): asserts customerId is string {
-  validateNonEmptyString(customerId, 'customerId');
-  
+export function validateCustomerId(
+  customerId: unknown,
+): asserts customerId is string {
+  validateNonEmptyString(customerId, "customerId");
+
   // Basic format validation - can be enhanced based on actual ID format
   if (customerId.length < 1 || customerId.length > 255) {
-    throw new ValidationError('customerId must be between 1 and 255 characters');
+    throw new ValidationError(
+      "customerId must be between 1 and 255 characters",
+    );
   }
 }
 
 /**
  * Validates that a value is a valid user ID format.
- * 
+ *
  * @param userId - User ID to validate
  * @throws {ValidationError} If value is not a valid user ID
  */
 export function validateUserId(userId: unknown): asserts userId is string {
-  validateNonEmptyString(userId, 'userId');
-  
+  validateNonEmptyString(userId, "userId");
+
   if (userId.length < 1 || userId.length > 255) {
-    throw new ValidationError('userId must be between 1 and 255 characters');
+    throw new ValidationError("userId must be between 1 and 255 characters");
   }
 }
 
 /**
  * Validates pagination parameters.
- * 
+ *
  * @param limit - Limit value
  * @param offset - Offset value
  * @param maxLimit - Maximum allowed limit (default: 100)
@@ -106,23 +118,35 @@ export function validateUserId(userId: unknown): asserts userId is string {
 export function validatePaginationParams(
   limit: unknown,
   offset: unknown,
-  maxLimit: number = 100
+  maxLimit: number = 100,
 ): { limit: number; offset: number } {
-  const limitNum = typeof limit === 'string' ? parseInt(limit, 10) : 
-                   typeof limit === 'number' ? limit : 20;
-  const offsetNum = typeof offset === 'string' ? parseInt(offset, 10) : 
-                     typeof offset === 'number' ? offset : 0;
+  const limitNum =
+    typeof limit === "string"
+      ? parseInt(limit, 10)
+      : typeof limit === "number"
+        ? limit
+        : 20;
+  const offsetNum =
+    typeof offset === "string"
+      ? parseInt(offset, 10)
+      : typeof offset === "number"
+        ? offset
+        : 0;
 
   if (isNaN(limitNum) || limitNum < 1) {
     throw new ValidationError(`limit must be a positive number, got: ${limit}`);
   }
 
   if (limitNum > maxLimit) {
-    throw new ValidationError(`limit cannot exceed ${maxLimit}, got: ${limitNum}`);
+    throw new ValidationError(
+      `limit cannot exceed ${maxLimit}, got: ${limitNum}`,
+    );
   }
 
   if (isNaN(offsetNum) || offsetNum < 0) {
-    throw new ValidationError(`offset must be a non-negative number, got: ${offset}`);
+    throw new ValidationError(
+      `offset must be a non-negative number, got: ${offset}`,
+    );
   }
 
   return {
@@ -133,7 +157,7 @@ export function validatePaginationParams(
 
 /**
  * Validates a workflow step structure.
- * 
+ *
  * @param step - Step object to validate
  * @param stepIndex - Index of the step in the workflow (for error messages)
  * @param totalSteps - Total number of steps (for dependency validation)
@@ -142,11 +166,11 @@ export function validatePaginationParams(
 export function validateWorkflowStep(
   step: unknown,
   stepIndex: number,
-  totalSteps: number
+  totalSteps: number,
 ): ValidationResult {
   const errors: string[] = [];
 
-  if (!step || typeof step !== 'object') {
+  if (!step || typeof step !== "object") {
     return {
       valid: false,
       errors: [`Step ${stepIndex}: must be an object`],
@@ -156,29 +180,55 @@ export function validateWorkflowStep(
   const s = step as Partial<WorkflowStep>;
 
   // Required fields
-  if (!s.step_name || typeof s.step_name !== 'string' || s.step_name.trim().length === 0) {
-    errors.push(`Step ${stepIndex}: step_name is required and must be a non-empty string`);
+  if (
+    !s.step_name ||
+    typeof s.step_name !== "string" ||
+    s.step_name.trim().length === 0
+  ) {
+    errors.push(
+      `Step ${stepIndex}: step_name is required and must be a non-empty string`,
+    );
   }
 
-  if (s.step_type === 'webhook') {
-    if (!s.webhook_url || typeof s.webhook_url !== 'string') {
-      errors.push(`Step ${stepIndex}: webhook_url is required for webhook steps`);
+  if (s.step_type === "webhook") {
+    if (!s.webhook_url || typeof s.webhook_url !== "string") {
+      errors.push(
+        `Step ${stepIndex}: webhook_url is required for webhook steps`,
+      );
     }
   } else {
     // AI generation step (default)
-    if (!s.model || typeof s.model !== 'string' || s.model.trim().length === 0) {
-      errors.push(`Step ${stepIndex}: model is required and must be a non-empty string`);
+    if (
+      !s.model ||
+      typeof s.model !== "string" ||
+      s.model.trim().length === 0
+    ) {
+      errors.push(
+        `Step ${stepIndex}: model is required and must be a non-empty string`,
+      );
     }
 
-    if (!s.instructions || typeof s.instructions !== 'string' || s.instructions.trim().length === 0) {
-      errors.push(`Step ${stepIndex}: instructions is required and must be a non-empty string`);
+    if (
+      !s.instructions ||
+      typeof s.instructions !== "string" ||
+      s.instructions.trim().length === 0
+    ) {
+      errors.push(
+        `Step ${stepIndex}: instructions is required and must be a non-empty string`,
+      );
     }
   }
 
   // Optional but validated fields
   if (s.step_order !== undefined) {
-    if (typeof s.step_order !== 'number' || !Number.isInteger(s.step_order) || s.step_order < 0) {
-      errors.push(`Step ${stepIndex}: step_order must be a non-negative integer`);
+    if (
+      typeof s.step_order !== "number" ||
+      !Number.isInteger(s.step_order) ||
+      s.step_order < 0
+    ) {
+      errors.push(
+        `Step ${stepIndex}: step_order must be a non-negative integer`,
+      );
     }
   }
 
@@ -187,10 +237,14 @@ export function validateWorkflowStep(
       errors.push(`Step ${stepIndex}: depends_on must be an array`);
     } else {
       s.depends_on.forEach((depIndex: unknown, depArrayIndex: number) => {
-        if (typeof depIndex !== 'number' || !Number.isInteger(depIndex)) {
-          errors.push(`Step ${stepIndex}: depends_on[${depArrayIndex}] must be an integer`);
+        if (typeof depIndex !== "number" || !Number.isInteger(depIndex)) {
+          errors.push(
+            `Step ${stepIndex}: depends_on[${depArrayIndex}] must be an integer`,
+          );
         } else if (depIndex < 0 || depIndex >= totalSteps) {
-          errors.push(`Step ${stepIndex}: depends_on[${depArrayIndex}] (${depIndex}) is out of range [0, ${totalSteps - 1}]`);
+          errors.push(
+            `Step ${stepIndex}: depends_on[${depArrayIndex}] (${depIndex}) is out of range [0, ${totalSteps - 1}]`,
+          );
         } else if (depIndex === stepIndex) {
           errors.push(`Step ${stepIndex}: cannot depend on itself`);
         }
@@ -202,8 +256,13 @@ export function validateWorkflowStep(
     errors.push(`Step ${stepIndex}: tools must be an array`);
   }
 
-  if (s.tool_choice !== undefined && !['auto', 'required', 'none'].includes(s.tool_choice)) {
-    errors.push(`Step ${stepIndex}: tool_choice must be 'auto', 'required', or 'none'`);
+  if (
+    s.tool_choice !== undefined &&
+    !["auto", "required", "none"].includes(s.tool_choice)
+  ) {
+    errors.push(
+      `Step ${stepIndex}: tool_choice must be 'auto', 'required', or 'none'`,
+    );
   }
 
   return {
@@ -214,7 +273,7 @@ export function validateWorkflowStep(
 
 /**
  * Validates an array of workflow steps.
- * 
+ *
  * @param steps - Array of steps to validate
  * @returns Validation result
  */
@@ -224,14 +283,14 @@ export function validateWorkflowSteps(steps: unknown): ValidationResult {
   if (!Array.isArray(steps)) {
     return {
       valid: false,
-      errors: ['Steps must be an array'],
+      errors: ["Steps must be an array"],
     };
   }
 
   if (steps.length === 0) {
     return {
       valid: false,
-      errors: ['At least one step is required'],
+      errors: ["At least one step is required"],
     };
   }
 
@@ -287,17 +346,17 @@ export function validateWorkflowSteps(steps: unknown): ValidationResult {
 
 /**
  * Type guard to check if a value is a valid object.
- * 
+ *
  * @param value - Value to check
  * @returns True if value is a non-null object
  */
 export function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /**
  * Type guard to check if a value is a valid array.
- * 
+ *
  * @param value - Value to check
  * @returns True if value is an array
  */
@@ -307,21 +366,20 @@ export function isArray(value: unknown): value is unknown[] {
 
 /**
  * Type guard to check if a value is a valid string.
- * 
+ *
  * @param value - Value to check
  * @returns True if value is a string
  */
 export function isString(value: unknown): value is string {
-  return typeof value === 'string';
+  return typeof value === "string";
 }
 
 /**
  * Type guard to check if a value is a valid number.
- * 
+ *
  * @param value - Value to check
  * @returns True if value is a number and not NaN
  */
 export function isNumber(value: unknown): value is number {
-  return typeof value === 'number' && !isNaN(value);
+  return typeof value === "number" && !isNaN(value);
 }
-

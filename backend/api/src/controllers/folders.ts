@@ -1,11 +1,16 @@
-import { ulid } from 'ulid';
-import { db } from '../utils/db';
-import { RouteResponse } from '../routes';
-import { RequestContext } from '../routes/router';
-import { getCustomerId } from '../utils/rbac';
-import { logger } from '../utils/logger';
-import { ApiError, InternalServerError, NotFoundError, ValidationError } from '../utils/errors';
-import { env } from '../utils/env';
+import { ulid } from "ulid";
+import { db } from "../utils/db";
+import { RouteResponse } from "../routes";
+import { RequestContext } from "../routes/router";
+import { getCustomerId } from "../utils/rbac";
+import { logger } from "../utils/logger";
+import {
+  ApiError,
+  InternalServerError,
+  NotFoundError,
+  ValidationError,
+} from "../utils/errors";
+import { env } from "../utils/env";
 
 const USER_SETTINGS_TABLE = env.userSettingsTable;
 const WORKFLOWS_TABLE = env.workflowsTable;
@@ -21,7 +26,9 @@ interface Folder {
 class FoldersController {
   private async ensureSettings(tenantId: string): Promise<any> {
     if (!USER_SETTINGS_TABLE) {
-      throw new InternalServerError('USER_SETTINGS_TABLE environment variable is not configured');
+      throw new InternalServerError(
+        "USER_SETTINGS_TABLE environment variable is not configured",
+      );
     }
 
     let settings = await db.get(USER_SETTINGS_TABLE, { tenant_id: tenantId });
@@ -32,12 +39,12 @@ class FoldersController {
       const now = new Date().toISOString();
       settings = {
         tenant_id: tenantId,
-        organization_name: '',
-        contact_email: '',
-        default_ai_model: 'gpt-5.1-codex',
+        organization_name: "",
+        contact_email: "",
+        default_ai_model: "gpt-5.1-codex",
         api_usage_limit: 1000000,
         api_usage_current: 0,
-        billing_tier: 'free',
+        billing_tier: "free",
         onboarding_survey_completed: false,
         onboarding_survey_responses: {},
         onboarding_checklist: {
@@ -55,10 +62,14 @@ class FoldersController {
 
     // Ensure folders is always an array
     if (!Array.isArray(settings.folders)) {
-      settings = await db.update(USER_SETTINGS_TABLE, { tenant_id: tenantId }, {
-        folders: [],
-        updated_at: new Date().toISOString(),
-      });
+      settings = await db.update(
+        USER_SETTINGS_TABLE,
+        { tenant_id: tenantId },
+        {
+          folders: [],
+          updated_at: new Date().toISOString(),
+        },
+      );
     }
 
     return settings;
@@ -69,12 +80,19 @@ class FoldersController {
     return settings?.folders || [];
   }
 
-  private async saveFolders(tenantId: string, folders: Folder[]): Promise<void> {
+  private async saveFolders(
+    tenantId: string,
+    folders: Folder[],
+  ): Promise<void> {
     await this.ensureSettings(tenantId);
-    await db.update(USER_SETTINGS_TABLE, { tenant_id: tenantId }, {
-      folders,
-      updated_at: new Date().toISOString(),
-    });
+    await db.update(
+      USER_SETTINGS_TABLE,
+      { tenant_id: tenantId },
+      {
+        folders,
+        updated_at: new Date().toISOString(),
+      },
+    );
   }
 
   async list(
@@ -82,32 +100,34 @@ class FoldersController {
     _body: any,
     _query: Record<string, string | undefined>,
     _tenantId: string | undefined,
-    context?: RequestContext
+    context?: RequestContext,
   ): Promise<RouteResponse> {
     try {
       if (!WORKFLOWS_TABLE) {
-        throw new InternalServerError('WORKFLOWS_TABLE environment variable is not configured');
+        throw new InternalServerError(
+          "WORKFLOWS_TABLE environment variable is not configured",
+        );
       }
       const customerId = getCustomerId(context);
       const tenantId = customerId;
 
-      logger.debug('[FoldersController.list] Listing folders', { tenantId });
+      logger.debug("[FoldersController.list] Listing folders", { tenantId });
 
       const folders = await this.getFolders(tenantId);
 
       // Get workflow counts per folder
       const workflowsResult = await db.query(
         WORKFLOWS_TABLE,
-        'gsi_tenant_status',
-        'tenant_id = :tenant_id',
-        { ':tenant_id': tenantId }
+        "gsi_tenant_status",
+        "tenant_id = :tenant_id",
+        { ":tenant_id": tenantId },
       );
       const workflows = workflowsResult.items.filter((w: any) => !w.deleted_at);
 
       // Count workflows per folder
       const folderCounts: Record<string, number> = {};
       for (const workflow of workflows) {
-        const folderId = workflow.folder_id || 'root';
+        const folderId = workflow.folder_id || "root";
         folderCounts[folderId] = (folderCounts[folderId] || 0) + 1;
       }
 
@@ -125,8 +145,8 @@ class FoldersController {
       };
     } catch (error) {
       if (error instanceof ApiError) throw error;
-      logger.error('[FoldersController.list] Error', { error });
-      throw new InternalServerError('Failed to list folders');
+      logger.error("[FoldersController.list] Error", { error });
+      throw new InternalServerError("Failed to list folders");
     }
   }
 
@@ -135,20 +155,23 @@ class FoldersController {
     _body: any,
     _query: Record<string, string | undefined>,
     _tenantId: string | undefined,
-    context?: RequestContext
+    context?: RequestContext,
   ): Promise<RouteResponse> {
     try {
       const customerId = getCustomerId(context);
       const tenantId = customerId;
       const folderId = params.id;
 
-      logger.debug('[FoldersController.get] Getting folder', { tenantId, folderId });
+      logger.debug("[FoldersController.get] Getting folder", {
+        tenantId,
+        folderId,
+      });
 
       const folders = await this.getFolders(tenantId);
       const folder = folders.find((f) => f.folder_id === folderId);
 
       if (!folder) {
-        throw new NotFoundError('Folder not found');
+        throw new NotFoundError("Folder not found");
       }
 
       return {
@@ -157,8 +180,8 @@ class FoldersController {
       };
     } catch (error) {
       if (error instanceof ApiError) throw error;
-      logger.error('[FoldersController.get] Error', { error });
-      throw new InternalServerError('Failed to get folder');
+      logger.error("[FoldersController.get] Error", { error });
+      throw new InternalServerError("Failed to get folder");
     }
   }
 
@@ -167,26 +190,34 @@ class FoldersController {
     body: any,
     _query: Record<string, string | undefined>,
     _tenantId: string | undefined,
-    context?: RequestContext
+    context?: RequestContext,
   ): Promise<RouteResponse> {
     try {
       const customerId = getCustomerId(context);
       const tenantId = customerId;
 
-      logger.debug('[FoldersController.create] Creating folder', { tenantId, body });
+      logger.debug("[FoldersController.create] Creating folder", {
+        tenantId,
+        body,
+      });
 
-      if (!body?.folder_name || typeof body.folder_name !== 'string' || !body.folder_name.trim()) {
-        throw new ValidationError('folder_name is required');
+      if (
+        !body?.folder_name ||
+        typeof body.folder_name !== "string" ||
+        !body.folder_name.trim()
+      ) {
+        throw new ValidationError("folder_name is required");
       }
 
       const folders = await this.getFolders(tenantId);
 
       // Check for duplicate name
       const existingFolder = folders.find(
-        (f) => f.folder_name.toLowerCase() === body.folder_name.trim().toLowerCase()
+        (f) =>
+          f.folder_name.toLowerCase() === body.folder_name.trim().toLowerCase(),
       );
       if (existingFolder) {
-        throw new ValidationError('A folder with this name already exists');
+        throw new ValidationError("A folder with this name already exists");
       }
 
       const now = new Date().toISOString();
@@ -201,7 +232,10 @@ class FoldersController {
       folders.push(newFolder);
       await this.saveFolders(tenantId, folders);
 
-      logger.info('[FoldersController.create] Folder created', { tenantId, folderId: newFolder.folder_id });
+      logger.info("[FoldersController.create] Folder created", {
+        tenantId,
+        folderId: newFolder.folder_id,
+      });
 
       return {
         statusCode: 201,
@@ -209,8 +243,8 @@ class FoldersController {
       };
     } catch (error) {
       if (error instanceof ApiError) throw error;
-      logger.error('[FoldersController.create] Error', { error });
-      throw new InternalServerError('Failed to create folder');
+      logger.error("[FoldersController.create] Error", { error });
+      throw new InternalServerError("Failed to create folder");
     }
   }
 
@@ -219,20 +253,24 @@ class FoldersController {
     body: any,
     _query: Record<string, string | undefined>,
     _tenantId: string | undefined,
-    context?: RequestContext
+    context?: RequestContext,
   ): Promise<RouteResponse> {
     try {
       const customerId = getCustomerId(context);
       const tenantId = customerId;
       const folderId = params.id;
 
-      logger.debug('[FoldersController.update] Updating folder', { tenantId, folderId, body });
+      logger.debug("[FoldersController.update] Updating folder", {
+        tenantId,
+        folderId,
+        body,
+      });
 
       const folders = await this.getFolders(tenantId);
       const folderIndex = folders.findIndex((f) => f.folder_id === folderId);
 
       if (folderIndex === -1) {
-        throw new NotFoundError('Folder not found');
+        throw new NotFoundError("Folder not found");
       }
 
       // Check for duplicate name if name is being changed
@@ -240,10 +278,11 @@ class FoldersController {
         const existingFolder = folders.find(
           (f) =>
             f.folder_id !== folderId &&
-            f.folder_name.toLowerCase() === body.folder_name.trim().toLowerCase()
+            f.folder_name.toLowerCase() ===
+              body.folder_name.trim().toLowerCase(),
         );
         if (existingFolder) {
-          throw new ValidationError('A folder with this name already exists');
+          throw new ValidationError("A folder with this name already exists");
         }
         folders[folderIndex].folder_name = body.folder_name.trim();
       }
@@ -255,7 +294,10 @@ class FoldersController {
       folders[folderIndex].updated_at = new Date().toISOString();
       await this.saveFolders(tenantId, folders);
 
-      logger.info('[FoldersController.update] Folder updated', { tenantId, folderId });
+      logger.info("[FoldersController.update] Folder updated", {
+        tenantId,
+        folderId,
+      });
 
       return {
         statusCode: 200,
@@ -263,8 +305,8 @@ class FoldersController {
       };
     } catch (error) {
       if (error instanceof ApiError) throw error;
-      logger.error('[FoldersController.update] Error', { error });
-      throw new InternalServerError('Failed to update folder');
+      logger.error("[FoldersController.update] Error", { error });
+      throw new InternalServerError("Failed to update folder");
     }
   }
 
@@ -273,46 +315,57 @@ class FoldersController {
     _body: any,
     _query: Record<string, string | undefined>,
     _tenantId: string | undefined,
-    context?: RequestContext
+    context?: RequestContext,
   ): Promise<RouteResponse> {
     try {
       if (!WORKFLOWS_TABLE) {
-        throw new InternalServerError('WORKFLOWS_TABLE environment variable is not configured');
+        throw new InternalServerError(
+          "WORKFLOWS_TABLE environment variable is not configured",
+        );
       }
       const customerId = getCustomerId(context);
       const tenantId = customerId;
       const folderId = params.id;
 
-      logger.debug('[FoldersController.delete] Deleting folder', { tenantId, folderId });
+      logger.debug("[FoldersController.delete] Deleting folder", {
+        tenantId,
+        folderId,
+      });
 
       const folders = await this.getFolders(tenantId);
       const folderIndex = folders.findIndex((f) => f.folder_id === folderId);
 
       if (folderIndex === -1) {
-        throw new NotFoundError('Folder not found');
+        throw new NotFoundError("Folder not found");
       }
 
       // Move all workflows in this folder back to root (folder_id = null)
       const workflowsResult = await db.query(
         WORKFLOWS_TABLE,
-        'gsi_tenant_status',
-        'tenant_id = :tenant_id',
-        { ':tenant_id': tenantId }
+        "gsi_tenant_status",
+        "tenant_id = :tenant_id",
+        { ":tenant_id": tenantId },
       );
-      const workflows = workflowsResult.items.filter((w: any) => !w.deleted_at && w.folder_id === folderId);
+      const workflows = workflowsResult.items.filter(
+        (w: any) => !w.deleted_at && w.folder_id === folderId,
+      );
 
       for (const workflow of workflows) {
-        await db.update(WORKFLOWS_TABLE, { workflow_id: workflow.workflow_id }, {
-          folder_id: null,
-          updated_at: new Date().toISOString(),
-        });
+        await db.update(
+          WORKFLOWS_TABLE,
+          { workflow_id: workflow.workflow_id },
+          {
+            folder_id: null,
+            updated_at: new Date().toISOString(),
+          },
+        );
       }
 
       // Remove folder
       folders.splice(folderIndex, 1);
       await this.saveFolders(tenantId, folders);
 
-      logger.info('[FoldersController.delete] Folder deleted', {
+      logger.info("[FoldersController.delete] Folder deleted", {
         tenantId,
         folderId,
         movedWorkflows: workflows.length,
@@ -320,12 +373,12 @@ class FoldersController {
 
       return {
         statusCode: 200,
-        body: { message: 'Folder deleted successfully' },
+        body: { message: "Folder deleted successfully" },
       };
     } catch (error) {
       if (error instanceof ApiError) throw error;
-      logger.error('[FoldersController.delete] Error', { error });
-      throw new InternalServerError('Failed to delete folder');
+      logger.error("[FoldersController.delete] Error", { error });
+      throw new InternalServerError("Failed to delete folder");
     }
   }
 
@@ -334,11 +387,13 @@ class FoldersController {
     body: any,
     _query: Record<string, string | undefined>,
     _tenantId: string | undefined,
-    context?: RequestContext
+    context?: RequestContext,
   ): Promise<RouteResponse> {
     try {
       if (!WORKFLOWS_TABLE) {
-        throw new InternalServerError('WORKFLOWS_TABLE environment variable is not configured');
+        throw new InternalServerError(
+          "WORKFLOWS_TABLE environment variable is not configured",
+        );
       }
 
       const customerId = getCustomerId(context);
@@ -346,8 +401,8 @@ class FoldersController {
       const workflowId = params.id;
 
       const folderId = body?.folder_id ?? null;
-      if (folderId !== null && typeof folderId !== 'string') {
-        throw new ValidationError('folder_id must be a string or null');
+      if (folderId !== null && typeof folderId !== "string") {
+        throw new ValidationError("folder_id must be a string or null");
       }
 
       // Validate folder existence (if moving into a folder)
@@ -355,23 +410,32 @@ class FoldersController {
         const folders = await this.getFolders(tenantId);
         const exists = folders.some((f) => f.folder_id === folderId);
         if (!exists) {
-          throw new NotFoundError('Folder not found');
+          throw new NotFoundError("Folder not found");
         }
       }
 
       // Validate workflow existence and ownership
-      const existing = await db.get(WORKFLOWS_TABLE, { workflow_id: workflowId });
+      const existing = await db.get(WORKFLOWS_TABLE, {
+        workflow_id: workflowId,
+      });
       if (!existing || existing.deleted_at) {
-        throw new NotFoundError('Lead magnet not found');
+        throw new NotFoundError("Lead magnet not found");
       }
       if (existing.tenant_id !== tenantId) {
-        throw new ApiError('You do not have permission to access this lead magnet', 403);
+        throw new ApiError(
+          "You do not have permission to access this lead magnet",
+          403,
+        );
       }
 
-      const updated = await db.update(WORKFLOWS_TABLE, { workflow_id: workflowId }, {
-        folder_id: folderId,
-        updated_at: new Date().toISOString(),
-      });
+      const updated = await db.update(
+        WORKFLOWS_TABLE,
+        { workflow_id: workflowId },
+        {
+          folder_id: folderId,
+          updated_at: new Date().toISOString(),
+        },
+      );
 
       return {
         statusCode: 200,
@@ -379,11 +443,10 @@ class FoldersController {
       };
     } catch (error) {
       if (error instanceof ApiError) throw error;
-      logger.error('[FoldersController.moveWorkflowToFolder] Error', { error });
-      throw new InternalServerError('Failed to move lead magnet');
+      logger.error("[FoldersController.moveWorkflowToFolder] Error", { error });
+      throw new InternalServerError("Failed to move lead magnet");
     }
   }
 }
 
 export const foldersController = new FoldersController();
-

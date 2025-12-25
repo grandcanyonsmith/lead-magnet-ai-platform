@@ -1,160 +1,184 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { api } from '@/lib/api'
-import { AIModel, Tool } from '@/types'
-import { WorkflowStep } from '@/types/workflow'
-import { useWorkflowId } from './useWorkflowId'
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { api } from "@/lib/api";
+import { AIModel, Tool } from "@/types";
+import { WorkflowStep } from "@/types/workflow";
+import { useWorkflowId } from "./useWorkflowId";
 
 export interface WorkflowFormData {
-  workflow_name: string
-  workflow_description: string
-  template_id: string
-  template_version: number
+  workflow_name: string;
+  workflow_description: string;
+  template_id: string;
+  template_version: number;
 }
 
 export function useWorkflowEdit() {
-  const router = useRouter()
-  const workflowId = useWorkflowId()
-  
-  const [loading, setLoading] = useState(true)
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  
-  const [formData, setFormData] = useState<WorkflowFormData>({
-    workflow_name: '',
-    workflow_description: '',
-    template_id: '',
-    template_version: 0,
-  })
+  const router = useRouter();
+  const workflowId = useWorkflowId();
 
-  const [steps, setSteps] = useState<WorkflowStep[]>([])
-  const [formId, setFormId] = useState<string | null>(null)
-  const [workflowForm, setWorkflowForm] = useState<any>(null)
-  const [workflowStatus, setWorkflowStatus] = useState<'active' | 'inactive' | 'draft' | null>(null)
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [formData, setFormData] = useState<WorkflowFormData>({
+    workflow_name: "",
+    workflow_description: "",
+    template_id: "",
+    template_version: 0,
+  });
+
+  const [steps, setSteps] = useState<WorkflowStep[]>([]);
+  const [formId, setFormId] = useState<string | null>(null);
+  const [workflowForm, setWorkflowForm] = useState<any>(null);
+  const [workflowStatus, setWorkflowStatus] = useState<
+    "active" | "inactive" | "draft" | null
+  >(null);
 
   useEffect(() => {
     if (workflowId) {
-      loadWorkflow()
+      loadWorkflow();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workflowId])
+  }, [workflowId]);
 
   const loadWorkflow = async () => {
     try {
-      const workflow = await api.getWorkflow(workflowId)
+      const workflow = await api.getWorkflow(workflowId);
       setFormData({
-        workflow_name: workflow.workflow_name || '',
-        workflow_description: workflow.workflow_description || '',
-        template_id: workflow.template_id || '',
+        workflow_name: workflow.workflow_name || "",
+        workflow_description: workflow.workflow_description || "",
+        template_id: workflow.template_id || "",
         template_version: workflow.template_version || 0,
-      })
+      });
 
       // Load steps - all workflows must have steps
       if (!workflow.steps || workflow.steps.length === 0) {
-        throw new Error('Workflow has no steps. Legacy format is no longer supported.')
+        throw new Error(
+          "Workflow has no steps. Legacy format is no longer supported.",
+        );
       }
-      
+
       const loadedSteps = workflow.steps.map((step: any, index: number) => {
-        let defaultInstructions = ''
-        if (step.step_name && step.step_name.toLowerCase().includes('html')) {
-          defaultInstructions = 'Rewrite the content into styled HTML matching the provided template. Ensure the output is complete, valid HTML that matches the template\'s design and structure.'
-        } else if (step.step_name && step.step_name.toLowerCase().includes('research')) {
-          defaultInstructions = 'Generate a comprehensive research report based on the form submission data.'
+        let defaultInstructions = "";
+        if (step.step_name && step.step_name.toLowerCase().includes("html")) {
+          defaultInstructions =
+            "Rewrite the content into styled HTML matching the provided template. Ensure the output is complete, valid HTML that matches the template's design and structure.";
+        } else if (
+          step.step_name &&
+          step.step_name.toLowerCase().includes("research")
+        ) {
+          defaultInstructions =
+            "Generate a comprehensive research report based on the form submission data.";
         } else {
-          defaultInstructions = 'Process the input data according to the workflow requirements.'
+          defaultInstructions =
+            "Process the input data according to the workflow requirements.";
         }
-        
+
         return {
           step_name: step.step_name || `Step ${index + 1}`,
-          step_description: step.step_description || '',
-          step_type: step.step_type || 'ai_generation',
-          model: step.model || 'gpt-5',
+          step_description: step.step_description || "",
+          step_type: step.step_type || "ai_generation",
+          model: step.model || "gpt-5",
           instructions: step.instructions?.trim() || defaultInstructions,
           step_order: step.step_order !== undefined ? step.step_order : index,
-          tools: step.tools || ['web_search'],
-          tool_choice: step.tool_choice || 'auto',
+          tools: step.tools || ["web_search"],
+          tool_choice: step.tool_choice || "auto",
           // Webhook step fields
-          webhook_url: step.webhook_url || '',
-          webhook_method: step.webhook_method || 'POST',
+          webhook_url: step.webhook_url || "",
+          webhook_method: step.webhook_method || "POST",
           webhook_headers: step.webhook_headers || {},
           webhook_query_params: step.webhook_query_params || {},
-          webhook_content_type: step.webhook_content_type || 'application/json',
-          webhook_body_mode: step.webhook_body_mode || (step.webhook_body ? 'custom' : 'auto'),
-          webhook_body: step.webhook_body || '',
-          webhook_save_response: step.webhook_save_response !== undefined ? step.webhook_save_response : true,
+          webhook_content_type: step.webhook_content_type || "application/json",
+          webhook_body_mode:
+            step.webhook_body_mode || (step.webhook_body ? "custom" : "auto"),
+          webhook_body: step.webhook_body || "",
+          webhook_save_response:
+            step.webhook_save_response !== undefined
+              ? step.webhook_save_response
+              : true,
           webhook_data_selection: step.webhook_data_selection || undefined,
-        }
-      })
-      setSteps(loadedSteps)
+        };
+      });
+      setSteps(loadedSteps);
 
       if (workflow.form) {
-        setFormId(workflow.form.form_id)
-        setWorkflowForm(workflow.form)
+        setFormId(workflow.form.form_id);
+        setWorkflowForm(workflow.form);
       }
-      
+
       // Store workflow status
-      setWorkflowStatus(workflow.status || 'active')
+      setWorkflowStatus(workflow.status || "active");
     } catch (error: any) {
-      console.error('Failed to load workflow:', error)
-      setError(error.response?.data?.message || error.message || 'Failed to load workflow')
+      console.error("Failed to load workflow:", error);
+      setError(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to load workflow",
+      );
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleChange = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
-  }
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
 
   const handleStepChange = (index: number, step: WorkflowStep) => {
-    setSteps(prev => {
-      const newSteps = [...prev]
-      newSteps[index] = { ...step, step_order: index }
-      return newSteps
-    })
-  }
+    setSteps((prev) => {
+      const newSteps = [...prev];
+      newSteps[index] = { ...step, step_order: index };
+      return newSteps;
+    });
+  };
 
   const handleAddStep = () => {
-    setSteps(prev => [
+    setSteps((prev) => [
       ...prev,
       {
         step_name: `Step ${prev.length + 1}`,
-        step_description: '',
-        model: 'gpt-5',
-        instructions: '',
+        step_description: "",
+        model: "gpt-5",
+        instructions: "",
         step_order: prev.length,
-        tools: ['web_search'],
-        tool_choice: 'auto',
+        tools: ["web_search"],
+        tool_choice: "auto",
       },
-    ])
-  }
+    ]);
+  };
 
   const handleDeleteStep = (index: number) => {
-    setSteps(prev => {
-      const newSteps = prev.filter((_, i) => i !== index)
-      return newSteps.map((step, i) => ({ ...step, step_order: i }))
-    })
-  }
+    setSteps((prev) => {
+      const newSteps = prev.filter((_, i) => i !== index);
+      return newSteps.map((step, i) => ({ ...step, step_order: i }));
+    });
+  };
 
   const handleMoveStepUp = (index: number) => {
-    if (index === 0) return
-    setSteps(prev => {
-      const newSteps = [...prev]
-      ;[newSteps[index - 1], newSteps[index]] = [newSteps[index], newSteps[index - 1]]
-      return newSteps.map((step, i) => ({ ...step, step_order: i }))
-    })
-  }
+    if (index === 0) return;
+    setSteps((prev) => {
+      const newSteps = [...prev];
+      [newSteps[index - 1], newSteps[index]] = [
+        newSteps[index],
+        newSteps[index - 1],
+      ];
+      return newSteps.map((step, i) => ({ ...step, step_order: i }));
+    });
+  };
 
   const handleMoveStepDown = (index: number) => {
-    if (index === steps.length - 1) return
-    setSteps(prev => {
-      const newSteps = [...prev]
-      ;[newSteps[index], newSteps[index + 1]] = [newSteps[index + 1], newSteps[index]]
-      return newSteps.map((step, i) => ({ ...step, step_order: i }))
-    })
-  }
+    if (index === steps.length - 1) return;
+    setSteps((prev) => {
+      const newSteps = [...prev];
+      [newSteps[index], newSteps[index + 1]] = [
+        newSteps[index + 1],
+        newSteps[index],
+      ];
+      return newSteps.map((step, i) => ({ ...step, step_order: i }));
+    });
+  };
 
   return {
     workflowId,
@@ -177,6 +201,5 @@ export function useWorkflowEdit() {
     handleMoveStepUp,
     handleMoveStepDown,
     router,
-  }
+  };
 }
-

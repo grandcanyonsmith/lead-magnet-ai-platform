@@ -1,115 +1,137 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { FiSave, FiZap, FiPlus } from 'react-icons/fi'
-import WorkflowStepEditor from '../components/WorkflowStepEditor'
-import { WorkflowBasicFields } from '@/components/workflows/WorkflowBasicFields'
-import { TemplateEditor } from '@/components/workflows/TemplateEditor'
-import { FormFieldsEditor } from '@/components/workflows/FormFieldsEditor'
-import { DeliveryConfig } from '@/components/workflows/DeliveryConfig'
-import { useAIGeneration } from '@/hooks/useAIGeneration'
-import { useWorkflowForm } from '@/hooks/useWorkflowForm'
-import { useWorkflowSteps } from '@/hooks/useWorkflowSteps'
-import { useWorkflowValidation } from '@/hooks/useWorkflowValidation'
-import { useWorkflowSubmission } from '@/hooks/useWorkflowSubmission'
-import { useWorkflowGenerationStatus } from '@/hooks/useWorkflowGenerationStatus'
-import { useSettings } from '@/hooks/api/useSettings'
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { FiSave, FiZap, FiPlus } from "react-icons/fi";
+import WorkflowStepEditor from "../components/WorkflowStepEditor";
+import { WorkflowBasicFields } from "@/components/workflows/WorkflowBasicFields";
+import { TemplateEditor } from "@/components/workflows/TemplateEditor";
+import { FormFieldsEditor } from "@/components/workflows/FormFieldsEditor";
+import { DeliveryConfig } from "@/components/workflows/DeliveryConfig";
+import { useAIGeneration } from "@/hooks/useAIGeneration";
+import { useWorkflowForm } from "@/hooks/useWorkflowForm";
+import { useWorkflowSteps } from "@/hooks/useWorkflowSteps";
+import { useWorkflowValidation } from "@/hooks/useWorkflowValidation";
+import { useWorkflowSubmission } from "@/hooks/useWorkflowSubmission";
+import { useWorkflowGenerationStatus } from "@/hooks/useWorkflowGenerationStatus";
+import { useSettings } from "@/hooks/api/useSettings";
 
 export default function NewWorkflowPage() {
-  const router = useRouter()
-  const [step, setStep] = useState<'prompt' | 'form' | 'creating'>('prompt')
-  const [prompt, setPrompt] = useState('')
-  const [generatedTemplateId, setGeneratedTemplateId] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [generationJobId, setGenerationJobId] = useState<string | null>(null)
+  const router = useRouter();
+  const [step, setStep] = useState<"prompt" | "form" | "creating">("prompt");
+  const [prompt, setPrompt] = useState("");
+  const [generatedTemplateId, setGeneratedTemplateId] = useState<string | null>(
+    null,
+  );
+  const [error, setError] = useState<string | null>(null);
+  const [generationJobId, setGenerationJobId] = useState<string | null>(null);
 
   // Hooks
-  const aiGeneration = useAIGeneration()
-  const workflowForm = useWorkflowForm()
-  const workflowSteps = useWorkflowSteps()
-  const validation = useWorkflowValidation(workflowForm.formData, workflowSteps.steps, workflowForm.templateData)
-  const submission = useWorkflowSubmission()
-  const generationStatus = useWorkflowGenerationStatus(generationJobId)
-  const { settings } = useSettings()
+  const aiGeneration = useAIGeneration();
+  const workflowForm = useWorkflowForm();
+  const workflowSteps = useWorkflowSteps();
+  const validation = useWorkflowValidation(
+    workflowForm.formData,
+    workflowSteps.steps,
+    workflowForm.templateData,
+  );
+  const submission = useWorkflowSubmission();
+  const generationStatus = useWorkflowGenerationStatus(generationJobId);
+  const { settings } = useSettings();
 
   // Handle AI generation result
   useEffect(() => {
     if (aiGeneration.result) {
-      const result = aiGeneration.result
-      
+      const result = aiGeneration.result;
+
       // Populate form data
-      workflowForm.populateFromAIGeneration(result)
-      
+      workflowForm.populateFromAIGeneration(result);
+
       // Populate steps
-      if (result.workflow?.steps && Array.isArray(result.workflow.steps) && result.workflow.steps.length > 0) {
-        workflowSteps.setStepsFromAIGeneration(result.workflow.steps)
+      if (
+        result.workflow?.steps &&
+        Array.isArray(result.workflow.steps) &&
+        result.workflow.steps.length > 0
+      ) {
+        workflowSteps.setStepsFromAIGeneration(result.workflow.steps);
       } else if (result.workflow?.research_instructions) {
-        workflowSteps.updateFirstStepInstructions(result.workflow.research_instructions)
+        workflowSteps.updateFirstStepInstructions(
+          result.workflow.research_instructions,
+        );
       }
-      
+
       // Move to form step
-      setStep('form')
+      setStep("form");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [aiGeneration.result])
+  }, [aiGeneration.result]);
 
   // Set error from hooks
   useEffect(() => {
     if (aiGeneration.error) {
-      setError(aiGeneration.error)
+      setError(aiGeneration.error);
     }
     if (submission.error) {
-      setError(submission.error)
+      setError(submission.error);
     }
-  }, [aiGeneration.error, submission.error])
+  }, [aiGeneration.error, submission.error]);
 
   const handleGenerateWithAI = async () => {
     if (!prompt.trim()) {
-      setError('Please describe what you want to build a lead magnet for')
-      return
+      setError("Please describe what you want to build a lead magnet for");
+      return;
     }
 
-    setError(null)
-    setStep('creating')
-    const result = await aiGeneration.generateWorkflow(prompt.trim(), settings?.default_ai_model || 'gpt-5.1-codex')
-    
+    setError(null);
+    setStep("creating");
+    const result = await aiGeneration.generateWorkflow(
+      prompt.trim(),
+      settings?.default_ai_model || "gpt-5.1-codex",
+    );
+
     if (result && result.job_id) {
       // Store job_id for status tracking
-      setGenerationJobId(result.job_id)
+      setGenerationJobId(result.job_id);
     } else if (result) {
       // Fallback: synchronous result (legacy behavior)
       // Auto-save will be handled by useEffect
-      aiGeneration.generationStatus && setTimeout(() => {
-        // Status will be cleared by hook
-          }, 5000)
+      aiGeneration.generationStatus &&
+        setTimeout(() => {
+          // Status will be cleared by hook
+        }, 5000);
     }
-  }
+  };
 
   // Handle generation status changes
   useEffect(() => {
-    if (generationStatus.status === 'completed' && generationStatus.workflowId) {
+    if (
+      generationStatus.status === "completed" &&
+      generationStatus.workflowId
+    ) {
       // Navigation is handled by useWorkflowGenerationStatus hook
       // Just clear the creating state
-      setStep('form')
-    } else if (generationStatus.status === 'failed') {
-      setError(generationStatus.error || 'Workflow generation failed')
-      setStep('prompt')
-      setGenerationJobId(null)
+      setStep("form");
+    } else if (generationStatus.status === "failed") {
+      setError(generationStatus.error || "Workflow generation failed");
+      setStep("prompt");
+      setGenerationJobId(null);
     }
-  }, [generationStatus.status, generationStatus.workflowId, generationStatus.error])
-
+  }, [
+    generationStatus.status,
+    generationStatus.workflowId,
+    generationStatus.error,
+  ]);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
+    e.preventDefault();
+
     // Validate
     if (!validation.valid) {
-      setError(validation.errors[0])
-      return
+      setError(validation.errors[0]);
+      return;
     }
 
-    setError(null)
+    setError(null);
     const workflow = await submission.submitWorkflow(
       workflowForm.formData,
       workflowSteps.steps,
@@ -117,21 +139,25 @@ export default function NewWorkflowPage() {
       workflowForm.formFieldsData,
       generatedTemplateId,
       setGeneratedTemplateId,
-      false
-    )
-    
+      false,
+    );
+
     if (workflow) {
-      router.push('/dashboard/workflows')
+      router.push("/dashboard/workflows");
     }
-  }
+  };
 
   // Creating Step
-  if (step === 'creating') {
+  if (step === "creating") {
     return (
       <div>
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Creating Your Lead Magnet</h1>
-          <p className="text-gray-600">AI is generating your lead magnet configuration...</p>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Creating Your Lead Magnet
+          </h1>
+          <p className="text-gray-600">
+            AI is generating your lead magnet configuration...
+          </p>
         </div>
 
         {error && (
@@ -146,10 +172,12 @@ export default function NewWorkflowPage() {
               <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-purple-600"></div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  {aiGeneration.generationStatus || 'Creating your lead magnet...'}
+                  {aiGeneration.generationStatus ||
+                    "Creating your lead magnet..."}
                 </h3>
                 <p className="text-sm text-gray-600">
-                  This may take a minute. We&apos;ll automatically take you to the edit page when it&apos;s ready.
+                  This may take a minute. We&apos;ll automatically take you to
+                  the edit page when it&apos;s ready.
                 </p>
                 {generationJobId && (
                   <p className="text-xs text-gray-500 mt-2 font-mono">
@@ -161,16 +189,21 @@ export default function NewWorkflowPage() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   // Prompt Step
-  if (step === 'prompt') {
+  if (step === "prompt") {
     return (
       <div>
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Create Lead Magnet</h1>
-          <p className="text-gray-600">Describe what you want to build, and AI will generate everything for you</p>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Create Lead Magnet
+          </h1>
+          <p className="text-gray-600">
+            Describe what you want to build, and AI will generate everything for
+            you
+          </p>
         </div>
 
         {error && (
@@ -182,13 +215,16 @@ export default function NewWorkflowPage() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-6 mb-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center">
-              <FiZap className={`w-5 h-5 mr-2 text-purple-600 ${aiGeneration.isGenerating ? 'animate-pulse' : ''}`} />
+              <FiZap
+                className={`w-5 h-5 mr-2 text-purple-600 ${aiGeneration.isGenerating ? "animate-pulse" : ""}`}
+              />
               What do you want to build?
             </h3>
             <p className="text-sm text-gray-600 mb-4">
-              Describe your lead magnet idea. AI will generate the name, description, research instructions, and template HTML for you.
+              Describe your lead magnet idea. AI will generate the name,
+              description, research instructions, and template HTML for you.
             </p>
-            
+
             <div className="space-y-4">
               <textarea
                 value={prompt}
@@ -198,14 +234,16 @@ export default function NewWorkflowPage() {
                 rows={6}
                 disabled={aiGeneration.isGenerating}
               />
-              
+
               {aiGeneration.generationStatus && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-3"></div>
-                  <span className="text-sm text-blue-800 font-medium">{aiGeneration.generationStatus}</span>
+                  <span className="text-sm text-blue-800 font-medium">
+                    {aiGeneration.generationStatus}
+                  </span>
                 </div>
               )}
-              
+
               <button
                 type="button"
                 onClick={handleGenerateWithAI}
@@ -228,7 +266,7 @@ export default function NewWorkflowPage() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   // Form Step - Show all generated fields
@@ -236,7 +274,9 @@ export default function NewWorkflowPage() {
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Create Lead Magnet</h1>
-        <p className="text-gray-600">Review and edit the generated configuration</p>
+        <p className="text-gray-600">
+          Review and edit the generated configuration
+        </p>
       </div>
 
       {error && (
@@ -253,61 +293,82 @@ export default function NewWorkflowPage() {
 
       {/* Info Box */}
       <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h3 className="text-sm font-semibold text-blue-900 mb-2">Processing Modes</h3>
+        <h3 className="text-sm font-semibold text-blue-900 mb-2">
+          Processing Modes
+        </h3>
         <p className="text-sm text-blue-800 mb-2">
           Choose how your lead magnet is generated:
         </p>
         <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-          <li><strong>Research + HTML:</strong> AI generates personalized research, then converts it to styled HTML</li>
-          <li><strong>Research Only:</strong> AI generates research report (markdown format)</li>
-          <li><strong>HTML Only:</strong> AI generates styled HTML directly from form submission</li>
-          <li><strong>Text Only:</strong> Simple text output from form submission</li>
+          <li>
+            <strong>Research + HTML:</strong> AI generates personalized
+            research, then converts it to styled HTML
+          </li>
+          <li>
+            <strong>Research Only:</strong> AI generates research report
+            (markdown format)
+          </li>
+          <li>
+            <strong>HTML Only:</strong> AI generates styled HTML directly from
+            form submission
+          </li>
+          <li>
+            <strong>Text Only:</strong> Simple text output from form submission
+          </li>
         </ul>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 space-y-6" data-tour="workflow-form">
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white rounded-lg shadow p-6 space-y-6"
+        data-tour="workflow-form"
+      >
         {/* Workflow Basic Fields */}
         <WorkflowBasicFields
           formData={workflowForm.formData}
           onChange={workflowForm.updateFormData}
         />
 
-          {/* Workflow Steps */}
-          <div className="space-y-4 pt-6 border-t" data-tour="workflow-steps">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">Workflow Steps</h2>
-              <button
-                type="button"
+        {/* Workflow Steps */}
+        <div className="space-y-4 pt-6 border-t" data-tour="workflow-steps">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-gray-900">
+              Workflow Steps
+            </h2>
+            <button
+              type="button"
               onClick={workflowSteps.addStep}
-                className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors touch-target"
-              >
-                <FiPlus className="w-4 h-4" />
-                Add Step
-              </button>
-            </div>
-            <p className="text-sm text-gray-600 mb-4">
-              Define the steps your workflow will execute. Each step receives context from all previous steps.
-            </p>
-            
-            <div className="space-y-4">
+              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors touch-target"
+            >
+              <FiPlus className="w-4 h-4" />
+              Add Step
+            </button>
+          </div>
+          <p className="text-sm text-gray-600 mb-4">
+            Define the steps your workflow will execute. Each step receives
+            context from all previous steps.
+          </p>
+
+          <div className="space-y-4">
             {workflowSteps.steps.map((step, index) => (
-                <WorkflowStepEditor
-                  key={index}
-                  step={step}
-                  index={index}
+              <WorkflowStepEditor
+                key={index}
+                step={step}
+                index={index}
                 totalSteps={workflowSteps.steps.length}
                 allSteps={workflowSteps.steps}
                 onChange={workflowSteps.updateStep}
                 onDelete={workflowSteps.deleteStep}
                 onMoveUp={workflowSteps.moveStepUp}
                 onMoveDown={workflowSteps.moveStepDown}
-                />
-              ))}
-            </div>
+              />
+            ))}
           </div>
+        </div>
 
         {/* Template Editor */}
-        {(workflowForm.formData.template_id || workflowForm.templateData.html_content.trim()) && (
+        {(workflowForm.formData.template_id ||
+          workflowForm.templateData.html_content.trim()) && (
           <TemplateEditor
             templateData={workflowForm.templateData}
             onChange={workflowForm.updateTemplateData}
@@ -337,10 +398,10 @@ export default function NewWorkflowPage() {
             data-tour="create-workflow-button"
           >
             <FiSave className="w-5 h-5 mr-2" />
-            {submission.isSubmitting ? 'Creating...' : 'Create Lead Magnet'}
+            {submission.isSubmitting ? "Creating..." : "Create Lead Magnet"}
           </button>
         </div>
       </form>
     </div>
-  )
+  );
 }

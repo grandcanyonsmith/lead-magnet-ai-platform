@@ -1,59 +1,61 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { isAuthenticated } from '@/lib/auth'
-import { BillingClient } from '@/lib/api/billing.client'
-import { FiCheck, FiDollarSign, FiZap } from 'react-icons/fi'
-import { getIdToken } from '@/lib/auth'
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { isAuthenticated } from "@/lib/auth";
+import { BillingClient } from "@/lib/api/billing.client";
+import { FiCheck, FiDollarSign, FiZap } from "react-icons/fi";
+import { getIdToken } from "@/lib/auth";
 
 export default function SetupBillingPage() {
-  const router = useRouter()
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [authChecked, setAuthChecked] = useState(false)
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
-      const authenticated = await isAuthenticated()
+      const authenticated = await isAuthenticated();
       if (!authenticated) {
-        router.push('/auth/login?redirect=/setup-billing')
-        return
+        router.push("/auth/login?redirect=/setup-billing");
+        return;
       }
-      setAuthChecked(true)
-    }
-    checkAuth()
-  }, [router])
+      setAuthChecked(true);
+    };
+    checkAuth();
+  }, [router]);
 
   const handleStartSubscription = async () => {
-    setLoading(true)
-    setError('')
+    setLoading(true);
+    setError("");
 
     try {
-      const token = await getIdToken()
+      const token = await getIdToken();
       if (!token) {
-        throw new Error('Not authenticated')
+        throw new Error("Not authenticated");
       }
 
       const billingClient = new BillingClient({
         getToken: () => token,
-      })
+      });
 
       // Create checkout session
-      const baseUrl = window.location.origin
+      const baseUrl = window.location.origin;
       const { checkout_url } = await billingClient.createCheckoutSession(
         `${baseUrl}/dashboard?billing=success`,
-        `${baseUrl}/setup-billing`
-      )
+        `${baseUrl}/setup-billing`,
+      );
 
       // Redirect to Stripe Checkout
-      window.location.href = checkout_url
+      window.location.href = checkout_url;
     } catch (err: any) {
-      console.error('Failed to create checkout session:', err)
-      setError(err.message || 'Failed to create checkout session. Please try again.')
-      setLoading(false)
+      console.error("Failed to create checkout session:", err);
+      setError(
+        err.message || "Failed to create checkout session. Please try again.",
+      );
+      setLoading(false);
     }
-  }
+  };
 
   if (!authChecked) {
     return (
@@ -62,7 +64,7 @@ export default function SetupBillingPage() {
           <p className="text-gray-600">Loading...</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -100,25 +102,33 @@ export default function SetupBillingPage() {
                 <div className="flex items-start">
                   <FiCheck className="w-6 h-6 text-green-500 mt-0.5 mr-3 flex-shrink-0" />
                   <div>
-                    <p className="font-medium text-gray-900">$10 included usage per month</p>
+                    <p className="font-medium text-gray-900">
+                      $10 included usage per month
+                    </p>
                     <p className="text-sm text-gray-600">
-                      Equivalent to ~20,000 AI-generated words or ~5 complete workflows
+                      Equivalent to ~20,000 AI-generated words or ~5 complete
+                      workflows
                     </p>
                   </div>
                 </div>
                 <div className="flex items-start">
                   <FiCheck className="w-6 h-6 text-green-500 mt-0.5 mr-3 flex-shrink-0" />
                   <div>
-                    <p className="font-medium text-gray-900">2x markup on OpenAI costs</p>
+                    <p className="font-medium text-gray-900">
+                      2x markup on OpenAI costs
+                    </p>
                     <p className="text-sm text-gray-600">
-                      Usage beyond included allowance is charged at 2x the actual OpenAI API cost
+                      Usage beyond included allowance is charged at 2x the
+                      actual OpenAI API cost
                     </p>
                   </div>
                 </div>
                 <div className="flex items-start">
                   <FiZap className="w-6 h-6 text-blue-500 mt-0.5 mr-3 flex-shrink-0" />
                   <div>
-                    <p className="font-medium text-gray-900">Unlimited workflows & forms</p>
+                    <p className="font-medium text-gray-900">
+                      Unlimited workflows & forms
+                    </p>
                     <p className="text-sm text-gray-600">
                       Create as many lead magnets as you need
                     </p>
@@ -127,7 +137,9 @@ export default function SetupBillingPage() {
                 <div className="flex items-start">
                   <FiZap className="w-6 h-6 text-blue-500 mt-0.5 mr-3 flex-shrink-0" />
                   <div>
-                    <p className="font-medium text-gray-900">Advanced AI models</p>
+                    <p className="font-medium text-gray-900">
+                      Advanced AI models
+                    </p>
                     <p className="text-sm text-gray-600">
                       Access to GPT-4, Claude, and other state-of-the-art models
                     </p>
@@ -136,9 +148,12 @@ export default function SetupBillingPage() {
                 <div className="flex items-start">
                   <FiDollarSign className="w-6 h-6 text-purple-500 mt-0.5 mr-3 flex-shrink-0" />
                   <div>
-                    <p className="font-medium text-gray-900">Transparent billing</p>
+                    <p className="font-medium text-gray-900">
+                      Transparent billing
+                    </p>
                     <p className="text-sm text-gray-600">
-                      Track your usage and costs in real-time from your dashboard
+                      Track your usage and costs in real-time from your
+                      dashboard
                     </p>
                   </div>
                 </div>
@@ -148,9 +163,11 @@ export default function SetupBillingPage() {
             {/* Billing Info */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8">
               <p className="text-sm text-blue-800">
-                <strong>How billing works:</strong> You&apos;ll be charged $29/month for your base subscription.
-                This includes $10 of usage. If you exceed $10 in usage during a billing period,
-                you&apos;ll be charged for the overage at the end of the month. Cancel anytime.
+                <strong>How billing works:</strong> You&apos;ll be charged
+                $29/month for your base subscription. This includes $10 of
+                usage. If you exceed $10 in usage during a billing period,
+                you&apos;ll be charged for the overage at the end of the month.
+                Cancel anytime.
               </p>
             </div>
 
@@ -208,7 +225,7 @@ export default function SetupBillingPage() {
         {/* Skip Option */}
         <div className="text-center mt-8">
           <button
-            onClick={() => router.push('/dashboard')}
+            onClick={() => router.push("/dashboard")}
             className="text-gray-600 hover:text-gray-900 underline"
           >
             I&apos;ll set this up later
@@ -216,5 +233,5 @@ export default function SetupBillingPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

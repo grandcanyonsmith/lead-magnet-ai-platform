@@ -1,8 +1,8 @@
-import { db, normalizeQueryResult } from '../utils/db';
-import { RouteResponse } from '../routes';
-import { logger } from '../utils/logger';
-import { env } from '../utils/env';
-import { webhooksController } from './webhooks';
+import { db, normalizeQueryResult } from "../utils/db";
+import { RouteResponse } from "../routes";
+import { logger } from "../utils/logger";
+import { env } from "../utils/env";
+import { webhooksController } from "./webhooks";
 
 const WEBHOOK_LOGS_TABLE = env.webhookLogsTable;
 
@@ -19,10 +19,13 @@ class WebhookLogsController {
   /**
    * List webhook logs with filtering and pagination
    */
-  async list(tenantId: string, query: WebhookLogQueryParams = {}): Promise<RouteResponse> {
+  async list(
+    tenantId: string,
+    query: WebhookLogQueryParams = {},
+  ): Promise<RouteResponse> {
     const limit = Math.min(query.limit || 50, 100);
     const offset = query.offset || 0;
-    const statusFilter = query.status || 'all';
+    const statusFilter = query.status || "all";
 
     try {
       let logs: any[] = [];
@@ -31,11 +34,11 @@ class WebhookLogsController {
       if (tenantId) {
         const result = await db.query(
           WEBHOOK_LOGS_TABLE,
-          'gsi_tenant_created',
-          'tenant_id = :tenant_id',
-          { ':tenant_id': tenantId },
+          "gsi_tenant_created",
+          "tenant_id = :tenant_id",
+          { ":tenant_id": tenantId },
           undefined,
-          limit + offset + 1 // Fetch enough to handle pagination
+          limit + offset + 1, // Fetch enough to handle pagination
         );
         logs = normalizeQueryResult(result);
         // Apply offset manually since DynamoDB query doesn't support offset directly
@@ -51,20 +54,29 @@ class WebhookLogsController {
 
       // Filter by endpoint if provided
       if (query.endpoint) {
-        logs = logs.filter(log => log.endpoint === query.endpoint);
+        logs = logs.filter((log) => log.endpoint === query.endpoint);
       }
 
       // Filter by webhook_token if provided
       if (query.webhook_token) {
-        logs = logs.filter(log => log.webhook_token === query.webhook_token);
+        logs = logs.filter((log) => log.webhook_token === query.webhook_token);
       }
 
       // Filter by status
-      if (statusFilter !== 'all') {
-        if (statusFilter === 'success') {
-          logs = logs.filter(log => !log.error_message && log.response_status && log.response_status < 400);
-        } else if (statusFilter === 'error') {
-          logs = logs.filter(log => log.error_message || (log.response_status && log.response_status >= 400));
+      if (statusFilter !== "all") {
+        if (statusFilter === "success") {
+          logs = logs.filter(
+            (log) =>
+              !log.error_message &&
+              log.response_status &&
+              log.response_status < 400,
+          );
+        } else if (statusFilter === "error") {
+          logs = logs.filter(
+            (log) =>
+              log.error_message ||
+              (log.response_status && log.response_status >= 400),
+          );
         }
       }
 
@@ -88,7 +100,7 @@ class WebhookLogsController {
         },
       };
     } catch (error: any) {
-      logger.error('[WebhookLogs] Failed to list logs', {
+      logger.error("[WebhookLogs] Failed to list logs", {
         error: error.message,
         errorStack: error.stack,
         tenantId,
@@ -107,7 +119,7 @@ class WebhookLogsController {
       if (!log) {
         return {
           statusCode: 404,
-          body: { error: 'Webhook log not found' },
+          body: { error: "Webhook log not found" },
         };
       }
 
@@ -115,7 +127,7 @@ class WebhookLogsController {
       if (log.tenant_id && log.tenant_id !== tenantId) {
         return {
           statusCode: 403,
-          body: { error: 'You don\'t have permission to access this log' },
+          body: { error: "You don't have permission to access this log" },
         };
       }
 
@@ -124,7 +136,7 @@ class WebhookLogsController {
         body: log,
       };
     } catch (error: any) {
-      logger.error('[WebhookLogs] Failed to get log', {
+      logger.error("[WebhookLogs] Failed to get log", {
         error: error.message,
         errorStack: error.stack,
         logId,
@@ -144,7 +156,7 @@ class WebhookLogsController {
       if (!log) {
         return {
           statusCode: 404,
-          body: { error: 'Webhook log not found' },
+          body: { error: "Webhook log not found" },
         };
       }
 
@@ -152,47 +164,50 @@ class WebhookLogsController {
       if (log.tenant_id && log.tenant_id !== tenantId) {
         return {
           statusCode: 403,
-          body: { error: 'You don\'t have permission to retry this webhook' },
+          body: { error: "You don't have permission to retry this webhook" },
         };
       }
 
       // Parse request body
       let requestBody: any;
       try {
-        requestBody = typeof log.request_body === 'string' 
-          ? JSON.parse(log.request_body) 
-          : log.request_body;
+        requestBody =
+          typeof log.request_body === "string"
+            ? JSON.parse(log.request_body)
+            : log.request_body;
       } catch (e) {
         requestBody = log.request_body;
       }
 
       // Retry based on endpoint
-      if (log.endpoint === '/v1/webhooks/:token' && log.webhook_token) {
+      if (log.endpoint === "/v1/webhooks/:token" && log.webhook_token) {
         // Retry main webhook
-        const headers = log.request_headers 
-          ? (typeof log.request_headers === 'string' ? JSON.parse(log.request_headers) : log.request_headers)
+        const headers = log.request_headers
+          ? typeof log.request_headers === "string"
+            ? JSON.parse(log.request_headers)
+            : log.request_headers
           : {};
         const result = await webhooksController.handleWebhook(
           log.webhook_token,
           requestBody,
-          log.source_ip || '',
-          headers
+          log.source_ip || "",
+          headers,
         );
         return {
           statusCode: 200,
           body: {
-            message: 'Webhook retried successfully',
+            message: "Webhook retried successfully",
             result,
           },
         };
       } else {
         return {
           statusCode: 400,
-          body: { error: 'Unknown webhook endpoint, cannot retry' },
+          body: { error: "Unknown webhook endpoint, cannot retry" },
         };
       }
     } catch (error: any) {
-      logger.error('[WebhookLogs] Failed to retry webhook', {
+      logger.error("[WebhookLogs] Failed to retry webhook", {
         error: error.message,
         errorStack: error.stack,
         logId,
@@ -207,4 +222,3 @@ class WebhookLogsController {
 }
 
 export const webhookLogsController = new WebhookLogsController();
-

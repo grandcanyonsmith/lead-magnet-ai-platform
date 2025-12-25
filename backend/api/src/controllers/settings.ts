@@ -1,28 +1,40 @@
-import { db } from '../utils/db';
-import { validate, updateSettingsSchema } from '../utils/validation';
-import { RouteResponse } from '../routes';
-import { RequestContext } from '../routes/router';
-import { getCustomerId } from '../utils/rbac';
-import { generateWebhookToken } from '../utils/webhookToken';
-import { logger } from '../utils/logger';
-import { ApiError, InternalServerError, ValidationError } from '../utils/errors';
-import { env } from '../utils/env';
+import { db } from "../utils/db";
+import { validate, updateSettingsSchema } from "../utils/validation";
+import { RouteResponse } from "../routes";
+import { RequestContext } from "../routes/router";
+import { getCustomerId } from "../utils/rbac";
+import { generateWebhookToken } from "../utils/webhookToken";
+import { logger } from "../utils/logger";
+import {
+  ApiError,
+  InternalServerError,
+  ValidationError,
+} from "../utils/errors";
+import { env } from "../utils/env";
 
 const USER_SETTINGS_TABLE = env.userSettingsTable;
 const API_URL = env.apiUrl || env.apiGatewayUrl;
 
 class SettingsController {
-  async get(_params: Record<string, string>, _body: any, _query: Record<string, string | undefined>, _tenantId: string | undefined, context?: RequestContext): Promise<RouteResponse> {
+  async get(
+    _params: Record<string, string>,
+    _body: any,
+    _query: Record<string, string | undefined>,
+    _tenantId: string | undefined,
+    context?: RequestContext,
+  ): Promise<RouteResponse> {
     try {
       if (!USER_SETTINGS_TABLE) {
-        throw new InternalServerError('USER_SETTINGS_TABLE environment variable is not configured');
+        throw new InternalServerError(
+          "USER_SETTINGS_TABLE environment variable is not configured",
+        );
       }
 
       const customerId = getCustomerId(context);
       // Use customer_id as tenant_id for backward compatibility (settings table uses tenant_id as key)
       const tenantId = customerId;
-      
-      logger.debug('[SettingsController.get] Fetching settings', {
+
+      logger.debug("[SettingsController.get] Fetching settings", {
         customerId,
         tenantId,
         hasContext: !!context,
@@ -33,12 +45,12 @@ class SettingsController {
 
       const now = new Date().toISOString();
       const defaultSettings = {
-        organization_name: '',
-        contact_email: '',
-        default_ai_model: 'gpt-5.1-codex',
+        organization_name: "",
+        contact_email: "",
+        default_ai_model: "gpt-5.1-codex",
         api_usage_limit: 1000000,
         api_usage_current: 0,
-        billing_tier: 'free',
+        billing_tier: "free",
         onboarding_survey_completed: false,
         onboarding_survey_responses: {},
         onboarding_checklist: {
@@ -51,7 +63,9 @@ class SettingsController {
 
       // If settings don't exist, create default settings
       if (!settings) {
-        logger.info('[SettingsController.get] Creating default settings', { tenantId });
+        logger.info("[SettingsController.get] Creating default settings", {
+          tenantId,
+        });
         settings = {
           tenant_id: tenantId,
           ...defaultSettings,
@@ -65,12 +79,14 @@ class SettingsController {
           ...defaultSettings,
           ...settings,
           onboarding_survey_responses:
-            settings.onboarding_survey_responses && typeof settings.onboarding_survey_responses === 'object'
+            settings.onboarding_survey_responses &&
+            typeof settings.onboarding_survey_responses === "object"
               ? settings.onboarding_survey_responses
               : {},
           onboarding_checklist: {
             ...defaultSettings.onboarding_checklist,
-            ...(settings.onboarding_checklist && typeof settings.onboarding_checklist === 'object'
+            ...(settings.onboarding_checklist &&
+            typeof settings.onboarding_checklist === "object"
               ? settings.onboarding_checklist
               : {}),
           },
@@ -87,20 +103,27 @@ class SettingsController {
         }
 
         // Nested fixes even when key exists but is malformed
-        if (!settings.onboarding_checklist || typeof settings.onboarding_checklist !== 'object') {
+        if (
+          !settings.onboarding_checklist ||
+          typeof settings.onboarding_checklist !== "object"
+        ) {
           updates.onboarding_checklist = merged.onboarding_checklist;
         } else {
           const existingChecklist = settings.onboarding_checklist || {};
-          const hasAllChecklistKeys = Object.keys(defaultSettings.onboarding_checklist).every(
-            (k) => (existingChecklist as any)[k] !== undefined
-          );
+          const hasAllChecklistKeys = Object.keys(
+            defaultSettings.onboarding_checklist,
+          ).every((k) => (existingChecklist as any)[k] !== undefined);
           if (!hasAllChecklistKeys) {
             updates.onboarding_checklist = merged.onboarding_checklist;
           }
         }
 
-        if (!settings.onboarding_survey_responses || typeof settings.onboarding_survey_responses !== 'object') {
-          updates.onboarding_survey_responses = merged.onboarding_survey_responses;
+        if (
+          !settings.onboarding_survey_responses ||
+          typeof settings.onboarding_survey_responses !== "object"
+        ) {
+          updates.onboarding_survey_responses =
+            merged.onboarding_survey_responses;
         }
 
         if (!Array.isArray(settings.folders)) {
@@ -112,10 +135,14 @@ class SettingsController {
         }
 
         if (Object.keys(updates).length > 0) {
-          settings = await db.update(USER_SETTINGS_TABLE, { tenant_id: tenantId }, {
-            ...updates,
-            updated_at: now,
-          });
+          settings = await db.update(
+            USER_SETTINGS_TABLE,
+            { tenant_id: tenantId },
+            {
+              ...updates,
+              updated_at: now,
+            },
+          );
         } else {
           settings = merged;
         }
@@ -123,12 +150,18 @@ class SettingsController {
 
       // Auto-generate webhook_token if missing
       if (!settings?.webhook_token) {
-        logger.info('[SettingsController.get] Generating webhook token', { tenantId });
-        const webhookToken = generateWebhookToken();
-        settings = await db.update(USER_SETTINGS_TABLE, { tenant_id: tenantId }, {
-          webhook_token: webhookToken,
-          updated_at: now,
+        logger.info("[SettingsController.get] Generating webhook token", {
+          tenantId,
         });
+        const webhookToken = generateWebhookToken();
+        settings = await db.update(
+          USER_SETTINGS_TABLE,
+          { tenant_id: tenantId },
+          {
+            webhook_token: webhookToken,
+            updated_at: now,
+          },
+        );
       }
 
       // Construct webhook URL
@@ -147,44 +180,65 @@ class SettingsController {
       if (error instanceof ApiError) {
         throw error;
       }
-      logger.error('[SettingsController.get] Unexpected error', {
+      logger.error("[SettingsController.get] Unexpected error", {
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
         hasContext: !!context,
         hasAuth: !!context?.auth,
       });
-      throw new InternalServerError('Failed to retrieve settings', {
+      throw new InternalServerError("Failed to retrieve settings", {
         originalError: error instanceof Error ? error.message : String(error),
       });
     }
   }
 
-  async update(_params: Record<string, string>, body: any, _query: Record<string, string | undefined>, _tenantId: string | undefined, context?: RequestContext): Promise<RouteResponse> {
+  async update(
+    _params: Record<string, string>,
+    body: any,
+    _query: Record<string, string | undefined>,
+    _tenantId: string | undefined,
+    context?: RequestContext,
+  ): Promise<RouteResponse> {
     try {
       if (!USER_SETTINGS_TABLE) {
-        throw new InternalServerError('USER_SETTINGS_TABLE environment variable is not configured');
+        throw new InternalServerError(
+          "USER_SETTINGS_TABLE environment variable is not configured",
+        );
       }
 
       // Validate context and authentication
       if (!context) {
-        logger.error('[SettingsController.update] Missing request context');
-        throw new ApiError('Request context is missing', 500, 'MISSING_CONTEXT');
+        logger.error("[SettingsController.update] Missing request context");
+        throw new ApiError(
+          "Request context is missing",
+          500,
+          "MISSING_CONTEXT",
+        );
       }
 
       if (!context.auth) {
-        logger.error('[SettingsController.update] Missing authentication context', {
-          hasContext: !!context,
-        });
-        throw new ApiError('Authentication required. Please sign in to access this resource.', 401, 'AUTHENTICATION_REQUIRED', {
-          message: 'User authentication context is missing. This may indicate a problem with the superadmin account configuration.',
-        });
+        logger.error(
+          "[SettingsController.update] Missing authentication context",
+          {
+            hasContext: !!context,
+          },
+        );
+        throw new ApiError(
+          "Authentication required. Please sign in to access this resource.",
+          401,
+          "AUTHENTICATION_REQUIRED",
+          {
+            message:
+              "User authentication context is missing. This may indicate a problem with the superadmin account configuration.",
+          },
+        );
       }
 
       const customerId = getCustomerId(context);
       // Use customer_id as tenant_id for backward compatibility (settings table uses tenant_id as key)
       const tenantId = customerId;
-      
-      logger.debug('[SettingsController.update] Updating settings', {
+
+      logger.debug("[SettingsController.update] Updating settings", {
         customerId,
         tenantId,
         role: context.auth.role,
@@ -198,13 +252,24 @@ class SettingsController {
       try {
         data = validate(updateSettingsSchema, body);
       } catch (validationError) {
-        logger.warn('[SettingsController.update] Validation error', {
-          error: validationError instanceof Error ? validationError.message : String(validationError),
+        logger.warn("[SettingsController.update] Validation error", {
+          error:
+            validationError instanceof Error
+              ? validationError.message
+              : String(validationError),
           body,
         });
         throw new ValidationError(
-          validationError instanceof Error ? validationError.message : 'Invalid settings data',
-          { body, validationError: validationError instanceof Error ? validationError.message : String(validationError) }
+          validationError instanceof Error
+            ? validationError.message
+            : "Invalid settings data",
+          {
+            body,
+            validationError:
+              validationError instanceof Error
+                ? validationError.message
+                : String(validationError),
+          },
         );
       }
 
@@ -213,13 +278,17 @@ class SettingsController {
       try {
         existing = await db.get(USER_SETTINGS_TABLE, { tenant_id: tenantId });
       } catch (dbError) {
-        logger.error('[SettingsController.update] Database error fetching settings', {
-          error: dbError instanceof Error ? dbError.message : String(dbError),
-          tenantId,
-          table: USER_SETTINGS_TABLE,
-        });
-        throw new InternalServerError('Failed to fetch existing settings', {
-          originalError: dbError instanceof Error ? dbError.message : String(dbError),
+        logger.error(
+          "[SettingsController.update] Database error fetching settings",
+          {
+            error: dbError instanceof Error ? dbError.message : String(dbError),
+            tenantId,
+            table: USER_SETTINGS_TABLE,
+          },
+        );
+        throw new InternalServerError("Failed to fetch existing settings", {
+          originalError:
+            dbError instanceof Error ? dbError.message : String(dbError),
           tenantId,
         });
       }
@@ -228,7 +297,9 @@ class SettingsController {
       try {
         if (!existing) {
           // Create new settings
-          logger.info('[SettingsController.update] Creating new settings', { tenantId });
+          logger.info("[SettingsController.update] Creating new settings", {
+            tenantId,
+          });
           existing = {
             tenant_id: tenantId,
             ...data,
@@ -238,21 +309,32 @@ class SettingsController {
           await db.put(USER_SETTINGS_TABLE, existing);
         } else {
           // Update existing
-          logger.info('[SettingsController.update] Updating existing settings', { tenantId });
-          existing = await db.update(USER_SETTINGS_TABLE, { tenant_id: tenantId }, {
-            ...data,
-            updated_at: new Date().toISOString(),
-          });
+          logger.info(
+            "[SettingsController.update] Updating existing settings",
+            { tenantId },
+          );
+          existing = await db.update(
+            USER_SETTINGS_TABLE,
+            { tenant_id: tenantId },
+            {
+              ...data,
+              updated_at: new Date().toISOString(),
+            },
+          );
         }
       } catch (dbError) {
-        logger.error('[SettingsController.update] Database error saving settings', {
-          error: dbError instanceof Error ? dbError.message : String(dbError),
-          tenantId,
-          table: USER_SETTINGS_TABLE,
-          isNew: !existing,
-        });
-        throw new InternalServerError('Failed to save settings', {
-          originalError: dbError instanceof Error ? dbError.message : String(dbError),
+        logger.error(
+          "[SettingsController.update] Database error saving settings",
+          {
+            error: dbError instanceof Error ? dbError.message : String(dbError),
+            tenantId,
+            table: USER_SETTINGS_TABLE,
+            isNew: !existing,
+          },
+        );
+        throw new InternalServerError("Failed to save settings", {
+          originalError:
+            dbError instanceof Error ? dbError.message : String(dbError),
           tenantId,
         });
       }
@@ -260,17 +342,27 @@ class SettingsController {
       // Ensure webhook_token exists
       if (!existing?.webhook_token) {
         try {
-          logger.info('[SettingsController.update] Generating webhook token', { tenantId });
-          const webhookToken = generateWebhookToken();
-          existing = await db.update(USER_SETTINGS_TABLE, { tenant_id: tenantId }, {
-            webhook_token: webhookToken,
-            updated_at: new Date().toISOString(),
-          });
-        } catch (dbError) {
-          logger.error('[SettingsController.update] Database error updating webhook token', {
-            error: dbError instanceof Error ? dbError.message : String(dbError),
+          logger.info("[SettingsController.update] Generating webhook token", {
             tenantId,
           });
+          const webhookToken = generateWebhookToken();
+          existing = await db.update(
+            USER_SETTINGS_TABLE,
+            { tenant_id: tenantId },
+            {
+              webhook_token: webhookToken,
+              updated_at: new Date().toISOString(),
+            },
+          );
+        } catch (dbError) {
+          logger.error(
+            "[SettingsController.update] Database error updating webhook token",
+            {
+              error:
+                dbError instanceof Error ? dbError.message : String(dbError),
+              tenantId,
+            },
+          );
           // Don't fail the request if webhook token generation fails, just log it
         }
       }
@@ -280,7 +372,7 @@ class SettingsController {
         ? `${API_URL}/v1/webhooks/${existing.webhook_token}`
         : null;
 
-      logger.info('[SettingsController.update] Settings updated successfully', {
+      logger.info("[SettingsController.update] Settings updated successfully", {
         tenantId,
         updatedFields: Object.keys(data),
       });
@@ -297,9 +389,9 @@ class SettingsController {
       if (error instanceof ApiError) {
         throw error;
       }
-      
+
       // Log and wrap unexpected errors
-      logger.error('[SettingsController.update] Unexpected error', {
+      logger.error("[SettingsController.update] Unexpected error", {
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
         hasContext: !!context,
@@ -307,29 +399,42 @@ class SettingsController {
         customerId: context?.auth?.customerId,
         role: context?.auth?.role,
       });
-      
-      throw new InternalServerError('An error occurred while updating settings', {
-        originalError: error instanceof Error ? error.message : String(error),
-        customerId: context?.auth?.customerId,
-        role: context?.auth?.role,
-      });
+
+      throw new InternalServerError(
+        "An error occurred while updating settings",
+        {
+          originalError: error instanceof Error ? error.message : String(error),
+          customerId: context?.auth?.customerId,
+          role: context?.auth?.role,
+        },
+      );
     }
   }
 
   /**
    * Regenerate webhook token for a user
    */
-  async regenerateWebhookToken(_params: Record<string, string>, _body: any, _query: Record<string, string | undefined>, _tenantId: string | undefined, context?: RequestContext): Promise<RouteResponse> {
+  async regenerateWebhookToken(
+    _params: Record<string, string>,
+    _body: any,
+    _query: Record<string, string | undefined>,
+    _tenantId: string | undefined,
+    context?: RequestContext,
+  ): Promise<RouteResponse> {
     const customerId = getCustomerId(context);
     // Use customer_id as tenant_id for backward compatibility (settings table uses tenant_id as key)
     const tenantId = customerId;
-    
+
     const webhookToken = generateWebhookToken();
-    
-    const updated = await db.update(USER_SETTINGS_TABLE, { tenant_id: tenantId }, {
-      webhook_token: webhookToken,
-      updated_at: new Date().toISOString(),
-    });
+
+    const updated = await db.update(
+      USER_SETTINGS_TABLE,
+      { tenant_id: tenantId },
+      {
+        webhook_token: webhookToken,
+        updated_at: new Date().toISOString(),
+      },
+    );
 
     const webhookUrl = `${API_URL}/v1/webhooks/${webhookToken}`;
 
@@ -338,7 +443,7 @@ class SettingsController {
       body: {
         ...updated,
         webhook_url: webhookUrl,
-        message: 'Webhook token regenerated successfully',
+        message: "Webhook token regenerated successfully",
       },
     };
   }
@@ -346,25 +451,35 @@ class SettingsController {
   /**
    * Get webhook URL for a user
    */
-  async getWebhookUrl(_params: Record<string, string>, _body: any, _query: Record<string, string | undefined>, _tenantId: string | undefined, context?: RequestContext): Promise<RouteResponse> {
+  async getWebhookUrl(
+    _params: Record<string, string>,
+    _body: any,
+    _query: Record<string, string | undefined>,
+    _tenantId: string | undefined,
+    context?: RequestContext,
+  ): Promise<RouteResponse> {
     const customerId = getCustomerId(context);
     // Use customer_id as tenant_id for backward compatibility (settings table uses tenant_id as key)
     const tenantId = customerId;
-    
+
     const settings = await db.get(USER_SETTINGS_TABLE, { tenant_id: tenantId });
 
     if (!settings) {
-      throw new Error('Settings not found');
+      throw new Error("Settings not found");
     }
 
     // Auto-generate webhook_token if missing
     let webhookToken = settings.webhook_token;
     if (!webhookToken) {
       webhookToken = generateWebhookToken();
-      await db.update(USER_SETTINGS_TABLE, { tenant_id: tenantId }, {
-        webhook_token: webhookToken,
-        updated_at: new Date().toISOString(),
-      });
+      await db.update(
+        USER_SETTINGS_TABLE,
+        { tenant_id: tenantId },
+        {
+          webhook_token: webhookToken,
+          updated_at: new Date().toISOString(),
+        },
+      );
     }
 
     const webhookUrl = `${API_URL}/v1/webhooks/${webhookToken}`;

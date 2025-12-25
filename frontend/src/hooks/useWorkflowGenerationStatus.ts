@@ -3,10 +3,10 @@
  * Handles webhook completion events and polling fallback
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import { api } from '@/lib/api';
-import { logger } from '@/utils/logger';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { api } from "@/lib/api";
+import { logger } from "@/utils/logger";
 
 interface GenerationJob {
   jobId: string;
@@ -17,42 +17,44 @@ interface GenerationJob {
 
 export function useWorkflowGenerationStatus(jobId: string | null) {
   const router = useRouter();
-  const [status, setStatus] = useState<'pending' | 'processing' | 'completed' | 'failed' | null>(null);
+  const [status, setStatus] = useState<
+    "pending" | "processing" | "completed" | "failed" | null
+  >(null);
   const [workflowId, setWorkflowId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Listen for webhook completion events
   useEffect(() => {
-    if (!jobId || typeof window === 'undefined') return;
+    if (!jobId || typeof window === "undefined") return;
 
     const handleWebhookMessage = (event: MessageEvent) => {
-      if (event.data?.type === 'workflow_generation_completed') {
+      if (event.data?.type === "workflow_generation_completed") {
         const { job_id, workflow_id, status: eventStatus } = event.data;
-        
+
         if (job_id === jobId) {
-          logger.debug('Webhook completion received', {
-            context: 'WorkflowGenerationStatus',
+          logger.debug("Webhook completion received", {
+            context: "WorkflowGenerationStatus",
             data: { jobId, workflowId: workflow_id, status: eventStatus },
           });
 
-          if (eventStatus === 'completed' && workflow_id) {
-            setStatus('completed');
+          if (eventStatus === "completed" && workflow_id) {
+            setStatus("completed");
             setWorkflowId(workflow_id);
             // Navigate to workflow edit page
             router.push(`/dashboard/workflows/${workflow_id}/edit`);
-          } else if (eventStatus === 'failed') {
-            setStatus('failed');
-            setError(event.data.error_message || 'Workflow generation failed');
+          } else if (eventStatus === "failed") {
+            setStatus("failed");
+            setError(event.data.error_message || "Workflow generation failed");
           }
         }
       }
     };
 
-    window.addEventListener('message', handleWebhookMessage);
+    window.addEventListener("message", handleWebhookMessage);
 
     return () => {
-      window.removeEventListener('message', handleWebhookMessage);
+      window.removeEventListener("message", handleWebhookMessage);
     };
   }, [jobId, router]);
 
@@ -63,51 +65,60 @@ export function useWorkflowGenerationStatus(jobId: string | null) {
     try {
       // First check webhook endpoint (faster if webhook was received)
       try {
-        const webhookResponse = await fetch(`/api/webhooks/workflow-completion/${jobId}`);
+        const webhookResponse = await fetch(
+          `/api/webhooks/workflow-completion/${jobId}`,
+        );
         if (webhookResponse.ok) {
           const webhookData = await webhookResponse.json();
-          if (webhookData.status === 'completed' && webhookData.workflow_id) {
-            setStatus('completed');
+          if (webhookData.status === "completed" && webhookData.workflow_id) {
+            setStatus("completed");
             setWorkflowId(webhookData.workflow_id);
             router.push(`/dashboard/workflows/${webhookData.workflow_id}/edit`);
             return;
-          } else if (webhookData.status === 'failed') {
-            setStatus('failed');
-            setError(webhookData.error_message || 'Workflow generation failed');
+          } else if (webhookData.status === "failed") {
+            setStatus("failed");
+            setError(webhookData.error_message || "Workflow generation failed");
             return;
           }
         }
       } catch (webhookErr) {
         // Webhook endpoint not available, fall back to API
-        logger.debug('Webhook endpoint not available, using API', {
-          context: 'WorkflowGenerationStatus',
+        logger.debug("Webhook endpoint not available, using API", {
+          context: "WorkflowGenerationStatus",
           error: webhookErr,
         });
       }
 
       // Fall back to API status check
       const response = await api.getWorkflowGenerationStatus(jobId);
-      
-      if (response.status === 'completed') {
-        setStatus('completed');
+
+      if (response.status === "completed") {
+        setStatus("completed");
         // Check if workflow_id is in the response
         if ((response as any).workflow_id) {
           setWorkflowId((response as any).workflow_id);
-          router.push(`/dashboard/workflows/${(response as any).workflow_id}/edit`);
+          router.push(
+            `/dashboard/workflows/${(response as any).workflow_id}/edit`,
+          );
         } else if (response.result) {
           // Legacy: workflow data is in result, need to load workflow
           // This shouldn't happen with new flow, but handle it
-          logger.debug('No workflow_id in response, checking result', { context: 'WorkflowGenerationStatus' });
+          logger.debug("No workflow_id in response, checking result", {
+            context: "WorkflowGenerationStatus",
+          });
         }
-      } else if (response.status === 'failed') {
-        setStatus('failed');
-        setError(response.error_message || 'Workflow generation failed');
+      } else if (response.status === "failed") {
+        setStatus("failed");
+        setError(response.error_message || "Workflow generation failed");
       } else {
         setStatus(response.status as any);
       }
     } catch (err: any) {
-      logger.debug('Error polling status', { context: 'WorkflowGenerationStatus', error: err });
-      setError(err.message || 'Failed to check generation status');
+      logger.debug("Error polling status", {
+        context: "WorkflowGenerationStatus",
+        error: err,
+      });
+      setError(err.message || "Failed to check generation status");
     }
   }, [jobId, router]);
 
@@ -122,7 +133,7 @@ export function useWorkflowGenerationStatus(jobId: string | null) {
     }
 
     // If already completed or failed, don't poll
-    if (status === 'completed' || status === 'failed') {
+    if (status === "completed" || status === "failed") {
       return;
     }
 
@@ -151,4 +162,3 @@ export function useWorkflowGenerationStatus(jobId: string | null) {
     pollStatus,
   };
 }
-

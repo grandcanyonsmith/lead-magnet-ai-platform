@@ -3,16 +3,16 @@
  * Provides utilities for parallel execution, sequential processing, and batching.
  */
 
-import { logger } from './logger';
+import { logger } from "./logger";
 
 /**
  * Executes multiple async operations in parallel and returns all results.
- * 
+ *
  * @param operations - Array of async functions to execute
  * @param options - Execution options
  * @returns Array of results in the same order as input
  * @throws Error if any operation fails (unless continueOnError is true)
- * 
+ *
  * @example
  * ```typescript
  * const results = await parallel([
@@ -27,7 +27,7 @@ export async function parallel<T>(
   options: {
     continueOnError?: boolean;
     maxConcurrency?: number;
-  } = {}
+  } = {},
 ): Promise<T[]> {
   const { continueOnError = false, maxConcurrency } = options;
 
@@ -37,17 +37,20 @@ export async function parallel<T>(
 
   // If no concurrency limit, execute all in parallel
   if (maxConcurrency === undefined || maxConcurrency >= operations.length) {
-    const promises = operations.map(op => op());
-    
+    const promises = operations.map((op) => op());
+
     if (continueOnError) {
       const results = await Promise.allSettled(promises);
       return results.map((result, index) => {
-        if (result.status === 'fulfilled') {
+        if (result.status === "fulfilled") {
           return result.value;
         } else {
-          logger.error('[Parallel] Operation failed', {
+          logger.error("[Parallel] Operation failed", {
             index,
-            error: result.reason instanceof Error ? result.reason.message : String(result.reason),
+            error:
+              result.reason instanceof Error
+                ? result.reason.message
+                : String(result.reason),
           });
           throw result.reason;
         }
@@ -71,7 +74,7 @@ export async function parallel<T>(
         if (!continueOnError) {
           throw error;
         }
-        logger.error('[Parallel] Operation failed', {
+        logger.error("[Parallel] Operation failed", {
           index: i,
           error: error instanceof Error ? error.message : String(error),
         });
@@ -106,11 +109,11 @@ export async function parallel<T>(
 
 /**
  * Executes async operations sequentially (one after another).
- * 
+ *
  * @param operations - Array of async functions to execute
  * @returns Array of results in execution order
  * @throws Error if any operation fails
- * 
+ *
  * @example
  * ```typescript
  * const results = await sequential([
@@ -121,7 +124,7 @@ export async function parallel<T>(
  * ```
  */
 export async function sequential<T>(
-  operations: Array<() => Promise<T>>
+  operations: Array<() => Promise<T>>,
 ): Promise<T[]> {
   const results: T[] = [];
 
@@ -135,12 +138,12 @@ export async function sequential<T>(
 
 /**
  * Processes items in batches with optional concurrency control.
- * 
+ *
  * @param items - Array of items to process
  * @param processor - Function to process each item
  * @param options - Batch processing options
  * @returns Array of results in the same order as input
- * 
+ *
  * @example
  * ```typescript
  * const results = await batch(
@@ -157,9 +160,13 @@ export async function batch<T, R>(
     batchSize?: number;
     maxConcurrency?: number;
     continueOnError?: boolean;
-  } = {}
+  } = {},
 ): Promise<R[]> {
-  const { batchSize = items.length, maxConcurrency, continueOnError = false } = options;
+  const {
+    batchSize = items.length,
+    maxConcurrency,
+    continueOnError = false,
+  } = options;
 
   if (items.length === 0) {
     return [];
@@ -193,12 +200,12 @@ export async function batch<T, R>(
 
 /**
  * Maps an array through an async function with optional concurrency control.
- * 
+ *
  * @param items - Array of items to map
  * @param mapper - Async function to map each item
  * @param options - Mapping options
  * @returns Array of mapped results
- * 
+ *
  * @example
  * ```typescript
  * const results = await asyncMap(
@@ -214,7 +221,7 @@ export async function asyncMap<T, R>(
   options: {
     maxConcurrency?: number;
     continueOnError?: boolean;
-  } = {}
+  } = {},
 ): Promise<R[]> {
   const operations = items.map((item, index) => () => mapper(item, index));
   return parallel(operations, options);
@@ -222,12 +229,12 @@ export async function asyncMap<T, R>(
 
 /**
  * Filters an array using an async predicate function.
- * 
+ *
  * @param items - Array of items to filter
  * @param predicate - Async function that returns true to keep item
  * @param options - Filtering options
  * @returns Array of items that passed the predicate
- * 
+ *
  * @example
  * ```typescript
  * const validUsers = await asyncFilter(
@@ -241,7 +248,7 @@ export async function asyncFilter<T>(
   predicate: (item: T, index: number) => Promise<boolean>,
   options: {
     maxConcurrency?: number;
-  } = {}
+  } = {},
 ): Promise<T[]> {
   const operations = items.map((item, index) => async () => {
     const keep = await predicate(item, index);
@@ -249,17 +256,17 @@ export async function asyncFilter<T>(
   });
 
   const results = await parallel(operations, options);
-  return results.filter(result => result.keep).map(result => result.item);
+  return results.filter((result) => result.keep).map((result) => result.item);
 }
 
 /**
  * Reduces an array using an async reducer function.
- * 
+ *
  * @param items - Array of items to reduce
  * @param reducer - Async reducer function
  * @param initialValue - Initial accumulator value
  * @returns Final accumulator value
- * 
+ *
  * @example
  * ```typescript
  * const total = await asyncReduce(
@@ -272,7 +279,7 @@ export async function asyncFilter<T>(
 export async function asyncReduce<T, R>(
   items: T[],
   reducer: (accumulator: R, item: T, index: number) => Promise<R>,
-  initialValue: R
+  initialValue: R,
 ): Promise<R> {
   let accumulator = initialValue;
 
@@ -282,4 +289,3 @@ export async function asyncReduce<T, R>(
 
   return accumulator;
 }
-

@@ -2,7 +2,7 @@
  * Workflows API client
  */
 
-import { BaseApiClient, TokenProvider } from './base.client'
+import { BaseApiClient, TokenProvider } from "./base.client";
 import {
   Workflow,
   WorkflowListResponse,
@@ -16,121 +16,144 @@ import {
   FolderListResponse,
   FolderCreateRequest,
   FolderUpdateRequest,
-} from '@/types'
+} from "@/types";
 
 export class WorkflowsClient extends BaseApiClient {
   constructor(tokenProvider: TokenProvider) {
-    super(tokenProvider)
+    super(tokenProvider);
   }
 
-  async getWorkflows(params?: Record<string, unknown>): Promise<WorkflowListResponse> {
-    return this.get<WorkflowListResponse>('/admin/workflows', { params })
+  async getWorkflows(
+    params?: Record<string, unknown>,
+  ): Promise<WorkflowListResponse> {
+    return this.get<WorkflowListResponse>("/admin/workflows", { params });
   }
 
   async getWorkflow(id: string): Promise<Workflow> {
-    return this.get<Workflow>(`/admin/workflows/${id}`)
+    return this.get<Workflow>(`/admin/workflows/${id}`);
   }
 
   async createWorkflow(data: WorkflowCreateRequest): Promise<Workflow> {
-    return this.post<Workflow>('/admin/workflows', data)
+    return this.post<Workflow>("/admin/workflows", data);
   }
 
-  async updateWorkflow(id: string, data: WorkflowUpdateRequest): Promise<Workflow> {
-    return this.put<Workflow>(`/admin/workflows/${id}`, data)
+  async updateWorkflow(
+    id: string,
+    data: WorkflowUpdateRequest,
+  ): Promise<Workflow> {
+    return this.put<Workflow>(`/admin/workflows/${id}`, data);
   }
 
   async deleteWorkflow(id: string): Promise<void> {
-    return this.delete<void>(`/admin/workflows/${id}`)
+    return this.delete<void>(`/admin/workflows/${id}`);
   }
 
-  async generateWorkflowWithAI(request: WorkflowGenerationRequest): Promise<WorkflowGenerationResponse> {
-    return this.post<WorkflowGenerationResponse>('/admin/workflows/generate-with-ai', {
-      description: request.description,
-      model: request.model || 'gpt-5.1-codex',
-      webhook_url: request.webhook_url,
-    })
+  async generateWorkflowWithAI(
+    request: WorkflowGenerationRequest,
+  ): Promise<WorkflowGenerationResponse> {
+    return this.post<WorkflowGenerationResponse>(
+      "/admin/workflows/generate-with-ai",
+      {
+        description: request.description,
+        model: request.model || "gpt-5.1-codex",
+        webhook_url: request.webhook_url,
+      },
+    );
   }
 
-  async getWorkflowGenerationStatus(jobId: string): Promise<WorkflowGenerationResponse> {
-    return this.get<WorkflowGenerationResponse>(`/admin/workflows/generation-status/${jobId}`)
+  async getWorkflowGenerationStatus(
+    jobId: string,
+  ): Promise<WorkflowGenerationResponse> {
+    return this.get<WorkflowGenerationResponse>(
+      `/admin/workflows/generation-status/${jobId}`,
+    );
   }
 
   async refineWorkflowInstructions(
     workflowId: string,
-    request: WorkflowRefineInstructionsRequest
+    request: WorkflowRefineInstructionsRequest,
   ): Promise<WorkflowRefineInstructionsResponse> {
     return this.post<WorkflowRefineInstructionsResponse>(
       `/admin/workflows/${workflowId}/refine-instructions`,
       {
         current_instructions: request.current_instructions,
         edit_prompt: request.edit_prompt,
-        model: request.model || 'gpt-4o',
-      }
-    )
+        model: request.model || "gpt-4o",
+      },
+    );
   }
 
-  async refineInstructions(request: WorkflowRefineInstructionsRequest): Promise<WorkflowRefineInstructionsResponse> {
-    return this.post<WorkflowRefineInstructionsResponse>('/admin/workflows/refine-instructions', {
-      current_instructions: request.current_instructions,
-      edit_prompt: request.edit_prompt,
-      model: request.model || 'gpt-4o',
-    })
+  async refineInstructions(
+    request: WorkflowRefineInstructionsRequest,
+  ): Promise<WorkflowRefineInstructionsResponse> {
+    return this.post<WorkflowRefineInstructionsResponse>(
+      "/admin/workflows/refine-instructions",
+      {
+        current_instructions: request.current_instructions,
+        edit_prompt: request.edit_prompt,
+        model: request.model || "gpt-4o",
+      },
+    );
   }
 
   async generateStepWithAI(
     workflowId: string,
     request: {
-      userPrompt: string
-      action?: 'update' | 'add'
-      currentStep?: any
-      currentStepIndex?: number
-    }
+      userPrompt: string;
+      action?: "update" | "add";
+      currentStep?: any;
+      currentStepIndex?: number;
+    },
   ): Promise<{
-    action: 'update' | 'add'
-    step_index?: number
-    step: any
+    action: "update" | "add";
+    step_index?: number;
+    step: any;
   }> {
-    return this.post(`/admin/workflows/${workflowId}/ai-step`, request)
+    return this.post(`/admin/workflows/${workflowId}/ai-step`, request);
   }
 
   async editWorkflowWithAI(
     workflowId: string,
     request: {
-      userPrompt: string
-    }
+      userPrompt: string;
+    },
   ): Promise<{
-    workflow_name?: string
-    workflow_description?: string
-    html_enabled?: boolean
-    steps: any[]
-    changes_summary: string
+    workflow_name?: string;
+    workflow_description?: string;
+    html_enabled?: boolean;
+    steps: any[];
+    changes_summary: string;
   }> {
-    return this.post(`/admin/workflows/${workflowId}/ai-edit`, request)
+    return this.post(`/admin/workflows/${workflowId}/ai-edit`, request);
   }
 
   // Folder methods
   async getFolders(): Promise<FolderListResponse> {
-    return this.get<FolderListResponse>('/admin/folders')
+    return this.get<FolderListResponse>("/admin/folders");
   }
 
   async getFolder(id: string): Promise<Folder> {
-    return this.get<Folder>(`/admin/folders/${id}`)
+    return this.get<Folder>(`/admin/folders/${id}`);
   }
 
   async createFolder(data: FolderCreateRequest): Promise<Folder> {
-    return this.post<Folder>('/admin/folders', data)
+    return this.post<Folder>("/admin/folders", data);
   }
 
   async updateFolder(id: string, data: FolderUpdateRequest): Promise<Folder> {
-    return this.put<Folder>(`/admin/folders/${id}`, data)
+    return this.put<Folder>(`/admin/folders/${id}`, data);
   }
 
   async deleteFolder(id: string): Promise<void> {
-    return this.delete<void>(`/admin/folders/${id}`)
+    return this.delete<void>(`/admin/folders/${id}`);
   }
 
-  async moveWorkflowToFolder(workflowId: string, folderId: string | null): Promise<Workflow> {
-    return this.put<Workflow>(`/admin/workflows/${workflowId}`, { folder_id: folderId })
+  async moveWorkflowToFolder(
+    workflowId: string,
+    folderId: string | null,
+  ): Promise<Workflow> {
+    return this.put<Workflow>(`/admin/workflows/${workflowId}`, {
+      folder_id: folderId,
+    });
   }
 }
-

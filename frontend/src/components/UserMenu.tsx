@@ -1,71 +1,82 @@
-'use client'
+"use client";
 
-import React, { useState, useEffect, useRef } from 'react'
-import { FiUser, FiSettings, FiLogOut, FiChevronDown, FiX, FiUsers, FiFilter } from 'react-icons/fi'
-import { useRouter, usePathname } from 'next/navigation'
-import { useAuth } from '@/lib/auth/context'
-import { signOut } from '@/lib/auth'
-import { useJobFiltersContext } from '@/contexts/JobFiltersContext'
+import React, { useState, useEffect, useRef } from "react";
+import {
+  FiUser,
+  FiSettings,
+  FiLogOut,
+  FiChevronDown,
+  FiX,
+  FiUsers,
+  FiFilter,
+} from "react-icons/fi";
+import { useRouter, usePathname } from "next/navigation";
+import { useAuth } from "@/lib/auth/context";
+import { signOut } from "@/lib/auth";
+import { useJobFiltersContext } from "@/contexts/JobFiltersContext";
 
 export const UserMenu: React.FC = () => {
-  const router = useRouter()
-  const pathname = usePathname()
-  const { user, role, isLoading } = useAuth()
-  const [isOpen, setIsOpen] = useState(false)
-  const dropdownRef = useRef<HTMLDivElement>(null)
-  const jobFilters = useJobFiltersContext()
-  const isJobsPage = pathname === '/dashboard/jobs'
+  const router = useRouter();
+  const pathname = usePathname();
+  const { user, role, isLoading } = useAuth();
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const jobFilters = useJobFiltersContext();
+  const isJobsPage = pathname === "/dashboard/jobs";
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
       }
-    }
+    };
 
     if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
+      document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [isOpen])
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen]);
 
   const handleSignOut = () => {
-    signOut()
-    router.push('/auth/login')
-    setIsOpen(false)
-  }
+    signOut();
+    router.push("/auth/login");
+    setIsOpen(false);
+  };
 
   const handleSettingsClick = () => {
-    router.push('/dashboard/settings')
-    setIsOpen(false)
-  }
+    router.push("/dashboard/settings");
+    setIsOpen(false);
+  };
 
   const handleAgencyUsersClick = () => {
-    router.push('/dashboard/agency/users')
-    setIsOpen(false)
-  }
+    router.push("/dashboard/agency/users");
+    setIsOpen(false);
+  };
 
   const getInitials = (name?: string, email?: string) => {
     if (name) {
-      const parts = name.split(' ')
+      const parts = name.split(" ");
       if (parts.length >= 2) {
-        return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
+        return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
       }
-      return name[0].toUpperCase()
+      return name[0].toUpperCase();
     }
     if (email) {
-      return email[0].toUpperCase()
+      return email[0].toUpperCase();
     }
-    return 'U'
-  }
+    return "U";
+  };
 
   // Don't show "User" placeholder while loading - wait for actual user data
-  const displayName = isLoading ? '' : (user?.name || user?.email || 'User')
-  const initials = isLoading ? '' : getInitials(user?.name, user?.email)
+  const displayName = isLoading ? "" : user?.name || user?.email || "User";
+  const initials = isLoading ? "" : getInitials(user?.name, user?.email);
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -86,7 +97,9 @@ export const UserMenu: React.FC = () => {
             {displayName}
           </span>
         )}
-        <FiChevronDown className={`hidden sm:block w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <FiChevronDown
+          className={`hidden sm:block w-4 h-4 text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`}
+        />
       </button>
 
       {isOpen && (
@@ -109,10 +122,10 @@ export const UserMenu: React.FC = () => {
                 ) : (
                   <>
                     <p className="text-sm font-semibold text-gray-900 truncate">
-                      {user?.name || 'User'}
+                      {user?.name || "User"}
                     </p>
                     <p className="text-xs text-gray-500 truncate">
-                      {user?.email || ''}
+                      {user?.email || ""}
                     </p>
                   </>
                 )}
@@ -127,15 +140,19 @@ export const UserMenu: React.FC = () => {
                 <div className="px-4 py-2">
                   <div className="flex items-center mb-2">
                     <FiFilter className="w-4 h-4 mr-2 text-gray-400" />
-                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Filters</span>
+                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                      Filters
+                    </span>
                   </div>
                   <div className="space-y-2">
                     <div>
-                      <label className="block text-xs text-gray-600 mb-1">Status</label>
+                      <label className="block text-xs text-gray-600 mb-1">
+                        Status
+                      </label>
                       <select
                         value={jobFilters.statusFilter}
                         onChange={(e) => {
-                          jobFilters.setStatusFilter(e.target.value)
+                          jobFilters.setStatusFilter(e.target.value);
                         }}
                         className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-transparent"
                         onClick={(e) => e.stopPropagation()}
@@ -148,11 +165,13 @@ export const UserMenu: React.FC = () => {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-600 mb-1">Lead Magnet</label>
+                      <label className="block text-xs text-gray-600 mb-1">
+                        Lead Magnet
+                      </label>
                       <select
                         value={jobFilters.workflowFilter}
                         onChange={(e) => {
-                          jobFilters.setWorkflowFilter(e.target.value)
+                          jobFilters.setWorkflowFilter(e.target.value);
                         }}
                         className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-transparent"
                         onClick={(e) => e.stopPropagation()}
@@ -176,7 +195,7 @@ export const UserMenu: React.FC = () => {
               <FiSettings className="w-4 h-4 mr-3 text-gray-400" />
               <span>Settings</span>
             </button>
-            {role === 'SUPER_ADMIN' && (
+            {role === "SUPER_ADMIN" && (
               <button
                 onClick={handleAgencyUsersClick}
                 className="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
@@ -199,6 +218,5 @@ export const UserMenu: React.FC = () => {
         </div>
       )}
     </div>
-  )
-}
-
+  );
+};

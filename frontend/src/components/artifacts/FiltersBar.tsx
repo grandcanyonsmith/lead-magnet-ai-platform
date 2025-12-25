@@ -1,19 +1,19 @@
-import { FiSearch, FiFilter } from 'react-icons/fi'
+import { FiSearch, FiFilter } from "react-icons/fi";
 
 interface FiltersBarProps {
-  searchQuery: string
-  onSearchChange: (query: string) => void
-  selectedType: string
-  onTypeChange: (type: string) => void
-  artifactTypes: string[]
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
+  selectedType: string;
+  onTypeChange: (type: string) => void;
+  artifactTypes: string[];
 }
 
-export function FiltersBar({ 
-  searchQuery, 
-  onSearchChange, 
-  selectedType, 
+export function FiltersBar({
+  searchQuery,
+  onSearchChange,
+  selectedType,
   onTypeChange,
-  artifactTypes 
+  artifactTypes,
 }: FiltersBarProps) {
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
@@ -42,13 +42,15 @@ export function FiltersBar({
               className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent appearance-none bg-white cursor-pointer"
             >
               <option value="">All Types</option>
-              {artifactTypes.map(type => (
-                <option key={type} value={type}>{type}</option>
+              {artifactTypes.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
               ))}
             </select>
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }

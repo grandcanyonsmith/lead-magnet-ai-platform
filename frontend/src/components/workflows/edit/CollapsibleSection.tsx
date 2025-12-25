@@ -1,15 +1,20 @@
-'use client'
+"use client";
 
-import { FiChevronDown, FiChevronUp } from 'react-icons/fi'
+import { FiChevronDown, FiChevronUp } from "react-icons/fi";
 
 interface CollapsibleSectionProps {
-  title: string
-  isCollapsed: boolean
-  onToggle: () => void
-  children: React.ReactNode
+  title: string;
+  isCollapsed: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
 }
 
-export function CollapsibleSection({ title, isCollapsed, onToggle, children }: CollapsibleSectionProps) {
+export function CollapsibleSection({
+  title,
+  isCollapsed,
+  onToggle,
+  children,
+}: CollapsibleSectionProps) {
   return (
     <div className="border border-gray-200 rounded-lg overflow-hidden">
       <button
@@ -24,12 +29,7 @@ export function CollapsibleSection({ title, isCollapsed, onToggle, children }: C
           <FiChevronUp className="w-5 h-5 text-gray-500" />
         )}
       </button>
-      {!isCollapsed && (
-        <div className="p-4">
-          {children}
-        </div>
-      )}
+      {!isCollapsed && <div className="p-4">{children}</div>}
     </div>
-  )
+  );
 }
-

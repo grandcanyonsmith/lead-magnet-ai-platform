@@ -1,156 +1,173 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { useRouter, useParams } from 'next/navigation'
-import { api } from '@/lib/api'
-import { useSettings } from '@/hooks/api/useSettings'
-import { buildPublicFormUrl } from '@/utils/url'
-import { openJobDocumentInNewTab } from '@/utils/jobs/openJobDocument'
-import { 
-  ArrowLeftIcon, 
-  PencilIcon, 
-  TrashIcon, 
-  ClockIcon, 
-  ArrowTopRightOnSquareIcon, 
-  LinkIcon, 
-  Cog6ToothIcon, 
-  DocumentTextIcon, 
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
+import { api } from "@/lib/api";
+import { useSettings } from "@/hooks/api/useSettings";
+import { buildPublicFormUrl } from "@/utils/url";
+import { openJobDocumentInNewTab } from "@/utils/jobs/openJobDocument";
+import {
+  ArrowLeftIcon,
+  PencilIcon,
+  TrashIcon,
+  ClockIcon,
+  ArrowTopRightOnSquareIcon,
+  LinkIcon,
+  Cog6ToothIcon,
+  DocumentTextIcon,
   CalendarIcon,
   ChevronRightIcon,
   FingerPrintIcon,
   IdentificationIcon,
   ChatBubbleLeftRightIcon,
   ArrowPathIcon,
-  PlusIcon
-} from '@heroicons/react/24/outline'
-import toast from 'react-hot-toast'
-import clsx from 'clsx'
+  PlusIcon,
+} from "@heroicons/react/24/outline";
+import toast from "react-hot-toast";
+import clsx from "clsx";
 
 const formatRelativeTime = (dateString: string) => {
-  if (!dateString) return '—'
-  const date = new Date(dateString)
-  const now = new Date()
-  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+  if (!dateString) return "—";
+  const date = new Date(dateString);
+  const now = new Date();
+  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
-  if (seconds < 60) return `${seconds}s ago`
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  return `${days}d ago`
-}
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+};
 
 const formatDuration = (seconds: number) => {
-  if (seconds < 60) return `${seconds}s`
-  const minutes = Math.floor(seconds / 60)
-  const remainingSeconds = seconds % 60
-  return `${minutes}m ${remainingSeconds}s`
-}
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes}m ${remainingSeconds}s`;
+};
 
 export default function WorkflowDetailPage() {
-  const router = useRouter()
-  const params = useParams()
+  const router = useRouter();
+  const params = useParams();
   // Extract workflow ID from params, or fallback to URL pathname if param is '_' (static export edge rewrite)
   const getWorkflowId = () => {
-    const paramId = params?.id as string
-    if (paramId && paramId !== '_') {
-      return paramId
+    const paramId = params?.id as string;
+    if (paramId && paramId !== "_") {
+      return paramId;
     }
     // Fallback: extract from browser URL
-    if (typeof window !== 'undefined') {
-      const pathMatch = window.location.pathname.match(/\/dashboard\/workflows\/([^/]+)/)
-      if (pathMatch && pathMatch[1] && pathMatch[1] !== '_') {
-        return pathMatch[1]
+    if (typeof window !== "undefined") {
+      const pathMatch = window.location.pathname.match(
+        /\/dashboard\/workflows\/([^/]+)/,
+      );
+      if (pathMatch && pathMatch[1] && pathMatch[1] !== "_") {
+        return pathMatch[1];
       }
     }
-    return paramId || ''
-  }
-  const workflowId = getWorkflowId()
-  
-  const [workflow, setWorkflow] = useState<any>(null)
-  const [jobs, setJobs] = useState<any[]>([])
-  const [submissions, setSubmissions] = useState<Record<string, any>>({})
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [creatingForm, setCreatingForm] = useState(false)
-  const { settings } = useSettings()
+    return paramId || "";
+  };
+  const workflowId = getWorkflowId();
+
+  const [workflow, setWorkflow] = useState<any>(null);
+  const [jobs, setJobs] = useState<any[]>([]);
+  const [submissions, setSubmissions] = useState<Record<string, any>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [creatingForm, setCreatingForm] = useState(false);
+  const { settings } = useSettings();
 
   useEffect(() => {
     if (workflowId) {
-      Promise.all([loadWorkflow(), loadJobs()])
+      Promise.all([loadWorkflow(), loadJobs()]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workflowId])
+  }, [workflowId]);
 
   const loadWorkflow = async () => {
     try {
-      const data = await api.getWorkflow(workflowId)
-      setWorkflow(data)
-      setError(null)
+      const data = await api.getWorkflow(workflowId);
+      setWorkflow(data);
+      setError(null);
     } catch (error: any) {
-      console.error('Failed to load workflow:', error)
-      setError(error.response?.data?.message || error.message || 'Failed to load workflow')
-      setLoading(false)
+      console.error("Failed to load workflow:", error);
+      setError(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to load workflow",
+      );
+      setLoading(false);
     }
-  }
+  };
 
   const loadJobs = async () => {
     try {
-      const data = await api.getJobs({ workflow_id: workflowId, limit: 10 })
-      const jobsList = data.jobs || []
-      setJobs(jobsList)
-      
+      const data = await api.getJobs({ workflow_id: workflowId, limit: 10 });
+      const jobsList = data.jobs || [];
+      setJobs(jobsList);
+
       // Load submissions for each job
-      const submissionsMap: Record<string, any> = {}
+      const submissionsMap: Record<string, any> = {};
       for (const job of jobsList) {
         if (job.submission_id) {
           try {
-            const submission = await api.getSubmission(job.submission_id)
-            submissionsMap[job.job_id] = submission
+            const submission = await api.getSubmission(job.submission_id);
+            submissionsMap[job.job_id] = submission;
           } catch (error) {
-            console.error(`Failed to load submission for job ${job.job_id}:`, error)
+            console.error(
+              `Failed to load submission for job ${job.job_id}:`,
+              error,
+            );
           }
         }
       }
-      setSubmissions(submissionsMap)
+      setSubmissions(submissionsMap);
     } catch (error) {
-      console.error('Failed to load jobs:', error)
+      console.error("Failed to load jobs:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleDelete = async () => {
-    if (!confirm(`Are you sure you want to delete "${workflow?.workflow_name}"? This action cannot be undone.`)) {
-      return
+    if (
+      !confirm(
+        `Are you sure you want to delete "${workflow?.workflow_name}"? This action cannot be undone.`,
+      )
+    ) {
+      return;
     }
 
     try {
-      await api.deleteWorkflow(workflowId)
-      router.push('/dashboard/workflows')
+      await api.deleteWorkflow(workflowId);
+      router.push("/dashboard/workflows");
     } catch (error: any) {
-      console.error('Failed to delete workflow:', error)
-      toast.error(error.response?.data?.message || error.message || 'Failed to delete lead magnet')
+      console.error("Failed to delete workflow:", error);
+      toast.error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to delete lead magnet",
+      );
     }
-  }
+  };
 
   const handleCreateForm = async () => {
-    if (!workflow) return
-    
-    setCreatingForm(true)
-    setError(null)
-    
+    if (!workflow) return;
+
+    setCreatingForm(true);
+    setError(null);
+
     try {
       // Generate a valid slug
       const baseSlug = workflow.workflow_name
         .toLowerCase()
         .trim()
-        .replace(/[^a-z0-9\s-]/g, '')
-        .replace(/\s+/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '')
-      
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "");
+
       const formData = {
         workflow_id: workflowId,
         form_name: `${workflow.workflow_name} Form`,
@@ -161,18 +178,21 @@ export default function WorkflowDetailPage() {
         rate_limit_enabled: true,
         rate_limit_per_hour: 10,
         captcha_enabled: false,
-      }
-      
-      await api.createForm(formData)
-      await loadWorkflow()
+      };
+
+      await api.createForm(formData);
+      await loadWorkflow();
     } catch (error: any) {
-      console.error('Failed to create form:', error)
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to create form'
-      setError(errorMessage)
+      console.error("Failed to create form:", error);
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to create form";
+      setError(errorMessage);
     } finally {
-      setCreatingForm(false)
+      setCreatingForm(false);
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -192,7 +212,7 @@ export default function WorkflowDetailPage() {
           <div className="h-96 bg-white border border-gray-200 rounded-xl"></div>
         </div>
       </div>
-    )
+    );
   }
 
   if (error && !workflow) {
@@ -213,10 +233,10 @@ export default function WorkflowDetailPage() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
-  if (!workflow) return null
+  if (!workflow) return null;
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -229,7 +249,7 @@ export default function WorkflowDetailPage() {
           <ArrowLeftIcon className="w-4 h-4 mr-1 group-hover:-translate-x-0.5 transition-transform" />
           Back to Workflows
         </button>
-        
+
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="flex-1 min-w-0">
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight truncate">
@@ -240,13 +260,17 @@ export default function WorkflowDetailPage() {
                 {workflow.workflow_description}
               </p>
             ) : (
-              <p className="mt-2 text-sm text-gray-400 italic">No description provided</p>
+              <p className="mt-2 text-sm text-gray-400 italic">
+                No description provided
+              </p>
             )}
           </div>
-          
+
           <div className="flex items-center gap-3 shrink-0">
             <button
-              onClick={() => router.push(`/dashboard/workflows/${workflowId}/edit`)}
+              onClick={() =>
+                router.push(`/dashboard/workflows/${workflowId}/edit`)
+              }
               className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-gray-700 font-bold rounded-lg hover:bg-gray-50 transition-all shadow-sm text-sm"
             >
               <PencilIcon className="w-4 h-4 mr-2" />
@@ -271,7 +295,9 @@ export default function WorkflowDetailPage() {
             <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <IdentificationIcon className="h-5 w-5 text-gray-400" />
-                <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Public Form</h2>
+                <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">
+                  Public Form
+                </h2>
               </div>
               {workflow.form && (
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800">
@@ -279,22 +305,35 @@ export default function WorkflowDetailPage() {
                 </span>
               )}
             </div>
-            
+
             <div className="p-6">
               {workflow.form ? (
                 <div className="space-y-6">
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
-                      <h3 className="text-lg font-bold text-gray-900">{workflow.form.form_name}</h3>
+                      <h3 className="text-lg font-bold text-gray-900">
+                        {workflow.form.form_name}
+                      </h3>
                       <p className="text-sm text-gray-500 mt-1 truncate">
-                        {workflow.form.public_slug && buildPublicFormUrl(workflow.form.public_slug, settings?.custom_domain)}
+                        {workflow.form.public_slug &&
+                          buildPublicFormUrl(
+                            workflow.form.public_slug,
+                            settings?.custom_domain,
+                          )}
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <a
-                      href={workflow.form.public_slug ? buildPublicFormUrl(workflow.form.public_slug, settings?.custom_domain) : '#'}
+                      href={
+                        workflow.form.public_slug
+                          ? buildPublicFormUrl(
+                              workflow.form.public_slug,
+                              settings?.custom_domain,
+                            )
+                          : "#"
+                      }
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center justify-center gap-2 px-4 py-2.5 bg-primary-600 text-white font-bold rounded-xl hover:bg-primary-700 transition-all shadow-md active:scale-[0.98]"
@@ -303,7 +342,11 @@ export default function WorkflowDetailPage() {
                       View Public Form
                     </a>
                     <button
-                      onClick={() => router.push(`/dashboard/forms/${workflow.form.form_id}/edit`)}
+                      onClick={() =>
+                        router.push(
+                          `/dashboard/forms/${workflow.form.form_id}/edit`,
+                        )
+                      }
                       className="flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-all shadow-sm active:scale-[0.98]"
                     >
                       <PencilIcon className="w-5 h-5 text-gray-400" />
@@ -316,8 +359,12 @@ export default function WorkflowDetailPage() {
                   <div className="mx-auto h-12 w-12 text-gray-300 mb-3">
                     <LinkIcon className="h-full w-full" />
                   </div>
-                  <h3 className="text-sm font-bold text-gray-900">No Form Linked</h3>
-                  <p className="mt-1 text-sm text-gray-500 mb-6">Create a form to start collecting leads for this magnet.</p>
+                  <h3 className="text-sm font-bold text-gray-900">
+                    No Form Linked
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-500 mb-6">
+                    Create a form to start collecting leads for this magnet.
+                  </p>
                   <button
                     onClick={handleCreateForm}
                     disabled={creatingForm}
@@ -344,7 +391,9 @@ export default function WorkflowDetailPage() {
           <section className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50 flex items-center gap-2">
               <Cog6ToothIcon className="h-5 w-5 text-gray-400" />
-              <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Asset Configuration</h2>
+              <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">
+                Asset Configuration
+              </h2>
             </div>
             <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
               <div className="space-y-6">
@@ -355,15 +404,21 @@ export default function WorkflowDetailPage() {
                   </h4>
                   <div className="space-y-3">
                     <div>
-                      <p className="text-[10px] text-gray-400 mb-0.5">Template ID</p>
+                      <p className="text-[10px] text-gray-400 mb-0.5">
+                        Template ID
+                      </p>
                       <p className="text-xs font-mono text-gray-700 bg-gray-50 px-2 py-1 rounded inline-block">
-                        {workflow.template_id || 'None'}
+                        {workflow.template_id || "None"}
                       </p>
                     </div>
                     {workflow.template_version && (
                       <div>
-                        <p className="text-[10px] text-gray-400 mb-0.5">Template Version</p>
-                        <p className="text-sm font-medium text-gray-900">v{workflow.template_version}</p>
+                        <p className="text-[10px] text-gray-400 mb-0.5">
+                          Template Version
+                        </p>
+                        <p className="text-sm font-medium text-gray-900">
+                          v{workflow.template_version}
+                        </p>
                       </div>
                     )}
                   </div>
@@ -375,7 +430,9 @@ export default function WorkflowDetailPage() {
                       <LinkIcon className="h-3.5 w-3.5" />
                       External Integration
                     </h4>
-                    <p className="text-[10px] text-gray-400 mb-0.5">Webhook Endpoint</p>
+                    <p className="text-[10px] text-gray-400 mb-0.5">
+                      Webhook Endpoint
+                    </p>
                     <p className="text-xs font-mono text-gray-700 bg-blue-50/50 px-2 py-1 rounded break-all leading-relaxed border border-blue-100">
                       {workflow.delivery_webhook_url}
                     </p>
@@ -392,16 +449,30 @@ export default function WorkflowDetailPage() {
                   <div className="space-y-4 mt-3">
                     <div className="relative pl-4 border-l-2 border-gray-100 py-0.5">
                       <div className="absolute -left-1.5 top-1.5 h-3 w-3 rounded-full bg-gray-200 border-2 border-white" />
-                      <p className="text-[10px] text-gray-400 uppercase font-bold">Created</p>
+                      <p className="text-[10px] text-gray-400 uppercase font-bold">
+                        Created
+                      </p>
                       <p className="text-sm font-medium text-gray-900 mt-0.5">
-                        {workflow.created_at ? new Date(workflow.created_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '—'}
+                        {workflow.created_at
+                          ? new Date(workflow.created_at).toLocaleString(
+                              undefined,
+                              { dateStyle: "medium", timeStyle: "short" },
+                            )
+                          : "—"}
                       </p>
                     </div>
                     <div className="relative pl-4 border-l-2 border-primary-100 py-0.5">
                       <div className="absolute -left-1.5 top-1.5 h-3 w-3 rounded-full bg-primary-500 border-2 border-white shadow-sm" />
-                      <p className="text-[10px] text-primary-500 uppercase font-bold">Last Updated</p>
+                      <p className="text-[10px] text-primary-500 uppercase font-bold">
+                        Last Updated
+                      </p>
                       <p className="text-sm font-medium text-gray-900 mt-0.5">
-                        {workflow.updated_at ? new Date(workflow.updated_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '—'}
+                        {workflow.updated_at
+                          ? new Date(workflow.updated_at).toLocaleString(
+                              undefined,
+                              { dateStyle: "medium", timeStyle: "short" },
+                            )
+                          : "—"}
                       </p>
                     </div>
                   </div>
@@ -429,92 +500,125 @@ export default function WorkflowDetailPage() {
             <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <ClockIcon className="h-5 w-5 text-gray-400" />
-                <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Recent Runs</h2>
+                <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">
+                  Recent Runs
+                </h2>
               </div>
-              <button 
-                onClick={() => router.push(`/dashboard/jobs?workflow_id=${workflowId}`)}
+              <button
+                onClick={() =>
+                  router.push(`/dashboard/jobs?workflow_id=${workflowId}`)
+                }
                 className="text-xs font-bold text-primary-600 hover:text-primary-700 transition-colors flex items-center gap-0.5 group"
               >
                 View all
                 <ChevronRightIcon className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
               </button>
             </div>
-            
+
             <div className="divide-y divide-gray-100">
               {jobs.length === 0 ? (
                 <div className="px-6 py-12 text-center">
                   <div className="h-10 w-10 text-gray-200 mx-auto mb-3">
                     <DocumentTextIcon className="h-full w-full" />
                   </div>
-                  <p className="text-sm text-gray-400 font-medium tracking-tight">No generation history yet</p>
+                  <p className="text-sm text-gray-400 font-medium tracking-tight">
+                    No generation history yet
+                  </p>
                 </div>
               ) : (
                 jobs.map((job) => {
-                  const submission = submissions[job.job_id]
-                  const submitterName = submission?.submission_data?.name || submission?.submitter_name || submission?.submitter_email || job.job_id.slice(-8).toUpperCase()
-                  
+                  const submission = submissions[job.job_id];
+                  const submitterName =
+                    submission?.submission_data?.name ||
+                    submission?.submitter_name ||
+                    submission?.submitter_email ||
+                    job.job_id.slice(-8).toUpperCase();
+
                   const durationSeconds = job.completed_at
-                    ? Math.round((new Date(job.completed_at).getTime() - new Date(job.created_at).getTime()) / 1000)
-                    : null
-                  
+                    ? Math.round(
+                        (new Date(job.completed_at).getTime() -
+                          new Date(job.created_at).getTime()) /
+                          1000,
+                      )
+                    : null;
+
                   const handleViewAsset = async (e: React.MouseEvent) => {
-                    e.stopPropagation()
-                    if (!job.output_url) return
-                    await openJobDocumentInNewTab(job.job_id, { fallbackUrl: job.output_url })
-                  }
+                    e.stopPropagation();
+                    if (!job.output_url) return;
+                    await openJobDocumentInNewTab(job.job_id, {
+                      fallbackUrl: job.output_url,
+                    });
+                  };
 
                   return (
-                    <div 
-                      key={job.job_id} 
-                      onClick={() => router.push(`/dashboard/jobs/${job.job_id}`)}
+                    <div
+                      key={job.job_id}
+                      onClick={() =>
+                        router.push(`/dashboard/jobs/${job.job_id}`)
+                      }
                       className="group p-4 hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-100 last:border-0"
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div className="min-w-0 pr-2">
-                          <h3 className="text-sm font-bold text-gray-900 truncate" title={submitterName}>
+                          <h3
+                            className="text-sm font-bold text-gray-900 truncate"
+                            title={submitterName}
+                          >
                             {submitterName}
                           </h3>
                           {/* Use job.step_count if available, otherwise just hide or use placeholder if needed */}
                           {/* Assuming job.status implies completion state */}
                         </div>
-                        <div className={clsx(
-                          "px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide flex-shrink-0",
-                          job.status === 'completed' ? "bg-green-100 text-green-700" :
-                          job.status === 'failed' ? "bg-red-100 text-red-700" :
-                          "bg-blue-100 text-blue-700"
-                        )}>
-                          {job.status === 'completed' ? 'Ready' : job.status}
+                        <div
+                          className={clsx(
+                            "px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide flex-shrink-0",
+                            job.status === "completed"
+                              ? "bg-green-100 text-green-700"
+                              : job.status === "failed"
+                                ? "bg-red-100 text-red-700"
+                                : "bg-blue-100 text-blue-700",
+                          )}
+                        >
+                          {job.status === "completed" ? "Ready" : job.status}
                         </div>
                       </div>
 
                       <div className="flex items-center justify-between">
                         <div className="flex flex-col">
                           <span className="text-xs font-medium text-gray-900">
-                            {job.created_at ? formatRelativeTime(job.created_at) : '—'}
+                            {job.created_at
+                              ? formatRelativeTime(job.created_at)
+                              : "—"}
                           </span>
                           <span className="text-[10px] text-gray-400 mt-0.5">
-                            {job.created_at ? new Date(job.created_at).toLocaleDateString() : ''}
+                            {job.created_at
+                              ? new Date(job.created_at).toLocaleDateString()
+                              : ""}
                           </span>
                         </div>
 
                         <div className="flex flex-col items-end gap-2">
                           <span className="text-xs font-mono text-gray-500">
-                            {durationSeconds ? formatDuration(durationSeconds) : '—'}
+                            {durationSeconds
+                              ? formatDuration(durationSeconds)
+                              : "—"}
                           </span>
-                          
-                          {job.status === 'completed' && (
+
+                          {job.status === "completed" && (
                             <button
                               onClick={handleViewAsset}
                               className="text-xs font-bold text-primary-600 hover:text-primary-700 flex items-center gap-1 group/link"
                             >
                               <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5" />
-                              <span className="group-hover/link:underline">View asset</span>
+                              <span className="group-hover/link:underline">
+                                View asset
+                              </span>
                             </button>
                           )}
                         </div>
                       </div>
                     </div>
-                  )
+                  );
                 })
               )}
             </div>
@@ -522,5 +626,5 @@ export default function WorkflowDetailPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

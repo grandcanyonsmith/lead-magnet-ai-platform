@@ -1,7 +1,7 @@
-import crypto from 'crypto';
-import { setErrorTrackingHook, ApiError } from '@utils/errors';
-import { env } from '@utils/env';
-import { logger } from '@utils/logger';
+import crypto from "crypto";
+import { setErrorTrackingHook, ApiError } from "@utils/errors";
+import { env } from "@utils/env";
+import { logger } from "@utils/logger";
 
 type ErrorWebhookPayload = Record<string, any>;
 
@@ -17,20 +17,23 @@ async function postToErrorWebhook(payload: ErrorWebhookPayload): Promise<void> {
   if (!env.errorWebhookUrl) return;
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), env.errorWebhookTimeoutMs);
+  const timeout = setTimeout(
+    () => controller.abort(),
+    env.errorWebhookTimeoutMs,
+  );
 
   try {
     await fetch(env.errorWebhookUrl, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         ...env.errorWebhookHeaders,
       },
       body: JSON.stringify(payload),
       signal: controller.signal,
     });
   } catch (error: any) {
-    logger.warn('[ErrorReporting] Failed to POST to error webhook', {
+    logger.warn("[ErrorReporting] Failed to POST to error webhook", {
       error: error?.message || String(error),
     });
   } finally {
@@ -43,8 +46,8 @@ export function initErrorReporting(): void {
   setErrorTrackingHook((error: ApiError, context?: Record<string, any>) => {
     const errorId = createErrorId();
     const payload: ErrorWebhookPayload = {
-      source: 'api',
-      kind: 'server_error',
+      source: "api",
+      kind: "server_error",
       error_id: errorId,
       timestamp: new Date().toISOString(),
       error: error.toLogObject(),
@@ -56,7 +59,7 @@ export function initErrorReporting(): void {
     };
 
     // Always log a single, searchable entry with an error_id.
-    logger.error('[ErrorReporting] Captured server error', {
+    logger.error("[ErrorReporting] Captured server error", {
       error_id: errorId,
       statusCode: error.statusCode,
       code: error.code,
@@ -79,8 +82,8 @@ export async function reportClientError(args: {
   const errorId = createErrorId();
 
   const payload: ErrorWebhookPayload = {
-    source: 'frontend',
-    kind: 'client_error',
+    source: "frontend",
+    kind: "client_error",
     error_id: errorId,
     timestamp: new Date().toISOString(),
     tenant_id: args.tenantId,
@@ -94,10 +97,8 @@ export async function reportClientError(args: {
     },
   };
 
-  logger.error('[ErrorReporting] Captured client error', payload);
+  logger.error("[ErrorReporting] Captured client error", payload);
   void postToErrorWebhook(payload);
 
   return { errorId };
 }
-
-

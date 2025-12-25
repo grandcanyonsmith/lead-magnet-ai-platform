@@ -2,18 +2,17 @@
  * Analytics API client
  */
 
-import { BaseApiClient, TokenProvider } from './base.client'
-import {
-  AnalyticsResponse,
-} from '@/types'
+import { BaseApiClient, TokenProvider } from "./base.client";
+import { AnalyticsResponse } from "@/types";
 
 export class AnalyticsClient extends BaseApiClient {
   constructor(tokenProvider: TokenProvider) {
-    super(tokenProvider)
+    super(tokenProvider);
   }
 
-  async getAnalytics(params?: Record<string, unknown>): Promise<AnalyticsResponse> {
-    return this.get<AnalyticsResponse>('/admin/analytics', { params })
+  async getAnalytics(
+    params?: Record<string, unknown>,
+  ): Promise<AnalyticsResponse> {
+    return this.get<AnalyticsResponse>("/admin/analytics", { params });
   }
 }
-

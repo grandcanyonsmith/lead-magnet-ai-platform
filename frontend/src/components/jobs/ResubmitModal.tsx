@@ -1,25 +1,30 @@
-'use client'
+"use client";
 
-import { FiAlertCircle, FiX, FiRefreshCw } from 'react-icons/fi'
+import { FiAlertCircle, FiX, FiRefreshCw } from "react-icons/fi";
 
 interface ResubmitModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onConfirm: () => void
-  isResubmitting: boolean
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  isResubmitting: boolean;
 }
 
-export function ResubmitModal({ isOpen, onClose, onConfirm, isResubmitting }: ResubmitModalProps) {
-  if (!isOpen) return null
+export function ResubmitModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  isResubmitting,
+}: ResubmitModalProps) {
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* Backdrop */}
-      <div 
+      <div
         className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
         onClick={onClose}
       />
-      
+
       {/* Modal */}
       <div className="flex min-h-full items-center justify-center p-4">
         <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
@@ -43,7 +48,8 @@ export function ResubmitModal({ isOpen, onClose, onConfirm, isResubmitting }: Re
               Resubmit Lead Magnet?
             </h3>
             <p className="text-sm text-gray-600">
-              This will create a new job with the same submission data. The original job will remain unchanged.
+              This will create a new job with the same submission data. The
+              original job will remain unchanged.
             </p>
           </div>
 
@@ -77,6 +83,5 @@ export function ResubmitModal({ isOpen, onClose, onConfirm, isResubmitting }: Re
         </div>
       </div>
     </div>
-  )
+  );
 }
-

@@ -1,12 +1,12 @@
-import { APIGatewayProxyEventV2 } from 'aws-lambda';
-import { RouteResponse } from '../routes';
+import { APIGatewayProxyEventV2 } from "aws-lambda";
+import { RouteResponse } from "../routes";
 
 /**
  * Route handler function type.
  */
 export type RouteHandler = (
   event: APIGatewayProxyEventV2,
-  tenantId?: string
+  tenantId?: string,
 ) => Promise<RouteResponse>;
 
 /**
@@ -15,7 +15,7 @@ export type RouteHandler = (
 export type Middleware = (
   event: APIGatewayProxyEventV2,
   tenantId?: string,
-  next?: () => Promise<RouteResponse>
+  next?: () => Promise<RouteResponse>,
 ) => Promise<RouteResponse | void> | RouteResponse | void;
 
 /**
@@ -44,4 +44,3 @@ export interface RouteMatch {
   route: RouteDefinition;
   params: PathParams;
 }
-

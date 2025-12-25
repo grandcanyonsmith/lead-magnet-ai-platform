@@ -1,112 +1,128 @@
-'use client'
+"use client";
 
-import { useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { SparklesIcon } from '@heroicons/react/24/outline'
-import toast from 'react-hot-toast'
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { SparklesIcon } from "@heroicons/react/24/outline";
+import toast from "react-hot-toast";
 
-import { api } from '@/lib/api'
-import { useWorkflowAI } from '@/hooks/useWorkflowAI'
-import { WorkflowDiffPreview } from '@/components/workflows/edit/WorkflowDiffPreview'
+import { api } from "@/lib/api";
+import { useWorkflowAI } from "@/hooks/useWorkflowAI";
+import { WorkflowDiffPreview } from "@/components/workflows/edit/WorkflowDiffPreview";
 
-import type { Artifact } from '@/types/artifact'
-import type { Job, MergedStep } from '@/types/job'
-import type { Workflow } from '@/types/workflow'
+import type { Artifact } from "@/types/artifact";
+import type { Job, MergedStep } from "@/types/job";
+import type { Workflow } from "@/types/workflow";
 
 function truncate(text: string, maxChars: number): string {
-  const raw = String(text || '')
-  if (raw.length <= maxChars) return raw
-  return `${raw.slice(0, maxChars)}\n\n[TRUNCATED: ${raw.length - maxChars} chars omitted]`
+  const raw = String(text || "");
+  if (raw.length <= maxChars) return raw;
+  return `${raw.slice(0, maxChars)}\n\n[TRUNCATED: ${raw.length - maxChars} chars omitted]`;
 }
 
 function toCompactText(value: unknown, maxChars: number): string {
-  if (value === null || value === undefined) return ''
-  if (typeof value === 'string') return truncate(value, maxChars)
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string") return truncate(value, maxChars);
   try {
-    return truncate(JSON.stringify(value, null, 2), maxChars)
+    return truncate(JSON.stringify(value, null, 2), maxChars);
   } catch {
-    return truncate(String(value), maxChars)
+    return truncate(String(value), maxChars);
   }
 }
 
 function stripInjectedBlocksForReview(html: string): string {
-  return String(html || '')
-    .replace(/<!--\s*Lead Magnet Editor Overlay\s*-->[\s\S]*?<\/script>\s*/gi, '')
-    .replace(/<!--\s*Lead Magnet Tracking Script\s*-->[\s\S]*?<\/script>\s*/gi, '')
-    .trim()
+  return String(html || "")
+    .replace(
+      /<!--\s*Lead Magnet Editor Overlay\s*-->[\s\S]*?<\/script>\s*/gi,
+      "",
+    )
+    .replace(
+      /<!--\s*Lead Magnet Tracking Script\s*-->[\s\S]*?<\/script>\s*/gi,
+      "",
+    )
+    .trim();
 }
 
 function buildWorkflowImprovementPrompt(args: {
-  job: Job
-  workflow: Workflow
-  mergedSteps: MergedStep[]
-  artifacts: Artifact[]
-  finalDocument: string
-  notes: string
+  job: Job;
+  workflow: Workflow;
+  mergedSteps: MergedStep[];
+  artifacts: Artifact[];
+  finalDocument: string;
+  notes: string;
 }): string {
-  const { job, workflow, mergedSteps, artifacts, finalDocument, notes } = args
+  const { job, workflow, mergedSteps, artifacts, finalDocument, notes } = args;
 
-  const cleanedDoc = stripInjectedBlocksForReview(finalDocument)
-  const finalDocSnippet = truncate(cleanedDoc, 20_000)
+  const cleanedDoc = stripInjectedBlocksForReview(finalDocument);
+  const finalDocSnippet = truncate(cleanedDoc, 20_000);
 
   const artifactsSorted = [...(artifacts || [])].sort((a, b) => {
-    const at = a.created_at ? new Date(a.created_at).getTime() : 0
-    const bt = b.created_at ? new Date(b.created_at).getTime() : 0
-    return bt - at
-  })
+    const at = a.created_at ? new Date(a.created_at).getTime() : 0;
+    const bt = b.created_at ? new Date(b.created_at).getTime() : 0;
+    return bt - at;
+  });
 
   const artifactLines = artifactsSorted.slice(0, 35).map((a, idx) => {
-    const name = a.file_name || a.artifact_name || a.artifact_id
-    const url = a.public_url || a.object_url
-    const type = a.artifact_type || a.content_type || 'unknown'
-    return `${idx + 1}. ${name} (type=${type})${url ? ` url=${url}` : ''}`
-  })
+    const name = a.file_name || a.artifact_name || a.artifact_id;
+    const url = a.public_url || a.object_url;
+    const type = a.artifact_type || a.content_type || "unknown";
+    return `${idx + 1}. ${name} (type=${type})${url ? ` url=${url}` : ""}`;
+  });
 
-  const workflowSteps = workflow.steps || []
+  const workflowSteps = workflow.steps || [];
   const stepLines = workflowSteps.slice(0, 12).map((step, idx) => {
-    const exec = mergedSteps.find((s) => s.step_order === idx + 1)
+    const exec = mergedSteps.find((s) => s.step_order === idx + 1);
     const tools =
       Array.isArray(step.tools) && step.tools.length > 0
-        ? step.tools.map((t: any) => (typeof t === 'string' ? t : t?.type || 'unknown')).join(', ')
-        : '(none)'
+        ? step.tools
+            .map((t: any) => (typeof t === "string" ? t : t?.type || "unknown"))
+            .join(", ")
+        : "(none)";
 
-    const outputExcerpt = toCompactText(exec?.output, 1_600)
-    const errorExcerpt = exec?.error ? truncate(String(exec.error), 600) : ''
+    const outputExcerpt = toCompactText(exec?.output, 1_600);
+    const errorExcerpt = exec?.error ? truncate(String(exec.error), 600) : "";
 
-    const usage = exec?.usage_info
+    const usage = exec?.usage_info;
     const usageLine =
-      usage && (usage.total_tokens || usage.input_tokens || usage.output_tokens || usage.cost_usd)
-        ? `usage: tokens=${usage.total_tokens ?? 'n/a'} input=${usage.input_tokens ?? 'n/a'} output=${usage.output_tokens ?? 'n/a'} cost_usd=${usage.cost_usd ?? 'n/a'}`
-        : null
+      usage &&
+      (usage.total_tokens ||
+        usage.input_tokens ||
+        usage.output_tokens ||
+        usage.cost_usd)
+        ? `usage: tokens=${usage.total_tokens ?? "n/a"} input=${usage.input_tokens ?? "n/a"} output=${usage.output_tokens ?? "n/a"} cost_usd=${usage.cost_usd ?? "n/a"}`
+        : null;
 
     return [
       `Step ${idx + 1}: ${step.step_name} (model=${step.model}${
-        step.reasoning_effort ? ` effort=${step.reasoning_effort}` : ''
+        step.reasoning_effort ? ` effort=${step.reasoning_effort}` : ""
       })`,
       step.step_description ? `Description: ${step.step_description}` : null,
-      `Tools: ${tools} (tool_choice=${step.tool_choice || 'auto'})`,
-      step.depends_on && step.depends_on.length > 0 ? `Depends on: ${step.depends_on.map((d) => d + 1).join(', ')}` : null,
-      `Instructions:\n${truncate(step.instructions || '', 2_200)}`,
+      `Tools: ${tools} (tool_choice=${step.tool_choice || "auto"})`,
+      step.depends_on && step.depends_on.length > 0
+        ? `Depends on: ${step.depends_on.map((d) => d + 1).join(", ")}`
+        : null,
+      `Instructions:\n${truncate(step.instructions || "", 2_200)}`,
       exec
-        ? `Run result: status=${exec._status} duration_ms=${exec.duration_ms ?? 'n/a'} artifact_id=${
-            exec.artifact_id ?? 'n/a'
+        ? `Run result: status=${exec._status} duration_ms=${exec.duration_ms ?? "n/a"} artifact_id=${
+            exec.artifact_id ?? "n/a"
           } images=${exec.image_urls?.length ?? 0}`
-        : 'Run result: (no execution data found for this step)',
+        : "Run result: (no execution data found for this step)",
       usageLine,
       errorExcerpt ? `Error:\n${errorExcerpt}` : null,
       outputExcerpt ? `Output excerpt:\n${outputExcerpt}` : null,
     ]
       .filter(Boolean)
-      .join('\n')
-  })
+      .join("\n");
+  });
 
-  const nonWorkflowExecSteps = mergedSteps.filter((s) => s.step_type !== 'workflow_step')
+  const nonWorkflowExecSteps = mergedSteps.filter(
+    (s) => s.step_type !== "workflow_step",
+  );
   const extraExecLines = nonWorkflowExecSteps.slice(0, 8).map((s) => {
-    return `- step_order=${s.step_order} type=${s.step_type} name=${s.step_name || '(none)'} status=${s._status}`
-  })
+    return `- step_order=${s.step_order} type=${s.step_type} name=${s.step_name || "(none)"} status=${s._status}`;
+  });
 
-  const artifactCount = artifacts?.length || 0
-  const stepCount = workflowSteps.length || 0
+  const artifactCount = artifacts?.length || 0;
+  const stepCount = workflowSteps.length || 0;
 
   return `You are an expert workflow engineer for an AI-powered lead magnet generation platform.
 
@@ -133,61 +149,71 @@ Job context:
 - workflow: ${workflow.workflow_name} (${workflow.workflow_id})
 - step_count: ${stepCount}
 - artifact_count: ${artifactCount}
-${notes.trim() ? `\nAdditional improvement goals from the user:\n${notes.trim()}\n` : ''}
+${notes.trim() ? `\nAdditional improvement goals from the user:\n${notes.trim()}\n` : ""}
 
 Artifacts (most recent first; list may be truncated):
-${artifactLines.length ? artifactLines.join('\n') : '(none)'}
-${artifactCount > artifactLines.length ? `\n[${artifactCount - artifactLines.length} more artifacts omitted]\n` : ''}
+${artifactLines.length ? artifactLines.join("\n") : "(none)"}
+${artifactCount > artifactLines.length ? `\n[${artifactCount - artifactLines.length} more artifacts omitted]\n` : ""}
 
 Final deliverable (cleaned; may be truncated):
 ${finalDocSnippet}
 
 Execution steps observed (workflow steps; may be truncated):
-${stepLines.length ? stepLines.join('\n\n---\n\n') : '(no workflow steps found)'}
-${workflowSteps.length > stepLines.length ? `\n\n[${workflowSteps.length - stepLines.length} more steps omitted]\n` : ''}
+${stepLines.length ? stepLines.join("\n\n---\n\n") : "(no workflow steps found)"}
+${workflowSteps.length > stepLines.length ? `\n\n[${workflowSteps.length - stepLines.length} more steps omitted]\n` : ""}
 
 Other execution steps (non-workflow; for context only):
-${extraExecLines.length ? extraExecLines.join('\n') : '(none)'}
+${extraExecLines.length ? extraExecLines.join("\n") : "(none)"}
 
-Now return a JSON object per the system schema with an improved steps array and a short changes_summary.`
+Now return a JSON object per the system schema with an improved steps array and a short changes_summary.`;
 }
 
 interface WorkflowImprovePanelProps {
-  job: Job
-  workflow: Workflow | null
-  mergedSteps: MergedStep[]
-  artifacts: Artifact[]
+  job: Job;
+  workflow: Workflow | null;
+  mergedSteps: MergedStep[];
+  artifacts: Artifact[];
 }
 
-export function WorkflowImprovePanel({ job, workflow, mergedSteps, artifacts }: WorkflowImprovePanelProps) {
-  const router = useRouter()
-  const workflowId = workflow?.workflow_id || ''
+export function WorkflowImprovePanel({
+  job,
+  workflow,
+  mergedSteps,
+  artifacts,
+}: WorkflowImprovePanelProps) {
+  const router = useRouter();
+  const workflowId = workflow?.workflow_id || "";
 
-  const [notes, setNotes] = useState('')
-  const [isBuildingPrompt, setIsBuildingPrompt] = useState(false)
-  const [isApplying, setIsApplying] = useState(false)
+  const [notes, setNotes] = useState("");
+  const [isBuildingPrompt, setIsBuildingPrompt] = useState(false);
+  const [isApplying, setIsApplying] = useState(false);
 
-  const { generateWorkflowEdit, clearProposal, isGenerating, error, proposal } = useWorkflowAI(workflowId)
+  const { generateWorkflowEdit, clearProposal, isGenerating, error, proposal } =
+    useWorkflowAI(workflowId);
 
-  const canGenerate = Boolean(workflowId && !isGenerating && !isBuildingPrompt)
+  const canGenerate = Boolean(workflowId && !isGenerating && !isBuildingPrompt);
 
   const currentWorkflowForDiff = useMemo(() => {
     return {
-      workflow_name: workflow?.workflow_name || 'Untitled workflow',
-      workflow_description: workflow?.workflow_description || '',
+      workflow_name: workflow?.workflow_name || "Untitled workflow",
+      workflow_description: workflow?.workflow_description || "",
       steps: workflow?.steps || [],
-    }
-  }, [workflow?.workflow_description, workflow?.workflow_name, workflow?.steps])
+    };
+  }, [
+    workflow?.workflow_description,
+    workflow?.workflow_name,
+    workflow?.steps,
+  ]);
 
   const handleGenerate = async () => {
     if (!workflow || !workflow.workflow_id) {
-      toast.error('Workflow not loaded for this job')
-      return
+      toast.error("Workflow not loaded for this job");
+      return;
     }
 
-    setIsBuildingPrompt(true)
+    setIsBuildingPrompt(true);
     try {
-      const finalDoc = await api.jobs.getJobDocument(job.job_id)
+      const finalDoc = await api.jobs.getJobDocument(job.job_id);
       const prompt = buildWorkflowImprovementPrompt({
         job,
         workflow,
@@ -195,42 +221,49 @@ export function WorkflowImprovePanel({ job, workflow, mergedSteps, artifacts }: 
         artifacts,
         finalDocument: finalDoc,
         notes,
-      })
+      });
 
-      await generateWorkflowEdit(prompt)
-      toast.success('AI improvements generated')
+      await generateWorkflowEdit(prompt);
+      toast.success("AI improvements generated");
     } catch (err: any) {
-      console.error('[WorkflowImprovePanel] Failed to generate improvements', err)
-      toast.error(err?.message || 'Failed to generate AI improvements')
+      console.error(
+        "[WorkflowImprovePanel] Failed to generate improvements",
+        err,
+      );
+      toast.error(err?.message || "Failed to generate AI improvements");
     } finally {
-      setIsBuildingPrompt(false)
+      setIsBuildingPrompt(false);
     }
-  }
+  };
 
   const handleApply = async () => {
-    if (!workflow || !proposal) return
-    setIsApplying(true)
+    if (!workflow || !proposal) return;
+    setIsApplying(true);
     try {
       await api.updateWorkflow(workflow.workflow_id, {
-        ...(proposal.workflow_name ? { workflow_name: proposal.workflow_name } : {}),
-        ...(proposal.workflow_description !== undefined ? { workflow_description: proposal.workflow_description } : {}),
+        ...(proposal.workflow_name
+          ? { workflow_name: proposal.workflow_name }
+          : {}),
+        ...(proposal.workflow_description !== undefined
+          ? { workflow_description: proposal.workflow_description }
+          : {}),
         steps: proposal.steps,
-      })
-      toast.success('Workflow updated. Rerun a job to see improved output.')
-      clearProposal()
-      router.refresh()
+      });
+      toast.success("Workflow updated. Rerun a job to see improved output.");
+      clearProposal();
+      router.refresh();
     } catch (err: any) {
-      console.error('[WorkflowImprovePanel] Failed to apply improvements', err)
-      toast.error(err?.message || 'Failed to apply improvements')
+      console.error("[WorkflowImprovePanel] Failed to apply improvements", err);
+      toast.error(err?.message || "Failed to apply improvements");
     } finally {
-      setIsApplying(false)
+      setIsApplying(false);
     }
-  }
+  };
 
   const handleReject = () => {
-    clearProposal()
-    toast('AI proposal dismissed', { icon: '✕' })
-  }
+    clearProposal();
+    toast("AI proposal dismissed", { icon: "✕" });
+  };
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -241,10 +274,13 @@ export function WorkflowImprovePanel({ job, workflow, mergedSteps, artifacts }: 
               <SparklesIcon className="h-5 w-5" aria-hidden="true" />
             </span>
             <div className="min-w-0">
-              <h3 className="text-sm font-semibold text-gray-900">Review & improve workflow steps</h3>
+              <h3 className="text-sm font-semibold text-gray-900">
+                Review & improve workflow steps
+              </h3>
               <p className="mt-0.5 text-sm text-gray-600">
-                AI will review the final deliverable, artifacts, and execution results, then propose better step
-                instructions/models/tools for future runs.
+                AI will review the final deliverable, artifacts, and execution
+                results, then propose better step instructions/models/tools for
+                future runs.
               </p>
             </div>
           </div>
@@ -255,9 +291,15 @@ export function WorkflowImprovePanel({ job, workflow, mergedSteps, artifacts }: 
           onClick={handleGenerate}
           disabled={!canGenerate}
           className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
-          title={workflowId ? 'Generate workflow improvements' : 'Workflow not loaded'}
+          title={
+            workflowId
+              ? "Generate workflow improvements"
+              : "Workflow not loaded"
+          }
         >
-          {isGenerating || isBuildingPrompt ? 'Generating…' : 'Generate improvements'}
+          {isGenerating || isBuildingPrompt
+            ? "Generating…"
+            : "Generate improvements"}
         </button>
       </div>
 
@@ -287,7 +329,5 @@ export function WorkflowImprovePanel({ job, workflow, mergedSteps, artifacts }: 
         </div>
       ) : null}
     </div>
-  )
+  );
 }
-
-

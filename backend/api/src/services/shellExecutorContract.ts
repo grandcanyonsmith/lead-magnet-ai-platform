@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 /**
  * Shell Executor Contract (Orchestrator <-> Fargate runner)
@@ -13,7 +13,7 @@ import { z } from 'zod';
  *   orchestrator can forward it directly back to OpenAI.
  */
 
-export const SHELL_EXECUTOR_CONTRACT_VERSION = '2025-12-18' as const;
+export const SHELL_EXECUTOR_CONTRACT_VERSION = "2025-12-18" as const;
 
 /**
  * Output outcome matches OpenAI shell tool expectations.
@@ -22,11 +22,11 @@ export const SHELL_EXECUTOR_CONTRACT_VERSION = '2025-12-18' as const;
  */
 export const shellCommandOutcomeSchema = z.union([
   z.object({
-    type: z.literal('exit'),
+    type: z.literal("exit"),
     exit_code: z.number().int(),
   }),
   z.object({
-    type: z.literal('timeout'),
+    type: z.literal("timeout"),
   }),
 ]);
 
@@ -61,7 +61,9 @@ export const shellExecutorJobRequestSchema = z.object({
   result_content_type: z.string().optional(),
 });
 
-export type ShellExecutorJobRequest = z.infer<typeof shellExecutorJobRequestSchema>;
+export type ShellExecutorJobRequest = z.infer<
+  typeof shellExecutorJobRequestSchema
+>;
 
 /**
  * Result JSON uploaded by the executor via presigned PUT.
@@ -84,6 +86,6 @@ export const shellExecutorJobResultSchema = z.object({
     .optional(),
 });
 
-export type ShellExecutorJobResult = z.infer<typeof shellExecutorJobResultSchema>;
-
-
+export type ShellExecutorJobResult = z.infer<
+  typeof shellExecutorJobResultSchema
+>;

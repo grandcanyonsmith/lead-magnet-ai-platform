@@ -2,28 +2,28 @@
  * Type definitions for OnboardingChecklist component
  */
 
-import { TourId } from '@/lib/tours'
-import { OnboardingChecklist as OnboardingChecklistType } from '@/types/settings'
+import { TourId } from "@/lib/tours";
+import { OnboardingChecklist as OnboardingChecklistType } from "@/types/settings";
 
 /**
  * Checklist item ID - must match keys in OnboardingChecklist type
  */
-export type ChecklistItemId = keyof NonNullable<OnboardingChecklistType>
+export type ChecklistItemId = keyof NonNullable<OnboardingChecklistType>;
 
 /**
  * Checklist item configuration
  */
 export interface ChecklistItem {
   /** Unique identifier matching OnboardingChecklist key */
-  id: ChecklistItemId
+  id: ChecklistItemId;
   /** Display label for the checklist item */
-  label: string
+  label: string;
   /** Route to navigate to when item is clicked */
-  route: string
+  route: string;
   /** Tour ID to start after navigation */
-  tourId: TourId
+  tourId: TourId;
   /** Optional description/tooltip for the item */
-  description?: string
+  description?: string;
 }
 
 /**
@@ -31,9 +31,9 @@ export interface ChecklistItem {
  */
 export interface OnboardingChecklistSettings {
   /** Whether the onboarding survey has been completed */
-  onboarding_survey_completed?: boolean
+  onboarding_survey_completed?: boolean;
   /** Checklist completion status */
-  onboarding_checklist?: OnboardingChecklistType
+  onboarding_checklist?: OnboardingChecklistType;
 }
 
 /**
@@ -41,13 +41,13 @@ export interface OnboardingChecklistSettings {
  */
 export interface OnboardingChecklistProps {
   /** User settings containing onboarding state */
-  settings: OnboardingChecklistSettings
+  settings: OnboardingChecklistSettings;
   /** Callback to start a tour when checklist item is clicked */
-  onStartTour: (tourId: TourId) => void
+  onStartTour: (tourId: TourId) => void;
   /** Optional callback when checklist is dismissed */
-  onDismiss?: () => void
+  onDismiss?: () => void;
   /** Optional callback when checklist item is clicked */
-  onItemClick?: (itemId: ChecklistItemId) => void
+  onItemClick?: (itemId: ChecklistItemId) => void;
 }
 
 /**
@@ -55,20 +55,20 @@ export interface OnboardingChecklistProps {
  */
 export interface ChecklistItemState {
   /** ID of the item currently being processed */
-  updating: ChecklistItemId | null
+  updating: ChecklistItemId | null;
   /** Error message for the current operation */
-  error: string | null
+  error: string | null;
   /** Whether the operation is retrying */
-  retrying: boolean
+  retrying: boolean;
 }
 
 /**
  * Local storage keys
  */
 export const STORAGE_KEYS = {
-  DISMISSED: 'onboarding-checklist-dismissed',
-  MINIMIZED: 'onboarding-checklist-minimized',
-} as const
+  DISMISSED: "onboarding-checklist-dismissed",
+  MINIMIZED: "onboarding-checklist-minimized",
+} as const;
 
 /**
  * Navigation configuration
@@ -82,14 +82,13 @@ export const NAVIGATION_CONFIG = {
   MAX_TOUR_DELAY: 5000,
   /** Interval to check for navigation completion (ms) */
   NAVIGATION_CHECK_INTERVAL: 100,
-} as const
+} as const;
 
 /**
  * Error messages
  */
 export const ERROR_MESSAGES = {
-  NAVIGATION_FAILED: 'Failed to navigate. Please try again.',
-  TOUR_START_FAILED: 'Failed to start tour. Please try again.',
-  GENERIC: 'An error occurred. Please try again.',
-} as const
-
+  NAVIGATION_FAILED: "Failed to navigate. Please try again.",
+  TOUR_START_FAILED: "Failed to start tour. Please try again.",
+  GENERIC: "An error occurred. Please try again.",
+} as const;

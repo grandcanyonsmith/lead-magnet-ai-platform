@@ -1,17 +1,17 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { FiX, FiSave, FiLoader, FiZap } from 'react-icons/fi'
-import { api } from '@/lib/api'
-import { toast } from 'react-hot-toast'
+import { useState } from "react";
+import { FiX, FiSave, FiLoader, FiZap } from "react-icons/fi";
+import { api } from "@/lib/api";
+import { toast } from "react-hot-toast";
 
 interface QuickEditStepModalProps {
-  isOpen: boolean
-  onClose: () => void
-  jobId: string
-  stepOrder: number
-  stepName: string
-  onSave?: () => void
+  isOpen: boolean;
+  onClose: () => void;
+  jobId: string;
+  stepOrder: number;
+  stepName: string;
+  onSave?: () => void;
 }
 
 export function QuickEditStepModal({
@@ -22,79 +22,84 @@ export function QuickEditStepModal({
   stepName,
   onSave,
 }: QuickEditStepModalProps) {
-  const [prompt, setPrompt] = useState('')
-  const [generating, setGenerating] = useState(false)
-  const [saving, setSaving] = useState(false)
+  const [prompt, setPrompt] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [proposedChanges, setProposedChanges] = useState<{
-    original_output: any
-    edited_output: any
-    changes_summary: string
-  } | null>(null)
+    original_output: any;
+    edited_output: any;
+    changes_summary: string;
+  } | null>(null);
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
-      toast.error('Please enter a prompt describing the changes you want')
-      return
+      toast.error("Please enter a prompt describing the changes you want");
+      return;
     }
 
-    setGenerating(true)
-    setProposedChanges(null)
+    setGenerating(true);
+    setProposedChanges(null);
 
     try {
-      const result = await api.quickEditStep(jobId, stepOrder, prompt.trim(), false)
-      setProposedChanges(result)
-      toast.success('Changes generated successfully')
+      const result = await api.quickEditStep(
+        jobId,
+        stepOrder,
+        prompt.trim(),
+        false,
+      );
+      setProposedChanges(result);
+      toast.success("Changes generated successfully");
     } catch (error: any) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Failed to generate changes:', error)
+      if (process.env.NODE_ENV === "development") {
+        console.error("Failed to generate changes:", error);
       }
-      toast.error(error.message || 'Failed to generate changes')
+      toast.error(error.message || "Failed to generate changes");
     } finally {
-      setGenerating(false)
+      setGenerating(false);
     }
-  }
+  };
 
   const handleSave = async () => {
     if (!prompt.trim() || !proposedChanges) {
-      return
+      return;
     }
 
-    setSaving(true)
+    setSaving(true);
 
     try {
-      await api.quickEditStep(jobId, stepOrder, prompt.trim(), true)
-      toast.success('Changes saved successfully')
-      setProposedChanges(null)
-      setPrompt('')
-      onSave?.()
-      onClose()
+      await api.quickEditStep(jobId, stepOrder, prompt.trim(), true);
+      toast.success("Changes saved successfully");
+      setProposedChanges(null);
+      setPrompt("");
+      onSave?.();
+      onClose();
     } catch (error: any) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Failed to save changes:', error)
+      if (process.env.NODE_ENV === "development") {
+        console.error("Failed to save changes:", error);
       }
-      toast.error(error.message || 'Failed to save changes')
+      toast.error(error.message || "Failed to save changes");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   const handleClose = () => {
     if (!generating && !saving) {
-      setPrompt('')
-      setProposedChanges(null)
-      onClose()
+      setPrompt("");
+      setProposedChanges(null);
+      onClose();
     }
-  }
+  };
 
   const formatOutput = (output: any): string => {
-    if (typeof output === 'string') {
-      return output
+    if (typeof output === "string") {
+      return output;
     }
-    return JSON.stringify(output, null, 2)
-  }
+    return JSON.stringify(output, null, 2);
+  };
 
   if (!isOpen) {
-    return null
+    return null;
   }
 
   return (
@@ -112,7 +117,9 @@ export function QuickEditStepModal({
           <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 flex-shrink-0">
             <div className="flex items-center gap-2">
               <FiZap className="w-5 h-5 text-purple-600" />
-              <h3 className="text-lg font-semibold text-gray-900">Quick Edit Step</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Quick Edit Step
+              </h3>
             </div>
             <button
               onClick={handleClose}
@@ -128,7 +135,8 @@ export function QuickEditStepModal({
             {/* Step Info */}
             <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
               <p className="text-sm text-gray-700">
-                <span className="font-medium">Step {stepOrder}:</span> {stepName}
+                <span className="font-medium">Step {stepOrder}:</span>{" "}
+                {stepName}
               </p>
             </div>
 
@@ -176,7 +184,8 @@ export function QuickEditStepModal({
                 {/* Changes Summary */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <p className="text-sm text-blue-800">
-                    <span className="font-medium">Summary:</span> {proposedChanges.changes_summary}
+                    <span className="font-medium">Summary:</span>{" "}
+                    {proposedChanges.changes_summary}
                   </p>
                 </div>
 
@@ -185,7 +194,9 @@ export function QuickEditStepModal({
                   {/* Original */}
                   <div className="border border-gray-200 rounded-lg overflow-hidden">
                     <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
-                      <span className="text-sm font-semibold text-gray-700">Original Output</span>
+                      <span className="text-sm font-semibold text-gray-700">
+                        Original Output
+                      </span>
                     </div>
                     <div className="p-4 bg-white max-h-96 overflow-y-auto">
                       <pre className="text-sm text-gray-700 whitespace-pre-wrap font-sans">
@@ -197,7 +208,9 @@ export function QuickEditStepModal({
                   {/* Edited */}
                   <div className="border border-green-200 rounded-lg overflow-hidden">
                     <div className="bg-green-50 px-4 py-2 border-b border-green-200">
-                      <span className="text-sm font-semibold text-green-700">Edited Output</span>
+                      <span className="text-sm font-semibold text-green-700">
+                        Edited Output
+                      </span>
                     </div>
                     <div className="p-4 bg-white max-h-96 overflow-y-auto">
                       <pre className="text-sm text-gray-700 whitespace-pre-wrap font-sans">
@@ -212,8 +225,8 @@ export function QuickEditStepModal({
                   <button
                     type="button"
                     onClick={() => {
-                      setProposedChanges(null)
-                      setPrompt('')
+                      setProposedChanges(null);
+                      setPrompt("");
                     }}
                     disabled={saving}
                     className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
@@ -244,6 +257,5 @@ export function QuickEditStepModal({
         </div>
       </div>
     </div>
-  )
+  );
 }
-

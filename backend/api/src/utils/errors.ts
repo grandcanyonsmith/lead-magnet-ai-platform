@@ -1,5 +1,5 @@
-import { logger } from './logger';
-import { env } from './env';
+import { logger } from "./logger";
+import { env } from "./env";
 
 /**
  * Base API error class.
@@ -20,10 +20,10 @@ export class ApiError extends Error {
       requestId?: string;
       userId?: string;
       tenantId?: string;
-    }
+    },
   ) {
     super(message);
-    this.name = 'ApiError';
+    this.name = "ApiError";
     this.timestamp = new Date().toISOString();
     this.requestId = context?.requestId;
     this.userId = context?.userId;
@@ -54,9 +54,12 @@ export class ApiError extends Error {
  * Authentication error (401).
  */
 export class AuthenticationError extends ApiError {
-  constructor(message: string = 'Please sign in to access this page', details?: Record<string, any>) {
-    super(message, 401, 'AUTHENTICATION_REQUIRED', details);
-    this.name = 'AuthenticationError';
+  constructor(
+    message: string = "Please sign in to access this page",
+    details?: Record<string, any>,
+  ) {
+    super(message, 401, "AUTHENTICATION_REQUIRED", details);
+    this.name = "AuthenticationError";
   }
 }
 
@@ -64,9 +67,12 @@ export class AuthenticationError extends ApiError {
  * Authorization error (403).
  */
 export class AuthorizationError extends ApiError {
-  constructor(message: string = 'You don\'t have permission to access this resource', details?: Record<string, any>) {
-    super(message, 403, 'AUTHORIZATION_FAILED', details);
-    this.name = 'AuthorizationError';
+  constructor(
+    message: string = "You don't have permission to access this resource",
+    details?: Record<string, any>,
+  ) {
+    super(message, 403, "AUTHORIZATION_FAILED", details);
+    this.name = "AuthorizationError";
   }
 }
 
@@ -74,9 +80,12 @@ export class AuthorizationError extends ApiError {
  * Not found error (404).
  */
 export class NotFoundError extends ApiError {
-  constructor(message: string = 'Resource not found', details?: Record<string, any>) {
-    super(message, 404, 'NOT_FOUND', details);
-    this.name = 'NotFoundError';
+  constructor(
+    message: string = "Resource not found",
+    details?: Record<string, any>,
+  ) {
+    super(message, 404, "NOT_FOUND", details);
+    this.name = "NotFoundError";
   }
 }
 
@@ -85,8 +94,8 @@ export class NotFoundError extends ApiError {
  */
 export class ValidationError extends ApiError {
   constructor(message: string, details?: Record<string, any>) {
-    super(message, 400, 'VALIDATION_ERROR', details);
-    this.name = 'ValidationError';
+    super(message, 400, "VALIDATION_ERROR", details);
+    this.name = "ValidationError";
   }
 }
 
@@ -95,8 +104,8 @@ export class ValidationError extends ApiError {
  */
 export class ConflictError extends ApiError {
   constructor(message: string, details?: Record<string, any>) {
-    super(message, 409, 'CONFLICT', details);
-    this.name = 'ConflictError';
+    super(message, 409, "CONFLICT", details);
+    this.name = "ConflictError";
   }
 }
 
@@ -104,9 +113,12 @@ export class ConflictError extends ApiError {
  * Rate limit error (429).
  */
 export class RateLimitError extends ApiError {
-  constructor(message: string = 'Rate limit exceeded', details?: Record<string, any>) {
-    super(message, 429, 'RATE_LIMIT_EXCEEDED', details);
-    this.name = 'RateLimitError';
+  constructor(
+    message: string = "Rate limit exceeded",
+    details?: Record<string, any>,
+  ) {
+    super(message, 429, "RATE_LIMIT_EXCEEDED", details);
+    this.name = "RateLimitError";
   }
 }
 
@@ -114,9 +126,12 @@ export class RateLimitError extends ApiError {
  * Internal server error (500).
  */
 export class InternalServerError extends ApiError {
-  constructor(message: string = 'Internal server error', details?: Record<string, any>) {
-    super(message, 500, 'INTERNAL_ERROR', details);
-    this.name = 'InternalServerError';
+  constructor(
+    message: string = "Internal server error",
+    details?: Record<string, any>,
+  ) {
+    super(message, 500, "INTERNAL_ERROR", details);
+    this.name = "InternalServerError";
   }
 }
 
@@ -124,22 +139,27 @@ export class InternalServerError extends ApiError {
  * Service unavailable error (503).
  */
 export class ServiceUnavailableError extends ApiError {
-  constructor(message: string = 'Service temporarily unavailable', details?: Record<string, any>) {
-    super(message, 503, 'SERVICE_UNAVAILABLE', details);
-    this.name = 'ServiceUnavailableError';
+  constructor(
+    message: string = "Service temporarily unavailable",
+    details?: Record<string, any>,
+  ) {
+    super(message, 503, "SERVICE_UNAVAILABLE", details);
+    this.name = "ServiceUnavailableError";
   }
 }
 
 /**
  * Error tracking hook - can be extended to send errors to monitoring services
  */
-let errorTrackingHook: ((error: ApiError, context?: Record<string, any>) => void) | null = null;
+let errorTrackingHook:
+  | ((error: ApiError, context?: Record<string, any>) => void)
+  | null = null;
 
 /**
  * Set a custom error tracking hook for monitoring services
  */
 export function setErrorTrackingHook(
-  hook: (error: ApiError, context?: Record<string, any>) => void
+  hook: (error: ApiError, context?: Record<string, any>) => void,
 ): void {
   errorTrackingHook = hook;
 }
@@ -156,12 +176,12 @@ export const handleError = (
     tenantId?: string;
     path?: string;
     method?: string;
-  }
+  },
 ): { statusCode: number; body: any } => {
   // ApiError instances are already formatted
   if (error instanceof ApiError) {
     // Log with full context
-    logger.debug('[Error Handler] API Error', {
+    logger.debug("[Error Handler] API Error", {
       ...error.toLogObject(),
       ...(context && { context }),
     });
@@ -171,8 +191,11 @@ export const handleError = (
       try {
         errorTrackingHook(error, context);
       } catch (trackingError) {
-        logger.warn('[Error Handler] Error tracking hook failed', {
-          error: trackingError instanceof Error ? trackingError.message : String(trackingError),
+        logger.warn("[Error Handler] Error tracking hook failed", {
+          error:
+            trackingError instanceof Error
+              ? trackingError.message
+              : String(trackingError),
         });
       }
     }
@@ -191,7 +214,7 @@ export const handleError = (
 
   // Standard Error instances
   if (error instanceof Error) {
-    logger.error('[Error Handler] Unexpected error', {
+    logger.error("[Error Handler] Unexpected error", {
       error: error.message,
       stack: error.stack,
       name: error.name,
@@ -199,21 +222,21 @@ export const handleError = (
     });
 
     // Convert to ApiError for consistent handling
-    const apiError = new InternalServerError(
-      'An unexpected error occurred',
-      {
-        originalError: error.message,
-        ...(context && { context }),
-      }
-    );
+    const apiError = new InternalServerError("An unexpected error occurred", {
+      originalError: error.message,
+      ...(context && { context }),
+    });
 
     // Call error tracking hook if set
     if (errorTrackingHook) {
       try {
         errorTrackingHook(apiError, context);
       } catch (trackingError) {
-        logger.warn('[Error Handler] Error tracking hook failed', {
-          error: trackingError instanceof Error ? trackingError.message : String(trackingError),
+        logger.warn("[Error Handler] Error tracking hook failed", {
+          error:
+            trackingError instanceof Error
+              ? trackingError.message
+              : String(trackingError),
         });
       }
     }
@@ -221,14 +244,15 @@ export const handleError = (
     // Don't expose internal error details in production
     // In normal runtime, env.nodeEnv is stable. In tests, NODE_ENV may be mutated after env is instantiated.
     // Honor the live process.env.NODE_ENV to keep error output expectations deterministic.
-    const isDevelopment = env.isDevelopment() || process.env.NODE_ENV === 'development';
-    
+    const isDevelopment =
+      env.isDevelopment() || process.env.NODE_ENV === "development";
+
     return {
       statusCode: 500,
       body: {
-        error: 'Internal server error',
-        message: isDevelopment ? error.message : 'Internal server error',
-        code: 'INTERNAL_ERROR',
+        error: "Internal server error",
+        message: isDevelopment ? error.message : "Internal server error",
+        code: "INTERNAL_ERROR",
         ...(context?.requestId && { requestId: context.requestId }),
         ...(isDevelopment && {
           stack: error.stack,
@@ -238,7 +262,7 @@ export const handleError = (
   }
 
   // Unknown error type
-  logger.error('[Error Handler] Unknown error type', {
+  logger.error("[Error Handler] Unknown error type", {
     error: String(error),
     type: typeof error,
   });
@@ -246,8 +270,8 @@ export const handleError = (
   return {
     statusCode: 500,
     body: {
-      error: 'Unknown error occurred',
-      message: 'Unknown error occurred',
+      error: "Unknown error occurred",
+      message: "Unknown error occurred",
     },
   };
 };
@@ -259,7 +283,7 @@ export function createErrorResponse(
   statusCode: number,
   message: string,
   code?: string,
-  details?: Record<string, any>
+  details?: Record<string, any>,
 ): { statusCode: number; body: any } {
   return {
     statusCode,

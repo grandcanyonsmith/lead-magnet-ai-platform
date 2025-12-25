@@ -2,7 +2,7 @@
  * Standardized response helpers
  */
 
-import { RouteResponse } from '../routes';
+import { RouteResponse } from "../routes";
 
 /**
  * Create a success response
@@ -42,10 +42,10 @@ export function paginatedList<T>(
     limit?: number;
     hasMore?: boolean;
     resourceName?: string;
-  } = {}
+  } = {},
 ): RouteResponse {
-  const { total, offset, limit, hasMore, resourceName = 'items' } = options;
-  
+  const { total, offset, limit, hasMore, resourceName = "items" } = options;
+
   const response: any = {
     [resourceName]: items,
     count: items.length,
@@ -75,7 +75,7 @@ export function paginatedList<T>(
  */
 export function listResponse<T>(
   items: T[],
-  resourceName: string = 'items'
+  resourceName: string = "items",
 ): RouteResponse {
   return {
     statusCode: 200,
@@ -91,7 +91,7 @@ export function listResponse<T>(
  */
 export function withHeaders<T extends RouteResponse>(
   response: T,
-  headers: Record<string, string>
+  headers: Record<string, string>,
 ): T {
   return {
     ...response,
@@ -107,8 +107,7 @@ export function withHeaders<T extends RouteResponse>(
  */
 export function withContentType<T extends RouteResponse>(
   response: T,
-  contentType: string
+  contentType: string,
 ): T {
-  return withHeaders(response, { 'Content-Type': contentType });
+  return withHeaders(response, { "Content-Type": contentType });
 }
-

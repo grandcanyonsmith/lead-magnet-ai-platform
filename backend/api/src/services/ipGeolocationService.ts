@@ -3,7 +3,7 @@
  * Provides IP address geolocation lookup functionality.
  */
 
-import { logger } from '../utils/logger';
+import { logger } from "../utils/logger";
 
 interface LocationData {
   country?: string;
@@ -14,7 +14,7 @@ interface LocationData {
 }
 
 interface IpApiResponse {
-  status: 'success' | 'fail';
+  status: "success" | "fail";
   message?: string;
   country?: string;
   regionName?: string;
@@ -24,19 +24,22 @@ interface IpApiResponse {
 }
 
 // Simple in-memory cache to avoid repeated lookups
-const locationCache = new Map<string, { data: LocationData; timestamp: number }>();
+const locationCache = new Map<
+  string,
+  { data: LocationData; timestamp: number }
+>();
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export class IPGeolocationService {
   /**
    * Get location data from IP address.
    * Uses free ip-api.com service with caching.
-   * 
+   *
    * @param ipAddress - IP address to lookup
    * @returns Location data or null if lookup fails
    */
   async getLocationFromIP(ipAddress: string): Promise<LocationData | null> {
-    if (!ipAddress || ipAddress === '::1' || ipAddress === '127.0.0.1') {
+    if (!ipAddress || ipAddress === "::1" || ipAddress === "127.0.0.1") {
       // Localhost - return null
       return null;
     }
@@ -44,20 +47,26 @@ export class IPGeolocationService {
     // Check cache first
     const cached = locationCache.get(ipAddress);
     if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
-      logger.debug('[IP Geolocation] Using cached location', { ipAddress, location: cached.data });
+      logger.debug("[IP Geolocation] Using cached location", {
+        ipAddress,
+        location: cached.data,
+      });
       return cached.data;
     }
 
     try {
       // Use free ip-api.com service (no API key required, rate limit: 45 requests/minute)
-      const response = await fetch(`http://ip-api.com/json/${ipAddress}?fields=status,message,country,regionName,city,lat,lon`, {
-        headers: {
-          'Accept': 'application/json',
+      const response = await fetch(
+        `http://ip-api.com/json/${ipAddress}?fields=status,message,country,regionName,city,lat,lon`,
+        {
+          headers: {
+            Accept: "application/json",
+          },
         },
-      });
+      );
 
       if (!response.ok) {
-        logger.warn('[IP Geolocation] Failed to fetch location', {
+        logger.warn("[IP Geolocation] Failed to fetch location", {
           ipAddress,
           status: response.status,
           statusText: response.statusText,
@@ -67,8 +76,8 @@ export class IPGeolocationService {
 
       const data = (await response.json()) as IpApiResponse;
 
-      if (data.status === 'fail') {
-        logger.warn('[IP Geolocation] IP lookup failed', {
+      if (data.status === "fail") {
+        logger.warn("[IP Geolocation] IP lookup failed", {
           ipAddress,
           message: data.message,
         });
@@ -89,10 +98,13 @@ export class IPGeolocationService {
         timestamp: Date.now(),
       });
 
-      logger.debug('[IP Geolocation] Location fetched', { ipAddress, location });
+      logger.debug("[IP Geolocation] Location fetched", {
+        ipAddress,
+        location,
+      });
       return location;
     } catch (error: any) {
-      logger.error('[IP Geolocation] Error fetching location', {
+      logger.error("[IP Geolocation] Error fetching location", {
         ipAddress,
         error: error.message,
         stack: error.stack,

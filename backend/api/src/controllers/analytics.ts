@@ -1,32 +1,47 @@
-import { db, normalizeQueryResult } from '../utils/db';
-import { RouteResponse } from '../routes';
-import { ApiError } from '../utils/errors';
-import { logger } from '../utils/logger';
-import { env } from '../utils/env';
+import { db, normalizeQueryResult } from "../utils/db";
+import { RouteResponse } from "../routes";
+import { ApiError } from "../utils/errors";
+import { logger } from "../utils/logger";
+import { env } from "../utils/env";
 
 const JOBS_TABLE = env.jobsTable;
 const SUBMISSIONS_TABLE = env.submissionsTable;
 const WORKFLOWS_TABLE = env.workflowsTable;
 
 if (!JOBS_TABLE) {
-  logger.error('[Analytics Controller] JOBS_TABLE environment variable is not set');
+  logger.error(
+    "[Analytics Controller] JOBS_TABLE environment variable is not set",
+  );
 }
 if (!SUBMISSIONS_TABLE) {
-  logger.error('[Analytics Controller] SUBMISSIONS_TABLE environment variable is not set');
+  logger.error(
+    "[Analytics Controller] SUBMISSIONS_TABLE environment variable is not set",
+  );
 }
 if (!WORKFLOWS_TABLE) {
-  logger.error('[Analytics Controller] WORKFLOWS_TABLE environment variable is not set');
+  logger.error(
+    "[Analytics Controller] WORKFLOWS_TABLE environment variable is not set",
+  );
 }
 
 class AnalyticsController {
-  async getAnalytics(tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {
-    logger.info('[Analytics] Starting analytics query', { tenantId, queryParams });
-    
+  async getAnalytics(
+    tenantId: string,
+    queryParams: Record<string, any>,
+  ): Promise<RouteResponse> {
+    logger.info("[Analytics] Starting analytics query", {
+      tenantId,
+      queryParams,
+    });
+
     // Validate environment variables
     if (!JOBS_TABLE || !SUBMISSIONS_TABLE || !WORKFLOWS_TABLE) {
-      throw new ApiError('Analytics service configuration error: Missing required environment variables', 500);
+      throw new ApiError(
+        "Analytics service configuration error: Missing required environment variables",
+        500,
+      );
     }
-    
+
     const days = queryParams.days ? parseInt(queryParams.days) : 30;
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
@@ -40,19 +55,22 @@ class AnalyticsController {
       // Get all jobs for tenant in date range
       const jobsResult = await db.query(
         JOBS_TABLE!,
-        'gsi_tenant_created',
-        'tenant_id = :tenant_id AND created_at >= :start_date',
-        { ':tenant_id': tenantId, ':start_date': startDateStr }
+        "gsi_tenant_created",
+        "tenant_id = :tenant_id AND created_at >= :start_date",
+        { ":tenant_id": tenantId, ":start_date": startDateStr },
       );
       jobs = normalizeQueryResult(jobsResult);
-      logger.info('[Analytics] Jobs query completed', { count: jobs.length });
+      logger.info("[Analytics] Jobs query completed", { count: jobs.length });
     } catch (error: any) {
-      logger.error('[Analytics] Jobs query error', {
+      logger.error("[Analytics] Jobs query error", {
         error: error.message,
         errorName: error.name,
         table: JOBS_TABLE,
       });
-      if (error.name !== 'ResourceNotFoundException' && error.name !== 'AccessDeniedException') {
+      if (
+        error.name !== "ResourceNotFoundException" &&
+        error.name !== "AccessDeniedException"
+      ) {
         throw error;
       }
     }
@@ -61,19 +79,24 @@ class AnalyticsController {
       // Get all submissions for tenant in date range
       const submissionsResult = await db.query(
         SUBMISSIONS_TABLE!,
-        'gsi_tenant_created',
-        'tenant_id = :tenant_id AND created_at >= :start_date',
-        { ':tenant_id': tenantId, ':start_date': startDateStr }
+        "gsi_tenant_created",
+        "tenant_id = :tenant_id AND created_at >= :start_date",
+        { ":tenant_id": tenantId, ":start_date": startDateStr },
       );
       submissions = normalizeQueryResult(submissionsResult);
-      logger.info('[Analytics] Submissions query completed', { count: submissions.length });
+      logger.info("[Analytics] Submissions query completed", {
+        count: submissions.length,
+      });
     } catch (error: any) {
-      logger.error('[Analytics] Submissions query error', {
+      logger.error("[Analytics] Submissions query error", {
         error: error.message,
         errorName: error.name,
         table: SUBMISSIONS_TABLE,
       });
-      if (error.name !== 'ResourceNotFoundException' && error.name !== 'AccessDeniedException') {
+      if (
+        error.name !== "ResourceNotFoundException" &&
+        error.name !== "AccessDeniedException"
+      ) {
         throw error;
       }
     }
@@ -82,39 +105,50 @@ class AnalyticsController {
       // Get all workflows for tenant
       const workflowsResult = await db.query(
         WORKFLOWS_TABLE!,
-        'gsi_tenant_status',
-        'tenant_id = :tenant_id',
-        { ':tenant_id': tenantId }
+        "gsi_tenant_status",
+        "tenant_id = :tenant_id",
+        { ":tenant_id": tenantId },
       );
       workflows = normalizeQueryResult(workflowsResult);
-      logger.info('[Analytics] Workflows query completed', { count: workflows.length });
+      logger.info("[Analytics] Workflows query completed", {
+        count: workflows.length,
+      });
     } catch (error: any) {
-      logger.error('[Analytics] Workflows query error', {
+      logger.error("[Analytics] Workflows query error", {
         error: error.message,
         errorName: error.name,
         table: WORKFLOWS_TABLE,
       });
-      if (error.name !== 'ResourceNotFoundException' && error.name !== 'AccessDeniedException') {
+      if (
+        error.name !== "ResourceNotFoundException" &&
+        error.name !== "AccessDeniedException"
+      ) {
         throw error;
       }
     }
 
     // Calculate metrics
     const totalJobs = jobs.length;
-    const completedJobs = jobs.filter((j: any) => j.status === 'completed').length;
-    const failedJobs = jobs.filter((j: any) => j.status === 'failed').length;
-    const pendingJobs = jobs.filter((j: any) => j.status === 'pending' || j.status === 'processing').length;
+    const completedJobs = jobs.filter(
+      (j: any) => j.status === "completed",
+    ).length;
+    const failedJobs = jobs.filter((j: any) => j.status === "failed").length;
+    const pendingJobs = jobs.filter(
+      (j: any) => j.status === "pending" || j.status === "processing",
+    ).length;
 
     const totalSubmissions = submissions.length;
     const totalWorkflows = workflows.filter((w: any) => !w.deleted_at).length;
-    const activeWorkflows = workflows.filter((w: any) => w.status === 'active' && !w.deleted_at).length;
+    const activeWorkflows = workflows.filter(
+      (w: any) => w.status === "active" && !w.deleted_at,
+    ).length;
 
     // Calculate success rate
     const successRate = totalJobs > 0 ? (completedJobs / totalJobs) * 100 : 0;
 
     // Calculate average processing time for completed jobs
     const completedJobsWithTimes = jobs.filter(
-      (j: any) => j.status === 'completed' && j.completed_at && j.created_at
+      (j: any) => j.status === "completed" && j.completed_at && j.created_at,
     );
     let avgProcessingTime = 0;
     if (completedJobsWithTimes.length > 0) {
@@ -123,20 +157,22 @@ class AnalyticsController {
         const end = new Date(j.completed_at).getTime();
         return sum + (end - start);
       }, 0);
-      avgProcessingTime = Math.round(totalTime / completedJobsWithTimes.length / 1000); // seconds
+      avgProcessingTime = Math.round(
+        totalTime / completedJobsWithTimes.length / 1000,
+      ); // seconds
     }
 
     // Group jobs by day
     const jobsByDay: Record<string, number> = {};
     jobs.forEach((j: any) => {
-      const date = j.created_at.split('T')[0];
+      const date = j.created_at.split("T")[0];
       jobsByDay[date] = (jobsByDay[date] || 0) + 1;
     });
 
     // Group submissions by day
     const submissionsByDay: Record<string, number> = {};
     submissions.forEach((s: any) => {
-      const date = s.created_at.split('T')[0];
+      const date = s.created_at.split("T")[0];
       submissionsByDay[date] = (submissionsByDay[date] || 0) + 1;
     });
 
@@ -178,7 +214,7 @@ class AnalyticsController {
       },
     };
 
-    logger.info('[Analytics] Returning response', {
+    logger.info("[Analytics] Returning response", {
       statusCode: response.statusCode,
       bodyKeys: Object.keys(response.body),
       overview: response.body.overview,
@@ -189,4 +225,3 @@ class AnalyticsController {
 }
 
 export const analyticsController = new AnalyticsController();
-
