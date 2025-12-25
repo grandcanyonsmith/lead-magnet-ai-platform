@@ -88,9 +88,28 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
     'Artifact'
   const [openingJobOutput, setOpeningJobOutput] = useState(false)
 
+  const editorJobId = item.jobId || item.artifact?.job_id
+  const editorHref =
+    editorJobId
+      ? `/dashboard/editor?jobId=${editorJobId}&artifactId=${item.artifact?.artifact_id || ''}&url=${encodeURIComponent(artifactUrl || '')}`
+      : null
+
+  const normalizedFileName = fileName.toLowerCase()
+  const normalizedContentType = String(item.artifact?.content_type || '').toLowerCase()
+  const normalizedUrlPath = (() => {
+    try {
+      return artifactUrl ? new URL(artifactUrl).pathname.toLowerCase() : ''
+    } catch {
+      return String(artifactUrl || '').toLowerCase()
+    }
+  })()
+
   const isHtml =
-    item.artifact?.content_type === 'text/html' ||
-    fileName.toLowerCase().endsWith('.html')
+    normalizedContentType.includes('text/html') ||
+    normalizedFileName.endsWith('.html') ||
+    normalizedFileName.endsWith('.htm') ||
+    normalizedUrlPath.endsWith('.html') ||
+    normalizedUrlPath.endsWith('.htm')
 
   const handleCopy = async (value: string, successMessage: string) => {
     try {
@@ -146,9 +165,8 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
               className="h-full w-full object-cover"
               artifactId={item.artifact?.artifact_id}
             />
-            {/* Overlay Actions - Removed as requested */}
             <div
-              className="absolute inset-0 cursor-pointer"
+              className="absolute inset-0 cursor-pointer z-10"
               onClick={() => onPreview(item)}
             />
           </div>
@@ -165,6 +183,20 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
               <PhotoIcon className="h-12 w-12" />
             )}
           </div>
+        )}
+
+        {/* Overlay AI Editor button (restored) */}
+        {isHtml && editorHref && (
+          <Tooltip content="Open in AI Editor" position="top">
+            <Link
+              href={editorHref}
+              onClick={(e) => e.stopPropagation()}
+              className="absolute right-3 top-3 z-20 flex h-12 w-12 items-center justify-center rounded-full bg-gray-900/80 text-white shadow-lg transition-colors hover:bg-gray-900"
+              aria-label="Open in AI Editor"
+            >
+              <PencilSquareIcon className="h-5 w-5" />
+            </Link>
+          </Tooltip>
         )}
 
         {/* Type Badge */}
@@ -228,10 +260,10 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
                 </a>
               </Tooltip>
             )}
-            {isHtml && item.jobId && (
+            {isHtml && editorHref && (
               <Tooltip content="Open in AI Editor" position="top">
                 <Link
-                  href={`/dashboard/editor?jobId=${item.jobId}&artifactId=${item.artifact?.artifact_id || ''}&url=${encodeURIComponent(artifactUrl || '')}`}
+                  href={editorHref}
                   className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
                 >
                   <PencilSquareIcon className="h-4 w-4" />
