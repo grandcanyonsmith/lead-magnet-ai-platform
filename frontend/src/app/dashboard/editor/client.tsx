@@ -442,6 +442,8 @@ export default function EditorClient() {
         status: string;
         message: string;
       }>(`/v1/jobs/${jobId}/html/patch`, {
+        // Always send the latest editor HTML (even if unsaved) so sequential AI edits stack correctly.
+        html: htmlState.html,
         prompt: prompt,
         selector: selectedElement,
         model: aiModel,
@@ -541,6 +543,7 @@ export default function EditorClient() {
     aiReasoningEffort,
     initialUrl,
     jobId,
+    htmlState.html,
     prompt,
     selectedElement,
     selectedOuterHtml,

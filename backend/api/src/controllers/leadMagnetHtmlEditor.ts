@@ -130,6 +130,32 @@ class LeadMagnetHtmlEditorController {
         ? body.reasoning_effort
         : null;
 
+    // IMPORTANT: Use the latest HTML from the client (unsaved edits included) when provided.
+    // This ensures sequential AI edits build on each other without requiring a save between prompts.
+    const clientHtml =
+      typeof body?.html === "string" && body.html.trim().length > 0
+        ? String(body.html)
+        : null;
+
+    let inputS3Key: string | null = null;
+    if (clientHtml) {
+      if (!ARTIFACTS_BUCKET) {
+        throw new ApiError(
+          "ARTIFACTS_BUCKET environment variable is not configured",
+          500,
+        );
+      }
+      inputS3Key = `${tenantId}/patches/${patchId}/input.html`;
+      await s3Client.send(
+        new PutObjectCommand({
+          Bucket: ARTIFACTS_BUCKET,
+          Key: inputS3Key,
+          Body: clientHtml,
+          ContentType: "text/html; charset=utf-8",
+        }),
+      );
+    }
+
     // TTL: 24 hours from now (Unix timestamp)
     const ttl = Math.floor(Date.now() / 1000) + 24 * 60 * 60;
 
@@ -143,6 +169,7 @@ class LeadMagnetHtmlEditorController {
       page_url: pageUrl,
       model,
       reasoning_effort: reasoningEffort,
+      ...(inputS3Key ? { input_s3_key: inputS3Key } : {}),
       status: "pending",
       created_at: now,
       updated_at: now,
