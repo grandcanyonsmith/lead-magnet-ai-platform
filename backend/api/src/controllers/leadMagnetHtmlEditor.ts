@@ -3,19 +3,21 @@ import {
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
+import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
 import { ulid } from "ulid";
 import { env } from "../utils/env";
 import { db } from "../utils/db";
 import { ApiError } from "../utils/errors";
 import { logger } from "../utils/logger";
 import type { RouteResponse } from "../routes";
-import { patchHtmlWithOpenAI } from "../services/htmlPatchService";
 import { invalidateCloudFrontPaths } from "../services/cloudfrontInvalidationService";
 
 const JOBS_TABLE = env.jobsTable;
 const ARTIFACTS_TABLE = env.artifactsTable;
 const ARTIFACTS_BUCKET = env.artifactsBucket;
+const HTML_PATCH_REQUESTS_TABLE = env.htmlPatchRequestsTable;
 const s3Client = new S3Client({ region: env.awsRegion });
+const lambdaClient = new LambdaClient({ region: env.awsRegion });
 
 async function fetchFinalHtmlFromS3(
   tenantId: string,
@@ -111,8 +113,9 @@ class LeadMagnetHtmlEditorController {
       throw new ApiError("Job tenant not found", 404);
     }
 
-    const html = await fetchFinalHtmlFromS3(tenantId, jobId);
-
+    // Create patch request
+    const patchId = `patch_${ulid()}`;
+    const now = new Date().toISOString();
     const selector = typeof body?.selector === "string" ? body.selector : null;
     const selectedOuterHtml =
       typeof body?.selected_outer_html === "string"
@@ -127,84 +130,152 @@ class LeadMagnetHtmlEditorController {
         ? body.reasoning_effort
         : null;
 
+    // TTL: 24 hours from now (Unix timestamp)
+    const ttl = Math.floor(Date.now() / 1000) + 24 * 60 * 60;
 
-    let patchedHtml: string;
-    let summary: string;
+    const patchRequest = {
+      patch_id: patchId,
+      job_id: jobId,
+      tenant_id: tenantId,
+      prompt,
+      selector,
+      selected_outer_html: selectedOuterHtml,
+      page_url: pageUrl,
+      model,
+      reasoning_effort: reasoningEffort,
+      status: "pending",
+      created_at: now,
+      updated_at: now,
+      ttl,
+    };
 
+    await db.put(HTML_PATCH_REQUESTS_TABLE, patchRequest);
+
+    // Trigger async processing
     try {
-      const res = await patchHtmlWithOpenAI({
-        html,
-        prompt,
-        selector,
-        selectedOuterHtml,
-        pageUrl,
-        model,
-        reasoningEffort,
-      });
-      patchedHtml = res.patchedHtml;
-      summary = res.summary;
+      if (env.isDevelopment()) {
+        // In development, process synchronously in background
+        logger.info("[LeadMagnetHtmlEditor] Local mode - processing patch in background", {
+          patchId,
+          jobId,
+        });
+        setImmediate(async () => {
+          try {
+            const { handleHtmlPatchRequest } = await import("./htmlPatchHandler");
+            await handleHtmlPatchRequest({
+              patch_id: patchId,
+              job_id: jobId,
+              tenant_id: tenantId,
+            });
+          } catch (error: any) {
+            logger.error("[LeadMagnetHtmlEditor] Error processing patch in local mode", {
+              patchId,
+              error: error.message,
+            });
+          }
+        });
+      } else {
+        // In production, invoke Lambda asynchronously
+        const functionArn = env.getLambdaFunctionArn();
+        const invokeCommand = new InvokeCommand({
+          FunctionName: functionArn,
+          InvocationType: "Event",
+          Payload: JSON.stringify({
+            source: "html-patch-request",
+            patch_id: patchId,
+            job_id: jobId,
+            tenant_id: tenantId,
+          }),
+        });
+
+        await lambdaClient.send(invokeCommand);
+        logger.info("[LeadMagnetHtmlEditor] Triggered async patch processing", {
+          patchId,
+          jobId,
+          functionArn,
+        });
+      }
     } catch (error: any) {
-      // Preserve our explicit ApiErrors (validation/config issues).
-      if (error instanceof ApiError) {
-        throw error;
-      }
-
-      const upstreamStatus =
-        typeof error?.status === "number"
-          ? error.status
-          : typeof error?.statusCode === "number"
-            ? error.statusCode
-            : typeof error?.response?.status === "number"
-              ? error.response.status
-              : undefined;
-
-      const upstreamMessage = error?.message
-        ? String(error.message)
-        : String(error);
-
-      // Convert transient upstream issues into a consistent, user-friendly error.
-      const normalizedMsg = upstreamMessage.toLowerCase();
-      const looksRetryableByMessage =
-        normalizedMsg.includes("timeout") ||
-        normalizedMsg.includes("timed out") ||
-        normalizedMsg.includes("overloaded") ||
-        normalizedMsg.includes("service unavailable") ||
-        normalizedMsg.includes("econnreset") ||
-        normalizedMsg.includes("etimedout") ||
-        normalizedMsg.includes("enotfound") ||
-        normalizedMsg.includes("network");
-
-      if (
-        upstreamStatus === 429 ||
-        upstreamStatus === 503 ||
-        (typeof upstreamStatus === "number" && upstreamStatus >= 500) ||
-        (!upstreamStatus && looksRetryableByMessage)
-      ) {
-        throw new ApiError(
-          "AI editing is temporarily unavailable. Please try again in a moment.",
-          503,
-          "SERVICE_UNAVAILABLE",
-          { upstreamStatus, upstreamMessage },
-        );
-      }
-
-      // Unknown failure – treat as internal error.
-      throw error;
+      logger.error("[LeadMagnetHtmlEditor] Failed to trigger async processing", {
+        patchId,
+        jobId,
+        error: error.message,
+      });
+      await db.update(
+        HTML_PATCH_REQUESTS_TABLE,
+        { patch_id: patchId },
+        {
+          status: "failed",
+          error_message: `Failed to start processing: ${error.message}`,
+          updated_at: new Date().toISOString(),
+        },
+      );
+      throw new ApiError("Failed to start patch processing", 500);
     }
 
-    logger.info("[LeadMagnetHtmlEditor] Patched HTML", {
-      jobId,
-      tenantId,
-      summaryLength: summary.length,
-      patchedLength: patchedHtml.length,
+    // Return 202 Accepted with patch ID
+    return {
+      statusCode: 202,
+      body: {
+        patch_id: patchId,
+        status: "pending",
+        message: "Patch request accepted and processing",
+      },
+    };
+  }
+
+  async getPatchStatus(patchId: string): Promise<RouteResponse> {
+    if (!patchId) {
+      throw new ApiError("Patch ID is required", 400);
+    }
+
+    const patchRequest = await db.get(HTML_PATCH_REQUESTS_TABLE, {
+      patch_id: patchId,
     });
+
+    if (!patchRequest) {
+      throw new ApiError("Patch request not found", 404);
+    }
+
+    const response: any = {
+      patch_id: patchId,
+      status: patchRequest.status,
+      created_at: patchRequest.created_at,
+      updated_at: patchRequest.updated_at,
+    };
+
+    if (patchRequest.status === "completed") {
+      // Fetch result from S3 if available
+      if (patchRequest.s3_key && ARTIFACTS_BUCKET) {
+        try {
+          const s3Response = await s3Client.send(
+            new GetObjectCommand({
+              Bucket: ARTIFACTS_BUCKET,
+              Key: patchRequest.s3_key,
+            }),
+          );
+
+          if (s3Response.Body) {
+            const patchedHtml = await s3Response.Body.transformToString();
+            response.patched_html = patchedHtml;
+            response.summary = patchRequest.summary || null;
+          }
+        } catch (error: any) {
+          logger.error("[LeadMagnetHtmlEditor] Failed to fetch patch result from S3", {
+            patchId,
+            s3Key: patchRequest.s3_key,
+            error: error.message,
+          });
+          // Don't fail the request, just omit the HTML
+        }
+      }
+    } else if (patchRequest.status === "failed") {
+      response.error_message = patchRequest.error_message || null;
+    }
 
     return {
       statusCode: 200,
-      body: {
-        patched_html: patchedHtml,
-        summary,
-      },
+      body: response,
     };
   }
 

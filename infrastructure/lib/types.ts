@@ -25,6 +25,7 @@ export enum TableKey {
   WEBHOOK_LOGS = 'webhookLogs',
   TRACKING_EVENTS = 'trackingEvents',
   RATE_LIMITS = 'rateLimits',
+  HTML_PATCH_REQUESTS = 'htmlPatchRequests',
 }
 
 /**
@@ -49,6 +50,7 @@ export interface TableMap {
   [TableKey.WEBHOOK_LOGS]: dynamodb.ITable;
   [TableKey.TRACKING_EVENTS]: dynamodb.ITable;
   [TableKey.RATE_LIMITS]: dynamodb.ITable;
+  [TableKey.HTML_PATCH_REQUESTS]: dynamodb.ITable;
 }
 
 /**
