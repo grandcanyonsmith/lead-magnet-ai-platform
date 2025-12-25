@@ -158,7 +158,23 @@ class LeadMagnetHtmlEditorController {
       const upstreamMessage = error?.message ? String(error.message) : String(error);
 
       // Convert transient upstream issues into a consistent, user-friendly error.
-      if (upstreamStatus === 429 || upstreamStatus === 503 || (typeof upstreamStatus === 'number' && upstreamStatus >= 500)) {
+      const normalizedMsg = upstreamMessage.toLowerCase();
+      const looksRetryableByMessage =
+        normalizedMsg.includes('timeout') ||
+        normalizedMsg.includes('timed out') ||
+        normalizedMsg.includes('overloaded') ||
+        normalizedMsg.includes('service unavailable') ||
+        normalizedMsg.includes('econnreset') ||
+        normalizedMsg.includes('etimedout') ||
+        normalizedMsg.includes('enotfound') ||
+        normalizedMsg.includes('network');
+
+      if (
+        upstreamStatus === 429 ||
+        upstreamStatus === 503 ||
+        (typeof upstreamStatus === 'number' && upstreamStatus >= 500) ||
+        (!upstreamStatus && looksRetryableByMessage)
+      ) {
         throw new ApiError(
           'AI editing is temporarily unavailable. Please try again in a moment.',
           503,

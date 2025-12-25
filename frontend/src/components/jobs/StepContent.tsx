@@ -272,7 +272,7 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
               srcDoc={htmlContent}
               className="w-full border-0"
               style={{ height: '600px', minHeight: '600px' }}
-              sandbox="allow-same-origin"
+              sandbox="allow-popups"
               referrerPolicy="no-referrer"
               title="HTML Preview"
             />

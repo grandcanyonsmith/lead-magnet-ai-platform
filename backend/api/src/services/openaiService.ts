@@ -26,6 +26,20 @@ export async function getOpenAIClient(): Promise<OpenAI> {
     return cachedClient;
   }
 
+  // Fast path: allow supplying an API key directly via env var (useful for local dev
+  // and as a fallback if Secrets Manager is misconfigured).
+  const directEnvKey =
+    process.env.OPENAI_API_KEY ||
+    process.env.OPENAI_KEY ||
+    process.env.OPENAI_API_TOKEN ||
+    process.env.OPENAI_TOKEN;
+  if (directEnvKey && directEnvKey.trim().length > 0) {
+    cachedApiKey = directEnvKey.trim();
+    cachedClient = new OpenAI({ apiKey: cachedApiKey });
+    logger.info('[OpenAI Service] Client initialized from env var and cached');
+    return cachedClient;
+  }
+
   try {
     const command = new GetSecretValueCommand({ SecretId: OPENAI_SECRET_NAME });
     const response = await secretsClient.send(command);

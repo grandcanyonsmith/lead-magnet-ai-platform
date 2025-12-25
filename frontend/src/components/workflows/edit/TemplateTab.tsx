@@ -340,7 +340,7 @@ export function TemplateTab({
                       srcDoc={getPreviewHtml(templateData.html_content) + getSelectionScript()}
                       className="w-full h-full border-0"
                       title="HTML Preview"
-                      sandbox="allow-same-origin allow-scripts"
+                      sandbox="allow-scripts allow-popups"
                     />
                   </div>
                 </div>
