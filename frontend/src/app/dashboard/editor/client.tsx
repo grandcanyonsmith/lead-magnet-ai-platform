@@ -7,6 +7,7 @@ import {
   FiCode,
   FiArrowLeft,
   FiSave,
+  FiLayers,
   FiSmartphone,
   FiMousePointer,
   FiRotateCcw,
@@ -18,11 +19,13 @@ import Link from 'next/link'
 import { api } from '@/lib/api'
 import { ApiError } from '@/lib/api/errors'
 import type { Job } from '@/types/job'
+import type { Workflow } from '@/types/workflow'
 
 // Types
 type EditorMode = 'preview' | 'code'
 type DeviceMode = 'desktop' | 'mobile'
 type AISpeed = 'normal' | 'fast' | 'turbo'
+type AIReasoningEffort = 'low' | 'medium' | 'high'
 
 type HistoryEntry = { html: string; timestamp: number }
 type HtmlState = {
@@ -155,8 +158,13 @@ export default function EditorClient() {
 
   // AI Configuration
   const [aiSpeed, setAiSpeed] = useState<AISpeed>('normal')
+  const [aiReasoningEffort, setAiReasoningEffort] = useState<AIReasoningEffort>('medium')
   const [aiModel, setAiModel] = useState<'gpt-4o' | 'gpt-5.2'>('gpt-4o')
   const [showAiSettings, setShowAiSettings] = useState(false)
+
+  // Template / workflow context
+  const [workflow, setWorkflow] = useState<Workflow | null>(null)
+  const [savingTemplate, setSavingTemplate] = useState(false)
 
   // Refs
   const iframeRef = useRef<HTMLIFrameElement>(null)
@@ -271,6 +279,30 @@ export default function EditorClient() {
     }
   }, [jobId])
 
+  // Load workflow (lead magnet) metadata for template actions
+  useEffect(() => {
+    let isMounted = true
+
+    const loadWorkflow = async () => {
+      const workflowId = job?.workflow_id
+      if (!workflowId) {
+        setWorkflow(null)
+        return
+      }
+      try {
+        const wf = await api.getWorkflow(workflowId)
+        if (isMounted) setWorkflow(wf as Workflow)
+      } catch {
+        if (isMounted) setWorkflow(null)
+      }
+    }
+
+    loadWorkflow()
+    return () => {
+      isMounted = false
+    }
+  }, [job?.workflow_id])
+
   // Inject script when HTML changes or iframe loads
   const getPreviewContent = useCallback(() => {
     if (!htmlState.html) return ''
@@ -336,6 +368,7 @@ export default function EditorClient() {
         prompt: prompt,
         selector: selectedElement,
         model: aiModel,
+        reasoning_effort: aiReasoningEffort,
         selected_outer_html: selectedOuterHtml,
         page_url: initialUrl || undefined,
       })
@@ -360,7 +393,53 @@ export default function EditorClient() {
     } finally {
       setIsProcessing(false)
     }
-  }, [aiModel, initialUrl, jobId, prompt, selectedElement, selectedOuterHtml])
+  }, [aiModel, aiReasoningEffort, initialUrl, jobId, prompt, selectedElement, selectedOuterHtml])
+
+  const stripInjectedBlocksForTemplate = useCallback((html: string) => {
+    return String(html || '')
+      .replace(/<!--\s*Lead Magnet Editor Overlay\s*-->[\s\S]*?<\/script>\s*/gi, '')
+      .replace(/<!--\s*Lead Magnet Tracking Script\s*-->[\s\S]*?<\/script>\s*/gi, '')
+      .trim()
+  }, [])
+
+  const handleSaveAsTemplate = useCallback(async () => {
+    if (!workflow?.template_id) {
+      toast.error('This lead magnet does not have a template attached.')
+      return
+    }
+    if (!htmlState.html) return
+    if (savingTemplate) return
+
+    const name = workflow.workflow_name || 'this lead magnet'
+    const confirmed = confirm(
+      `Save your current HTML as the new template for "${name}"?\n\nThis will create a new template version. Future runs will use the updated template.`
+    )
+    if (!confirmed) return
+
+    setSavingTemplate(true)
+    try {
+      const cleanedHtml = stripInjectedBlocksForTemplate(htmlState.html)
+      const updatedTemplate = await api.updateTemplate(workflow.template_id, { html_content: cleanedHtml })
+
+      const currentVersion =
+        typeof workflow.template_version === 'number' && Number.isFinite(workflow.template_version)
+          ? workflow.template_version
+          : 0
+
+      // If this workflow is pinned to a specific version (non-zero), bump it to the new version.
+      if (currentVersion !== 0 && updatedTemplate?.version && updatedTemplate.version !== currentVersion) {
+        await api.updateWorkflow(workflow.workflow_id, { template_version: updatedTemplate.version })
+        setWorkflow((prev) => (prev ? { ...prev, template_version: updatedTemplate.version } : prev))
+      }
+
+      toast.success(`Template updated (v${updatedTemplate?.version || 'new'})`)
+    } catch (err) {
+      const apiErr = err instanceof ApiError ? err : null
+      toast.error(apiErr?.message || 'Failed to update template')
+    } finally {
+      setSavingTemplate(false)
+    }
+  }, [htmlState.html, savingTemplate, stripInjectedBlocksForTemplate, workflow])
   
   const handleSave = useCallback(async () => {
     if (!jobId || !htmlState.html) return
@@ -441,6 +520,8 @@ export default function EditorClient() {
 
   const backHref = jobId ? `/dashboard/jobs/${jobId}` : '/dashboard/jobs'
   const canSave = Boolean(jobId && htmlState.html && isDirty && !isSaving)
+  const canSaveAsTemplate = Boolean(workflow?.template_id && htmlState.html && !savingTemplate)
+  const reasoningLabel = aiReasoningEffort === 'medium' ? 'MED' : aiReasoningEffort.toUpperCase()
 
   return (
     <div className="flex h-screen flex-col bg-[#0c0d10] text-gray-200 font-sans selection:bg-purple-500/30 overflow-hidden">
@@ -526,6 +607,24 @@ export default function EditorClient() {
           >
             <FiSave className="w-3.5 h-3.5" />
             {isSaving ? 'Saving…' : 'Save'}
+          </button>
+
+          <button
+            onClick={handleSaveAsTemplate}
+            disabled={!canSaveAsTemplate}
+            className={`hidden md:inline-flex items-center gap-2 px-3 py-2 rounded-md text-xs font-semibold transition-colors border ${
+              canSaveAsTemplate
+                ? 'bg-white/10 text-white hover:bg-white/15 border-white/10'
+                : 'bg-white/5 text-gray-500 border-white/5 cursor-not-allowed'
+            }`}
+            title={
+              workflow?.template_id
+                ? 'Update the lead magnet template HTML from your current editor HTML'
+                : 'No template attached to this lead magnet'
+            }
+          >
+            <FiLayers className="w-3.5 h-3.5" />
+            {savingTemplate ? 'Updating template…' : 'Save as Template'}
           </button>
 
           <div className="hidden sm:block h-4 w-px bg-white/10 mx-1" />
@@ -684,7 +783,7 @@ export default function EditorClient() {
                     title="AI settings"
                   >
                     <FiZap className="w-3 h-3" />
-                    {aiModel === 'gpt-4o' ? 'GPT-4o' : 'GPT-5.2'} · {aiSpeed.toUpperCase()}
+                    {aiModel === 'gpt-4o' ? 'GPT-4o' : 'GPT-5.2'} · {aiSpeed.toUpperCase()} · {reasoningLabel}
                   </button>
 
                   <button
@@ -757,6 +856,28 @@ export default function EditorClient() {
                           </button>
                         ))}
                       </div>
+                    </div>
+
+                    <div>
+                      <div className="text-xs text-gray-400 mb-1.5">Reasoning effort</div>
+                      <div className="flex gap-1">
+                        {(['low', 'medium', 'high'] as const).map((effort) => (
+                          <button
+                            key={effort}
+                            onClick={() => setAiReasoningEffort(effort)}
+                            className={`flex-1 text-xs py-1.5 rounded-md border transition-colors ${
+                              aiReasoningEffort === effort
+                                ? 'border-purple-500/30 bg-purple-500/10 text-purple-300'
+                                : 'border-transparent bg-white/5 text-gray-500 hover:bg-white/10'
+                            }`}
+                          >
+                            {effort === 'medium' ? 'Medium' : effort.charAt(0).toUpperCase() + effort.slice(1)}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="mt-1 text-[11px] text-gray-500">
+                        Applies to GPT-5 models; ignored on GPT-4o.
+                      </p>
                     </div>
                   </div>
                 </div>

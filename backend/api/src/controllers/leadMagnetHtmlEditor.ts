@@ -108,6 +108,10 @@ class LeadMagnetHtmlEditorController {
       typeof body?.selected_outer_html === 'string' ? body.selected_outer_html : null;
     const pageUrl = typeof body?.page_url === 'string' ? body.page_url : null;
     const model = typeof body?.model === 'string' ? body.model : null;
+    const reasoningEffort =
+      body?.reasoning_effort === 'low' || body?.reasoning_effort === 'medium' || body?.reasoning_effort === 'high'
+        ? body.reasoning_effort
+        : null;
 
     // Guardrail: full-document rewrites can be slow/unreliable on large HTML.
     // Encourage element selection (snippet mode) for better latency and fewer upstream failures.
@@ -132,6 +136,7 @@ class LeadMagnetHtmlEditorController {
         selectedOuterHtml,
         pageUrl,
         model,
+        reasoningEffort,
       });
       patchedHtml = res.patchedHtml;
       summary = res.summary;
