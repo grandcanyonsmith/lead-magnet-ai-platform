@@ -10,6 +10,7 @@ type PatchHtmlArgs = {
   selectedOuterHtml?: string | null;
   pageUrl?: string | null;
   model?: string;
+  reasoningEffort?: 'low' | 'medium' | 'high' | null;
 };
 
 export type PatchHtmlResult = {
@@ -77,6 +78,10 @@ export async function patchHtmlWithOpenAI(args: PatchHtmlArgs): Promise<PatchHtm
 
   // Use provided model or default to gpt-5.1-codex
   const model = args.model || 'gpt-5.1-codex';
+  const reasoningEffort = args.reasoningEffort || null;
+  const supportsReasoningEffort =
+    model.startsWith('gpt-5') ||
+    model.startsWith('o'); // e.g. o-series models
 
   const getStatus = (err: any): number | undefined => {
     if (!err) return undefined;
@@ -140,6 +145,7 @@ Your task:
                 model,
                 instructions: snippetInstructions,
                 input: snippetInputParts.join('\n'),
+                ...(supportsReasoningEffort && reasoningEffort ? { reasoning: { effort: reasoningEffort } } : {}),
                 // NOTE: Avoid forcing priority tier here; it can be unavailable in some environments.
               }),
             'HTML Patch OpenAI call (selected element)',
@@ -232,6 +238,7 @@ Input HTML is provided below.`;
             model,
             instructions,
             input: inputParts.join('\n'),
+            ...(supportsReasoningEffort && reasoningEffort ? { reasoning: { effort: reasoningEffort } } : {}),
             // NOTE: Avoid forcing priority tier here; it can be unavailable in some environments.
           }),
         'HTML Patch OpenAI call (full document)',
