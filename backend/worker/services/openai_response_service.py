@@ -7,7 +7,7 @@ import json
 import copy
 from typing import Dict, List, Any, Optional, Tuple
 from services.response_parser import ResponseParser
-from services.cost_service import calculate_openai_cost
+from cost_service import calculate_openai_cost
 
 logger = logging.getLogger(__name__)
 
