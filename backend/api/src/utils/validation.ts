@@ -87,19 +87,16 @@ export const workflowStepSchema = z
   })
   .refine(
     (data) => {
-      // If step_type is 'webhook', webhook_url is required
+      // Backward-compat: if step_type is 'webhook', webhook_url is required.
+      // Note: step_type is deprecated; all steps are generic and webhook behavior
+      // is determined by webhook_* fields at runtime.
       if (data.step_type === "webhook") {
         return !!data.webhook_url;
-      }
-      // If step_type is 'ai_generation' (default), model and instructions are required
-      if (data.step_type === "ai_generation" || !data.step_type) {
-        return !!(data.model && data.instructions);
       }
       return true;
     },
     {
-      message:
-        "Webhook steps require webhook_url. AI generation steps require model and instructions.",
+      message: "Webhook steps require webhook_url.",
     },
   );
 
