@@ -66,7 +66,7 @@ export function PreviewCard({ artifact }: PreviewCardProps) {
     <div className="group bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 hover:border-primary-200">
       <div className="relative aspect-video bg-gray-100">
         <PreviewRenderer
-          contentType={artifact.content_type || (artifact as any).mime_type}
+          contentType={artifact.content_type || artifact.mime_type}
           objectUrl={downloadUrl}
           fileName={artifact.file_name || artifact.artifact_name}
           className="w-full h-full"
@@ -87,7 +87,7 @@ export function PreviewCard({ artifact }: PreviewCardProps) {
           <div className="bg-primary-600 text-white text-xs font-bold px-2 py-1 rounded">
             {getFileExtension(
               artifact.file_name || artifact.artifact_name,
-              artifact.content_type || (artifact as any).mime_type,
+              artifact.content_type || artifact.mime_type,
             )}
           </div>
         </div>
@@ -171,7 +171,7 @@ export function PreviewCard({ artifact }: PreviewCardProps) {
       <FullScreenPreviewModal
         isOpen={isFullScreenOpen}
         onClose={() => setIsFullScreenOpen(false)}
-        contentType={artifact.content_type || (artifact as any).mime_type}
+        contentType={artifact.content_type || artifact.mime_type}
         objectUrl={downloadUrl}
         fileName={artifact.file_name || artifact.artifact_name}
         artifactId={artifact.artifact_id}

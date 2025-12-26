@@ -30,6 +30,10 @@ interface SearchModalProps {
   onClose: () => void;
 }
 
+interface SearchJob extends Job {
+  workflow_name?: string;
+}
+
 export const SearchModal: React.FC<SearchModalProps> = ({
   isOpen,
   onClose,
@@ -39,7 +43,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [workflows, setWorkflows] = useState<any[]>([]);
-  const [jobs, setJobs] = useState<Job[]>([]);
+  const [jobs, setJobs] = useState<SearchJob[]>([]);
   const [submissions, setSubmissions] = useState<FormSubmission[]>([]);
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -73,7 +77,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
         api.getSubmissions({ limit: 50 }).catch(() => ({ submissions: [] })),
       ]);
       setWorkflows(workflowsData.workflows || []);
-      setJobs((jobsData.jobs as Job[]) || []);
+      setJobs((jobsData.jobs as SearchJob[]) || []);
       setSubmissions(
         (submissionsData.submissions as FormSubmission[] | undefined)?.map(
           (s) => ({
@@ -175,12 +179,12 @@ export const SearchModal: React.FC<SearchModalProps> = ({
     // Search jobs
     jobs.forEach((job) => {
       const jobId = (job.job_id || "").toLowerCase();
-      const workflowName = ((job as any).workflow_name || "").toLowerCase();
+      const workflowName = (job.workflow_name || "").toLowerCase();
       if (jobId.includes(queryLower) || workflowName.includes(queryLower)) {
         results.push({
           id: `job-${job.job_id}`,
           type: "job",
-          title: (job as any).workflow_name || "Generated Lead Magnet",
+          title: job.workflow_name || "Generated Lead Magnet",
           subtitle: `Job ${job.job_id}`,
           href: `/dashboard/jobs/${job.job_id}`,
         });
@@ -203,7 +207,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
         (j) => j.submission_id === submission.submission_id,
       );
       const workflowName =
-        (job as any)?.workflow_name || "Generated Lead Magnet";
+        job?.workflow_name || "Generated Lead Magnet";
       const preview = buildSubmissionPreview(submission.form_data);
 
       results.push({
