@@ -2,7 +2,7 @@ import OpenAI from 'openai';
 import { WorkflowStep, ensureStepDefaults } from './workflow/workflowConfigSupport';
 import { validateDependencies } from '@utils/dependencyResolver';
 import { logger } from '@utils/logger';
-import { callResponsesWithTimeout, stripMarkdownCodeFences } from '@utils/openaiHelpers';
+import { stripMarkdownCodeFences } from '@utils/openaiHelpers';
 
 export interface WorkflowAIEditRequest {
   userPrompt: string;
@@ -198,17 +198,13 @@ Please generate the updated workflow configuration with all necessary changes.`;
 
     try {
       // Use the Responses API so we can reliably set reasoning effort + service tier.
-      const completion = await callResponsesWithTimeout(
-        () =>
-          (this.openaiClient as any).responses.create({
-            model: 'gpt-5.2',
-            instructions: WORKFLOW_AI_SYSTEM_PROMPT,
-            input: userMessage,
-            reasoning: { effort: 'high' },
-            service_tier: 'priority',
-          }),
-        'workflow ai edit',
-      );
+      const completion = await (this.openaiClient as any).responses.create({
+        model: 'gpt-5.2',
+        instructions: WORKFLOW_AI_SYSTEM_PROMPT,
+        input: userMessage,
+        reasoning: { effort: 'medium' },
+        service_tier: 'priority',
+      });
 
       const outputText = String((completion as any)?.output_text || '');
       const cleaned = stripMarkdownCodeFences(outputText).trim();

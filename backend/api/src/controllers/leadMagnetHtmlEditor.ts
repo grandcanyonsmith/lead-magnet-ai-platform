@@ -172,31 +172,29 @@ class LeadMagnetHtmlEditorController {
       ttl,
     };
 
-    await db.put(HTML_PATCH_REQUESTS_TABLE, patchRequest);
-
     // Trigger async processing
     try {
+      await db.put(HTML_PATCH_REQUESTS_TABLE, patchRequest);
+
       if (env.isDevelopment()) {
-        // In development, process synchronously in background
-        logger.info("[LeadMagnetHtmlEditor] Local mode - processing patch in background", {
+        // In development, process synchronously to ensure completion before Lambda/process exit
+        logger.info("[LeadMagnetHtmlEditor] Local mode - processing patch synchronously", {
           patchId,
           jobId,
         });
-        setImmediate(async () => {
-          try {
-            const { handleHtmlPatchRequest } = await import("./htmlPatchHandler");
-            await handleHtmlPatchRequest({
-              patch_id: patchId,
-              job_id: jobId,
-              tenant_id: tenantId,
-            });
-          } catch (error: any) {
-            logger.error("[LeadMagnetHtmlEditor] Error processing patch in local mode", {
-              patchId,
-              error: error.message,
-            });
-          }
-        });
+        try {
+          const { handleHtmlPatchRequest } = await import("./htmlPatchHandler");
+          await handleHtmlPatchRequest({
+            patch_id: patchId,
+            job_id: jobId,
+            tenant_id: tenantId,
+          });
+        } catch (error: any) {
+          logger.error("[LeadMagnetHtmlEditor] Error processing patch in local mode", {
+            patchId,
+            error: error.message,
+          });
+        }
       } else {
         // In production, invoke Lambda asynchronously
         const functionArn = env.getLambdaFunctionArn();

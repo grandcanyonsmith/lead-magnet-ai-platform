@@ -394,6 +394,7 @@ export default function JobDetailClient() {
           imageArtifactsByStep={imageArtifactsByStep}
           loadingArtifacts={loadingArtifacts}
           submission={submission}
+          form={form}
           onResubmit={handleResubmitClick}
           resubmitting={resubmitting}
           onCopy={copyToClipboard}
@@ -476,6 +477,7 @@ interface JobTabsProps {
   imageArtifactsByStep: Map<number, Artifact[]>;
   loadingArtifacts: boolean;
   submission?: FormSubmission | null;
+  form?: Form | null;
   onResubmit?: () => void;
   resubmitting?: boolean;
   onCopy: (text: string) => void;
@@ -500,6 +502,7 @@ function JobTabs({
   imageArtifactsByStep,
   loadingArtifacts,
   submission,
+  form,
   onResubmit,
   resubmitting,
   onCopy,
@@ -546,6 +549,7 @@ function JobTabs({
                 onCopy={onCopy}
                 jobStatus={job.status}
                 submission={submission}
+                form={form}
                 onResubmit={onResubmit}
                 resubmitting={resubmitting}
                 onEditStep={onEditStep}

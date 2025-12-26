@@ -20,6 +20,7 @@ import { Artifact } from "@/types/artifact";
 import { extractImageUrls } from "@/utils/imageUtils";
 import { InlineImage } from "./InlineImage";
 import { ArtifactPreview } from "./ArtifactPreview";
+import type { Form } from "@/types/form";
 
 interface StepInputOutputProps {
   step: MergedStep;
@@ -27,6 +28,7 @@ interface StepInputOutputProps {
   onCopy: (text: string) => void;
   previousSteps: ExecutionStep[];
   formSubmission: Record<string, unknown> | null | undefined;
+  form?: Form | null;
   imageArtifacts?: Artifact[];
   loadingImageArtifacts?: boolean;
   onEditStep?: (stepIndex: number) => void;
@@ -155,6 +157,7 @@ function renderPreviousStepsContext(
   previousSteps: ExecutionStep[],
   formSubmission: Record<string, unknown> | null | undefined,
   currentStepOrder: number,
+  form?: Form | null,
 ) {
   if ((!previousSteps || previousSteps.length === 0) && !formSubmission) {
     return null;
@@ -172,7 +175,19 @@ function renderPreviousStepsContext(
           const formText =
             typeof formSubmission === "object"
               ? Object.entries(formSubmission)
-                  .map(([key, value]) => `${key}: ${value}`)
+                  .map(([key, value]) => {
+                    // Try to resolve field label if form schema is available
+                    let label = key;
+                    if (form?.form_fields_schema?.fields) {
+                      const field = form.form_fields_schema.fields.find(
+                        (f) => f.field_id === key,
+                      );
+                      if (field) {
+                        label = field.label;
+                      }
+                    }
+                    return `${label}: ${value}`;
+                  })
                   .join("\n")
               : String(formSubmission);
           const formImageUrls = extractImageUrls(formText);
@@ -265,6 +280,7 @@ export function StepInputOutput({
   onCopy,
   previousSteps,
   formSubmission,
+  form,
   imageArtifacts = [],
   loadingImageArtifacts = false,
   onEditStep,
@@ -595,6 +611,7 @@ export function StepInputOutput({
                   previousSteps,
                   formSubmission,
                   step.step_order ?? 0,
+                  form,
                 )}
 
                 {/* Current Step Input */}
