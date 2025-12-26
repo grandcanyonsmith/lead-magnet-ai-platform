@@ -1,0 +1,154 @@
+"use client";
+
+import React from "react";
+
+type ImageGenerationConfigState = {
+  model: string;
+  size: "1024x1024" | "1024x1536" | "1536x1024" | "auto";
+  quality: "low" | "medium" | "high" | "auto";
+  format?: "png" | "jpeg" | "webp";
+  compression?: number;
+  background: "transparent" | "opaque" | "auto";
+  input_fidelity?: "low" | "high";
+};
+
+interface ImageGenerationConfigProps {
+  config: ImageGenerationConfigState;
+  onChange: <K extends keyof ImageGenerationConfigState>(
+    field: K,
+    value: ImageGenerationConfigState[K],
+  ) => void;
+}
+
+export default function ImageGenerationConfig({
+  config,
+  onChange,
+}: ImageGenerationConfigProps) {
+  return (
+    <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+      <label className="block text-sm font-medium text-gray-700 mb-3">
+        Image Generation Configuration
+      </label>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="sm:col-span-2">
+          <label className="block text-xs font-medium text-gray-600 mb-1">
+            Model
+          </label>
+          <select
+            value={config.model}
+            onChange={(e) => onChange("model", e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+          >
+            <option value="gpt-image-1.5">gpt-image-1.5</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">
+            Size
+          </label>
+          <select
+            value={config.size}
+            onChange={(e) => onChange("size", e.target.value as any)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+          >
+            <option value="auto">Auto (default)</option>
+            <option value="1024x1024">1024x1024 (Square)</option>
+            <option value="1024x1536">1024x1536 (Portrait)</option>
+            <option value="1536x1024">1536x1024 (Landscape)</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">
+            Quality
+          </label>
+          <select
+            value={config.quality}
+            onChange={(e) => onChange("quality", e.target.value as any)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+          >
+            <option value="auto">Auto (default)</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">
+            Format
+          </label>
+          <select
+            value={config.format || ""}
+            onChange={(e) =>
+              onChange("format", (e.target.value || undefined) as any)
+            }
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+          >
+            <option value="">Default (PNG)</option>
+            <option value="png">PNG</option>
+            <option value="jpeg">JPEG</option>
+            <option value="webp">WebP</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">
+            Background
+          </label>
+          <select
+            value={config.background}
+            onChange={(e) => onChange("background", e.target.value as any)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+          >
+            <option value="auto">Auto (default)</option>
+            <option value="transparent">Transparent</option>
+            <option value="opaque">Opaque</option>
+          </select>
+        </div>
+
+        {(config.format === "jpeg" || config.format === "webp") && (
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              Compression ({config.compression ?? 85}%)
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={config.compression ?? 85}
+              onChange={(e) =>
+                onChange("compression", parseInt(e.target.value, 10) as any)
+              }
+              className="w-full"
+            />
+            <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <span>0%</span>
+              <span>100%</span>
+            </div>
+          </div>
+        )}
+
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">
+            Input Fidelity
+          </label>
+          <select
+            value={config.input_fidelity || ""}
+            onChange={(e) =>
+              onChange("input_fidelity", (e.target.value || undefined) as any)
+            }
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+          >
+            <option value="">Default</option>
+            <option value="low">Low</option>
+            <option value="high">High</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
