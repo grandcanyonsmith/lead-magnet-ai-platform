@@ -35,7 +35,8 @@ export interface Workflow {
 export interface WorkflowStep {
   step_name: string;
   step_description?: string;
-  step_type?: "ai_generation" | "webhook"; // Default: 'ai_generation'
+  /** @deprecated All steps are now generic steps */
+  step_type?: "ai_generation" | "webhook";
   model: string;
   reasoning_effort?: "low" | "medium" | "high";
   instructions: string;

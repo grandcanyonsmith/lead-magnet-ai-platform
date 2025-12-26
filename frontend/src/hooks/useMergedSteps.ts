@@ -222,8 +222,10 @@ export function useMergedSteps({
           (s: ExecutionStep) =>
             s.step_order > 0 &&
             s.step_order <= workflowSteps.length &&
-            (s.step_type === "ai_generation" ||
-              s.step_type === "workflow_step") &&
+            // Treat everything as a workflow step unless it's explicitly a system step
+            s.step_type !== "form_submission" &&
+            s.step_type !== "final_output" &&
+            s.step_type !== "html_generation" &&
             hasCompleted(s),
         ).length;
 
@@ -231,8 +233,9 @@ export function useMergedSteps({
         const executingStep = executionSteps.find(
           (s: ExecutionStep) =>
             s.step_order === executionStepOrder &&
-            (s.step_type === "ai_generation" ||
-              s.step_type === "workflow_step") &&
+            s.step_type !== "form_submission" &&
+            s.step_type !== "final_output" &&
+            s.step_type !== "html_generation" &&
             !hasCompleted(s),
         );
 
@@ -370,8 +373,9 @@ export function useMergedSteps({
         if (
           order === 0 ||
           order > workflowSteps.length ||
-          (execStep.step_type !== "ai_generation" &&
-            execStep.step_type !== "workflow_step")
+          (execStep.step_type === "form_submission" ||
+            execStep.step_type === "final_output" ||
+            execStep.step_type === "html_generation")
         ) {
           mergedStepsMap.set(order, {
             ...execStep,
