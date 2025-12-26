@@ -168,7 +168,7 @@ export default function DashboardPage() {
             Dashboard
           </h1>
           <p className="mt-2 max-w-2xl text-lg text-indigo-100">
-            Welcome back! Here's an overview of your lead generation performance.
+            Welcome back! Here is an overview of your lead generation performance.
           </p>
         </div>
         <div className="absolute right-0 top-0 h-full w-1/3 bg-white/5 blur-3xl transform skew-x-12 translate-x-1/2"></div>
