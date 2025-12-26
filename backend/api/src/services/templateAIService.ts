@@ -103,6 +103,7 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
         "You are an expert HTML template designer. Return only valid HTML code without markdown formatting.",
       input: prompt,
       service_tier: "priority",
+      reasoning: { effort: "high" },
     };
     // gpt-5.1-codex handles temperature differently or defaults are fine
     // if (!model.startsWith('gpt-5')) {
@@ -154,7 +155,7 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
     usageInfo: UsageInfo;
   }> {
     const { description, tenantId, jobId, brandContext, icpContext } = request;
-    const model = "gpt-5.1-codex";
+    const model = request.model || "gpt-5.2";
 
     if (!description || !description.trim()) {
       throw new ApiError("Description is required", 400);
@@ -184,6 +185,7 @@ Return JSON format: {"name": "...", "description": "..."}`;
       model,
       input: prompt,
       service_tier: "priority",
+      reasoning: { effort: "high" },
     };
     // if (!model.startsWith('gpt-5')) {
     //   completionParams.temperature = 0.5;
