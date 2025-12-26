@@ -2,6 +2,7 @@ import OpenAI from 'openai';
 import { WorkflowStep, ensureStepDefaults } from './workflow/workflowConfigSupport';
 import { validateDependencies } from '@utils/dependencyResolver';
 import { logger } from '@utils/logger';
+import { callResponsesWithTimeout, stripMarkdownCodeFences } from '@utils/openaiHelpers';
 
 export interface WorkflowAIEditRequest {
   userPrompt: string;
@@ -196,24 +197,36 @@ Please generate the updated workflow configuration with all necessary changes.`;
     });
 
     try {
-      const completion = await this.openaiClient.chat.completions.create({
-        model: 'gpt-5.2',
-        messages: [
-          { role: 'system', content: WORKFLOW_AI_SYSTEM_PROMPT },
-          { role: 'user', content: userMessage },
-        ],
-        response_format: { type: 'json_object' },
-        reasoning_effort: 'high',
-        // Note: reasoning models often ignore temperature, but we keep it if supported or fallback
-        // temperature: 0.7, 
-      } as any);
+      // Use the Responses API so we can reliably set reasoning effort + service tier.
+      const completion = await callResponsesWithTimeout(
+        () =>
+          (this.openaiClient as any).responses.create({
+            model: 'gpt-5.2',
+            instructions: WORKFLOW_AI_SYSTEM_PROMPT,
+            input: userMessage,
+            reasoning: { effort: 'high' },
+            service_tier: 'priority',
+          }),
+        'workflow ai edit',
+      );
 
-      const responseContent = completion.choices[0]?.message?.content;
-      if (!responseContent) {
+      const outputText = String((completion as any)?.output_text || '');
+      const cleaned = stripMarkdownCodeFences(outputText).trim();
+      if (!cleaned) {
         throw new Error('No response from OpenAI');
       }
 
-      const parsedResponse = JSON.parse(responseContent) as WorkflowAIEditResponse;
+      let parsedResponse: WorkflowAIEditResponse;
+      try {
+        parsedResponse = JSON.parse(cleaned) as WorkflowAIEditResponse;
+      } catch {
+        // Best-effort recovery if the model wrapped JSON with extra text.
+        const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+          throw new Error('Invalid response from OpenAI (expected JSON object)');
+        }
+        parsedResponse = JSON.parse(jsonMatch[0]) as WorkflowAIEditResponse;
+      }
 
       // Validate the response
       if (!parsedResponse.steps || !Array.isArray(parsedResponse.steps)) {
