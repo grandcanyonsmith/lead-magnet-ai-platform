@@ -179,12 +179,6 @@ You can manually migrate a legacy workflow:
 }
 ```
 
-### Migration Utility (Historical)
-
-> **Note**: Migration functions are deprecated and kept for reference only.
-
-The migration utility functions (`migrateLegacyWorkflowToSteps`, `migrateLegacyWorkflowOnUpdate`) are deprecated and should not be used in new code.
-
 ## Current Status
 
 - ✅ **All workflows use Steps Format**

@@ -44,19 +44,6 @@ export type ToolChoice = "auto" | "required" | "none";
 export type StepType = "ai_generation" | "webhook";
 
 /**
- * Legacy workflow data structure (deprecated).
- * Kept for backward compatibility during migration.
- */
-export interface LegacyWorkflowData {
-  research_enabled?: boolean;
-  html_enabled?: boolean;
-  ai_instructions?: string;
-  ai_model?: string;
-  rewrite_model?: string;
-  steps?: unknown[];
-}
-
-/**
  * Dependency graph structure for workflow execution planning.
  */
 export interface DependencyGraph {

@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { signIn } from "@/lib/auth";
+import { authService } from "@/lib/auth";
 import { api } from "@/lib/api";
 import { logger } from "@/utils/logger";
 import { Settings } from "@/types/settings";
@@ -85,7 +85,7 @@ function LoginForm() {
     setLoading(true);
 
     try {
-      const result = await signIn(email, password);
+      const result = await authService.signIn(email, password);
       if (result.success) {
         // Wait for Cognito tokens to be stored
         const tokensReady = await waitForCognitoTokens();

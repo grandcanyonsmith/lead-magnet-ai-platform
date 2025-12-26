@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { isAuthenticated, useAuth } from "@/lib/auth";
+import { authService, useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { TourProvider } from "@/components/TourProvider";
@@ -62,7 +62,7 @@ export default function DashboardLayout({
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const authenticated = await isAuthenticated();
+        const authenticated = await authService.isAuthenticated();
         if (!authenticated) {
           logger.debug("Not authenticated, redirecting to login", {
             context: "DashboardLayout",
