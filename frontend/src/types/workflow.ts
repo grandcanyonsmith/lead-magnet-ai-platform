@@ -178,6 +178,7 @@ export interface WorkflowGenerationRequest {
 export interface WorkflowGenerationResponse {
   job_id: string;
   status: "pending" | "processing" | "completed" | "failed";
+  workflow_id?: string;
   result?: WorkflowGenerationResult;
   error_message?: string;
 }

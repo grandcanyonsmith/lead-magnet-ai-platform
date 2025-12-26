@@ -9,6 +9,7 @@ export interface Artifact {
   file_name?: string;
   artifact_name?: string;
   content_type?: string;
+  mime_type?: string; // Legacy/Alternative
   size_bytes?: number;
   file_size_bytes?: number;
   s3_bucket?: string;

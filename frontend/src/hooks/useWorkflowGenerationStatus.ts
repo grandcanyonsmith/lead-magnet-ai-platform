@@ -95,10 +95,10 @@ export function useWorkflowGenerationStatus(jobId: string | null) {
       if (response.status === "completed") {
         setStatus("completed");
         // Check if workflow_id is in the response
-        if ((response as any).workflow_id) {
-          setWorkflowId((response as any).workflow_id);
+        if (response.workflow_id) {
+          setWorkflowId(response.workflow_id);
           router.push(
-            `/dashboard/workflows/${(response as any).workflow_id}/edit`,
+            `/dashboard/workflows/${response.workflow_id}/edit`,
           );
         } else if (response.result) {
           // Legacy: workflow data is in result, need to load workflow
@@ -111,7 +111,7 @@ export function useWorkflowGenerationStatus(jobId: string | null) {
         setStatus("failed");
         setError(response.error_message || "Workflow generation failed");
       } else {
-        setStatus(response.status as any);
+        setStatus(response.status);
       }
     } catch (err: any) {
       logger.debug("Error polling status", {
