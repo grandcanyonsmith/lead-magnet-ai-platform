@@ -45,8 +45,11 @@ const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// The HTML editor patch endpoint can send large HTML payloads; increase local body limits
+// (Express defaults are ~100kb and will return 413 PayloadTooLargeError.)
+const BODY_LIMIT = process.env.BODY_LIMIT || "20mb";
+app.use(express.json({ limit: BODY_LIMIT }));
+app.use(express.urlencoded({ extended: true, limit: BODY_LIMIT }));
 
 // Mock JWT claims for local development
 // In production, these come from API Gateway authorizer
