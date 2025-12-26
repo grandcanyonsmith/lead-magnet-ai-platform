@@ -12,14 +12,14 @@ interface LeadMagnetsTabsProps {
 const tabs = [
   {
     key: "builder",
-    label: "Builder",
+    label: "My Magnets",
     href: "/dashboard/workflows",
     icon: QueueListIcon,
     activePrefixes: ["/dashboard/workflows"],
   },
   {
     key: "generated",
-    label: "Generated",
+    label: "Leads & Results",
     href: "/dashboard/jobs",
     icon: ChartBarIcon,
     activePrefixes: ["/dashboard/jobs"],

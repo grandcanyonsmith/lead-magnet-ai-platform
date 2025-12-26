@@ -216,15 +216,15 @@ export function JobOverviewSection({
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  Artifacts
+                  Results
                 </p>
                 <p className="text-lg font-semibold text-gray-900">
                   {artifactCount}
                 </p>
                 <p className="text-sm text-gray-600">
                   {artifactCount
-                    ? "Artifacts ready to review"
-                    : "Generated assets will appear here"}
+                    ? "Results ready to review"
+                    : "Generated reports will appear here"}
                 </p>
               </div>
               <span className="inline-flex rounded-2xl bg-purple-50 p-3 text-purple-700 ring-1 ring-purple-100">
@@ -241,7 +241,7 @@ export function JobOverviewSection({
                 className="h-4 w-4"
                 aria-hidden="true"
               />
-              Open gallery
+              View Results
             </button>
           </div>
 

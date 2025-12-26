@@ -278,10 +278,10 @@ export default function EditWorkflowPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
-              Edit Lead Magnet
+              Edit Tool
             </h1>
             <p className="text-gray-600">
-              Update your AI lead magnet and form configuration
+              Customize your tool and lead form.
             </p>
           </div>
           {workflowEdit.workflowStatus === "draft" && (
@@ -310,7 +310,7 @@ export default function EditWorkflowPage() {
             }`}
           >
             <FiSettings className="inline w-4 h-4 mr-2" />
-            Lead Magnet Settings
+            Tool Settings
           </button>
           <button
             onClick={() => setActiveTab("form")}
@@ -321,7 +321,7 @@ export default function EditWorkflowPage() {
             }`}
           >
             <FiFileText className="inline w-4 h-4 mr-2" />
-            Form Settings
+            Form
           </button>
           {(templateId || templateData.html_content.trim()) && (
             <button
@@ -333,7 +333,7 @@ export default function EditWorkflowPage() {
               }`}
             >
               <FiLayout className="inline w-4 h-4 mr-2" />
-              Template
+              Design
             </button>
           )}
         </nav>

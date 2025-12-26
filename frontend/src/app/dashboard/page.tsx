@@ -12,6 +12,8 @@ import {
   ArrowTrendingUpIcon,
   DocumentTextIcon,
   BoltIcon,
+  UserGroupIcon,
+  DocumentCheckIcon,
 } from "@heroicons/react/24/outline";
 import { AnalyticsResponse, AnalyticsOverview } from "@/types/analytics";
 import { logger } from "@/utils/logger";
@@ -82,40 +84,22 @@ export default function DashboardPage() {
   const stats = useMemo(
     () => [
       {
-        label: "Lead Magnets Generated",
-        value: overview.total_jobs || 0,
-        icon: ChartBarIcon,
+        label: "Leads Collected",
+        value: overview.total_submissions || 0,
+        icon: UserGroupIcon,
         color: "blue",
       },
       {
-        label: "Completed Lead Magnets",
+        label: "Reports Generated",
         value: overview.completed_jobs || 0,
-        icon: CheckCircleIcon,
+        icon: DocumentCheckIcon,
         color: "green",
       },
       {
-        label: "Failed Lead Magnets",
-        value: overview.failed_jobs || 0,
-        icon: XCircleIcon,
-        color: "red",
-      },
-      {
-        label: "Pending Lead Magnets",
-        value: overview.pending_jobs || 0,
-        icon: ClockIcon,
-        color: "yellow",
-      },
-      {
-        label: "Success Rate",
-        value: `${overview.success_rate || 0}%`,
-        icon: ArrowTrendingUpIcon,
+        label: "Active Magnets",
+        value: overview.active_workflows || 0,
+        icon: BoltIcon,
         color: "purple",
-      },
-      {
-        label: "Avg Processing Time",
-        value: `${overview.avg_processing_time_seconds || 0}s`,
-        icon: ClockIcon,
-        color: "indigo",
       },
     ],
     [overview],
@@ -125,10 +109,7 @@ export default function DashboardPage() {
     () => ({
       blue: "bg-blue-100 text-blue-600",
       green: "bg-green-100 text-green-600",
-      red: "bg-red-100 text-red-600",
-      yellow: "bg-yellow-100 text-yellow-600",
       purple: "bg-purple-100 text-purple-600",
-      indigo: "bg-indigo-100 text-indigo-600",
     }),
     [],
   );
@@ -263,44 +244,15 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg sm:rounded-xl shadow-sm border border-blue-100 p-4 sm:p-6">
           <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-2 sm:mb-3">
-            What Are AI Lead Magnets?
+            What are Lead Magnets?
           </h2>
           <p className="text-xs sm:text-sm text-gray-700 mb-2 sm:mb-3 leading-relaxed">
-            AI lead magnets are personalized resources that use artificial
-            intelligence to create custom content for each lead. Instead of
-            sending a generic PDF, you send a personalized report generated
-            specifically for that lead.
+            Lead Magnets are personalized tools that generate custom content for your visitors.
+            Instead of a generic PDF, you deliver a tailored report.
           </p>
           <p className="text-xs sm:text-sm text-gray-700 font-semibold">
-            🚀 This approach is <strong>10x more effective</strong> at
-            converting leads because it solves their specific problems!
+            🚀 <strong>10x more effective</strong> at converting visitors into leads!
           </p>
-        </div>
-
-        <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
-          <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">
-            System Overview
-          </h2>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0 text-sm">
-              <span className="text-gray-600">Total Submissions</span>
-              <span className="font-semibold text-gray-900">
-                {overview.total_submissions || 0}
-              </span>
-            </div>
-            <div className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0 text-sm">
-              <span className="text-gray-600">Total Lead Magnets</span>
-              <span className="font-semibold text-gray-900">
-                {overview.total_workflows || 0}
-              </span>
-            </div>
-            <div className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0 text-sm">
-              <span className="text-gray-600">Active Lead Magnets</span>
-              <span className="font-semibold text-green-600">
-                {overview.active_workflows || 0}
-              </span>
-            </div>
-          </div>
         </div>
 
         <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
@@ -308,13 +260,13 @@ export default function DashboardPage() {
             Recent Activity
           </h2>
           <p className="text-gray-600 text-xs sm:text-sm leading-relaxed">
-            Monitor your generated lead magnets and form submissions in the{" "}
+            View your collected leads and generated reports in the{" "}
             <a
               href="/dashboard/jobs"
               className="text-primary-600 hover:text-primary-700 font-medium"
               aria-label="View generated lead magnets"
             >
-              Generated tab
+              Activity tab
             </a>
             .
           </p>

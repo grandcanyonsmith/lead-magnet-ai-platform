@@ -52,7 +52,7 @@ export function GeneralSettings({
       <div className="p-8 space-y-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
-            label="Organization Name"
+            label="Company Name"
             name="organization_name"
             type="text"
             value={settings.organization_name || ""}
@@ -63,7 +63,7 @@ export function GeneralSettings({
           />
 
           <FormField
-            label="Contact Email"
+            label="Support Email"
             name="contact_email"
             type="email"
             value={settings.contact_email || ""}
@@ -88,7 +88,7 @@ export function GeneralSettings({
           />
 
           <FormField
-            label="Default AI Model"
+            label="Preferred AI Brain"
             name="default_ai_model"
             type="text"
             value={settings.default_ai_model || "gpt-5.1-codex"}

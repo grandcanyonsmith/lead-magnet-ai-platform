@@ -49,33 +49,33 @@ const MODEL_OPTIONS = [
 const AVAILABLE_TOOLS = [
   {
     value: "web_search",
-    label: "Web Search",
-    description: "Web search capabilities",
+    label: "Search the Web",
+    description: "Look up real-time information",
   },
   {
     value: "image_generation",
-    label: "Image Generation",
+    label: "Create Images",
     description: "Generate images from text descriptions",
   },
   {
     value: "computer_use_preview",
-    label: "Computer Use Preview",
-    description: "Control computer interfaces (requires configuration)",
+    label: "Computer Use (Beta)",
+    description: "Interact with computer interfaces",
   },
   {
     value: "file_search",
-    label: "File Search",
+    label: "Search Files",
     description: "Search uploaded files for context",
   },
   {
     value: "code_interpreter",
-    label: "Code Interpreter",
-    description: "Execute Python code in a secure sandbox",
+    label: "Run Code",
+    description: "Execute Python code for calculations",
   },
   {
     value: "shell",
-    label: "Shell",
-    description: "Run shell commands via the AWS shell executor (high risk)",
+    label: "Run Shell Commands",
+    description: "Advanced: Run system commands",
   },
 ];
 
@@ -928,7 +928,7 @@ export default function WorkflowStepEditor({
               className="block text-sm font-medium text-gray-700 mb-1"
               htmlFor={`step-name-${index}`}
             >
-              Step Name *
+              Instruction Name *
             </label>
             <input
               id={`step-name-${index}`}
@@ -938,7 +938,7 @@ export default function WorkflowStepEditor({
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
               placeholder="e.g., Deep Research"
               required
-              aria-label="Step name"
+              aria-label="Instruction name"
               aria-required="true"
             />
           </div>
@@ -948,16 +948,16 @@ export default function WorkflowStepEditor({
               className="block text-sm font-medium text-gray-700 mb-1"
               htmlFor={`step-description-${index}`}
             >
-              Step Description (optional)
+              Description (optional)
             </label>
             <textarea
               id={`step-description-${index}`}
               value={localStep.step_description || ""}
               onChange={(e) => handleChange("step_description", e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-              placeholder="Brief description of what this step does"
+              placeholder="Brief description of what this does"
               rows={2}
-              aria-label="Step description"
+              aria-label="Instruction description"
             />
           </div>
 
@@ -966,7 +966,7 @@ export default function WorkflowStepEditor({
               className="block text-sm font-medium text-gray-700 mb-1"
               htmlFor={`step-type-${index}`}
             >
-              Step Type *
+              Action Type *
             </label>
             <select
               id={`step-type-${index}`}
@@ -1018,11 +1018,11 @@ export default function WorkflowStepEditor({
                 }
               }}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-              aria-label="Step type"
+              aria-label="Action type"
               aria-required="true"
             >
-              <option value="ai_generation">AI Generation</option>
-              <option value="webhook">HTTP Request</option>
+              <option value="ai_generation">Generate Content (AI)</option>
+              <option value="webhook">Send Webhook / API Request</option>
             </select>
           </div>
 
@@ -1035,7 +1035,7 @@ export default function WorkflowStepEditor({
                   className="block text-sm font-medium text-gray-700 mb-1"
                   htmlFor={`ai-model-${index}`}
                 >
-                  AI Model *
+                  AI Brain *
                 </label>
                 <select
                   id={`ai-model-${index}`}
@@ -1061,7 +1061,7 @@ export default function WorkflowStepEditor({
                   className="block text-sm font-medium text-gray-700 mb-1"
                   htmlFor={`reasoning-effort-${index}`}
                 >
-                  Reasoning Effort
+                  Thinking Power
                 </label>
                 <select
                   id={`reasoning-effort-${index}`}
@@ -1075,14 +1075,13 @@ export default function WorkflowStepEditor({
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                   aria-label="Reasoning effort"
                 >
-                  <option value="">Default</option>
+                  <option value="">Standard</option>
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>
                   <option value="high">High</option>
                 </select>
                 <p className="mt-1 text-sm text-gray-500">
-                  Optional. Controls how much reasoning the model uses (mainly
-                  for GPT-5 models).
+                  Optional. Controls how much the AI thinks before answering.
                 </p>
               </div>
 
@@ -1112,7 +1111,7 @@ export default function WorkflowStepEditor({
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  OpenAI Tools
+                  Capabilities
                 </label>
                 <div className="space-y-2 mb-3">
                   {AVAILABLE_TOOLS.map((tool) => (

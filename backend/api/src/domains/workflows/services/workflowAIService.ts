@@ -12,6 +12,18 @@ export interface WorkflowAIEditRequest {
     template_id?: string;
     current_steps: WorkflowStep[];
   };
+  // Context from the current job being analyzed
+  executionHistory?: {
+    submissionData?: any;
+    stepExecutionResults?: any[]; // Full or summarized step outputs
+    finalArtifactSummary?: string;
+  };
+  // Context from other successful jobs (few-shot learning)
+  referenceExamples?: Array<{
+    jobId: string;
+    submissionData: any;
+    finalArtifactSummary: string;
+  }>;
 }
 
 export interface WorkflowAIEditResponse {
@@ -92,7 +104,7 @@ export class WorkflowAIService {
   constructor(private openaiClient: OpenAI) {}
 
   async editWorkflow(request: WorkflowAIEditRequest): Promise<WorkflowAIEditResponse> {
-    const { userPrompt, workflowContext } = request;
+    const { userPrompt, workflowContext, executionHistory, referenceExamples } = request;
 
     // Build context message for AI
     const contextParts: string[] = [
@@ -122,6 +134,51 @@ export class WorkflowAIService {
       });
     }
 
+    // Add Reference Examples (Few-Shot Learning)
+    if (referenceExamples && referenceExamples.length > 0) {
+      contextParts.push('', '---', 'REFERENCE EXAMPLES (Past Successful Jobs):');
+      contextParts.push('Use these examples to understand how different inputs should be handled.');
+      referenceExamples.forEach((ex, idx) => {
+        const inputSummary = JSON.stringify(ex.submissionData || {}, null, 2);
+        // Truncate output summary if too long
+        const outputSummary = (ex.finalArtifactSummary || '').slice(0, 1000);
+        contextParts.push(`\nExample #${idx + 1}:`);
+        contextParts.push(`Input:\n${inputSummary}`);
+        contextParts.push(`Outcome:\n${outputSummary}...`);
+      });
+    }
+
+    // Add Current Execution Context
+    if (executionHistory) {
+      contextParts.push('', '---', 'CURRENT JOB CONTEXT (The run we are improving):');
+      
+      if (executionHistory.submissionData) {
+        contextParts.push(`Original Input:\n${JSON.stringify(executionHistory.submissionData, null, 2)}`);
+      }
+
+      if (executionHistory.stepExecutionResults && executionHistory.stepExecutionResults.length > 0) {
+        contextParts.push('\nStep Execution Results:');
+        executionHistory.stepExecutionResults.forEach((step: any, idx: number) => {
+          const status = step._status || step.status || 'unknown';
+          const output = step.output 
+            ? (typeof step.output === 'string' ? step.output : JSON.stringify(step.output))
+            : '(no output)';
+          // Limit output length to avoid token limits, but give enough context
+          // Using 4000 chars (~1000 tokens) per step is generous but safe for modern models
+          const truncatedOutput = output.length > 4000 ? output.slice(0, 4000) + '... [truncated]' : output;
+          
+          contextParts.push(`Step ${step.step_order || idx + 1} (${status}):\n${truncatedOutput}\n`);
+        });
+      }
+
+      if (executionHistory.finalArtifactSummary) {
+        const finalDoc = executionHistory.finalArtifactSummary.length > 15000 
+          ? executionHistory.finalArtifactSummary.slice(0, 15000) + '... [truncated]' 
+          : executionHistory.finalArtifactSummary;
+        contextParts.push(`\nFinal Deliverable:\n${finalDoc}`);
+      }
+    }
+
     const contextMessage = contextParts.join('\n');
 
     const userMessage = `${contextMessage}
@@ -134,19 +191,22 @@ Please generate the updated workflow configuration with all necessary changes.`;
       workflow: workflowContext.workflow_name,
       userPrompt: userPrompt.substring(0, 100),
       currentStepCount: workflowContext.current_steps.length,
+      hasContext: !!executionHistory,
+      referenceCount: referenceExamples?.length || 0
     });
 
     try {
       const completion = await this.openaiClient.chat.completions.create({
-        model: 'gpt-4o',
+        model: 'gpt-5.2',
         messages: [
           { role: 'system', content: WORKFLOW_AI_SYSTEM_PROMPT },
           { role: 'user', content: userMessage },
         ],
         response_format: { type: 'json_object' },
-        temperature: 0.7,
-        max_tokens: 4000,
-      });
+        reasoning_effort: 'high',
+        // Note: reasoning models often ignore temperature, but we keep it if supported or fallback
+        // temperature: 0.7, 
+      } as any);
 
       const responseContent = completion.choices[0]?.message?.content;
       if (!responseContent) {

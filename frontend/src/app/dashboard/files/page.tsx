@@ -151,17 +151,17 @@ export default function FilesPage() {
   return (
     <div className="max-w-7xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Files</h1>
-        <p className="text-gray-600">Upload and manage your customer files</p>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">My Documents</h1>
+        <p className="text-gray-600">Upload and manage files to use in your tools</p>
       </div>
 
       {/* Upload Section */}
       <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <h2 className="text-lg font-semibold mb-4">Upload File</h2>
+        <h2 className="text-lg font-semibold mb-4">Upload Document</h2>
         <div className="flex items-center gap-4">
           <label className="cursor-pointer">
             <span className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
-              {isUploading ? "Uploading..." : "Choose File"}
+              {isUploading ? "Uploading..." : "Select Document"}
             </span>
             <input
               type="file"
@@ -170,17 +170,17 @@ export default function FilesPage() {
               disabled={isUploading}
             />
           </label>
-          <span className="text-sm text-gray-500">Max file size: 10MB</span>
+          <span className="text-sm text-gray-500">Supports PDF, DOCX, TXT up to 10MB</span>
         </div>
       </div>
 
       {/* Search Section */}
       <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <h2 className="text-lg font-semibold mb-4">Search Files</h2>
+        <h2 className="text-lg font-semibold mb-4">Search Content</h2>
         <div className="flex gap-2">
           <input
             type="text"
-            placeholder="Search files by content..."
+            placeholder="Find documents containing..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyPress={(e) => e.key === "Enter" && handleSearch()}
@@ -211,14 +211,14 @@ export default function FilesPage() {
       {/* Files List */}
       <div className="bg-white rounded-lg shadow">
         <div className="p-6 border-b border-gray-200">
-          <h2 className="text-lg font-semibold">Your Files ({files.length})</h2>
+          <h2 className="text-lg font-semibold">Library ({files.length})</h2>
         </div>
 
         {isLoading ? (
-          <div className="p-8 text-center text-gray-500">Loading files...</div>
+          <div className="p-8 text-center text-gray-500">Loading library...</div>
         ) : files.length === 0 ? (
           <div className="p-8 text-center text-gray-500">
-            No files uploaded yet. Upload your first file above.
+            No documents yet. Upload one to get started.
           </div>
         ) : (
           <div className="divide-y divide-gray-200">
