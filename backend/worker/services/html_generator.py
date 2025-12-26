@@ -31,7 +31,7 @@ class HTMLGenerator:
         submission_data: dict,
         template_html: str,
         template_style: str = '',
-        model: str = 'gpt-5'
+        model: str = 'gpt-5.2'
     ) -> Tuple[str, Dict, Dict, Dict]:
         """
         Generate final deliverable HTML from submission data using the template as a style reference.
@@ -52,7 +52,7 @@ class HTMLGenerator:
         template_html: str,
         template_style: str = '',
         submission_data: Dict = None,
-        model: str = 'gpt-5'
+        model: str = 'gpt-5.2'
     ) -> Tuple[str, Dict, Dict, Dict]:
         """
         Generate styled HTML deliverable from accumulated workflow content using a template as a style reference.
@@ -66,7 +66,7 @@ class HTMLGenerator:
             model=model,
         )
     
-    def rewrite_html(self, html_content: str, model: str = 'gpt-5') -> str:
+    def rewrite_html(self, html_content: str, model: str = 'gpt-5.2') -> str:
         """Rewrite/enhance HTML content."""
         return html_content
 
@@ -77,7 +77,7 @@ class HTMLGenerator:
         template_html: str,
         template_style: str = '',
         submission_data: Optional[Dict] = None,
-        model: str = 'gpt-5',
+        model: str = 'gpt-5.2',
     ) -> Tuple[str, Dict, Dict, Dict]:
         """
         Internal helper that calls OpenAI Responses API to create a complete HTML deliverable

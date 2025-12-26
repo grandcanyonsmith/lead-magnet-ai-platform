@@ -94,7 +94,7 @@ export function WorkflowTab({
             `Invalid step ${i + 1}: missing required fields (step_name or instructions)`,
           );
         }
-        // Model is required but backend will default to 'gpt-5' if missing
+        // Model is required but backend will default to 'gpt-5.2' if missing
         // We don't need to validate it here as the backend handles defaults
       }
 

@@ -269,7 +269,7 @@ Return JSON format: {"name": "...", "description": "..."}`;
     html_content: string;
     placeholder_tags: string[];
   }> {
-    const { tenantId, model = "gpt-5", jobId } = request;
+    const { tenantId, model = "gpt-5.2", jobId } = request;
 
     logger.info("[Template Generation] Starting AI generation", {
       tenantId,
@@ -303,7 +303,7 @@ Return JSON format: {"name": "...", "description": "..."}`;
     const {
       current_html,
       edit_prompt,
-      model = "gpt-5",
+      model = "gpt-5.2",
       tenantId,
       jobId,
       selectors,

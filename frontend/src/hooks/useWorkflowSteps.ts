@@ -7,7 +7,7 @@ const defaultSteps: WorkflowStep[] = [
   {
     step_name: "Deep Research",
     step_description: "Generate comprehensive research report",
-    model: "gpt-5",
+    model: "gpt-5.2",
     instructions: "",
     step_order: 0,
     tools: ["web_search"],
@@ -16,7 +16,7 @@ const defaultSteps: WorkflowStep[] = [
   {
     step_name: "HTML Rewrite",
     step_description: "Rewrite content into styled HTML matching template",
-    model: "gpt-5",
+    model: "gpt-5.2",
     instructions:
       "Rewrite the research content into styled HTML matching the provided template. Ensure the output is complete, valid HTML that matches the template's design and structure.",
     step_order: 1,
@@ -45,7 +45,7 @@ export function useWorkflowSteps(initialSteps?: WorkflowStep[]) {
         step_name: `Step ${prev.length + 1}`,
         step_description: "",
         step_type: "ai_generation",
-        model: "gpt-5",
+        model: "gpt-5.2",
         instructions: "",
         step_order: prev.length,
         tools: [],
