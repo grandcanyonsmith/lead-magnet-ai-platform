@@ -27,6 +27,7 @@ import {
   ChevronRightIcon,
   ChevronUpIcon,
 } from "@heroicons/react/24/outline";
+import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 
 export default function DashboardLayout({
   children,
@@ -372,16 +373,16 @@ export default function DashboardLayout({
                         group flex items-center gap-2 sm:gap-3 rounded-xl px-2.5 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all duration-200
                         ${
                           isActive
-                            ? "bg-primary-50 text-primary-700 ring-1 ring-primary-100"
-                            : "text-zinc-700 hover:bg-zinc-100/70"
+                            ? "bg-primary-600 text-white shadow-md shadow-primary-600/20"
+                            : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
                         }
                       `}
                     >
                       <Icon
                         className={`h-4 w-4 sm:h-5 sm:w-5 shrink-0 ${
                           isActive
-                            ? "text-primary-600"
-                            : "text-zinc-500 group-hover:text-zinc-700"
+                            ? "text-white"
+                            : "text-zinc-400 group-hover:text-zinc-600"
                         }`}
                       />
                       <span className="truncate">{item.label}</span>
@@ -503,7 +504,10 @@ export default function DashboardLayout({
               <div className="w-full">{children}</div>
             ) : (
               <div className="w-full lg:rounded-xl lg:bg-white lg:p-6 xl:p-8 lg:shadow-md lg:ring-1 lg:ring-gray-200">
-                <div className="mx-auto max-w-6xl w-full">{children}</div>
+                <div className="mx-auto max-w-6xl w-full">
+                  <Breadcrumbs />
+                  {children}
+                </div>
               </div>
             )}
           </main>
