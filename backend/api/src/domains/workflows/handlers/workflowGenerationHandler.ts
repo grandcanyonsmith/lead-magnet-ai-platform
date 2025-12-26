@@ -23,7 +23,7 @@ export async function handleWorkflowGenerationJob(event: any): Promise<APIGatewa
       throw new Error(`Job ${job_id} not found`);
     }
     finalDescription = finalDescription || job.description;
-    finalModel = finalModel || job.model || 'gpt-5';
+    finalModel = finalModel || job.model || 'gpt-5.2';
     finalTenantId = finalTenantId || job.tenant_id;
   }
 

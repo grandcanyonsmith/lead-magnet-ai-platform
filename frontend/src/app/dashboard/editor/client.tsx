@@ -26,6 +26,7 @@ import { api } from "@/lib/api";
 import { ApiError } from "@/lib/api/errors";
 import type { Job } from "@/types/job";
 import type { Workflow } from "@/types/workflow";
+import { Tooltip } from "@/components/ui/Tooltip";
 
 import { useEditorHistory } from "./hooks/useEditorHistory";
 import { useHtmlPatcher } from "./hooks/useHtmlPatcher";
@@ -461,50 +462,52 @@ export default function EditorClient() {
     aiReasoningEffort === "medium" ? "MED" : aiReasoningEffort.toUpperCase();
 
   return (
-    <div className="flex h-screen flex-col bg-[#0c0d10] text-gray-200 font-sans selection:bg-purple-500/30 overflow-hidden">
-      {/* Top Navigation Bar - Replicating Web Weaver */}
-      <header className="h-14 flex items-center justify-between px-4 border-b border-white/5 bg-[#0c0d10] z-50">
-        <div className="flex items-center gap-4 min-w-0">
-          <div className="flex items-center gap-3 min-w-0">
-            <Link
-              href={backHref}
-              className="text-gray-400 hover:text-white transition-colors p-1.5 rounded-md hover:bg-white/5"
-              aria-label="Back"
-            >
-              <FiArrowLeft className="w-4 h-4" />
-            </Link>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 min-w-0">
+    <div className="flex h-screen flex-col bg-zinc-950 text-gray-200 font-sans selection:bg-indigo-500/30 overflow-hidden">
+      {/* Top Navigation Bar */}
+      <header className="h-16 flex items-center justify-between px-6 border-b border-white/5 bg-zinc-950/80 backdrop-blur-sm z-50">
+        <div className="flex items-center gap-6 min-w-0">
+          <div className="flex items-center gap-4 min-w-0">
+            <Tooltip content="Back to Job Details" position="bottom">
+              <Link
+                href={backHref}
+                className="text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-white/5"
+                aria-label="Back"
+              >
+                <FiArrowLeft className="w-5 h-5" />
+              </Link>
+            </Tooltip>
+            <div className="min-w-0 flex flex-col justify-center">
+              <div className="flex items-center gap-3 min-w-0">
                 <span className="font-semibold text-sm text-gray-200 truncate">
                   {headerTitle}
                 </span>
                 {headerMeta && (
-                  <span className="text-[11px] font-mono text-gray-500 truncate">
+                  <span className="text-[11px] font-mono text-gray-500 truncate bg-white/5 px-1.5 py-0.5 rounded">
                     {headerMeta}
                   </span>
                 )}
               </div>
               <div className="flex items-center gap-2 mt-0.5 text-[11px] text-gray-500">
                 <span
-                  className={`h-1.5 w-1.5 rounded-full ${isDirty ? "bg-yellow-400" : "bg-emerald-400"}`}
+                  className={`h-1.5 w-1.5 rounded-full ${isDirty ? "bg-amber-400" : "bg-emerald-400"}`}
                 />
                 <span>{saveStateLabel}</span>
                 {lastSavedAt && !isDirty && (
-                  <span className="hidden sm:inline">
-                    · {new Date(lastSavedAt).toLocaleTimeString()}
+                  <span className="hidden sm:inline opacity-60">
+                    · {new Date(Number(lastSavedAt)).toLocaleTimeString()}
                   </span>
                 )}
               </div>
             </div>
           </div>
 
-          <div className="hidden sm:flex bg-[#1c1d21] rounded-lg p-1 border border-white/5">
+          <div className="hidden sm:flex bg-zinc-900 rounded-lg p-1 border border-white/5">
             <button
               onClick={() => setMode("preview")}
-              className={`flex items-center gap-2 px-3 py-1 text-xs font-medium rounded-md transition-all ${
+              className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
                 mode === "preview"
-                  ? "bg-[#2b2d31] text-white shadow-sm"
-                  : "text-gray-500 hover:text-gray-300"
+                  ? "bg-zinc-800 text-white shadow-sm ring-1 ring-white/5"
+                  : "text-gray-500 hover:text-gray-300 hover:bg-white/5"
               }`}
             >
               <FiMonitor className="w-3.5 h-3.5" />
@@ -512,10 +515,10 @@ export default function EditorClient() {
             </button>
             <button
               onClick={() => setMode("code")}
-              className={`flex items-center gap-2 px-3 py-1 text-xs font-medium rounded-md transition-all ${
+              className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
                 mode === "code"
-                  ? "bg-[#2b2d31] text-white shadow-sm"
-                  : "text-gray-500 hover:text-gray-300"
+                  ? "bg-zinc-800 text-white shadow-sm ring-1 ring-white/5"
+                  : "text-gray-500 hover:text-gray-300 hover:bg-white/5"
               }`}
             >
               <FiCode className="w-3.5 h-3.5" />
@@ -525,99 +528,113 @@ export default function EditorClient() {
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleUndo}
-            disabled={!canUndo}
-            className="p-2 rounded-md hover:bg-white/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            title="Undo (Cmd/Ctrl+Z)"
-          >
-            <FiRotateCcw className="w-4 h-4" />
-          </button>
-          <button
-            onClick={handleRedo}
-            disabled={!canRedo}
-            className="p-2 rounded-md hover:bg-white/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            title="Redo (Cmd/Ctrl+Shift+Z)"
-          >
-            <FiRotateCw className="w-4 h-4" />
-          </button>
+          <Tooltip content="Undo (Cmd/Ctrl+Z)" position="bottom">
+            <button
+              onClick={handleUndo}
+              disabled={!canUndo}
+              className="p-2 rounded-lg hover:bg-white/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-gray-400 hover:text-white"
+            >
+              <FiRotateCcw className="w-4 h-4" />
+            </button>
+          </Tooltip>
+          
+          <Tooltip content="Redo (Cmd/Ctrl+Shift+Z)" position="bottom">
+            <button
+              onClick={handleRedo}
+              disabled={!canRedo}
+              className="p-2 rounded-lg hover:bg-white/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-gray-400 hover:text-white"
+            >
+              <FiRotateCw className="w-4 h-4" />
+            </button>
+          </Tooltip>
 
-          <button
-            onClick={handleSave}
-            disabled={!canSave}
-            className={`hidden sm:inline-flex items-center gap-2 px-3 py-2 rounded-md text-xs font-semibold transition-colors border ${
-              canSave
-                ? "bg-white text-black hover:bg-gray-200 border-white/10"
-                : "bg-white/5 text-gray-500 border-white/5 cursor-not-allowed"
-            }`}
-            title={jobId ? "Save (Cmd/Ctrl+S)" : "Saving requires a jobId"}
-          >
-            <FiSave className="w-3.5 h-3.5" />
-            {isSaving ? "Saving…" : "Save"}
-          </button>
+          <div className="w-px h-4 bg-white/10 mx-1" />
 
-          <button
-            onClick={handleSaveAsTemplate}
-            disabled={!canSaveAsTemplate}
-            className={`hidden md:inline-flex items-center gap-2 px-3 py-2 rounded-md text-xs font-semibold transition-colors border ${
-              canSaveAsTemplate
-                ? "bg-white/10 text-white hover:bg-white/15 border-white/10"
-                : "bg-white/5 text-gray-500 border-white/5 cursor-not-allowed"
-            }`}
-            title={
+          <Tooltip content={jobId ? "Save (Cmd/Ctrl+S)" : "Saving requires a jobId"} position="bottom">
+            <button
+              onClick={handleSave}
+              disabled={!canSave}
+              className={`hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all border ${
+                canSave
+                  ? "bg-white text-black hover:bg-zinc-200 border-white/10 shadow-sm"
+                  : "bg-white/5 text-gray-500 border-white/5 cursor-not-allowed"
+              }`}
+            >
+              <FiSave className="w-3.5 h-3.5" />
+              {isSaving ? "Saving…" : "Save"}
+            </button>
+          </Tooltip>
+
+          <Tooltip 
+            content={
               workflow?.template_id
                 ? "Update the lead magnet template HTML from your current editor HTML"
                 : "No template attached to this lead magnet"
             }
+            position="bottom"
           >
-            <FiLayers className="w-3.5 h-3.5" />
-            {savingTemplate ? "Updating template…" : "Save as Template"}
-          </button>
-
-          <div className="hidden sm:block h-4 w-px bg-white/10 mx-1" />
-
-          <div className="flex items-center gap-1 text-gray-500">
             <button
-              onClick={() => setDevice("desktop")}
-              className={`p-2 rounded-md hover:bg-white/5 transition-colors ${
-                device === "desktop" ? "text-gray-200 bg-white/5" : ""
+              onClick={handleSaveAsTemplate}
+              disabled={!canSaveAsTemplate}
+              className={`hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all border ${
+                canSaveAsTemplate
+                  ? "bg-indigo-600/10 text-indigo-400 hover:bg-indigo-600/20 border-indigo-500/20"
+                  : "bg-white/5 text-gray-500 border-white/5 cursor-not-allowed"
               }`}
-              title="Desktop preview"
             >
-              <FiMonitor className="w-4 h-4" />
+              <FiLayers className="w-3.5 h-3.5" />
+              {savingTemplate ? "Updating template…" : "Save as Template"}
             </button>
-            <button
-              onClick={() => setDevice("mobile")}
-              className={`p-2 rounded-md hover:bg-white/5 transition-colors ${
-                device === "mobile" ? "text-gray-200 bg-white/5" : ""
-              }`}
-              title="Mobile preview"
-            >
-              <FiSmartphone className="w-4 h-4" />
-            </button>
+          </Tooltip>
+
+          <div className="hidden sm:block w-px h-4 bg-white/10 mx-1" />
+
+          <div className="flex items-center bg-zinc-900 rounded-lg p-1 border border-white/5">
+            <Tooltip content="Desktop Preview" position="bottom">
+              <button
+                onClick={() => setDevice("desktop")}
+                className={`p-1.5 rounded-md transition-colors ${
+                  device === "desktop" ? "text-white bg-zinc-800 shadow-sm" : "text-gray-500 hover:text-gray-300"
+                }`}
+              >
+                <FiMonitor className="w-4 h-4" />
+              </button>
+            </Tooltip>
+            <Tooltip content="Mobile Preview" position="bottom">
+              <button
+                onClick={() => setDevice("mobile")}
+                className={`p-1.5 rounded-md transition-colors ${
+                  device === "mobile" ? "text-white bg-zinc-800 shadow-sm" : "text-gray-500 hover:text-gray-300"
+                }`}
+              >
+                <FiSmartphone className="w-4 h-4" />
+              </button>
+            </Tooltip>
           </div>
 
           {initialUrl ? (
-            <a
-              href={initialUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden sm:inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold bg-white text-black rounded-md hover:bg-gray-200 transition-colors"
-            >
-              Visit <FiArrowLeft className="w-3 h-3 rotate-[135deg]" />
-            </a>
+            <Tooltip content="View original URL" position="bottom">
+              <a
+                href={initialUrl || "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hidden sm:inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold bg-zinc-800 text-white rounded-lg hover:bg-zinc-700 transition-colors border border-white/10"
+              >
+                Visit <FiArrowLeft className="w-3 h-3 rotate-[135deg]" />
+              </a>
+            </Tooltip>
           ) : null}
         </div>
       </header>
 
       {/* Main Workspace */}
-      <main className="flex-1 relative overflow-hidden bg-[#050505] flex flex-col items-center justify-center p-6">
+      <main className="flex-1 relative overflow-hidden bg-zinc-950/50 flex flex-col items-center justify-center p-6 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-900/50 via-zinc-950/50 to-zinc-950/50">
         {mode === "preview" ? (
           <div
             className={`relative transition-all duration-500 ease-spring shadow-2xl ${
               device === "mobile"
-                ? "w-[375px] h-[667px] rounded-[3rem] border-8 border-[#1c1d21] bg-white overflow-hidden"
-                : "w-full max-w-6xl h-full rounded-xl border border-white/5 bg-white overflow-hidden"
+                ? "w-[375px] h-[667px] rounded-[3rem] border-8 border-zinc-900 bg-white overflow-hidden shadow-zinc-900/50"
+                : "w-full max-w-6xl h-full rounded-xl border border-white/5 bg-white overflow-hidden shadow-zinc-900/20"
             }`}
           >
             {htmlState.html ? (
@@ -629,7 +646,7 @@ export default function EditorClient() {
                 sandbox="allow-scripts allow-popups"
               />
             ) : hasError ? (
-              <div className="flex flex-col w-full h-full items-center justify-center text-gray-500 bg-[#0c0d10] p-4 text-center">
+              <div className="flex flex-col w-full h-full items-center justify-center text-gray-500 bg-zinc-950 p-4 text-center">
                 <p className="text-red-400 font-medium mb-2">
                   Failed to load content
                 </p>
@@ -641,7 +658,7 @@ export default function EditorClient() {
                 </button>
               </div>
             ) : (
-              <div className="flex w-full h-full items-center justify-center text-gray-500 bg-[#0c0d10]">
+              <div className="flex w-full h-full items-center justify-center text-gray-500 bg-zinc-950">
                 <FiRotateCw className="h-5 w-5 animate-spin mr-2" />
                 Loading...
               </div>
@@ -649,14 +666,14 @@ export default function EditorClient() {
 
             {/* Selection Mode Indicator Overlay */}
             {isSelectionMode && (
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-purple-600 text-white text-xs font-medium px-3 py-1.5 rounded-full shadow-lg flex items-center gap-2 animate-in fade-in slide-in-from-top-2 pointer-events-none">
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-xs font-medium px-4 py-2 rounded-full shadow-lg flex items-center gap-2 animate-in fade-in slide-in-from-top-2 pointer-events-none ring-1 ring-white/10 backdrop-blur-md">
                 <FiMousePointer className="w-3.5 h-3.5" />
                 Select an element to edit
               </div>
             )}
           </div>
         ) : (
-          <div className="w-full h-full max-w-6xl rounded-xl border border-white/5 bg-[#15161a] overflow-hidden">
+          <div className="w-full h-full max-w-6xl rounded-xl border border-white/5 bg-zinc-900 overflow-hidden shadow-2xl">
             <textarea
               value={htmlState.html}
               onChange={(e) => {
@@ -665,22 +682,22 @@ export default function EditorClient() {
               onBlur={() =>
                 commit(htmlState.html)
               }
-              className="w-full h-full bg-[#15161a] text-gray-300 font-mono text-sm p-4 resize-none focus:outline-none"
+              className="w-full h-full bg-zinc-900 text-gray-300 font-mono text-sm p-4 resize-none focus:outline-none selection:bg-indigo-500/30"
               spellCheck={false}
             />
           </div>
         )}
       </main>
 
-      <footer className="relative border-t border-white/5 bg-[#0c0d10] px-4 py-4">
+      <footer className="relative border-t border-white/5 bg-zinc-950 px-4 py-4 z-40">
         <div className="mx-auto w-full max-w-3xl">
-          <div className="bg-[#15161a]/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl p-1.5 transition-all focus-within:ring-1 focus-within:ring-purple-500/50 ring-offset-2 ring-offset-[#0c0d10]">
+          <div className="bg-zinc-900/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl p-2 transition-all focus-within:ring-1 focus-within:ring-indigo-500/50 ring-offset-2 ring-offset-zinc-950">
             <div className="flex flex-col">
               {/* Context & Selection (if any) */}
               {selectedElement && (
-                <div className="px-3 py-1.5 flex items-center justify-between border-b border-white/5 mb-1">
-                  <div className="flex items-center gap-2 text-xs text-purple-400">
-                    <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
+                <div className="px-3 py-2 flex items-center justify-between border-b border-white/5 mb-1 bg-white/5 rounded-t-lg mx-1 mt-1">
+                  <div className="flex items-center gap-2 text-xs text-indigo-400">
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
                     <span className="font-mono truncate max-w-[300px]">
                       {selectedElement}
                     </span>
@@ -691,7 +708,7 @@ export default function EditorClient() {
                       setSelectedOuterHtml(null);
                       setIsSelectionMode(false);
                     }}
-                    className="text-gray-500 hover:text-white"
+                    className="text-gray-500 hover:text-white transition-colors"
                     title="Clear selection"
                   >
                     <FiRotateCw className="w-3 h-3 rotate-45" />
@@ -701,24 +718,24 @@ export default function EditorClient() {
 
               {/* Main Input Area */}
               <div className="flex items-end gap-2 px-2">
-                <button
-                  onClick={() => setIsSelectionMode((v) => !v)}
-                  disabled={mode !== "preview" || !htmlState.html}
-                  className={`p-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-                    isSelectionMode
-                      ? "text-purple-400 bg-purple-500/10"
-                      : "text-gray-400 hover:text-white hover:bg-white/5"
-                  }`}
-                  title={
-                    mode === "preview"
-                      ? "Select element"
-                      : "Selection requires Preview mode"
-                  }
+                <Tooltip 
+                  content={mode === "preview" ? "Select element to edit" : "Selection requires Preview mode"}
+                  position="top"
                 >
-                  <FiMousePointer className="w-4 h-4" />
-                </button>
+                  <button
+                    onClick={() => setIsSelectionMode((v) => !v)}
+                    disabled={mode !== "preview" || !htmlState.html}
+                    className={`p-2.5 rounded-xl transition-all disabled:opacity-30 disabled:cursor-not-allowed ${
+                      isSelectionMode
+                        ? "text-indigo-300 bg-indigo-500/20 ring-1 ring-indigo-500/30"
+                        : "text-gray-400 hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    <FiMousePointer className="w-5 h-5" />
+                  </button>
+                </Tooltip>
 
-                <div className="h-9 w-px bg-white/10" />
+                <div className="h-8 w-px bg-white/10 my-auto" />
 
                 <textarea
                   value={prompt}
@@ -731,43 +748,42 @@ export default function EditorClient() {
                   }}
                   placeholder={
                     jobId
-                      ? "Describe the change you want (Shift+Enter for a new line)…"
+                      ? "Describe changes with AI... (e.g. 'Make the headline bigger')"
                       : "Open this editor from a job to apply AI edits…"
                   }
-                  className="flex-1 bg-transparent border-none focus:ring-0 text-sm text-white placeholder-gray-500 min-h-[44px] max-h-36 py-2 resize-none"
+                  className="flex-1 bg-transparent border-none focus:ring-0 text-sm text-white placeholder-gray-500 min-h-[48px] max-h-36 py-3 resize-none leading-relaxed"
                   disabled={isProcessing || !jobId}
                   rows={1}
                 />
 
-                <div className="flex items-center gap-1 pb-2">
-                  <button
-                    onClick={() => setShowAiSettings((v) => !v)}
-                    className="px-2 py-1 text-[10px] font-semibold bg-[#2b2d31] text-yellow-300 rounded-md flex items-center gap-1 border border-white/5 hover:bg-white/10 transition-colors"
-                    title="AI settings"
-                  >
-                    <FiZap className="w-3 h-3" />
-                    GPT-5.2 ·{" "}
-                    {aiSpeed.toUpperCase()} · {reasoningLabel}
-                  </button>
+                <div className="flex items-center gap-2 pb-2">
+                  <Tooltip content="AI Settings" position="top">
+                    <button
+                      onClick={() => setShowAiSettings((v) => !v)}
+                      className="px-2.5 py-1.5 text-[10px] font-semibold bg-zinc-800 text-amber-300/90 rounded-lg flex items-center gap-1.5 border border-white/5 hover:bg-zinc-700 transition-colors shadow-sm"
+                    >
+                      <FiZap className="w-3 h-3" />
+                      <span className="hidden sm:inline">GPT-5.2</span>
+                    </button>
+                  </Tooltip>
 
-                  <button
-                    onClick={handleSendMessage}
-                    disabled={!jobId || !prompt.trim() || isProcessing}
-                    className={`p-2 rounded-lg transition-all ${
-                      jobId && prompt.trim() && !isProcessing
-                        ? "bg-white text-black hover:bg-gray-200"
-                        : "bg-white/5 text-gray-500 cursor-not-allowed"
-                    }`}
-                    title={
-                      jobId ? "Apply (Enter)" : "Applying requires a jobId"
-                    }
-                  >
-                    {isProcessing ? (
-                      <FiRotateCw className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <FiArrowLeft className="w-4 h-4 rotate-90" />
-                    )}
-                  </button>
+                  <Tooltip content={jobId ? "Apply Changes (Enter)" : "Applying requires a jobId"} position="top">
+                    <button
+                      onClick={handleSendMessage}
+                      disabled={!jobId || !prompt.trim() || isProcessing}
+                      className={`p-2.5 rounded-xl transition-all shadow-sm ${
+                        jobId && prompt.trim() && !isProcessing
+                          ? "bg-white text-black hover:bg-zinc-200 hover:scale-105 active:scale-95"
+                          : "bg-white/5 text-gray-500 cursor-not-allowed"
+                      }`}
+                    >
+                      {isProcessing ? (
+                        <FiRotateCw className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <FiArrowLeft className="w-4 h-4 rotate-90 stroke-[3px]" />
+                      )}
+                    </button>
+                  </Tooltip>
                 </div>
               </div>
             </div>
@@ -775,24 +791,24 @@ export default function EditorClient() {
 
           {/* Settings Popover */}
           {showAiSettings && (
-            <div className="absolute bottom-full right-4 mb-3 w-72 bg-[#15161a] border border-white/10 rounded-xl shadow-2xl p-4 animate-in slide-in-from-bottom-2 fade-in">
+            <div className="absolute bottom-full right-4 mb-4 w-72 bg-zinc-900 border border-white/10 rounded-xl shadow-2xl p-4 animate-in slide-in-from-bottom-2 fade-in ring-1 ring-black/50">
               <div className="flex flex-col gap-4">
                 <div>
-                  <label className="text-[10px] uppercase font-bold text-gray-500 tracking-wider mb-2 block">
+                  <label className="text-[10px] uppercase font-bold text-gray-500 tracking-wider mb-3 block">
                     Generation Settings
                   </label>
 
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     <div>
-                      <div className="text-xs text-gray-400 mb-1.5">
+                      <div className="text-xs text-gray-400 mb-2 font-medium">
                         AI Model
                       </div>
-                      <div className="grid grid-cols-1 gap-1 bg-black/20 p-1 rounded-lg">
+                      <div className="grid grid-cols-1 gap-1 bg-black/20 p-1 rounded-lg border border-white/5">
                         <button
                           onClick={() => setAiModel("gpt-5.2")}
-                          className={`text-xs py-1.5 rounded-md transition-colors ${
+                          className={`text-xs py-1.5 rounded-md transition-colors font-medium ${
                             aiModel === "gpt-5.2"
-                              ? "bg-white/10 text-white"
+                              ? "bg-zinc-700 text-white shadow-sm"
                               : "text-gray-500 hover:text-gray-300"
                           }`}
                         >
@@ -802,16 +818,16 @@ export default function EditorClient() {
                     </div>
 
                     <div>
-                      <div className="text-xs text-gray-400 mb-1.5">Speed</div>
-                      <div className="flex gap-1">
+                      <div className="text-xs text-gray-400 mb-2 font-medium">Speed</div>
+                      <div className="flex gap-1 bg-black/20 p-1 rounded-lg border border-white/5">
                         {(["normal", "fast", "turbo"] as const).map((s) => (
                           <button
                             key={s}
                             onClick={() => setAiSpeed(s)}
-                            className={`flex-1 text-xs py-1.5 rounded-md border transition-colors ${
+                            className={`flex-1 text-xs py-1.5 rounded-md transition-colors font-medium ${
                               aiSpeed === s
-                                ? "border-purple-500/30 bg-purple-500/10 text-purple-300"
-                                : "border-transparent bg-white/5 text-gray-500 hover:bg-white/10"
+                                ? "bg-indigo-500/20 text-indigo-300 ring-1 ring-indigo-500/30"
+                                : "text-gray-500 hover:text-gray-300 hover:bg-white/5"
                             }`}
                           >
                             {s.charAt(0).toUpperCase() + s.slice(1)}
@@ -821,18 +837,18 @@ export default function EditorClient() {
                     </div>
 
                     <div>
-                      <div className="text-xs text-gray-400 mb-1.5">
+                      <div className="text-xs text-gray-400 mb-2 font-medium">
                         Reasoning effort
                       </div>
-                      <div className="flex gap-1">
+                      <div className="flex gap-1 bg-black/20 p-1 rounded-lg border border-white/5">
                         {(["low", "medium", "high"] as const).map((effort) => (
                           <button
                             key={effort}
                             onClick={() => setAiReasoningEffort(effort)}
-                            className={`flex-1 text-xs py-1.5 rounded-md border transition-colors ${
+                            className={`flex-1 text-xs py-1.5 rounded-md transition-colors font-medium ${
                               aiReasoningEffort === effort
-                                ? "border-purple-500/30 bg-purple-500/10 text-purple-300"
-                                : "border-transparent bg-white/5 text-gray-500 hover:bg-white/10"
+                                ? "bg-indigo-500/20 text-indigo-300 ring-1 ring-indigo-500/30"
+                                : "text-gray-500 hover:text-gray-300 hover:bg-white/5"
                             }`}
                           >
                             {effort === "medium"
@@ -842,8 +858,8 @@ export default function EditorClient() {
                           </button>
                         ))}
                       </div>
-                      <p className="mt-1 text-[11px] text-gray-500">
-                        Applies to GPT-5 models.
+                      <p className="mt-2 text-[10px] text-gray-500 leading-tight">
+                        Higher reasoning improves complex layout changes but takes longer.
                       </p>
                     </div>
                   </div>
@@ -852,18 +868,16 @@ export default function EditorClient() {
             </div>
           )}
 
-          <div className="mt-2 flex items-center justify-between text-[11px] text-gray-500">
-            <div className="flex items-center gap-2">
+          <div className="mt-3 flex items-center justify-between text-[11px] text-gray-500 px-1">
+            <div className="flex items-center gap-2 opacity-60">
               <span>Enter to apply</span>
               <span className="text-gray-700">·</span>
-              <span>Shift+Enter for a new line</span>
-              <span className="hidden sm:inline text-gray-700">·</span>
-              <span className="hidden sm:inline">Cmd/Ctrl+S to save</span>
+              <span>Shift+Enter for newline</span>
             </div>
             <button
               onClick={handleSave}
               disabled={!canSave}
-              className={`sm:hidden inline-flex items-center gap-2 px-3 py-2 rounded-md text-xs font-semibold transition-colors border ${
+              className={`sm:hidden inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-colors border ${
                 canSave
                   ? "bg-white text-black hover:bg-gray-200 border-white/10"
                   : "bg-white/5 text-gray-500 border-white/5 cursor-not-allowed"

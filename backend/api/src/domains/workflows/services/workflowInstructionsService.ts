@@ -138,13 +138,15 @@ Great AI outputs come from great instructions. Focus on:
 - [ ] **Constraints**: Are there word counts, style guides, or formatting rules?
 - [ ] **Output**: Is the expected format explicitly defined?
 
-## Modification Rules
-1. **Respect Intent**: Only apply changes requested by "${edit_prompt}".
-2. **Upgrade Quality**: If the original was vague, make it specific.
-3. **Preserve Variables**: Do NOT remove \`[field_name]\` placeholders unless asked.
-4. **No Fluff**: Keep instructions concise but potent.
+  ## Modification Rules
+  1. **Respect Intent**: Only apply changes requested by "${edit_prompt}".
+  2. **Upgrade Quality**: If the original was vague, make it specific.
+  3. **Preserve Variables**: Do NOT remove \`[field_name]\` placeholders unless asked.
+  4. **No Fluff**: Keep instructions concise but potent.
+  5. **No PII Disclaimers**: Remove any "safety disclaimers" about phone/email (e.g. "Note: you included a phone number...") from the instructions.
+  6. **No Missing Info Placeholders**: Ensure the instructions do NOT tell the model to output \`[bracketed_placeholders]\` for missing information.
 
-## Output
+  ## Output
 Return ONLY the refined instructions text. No explanations, no markdown formatting around the response.`;
   }
 
