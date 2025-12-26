@@ -92,11 +92,10 @@ export function JobHeader({ error, job }: JobHeaderProps) {
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
         <div className="min-w-0">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
-            Lead Magnet Details
+            Lead Report
           </h1>
           <p className="mt-2 text-sm text-gray-500 leading-relaxed">
-            View progress, artifacts, and step-level details for this
-            generation.
+            View the generated report and data for this lead.
           </p>
         </div>
 

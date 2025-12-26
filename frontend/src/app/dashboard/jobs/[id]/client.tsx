@@ -509,9 +509,9 @@ function JobTabs({
   openPreview,
 }: JobTabsProps) {
   const tabs = [
-    { name: "Execution", id: "execution" },
-    { name: "Tracking", id: "tracking" },
-    { name: "Raw JSON", id: "raw" },
+    { name: "Report Generation", id: "execution" },
+    { name: "Lead Activity", id: "tracking" },
+    { name: "Debug Data", id: "raw" },
   ];
 
   return (
