@@ -25,7 +25,7 @@ const NAV_ITEMS = [
   },
   {
     id: "delivery",
-    label: "Delivery",
+    label: "Email Settings",
     href: "/dashboard/settings/delivery",
     icon: PaperAirplaneIcon,
   },

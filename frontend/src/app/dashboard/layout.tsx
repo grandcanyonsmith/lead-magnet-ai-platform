@@ -20,6 +20,7 @@ import { logger } from "@/utils/logger";
 import {
   HomeIcon,
   QueueListIcon,
+  UserGroupIcon,
   Bars3Icon,
   XMarkIcon,
   MagnifyingGlassIcon,
@@ -149,7 +150,13 @@ export default function DashboardLayout({
         href: "/dashboard/workflows",
         label: "Lead Magnets",
         icon: QueueListIcon,
-        activePrefixes: ["/dashboard/workflows", "/dashboard/jobs"],
+        activePrefixes: ["/dashboard/workflows"],
+      },
+      {
+        href: "/dashboard/jobs",
+        label: "Leads & Results",
+        icon: UserGroupIcon,
+        activePrefixes: ["/dashboard/jobs"],
       },
     ],
     [],

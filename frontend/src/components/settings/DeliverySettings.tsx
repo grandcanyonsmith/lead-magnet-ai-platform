@@ -68,12 +68,11 @@ export function DeliverySettings({
               <ServerStackIcon className="w-5 h-5 text-green-600" />
             </div>
             <h3 className="text-lg font-semibold text-gray-900">
-              Webhook Integration
+              Receive Leads via Webhook
             </h3>
           </div>
           <p className="text-sm text-gray-600 ml-12">
-            Configure webhook endpoints to receive form submissions and trigger
-            automation.
+            Configure endpoints to receive form submissions and trigger automation.
           </p>
         </div>
 
@@ -160,7 +159,7 @@ export function DeliverySettings({
               <GlobeAltIcon className="w-5 h-5 text-blue-600" />
             </div>
             <h3 className="text-lg font-semibold text-gray-900">
-              Delivery Configuration
+              Integrations & Domain
             </h3>
           </div>
           <p className="text-sm text-gray-600 ml-12">
@@ -170,14 +169,14 @@ export function DeliverySettings({
 
         <div className="p-8 space-y-6">
           <FormField
-            label="GHL Webhook URL"
+            label="CRM Integration (Webhook)"
             name="ghl_webhook_url"
             type="url"
             value={settings.ghl_webhook_url || ""}
             onChange={(value) => onChange("ghl_webhook_url", value)}
             error={errors?.ghl_webhook_url}
-            helpText="Your GoHighLevel webhook endpoint for SMS/Email delivery"
-            placeholder="https://api.gohighlevel.com/webhook/..."
+            helpText="Your CRM/GoHighLevel webhook endpoint for SMS/Email delivery"
+            placeholder="https://api.crm.com/webhook/..."
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
