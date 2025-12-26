@@ -98,7 +98,7 @@ def normalize_steps(steps):
         
         # Ensure required fields have defaults
         if 'model' not in normalized_step:
-            normalized_step['model'] = 'gpt-5'
+            normalized_step['model'] = 'gpt-5.2'
         if 'tool_choice' not in normalized_step:
             normalized_step['tool_choice'] = 'auto'
         if 'tools' not in normalized_step:

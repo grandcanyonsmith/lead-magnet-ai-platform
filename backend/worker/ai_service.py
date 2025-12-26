@@ -630,7 +630,7 @@ class AIService:
         submission_data: dict,
         template_html: str,
         template_style: str = '',
-        model: str = 'gpt-5',
+        model: str = 'gpt-5.2',
     ) -> Tuple[str, Dict, Dict, Dict]:
         """
         Generate HTML document directly from submission data and template.
@@ -659,7 +659,7 @@ class AIService:
         template_html: str,
         template_style: str = '',
         submission_data: dict = None,
-        model: str = 'gpt-5',
+        model: str = 'gpt-5.2',
     ) -> Tuple[str, Dict, Dict, Dict]:
         """
         Generate styled HTML document from research content and template.
@@ -688,7 +688,7 @@ class AIService:
     def rewrite_html(
         self,
         html_content: str,
-        model: str = 'gpt-5',
+        model: str = 'gpt-5.2',
     ) -> str:
         """
         Rewrite/enhance HTML content using AI.

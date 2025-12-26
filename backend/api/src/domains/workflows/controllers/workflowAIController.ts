@@ -18,7 +18,7 @@ export class WorkflowAIController {
    * Creates a job and triggers async processing.
    */
   async generateWithAI(tenantId: string, body: any): Promise<RouteResponse> {
-    const { description, model = 'gpt-5.1-codex', webhook_url } = body;
+    const { description, model = 'gpt-5.2', webhook_url } = body;
 
     if (!description || !description.trim()) {
       throw new ApiError('Description is required', 400);

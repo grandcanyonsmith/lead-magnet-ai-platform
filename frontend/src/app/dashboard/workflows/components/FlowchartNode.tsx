@@ -110,7 +110,7 @@ function FlowchartNode({ data, selected }: NodeProps<FlowchartNodeData>) {
     animateIn,
   } = data;
 
-  const modelStyle = MODEL_STYLES[step.model] || MODEL_STYLES["gpt-5"];
+  const modelStyle = MODEL_STYLES[step.model] || MODEL_STYLES["gpt-5.2"];
   const tools = step.tools || [];
   const hasTools = tools.length > 0;
   const hasWarnings = warnings.length > 0;
