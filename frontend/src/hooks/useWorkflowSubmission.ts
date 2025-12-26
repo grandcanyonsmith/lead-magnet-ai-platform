@@ -91,8 +91,8 @@ export function useWorkflowSubmission() {
           steps: steps.map((step, index) => ({
             ...step,
             step_order: index,
-            model: step.model as any,
-            tools: step.tools as any,
+            model: step.model,
+            tools: step.tools,
             instructions: step.instructions.trim(), // Ensure instructions are trimmed
           })),
           // Legacy fields removed - all workflows must use steps format
