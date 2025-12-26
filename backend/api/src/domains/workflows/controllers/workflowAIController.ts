@@ -304,7 +304,7 @@ export class WorkflowAIController {
           if (ARTIFACTS_TABLE && job.artifacts && job.artifacts.length > 0) {
             const finalArtifactId = job.artifacts[job.artifacts.length - 1]; // Naive last
             // Ideally find html_final or markdown_final
-            const artifact = await db.get(ARTIFACTS_TABLE, { artifact_id: finalArtifactId });
+            const artifact = await db.get(ARTIFACTS_TABLE!, { artifact_id: finalArtifactId });
             if (artifact && artifact.s3_key) {
                const text = await fetchS3Text(String(artifact.s3_key));
                if (text) executionHistory.finalArtifactSummary = text;
@@ -349,7 +349,7 @@ export class WorkflowAIController {
         // Get output (final artifact only to save tokens)
          if (ARTIFACTS_TABLE && exJob.artifacts && exJob.artifacts.length > 0) {
             const artId = exJob.artifacts[exJob.artifacts.length - 1];
-            const art = await db.get(ARTIFACTS_TABLE, { artifact_id: artId });
+            const art = await db.get(ARTIFACTS_TABLE!, { artifact_id: artId });
             if (art && art.s3_key) {
                const txt = await fetchS3Text(String(art.s3_key));
                if (txt) exData.finalArtifactSummary = txt;
