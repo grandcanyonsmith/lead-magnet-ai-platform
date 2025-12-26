@@ -14,14 +14,6 @@ import {
 import { CheckCircleIcon as CheckCircleIconSolid } from "@heroicons/react/24/solid";
 import { Tooltip } from "@/components/ui/Tooltip";
 
-const STEP_TYPE_COLORS: Record<string, string> = {
-  form_submission: "bg-blue-50 text-blue-700",
-  ai_generation: "bg-purple-50 text-purple-700",
-  html_generation: "bg-green-50 text-green-700",
-  final_output: "bg-gray-50 text-gray-700",
-  workflow_step: "bg-gray-50 text-gray-700",
-};
-
 const STEP_STATUS_BADGE: Record<
   StepStatus,
   { label: string; className: string }
@@ -131,19 +123,9 @@ export function StepHeader({
   const isCompleted = status === "completed";
   const isInProgress = status === "in_progress";
   const statusBadge = STEP_STATUS_BADGE[status];
-  const stepTypeColor =
-    STEP_TYPE_COLORS[step.step_type] || STEP_TYPE_COLORS.workflow_step;
-  const stepNumberBg = STEP_NUMBER_BG[status] || STEP_NUMBER_BG.pending;
-  const typeLabel =
-    step.step_type === "final_output"
-      ? "Published deliverable"
-      : step.step_type
-        ? step.step_type.replace(/_/g, " ")
-        : "Workflow Step";
-  const typeHelp =
-    step.step_type === "final_output"
-      ? "This is the published deliverable URL sent to the customer."
-      : undefined;
+  
+  // Use status for coloring instead of step type
+  const isSystemStep = step.step_type === "form_submission" || step.step_type === "final_output";
 
   return (
     <div className="flex flex-col gap-4 p-4 sm:p-5">
@@ -207,13 +189,13 @@ export function StepHeader({
             {/* Edit Step Button - Only for workflow template steps */}
             {canEdit &&
               onEditStep &&
-              step.step_type === "workflow_step" &&
+              !isSystemStep &&
               step.step_order > 0 && (
                 <Tooltip
                   content={
                     jobStatus === "processing"
                       ? "Editing disabled while run is in progress"
-                      : "Edit workflow template step"
+                      : "Edit workflow step"
                   }
                   position="top"
                 >
@@ -227,7 +209,7 @@ export function StepHeader({
                       onEditStep(workflowStepIndex);
                     }}
                     disabled={jobStatus === "processing"}
-                    aria-label="Edit workflow template step"
+                    aria-label="Edit workflow step"
                     className={`p-1.5 rounded transition-colors touch-target min-h-[44px] sm:min-h-0 ${
                       jobStatus === "processing"
                         ? "text-yellow-600 cursor-not-allowed opacity-60"
@@ -242,8 +224,7 @@ export function StepHeader({
             {/* Rerun Step Button - Available for all executable steps except form_submission (step 0) */}
             {(onRerunStep || onRerunStepClick) &&
               step.step_order > 0 &&
-              step.step_type !== "form_submission" &&
-              step.step_type !== "final_output" && (
+              !isSystemStep && (
                 <Tooltip
                   content={
                     rerunningStep === step.step_order - 1
