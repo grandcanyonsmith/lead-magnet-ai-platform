@@ -74,7 +74,10 @@ class AIStepProcessor:
             Tuple of (step_output, usage_info, request_details, response_details, image_artifact_ids)
         """
         step_name = step.get('step_name', f'Step {step_index + 1}')
-        step_model = step.get('model', 'gpt-5')
+        step_model = step.get('model', 'gpt-5.2')
+        # Force GPT family steps onto gpt-5.2 for highest quality/consistency.
+        if isinstance(step_model, str) and step_model.startswith('gpt-') and step_model != 'gpt-5.2':
+            step_model = 'gpt-5.2'
         step_instructions = step.get('instructions', '')
         step_reasoning_effort = step.get('reasoning_effort')
         

@@ -301,7 +301,7 @@ export class WorkflowAIController {
           }
 
           // 3. Fetch Final Artifact Summary
-          if (job.artifacts && job.artifacts.length > 0) {
+          if (ARTIFACTS_TABLE && job.artifacts && job.artifacts.length > 0) {
             const finalArtifactId = job.artifacts[job.artifacts.length - 1]; // Naive last
             // Ideally find html_final or markdown_final
             const artifact = await db.get(ARTIFACTS_TABLE, { artifact_id: finalArtifactId });
@@ -309,6 +309,11 @@ export class WorkflowAIController {
                const text = await fetchS3Text(String(artifact.s3_key));
                if (text) executionHistory.finalArtifactSummary = text;
             }
+          } else if (!ARTIFACTS_TABLE && job.artifacts && job.artifacts.length > 0) {
+            logger.warn('[WorkflowAI] ARTIFACTS_TABLE is not configured; skipping final artifact context', {
+              workflowId,
+              contextJobId,
+            });
           }
         }
       } catch (err: any) {
@@ -342,13 +347,18 @@ export class WorkflowAIController {
         }
 
         // Get output (final artifact only to save tokens)
-         if (exJob.artifacts && exJob.artifacts.length > 0) {
+         if (ARTIFACTS_TABLE && exJob.artifacts && exJob.artifacts.length > 0) {
             const artId = exJob.artifacts[exJob.artifacts.length - 1];
             const art = await db.get(ARTIFACTS_TABLE, { artifact_id: artId });
             if (art && art.s3_key) {
                const txt = await fetchS3Text(String(art.s3_key));
                if (txt) exData.finalArtifactSummary = txt;
             }
+         } else if (!ARTIFACTS_TABLE && exJob.artifacts && exJob.artifacts.length > 0) {
+            logger.warn('[WorkflowAI] ARTIFACTS_TABLE is not configured; skipping reference example final artifact', {
+              workflowId,
+              exampleJobId: exJob.job_id,
+            });
          }
 
          if (exData.submissionData && exData.finalArtifactSummary) {
