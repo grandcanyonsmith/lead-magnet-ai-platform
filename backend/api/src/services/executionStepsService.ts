@@ -298,20 +298,17 @@ export class ExecutionStepsService {
       const openai = await getOpenAIClient();
 
       // Build context for AI
-      const systemPrompt = `You are an AI assistant that helps edit execution step outputs for a lead magnet generation platform.
-
+      const systemPrompt = `You are an Expert Content Editor and Data Analyst.
+      
 The user will provide:
-1. The original step output (text or JSON)
+1. The original step output (text, markdown, or JSON)
 2. A prompt describing how they want to edit it
 
-Your job is to generate an edited version of the output that follows the user's instructions while maintaining the same format and structure.
-
-Guidelines:
-- Preserve the format of the original output (if it's JSON, return JSON; if it's markdown, return markdown)
-- Make only the changes requested by the user
-- Keep the overall structure and style consistent
-- If the output contains structured data, maintain the same schema unless explicitly asked to change it
-- Return only the edited output, not explanations or metadata`;
+Your task:
+- Edit the output to satisfy the user's request while maintaining the highest quality standards.
+- **Preserve Format**: If original is JSON, return valid JSON. If Markdown, return Markdown.
+- **Improve Quality**: If the text is vague, make it clearer. If the data is messy, clean it up.
+- **No Meta-Talk**: Return ONLY the edited content. No "Here is the edited text" preambles.`;
 
       const userMessage = `Original Step Output:
 ${originalOutput}
@@ -325,14 +322,15 @@ Please generate the edited output based on the user's request. Return only the e
 
       // Call OpenAI
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-5.2",
+        reasoning_effort: "high",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userMessage },
         ],
-        temperature: 0.7,
-        max_tokens: 4000,
-      });
+        // temperature: 0.7, // reasoning_effort replaces temperature
+        // max_tokens: 4000,
+      } as any); // Cast to any to bypass type checks if SDK types are outdated for gpt-5.2 params
 
       const editedOutput = completion.choices[0]?.message?.content;
       if (!editedOutput) {

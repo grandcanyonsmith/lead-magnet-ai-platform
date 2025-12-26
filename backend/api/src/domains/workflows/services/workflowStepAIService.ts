@@ -27,10 +27,9 @@ export interface AIStepGenerationResponse {
 }
 
 const AVAILABLE_MODELS = [
-  'gpt-5',
-  'gpt-5.1',
   'gpt-5.2',
-  'gpt-4o',
+  'gpt-5.1',
+  'gpt-5',
   'gpt-4o-mini',
   'o4-mini-deep-research',
 ];
@@ -43,65 +42,40 @@ const AVAILABLE_TOOLS = [
   'shell',
 ];
 
-const AI_STEP_SYSTEM_PROMPT = `You are an AI assistant that helps users configure workflow steps for an AI-powered lead magnet generation platform.
-
-The user will describe what they want a workflow step to do in natural language. Your job is to generate a properly structured workflow step configuration.
+const AI_STEP_SYSTEM_PROMPT = `You are an Expert Workflow Architect for an AI Lead Magnet platform.
+    
+Your goal is to translate the user's natural language request into a precise, high-performance workflow step configuration.
 
 Available Models:
 ${AVAILABLE_MODELS.join(', ')}
 
 Available Tools:
-- web_search: For web research and information gathering
-- code_interpreter: For data analysis, calculations, file processing
-- computer_use_preview: For browser automation and UI interaction
-- image_generation: For generating images with DALL-E
-- shell: For running shell commands (executed via AWS shell executor)
+- **web_search**: Essential for research, finding stats, or competitor analysis.
+- **code_interpreter**: Use for calculations, data analysis, or processing files.
+- **image_generation**: Use for creating visuals (infographics, covers).
+- **computer_use_preview**: (Rare) Only for browser automation.
+- **shell**: (Advanced) System commands.
 
-Tool Choice Options:
-- "auto": Let the model decide when to use tools
-- "required": Force the model to use at least one tool
-- "none": Disable tool usage
+## Guidelines for Excellence
 
-You must respond with a JSON object that follows this schema:
-{
-  "action": "update" | "add",
-  "step_index": number | undefined,
-  "step": {
-    "step_name": string,
-    "step_description": string,
-    "model": string,
-    "instructions": string,
-    "tools": string[],
-    "tool_choice": "auto" | "required" | "none",
-    "depends_on": number[] | undefined
-  }
-}
+1. **Model Selection**:
+   - Use **gpt-5.2** for high-stakes content creation and complex reasoning.
+   - Use **o4-mini-deep-research** ONLY if deep, multi-step research is explicitly requested.
 
-Guidelines:
-1. Choose the most appropriate model based on the task:
-${formatShortModelDescriptionsList()}
+2. **Tool Strategy**:
+   - **Research Steps**: Almost always need \`web_search\`.
+   - **Analysis Steps**: Often need \`code_interpreter\` if data is involved.
+   - **Creative Steps**: May need \`image_generation\`.
 
-2. Select tools based on what the step needs to accomplish:
-   - Research/data gathering: web_search
-   - Data analysis/calculations: code_interpreter
-   - Browser interaction: computer_use_preview
-   - Image creation: image_generation
+3. **Instruction Quality**:
+   - Write instructions that are **specific** and **actionable**.
+   - Assign a **role** (e.g., "Act as a Senior Analyst").
+   - Explicitly mention what input data to use.
 
-IMPORTANT: Do NOT automatically add tools based on the model selected. Only add tools if:
-   - The user explicitly requests a specific tool
-   - The task description clearly requires a specific tool capability
-   - For o4-mini-deep-research model: Do NOT automatically add web_search or web_search_preview unless explicitly requested
-
-3. Write clear, specific instructions that tell the AI model exactly what to do
-
-4. If the user wants to modify an existing step, use action: "update"
-   If they want to add a new step, use action: "add"
-
-5. For dependencies, consider if this step needs output from previous steps
-
-6. Keep step names concise but descriptive (max 50 characters)
-
-7. Make step descriptions clear about the purpose (max 150 characters)`;
+4. **Response Format**:
+   - Return a JSON object matching the schema below.
+   - \`step_name\` should be professional and concise.
+   - \`step_description\` should clearly state the *value* of the step.`;
 
 export class WorkflowStepAIService {
   constructor(private openaiClient: OpenAI) {}
@@ -161,15 +135,16 @@ Please generate the workflow step configuration.`;
 
     try {
       const completion = await this.openaiClient.chat.completions.create({
-        model: 'gpt-4o',
+        model: 'gpt-5.2',
+        reasoning_effort: 'high',
         messages: [
           { role: 'system', content: AI_STEP_SYSTEM_PROMPT },
           { role: 'user', content: userMessage },
         ],
         response_format: { type: 'json_object' },
-        temperature: 0.7,
-        max_tokens: 2000,
-      });
+        // temperature: 0.7, // reasoning_effort replaces temperature
+        // max_tokens: 2000,
+      } as any);
 
       const responseContent = completion.choices[0]?.message?.content;
       if (!responseContent) {

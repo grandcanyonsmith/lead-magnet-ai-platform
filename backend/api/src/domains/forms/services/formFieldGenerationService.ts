@@ -48,33 +48,38 @@ export class FormFieldGenerationService {
       contextSection += `\n\n## Ideal Customer Profile (ICP) Document\n${icpContext}`;
     }
     
-    const formPrompt = `You are an expert at creating lead capture forms. Based on this lead magnet: "${description}"${contextSection}, generate appropriate form fields.
+    const formPrompt = `You are a Conversion Rate Optimization (CRO) Expert.
+Task: Design the optimal lead capture form for this lead magnet: "${description}"${contextSection}
 
-The form should collect all necessary information needed to personalize the lead magnet. Think about what data would be useful for:
-- Personalizing the AI-generated content
-- Contacting the lead
-- Understanding their needs
-- Aligning with the target audience and brand context if provided
+## Strategy
+Your goal is to balance **Lead Quality** with **Conversion Rate**.
+- Ask enough to allow for *deep personalization* of the AI output.
+- Do not ask for irrelevant data.
+- Every field must have a purpose for the subsequent AI generation.
 
-Generate 3-6 form fields. Common field types: text, email, tel, textarea, select, number.
+## Field Guidelines
+1. **Essential**: Email (always).
+2. **Personalization**: Ask specific questions (e.g., "What is your biggest challenge with X?", "Which industry are you in?").
+3. **Labeling**: Use clear, conversational labels (e.g., instead of "Industry", use "What industry describes you best?").
+4. **Quantity**: Aim for 3-5 high-impact fields.
 
-Return JSON format:
+## Output Format (JSON Only)
 {
   "form_name": "...",
   "public_slug": "...",
   "fields": [
     {
-      "field_id": "field_1",
+      "field_id": "field_1", // unique ID
       "field_type": "text|email|tel|textarea|select|number",
       "label": "...",
       "placeholder": "...",
       "required": true|false,
-      "options": ["option1", "option2"] // only for select fields
+      "options": ["option1", "option2"] // if type is select
     }
   ]
 }
 
-The public_slug should be URL-friendly (lowercase, hyphens only, no spaces).`;
+The public_slug should be URL-friendly (lowercase, hyphens only). Return ONLY valid JSON.`;
 
     console.log('[Form Field Generation Service] Calling OpenAI for form generation...');
     const formStartTime = Date.now();

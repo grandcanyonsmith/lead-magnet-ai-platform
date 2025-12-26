@@ -55,7 +55,7 @@ export class WorkflowConfigService {
     const workflowCompletionParams: any = {
       model,
       instructions:
-        'You are an expert at creating AI-powered lead magnets. Return only valid JSON without markdown formatting.',
+        'You are an expert AI Lead Magnet Architect. Return only valid JSON without markdown formatting.',
       input: workflowPrompt,
     };
 
