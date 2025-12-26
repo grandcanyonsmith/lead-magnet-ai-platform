@@ -141,11 +141,15 @@ export class WorkflowAIService {
       contextParts.push('Use these examples to understand how different inputs should be handled.');
       referenceExamples.forEach((ex, idx) => {
         const inputSummary = JSON.stringify(ex.submissionData || {}, null, 2);
-        // Truncate output summary if too long
-        const outputSummary = (ex.finalArtifactSummary || '').slice(0, 1000);
+        // Truncate output summary if too long (only add truncation marker when we actually truncate)
+        const fullOutcome = String(ex.finalArtifactSummary || "");
+        const outputSummary =
+          fullOutcome.length > 1000
+            ? fullOutcome.slice(0, 1000) + "... [truncated]"
+            : fullOutcome;
         contextParts.push(`\nExample #${idx + 1}:`);
         contextParts.push(`Input:\n${inputSummary}`);
-        contextParts.push(`Outcome:\n${outputSummary}...`);
+        contextParts.push(`Outcome:\n${outputSummary}`);
       });
     }
 
