@@ -35,6 +35,7 @@ export interface WorkflowAIEditResponse {
 }
 
 const AVAILABLE_MODELS = [
+  'gpt-4o',
   'gpt-5.2',
 ];
 
@@ -197,16 +198,17 @@ Please generate the updated workflow configuration with all necessary changes.`;
     });
 
     try {
-      // Use the Responses API so we can reliably set reasoning effort + service tier.
-      const completion = await (this.openaiClient as any).responses.create({
-        model: 'gpt-5.2',
-        instructions: WORKFLOW_AI_SYSTEM_PROMPT,
-        input: userMessage,
-        reasoning: { effort: 'medium' },
-        service_tier: 'priority',
+      // Use standard Chat Completions API
+      const completion = await this.openaiClient.chat.completions.create({
+        model: 'gpt-4o', // Fallback to gpt-4o as gpt-5.2/responses API is not available
+        messages: [
+          { role: 'system', content: WORKFLOW_AI_SYSTEM_PROMPT },
+          { role: 'user', content: userMessage }
+        ],
+        temperature: 0.7,
       });
 
-      const outputText = String((completion as any)?.output_text || '');
+      const outputText = completion.choices[0]?.message?.content || '';
       const cleaned = stripMarkdownCodeFences(outputText).trim();
       if (!cleaned) {
         throw new Error('No response from OpenAI');

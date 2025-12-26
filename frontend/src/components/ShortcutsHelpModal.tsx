@@ -20,7 +20,7 @@ export const ShortcutsHelpModal: React.FC<ShortcutsHelpModalProps> = ({
   const modKey = isMac ? "⌘" : "Ctrl";
 
   const shortcuts = [
-    { keys: [`${modKey}K`], description: "Open search" },
+    { keys: [`${modKey}K`, `${modKey}Space`], description: "Open search" },
     { keys: [`${modKey}/`], description: "Show keyboard shortcuts" },
     {
       keys: ["1", "2", "3", "4", "5"],
