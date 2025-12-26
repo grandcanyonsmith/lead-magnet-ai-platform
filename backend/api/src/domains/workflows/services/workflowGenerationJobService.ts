@@ -118,7 +118,7 @@ class WorkflowGenerationJobService {
     }
 
     const jobDescription = description || job.description || '';
-    const jobModel = model || job.model || 'gpt-5';
+    const jobModel = model || job.model || 'gpt-5.2';
 
     try {
       await db.update(JOBS_TABLE, { job_id: jobId }, {

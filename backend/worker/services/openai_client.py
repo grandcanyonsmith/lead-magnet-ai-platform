@@ -334,7 +334,7 @@ class OpenAIClient:
             if tool_choice != "none":
                 params["tool_choice"] = tool_choice
 
-        # Reasoning + speed controls (Responses API)
+        # Reasoning + speed controls (Responses API) 
         # Map deprecated reasoning_level to reasoning_effort if provided
         if reasoning_level and not reasoning_effort:
             reasoning_effort = reasoning_level
@@ -346,9 +346,9 @@ class OpenAIClient:
         if reasoning_effort:
             params["reasoning"] = {"effort": reasoning_effort}
 
-        # Prefer the default (non-flex) tier for faster responses on supported models
+        # Prefer the priority tier for fastest responses on supported models (best-effort; we retry without if unsupported)
         if service_tier is None and isinstance(model, str) and model.startswith('gpt-5'):
-            service_tier = 'default'
+            service_tier = 'priority'
 
         if service_tier:
             params["service_tier"] = service_tier
