@@ -162,40 +162,44 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
-          Dashboard
-        </h1>
-        <p className="mt-2 text-base text-gray-600 max-w-3xl">
-          Welcome back! Here's what's happening with your lead magnets today.
-        </p>
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-purple-700 to-indigo-600 p-8 text-white shadow-lg">
+        <div className="relative z-10">
+          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+            Dashboard
+          </h1>
+          <p className="mt-2 max-w-2xl text-lg text-indigo-100">
+            Welcome back! Here's an overview of your lead generation performance.
+          </p>
+        </div>
+        <div className="absolute right-0 top-0 h-full w-1/3 bg-white/5 blur-3xl transform skew-x-12 translate-x-1/2"></div>
+        <div className="absolute bottom-0 left-0 h-24 w-24 rounded-full bg-indigo-500/30 blur-2xl"></div>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
             <div
               key={stat.label}
-              className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 p-5 sm:p-6 border border-gray-100 group relative overflow-hidden"
+              className="group relative overflow-hidden rounded-xl border border-gray-100 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
             >
-              <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity transform group-hover:scale-110 duration-300">
-                <Icon className="w-24 h-24 text-current" />
+              <div className="absolute right-0 top-0 p-4 opacity-5 transition-transform duration-300 group-hover:scale-110 group-hover:opacity-10">
+                <Icon className="h-24 w-24 text-current" />
               </div>
               
               <div className="relative z-10">
-                <div className="flex items-center justify-between mb-4">
+                <div className="mb-4 flex items-center justify-between">
                   <div
-                    className={`p-3 rounded-xl ${colorMap[stat.color]} ring-1`}
+                    className={`rounded-xl p-3 ${colorMap[stat.color]} ring-1 ring-inset`}
                   >
-                    <Icon className="w-6 h-6" />
+                    <Icon className="h-6 w-6" />
                   </div>
                 </div>
-                <p className="text-3xl sm:text-4xl font-bold text-gray-900 mb-1 tracking-tight">
+                <p className="mb-1 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
                   {stat.value.toLocaleString()}
                 </p>
-                <p className="text-sm font-medium text-gray-600 mb-1">
+                <p className="mb-1 text-sm font-medium text-gray-600">
                   {stat.label}
                 </p>
                 <p className="text-xs text-gray-400">
@@ -207,20 +211,20 @@ export default function DashboardPage() {
         })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 sm:gap-8">
         {/* Main Content Area - Recent Activity */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+          <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
+            <div className="flex items-center justify-between border-b border-gray-100 p-6">
               <h2 className="text-lg font-semibold text-gray-900">
                 Recent Activity
               </h2>
               <Link
                 href="/dashboard/jobs"
-                className="text-sm font-medium text-primary-600 hover:text-primary-700 flex items-center gap-1 group"
+                className="group flex items-center gap-1 text-sm font-medium text-indigo-600 transition-colors hover:text-indigo-700"
               >
                 View all
-                <ArrowRightIcon className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
               </Link>
             </div>
             
@@ -229,22 +233,30 @@ export default function DashboardPage() {
                 recentJobs.map((job) => (
                   <div
                     key={job.job_id}
-                    className="p-4 sm:p-6 hover:bg-gray-50/50 transition-colors"
+                    className="group transition-colors hover:bg-gray-50/50 p-4 sm:p-6"
                   >
                     <div className="flex items-center justify-between gap-4">
                       <div className="flex items-center gap-4 min-w-0">
-                        <div className="h-10 w-10 bg-gray-100 rounded-lg flex items-center justify-center shrink-0">
-                          <DocumentCheckIcon className="w-5 h-5 text-gray-500" />
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 transition-colors group-hover:bg-white group-hover:shadow-sm">
+                          <DocumentCheckIcon className="h-5 w-5 text-gray-500 group-hover:text-indigo-600" />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">
-                            Job #{job.job_id.slice(-6)}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {job.created_at
-                              ? format(new Date(job.created_at), "MMM d, yyyy 'at' h:mm a")
-                              : "Unknown date"}
-                          </p>
+                          <div className="flex items-center gap-2">
+                             <p className="truncate text-sm font-medium text-gray-900">
+                              Job #{job.job_id.slice(-6)}
+                            </p>
+                            <span className="text-xs text-gray-400">•</span>
+                            <p className="text-xs text-gray-500">
+                                {job.created_at
+                                  ? format(new Date(job.created_at), "MMM d, h:mm a")
+                                  : "Unknown date"}
+                            </p>
+                          </div>
+                          {job.workflow_id && (
+                             <p className="mt-0.5 truncate text-xs text-gray-500">
+                               Workflow: {job.workflow_id}
+                             </p>
+                          )}
                         </div>
                       </div>
                       <StatusBadge status={job.status} />
@@ -253,12 +265,16 @@ export default function DashboardPage() {
                 ))
               ) : (
                 <div className="p-8 text-center text-gray-500">
-                  <p>No recent activity found.</p>
+                  <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
+                    <DocumentDuplicateIcon className="h-6 w-6 text-gray-400" />
+                  </div>
+                  <p className="mb-2 font-medium text-gray-900">No activity yet</p>
+                  <p className="mb-4 text-sm">Create your first lead magnet to get started.</p>
                   <Link
                     href="/dashboard/workflows/new"
-                    className="text-primary-600 hover:text-primary-700 text-sm font-medium mt-2 inline-block"
+                    className="inline-flex items-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
                   >
-                    Create your first lead magnet &rarr;
+                    Create Lead Magnet
                   </Link>
                 </div>
               )}
@@ -269,64 +285,64 @@ export default function DashboardPage() {
         {/* Sidebar Area - Quick Actions & Info */}
         <div className="space-y-6">
           {/* Quick Actions */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
+            <h2 className="mb-4 text-lg font-semibold text-gray-900">
               Quick Actions
             </h2>
             <div className="space-y-3">
               <Link
                 href="/dashboard/workflows/new"
-                className="flex items-center w-full p-3 rounded-lg border border-gray-200 hover:border-primary-200 hover:bg-primary-50/50 hover:text-primary-700 transition-all group"
+                className="group flex w-full items-center rounded-lg border border-gray-200 p-3 transition-all hover:border-indigo-200 hover:bg-indigo-50/50 hover:text-indigo-700"
               >
-                <div className="p-2 bg-primary-100 text-primary-600 rounded-lg mr-3 group-hover:bg-primary-200 transition-colors">
-                  <SparklesIcon className="w-5 h-5" />
+                <div className="mr-3 rounded-lg bg-indigo-100 p-2 text-indigo-600 transition-colors group-hover:bg-indigo-200 group-hover:text-indigo-800">
+                  <SparklesIcon className="h-5 w-5" />
                 </div>
-                <span className="font-medium text-gray-700 group-hover:text-primary-800">New Lead Magnet</span>
+                <span className="font-medium text-gray-700 group-hover:text-indigo-900">New Lead Magnet</span>
               </Link>
               
               <Link
                 href="/dashboard/workflows"
-                className="flex items-center w-full p-3 rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all group"
+                className="group flex w-full items-center rounded-lg border border-gray-200 p-3 transition-all hover:border-gray-300 hover:bg-gray-50"
               >
-                <div className="p-2 bg-gray-100 text-gray-600 rounded-lg mr-3 group-hover:bg-gray-200 transition-colors">
-                  <DocumentDuplicateIcon className="w-5 h-5" />
+                <div className="mr-3 rounded-lg bg-gray-100 p-2 text-gray-600 transition-colors group-hover:bg-gray-200 group-hover:text-gray-800">
+                  <DocumentDuplicateIcon className="h-5 w-5" />
                 </div>
-                <span className="font-medium text-gray-700">View Templates</span>
+                <span className="font-medium text-gray-700 group-hover:text-gray-900">View Templates</span>
               </Link>
 
               <Link
                 href="/dashboard/settings"
-                className="flex items-center w-full p-3 rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all group"
+                className="group flex w-full items-center rounded-lg border border-gray-200 p-3 transition-all hover:border-gray-300 hover:bg-gray-50"
               >
-                <div className="p-2 bg-gray-100 text-gray-600 rounded-lg mr-3 group-hover:bg-gray-200 transition-colors">
-                  <Cog6ToothIcon className="w-5 h-5" />
+                <div className="mr-3 rounded-lg bg-gray-100 p-2 text-gray-600 transition-colors group-hover:bg-gray-200 group-hover:text-gray-800">
+                  <Cog6ToothIcon className="h-5 w-5" />
                 </div>
-                <span className="font-medium text-gray-700">Settings</span>
+                <span className="font-medium text-gray-700 group-hover:text-gray-900">Settings</span>
               </Link>
             </div>
           </div>
 
           {/* Info Card */}
-          <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-xl shadow-lg text-white p-6 relative overflow-hidden">
+          <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-indigo-600 to-purple-700 p-6 text-white shadow-lg transition-transform hover:scale-[1.02]">
             <div className="relative z-10">
-              <h2 className="text-lg font-semibold mb-2">
+              <h2 className="mb-2 text-lg font-semibold">
                 Boost Your Conversions
               </h2>
-              <p className="text-indigo-100 text-sm mb-4 leading-relaxed">
+              <p className="mb-4 text-sm leading-relaxed text-indigo-100">
                 Lead magnets with personalized reports convert up to 10x better than generic PDFs.
               </p>
               <Link
                 href="https://docs.leadmagnet.ai"
                 target="_blank"
-                className="inline-flex items-center text-sm font-medium text-white hover:text-indigo-100 transition-colors"
+                className="inline-flex items-center rounded-lg bg-white/10 px-3 py-2 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/20"
               >
-                Read the guide <ArrowRightIcon className="w-4 h-4 ml-1" />
+                Read the guide <ArrowRightIcon className="ml-1 h-4 w-4" />
               </Link>
             </div>
             
             {/* Background decoration */}
-            <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-white opacity-10 rounded-full blur-2xl"></div>
-            <div className="absolute top-10 -left-10 w-20 h-20 bg-purple-400 opacity-20 rounded-full blur-xl"></div>
+            <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white opacity-10 blur-2xl"></div>
+            <div className="absolute -left-10 top-10 h-20 w-20 rounded-full bg-purple-400 opacity-20 blur-xl"></div>
           </div>
         </div>
       </div>
