@@ -21,6 +21,9 @@ import {
 } from "@/types/workflow";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { api } from "@/lib/api";
+import WebhookConfig from "./step-editor/WebhookConfig";
+import AIAssist from "./step-editor/AIAssist";
+import ComputerUseConfig from "./step-editor/ComputerUseConfig";
 
 interface WorkflowStepEditorProps {
   step: WorkflowStep;
