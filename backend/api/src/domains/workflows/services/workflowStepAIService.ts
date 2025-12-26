@@ -58,24 +58,70 @@ Available Tools:
    - Use **gpt-5.2** for high-stakes content creation and complex reasoning.
    - Use **o4-mini-deep-research** ONLY if deep, multi-step research is explicitly requested.
 
-2. **Tool Strategy**:
+2. **Reasoning Effort (Thinking Power)**:
+   - **high**: For complex analysis, strategy, persona creation, and final content generation. (Default for most valuable steps).
+   - **medium**: For standard summarization or formatting.
+   - **low**: For simple tasks.
+
+3. **Tool Strategy & Configuration**:
    - **Research Steps**: Almost always need \`web_search\`.
    - **Analysis Steps**: Often need \`code_interpreter\` if data is involved.
    - **Creative Steps**: May need \`image_generation\`.
+   - **Image Generation Config**:
+     - If adding \`image_generation\`, you MUST configure it:
+     - \`size\`: "1024x1024" (square), "1024x1536" (portrait), "1536x1024" (landscape/wide).
+     - \`quality\`: "standard" or "hd".
+     - \`format\`: "png" or "jpeg".
+     - \`background\`: "opaque" or "transparent" (if logo/icon).
 
-3. **Instruction Quality**:
+4. **Tool Choice**:
+   - **auto**: Default. Model decides.
+   - **required**: If the step's SOLE purpose is to use a tool (e.g. "Research X").
+   - **none**: If the step is pure text processing or formatting.
+
+5. **Instruction Quality**:
    - Write instructions that are **specific** and **actionable**.
    - Assign a **role** (e.g., "Act as a Senior Analyst").
    - Explicitly mention what input data to use.
 
-4. **Response Format**:
+6. **Response Format**:
    - Return a JSON object matching the schema below.
    - \`step_name\` should be professional and concise.
    - \`step_description\` should clearly state the *value* of the step.
+   - \`depends_on\`: Array of step indices this step depends on.
+     - **CRITICAL**: If this step uses output from previous steps, list their indices here.
+     - If this is the first step, use \`[]\`.
+     - If inserting a step, ensure dependencies make sense.
 
-5. **Instruction Hygiene**:
+7. **Instruction Hygiene**:
    - Do NOT include "safety disclaimers" about PII (e.g. "Note: you included a phone number...") in the step instructions. The system handles PII securely.
-   - Do NOT instruct the model to use [bracketed_placeholders] for missing information in its output. If information is missing, it should be omitted or handled gracefully without placeholders.`;
+   - Do NOT instruct the model to use [bracketed_placeholders] for missing information in its output. If information is missing, it should be omitted or handled gracefully without placeholders.
+
+## JSON Output Schema
+\`\`\`json
+{
+  "step": {
+    "step_name": "string",
+    "step_description": "string",
+    "model": "string",
+    "reasoning_effort": "low" | "medium" | "high",
+    "instructions": "string",
+    "tools": [
+      "string" OR 
+      {
+        "type": "image_generation",
+        "size": "string",
+        "quality": "string",
+        "format": "string",
+        "background": "string"
+      }
+    ],
+    "tool_choice": "auto" | "required" | "none",
+    "depends_on": [number]
+  }
+}
+\`\`\`
+`;
 
 export class WorkflowStepAIService {
   constructor(private openaiClient: OpenAI) {}
@@ -195,6 +241,11 @@ Please generate the workflow step configuration.`;
       // Validate tool_choice
       if (!['auto', 'required', 'none'].includes(parsedResponse.step.tool_choice || '')) {
         parsedResponse.step.tool_choice = 'auto';
+      }
+
+      // Validate reasoning_effort
+      if (!['low', 'medium', 'high'].includes(parsedResponse.step.reasoning_effort || '')) {
+        parsedResponse.step.reasoning_effort = 'high';
       }
 
       // Set action
