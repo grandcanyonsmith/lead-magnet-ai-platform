@@ -292,7 +292,7 @@ export class WorkflowAIController {
 
           // 2. Fetch Step Execution Results (Outputs)
           if (job.execution_steps_s3_key) {
-             const fullSteps = await fetchS3Json(job.execution_steps_s3_key);
+             const fullSteps = await fetchS3Json(String(job.execution_steps_s3_key));
              if (fullSteps) {
                executionHistory.stepExecutionResults = fullSteps;
              }
@@ -306,7 +306,7 @@ export class WorkflowAIController {
             // Ideally find html_final or markdown_final
             const artifact = await db.get(ARTIFACTS_TABLE, { artifact_id: finalArtifactId });
             if (artifact && artifact.s3_key) {
-               const text = await fetchS3Text(artifact.s3_key);
+               const text = await fetchS3Text(String(artifact.s3_key));
                if (text) executionHistory.finalArtifactSummary = text;
             }
           }
