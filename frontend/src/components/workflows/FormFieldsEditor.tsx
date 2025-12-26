@@ -24,7 +24,7 @@ export function FormFieldsEditor({
   return (
     <div className="space-y-6 pt-6 border-t">
       <h2 className="text-xl font-semibold text-gray-900 border-b pb-2">
-        Lead Capture Form
+        Lead Form
       </h2>
 
       <div>
@@ -49,7 +49,7 @@ export function FormFieldsEditor({
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Public Slug <span className="text-red-500">*</span>
+          URL Slug <span className="text-red-500">*</span>
         </label>
         <input
           type="text"
@@ -66,8 +66,7 @@ export function FormFieldsEditor({
           required
         />
         <p className="mt-1 text-xs text-gray-500">
-          URL-friendly identifier (lowercase, hyphens only). Forms will be
-          accessible at /v1/forms/{formFieldsData.public_slug || "[slug]"}
+          This is the web address for your form. Example: /v1/forms/my-calculator
         </p>
       </div>
 
@@ -158,7 +157,7 @@ export function FormFieldsEditor({
       {/* Form Fields List */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Form Fields ({formFieldsData.form_fields_schema.fields.length})
+          Questions ({formFieldsData.form_fields_schema.fields.length})
         </label>
         <div className="space-y-4">
           {formFieldsData.form_fields_schema.fields.map(
@@ -170,7 +169,7 @@ export function FormFieldsEditor({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Label
+                      Question Label
                     </label>
                     <input
                       type="text"
@@ -179,7 +178,7 @@ export function FormFieldsEditor({
                         onFieldChange(index, "label", e.target.value)
                       }
                       className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                      placeholder="Field Label"
+                      placeholder="e.g. What is your email?"
                     />
                   </div>
                   <div>

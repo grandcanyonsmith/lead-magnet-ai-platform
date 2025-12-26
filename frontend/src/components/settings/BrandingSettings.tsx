@@ -124,7 +124,7 @@ export function BrandingSettings({
               <SparklesIcon className="w-5 h-5 text-indigo-600" />
             </div>
             <h3 className="text-lg font-semibold text-gray-900">
-              Brand Intelligence
+              Brand Identity
             </h3>
           </div>
           <p className="text-sm text-gray-600 ml-12">
@@ -158,7 +158,7 @@ export function BrandingSettings({
 
           <div className="space-y-6">
             <FormField
-              label="Brand Description"
+              label="About Your Brand"
               name="brand_description"
               type="textarea"
               value={settings.brand_description || ""}
@@ -170,7 +170,7 @@ export function BrandingSettings({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
-                label="Brand Voice"
+                label="Tone of Voice"
                 name="brand_voice"
                 type="textarea"
                 value={settings.brand_voice || ""}
@@ -181,7 +181,7 @@ export function BrandingSettings({
               />
 
               <FormField
-                label="Target Audience"
+                label="Ideal Customer"
                 name="target_audience"
                 type="textarea"
                 value={settings.target_audience || ""}
@@ -193,7 +193,7 @@ export function BrandingSettings({
             </div>
 
             <FormField
-              label="Brand Messaging Guidelines"
+              label="Key Messages & Rules"
               name="brand_messaging_guidelines"
               type="textarea"
               value={settings.brand_messaging_guidelines || ""}
@@ -224,7 +224,7 @@ export function BrandingSettings({
 
         <div className="p-8">
           <FormField
-            label="ICP Document URL"
+            label="Reference Document (URL)"
             name="icp_document_url"
             type="url"
             value={settings.icp_document_url || ""}

@@ -294,26 +294,20 @@ export default function NewWorkflowPage() {
       {/* Info Box */}
       <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
         <h3 className="text-sm font-semibold text-blue-900 mb-2">
-          Processing Modes
+          How it works
         </h3>
         <p className="text-sm text-blue-800 mb-2">
-          Choose how your lead magnet is generated:
+          This tool will generate a personalized report for your leads.
         </p>
         <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
           <li>
-            <strong>Research + HTML:</strong> AI generates personalized
-            research, then converts it to styled HTML
+            <strong>Research + Design:</strong> AI gathers data and creates a beautiful report.
           </li>
           <li>
-            <strong>Research Only:</strong> AI generates research report
-            (markdown format)
+            <strong>Research Only:</strong> AI generates a text-based report.
           </li>
           <li>
-            <strong>HTML Only:</strong> AI generates styled HTML directly from
-            form submission
-          </li>
-          <li>
-            <strong>Text Only:</strong> Simple text output from form submission
+            <strong>Design Only:</strong> AI formats your inputs into a design.
           </li>
         </ul>
       </div>
@@ -333,7 +327,7 @@ export default function NewWorkflowPage() {
         <div className="space-y-4 pt-6 border-t" data-tour="workflow-steps">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-gray-900">
-              Workflow Steps
+              AI Instructions
             </h2>
             <button
               type="button"
@@ -341,12 +335,11 @@ export default function NewWorkflowPage() {
               className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors touch-target"
             >
               <FiPlus className="w-4 h-4" />
-              Add Step
+              Add Instruction
             </button>
           </div>
           <p className="text-sm text-gray-600 mb-4">
-            Define the steps your workflow will execute. Each step receives
-            context from all previous steps.
+            Tell the AI what to do. Each instruction builds on the previous one.
           </p>
 
           <div className="space-y-4">

@@ -164,34 +164,34 @@ export default function JobsPage() {
   const statusQuickFilters = useMemo<StatusQuickFilter[]>(
     () => [
       {
-        label: "All jobs",
+        label: "All Leads",
         value: "all",
         count: totalJobs,
-        description: "Show every run",
+        description: "Show everything",
       },
       {
-        label: "Queued",
+        label: "Waiting",
         value: "pending",
         count: statusCounts.pending,
-        description: "Waiting to process",
+        description: "Waiting to start",
       },
       {
-        label: "Generating",
+        label: "In Progress",
         value: "processing",
         count: statusCounts.processing,
-        description: "In progress",
+        description: "Generating now",
       },
       {
-        label: "Ready",
+        label: "Completed",
         value: "completed",
         count: statusCounts.completed,
-        description: "Completed runs",
+        description: "Reports sent",
       },
       {
-        label: "Errors",
+        label: "Issues",
         value: "failed",
         count: statusCounts.failed,
-        description: "Failed runs",
+        description: "Needs attention",
       },
     ],
     [totalJobs, statusCounts],
@@ -200,38 +200,27 @@ export default function JobsPage() {
   const summaryCards = useMemo<SummaryCard[]>(
     () => [
       {
-        label: "Active jobs",
+        label: "Active Processes",
         value: summaryStats.activeJobs.toString(),
         subtext: `${statusCounts.processing} running · ${statusCounts.pending} queued`,
         icon: <ArrowPathIcon className="h-5 w-5 text-primary-600" />,
         accentClass: "border-primary-100 bg-primary-50/70",
       },
       {
-        label: "Completed (24h)",
+        label: "New Leads (24h)",
         value: summaryStats.completedLastDay.toString(),
         subtext: summaryStats.latestJobCreatedAt
-          ? `Last job ${formatRelativeTime(summaryStats.latestJobCreatedAt)}`
-          : "No jobs yet",
+          ? `Last lead ${formatRelativeTime(summaryStats.latestJobCreatedAt)}`
+          : "No leads yet",
         icon: <ArrowTrendingUpIcon className="h-5 w-5 text-emerald-600" />,
         accentClass: "border-emerald-100 bg-emerald-50/80",
       },
       {
-        label: "Avg processing time",
-        value: summaryStats.avgDurationSeconds
-          ? formatDuration(summaryStats.avgDurationSeconds)
-          : "—",
-        subtext: summaryStats.avgDurationSeconds
-          ? "Across completed jobs"
-          : "No completed jobs yet",
-        icon: <ClockIcon className="h-5 w-5 text-blue-600" />,
-        accentClass: "border-blue-100 bg-blue-50/80",
-      },
-      {
-        label: "Failures",
+        label: "Issues",
         value: summaryStats.failedCount.toString(),
         subtext: jobs.length
-          ? `${Math.round((summaryStats.failedCount / jobs.length) * 100)}% of this page`
-          : "No jobs yet",
+          ? `${Math.round((summaryStats.failedCount / jobs.length) * 100)}% failure rate`
+          : "No issues",
         icon: <ExclamationTriangleIcon className="h-5 w-5 text-red-600" />,
         accentClass: "border-red-100 bg-red-50/80",
       },
@@ -438,10 +427,10 @@ export default function JobsPage() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
-                Lead Magnets
+                Leads & Results
               </h1>
               <p className="mt-1 text-sm text-gray-500">
-                Review generated runs, statuses, errors, and delivery outcomes.
+                Track your collected leads and generated reports.
               </p>
               <LeadMagnetsTabs className="mt-3" />
             </div>
@@ -508,10 +497,10 @@ export default function JobsPage() {
               <ClockIcon className="h-full w-full" />
             </div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              No jobs found
+              No leads found
             </h3>
             <p className="text-gray-500 mb-6">
-              Generated lead magnets will appear here once forms are submitted.
+              Generated reports will appear here once visitors submit your forms.
             </p>
             {(statusFilter !== "all" ||
               workflowFilter !== "all" ||

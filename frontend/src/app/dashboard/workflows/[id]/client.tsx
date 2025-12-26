@@ -392,7 +392,7 @@ export default function WorkflowDetailPage() {
             <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50 flex items-center gap-2">
               <Cog6ToothIcon className="h-5 w-5 text-gray-400" />
               <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">
-                Asset Configuration
+                Tool Settings
               </h2>
             </div>
             <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
@@ -400,7 +400,7 @@ export default function WorkflowDetailPage() {
                 <div>
                   <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
                     <FingerPrintIcon className="h-3.5 w-3.5" />
-                    Internal IDs
+                    System IDs
                   </h4>
                   <div className="space-y-3">
                     <div>
@@ -428,7 +428,7 @@ export default function WorkflowDetailPage() {
                   <div>
                     <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
                       <LinkIcon className="h-3.5 w-3.5" />
-                      External Integration
+                      Webhooks
                     </h4>
                     <p className="text-[10px] text-gray-400 mb-0.5">
                       Webhook Endpoint
@@ -501,7 +501,7 @@ export default function WorkflowDetailPage() {
               <div className="flex items-center gap-2">
                 <ClockIcon className="h-5 w-5 text-gray-400" />
                 <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">
-                  Recent Runs
+                  Recent Leads
                 </h2>
               </div>
               <button
@@ -611,7 +611,7 @@ export default function WorkflowDetailPage() {
                             >
                               <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5" />
                               <span className="group-hover/link:underline">
-                                View asset
+                                View Report
                               </span>
                             </button>
                           )}

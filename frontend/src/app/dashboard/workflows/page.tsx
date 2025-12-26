@@ -959,7 +959,7 @@ export default function WorkflowsPage() {
                     onClick={() => handleSort("name")}
                   >
                     <div className="flex items-center gap-1">
-                      Lead Magnet
+                      Tool Name
                       {sortField === "name" &&
                         (sortDirection === "asc" ? (
                           <ChevronUpIcon className="w-3.5 h-3.5" />
@@ -1019,7 +1019,7 @@ export default function WorkflowsPage() {
                     onClick={() => handleSort("last_generated")}
                   >
                     <div className="flex items-center gap-1">
-                      Last Generated
+                      Last Used
                       {sortField === "last_generated" &&
                         (sortDirection === "asc" ? (
                           <ChevronUpIcon className="w-3.5 h-3.5" />
@@ -1032,7 +1032,7 @@ export default function WorkflowsPage() {
                     scope="col"
                     className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
-                    Documents
+                    Latest Report
                   </th>
                   <th scope="col" className="relative px-6 py-4">
                     <span className="sr-only">Actions</span>
