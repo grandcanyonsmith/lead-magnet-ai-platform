@@ -50,13 +50,26 @@ export class WorkflowConfigService {
     console.log('[Workflow Config Service] Calling OpenAI for workflow generation...');
     const workflowStartTime = Date.now();
     
+    // Respect the caller-provided model (API contract), while only applying
+    // reasoning/service_tier controls on models that support them.
     const workflowCompletionParams: any = {
-      model: 'gpt-5.2',
-      instructions: 'You are an expert at creating AI-powered lead magnets. Return only valid JSON without markdown formatting.',
+      model,
+      instructions:
+        'You are an expert at creating AI-powered lead magnets. Return only valid JSON without markdown formatting.',
       input: workflowPrompt,
-      reasoning: { effort: 'high' },
-      service_tier: 'priority',
     };
+
+    const supportsReasoningAndTier =
+      typeof model === "string" &&
+      (model.startsWith("gpt-5") || model.startsWith("o"));
+
+    if (supportsReasoningAndTier) {
+      workflowCompletionParams.reasoning = { effort: "high" };
+      workflowCompletionParams.service_tier = "priority";
+    } else {
+      // Non GPT-5/o-series models typically use temperature and may reject reasoning/service_tier.
+      workflowCompletionParams.temperature = 0.7;
+    }
     const workflowCompletion = await callResponsesWithTimeout(
       () => this.openai.responses.create(workflowCompletionParams),
       'workflow generation'
