@@ -54,7 +54,8 @@ export class WorkflowConfigService {
       model: 'gpt-5.2',
       instructions: 'You are an expert at creating AI-powered lead magnets. Return only valid JSON without markdown formatting.',
       input: workflowPrompt,
-      reasoning: { effort: 'high' }
+      reasoning: { effort: 'high' },
+      service_tier: 'priority',
     };
     const workflowCompletion = await callResponsesWithTimeout(
       () => this.openai.responses.create(workflowCompletionParams),
