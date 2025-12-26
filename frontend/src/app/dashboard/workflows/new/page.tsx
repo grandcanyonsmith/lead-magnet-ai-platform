@@ -86,7 +86,7 @@ export default function NewWorkflowPage() {
     setStep("creating");
     const result = await aiGeneration.generateWorkflow(
       prompt.trim(),
-      settings?.default_ai_model || "gpt-5.1-codex",
+      settings?.default_ai_model || "gpt-5.2",
     );
 
     if (result && result.job_id) {

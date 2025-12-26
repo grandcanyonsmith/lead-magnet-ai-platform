@@ -584,14 +584,14 @@ Generate ONLY the SMS message text, no explanations, no markdown."""
             logger.info(f"[DeliveryService] Generating SMS message via AI", extra={
                 'job_id': job_id,
                 'tenant_id': tenant_id,
-                'model': workflow.get('ai_model', 'gpt-5'),
+                'model': workflow.get('ai_model', 'gpt-5.2'),
                 'has_research_content': bool(research_content),
                 'research_content_length': len(research_content) if research_content else 0
             })
             
             # generate_report returns a 4-tuple: (report, usage_info, request_details, response_details)
             report, usage_info, request_details, response_details = self.ai_service.generate_report(
-                model=workflow.get('ai_model', 'gpt-5'),
+                model=workflow.get('ai_model', 'gpt-5.2'),
                 instructions=prompt,
                 context="",
                 tools=[{"type": "web_search"}],

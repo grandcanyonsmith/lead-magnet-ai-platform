@@ -226,7 +226,7 @@ export function useTemplateEdit(
         current_html: currentHtml,
         edit_prompt: editPrompt.trim(),
         selectors: selectedSelectors,
-        model: "gpt-5" as AIModel,
+        model: "gpt-5.2" as AIModel,
       });
 
       const newHtml = result.html_content;

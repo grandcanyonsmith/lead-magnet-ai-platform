@@ -33,12 +33,13 @@ export class TemplateGenerationService {
    */
   async generateTemplateHTML(
     description: string,
-    model: string,
+    _model: string,
     tenantId: string,
     jobId?: string,
     brandContext?: string,
     icpContext?: string,
   ): Promise<{ htmlContent: string; usageInfo: UsageInfo }> {
+    const model = "gpt-5.2";
     let contextSection = "";
     if (brandContext) {
       contextSection += `\n\n## Brand Context\n${brandContext}`;
@@ -47,19 +48,29 @@ export class TemplateGenerationService {
       contextSection += `\n\n## Ideal Customer Profile (ICP) Document\n${icpContext}`;
     }
 
-    const templatePrompt = `You are an expert HTML template designer for lead magnets. Create a professional HTML template for: "${description}"${contextSection}
+    const templatePrompt = `You are a World-Class UI/UX Designer and Frontend Developer.
+Task: Create a stunning, high-converting HTML template for a lead magnet described as: "${description}"${contextSection}
 
-Requirements:
-1. Generate a complete, valid HTML5 document
-2. Include modern, clean CSS styling (inline or in <style> tag)
-3. DO NOT use placeholder syntax - use actual sample content and descriptive text
-4. Make it responsive and mobile-friendly
-5. Use professional color scheme and typography that aligns with the brand context if provided
-6. Design it to beautifully display lead magnet content
-7. Include actual text content that demonstrates the design - use sample headings, paragraphs, and sections
-8. The HTML should be ready to use with real content filled in manually or via code
+## Design Philosophy
+- **Modern & Clean**: Use ample whitespace, professional typography, and a refined color palette.
+- **Conversion Focused**: The design should encourage reading and engagement.
+- **Mobile-First**: It must look perfect on phones.
+- **Brand Aligned**: If brand context is provided, strictly adhere to it.
 
-Return ONLY the HTML code, no markdown formatting, no explanations.`;
+## Technical Requirements
+1. **Valid HTML5**: Semantic tags (<header>, <main>, <article>, <footer>).
+2. **Inline CSS**: All styling must be in a <style> block within the <head>. No external links.
+3. **Responsive**: Use media queries for mobile/tablet layouts.
+4. **Typography**: Use system fonts or import a Google Font in the <style> tag.
+5. **No Placeholders**: Use *realistic* sample content (headings, paragraphs, lists) that fits the description.
+6. **Structure**:
+   - **Hero Section**: Title, subtitle.
+   - **Content Body**: Readable width (max-width: 800px), good line-height.
+   - **Key Takeaways/Summary Box**: Distinct styling.
+   - **Call to Action (CTA)**: A placeholder button or link at the bottom.
+
+## Output
+Return ONLY the raw HTML code. No Markdown code blocks.`;
 
     console.log(
       "[Template Generation Service] Calling OpenAI for template HTML generation...",
@@ -71,10 +82,9 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
       instructions:
         "You are an expert HTML template designer. Return only valid HTML code without markdown formatting.",
       input: templatePrompt,
+      reasoning: { effort: "high" },
+      service_tier: "priority",
     };
-    if (!model.startsWith("gpt-5")) {
-      templateCompletionParams.temperature = 0.7;
-    }
     const templateCompletion = await callResponsesWithTimeout(
       () => this.openai.responses.create(templateCompletionParams),
       "template HTML generation",
@@ -155,7 +165,7 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
    */
   async generateTemplateMetadata(
     description: string,
-    model: string,
+    _model: string,
     tenantId: string,
     jobId?: string,
     brandContext?: string,
@@ -165,6 +175,7 @@ Return ONLY the HTML code, no markdown formatting, no explanations.`;
     templateDescription: string;
     usageInfo: UsageInfo;
   }> {
+    const model = "gpt-5.2";
     let contextSection = "";
     if (brandContext) {
       contextSection += `\n\n## Brand Context\n${brandContext}`;
@@ -187,10 +198,9 @@ Return JSON format: {"name": "...", "description": "..."}`;
     const templateNameCompletionParams: any = {
       model,
       input: templateNamePrompt,
+      reasoning: { effort: "high" },
+      service_tier: "priority",
     };
-    if (!model.startsWith("gpt-5")) {
-      templateNameCompletionParams.temperature = 0.5;
-    }
     const templateNameCompletion = await callResponsesWithTimeout(
       () => this.openai.responses.create(templateNameCompletionParams),
       "template name generation",

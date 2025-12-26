@@ -45,7 +45,7 @@ export class FormsClient extends BaseApiClient {
     return this.post<FormGenerateCSSResponse>("/admin/forms/generate-css", {
       form_fields_schema: request.form_fields_schema,
       css_prompt: request.css_prompt,
-      model: request.model || "gpt-4o",
+      model: request.model || "gpt-5.2",
     });
   }
 
@@ -55,7 +55,7 @@ export class FormsClient extends BaseApiClient {
     return this.post<FormRefineCSSResponse>("/admin/forms/refine-css", {
       current_css: request.current_css,
       css_prompt: request.css_prompt,
-      model: request.model || "gpt-4o",
+      model: request.model || "gpt-5.2",
     });
   }
 }

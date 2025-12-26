@@ -73,6 +73,14 @@ The local API server (`backend/api/server-local.js`) wraps the Lambda handler in
 - Handles CORS for local development
 - Runs on port 3001 by default
 
+### Large Request Bodies (HTML Editor / Patch)
+
+The HTML editor patch flow can send large HTML payloads. The local server increases Express body limits (defaults to `20mb`), and you can override it if needed:
+
+```bash
+export BODY_LIMIT=50mb
+```
+
 ### Mock Authentication
 
 For local development, the server uses mock JWT claims:

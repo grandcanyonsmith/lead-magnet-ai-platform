@@ -270,11 +270,10 @@ export async function patchHtmlWithOpenAI(
 
   const openai = await getOpenAIClient();
 
-  // Use provided model or default to gpt-5.1-codex
-  const model = args.model || "gpt-5.1-codex";
-  const reasoningEffort = args.reasoningEffort || null;
-  const supportsReasoningEffort =
-    model.startsWith("gpt-5") || model.startsWith("o"); // e.g. o-series models
+  // Force gpt-5.2 with max reasoning + priority tier for best quality and faster throughput.
+  const model = "gpt-5.2";
+  const reasoningEffort = "high" as const;
+  const supportsReasoningEffort = true;
 
   const getStatus = (err: any): number | undefined => {
     if (!err) return undefined;
@@ -308,13 +307,14 @@ export async function patchHtmlWithOpenAI(
   // full-document rewrites/timeouts.
   // ------------------------------------------------------------
   if (selectedOuterHtml) {
-    const snippetInstructions = `You are an expert HTML editor.
-
+    const snippetInstructions = `You are a Senior Frontend Engineer.
+    
 You will receive:
 - A CSS selector (optional) and the selected element's outerHTML.
 - A user request describing changes.
 
 Your task:
+- Surgically update the HTML fragment to meet the user's request.
 - Return ONLY the updated outerHTML for the selected element.
 - Do NOT return the full HTML document.
 - Preserve attributes and structure unless asked to change them.
@@ -348,7 +348,7 @@ Your task:
                 ...(supportsReasoningEffort && reasoningEffort
                   ? { reasoning: { effort: reasoningEffort } }
                   : {}),
-                // NOTE: Avoid forcing priority tier here; it can be unavailable in some environments.
+                service_tier: "priority",
               }),
             "HTML Patch OpenAI call (selected element)",
           ),
@@ -445,7 +445,7 @@ Your task:
     }
   }
 
-  const instructions = `You are an expert HTML editor.
+  const instructions = `You are a Senior Frontend Engineer.
 
 You will receive:
 - A complete HTML document (WITHOUT any editing overlays).
@@ -453,7 +453,7 @@ You will receive:
 - A user request describing changes.
 
 Your task:
-- Apply the user's requested changes to the HTML.
+- Apply the user's requested changes to the HTML with high precision.
 - Return the COMPLETE, VALID, modified HTML document.
 - Do NOT return a diff. Return the full HTML.
 - Preserve all existing scripts, styles, and structure unless explicitly asked to change them.
@@ -495,7 +495,7 @@ Input HTML is provided below.`;
             ...(supportsReasoningEffort && reasoningEffort
               ? { reasoning: { effort: reasoningEffort } }
               : {}),
-            // NOTE: Avoid forcing priority tier here; it can be unavailable in some environments.
+            service_tier: "priority",
           }),
         "HTML Patch OpenAI call (full document)",
       ),

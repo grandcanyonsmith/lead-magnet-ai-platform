@@ -6,7 +6,6 @@ import {
   useRef,
   useCallback,
   useMemo,
-  useReducer,
 } from "react";
 import { useSearchParams } from "next/navigation";
 import {
@@ -28,167 +27,14 @@ import { ApiError } from "@/lib/api/errors";
 import type { Job } from "@/types/job";
 import type { Workflow } from "@/types/workflow";
 
+import { useEditorHistory } from "./hooks/useEditorHistory";
+import { useHtmlPatcher } from "./hooks/useHtmlPatcher";
+import { SELECTION_SCRIPT } from "./constants";
+import { isTextInputTarget, stripInjectedBlocksForTemplate } from "./utils";
+
 // Types
 type EditorMode = "preview" | "code";
 type DeviceMode = "desktop" | "mobile";
-type AISpeed = "normal" | "fast" | "turbo";
-type AIReasoningEffort = "low" | "medium" | "high";
-
-type HistoryEntry = { html: string; timestamp: number };
-type HtmlState = {
-  html: string;
-  history: HistoryEntry[];
-  historyIndex: number;
-};
-type HtmlAction =
-  | { type: "reset"; html: string }
-  | { type: "set"; html: string }
-  | { type: "commit"; html: string }
-  | { type: "undo" }
-  | { type: "redo" };
-
-const initialHtmlState: HtmlState = { html: "", history: [], historyIndex: -1 };
-
-function htmlReducer(state: HtmlState, action: HtmlAction): HtmlState {
-  switch (action.type) {
-    case "reset": {
-      const entry: HistoryEntry = { html: action.html, timestamp: Date.now() };
-      return { html: action.html, history: [entry], historyIndex: 0 };
-    }
-    case "set": {
-      return { ...state, html: action.html };
-    }
-    case "commit": {
-      const base = state.history.slice(0, state.historyIndex + 1);
-      const lastHtml = base[base.length - 1]?.html;
-      if (lastHtml === action.html) {
-        return { ...state, html: action.html };
-      }
-      const nextHistory: HistoryEntry[] = [
-        ...base,
-        { html: action.html, timestamp: Date.now() },
-      ];
-      return {
-        html: action.html,
-        history: nextHistory,
-        historyIndex: nextHistory.length - 1,
-      };
-    }
-    case "undo": {
-      if (state.historyIndex <= 0) return state;
-      const newIndex = state.historyIndex - 1;
-      return {
-        ...state,
-        html: state.history[newIndex].html,
-        historyIndex: newIndex,
-      };
-    }
-    case "redo": {
-      if (state.historyIndex >= state.history.length - 1) return state;
-      const newIndex = state.historyIndex + 1;
-      return {
-        ...state,
-        html: state.history[newIndex].html,
-        historyIndex: newIndex,
-      };
-    }
-    default:
-      return state;
-  }
-}
-
-function isTextInputTarget(target: EventTarget | null) {
-  if (!target || !(target instanceof HTMLElement)) return false;
-  const tag = target.tagName.toLowerCase();
-  return tag === "input" || tag === "textarea" || target.isContentEditable;
-}
-
-const SELECTION_SCRIPT = `
-  window.__selectionMode = false;
-
-  // Store original inline styles so our hover/selection UI does NOT leak into captured outerHTML.
-  const __lmOriginalStyles = new WeakMap();
-  const __lmGetEl = (e) => {
-    const t = e && e.target;
-    return t && t.nodeType === 1 ? t : null; // Element
-  };
-  
-  document.addEventListener('mouseover', (e) => {
-    if (window.__selectionMode) {
-      e.stopPropagation();
-      const el = __lmGetEl(e);
-      if (!el) return;
-      if (!__lmOriginalStyles.has(el)) {
-        __lmOriginalStyles.set(el, { outline: el.style.outline || '', cursor: el.style.cursor || '' });
-      }
-      el.style.outline = '2px dashed #8b5cf6';
-      el.style.cursor = 'crosshair';
-    }
-  }, true);
-
-  document.addEventListener('mouseout', (e) => {
-    if (window.__selectionMode) {
-      e.stopPropagation();
-      const el = __lmGetEl(e);
-      if (!el) return;
-      const original = __lmOriginalStyles.get(el);
-      if (original) {
-        el.style.outline = original.outline || '';
-        el.style.cursor = original.cursor || '';
-        __lmOriginalStyles.delete(el);
-      } else {
-        el.style.outline = '';
-        el.style.cursor = '';
-      }
-    }
-  }, true);
-
-  document.addEventListener('click', (e) => {
-    if (window.__selectionMode) {
-      e.preventDefault();
-      e.stopPropagation();
-
-      const el = __lmGetEl(e);
-      if (!el) return;
-      
-      const tagName = el.tagName.toLowerCase();
-      const id = el.id ? '#' + el.id : '';
-      const classes = el.className && typeof el.className === 'string' ? '.' + el.className.split(' ').filter(c => c).join('.') : '';
-      const selector = tagName + id + classes;
-
-      // Capture the element's outerHTML WITHOUT our temporary outline/cursor styles.
-      const original = __lmOriginalStyles.get(el) || { outline: '', cursor: '' };
-      const clone = el.cloneNode(true);
-      clone.style.outline = original.outline || '';
-      clone.style.cursor = original.cursor || '';
-      
-      window.parent.postMessage({ 
-        type: 'ELEMENT_SELECTED', 
-        selector, 
-        outerHtml: clone.outerHTML 
-      }, '*');
-      
-      // Temporary flash
-      const originalOutline = original.outline || '';
-      const originalCursor = original.cursor || '';
-      el.style.outline = '2px solid #8b5cf6';
-      setTimeout(() => {
-        el.style.outline = originalOutline;
-        el.style.cursor = originalCursor;
-        __lmOriginalStyles.delete(el);
-      }, 500);
-    }
-  }, true);
-
-  window.addEventListener('message', (e) => {
-    if (e.data.type === 'TOGGLE_SELECTION_MODE') {
-        window.__selectionMode = e.data.enabled;
-    }
-    if (e.data.type === 'UPDATE_CONTENT') {
-        // Optional: Update content without reload if needed
-    }
-  });
-`;
 
 export default function EditorClient() {
   const searchParams = useSearchParams();
@@ -199,11 +45,21 @@ export default function EditorClient() {
   // State
   const [mode, setMode] = useState<EditorMode>("preview");
   const [device, setDevice] = useState<DeviceMode>("desktop");
-  const [prompt, setPrompt] = useState("");
-  const [isProcessing, setIsProcessing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [hasError, setHasError] = useState(false);
-  const [htmlState, dispatchHtml] = useReducer(htmlReducer, initialHtmlState);
+  
+  // History & HTML State
+  const {
+    htmlState,
+    undo,
+    redo,
+    reset,
+    setHtml,
+    commit,
+    canUndo,
+    canRedo,
+  } = useEditorHistory();
+
   const [selectedElement, setSelectedElement] = useState<string | null>(null);
   const [selectedOuterHtml, setSelectedOuterHtml] = useState<string | null>(
     null,
@@ -212,12 +68,6 @@ export default function EditorClient() {
   const [job, setJob] = useState<Job | null>(null);
   const [lastSavedHtml, setLastSavedHtml] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
-
-  // AI Configuration
-  const [aiSpeed, setAiSpeed] = useState<AISpeed>("normal");
-  const [aiReasoningEffort, setAiReasoningEffort] =
-    useState<AIReasoningEffort>("medium");
-  const [aiModel, setAiModel] = useState<"gpt-4o" | "gpt-5.2">("gpt-4o");
   const [showAiSettings, setShowAiSettings] = useState(false);
 
   // Template / workflow context
@@ -227,10 +77,30 @@ export default function EditorClient() {
   // Refs
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  const canUndo = htmlState.historyIndex > 0;
-  const canRedo =
-    htmlState.historyIndex >= 0 &&
-    htmlState.historyIndex < htmlState.history.length - 1;
+  // AI Patcher Hook
+  const handlePatchApplied = useCallback((newHtml: string) => {
+    commit(newHtml);
+    setSelectedElement(null);
+    setSelectedOuterHtml(null);
+  }, [commit]);
+
+  const {
+    prompt,
+    setPrompt,
+    isProcessing,
+    submitPatch,
+    aiModel,
+    setAiModel,
+    aiSpeed,
+    setAiSpeed,
+    aiReasoningEffort,
+    setAiReasoningEffort,
+  } = useHtmlPatcher({
+    jobId,
+    onApply: handlePatchApplied,
+    initialUrl,
+  });
+
   const isDirty = lastSavedHtml !== null && htmlState.html !== lastSavedHtml;
 
   // Load HTML
@@ -247,7 +117,7 @@ export default function EditorClient() {
         try {
           const content = await api.artifacts.getArtifactContent(artifactId);
           if (content && isMounted) {
-            dispatchHtml({ type: "reset", html: content });
+            reset(content);
             setLastSavedHtml(content);
             setLastSavedAt(Date.now());
             setSelectedElement(null);
@@ -265,7 +135,7 @@ export default function EditorClient() {
         try {
           const content = await api.jobs.getJobDocument(jobId);
           if (content && isMounted) {
-            dispatchHtml({ type: "reset", html: content });
+            reset(content);
             setLastSavedHtml(content);
             setLastSavedAt(Date.now());
             setSelectedElement(null);
@@ -290,7 +160,7 @@ export default function EditorClient() {
           } else {
             const content = await res.text();
             if (isMounted) {
-              dispatchHtml({ type: "reset", html: content });
+              reset(content);
               setLastSavedHtml(content);
               setLastSavedAt(Date.now());
               setSelectedElement(null);
@@ -316,7 +186,7 @@ export default function EditorClient() {
     return () => {
       isMounted = false;
     };
-  }, [jobId, initialUrl, artifactId]);
+  }, [jobId, initialUrl, artifactId, reset]);
 
   // Load job metadata for header context
   useEffect(() => {
@@ -406,13 +276,24 @@ export default function EditorClient() {
   // Handle iframe messages
   useEffect(() => {
     const handleMessage = (e: MessageEvent) => {
-      if (e.data.type === "ELEMENT_SELECTED") {
-        setSelectedElement(e.data.selector);
+      // Only accept messages from our preview iframe.
+      // The HTML inside the iframe is untrusted and can postMessage arbitrarily.
+      if (e.source !== iframeRef.current?.contentWindow) return;
+
+      const data: any = e.data;
+      if (!data || typeof data !== "object") return;
+
+      if (data.type === "ELEMENT_SELECTED") {
+        const selector =
+          typeof data.selector === "string" ? (data.selector as string) : null;
+        if (!selector) return;
+
+        setSelectedElement(selector);
         setSelectedOuterHtml(
-          typeof e.data.outerHtml === "string" ? e.data.outerHtml : null,
+          typeof data.outerHtml === "string" ? (data.outerHtml as string) : null,
         );
         setIsSelectionMode(false); // Turn off after selection
-        toast.success(`Selected: ${e.data.selector}`, { icon: "🎯" });
+        toast.success(`Selected: ${selector}`, { icon: "🎯" });
       }
     };
     window.addEventListener("message", handleMessage);
@@ -421,146 +302,23 @@ export default function EditorClient() {
 
   const handleUndo = useCallback(() => {
     if (!canUndo) return;
-    dispatchHtml({ type: "undo" });
+    undo();
     toast("Undone", { icon: "↩️", duration: 1000 });
-  }, [canUndo]);
+  }, [canUndo, undo]);
 
   const handleRedo = useCallback(() => {
     if (!canRedo) return;
-    dispatchHtml({ type: "redo" });
+    redo();
     toast("Redone", { icon: "↪️", duration: 1000 });
-  }, [canRedo]);
+  }, [canRedo, redo]);
 
   const handleSendMessage = useCallback(async () => {
-    if (!prompt.trim() || !jobId) return;
-    setIsProcessing(true);
-
-    try {
-      // Submit patch request (returns 202 with patch_id)
-      const patchRes = await api.post<{
-        patch_id: string;
-        status: string;
-        message: string;
-      }>(`/v1/jobs/${jobId}/html/patch`, {
-        // Always send the latest editor HTML (even if unsaved) so sequential AI edits stack correctly.
-        html: htmlState.html,
-        prompt: prompt,
-        selector: selectedElement,
-        model: aiModel,
-        reasoning_effort: aiReasoningEffort,
-        selected_outer_html: selectedOuterHtml,
-        page_url: initialUrl || undefined,
-      });
-
-      const patchId = patchRes.patch_id;
-      if (!patchId) {
-        throw new Error("No patch ID returned");
-      }
-
-      // Poll for completion
-      const pollInterval = 1000; // 1 second
-      const maxAttempts = 300; // 5 minutes max
-      let attempts = 0;
-
-      const pollPatchStatus = (): Promise<void> => {
-        return new Promise((resolve, reject) => {
-          const doPoll = async () => {
-            attempts++;
-            if (attempts > maxAttempts) {
-              reject(new Error("Patch request timed out"));
-              return;
-            }
-
-            try {
-              const statusRes = await api.get<{
-                patch_id: string;
-                status: "pending" | "processing" | "completed" | "failed";
-                patched_html?: string;
-                summary?: string;
-                error_message?: string;
-                created_at: string;
-                updated_at: string;
-              }>(`/v1/jobs/${jobId}/html/patch/${patchId}/status`);
-
-              if (statusRes.status === "completed") {
-                if (statusRes.patched_html) {
-                  dispatchHtml({ type: "commit", html: statusRes.patched_html });
-                  setPrompt("");
-                  setSelectedElement(null);
-                  setSelectedOuterHtml(null);
-                  toast.success("AI changes applied!");
-                  resolve();
-                } else {
-                  reject(new Error("Patch completed but no HTML returned"));
-                }
-              } else if (statusRes.status === "failed") {
-                reject(
-                  new Error(statusRes.error_message || "Patch processing failed"),
-                );
-              } else {
-                // Still pending or processing, poll again
-                setTimeout(doPoll, pollInterval);
-              }
-            } catch (pollErr) {
-              // If it's a final error (not a retry), throw it
-              if (
-                pollErr instanceof ApiError &&
-                pollErr.statusCode !== 503 &&
-                pollErr.statusCode !== 500
-              ) {
-                reject(pollErr);
-                return;
-              }
-              // For transient errors, retry after a delay
-              setTimeout(doPoll, pollInterval * 2);
-            }
-          };
-
-          // Start polling immediately
-          doPoll();
-        });
-      };
-
-      // Wait for polling to complete
-      await pollPatchStatus();
-    } catch (err) {
-      console.error("AI generation failed:", err);
-      const apiErr = err instanceof ApiError ? err : null;
-      if (apiErr?.statusCode === 400) {
-        toast.error(apiErr.message);
-      } else if (apiErr?.statusCode === 503) {
-        toast.error(
-          "AI editing is temporarily unavailable. Please try again in a moment.",
-        );
-      } else {
-        toast.error(apiErr?.message || "Failed to apply AI changes");
-      }
-    } finally {
-      setIsProcessing(false);
-    }
-  }, [
-    aiModel,
-    aiReasoningEffort,
-    initialUrl,
-    jobId,
-    htmlState.html,
-    prompt,
-    selectedElement,
-    selectedOuterHtml,
-  ]);
-
-  const stripInjectedBlocksForTemplate = useCallback((html: string) => {
-    return String(html || "")
-      .replace(
-        /<!--\s*Lead Magnet Editor Overlay\s*-->[\s\S]*?<\/script>\s*/gi,
-        "",
-      )
-      .replace(
-        /<!--\s*Lead Magnet Tracking Script\s*-->[\s\S]*?<\/script>\s*/gi,
-        "",
-      )
-      .trim();
-  }, []);
+    await submitPatch({
+      currentHtml: htmlState.html,
+      selectedElement,
+      selectedOuterHtml,
+    });
+  }, [submitPatch, htmlState.html, selectedElement, selectedOuterHtml]);
 
   const handleSaveAsTemplate = useCallback(async () => {
     if (!workflow?.template_id) {
@@ -613,7 +371,6 @@ export default function EditorClient() {
   }, [
     htmlState.html,
     savingTemplate,
-    stripInjectedBlocksForTemplate,
     workflow,
   ]);
 
@@ -903,10 +660,10 @@ export default function EditorClient() {
             <textarea
               value={htmlState.html}
               onChange={(e) => {
-                dispatchHtml({ type: "set", html: e.target.value });
+                setHtml(e.target.value);
               }}
               onBlur={() =>
-                dispatchHtml({ type: "commit", html: htmlState.html })
+                commit(htmlState.html)
               }
               className="w-full h-full bg-[#15161a] text-gray-300 font-mono text-sm p-4 resize-none focus:outline-none"
               spellCheck={false}
@@ -989,7 +746,7 @@ export default function EditorClient() {
                     title="AI settings"
                   >
                     <FiZap className="w-3 h-3" />
-                    {aiModel === "gpt-4o" ? "GPT-4o" : "GPT-5.2"} ·{" "}
+                    GPT-5.2 ·{" "}
                     {aiSpeed.toUpperCase()} · {reasoningLabel}
                   </button>
 
@@ -1030,17 +787,7 @@ export default function EditorClient() {
                       <div className="text-xs text-gray-400 mb-1.5">
                         AI Model
                       </div>
-                      <div className="grid grid-cols-2 gap-1 bg-black/20 p-1 rounded-lg">
-                        <button
-                          onClick={() => setAiModel("gpt-4o")}
-                          className={`text-xs py-1.5 rounded-md transition-colors ${
-                            aiModel === "gpt-4o"
-                              ? "bg-white/10 text-white"
-                              : "text-gray-500 hover:text-gray-300"
-                          }`}
-                        >
-                          GPT-4o
-                        </button>
+                      <div className="grid grid-cols-1 gap-1 bg-black/20 p-1 rounded-lg">
                         <button
                           onClick={() => setAiModel("gpt-5.2")}
                           className={`text-xs py-1.5 rounded-md transition-colors ${
@@ -1096,7 +843,7 @@ export default function EditorClient() {
                         ))}
                       </div>
                       <p className="mt-1 text-[11px] text-gray-500">
-                        Applies to GPT-5 models; ignored on GPT-4o.
+                        Applies to GPT-5 models.
                       </p>
                     </div>
                   </div>

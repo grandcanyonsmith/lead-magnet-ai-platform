@@ -39,9 +39,9 @@ export class CSSGenerationService {
     const {
       form_fields_schema,
       css_prompt,
-      model = "gpt-5",
       tenantId,
     } = request;
+    const model = "gpt-5.2";
 
     if (
       !form_fields_schema ||
@@ -74,19 +74,20 @@ export class CSSGenerationService {
         )
         .join("\n");
 
-      const prompt = `You are an expert CSS designer. Generate CSS styles for a form based on this description: "${css_prompt}"
+      const prompt = `You are a Senior UI/UX Designer specializing in CSS.
+Task: Generate professional, modern CSS for a form based on this description: "${css_prompt}"
 
 Form Fields:
 ${fieldsDescription}
 
-Requirements:
-1. Generate valid CSS only (no HTML, no markdown formatting)
-2. Style the form container, fields, labels, inputs, textareas, selects, and buttons
-3. Use modern, clean design principles
-4. Make it responsive and mobile-friendly
-5. Apply the requested styling from the description
+## Design Requirements
+1. **Modern Aesthetics**: Use subtle shadows, rounded corners (border-radius), and adequate whitespace (padding/margin).
+2. **Responsive**: Ensure full responsiveness for mobile devices (media queries).
+3. **Interactive**: Include \`:hover\` and \`:focus\` states for inputs and buttons.
+4. **Clean Code**: Generate valid, well-structured CSS.
+5. **Scope**: Style the container, fields, labels, inputs, and the submit button.
 
-Return ONLY the CSS code, no markdown formatting, no explanations.`;
+Return ONLY the CSS code. No Markdown code blocks.`;
 
       logger.info("[Form CSS Generation] Calling OpenAI for CSS generation", {
         model,
@@ -97,13 +98,11 @@ Return ONLY the CSS code, no markdown formatting, no explanations.`;
       const completionParams: any = {
         model,
         instructions:
-          "You are an expert CSS designer. Return only valid CSS code without markdown formatting.",
+          "You are a Senior UI/UX Designer. Return only valid CSS code without markdown formatting.",
         input: prompt,
+        reasoning: { effort: "high" },
+        service_tier: "priority",
       };
-      // GPT-5 only supports default temperature (1), don't set custom temperature
-      if (!model.startsWith("gpt-5")) {
-        completionParams.temperature = 0.7;
-      }
       const completion = await callResponsesWithTimeout(
         () => openai.responses.create(completionParams),
         "form CSS generation",
@@ -182,7 +181,8 @@ Return ONLY the CSS code, no markdown formatting, no explanations.`;
    * Refine existing CSS based on a prompt.
    */
   async refineCSS(request: CSSRefinementRequest): Promise<string> {
-    const { current_css, css_prompt, model = "gpt-5", tenantId } = request;
+    const { current_css, css_prompt, tenantId } = request;
+    const model = "gpt-5.2";
 
     if (!current_css || !current_css.trim()) {
       throw new ApiError("Current CSS is required", 400);
@@ -204,18 +204,16 @@ Return ONLY the CSS code, no markdown formatting, no explanations.`;
       const openai = await getOpenAIClient();
       logger.info("[Form CSS Refinement] OpenAI client initialized");
 
-      const prompt = `You are an expert CSS designer. Modify the following CSS based on these instructions: "${css_prompt}"
+      const prompt = `You are a Senior UI/UX Designer. Modify the following CSS based on these instructions: "${css_prompt}"
 
 Current CSS:
 ${current_css}
 
-Requirements:
-1. Apply the requested changes while maintaining valid CSS syntax
-2. Keep the overall structure unless specifically asked to change it
-3. Ensure the CSS remains well-organized and readable
-4. Return only the modified CSS code, no markdown formatting, no explanations
-
-Return ONLY the modified CSS code, no markdown formatting, no explanations.`;
+## Requirements
+1. **Precision**: Apply the requested changes while maintaining valid CSS syntax.
+2. **Consistency**: Keep the overall design language unless asked to change it.
+3. **Quality**: Ensure the resulting CSS is clean and readable.
+4. **Output**: Return ONLY the modified CSS code. No Markdown code blocks.`;
 
       logger.info("[Form CSS Refinement] Calling OpenAI for refinement", {
         model,
@@ -226,13 +224,11 @@ Return ONLY the modified CSS code, no markdown formatting, no explanations.`;
       const completionParams: any = {
         model,
         instructions:
-          "You are an expert CSS designer. Return only valid CSS code without markdown formatting.",
+          "You are a Senior UI/UX Designer. Return only valid CSS code without markdown formatting.",
         input: prompt,
+        reasoning: { effort: "high" },
+        service_tier: "priority",
       };
-      // GPT-5 only supports default temperature (1), don't set custom temperature
-      if (!model.startsWith("gpt-5")) {
-        completionParams.temperature = 0.7;
-      }
       const completion = await callResponsesWithTimeout(
         () => openai.responses.create(completionParams),
         "form CSS refinement",

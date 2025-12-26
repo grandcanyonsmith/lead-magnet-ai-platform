@@ -41,7 +41,7 @@ class FoldersController {
         tenant_id: tenantId,
         organization_name: "",
         contact_email: "",
-        default_ai_model: "gpt-5.1-codex",
+        default_ai_model: "gpt-5.2",
         api_usage_limit: 1000000,
         api_usage_current: 0,
         billing_tier: "free",

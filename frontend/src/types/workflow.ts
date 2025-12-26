@@ -11,7 +11,6 @@ export type AIModel =
   | "gpt-5.2"
   | "gpt-5"
   | "gpt-4.1"
-  | "gpt-4o"
   | "gpt-4-turbo"
   | "gpt-3.5-turbo"
   | "computer-use-preview"
