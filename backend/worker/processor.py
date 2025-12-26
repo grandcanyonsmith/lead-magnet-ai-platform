@@ -194,21 +194,35 @@ class JobProcessor:
         
         return execution_steps
     
-    def _add_form_submission_step(self, job_id: str, submission: Dict[str, Any], execution_steps: List[Dict[str, Any]]) -> None:
+    def _add_form_submission_step(self, job_id: str, submission: Dict[str, Any], form: Optional[Dict[str, Any]], execution_steps: List[Dict[str, Any]]) -> None:
         """
         Add form submission as the initial execution step.
         
         Args:
             job_id: The job ID
             submission: Submission dictionary
+            form: Optional form dictionary (used for label mapping)
             execution_steps: Execution steps list to update
         """
         submission_data = submission.get('submission_data', {})
+        
+        # Map fields if form is available to ensure labels are used in execution steps
+        if form:
+            try:
+                field_label_map = FieldLabelService.build_field_label_map(form)
+                submission_data = FieldLabelService.map_submission_data_keys(
+                    submission_data,
+                    field_label_map
+                )
+            except Exception as e:
+                logger.warning(f"[JobProcessor] Failed to map form submission labels: {e}")
+                # Continue with original submission_data
+        
         execution_steps.append(
             ExecutionStepManager.create_form_submission_step(submission_data)
         )
         self.db.update_job(job_id, {'execution_steps': execution_steps}, s3_service=self.s3)
-    
+
     def _validate_workflow_steps(self, workflow: Dict[str, Any]) -> None:
         """
         Validate that workflow has steps configured.
@@ -252,7 +266,7 @@ class JobProcessor:
             job, workflow, submission, form = self._load_job_data(job_id)
             
             # Add form submission as step 0
-            self._add_form_submission_step(job_id, submission, execution_steps)
+            self._add_form_submission_step(job_id, submission, form, execution_steps)
             
             # Validate workflow has steps
             self._validate_workflow_steps(workflow)
