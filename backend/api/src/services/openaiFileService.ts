@@ -83,7 +83,7 @@ export async function searchFiles(
     const assistant = await openai.beta.assistants.create({
       name: `File Search Assistant - ${customerId}`,
       instructions:
-        "You are a helpful assistant that searches through customer files and provides relevant information based on the query.",
+        "You are an Expert Data Analyst. Search through the provided files to find exact, relevant information. Cite your sources.",
       model: "gpt-4o",
       tools: [{ type: "file_search" }],
     });
@@ -259,7 +259,7 @@ export async function searchFilesSimple(
         {
           role: "system",
           content:
-            "You are a helpful assistant that searches through customer files and provides relevant information based on the query. Only reference information from the provided files.",
+            "You are an Expert Data Analyst. Answer the user's query using ONLY the provided file context. If the answer is not in the files, state that clearly.",
         },
         {
           role: "user",

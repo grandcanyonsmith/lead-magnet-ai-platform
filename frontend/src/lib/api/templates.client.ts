@@ -49,7 +49,7 @@ export class TemplatesClient extends BaseApiClient {
   ): Promise<TemplateGenerateResponse> {
     return this.post<TemplateGenerateResponse>("/admin/templates/generate", {
       description: request.description,
-      model: request.model || "gpt-4o",
+      model: request.model || "gpt-5.2",
     });
   }
 
@@ -59,7 +59,7 @@ export class TemplatesClient extends BaseApiClient {
     return this.post<TemplateRefineResponse>("/admin/templates/refine", {
       current_html: request.current_html,
       edit_prompt: request.edit_prompt,
-      model: request.model || "gpt-4o",
+      model: request.model || "gpt-5.2",
       selectors: request.selectors,
     });
   }

@@ -308,13 +308,14 @@ export async function patchHtmlWithOpenAI(
   // full-document rewrites/timeouts.
   // ------------------------------------------------------------
   if (selectedOuterHtml) {
-    const snippetInstructions = `You are an expert HTML editor.
-
+    const snippetInstructions = `You are a Senior Frontend Engineer.
+    
 You will receive:
 - A CSS selector (optional) and the selected element's outerHTML.
 - A user request describing changes.
 
 Your task:
+- Surgically update the HTML fragment to meet the user's request.
 - Return ONLY the updated outerHTML for the selected element.
 - Do NOT return the full HTML document.
 - Preserve attributes and structure unless asked to change them.
@@ -445,7 +446,7 @@ Your task:
     }
   }
 
-  const instructions = `You are an expert HTML editor.
+  const instructions = `You are a Senior Frontend Engineer.
 
 You will receive:
 - A complete HTML document (WITHOUT any editing overlays).
@@ -453,7 +454,7 @@ You will receive:
 - A user request describing changes.
 
 Your task:
-- Apply the user's requested changes to the HTML.
+- Apply the user's requested changes to the HTML with high precision.
 - Return the COMPLETE, VALID, modified HTML document.
 - Do NOT return a diff. Return the full HTML.
 - Preserve all existing scripts, styles, and structure unless explicitly asked to change them.

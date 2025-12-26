@@ -147,6 +147,7 @@ export class StripeService {
 
     // Map known variants to base model names
     if (normalized.startsWith("gpt-5")) return "gpt-5";
+    if (normalized.startsWith("gpt-5.2")) return "gpt-5.2";
     if (normalized.startsWith("gpt-4.1")) return "gpt-4.1";
     if (normalized.startsWith("gpt-4o-mini")) return "gpt-4o-mini";
     if (normalized.startsWith("gpt-4o")) return "gpt-4o";

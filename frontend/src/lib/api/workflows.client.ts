@@ -78,7 +78,7 @@ export class WorkflowsClient extends BaseApiClient {
       {
         current_instructions: request.current_instructions,
         edit_prompt: request.edit_prompt,
-        model: request.model || "gpt-4o",
+        model: request.model || "gpt-5.2",
       },
     );
   }
@@ -91,7 +91,7 @@ export class WorkflowsClient extends BaseApiClient {
       {
         current_instructions: request.current_instructions,
         edit_prompt: request.edit_prompt,
-        model: request.model || "gpt-4o",
+        model: request.model || "gpt-5.2",
       },
     );
   }

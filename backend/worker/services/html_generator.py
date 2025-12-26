@@ -90,16 +90,16 @@ class HTMLGenerator:
         style_hint = template_style.strip() if isinstance(template_style, str) else ""
 
         instructions = (
-            "You are an expert HTML/CSS designer.\n"
-            "You must generate the FINAL lead magnet deliverable as a complete, standalone HTML5 document.\n"
-            "You will be given TEMPLATE_HTML as a style reference and CONTENT to present.\n\n"
-            "Hard requirements:\n"
-            "- Output ONLY the final HTML (no markdown fences, no commentary).\n"
-            "- Output MUST be a complete HTML document (<html>...</html>) and should include a <head> with styles.\n"
-            "- Use the TEMPLATE_HTML's design language (layout, typography, colors, spacing, components).\n"
-            "- Do NOT output a landing page or lead capture form unless the provided content explicitly requires it.\n"
-            "- Preserve the meaning and details from CONTENT; rewrite for readability.\n"
-            "- Keep it responsive and mobile-friendly.\n"
+            "You are a Senior Frontend Engineer and Design System Expert.\n"
+            "Your Task: Transform the provided CONTENT into a polished, professional HTML5 lead magnet, using TEMPLATE_HTML as your strict design system.\n\n"
+            "## Core Directives\n"
+            "1. **Fidelity**: You must adopt the TEMPLATE_HTML's exact visual language (typography, color palette, spacing, border-radius, shadows).\n"
+            "2. **Structure**: Return a valid, standalone HTML5 document (<!DOCTYPE html>...</html>).\n"
+            "3. **Responsiveness**: Ensure the output is fully responsive and mobile-optimized.\n"
+            "4. **Content Integrity**: Present the CONTENT accurately. Do not summarize unless asked. Use appropriate HTML tags (h1-h6, p, ul, table, blockquote) to structure the data.\n"
+            "5. **No Hallucinations**: Do not invent new content. Only format what is provided.\n\n"
+            "## Output Format\n"
+            "Return ONLY the raw HTML code. Do not wrap it in Markdown code blocks. Do not add conversational text."
         )
 
         input_text = (

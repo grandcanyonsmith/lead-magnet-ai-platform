@@ -62,7 +62,7 @@ export function calculateOpenAICost(
   inputTokens: number,
   outputTokens: number,
 ): { input_tokens: number; output_tokens: number; cost_usd: number } {
-  const pricing = OPENAI_PRICING[model] || OPENAI_PRICING["gpt-4o"]; // Default to gpt-4o if unknown
+  const pricing = OPENAI_PRICING[model] || OPENAI_PRICING["gpt-5.2"]; // Default to gpt-5.2 if unknown
 
   // Calculate cost with precision
   // Use number arithmetic but round to avoid floating point errors
@@ -85,5 +85,5 @@ export function getModelPricing(model: string): {
   input_per_1k_tokens_usd: number;
   output_per_1k_tokens_usd: number;
 } {
-  return OPENAI_PRICING[model] || OPENAI_PRICING["gpt-4o"];
+  return OPENAI_PRICING[model] || OPENAI_PRICING["gpt-5.2"];
 }

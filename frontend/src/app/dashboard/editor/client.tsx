@@ -217,7 +217,7 @@ export default function EditorClient() {
   const [aiSpeed, setAiSpeed] = useState<AISpeed>("normal");
   const [aiReasoningEffort, setAiReasoningEffort] =
     useState<AIReasoningEffort>("medium");
-  const [aiModel, setAiModel] = useState<"gpt-4o" | "gpt-5.2">("gpt-4o");
+  const [aiModel, setAiModel] = useState<"gpt-5.2">("gpt-5.2");
   const [showAiSettings, setShowAiSettings] = useState(false);
 
   // Template / workflow context
@@ -989,7 +989,7 @@ export default function EditorClient() {
                     title="AI settings"
                   >
                     <FiZap className="w-3 h-3" />
-                    {aiModel === "gpt-4o" ? "GPT-4o" : "GPT-5.2"} ·{" "}
+                    GPT-5.2 ·{" "}
                     {aiSpeed.toUpperCase()} · {reasoningLabel}
                   </button>
 
@@ -1030,17 +1030,7 @@ export default function EditorClient() {
                       <div className="text-xs text-gray-400 mb-1.5">
                         AI Model
                       </div>
-                      <div className="grid grid-cols-2 gap-1 bg-black/20 p-1 rounded-lg">
-                        <button
-                          onClick={() => setAiModel("gpt-4o")}
-                          className={`text-xs py-1.5 rounded-md transition-colors ${
-                            aiModel === "gpt-4o"
-                              ? "bg-white/10 text-white"
-                              : "text-gray-500 hover:text-gray-300"
-                          }`}
-                        >
-                          GPT-4o
-                        </button>
+                      <div className="grid grid-cols-1 gap-1 bg-black/20 p-1 rounded-lg">
                         <button
                           onClick={() => setAiModel("gpt-5.2")}
                           className={`text-xs py-1.5 rounded-md transition-colors ${
@@ -1096,7 +1086,7 @@ export default function EditorClient() {
                         ))}
                       </div>
                       <p className="mt-1 text-[11px] text-gray-500">
-                        Applies to GPT-5 models; ignored on GPT-4o.
+                        Applies to GPT-5 models.
                       </p>
                     </div>
                   </div>
