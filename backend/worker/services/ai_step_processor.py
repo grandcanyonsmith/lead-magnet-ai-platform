@@ -54,7 +54,7 @@ class AIStepProcessor:
         step_tools: List[Dict[str, Any]],
         step_tool_choice: str,
         previous_image_urls: Optional[List[str]] = None
-    ) -> Tuple[str, Dict[str, Any], Dict[str, Any], Dict[str, Any], List[str]]:
+    ) -> Tuple[str, Dict[str, Any], Dict[str, Any], Dict[str, Any], List[str], str]:
         """
         Process an AI generation step.
         
@@ -71,15 +71,16 @@ class AIStepProcessor:
             previous_image_urls: Optional list of previous image URLs
             
         Returns:
-            Tuple of (step_output, usage_info, request_details, response_details, image_artifact_ids)
+            Tuple of (step_output, usage_info, request_details, response_details, image_artifact_ids, step_artifact_id)
         """
         step_name = step.get('step_name', f'Step {step_index + 1}')
         step_model = step.get('model', 'gpt-5.2')
-        # Force GPT family steps onto gpt-5.2 for highest quality/consistency.
-        if isinstance(step_model, str) and step_model.startswith('gpt-') and step_model != 'gpt-5.2':
+        # Force ALL steps onto gpt-5.2 for highest quality/consistency (platform-wide standard).
+        if step_model != 'gpt-5.2':
             step_model = 'gpt-5.2'
         step_instructions = step.get('instructions', '')
-        step_reasoning_effort = step.get('reasoning_effort')
+        # Force max reasoning for all steps (platform-wide standard).
+        step_reasoning_effort = 'high'
         
         logger.info(f"[AIStepProcessor] Processing AI step {step_index + 1}", extra={
             'job_id': job_id,

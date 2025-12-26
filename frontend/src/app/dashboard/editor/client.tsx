@@ -214,9 +214,9 @@ export default function EditorClient() {
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
 
   // AI Configuration
-  const [aiSpeed, setAiSpeed] = useState<AISpeed>("normal");
+  const [aiSpeed, setAiSpeed] = useState<AISpeed>("fast");
   const [aiReasoningEffort, setAiReasoningEffort] =
-    useState<AIReasoningEffort>("medium");
+    useState<AIReasoningEffort>("high");
   const [aiModel, setAiModel] = useState<"gpt-5.2">("gpt-5.2");
   const [showAiSettings, setShowAiSettings] = useState(false);
 
@@ -406,13 +406,24 @@ export default function EditorClient() {
   // Handle iframe messages
   useEffect(() => {
     const handleMessage = (e: MessageEvent) => {
-      if (e.data.type === "ELEMENT_SELECTED") {
-        setSelectedElement(e.data.selector);
+      // Only accept messages from our preview iframe.
+      // The HTML inside the iframe is untrusted and can postMessage arbitrarily.
+      if (e.source !== iframeRef.current?.contentWindow) return;
+
+      const data: any = e.data;
+      if (!data || typeof data !== "object") return;
+
+      if (data.type === "ELEMENT_SELECTED") {
+        const selector =
+          typeof data.selector === "string" ? (data.selector as string) : null;
+        if (!selector) return;
+
+        setSelectedElement(selector);
         setSelectedOuterHtml(
-          typeof e.data.outerHtml === "string" ? e.data.outerHtml : null,
+          typeof data.outerHtml === "string" ? (data.outerHtml as string) : null,
         );
         setIsSelectionMode(false); // Turn off after selection
-        toast.success(`Selected: ${e.data.selector}`, { icon: "🎯" });
+        toast.success(`Selected: ${selector}`, { icon: "🎯" });
       }
     };
     window.addEventListener("message", handleMessage);

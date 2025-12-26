@@ -35,7 +35,7 @@ export class WorkflowConfigService {
    */
   async generateWorkflowConfig(
     description: string,
-    model: string,
+    _model: string,
     tenantId: string,
     jobId?: string,
     brandContext?: string,
@@ -50,33 +50,23 @@ export class WorkflowConfigService {
     console.log('[Workflow Config Service] Calling OpenAI for workflow generation...');
     const workflowStartTime = Date.now();
     
-    // Respect the caller-provided model (API contract), while only applying
-    // reasoning/service_tier controls on models that support them.
+    // Force gpt-5.2 with max reasoning + priority tier for best quality and faster throughput.
     const workflowCompletionParams: any = {
-      model,
+      model: "gpt-5.2",
       instructions:
         'You are an expert AI Lead Magnet Architect. Return only valid JSON without markdown formatting.',
       input: workflowPrompt,
+      reasoning: { effort: "high" },
+      service_tier: "priority",
     };
-
-    const supportsReasoningAndTier =
-      typeof model === "string" &&
-      (model.startsWith("gpt-5") || model.startsWith("o"));
-
-    if (supportsReasoningAndTier) {
-      workflowCompletionParams.reasoning = { effort: "high" };
-      workflowCompletionParams.service_tier = "priority";
-    } else {
-      // Non GPT-5/o-series models typically use temperature and may reject reasoning/service_tier.
-      workflowCompletionParams.temperature = 0.7;
-    }
     const workflowCompletion = await callResponsesWithTimeout(
       () => this.openai.responses.create(workflowCompletionParams),
       'workflow generation'
     );
 
     const workflowDuration = Date.now() - workflowStartTime;
-    const workflowUsedModel = (workflowCompletion as any).model || model;
+    const workflowUsedModel =
+      (workflowCompletion as any).model || workflowCompletionParams.model;
     console.log('[Workflow Config Service] Workflow generation completed', {
       duration: `${workflowDuration}ms`,
       tokensUsed: workflowCompletion.usage?.total_tokens,

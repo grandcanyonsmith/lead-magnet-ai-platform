@@ -33,12 +33,13 @@ export class TemplateGenerationService {
    */
   async generateTemplateHTML(
     description: string,
-    model: string,
+    _model: string,
     tenantId: string,
     jobId?: string,
     brandContext?: string,
     icpContext?: string,
   ): Promise<{ htmlContent: string; usageInfo: UsageInfo }> {
+    const model = "gpt-5.2";
     let contextSection = "";
     if (brandContext) {
       contextSection += `\n\n## Brand Context\n${brandContext}`;
@@ -81,10 +82,9 @@ Return ONLY the raw HTML code. No Markdown code blocks.`;
       instructions:
         "You are an expert HTML template designer. Return only valid HTML code without markdown formatting.",
       input: templatePrompt,
+      reasoning: { effort: "high" },
+      service_tier: "priority",
     };
-    if (!model.startsWith("gpt-5")) {
-      templateCompletionParams.temperature = 0.7;
-    }
     const templateCompletion = await callResponsesWithTimeout(
       () => this.openai.responses.create(templateCompletionParams),
       "template HTML generation",
@@ -165,7 +165,7 @@ Return ONLY the raw HTML code. No Markdown code blocks.`;
    */
   async generateTemplateMetadata(
     description: string,
-    model: string,
+    _model: string,
     tenantId: string,
     jobId?: string,
     brandContext?: string,
@@ -175,6 +175,7 @@ Return ONLY the raw HTML code. No Markdown code blocks.`;
     templateDescription: string;
     usageInfo: UsageInfo;
   }> {
+    const model = "gpt-5.2";
     let contextSection = "";
     if (brandContext) {
       contextSection += `\n\n## Brand Context\n${brandContext}`;
@@ -197,10 +198,9 @@ Return JSON format: {"name": "...", "description": "..."}`;
     const templateNameCompletionParams: any = {
       model,
       input: templateNamePrompt,
+      reasoning: { effort: "high" },
+      service_tier: "priority",
     };
-    if (!model.startsWith("gpt-5")) {
-      templateNameCompletionParams.temperature = 0.5;
-    }
     const templateNameCompletion = await callResponsesWithTimeout(
       () => this.openai.responses.create(templateNameCompletionParams),
       "template name generation",

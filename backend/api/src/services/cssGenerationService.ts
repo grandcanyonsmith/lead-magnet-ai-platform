@@ -39,9 +39,9 @@ export class CSSGenerationService {
     const {
       form_fields_schema,
       css_prompt,
-      model = "gpt-5",
       tenantId,
     } = request;
+    const model = "gpt-5.2";
 
     if (
       !form_fields_schema ||
@@ -100,11 +100,9 @@ Return ONLY the CSS code. No Markdown code blocks.`;
         instructions:
           "You are a Senior UI/UX Designer. Return only valid CSS code without markdown formatting.",
         input: prompt,
+        reasoning: { effort: "high" },
+        service_tier: "priority",
       };
-      // GPT-5 only supports default temperature (1), don't set custom temperature
-      if (!model.startsWith("gpt-5")) {
-        completionParams.temperature = 0.7;
-      }
       const completion = await callResponsesWithTimeout(
         () => openai.responses.create(completionParams),
         "form CSS generation",
@@ -183,7 +181,8 @@ Return ONLY the CSS code. No Markdown code blocks.`;
    * Refine existing CSS based on a prompt.
    */
   async refineCSS(request: CSSRefinementRequest): Promise<string> {
-    const { current_css, css_prompt, model = "gpt-5", tenantId } = request;
+    const { current_css, css_prompt, tenantId } = request;
+    const model = "gpt-5.2";
 
     if (!current_css || !current_css.trim()) {
       throw new ApiError("Current CSS is required", 400);
@@ -227,11 +226,9 @@ ${current_css}
         instructions:
           "You are a Senior UI/UX Designer. Return only valid CSS code without markdown formatting.",
         input: prompt,
+        reasoning: { effort: "high" },
+        service_tier: "priority",
       };
-      // GPT-5 only supports default temperature (1), don't set custom temperature
-      if (!model.startsWith("gpt-5")) {
-        completionParams.temperature = 0.7;
-      }
       const completion = await callResponsesWithTimeout(
         () => openai.responses.create(completionParams),
         "form CSS refinement",

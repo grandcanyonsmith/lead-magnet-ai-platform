@@ -14,15 +14,7 @@ interface GeneralSettingsProps {
 }
 
 const AI_MODEL_OPTIONS = [
-  { value: "gpt-5.1-codex", label: "GPT-5.1 Codex" },
-  { value: "gpt-5", label: "GPT-5" },
-  { value: "gpt-5.1", label: "GPT-5.1" },
   { value: "gpt-5.2", label: "GPT-5.2" },
-  { value: "gpt-4.1", label: "GPT-4.1" },
-  { value: "gpt-4-turbo", label: "GPT-4 Turbo" },
-  { value: "gpt-3.5-turbo", label: "GPT-3.5 Turbo" },
-  { value: "computer-use-preview", label: "Computer Use Preview" },
-  { value: "o4-mini-deep-research", label: "O4-Mini-Deep-Research" },
 ];
 
 import { BuildingOfficeIcon } from "@heroicons/react/24/outline";
@@ -90,7 +82,7 @@ export function GeneralSettings({
             label="Preferred AI Brain"
             name="default_ai_model"
             type="text"
-            value={settings.default_ai_model || "gpt-5.1-codex"}
+            value={settings.default_ai_model || "gpt-5.2"}
             onChange={(value) => onChange("default_ai_model", value)}
             options={AI_MODEL_OPTIONS}
             helpText="Default AI model used for generating lead magnets"

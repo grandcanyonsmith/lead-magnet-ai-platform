@@ -7,6 +7,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { getOpenAIClient } from "./openaiService";
 import { env } from "../utils/env";
+import { stripMarkdownCodeFences } from "../utils/openaiHelpers";
 
 const ARTIFACTS_BUCKET = env.artifactsBucket;
 const s3Client = new S3Client({ region: env.awsRegion });
@@ -320,19 +321,18 @@ User Request: ${userPrompt}
 
 Please generate the edited output based on the user's request. Return only the edited output, maintaining the same format as the original.`;
 
-      // Call OpenAI
-      const completion = await openai.chat.completions.create({
+      // Call OpenAI (Responses API)
+      const completion = await (openai as any).responses.create({
         model: "gpt-5.2",
-        reasoning_effort: "high",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userMessage },
-        ],
-        // temperature: 0.7, // reasoning_effort replaces temperature
-        // max_tokens: 4000,
-      } as any); // Cast to any to bypass type checks if SDK types are outdated for gpt-5.2 params
+        instructions: systemPrompt,
+        input: userMessage,
+        reasoning: { effort: "high" },
+        service_tier: "priority",
+      });
 
-      const editedOutput = completion.choices[0]?.message?.content;
+      const editedOutput = stripMarkdownCodeFences(
+        String((completion as any)?.output_text || ""),
+      ).trim();
       if (!editedOutput) {
         throw new Error("No response from OpenAI");
       }

@@ -20,6 +20,19 @@ from datetime import datetime
 import boto3
 from ulid import new as ulid
 
+# NOTE:
+# This file is intended to be run manually (see Usage above). It depends on real AWS resources
+# and makes live HTTP requests, so it should NOT run as part of the unit-test suite.
+# When imported/collected by pytest, we skip the entire module. When executed as a script,
+# __name__ == "__main__" and the skip is not applied.
+if __name__ != "__main__":
+    import pytest
+
+    pytest.skip(
+        "Integration script (requires AWS/network). Run manually: python test_webhook_artifacts.py [job_id]",
+        allow_module_level=True,
+    )
+
 # Add the worker directory to Python path so imports work
 worker_dir = Path(__file__).parent
 sys.path.insert(0, str(worker_dir))

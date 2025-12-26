@@ -55,7 +55,7 @@ export class WorkflowsClient extends BaseApiClient {
       "/admin/workflows/generate-with-ai",
       {
         description: request.description,
-        model: request.model || "gpt-5.1-codex",
+        model: request.model || "gpt-5.2",
         webhook_url: request.webhook_url,
       },
     );

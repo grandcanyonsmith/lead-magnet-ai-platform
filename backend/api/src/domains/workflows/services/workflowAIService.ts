@@ -36,10 +36,6 @@ export interface WorkflowAIEditResponse {
 
 const AVAILABLE_MODELS = [
   'gpt-5.2',
-  'gpt-5.1',
-  'gpt-5',
-  'gpt-4o-mini',
-  'o4-mini-deep-research',
 ];
 
 const AVAILABLE_TOOLS = [
@@ -67,7 +63,7 @@ ${AVAILABLE_MODELS.join(', ')}
 ## Modification Guidelines
 
 1. **Understand Intent**:
-   - "Make it better" -> Improve instructions, upgrade models to GPT-5.2/o4, add research steps.
+   - "Make it better" -> Improve instructions, ensure all steps use GPT-5.2, add research steps.
    - "Fix the error" -> Analyze the execution history (if provided) and adjust instructions or tools.
    - "Add X" -> Insert the step logically, updating \`depends_on\` for subsequent steps.
 
@@ -246,8 +242,10 @@ Please generate the updated workflow configuration with all necessary changes.`;
 
         // Validate model
         if (!AVAILABLE_MODELS.includes(step.model)) {
-          logger.warn(`[WorkflowAI] Invalid model ${step.model}, defaulting to gpt-5`);
-          step.model = 'gpt-5';
+          logger.warn(
+            `[WorkflowAI] Invalid model ${step.model}, defaulting to gpt-5.2`,
+          );
+          step.model = 'gpt-5.2';
         }
 
         // Validate and sanitize tools
