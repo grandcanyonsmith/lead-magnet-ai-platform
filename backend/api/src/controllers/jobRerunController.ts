@@ -138,53 +138,53 @@ export class JobRerunController {
           },
         );
 
-        try {
-          const { stdout, stderr } = await execAsync(command, {
-            cwd: workerDir,
-            env: {
-              ...process.env,
-              JOB_ID: jobId,
-              STEP_INDEX: stepIndex.toString(),
-              CONTINUE_AFTER: continueAfter ? "true" : "false",
-            },
-            timeout: 1800000, // 30 minute timeout
-            maxBuffer: 50 * 1024 * 1024, // 50MB buffer
+        // Fire and forget - don't await completion to avoid API timeout
+        // This mimics Step Functions behavior (async execution)
+        execAsync(command, {
+          cwd: workerDir,
+          env: {
+            ...process.env,
+            JOB_ID: jobId,
+            STEP_INDEX: stepIndex.toString(),
+            CONTINUE_AFTER: continueAfter ? "true" : "false",
+          },
+          timeout: 1800000, // 30 minute timeout
+          maxBuffer: 50 * 1024 * 1024, // 50MB buffer
+        })
+          .then(({ stdout, stderr }) => {
+            logger.info("[Job Rerun Controller] Step rerun completed", {
+              jobId,
+              stepIndex,
+              stdout,
+              stderr,
+            });
+          })
+          .catch((execError: any) => {
+            const errorMessage = execError.message || "Unknown error";
+            const stderrOutput = execError.stderr || "";
+            const stdoutOutput = execError.stdout || "";
+
+            logger.error("[Job Rerun Controller] Worker execution failed", {
+              jobId,
+              stepIndex,
+              error: errorMessage,
+              stderr: stderrOutput,
+              stdout: stdoutOutput,
+              code: execError.code,
+              signal: execError.signal,
+            });
           });
 
-          logger.info("[Job Rerun Controller] Step rerun completed", {
-            jobId,
-            stepIndex,
-            stdout,
-            stderr,
-          });
-
-          return {
-            statusCode: 200,
-            body: {
-              message: continueAfter
-                ? "Step rerun and continue initiated"
-                : "Step rerun initiated",
-              job_id: jobId,
-              step_index: stepIndex,
-            },
-          };
-        } catch (execError: any) {
-          const errorMessage = execError.message || "Unknown error";
-          const stderrOutput = execError.stderr || "";
-          const stdoutOutput = execError.stdout || "";
-
-          logger.error("[Job Rerun Controller] Worker execution failed", {
-            jobId,
-            stepIndex,
-            error: errorMessage,
-            stderr: stderrOutput,
-            stdout: stdoutOutput,
-            code: execError.code,
-            signal: execError.signal,
-          });
-
-          throw new ApiError(`Failed to rerun step: ${errorMessage}`, 500);
-        }
+        return {
+          statusCode: 200,
+          body: {
+            message: continueAfter
+              ? "Step rerun and continue initiated"
+              : "Step rerun initiated",
+            job_id: jobId,
+            step_index: stepIndex,
+          },
+        };
       } else {
         // Determine action based on continueAfter flag
         const action = continueAfter
