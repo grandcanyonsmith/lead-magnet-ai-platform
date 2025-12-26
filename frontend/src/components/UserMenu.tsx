@@ -12,7 +12,7 @@ import {
 } from "react-icons/fi";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth/context";
-import { signOut } from "@/lib/auth";
+import { authService } from "@/lib/auth";
 import { useJobFiltersContext } from "@/contexts/JobFiltersContext";
 
 export const UserMenu: React.FC = () => {
@@ -45,7 +45,7 @@ export const UserMenu: React.FC = () => {
   }, [isOpen]);
 
   const handleSignOut = () => {
-    signOut();
+    authService.signOut();
     router.push("/auth/login");
     setIsOpen(false);
   };

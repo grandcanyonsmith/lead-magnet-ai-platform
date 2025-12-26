@@ -1,7 +1,7 @@
 import { logger } from '@utils/logger';
 import { ValidationError } from '@utils/errors';
 import { isArray, isString, validateWorkflowSteps as baseValidateWorkflowSteps } from '@utils/validators';
-import { WorkflowStep, ToolConfig, LegacyWorkflowData } from '@utils/types';
+import { WorkflowStep, ToolConfig } from '@utils/types';
 
 export interface ParsedWorkflowConfig {
   workflow_name: string;
@@ -25,7 +25,6 @@ interface RawWorkflowData {
   workflow_name?: string;
   workflow_description?: string;
   steps?: RawStep[];
-  research_instructions?: string;
   [key: string]: unknown;
 }
 
@@ -56,14 +55,6 @@ export function parseWorkflowConfig(content: string, description: string): Parse
       };
     }
 
-    if (isString(parsed.research_instructions)) {
-      return {
-        workflow_name: isString(parsed.workflow_name) ? parsed.workflow_name : 'Generated Lead Magnet',
-        workflow_description: isString(parsed.workflow_description) ? parsed.workflow_description : description,
-        steps: createLegacySteps(parsed.research_instructions),
-      };
-    }
-
     const defaultConfig = getDefaultConfig(description);
     return {
       ...defaultConfig,
@@ -86,7 +77,7 @@ function getDefaultConfig(description: string): ParsedWorkflowConfig {
       {
         step_name: 'Deep Research',
         step_description: 'Generate comprehensive research report',
-        model: 'gpt-5',
+        model: 'gpt-5.2',
         instructions: 'Generate a personalized report based on form submission data. Use [field_name] to reference form fields.',
         step_order: 0,
         depends_on: [],
@@ -96,7 +87,7 @@ function getDefaultConfig(description: string): ParsedWorkflowConfig {
       {
         step_name: 'HTML Rewrite',
         step_description: 'Rewrite content into styled HTML matching template',
-        model: 'gpt-5',
+        model: 'gpt-5.2',
         instructions: "Rewrite the research content into styled HTML matching the provided template. Ensure the output is complete, valid HTML that matches the template's design and structure.",
         step_order: 1,
         depends_on: [0],
@@ -108,7 +99,7 @@ function getDefaultConfig(description: string): ParsedWorkflowConfig {
 }
 
 function normalizeStep(step: RawStep, index: number): WorkflowStep {
-  const model = isString(step.model) && step.model.trim().length > 0 ? step.model : 'gpt-5';
+  const model = isString(step.model) && step.model.trim().length > 0 ? step.model : 'gpt-5.2';
   const shouldAddDefaultWebSearch = index === 0 && model !== 'o4-mini-deep-research';
 
   const tools: (string | ToolConfig)[] = isArray(step.tools)
@@ -134,31 +125,6 @@ function normalizeStep(step: RawStep, index: number): WorkflowStep {
     tools: tools.length > 0 ? tools : undefined,
     tool_choice: toolChoice,
   };
-}
-
-function createLegacySteps(researchInstructions: string): WorkflowStep[] {
-  return [
-    {
-      step_name: 'Deep Research',
-      step_description: 'Generate comprehensive research report',
-      model: 'gpt-5',
-      instructions: researchInstructions,
-      step_order: 0,
-      depends_on: [],
-      tools: ['web_search'],
-      tool_choice: 'auto',
-    },
-    {
-      step_name: 'HTML Rewrite',
-      step_description: 'Rewrite content into styled HTML matching template',
-      model: 'gpt-5',
-      instructions: "Rewrite the research content into styled HTML matching the provided template. Ensure the output is complete, valid HTML that matches the template's design and structure.",
-      step_order: 1,
-      depends_on: [0],
-      tools: [],
-      tool_choice: 'none',
-    },
-  ];
 }
 
 export function ensureStepDefaults(steps: WorkflowStep[]): WorkflowStep[] {
@@ -232,76 +198,9 @@ export function ensureStepDefaults(steps: WorkflowStep[]): WorkflowStep[] {
   });
 }
 
-export function migrateLegacyWorkflowToSteps(workflowData: LegacyWorkflowData): WorkflowStep[] {
-  const steps: WorkflowStep[] = [];
-
-  if (workflowData.research_enabled && workflowData.ai_instructions) {
-    steps.push({
-      step_name: 'Deep Research',
-      step_description: 'Generate comprehensive research report',
-      model: workflowData.ai_model || 'gpt-5',
-      instructions: workflowData.ai_instructions,
-      step_order: 0,
-      tools: ['web_search'],
-      tool_choice: 'auto',
-    });
-  }
-
-  if (workflowData.html_enabled) {
-    steps.push({
-      step_name: 'HTML Rewrite',
-      step_description: 'Rewrite content into styled HTML matching template',
-      model: workflowData.rewrite_model || 'gpt-5',
-      instructions:
-        'Rewrite the research content into styled HTML matching the provided template. Ensure the output is complete, valid HTML that matches the template\'s design and structure.',
-      step_order: steps.length,
-      tools: [],
-      tool_choice: 'none',
-    });
-  }
-
-  return steps;
-}
-
-export function migrateLegacyWorkflowOnUpdate(updateData: LegacyWorkflowData, existingWorkflow: LegacyWorkflowData): WorkflowStep[] {
-  const steps: WorkflowStep[] = [];
-  const researchEnabled = updateData.research_enabled !== undefined ? updateData.research_enabled : existingWorkflow.research_enabled;
-  const htmlEnabled = updateData.html_enabled !== undefined ? updateData.html_enabled : existingWorkflow.html_enabled;
-  const aiInstructions = updateData.ai_instructions || existingWorkflow.ai_instructions;
-
-  if (researchEnabled && aiInstructions) {
-    steps.push({
-      step_name: 'Deep Research',
-      step_description: 'Generate comprehensive research report',
-      model: updateData.ai_model || existingWorkflow.ai_model || 'gpt-5',
-      instructions: aiInstructions,
-      step_order: 0,
-      tools: ['web_search'],
-      tool_choice: 'auto',
-    });
-  }
-
-  if (htmlEnabled) {
-    steps.push({
-      step_name: 'HTML Rewrite',
-      step_description: 'Rewrite content into styled HTML matching template',
-      model: updateData.rewrite_model || existingWorkflow.rewrite_model || 'gpt-5',
-      instructions:
-        'Rewrite the research content into styled HTML matching the provided template. Ensure the output is complete, valid HTML that matches the template\'s design and structure.',
-      step_order: steps.length,
-      tools: [],
-      tool_choice: 'none',
-    });
-  }
-
-  return steps;
-}
-
 export const workflowConfigSupport = {
   parseWorkflowConfig,
   ensureStepDefaults,
-  migrateLegacyWorkflowToSteps,
-  migrateLegacyWorkflowOnUpdate,
 };
 
 export type WorkflowConfigSupport = typeof workflowConfigSupport;

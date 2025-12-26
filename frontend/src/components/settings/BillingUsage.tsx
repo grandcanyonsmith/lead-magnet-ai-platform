@@ -21,7 +21,7 @@ import { ServiceUsage } from "@/types/usage";
 import { UsageCharts } from "./UsageCharts";
 import { ExportButton } from "./ExportButton";
 import { BillingClient, SubscriptionInfo } from "@/lib/api/billing.client";
-import { getIdToken } from "@/lib/auth";
+import { authService } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
@@ -50,7 +50,7 @@ export function BillingUsage() {
   useEffect(() => {
     const loadSubscription = async () => {
       try {
-        const token = await getIdToken();
+        const token = await authService.getIdToken();
         if (!token) return;
 
         const billingClient = new BillingClient({
@@ -77,7 +77,7 @@ export function BillingUsage() {
   const handleManageSubscription = async () => {
     setPortalLoading(true);
     try {
-      const token = await getIdToken();
+      const token = await authService.getIdToken();
       if (!token) {
         throw new Error("Not authenticated");
       }

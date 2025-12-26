@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { isAuthenticated } from "@/lib/auth";
+import { authService } from "@/lib/auth";
 import { logger } from "@/utils/logger";
 
 export default function Home() {
@@ -20,7 +20,7 @@ export default function Home() {
     }
 
     try {
-      const authenticated = await isAuthenticated();
+      const authenticated = await authService.isAuthenticated();
       if (authenticated) {
         router.push("/dashboard");
       } else {

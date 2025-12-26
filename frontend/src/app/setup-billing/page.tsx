@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { isAuthenticated } from "@/lib/auth";
+import { authService } from "@/lib/auth";
 import { BillingClient } from "@/lib/api/billing.client";
 import { FiCheck, FiDollarSign, FiZap } from "react-icons/fi";
-import { getIdToken } from "@/lib/auth";
+
 
 export default function SetupBillingPage() {
   const router = useRouter();
@@ -15,7 +15,7 @@ export default function SetupBillingPage() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const authenticated = await isAuthenticated();
+      const authenticated = await authService.isAuthenticated();
       if (!authenticated) {
         router.push("/auth/login?redirect=/setup-billing");
         return;
@@ -30,7 +30,7 @@ export default function SetupBillingPage() {
     setError("");
 
     try {
-      const token = await getIdToken();
+      const token = await authService.getIdToken();
       if (!token) {
         throw new Error("Not authenticated");
       }

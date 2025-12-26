@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { forgotPassword, confirmForgotPassword } from "@/lib/auth";
+import { authService } from "@/lib/auth";
 import { logger } from "@/utils/logger";
 
 type Step = "request" | "confirm";
@@ -24,7 +24,7 @@ export default function ForgotPasswordPage() {
 
     const trimmedEmail = email.trim();
     try {
-      const result = await forgotPassword(trimmedEmail);
+      const result = await authService.forgotPassword(trimmedEmail);
       if (result.success) {
         setStep("confirm");
         setMessage("Verification code sent. Check your email.");
@@ -55,7 +55,7 @@ export default function ForgotPasswordPage() {
     const trimmedPassword = newPassword.trim();
 
     try {
-      const result = await confirmForgotPassword(
+      const result = await authService.confirmForgotPassword(
         trimmedEmail,
         trimmedCode,
         trimmedPassword,

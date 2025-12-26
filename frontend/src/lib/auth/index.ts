@@ -1,24 +1,12 @@
 /**
- * Backward compatibility exports for auth module
- * Re-exports from the new refactored auth structure
+ * Auth module exports
  */
 
-// Re-export service functions for backward compatibility
+// Export service functions
 export { authService } from "./service";
-export {
-  signIn,
-  signUp,
-  forgotPassword,
-  confirmForgotPassword,
-  signOut,
-  getCurrentUser,
-  getSession,
-  isAuthenticated,
-  getIdToken,
-} from "./legacy";
 
-// Re-export types
+// Export types
 export type { AuthResponse, AuthUser } from "@/types/auth";
 
-// Re-export new components
+// Export components and hooks
 export { AuthProvider, useAuth } from "./context";
