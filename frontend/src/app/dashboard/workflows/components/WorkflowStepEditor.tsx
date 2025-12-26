@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { FiTrash2, FiChevronUp, FiChevronDown } from "react-icons/fi";
+import { FiTrash2, FiChevronUp, FiChevronDown, FiGlobe } from "react-icons/fi";
 import { useWorkflowStepAI } from "@/hooks/useWorkflowStepAI";
 import {
   WorkflowStep,
@@ -10,6 +10,7 @@ import {
   ImageGenerationToolConfig,
 } from "@/types/workflow";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
+import { CollapsibleSection } from "@/components/workflows/edit/CollapsibleSection";
 
 import AIAssist from "./step-editor/AIAssist";
 import WebhookConfig from "./step-editor/WebhookConfig";
@@ -122,6 +123,8 @@ export default function WorkflowStepEditor({
       background: "auto",
       input_fidelity: undefined,
     });
+  
+  const [isWebhookCollapsed, setIsWebhookCollapsed] = useState(true);
 
   // Track if we've already converted string tools to objects to prevent infinite loops
   const hasConvertedToolsRef = useRef<boolean>(false);
@@ -134,11 +137,7 @@ export default function WorkflowStepEditor({
     // Reset conversion tracking when step prop changes (new step or step updated externally)
     hasConvertedToolsRef.current = false;
 
-    // Preserve webhook step type if webhook_url exists but step_type is missing
     const stepWithType = { ...step };
-    if (!stepWithType.step_type && stepWithType.webhook_url) {
-      stepWithType.step_type = "webhook";
-    }
     // Force GPT-5.2 as the only supported model.
     stepWithType.model = "gpt-5.2";
     stepWithType.reasoning_effort = "high";
@@ -567,205 +566,148 @@ export default function WorkflowStepEditor({
           <div>
             <label
               className="block text-sm font-medium text-gray-700 mb-1"
-              htmlFor={`step-type-${index}`}
+              htmlFor={`ai-model-${index}`}
             >
-              Action Type *
+              AI Brain *
             </label>
             <select
-              id={`step-type-${index}`}
-              value={
-                localStep.step_type ||
-                (localStep.webhook_url ? "webhook" : "ai_generation")
-              }
-              onChange={(e) => {
-                const newStepType = e.target.value as "ai_generation" | "webhook";
-                if (newStepType === "webhook") {
-                  const updated = {
-                    ...localStep,
-                    step_type: newStepType,
-                    webhook_url: localStep.webhook_url || "",
-                    webhook_method: localStep.webhook_method || "POST",
-                    webhook_query_params: localStep.webhook_query_params || {},
-                    webhook_content_type:
-                      localStep.webhook_content_type || "application/json",
-                    webhook_body_mode: localStep.webhook_body_mode || "auto",
-                    webhook_body: localStep.webhook_body || "",
-                    webhook_save_response:
-                      localStep.webhook_save_response !== undefined
-                        ? localStep.webhook_save_response
-                        : true,
-                    webhook_data_selection:
-                      localStep.webhook_data_selection || {
-                        include_submission: true,
-                        exclude_step_indices: [],
-                        include_job_info: true,
-                      },
-                  };
-                  setLocalStep(updated);
-                  onChange(index, updated);
-                } else {
-                  const updated = { ...localStep, step_type: newStepType };
-                  setLocalStep(updated);
-                  onChange(index, updated);
-                }
-              }}
+              id={`ai-model-${index}`}
+              value={localStep.model}
+              onChange={(e) => handleChange("model", e.target.value as AIModel)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-              aria-label="Action type"
+              required
+              aria-label="AI model"
               aria-required="true"
             >
-              <option value="ai_generation">Generate Content (AI)</option>
-              <option value="webhook">Send Webhook / API Request</option>
+              {MODEL_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
           </div>
 
-          {/* AI Generation Step Fields */}
-          {(localStep.step_type === "ai_generation" ||
-            (!localStep.step_type && !localStep.webhook_url)) && (
-            <>
-              <div>
+          <div>
+            <label
+              className="block text-sm font-medium text-gray-700 mb-1"
+              htmlFor={`reasoning-effort-${index}`}
+            >
+              Thinking Power
+            </label>
+            <select
+              id={`reasoning-effort-${index}`}
+              value={localStep.reasoning_effort || ""}
+              onChange={(e) =>
+                handleChange("reasoning_effort", e.target.value || undefined)
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              aria-label="Reasoning effort"
+            >
+              <option value="">Standard</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+            <p className="mt-1 text-sm text-gray-500">
+              Optional. Controls how much the AI thinks before answering.
+            </p>
+          </div>
+
+          <div>
+            <label
+              className="block text-sm font-medium text-gray-700 mb-1"
+              htmlFor={`instructions-${index}`}
+            >
+              Instructions *
+            </label>
+            <textarea
+              id={`instructions-${index}`}
+              value={localStep.instructions}
+              onChange={(e) => handleChange("instructions", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              placeholder="Detailed instructions for what this step should do..."
+              rows={6}
+              required
+              aria-label="Step instructions"
+              aria-required="true"
+            />
+            <p className="mt-1 text-sm text-gray-500">
+              These instructions will be passed to the AI model along with
+              context from previous steps.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Capabilities
+            </label>
+            <div className="space-y-2 mb-3">
+              {AVAILABLE_TOOLS.map((tool) => (
                 <label
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                  htmlFor={`ai-model-${index}`}
+                  key={tool.value}
+                  className="flex items-start space-x-2 cursor-pointer"
                 >
-                  AI Brain *
-                </label>
-                <select
-                  id={`ai-model-${index}`}
-                  value={localStep.model}
-                  onChange={(e) => handleChange("model", e.target.value as AIModel)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  required
-                  aria-label="AI model"
-                  aria-required="true"
-                >
-                  {MODEL_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                  htmlFor={`reasoning-effort-${index}`}
-                >
-                  Thinking Power
-                </label>
-                <select
-                  id={`reasoning-effort-${index}`}
-                  value={localStep.reasoning_effort || ""}
-                  onChange={(e) =>
-                    handleChange("reasoning_effort", e.target.value || undefined)
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  aria-label="Reasoning effort"
-                >
-                  <option value="">Standard</option>
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                </select>
-                <p className="mt-1 text-sm text-gray-500">
-                  Optional. Controls how much the AI thinks before answering.
-                </p>
-              </div>
-
-              <div>
-                <label
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                  htmlFor={`instructions-${index}`}
-                >
-                  Instructions *
-                </label>
-                <textarea
-                  id={`instructions-${index}`}
-                  value={localStep.instructions}
-                  onChange={(e) => handleChange("instructions", e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  placeholder="Detailed instructions for what this step should do..."
-                  rows={6}
-                  required
-                  aria-label="Step instructions"
-                  aria-required="true"
-                />
-                <p className="mt-1 text-sm text-gray-500">
-                  These instructions will be passed to the AI model along with
-                  context from previous steps.
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Capabilities
-                </label>
-                <div className="space-y-2 mb-3">
-                  {AVAILABLE_TOOLS.map((tool) => (
-                    <label
-                      key={tool.value}
-                      className="flex items-start space-x-2 cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isToolSelected(tool.value)}
-                        onChange={() => handleToolToggle(tool.value)}
-                        className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                      />
-                      <div>
-                        <span className="text-sm font-medium text-gray-900">
-                          {tool.label}
-                        </span>
-                        <p className="text-xs text-gray-500">{tool.description}</p>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-
-                {isToolSelected("computer_use_preview") && (
-                  <ComputerUseConfig
-                    config={computerUseConfig}
-                    onChange={handleComputerUseConfigChange}
-                    index={index}
+                  <input
+                    type="checkbox"
+                    checked={isToolSelected(tool.value)}
+                    onChange={() => handleToolToggle(tool.value)}
+                    className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                   />
-                )}
-
-                {isToolSelected("image_generation") && (
-                  <ImageGenerationConfig
-                    config={imageGenerationConfig}
-                    onChange={(field, value) =>
-                      handleImageGenerationConfigChange(field, value)
-                    }
-                  />
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tool Choice
+                  <div>
+                    <span className="text-sm font-medium text-gray-900">
+                      {tool.label}
+                    </span>
+                    <p className="text-xs text-gray-500">{tool.description}</p>
+                  </div>
                 </label>
-                <select
-                  value={localStep.tool_choice || "auto"}
-                  onChange={(e) =>
-                    handleChange(
-                      "tool_choice",
-                      e.target.value as "auto" | "required" | "none",
-                    )
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                >
-                  {TOOL_CHOICE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label} - {option.description}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </>
-          )}
+              ))}
+            </div>
 
-          {/* Webhook Step Fields */}
-          {localStep.step_type === "webhook" && (
+            {isToolSelected("computer_use_preview") && (
+              <ComputerUseConfig
+                config={computerUseConfig}
+                onChange={handleComputerUseConfigChange}
+                index={index}
+              />
+            )}
+
+            {isToolSelected("image_generation") && (
+              <ImageGenerationConfig
+                config={imageGenerationConfig}
+                onChange={(field, value) =>
+                  handleImageGenerationConfigChange(field, value)
+                }
+              />
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Tool Choice
+            </label>
+            <select
+              value={localStep.tool_choice || "auto"}
+              onChange={(e) =>
+                handleChange(
+                  "tool_choice",
+                  e.target.value as "auto" | "required" | "none",
+                )
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            >
+              {TOOL_CHOICE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label} - {option.description}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <CollapsibleSection
+            title="Webhook / API Request"
+            isCollapsed={isWebhookCollapsed}
+            onToggle={() => setIsWebhookCollapsed(!isWebhookCollapsed)}
+          >
             <WebhookConfig
               step={localStep}
               index={index}
@@ -773,7 +715,7 @@ export default function WorkflowStepEditor({
               workflowId={workflowId}
               onChange={handleChange}
             />
-          )}
+          </CollapsibleSection>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">

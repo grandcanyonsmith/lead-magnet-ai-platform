@@ -9,10 +9,10 @@ export const workflowStepSchema = z
     step_type: z
       .enum(["ai_generation", "webhook"])
       .optional()
-      .default("ai_generation"),
-    model: z.string().min(1).optional(), // Optional for webhook steps
-    reasoning_effort: z.enum(["low", "medium", "high"]).optional(),
-    instructions: z.string().min(1).optional(), // Optional for webhook steps
+      .describe("Deprecated: All steps are now generic steps"),
+    model: z.string().min(1).optional().default("gpt-5.2"),
+    reasoning_effort: z.enum(["low", "medium", "high"]).optional().default("high"),
+    instructions: z.string().optional().default(""), 
     step_order: z.number().int().min(0).optional(),
     depends_on: z.array(z.number().int().min(0)).optional(), // Array of step indices this step depends on
     tools: z
