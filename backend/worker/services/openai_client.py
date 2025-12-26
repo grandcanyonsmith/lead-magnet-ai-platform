@@ -334,7 +334,7 @@ class OpenAIClient:
             if tool_choice != "none":
                 params["tool_choice"] = tool_choice
 
-        # Reasoning + speed controls (Responses API)
+        # Reasoning + speed controls (Responses API) 
         # Map deprecated reasoning_level to reasoning_effort if provided
         if reasoning_level and not reasoning_effort:
             reasoning_effort = reasoning_level

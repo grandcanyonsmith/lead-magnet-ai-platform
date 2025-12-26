@@ -118,6 +118,9 @@ class StepProcessor:
         
         # Regular AI generation step
         step_model = step.get('model', 'gpt-5.2')
+        # Force GPT family steps onto gpt-5.2 for highest quality/consistency.
+        if isinstance(step_model, str) and step_model.startswith('gpt-') and step_model != 'gpt-5.2':
+            step_model = 'gpt-5.2'
         
         # CRITICAL: Reload execution_steps from S3 to ensure we have all previous steps
         # This prevents overwriting S3 with a stale execution_steps list that might be missing
@@ -703,6 +706,9 @@ class StepProcessor:
         
         # Regular AI generation step
         step_model = step.get('model', 'gpt-5.2')
+        # Force GPT family steps onto gpt-5.2 for highest quality/consistency.
+        if isinstance(step_model, str) and step_model.startswith('gpt-') and step_model != 'gpt-5.2':
+            step_model = 'gpt-5.2'
         step_instructions = step.get('instructions', '')
         
         # Reload execution_steps from database/S3 to ensure we have the latest data
@@ -789,6 +795,9 @@ class StepProcessor:
         # Extract tools and tool_choice from step config
         # Do NOT auto-add web_search for o4-mini-deep-research model
         step_model = step.get('model', 'gpt-5.2')
+        # Force GPT family steps onto gpt-5.2 for highest quality/consistency.
+        if isinstance(step_model, str) and step_model.startswith('gpt-') and step_model != 'gpt-5.2':
+            step_model = 'gpt-5.2'
         default_tools = [] if step_model == 'o4-mini-deep-research' else ['web_search']
         step_tools_raw = step.get('tools', default_tools)
         # Convert string tools to objects, with special handling for image_generation
