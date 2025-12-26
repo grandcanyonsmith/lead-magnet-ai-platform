@@ -241,7 +241,7 @@ export class WorkflowAIController {
     });
 
     // ---------------------------------------------------------
-    // CONTEXT GATHERING
+    // CONTEXT GATHERING (Parallelized)
     // ---------------------------------------------------------
     let executionHistory: any = undefined;
     const referenceExamples: any[] = [];
@@ -276,98 +276,134 @@ export class WorkflowAIController {
       return null;
     };
 
-    if (contextJobId) {
+    // Promise for Context Job
+    const contextJobPromise = (async () => {
+      if (!contextJobId) return;
+
       try {
         const job = await db.get(JOBS_TABLE, { job_id: contextJobId });
         if (job && job.tenant_id === tenantId) {
-          executionHistory = {};
+          const history: any = {};
 
-          // 1. Fetch Submission Data (Inputs)
-          if (job.submission_id) {
-            const submission = await db.get(SUBMISSIONS_TABLE, { submission_id: job.submission_id });
-            if (submission) {
-              executionHistory.submissionData = submission.submission_data;
-            }
-          }
+          // Parallelize sub-fetches for the context job
+          const submissionPromise = job.submission_id
+            ? db.get(SUBMISSIONS_TABLE, { submission_id: job.submission_id })
+            : Promise.resolve(null);
 
-          // 2. Fetch Step Execution Results (Outputs)
-          if (job.execution_steps_s3_key) {
-             const fullSteps = await fetchS3Json(String(job.execution_steps_s3_key));
-             if (fullSteps) {
-               executionHistory.stepExecutionResults = fullSteps;
-             }
-          } else if (job.execution_steps) {
-            executionHistory.stepExecutionResults = job.execution_steps;
-          }
+          const stepsPromise = job.execution_steps_s3_key
+            ? fetchS3Json(String(job.execution_steps_s3_key))
+            : Promise.resolve(job.execution_steps || null);
 
-          // 3. Fetch Final Artifact Summary
-          if (ARTIFACTS_TABLE && job.artifacts && job.artifacts.length > 0) {
+          let artifactPromise: Promise<string | null> = Promise.resolve(null);
+          if (
+            ARTIFACTS_TABLE &&
+            job.artifacts &&
+            job.artifacts.length > 0
+          ) {
             const finalArtifactId = job.artifacts[job.artifacts.length - 1]; // Naive last
-            // Ideally find html_final or markdown_final
-            const artifact = await db.get(ARTIFACTS_TABLE!, { artifact_id: finalArtifactId });
-            if (artifact && artifact.s3_key) {
-               const text = await fetchS3Text(String(artifact.s3_key));
-               if (text) executionHistory.finalArtifactSummary = text;
-            }
-          } else if (!ARTIFACTS_TABLE && job.artifacts && job.artifacts.length > 0) {
-            logger.warn('[WorkflowAI] ARTIFACTS_TABLE is not configured; skipping final artifact context', {
-              workflowId,
-              contextJobId,
-            });
+            artifactPromise = db
+              .get(ARTIFACTS_TABLE!, { artifact_id: finalArtifactId })
+              .then((artifact) => {
+                if (artifact && artifact.s3_key) {
+                  return fetchS3Text(String(artifact.s3_key));
+                }
+                return null;
+              });
           }
+
+          const [submission, steps, finalArtifactText] = await Promise.all([
+            submissionPromise,
+            stepsPromise,
+            artifactPromise,
+          ]);
+
+          if (submission) {
+            history.submissionData = submission.submission_data;
+          }
+          if (steps) {
+            history.stepExecutionResults = steps;
+          }
+          if (finalArtifactText) {
+            history.finalArtifactSummary = finalArtifactText;
+          }
+
+          executionHistory = history;
         }
       } catch (err: any) {
-        logger.error('[WorkflowAI] Failed to fetch context job', { contextJobId, error: err.message });
+        logger.error('[WorkflowAI] Failed to fetch context job', {
+          contextJobId,
+          error: err.message,
+        });
       }
-    }
+    })();
 
-    // Reference Examples (completed jobs for same workflow)
-    try {
-      const examplesRes = await db.query(
-        JOBS_TABLE,
-        'gsi_workflow_status',
-        'workflow_id = :wId AND #s = :s',
-        { ':wId': workflowId, ':s': 'completed' },
-        { '#s': 'status' },
-        5 // fetch 5
-      );
-      
-      const potentialExamples = examplesRes.items || [];
-      // Filter out the current context job
-      const filtered = potentialExamples.filter((j: any) => j.job_id !== contextJobId);
-      
-      // Take top 2 recent
-      for (const exJob of filtered.slice(0, 2)) {
-        const exData: any = { jobId: exJob.job_id };
-        
-        // Get input
-        if (exJob.submission_id) {
-           const sub = await db.get(SUBMISSIONS_TABLE, { submission_id: exJob.submission_id });
-           if (sub) exData.submissionData = sub.submission_data;
-        }
+    // Promise for Reference Examples
+    const referenceExamplesPromise = (async () => {
+      try {
+        const examplesRes = await db.query(
+          JOBS_TABLE,
+          "gsi_workflow_status",
+          "workflow_id = :wId AND #s = :s",
+          { ":wId": workflowId, ":s": "completed" },
+          { "#s": "status" },
+          5, // fetch 5
+        );
 
-        // Get output (final artifact only to save tokens)
-         if (ARTIFACTS_TABLE && exJob.artifacts && exJob.artifacts.length > 0) {
+        const potentialExamples = examplesRes.items || [];
+        // Filter out the current context job
+        const filtered = potentialExamples.filter(
+          (j: any) => j.job_id !== contextJobId,
+        );
+
+        // Process top 2 recent in parallel
+        const examplePromises = filtered.slice(0, 2).map(async (exJob: any) => {
+          const exData: any = { jobId: exJob.job_id };
+
+          const subPromise = exJob.submission_id
+            ? db.get(SUBMISSIONS_TABLE, { submission_id: exJob.submission_id })
+            : Promise.resolve(null);
+
+          let artPromise: Promise<string | null> = Promise.resolve(null);
+          if (
+            ARTIFACTS_TABLE &&
+            exJob.artifacts &&
+            exJob.artifacts.length > 0
+          ) {
             const artId = exJob.artifacts[exJob.artifacts.length - 1];
-            const art = await db.get(ARTIFACTS_TABLE!, { artifact_id: artId });
-            if (art && art.s3_key) {
-               const txt = await fetchS3Text(String(art.s3_key));
-               if (txt) exData.finalArtifactSummary = txt;
-            }
-         } else if (!ARTIFACTS_TABLE && exJob.artifacts && exJob.artifacts.length > 0) {
-            logger.warn('[WorkflowAI] ARTIFACTS_TABLE is not configured; skipping reference example final artifact', {
-              workflowId,
-              exampleJobId: exJob.job_id,
-            });
-         }
+            artPromise = db
+              .get(ARTIFACTS_TABLE!, { artifact_id: artId })
+              .then((art) => {
+                if (art && art.s3_key) {
+                  return fetchS3Text(String(art.s3_key));
+                }
+                return null;
+              });
+          }
 
-         if (exData.submissionData && exData.finalArtifactSummary) {
-           referenceExamples.push(exData);
-         }
+          const [sub, txt] = await Promise.all([subPromise, artPromise]);
+
+          if (sub) exData.submissionData = sub.submission_data;
+          if (txt) exData.finalArtifactSummary = txt;
+
+          if (exData.submissionData && exData.finalArtifactSummary) {
+            return exData;
+          }
+          return null;
+        });
+
+        const results = await Promise.all(examplePromises);
+        results.forEach((res) => {
+          if (res) referenceExamples.push(res);
+        });
+      } catch (err: any) {
+        logger.warn("[WorkflowAI] Failed to fetch reference examples", {
+          error: err.message,
+        });
       }
-    } catch (err: any) {
-      logger.warn('[WorkflowAI] Failed to fetch reference examples', { error: err.message });
-    }
+    })();
+
+    // Wait for context gathering to complete
+    await Promise.all([contextJobPromise, referenceExamplesPromise]);
 
     try {
       // Get OpenAI client

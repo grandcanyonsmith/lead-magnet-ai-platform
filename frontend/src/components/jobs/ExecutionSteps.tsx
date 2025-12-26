@@ -16,7 +16,7 @@ import { getStepStatus, getPreviousSteps, getFormSubmission } from "./utils";
 import { Artifact } from "@/types/artifact";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { SubmissionSummary } from "@/components/jobs/detail/SubmissionSummary";
-import type { FormSubmission } from "@/types/form";
+import type { FormSubmission, Form } from "@/types/form";
 
 interface ExecutionStepsProps {
   steps: MergedStep[];
@@ -27,6 +27,7 @@ interface ExecutionStepsProps {
   onCopy: (text: string) => void;
   jobStatus?: string;
   submission?: FormSubmission | null;
+  form?: Form | null;
   onResubmit?: () => void;
   resubmitting?: boolean;
   onRerunStep?: (stepIndex: number) => Promise<void>;
@@ -47,6 +48,7 @@ export function ExecutionSteps({
   onCopy,
   jobStatus,
   submission,
+  form,
   onResubmit,
   resubmitting,
   onRerunStep,
@@ -205,6 +207,7 @@ export function ExecutionSteps({
                                     sortedSteps,
                                   )}
                                   formSubmission={formSubmission}
+                                  form={form}
                                   imageArtifacts={
                                     imageArtifactsByStep.get(stepOrder) || []
                                   }
