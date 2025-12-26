@@ -270,11 +270,10 @@ export async function patchHtmlWithOpenAI(
 
   const openai = await getOpenAIClient();
 
-  // Use provided model or default to gpt-5.1-codex
-  const model = args.model || "gpt-5.1-codex";
-  const reasoningEffort = args.reasoningEffort || null;
-  const supportsReasoningEffort =
-    model.startsWith("gpt-5") || model.startsWith("o"); // e.g. o-series models
+  // Force gpt-5.2 with max reasoning + priority tier for best quality and faster throughput.
+  const model = "gpt-5.2";
+  const reasoningEffort = "high" as const;
+  const supportsReasoningEffort = true;
 
   const getStatus = (err: any): number | undefined => {
     if (!err) return undefined;
@@ -349,7 +348,7 @@ Your task:
                 ...(supportsReasoningEffort && reasoningEffort
                   ? { reasoning: { effort: reasoningEffort } }
                   : {}),
-                // NOTE: Avoid forcing priority tier here; it can be unavailable in some environments.
+                service_tier: "priority",
               }),
             "HTML Patch OpenAI call (selected element)",
           ),
@@ -496,7 +495,7 @@ Input HTML is provided below.`;
             ...(supportsReasoningEffort && reasoningEffort
               ? { reasoning: { effort: reasoningEffort } }
               : {}),
-            // NOTE: Avoid forcing priority tier here; it can be unavailable in some environments.
+            service_tier: "priority",
           }),
         "HTML Patch OpenAI call (full document)",
       ),

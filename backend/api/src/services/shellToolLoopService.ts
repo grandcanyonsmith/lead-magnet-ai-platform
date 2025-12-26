@@ -79,7 +79,7 @@ export async function runShellToolLoop(
     throw new ApiError("Shell tool is disabled", 404);
   }
 
-  const model = (args.model || "gpt-5.1").trim() || "gpt-5.1";
+  const model = "gpt-5.2";
   const maxSteps = Number.isFinite(args.maxSteps)
     ? Math.max(1, Math.min(25, Math.floor(args.maxSteps!)))
     : 10;
@@ -96,6 +96,8 @@ export async function runShellToolLoop(
         instructions,
         input: args.input,
         tools: [{ type: "shell" }],
+        reasoning: { effort: "high" },
+        service_tier: "priority",
       } as any),
     "shell tool initial response",
   );

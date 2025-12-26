@@ -146,8 +146,9 @@ export class StripeService {
     const normalized = model.toLowerCase().trim();
 
     // Map known variants to base model names
-    if (normalized.startsWith("gpt-5")) return "gpt-5";
+    // Force all GPT-5* usage onto the gpt-5.2 meter (platform-wide standard).
     if (normalized.startsWith("gpt-5.2")) return "gpt-5.2";
+    if (normalized.startsWith("gpt-5")) return "gpt-5.2";
     if (normalized.startsWith("gpt-4.1")) return "gpt-4.1";
     if (normalized.startsWith("gpt-4o-mini")) return "gpt-4o-mini";
     if (normalized.startsWith("gpt-4o")) return "gpt-4o";

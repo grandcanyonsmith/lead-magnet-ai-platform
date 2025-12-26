@@ -20,7 +20,8 @@ export class WorkflowInstructionsService {
    * Refine workflow instructions using AI.
    */
   async refineInstructions(request: WorkflowInstructionsRefinementRequest): Promise<string> {
-    const { current_instructions, edit_prompt, model = 'gpt-5', tenantId } = request;
+    const { current_instructions, edit_prompt, tenantId } = request;
+    const model = "gpt-5.2";
 
     if (!current_instructions || !current_instructions.trim()) {
       throw new ApiError('Current instructions are required', 400);
@@ -52,13 +53,12 @@ export class WorkflowInstructionsService {
       const refineStartTime = Date.now();
       const completionParams: any = {
         model,
-        instructions: 'You are an expert AI prompt engineer. Return only the modified instructions without markdown formatting.',
+        instructions:
+          "You are an expert AI prompt engineer. Return only the modified instructions without markdown formatting.",
         input: prompt,
+        reasoning: { effort: "high" },
+        service_tier: "priority",
       };
-      // GPT-5 only supports default temperature (1), don't set custom temperature
-      if (!model.startsWith('gpt-5')) {
-        completionParams.temperature = 0.7;
-      }
       const completion = await callResponsesWithTimeout(
         () => openai.responses.create(completionParams),
         'workflow instructions refinement'

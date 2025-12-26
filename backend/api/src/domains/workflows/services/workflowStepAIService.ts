@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 import { WorkflowStep } from './workflow/workflowConfigSupport';
-import { formatShortModelDescriptionsList } from './workflow/modelDescriptions';
+import { stripMarkdownCodeFences } from '@utils/openaiHelpers';
 
 export interface AIStepGenerationRequest {
   userPrompt: string;
@@ -28,10 +28,6 @@ export interface AIStepGenerationResponse {
 
 const AVAILABLE_MODELS = [
   'gpt-5.2',
-  'gpt-5.1',
-  'gpt-5',
-  'gpt-4o-mini',
-  'o4-mini-deep-research',
 ];
 
 const AVAILABLE_TOOLS = [
@@ -134,24 +130,31 @@ Please generate the workflow step configuration.`;
     });
 
     try {
-      const completion = await this.openaiClient.chat.completions.create({
+      const completion = await (this.openaiClient as any).responses.create({
         model: 'gpt-5.2',
-        reasoning_effort: 'high',
-        messages: [
-          { role: 'system', content: AI_STEP_SYSTEM_PROMPT },
-          { role: 'user', content: userMessage },
-        ],
-        response_format: { type: 'json_object' },
-        // temperature: 0.7, // reasoning_effort replaces temperature
-        // max_tokens: 2000,
-      } as any);
+        instructions: AI_STEP_SYSTEM_PROMPT,
+        input: userMessage,
+        reasoning: { effort: 'high' },
+        service_tier: 'priority',
+      });
 
-      const responseContent = completion.choices[0]?.message?.content;
+      const responseContent = stripMarkdownCodeFences(
+        String((completion as any)?.output_text || ''),
+      ).trim();
       if (!responseContent) {
         throw new Error('No response from OpenAI');
       }
 
-      const parsedResponse = JSON.parse(responseContent) as AIStepGenerationResponse;
+      let parsedResponse: AIStepGenerationResponse;
+      try {
+        parsedResponse = JSON.parse(responseContent) as AIStepGenerationResponse;
+      } catch {
+        const jsonMatch = responseContent.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+          throw new Error('Invalid response from OpenAI (expected JSON object)');
+        }
+        parsedResponse = JSON.parse(jsonMatch[0]) as AIStepGenerationResponse;
+      }
 
       // Validate the response
       if (!parsedResponse.step || !parsedResponse.step.step_name || !parsedResponse.step.instructions) {
@@ -160,8 +163,10 @@ Please generate the workflow step configuration.`;
 
       // Validate model
       if (!AVAILABLE_MODELS.includes(parsedResponse.step.model)) {
-        console.warn(`[WorkflowStepAI] Invalid model ${parsedResponse.step.model}, defaulting to gpt-5`);
-        parsedResponse.step.model = 'gpt-5';
+        console.warn(
+          `[WorkflowStepAI] Invalid model ${parsedResponse.step.model}, defaulting to gpt-5.2`,
+        );
+        parsedResponse.step.model = 'gpt-5.2';
       }
 
       // Validate and sanitize tools

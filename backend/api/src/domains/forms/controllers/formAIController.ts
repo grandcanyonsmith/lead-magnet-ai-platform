@@ -15,7 +15,8 @@ export class FormAIController {
    * Generate CSS for a form using AI.
    */
   async generateCSS(tenantId: string, body: any): Promise<RouteResponse> {
-    const { form_fields_schema, css_prompt, model = 'gpt-5' } = body;
+    const { form_fields_schema, css_prompt } = body;
+    const model = "gpt-5.2";
 
     if (!form_fields_schema || !form_fields_schema.fields || form_fields_schema.fields.length === 0) {
       throw new ApiError('Form fields schema is required', 400);
@@ -66,11 +67,9 @@ Return ONLY the CSS code. No Markdown code blocks.`;
         model,
         instructions: 'You are a Senior UI/UX Designer. Return only valid CSS code without markdown formatting.',
         input: prompt,
+        reasoning: { effort: "high" },
+        service_tier: "priority",
       };
-      // GPT-5 only supports default temperature (1), don't set custom temperature
-      if (!model.startsWith('gpt-5')) {
-        completionParams.temperature = 0.7;
-      }
       const completion = await callResponsesWithTimeout(
         () => openai.responses.create(completionParams),
         'form CSS generation'
@@ -155,7 +154,8 @@ Return ONLY the CSS code. No Markdown code blocks.`;
    * Refine CSS for a form using AI.
    */
   async refineCSS(tenantId: string, body: any): Promise<RouteResponse> {
-    const { current_css, css_prompt, model = 'gpt-5' } = body;
+    const { current_css, css_prompt } = body;
+    const model = "gpt-5.2";
 
     if (!current_css || !current_css.trim()) {
       throw new ApiError('Current CSS is required', 400);
@@ -198,11 +198,9 @@ ${current_css}
         model,
         instructions: 'You are a Senior UI/UX Designer. Return only valid CSS code without markdown formatting.',
         input: prompt,
+        reasoning: { effort: "high" },
+        service_tier: "priority",
       };
-      // GPT-5 only supports default temperature (1), don't set custom temperature
-      if (!model.startsWith('gpt-5')) {
-        completionParams.temperature = 0.7;
-      }
       const completion = await callResponsesWithTimeout(
         () => openai.responses.create(completionParams),
         'form CSS refinement'
