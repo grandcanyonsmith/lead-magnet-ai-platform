@@ -15,15 +15,7 @@ interface StepEditModalProps {
 }
 
 const AI_MODELS: AIModel[] = [
-  "gpt-5",
-  "gpt-5.1-codex",
   "gpt-5.2",
-  "gpt-4.1",
-  "gpt-4o",
-  "gpt-4-turbo",
-  "gpt-3.5-turbo",
-  "computer-use-preview",
-  "o4-mini-deep-research",
 ];
 
 const TOOL_TYPES: ToolType[] = [
@@ -49,8 +41,8 @@ export function StepEditModal({
   const [formData, setFormData] = useState<WorkflowStep>({
     step_name: "",
     instructions: "",
-    model: "gpt-5",
-    reasoning_effort: undefined,
+    model: "gpt-5.2",
+    reasoning_effort: "high",
     tools: [],
     tool_choice: "auto",
     depends_on: [],
@@ -65,8 +57,8 @@ export function StepEditModal({
         step_name: step.step_name,
         step_description: step.step_description,
         instructions: step.instructions,
-        model: step.model,
-        reasoning_effort: (step as any).reasoning_effort,
+        model: "gpt-5.2",
+        reasoning_effort: "high",
         step_order: step.step_order,
         tools: step.tools || [],
         tool_choice: step.tool_choice || "auto",

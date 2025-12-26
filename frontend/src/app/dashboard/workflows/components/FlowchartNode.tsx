@@ -47,10 +47,6 @@ const MODEL_STYLES: Record<
     badge: "bg-indigo-100 text-indigo-800 border-indigo-300",
     accent: "from-indigo-100/70",
   },
-  "gpt-4o": {
-    badge: "bg-emerald-100 text-emerald-800 border-emerald-300",
-    accent: "from-emerald-100/70",
-  },
   "gpt-4-turbo": {
     badge: "bg-teal-100 text-teal-800 border-teal-300",
     accent: "from-teal-100/70",
@@ -114,7 +110,7 @@ function FlowchartNode({ data, selected }: NodeProps<FlowchartNodeData>) {
     animateIn,
   } = data;
 
-  const modelStyle = MODEL_STYLES[step.model] || MODEL_STYLES["gpt-5"];
+  const modelStyle = MODEL_STYLES[step.model] || MODEL_STYLES["gpt-5.2"];
   const tools = step.tools || [];
   const hasTools = tools.length > 0;
   const hasWarnings = warnings.length > 0;

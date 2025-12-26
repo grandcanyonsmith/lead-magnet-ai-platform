@@ -36,7 +36,7 @@ export function useAIGeneration() {
   const [result, setResult] = useState<AIGenerationResult | null>(null);
 
   const generateWorkflow = useCallback(
-    async (description: string, model: string = "gpt-5.1-codex") => {
+    async (description: string, model: string = "gpt-5.2") => {
       if (!description.trim()) {
         setError("Please describe what you want to build a lead magnet for");
         return null;

@@ -80,7 +80,7 @@ export function useWorkflowEdit() {
           step_name: step.step_name || `Step ${index + 1}`,
           step_description: step.step_description || "",
           step_type: step.step_type || "ai_generation",
-          model: step.model || "gpt-5",
+          model: step.model || "gpt-5.2",
           instructions: step.instructions?.trim() || defaultInstructions,
           step_order: step.step_order !== undefined ? step.step_order : index,
           tools: step.tools || ["web_search"],
@@ -140,7 +140,7 @@ export function useWorkflowEdit() {
       {
         step_name: `Step ${prev.length + 1}`,
         step_description: "",
-        model: "gpt-5",
+        model: "gpt-5.2",
         instructions: "",
         step_order: prev.length,
         tools: ["web_search"],

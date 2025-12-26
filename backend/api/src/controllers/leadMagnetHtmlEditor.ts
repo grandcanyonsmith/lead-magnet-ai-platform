@@ -122,13 +122,9 @@ class LeadMagnetHtmlEditorController {
         ? body.selected_outer_html
         : null;
     const pageUrl = typeof body?.page_url === "string" ? body.page_url : null;
-    const model = typeof body?.model === "string" ? body.model : null;
-    const reasoningEffort =
-      body?.reasoning_effort === "low" ||
-      body?.reasoning_effort === "medium" ||
-      body?.reasoning_effort === "high"
-        ? body.reasoning_effort
-        : null;
+    // Force GPT-5.2 with max reasoning for all HTML patch requests.
+    const model = "gpt-5.2";
+    const reasoningEffort = "high";
 
     // IMPORTANT: Use the latest HTML from the client (unsaved edits included) when provided.
     // This ensures sequential AI edits build on each other without requiring a save between prompts.

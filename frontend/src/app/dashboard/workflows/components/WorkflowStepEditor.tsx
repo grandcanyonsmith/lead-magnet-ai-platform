@@ -29,15 +29,7 @@ interface WorkflowStepEditorProps {
 }
 
 const MODEL_OPTIONS = [
-  { value: "gpt-5", label: "GPT-5" },
-  { value: "gpt-5.1", label: "GPT-5.1" },
   { value: "gpt-5.2", label: "GPT-5.2" },
-  { value: "gpt-4.1", label: "GPT-4.1" },
-  { value: "gpt-4o", label: "GPT-4o" },
-  { value: "gpt-4-turbo", label: "GPT-4 Turbo" },
-  { value: "gpt-3.5-turbo", label: "GPT-3.5 Turbo" },
-  { value: "computer-use-preview", label: "Computer Use Preview" },
-  { value: "o4-mini-deep-research", label: "O4-Mini-Deep-Research" },
 ];
 
 const AVAILABLE_TOOLS = [
@@ -147,6 +139,9 @@ export default function WorkflowStepEditor({
     if (!stepWithType.step_type && stepWithType.webhook_url) {
       stepWithType.step_type = "webhook";
     }
+    // Force GPT-5.2 as the only supported model.
+    stepWithType.model = "gpt-5.2";
+    stepWithType.reasoning_effort = "high";
 
     setLocalStep(stepWithType);
 

@@ -80,7 +80,8 @@ Generate only the filename, nothing else."""
             
             # Use vision model to analyze the image
             response = self.client.chat.completions.create(
-                model="gpt-4o",  # Use vision-capable model
+                model="gpt-5.2",  # Use vision-capable model
+                reasoning_effort="high",
                 messages=[
                     {
                         "role": "user",

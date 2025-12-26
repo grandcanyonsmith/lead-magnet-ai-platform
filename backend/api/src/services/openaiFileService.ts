@@ -83,8 +83,8 @@ export async function searchFiles(
     const assistant = await openai.beta.assistants.create({
       name: `File Search Assistant - ${customerId}`,
       instructions:
-        "You are a helpful assistant that searches through customer files and provides relevant information based on the query.",
-      model: "gpt-4o",
+        "You are an Expert Data Analyst. Search through the provided files to find exact, relevant information. Cite your sources.",
+      model: "gpt-5.2",
       tools: [{ type: "file_search" }],
     });
 
@@ -252,25 +252,17 @@ export async function searchFilesSimple(
       .map((fc) => `[File ${fc.fileId}]:\n${fc.content}`)
       .join("\n\n---\n\n");
 
-    // Use chat completion to answer query
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a helpful assistant that searches through customer files and provides relevant information based on the query. Only reference information from the provided files.",
-        },
-        {
-          role: "user",
-          content: `Query: ${query}\n\nFiles:\n${context}`,
-        },
-      ],
-      max_tokens: 1000,
+    // Use Responses API (gpt-5.2) to answer query
+    const completion = await (openai as any).responses.create({
+      model: "gpt-5.2",
+      instructions:
+        "You are an Expert Data Analyst. Answer the user's query using ONLY the provided file context. If the answer is not in the files, state that clearly.",
+      input: `Query:\n${query}\n\nFiles:\n${context}`,
+      reasoning: { effort: "high" },
+      service_tier: "priority",
     });
 
-    const response =
-      completion.choices[0]?.message?.content || "No response generated.";
+    const response = String((completion as any)?.output_text || "").trim() || "No response generated.";
 
     logger.info("[OpenAI File Service] File search completed (simple)", {
       customerId,

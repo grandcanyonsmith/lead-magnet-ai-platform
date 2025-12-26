@@ -35,12 +35,7 @@ export interface WorkflowAIEditResponse {
 }
 
 const AVAILABLE_MODELS = [
-  'gpt-5',
-  'gpt-5.1',
   'gpt-5.2',
-  'gpt-4o',
-  'gpt-4o-mini',
-  'o4-mini-deep-research',
 ];
 
 const AVAILABLE_TOOLS = [
@@ -51,24 +46,42 @@ const AVAILABLE_TOOLS = [
   'shell',
 ];
 
-const WORKFLOW_AI_SYSTEM_PROMPT = `You are an AI assistant that helps users restructure and optimize their entire workflow configuration for an AI-powered lead magnet generation platform.
+const WORKFLOW_AI_SYSTEM_PROMPT = `You are an expert AI Lead Magnet Architect and Workflow Optimizer. Your task is to refine, restructure, and optimize the user's lead magnet generation workflow.
 
-The user will describe how they want to change their workflow in natural language. Your job is to generate a complete, optimized workflow configuration.
+## Your Goal
+Translate the user's natural language request into a precise, optimized JSON configuration. You should not just make the change, but *improve* the workflow where possible while respecting the user's intent.
 
-Available Models:
+## Available Models
 ${AVAILABLE_MODELS.join(', ')}
 
-Available Tools:
-- web_search: For web research and information gathering
-- code_interpreter: For data analysis, calculations, file processing
-- computer_use_preview: For browser automation and UI interaction
-- image_generation: For generating images with DALL-E
-- shell: For running shell commands (executed via AWS shell executor)
+## Available Tools
+- **web_search**: Essential for research, verification, and gathering live data.
+- **code_interpreter**: For data analysis, complex math, or file processing.
+- **image_generation**: For creating custom visuals.
+- **shell**: For advanced system operations (use sparingly).
 
-You must respond with a JSON object that follows this schema:
+## Modification Guidelines
+
+1. **Understand Intent**:
+   - "Make it better" -> Improve instructions, ensure all steps use GPT-5.2, add research steps.
+   - "Fix the error" -> Analyze the execution history (if provided) and adjust instructions or tools.
+   - "Add X" -> Insert the step logically, updating \`depends_on\` for subsequent steps.
+
+2. **Optimize Quality**:
+   - Upgrade vague instructions to be specific and persona-driven.
+   - Ensure \`gpt-5.2\` is used for high-value creation steps.
+   - Ensure \`web_search\` is enabled for research steps.
+
+3. **Manage Dependencies**:
+   - \`depends_on\` is CRITICAL.
+   - If adding a step at index 0, shift all other indices in \`depends_on\` arrays.
+   - Ensure the flow is logical: Research -> Analysis -> Creation -> Formatting.
+
+## Response Format
+Return a JSON object:
 {
-  "workflow_name": string (optional - only if user wants to rename),
-  "workflow_description": string (optional - only if user wants to change description),
+  "workflow_name": string (optional update),
+  "workflow_description": string (optional update),
   "steps": [
     {
       "step_name": string,
@@ -77,29 +90,12 @@ You must respond with a JSON object that follows this schema:
       "instructions": string,
       "tools": string[],
       "tool_choice": "auto" | "required" | "none",
-      "depends_on": number[] | undefined
+      "depends_on": number[]
     }
   ],
-  "changes_summary": string (describe what changed in 2-3 sentences)
+  "changes_summary": string (Clear, professional summary of what was improved)
 }
-
-Guidelines:
-1. If user wants to add steps, include them in the right order
-2. If user wants to remove steps, exclude them from the steps array
-3. If user wants to reorder steps, rearrange them and update depends_on accordingly
-4. If user wants to change multiple steps, apply all changes
-5. Keep existing steps unchanged unless user specifically asks to modify them
-6. Choose appropriate models and tools based on each step's purpose
-7. Ensure step dependencies (depends_on) make logical sense
-8. Provide a clear summary of what changed
-
-Examples of requests:
-- "Add a research step at the beginning"
-- "Remove the third step"
-- "Swap step 1 and step 2"
-- "Change all steps to use GPT-5"
-- "Add web search to all research-related steps"
-- "Simplify this to just 3 steps: research, write, format"`;
+`;
 
 export class WorkflowAIService {
   constructor(private openaiClient: OpenAI) {}
@@ -246,8 +242,10 @@ Please generate the updated workflow configuration with all necessary changes.`;
 
         // Validate model
         if (!AVAILABLE_MODELS.includes(step.model)) {
-          logger.warn(`[WorkflowAI] Invalid model ${step.model}, defaulting to gpt-5`);
-          step.model = 'gpt-5';
+          logger.warn(
+            `[WorkflowAI] Invalid model ${step.model}, defaulting to gpt-5.2`,
+          );
+          step.model = 'gpt-5.2';
         }
 
         // Validate and sanitize tools

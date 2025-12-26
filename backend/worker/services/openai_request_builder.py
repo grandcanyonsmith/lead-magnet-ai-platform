@@ -5,11 +5,7 @@ Handles construction of API parameters for OpenAI Responses API calls.
 import logging
 from typing import Dict, List, Optional, Any
 from services.tool_builder import ToolBuilder
-from utils.image_utils import (
-    is_problematic_url, 
-    download_image_and_convert_to_data_url,
-    deduplicate_image_urls
-)
+from utils import image_utils
 
 logger = logging.getLogger(__name__)
 
@@ -136,7 +132,7 @@ class OpenAIRequestBuilder:
             {"type": "input_text", "text": input_text}
         ]
         
-        deduplicated_urls = deduplicate_image_urls(previous_image_urls, job_id=job_id, tenant_id=tenant_id)
+        deduplicated_urls = image_utils.deduplicate_image_urls(previous_image_urls, job_id=job_id, tenant_id=tenant_id)
         
         # Process image URLs - convert problematic ones to base64 upfront
         valid_image_urls = []
@@ -163,7 +159,7 @@ class OpenAIRequestBuilder:
                 continue
             
             # Check if URL is problematic - if so, convert to base64 upfront
-            if is_problematic_url(image_url):
+            if image_utils.is_problematic_url(image_url):
                 problematic_urls.append(image_url)
             else:
                 direct_urls.append(image_url)
@@ -186,7 +182,7 @@ class OpenAIRequestBuilder:
                     'image_index': idx,
                     'total_images': len(problematic_urls)
                 })
-                data_url = download_image_and_convert_to_data_url(
+                data_url = image_utils.download_image_and_convert_to_data_url(
                     url=image_url,
                     job_id=job_id,
                     tenant_id=tenant_id,

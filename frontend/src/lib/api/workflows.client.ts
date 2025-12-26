@@ -55,7 +55,7 @@ export class WorkflowsClient extends BaseApiClient {
       "/admin/workflows/generate-with-ai",
       {
         description: request.description,
-        model: request.model || "gpt-5.1-codex",
+        model: request.model || "gpt-5.2",
         webhook_url: request.webhook_url,
       },
     );
@@ -78,7 +78,7 @@ export class WorkflowsClient extends BaseApiClient {
       {
         current_instructions: request.current_instructions,
         edit_prompt: request.edit_prompt,
-        model: request.model || "gpt-4o",
+        model: request.model || "gpt-5.2",
       },
     );
   }
@@ -91,7 +91,7 @@ export class WorkflowsClient extends BaseApiClient {
       {
         current_instructions: request.current_instructions,
         edit_prompt: request.edit_prompt,
-        model: request.model || "gpt-4o",
+        model: request.model || "gpt-5.2",
       },
     );
   }

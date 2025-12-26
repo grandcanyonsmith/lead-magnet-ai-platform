@@ -94,7 +94,7 @@ class WorkflowGenerationJobService {
     });
 
     const description = job.description || '';
-    const model = job.model || 'gpt-5';
+    const model = job.model || 'gpt-5.2';
 
     setImmediate(async () => {
       try {
