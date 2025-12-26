@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { isAuthenticated } from "@/lib/auth";
+import { authService } from "@/lib/auth";
 import {
   ChartBarIcon,
   CheckCircleIcon,
@@ -47,7 +47,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const checkAndLoad = async () => {
       try {
-        const authenticated = await isAuthenticated();
+        const authenticated = await authService.isAuthenticated();
         if (!authenticated) {
           router.push("/auth/login");
           return;
