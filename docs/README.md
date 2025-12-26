@@ -72,6 +72,9 @@ Operational documentation for running and maintaining the platform.
 #### Development
 Development-specific documentation.
 
+- **[Coding Standards](./CODING_STANDARDS.md)** - Best practices and coding rules
+  - **NO TIMEOUTS**: Critical rule for async operations
+  - Backend/Frontend guidelines
 - **[Testing Guide](./testing/README.md)** - Comprehensive testing index
   - E2E suites and scripts
   - Manual testing playbooks
