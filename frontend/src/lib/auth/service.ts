@@ -469,6 +469,16 @@ export class AuthService {
     }
   }
 
+  async getIdToken(): Promise<string | null> {
+    // Prefer tokens stored by our app (set during sign-in). This is more resilient than
+    // relying on Cognito SDK session reconstruction, and supports mock/e2e auth flows.
+    const stored = this.tokenStorage.getIdToken();
+    if (stored) return stored;
+
+    const session = await this.getSession();
+    return session?.getIdToken().getJwtToken() ?? null;
+  }
+
   getTokenStorage(): LocalStorageTokenStorage {
     return this.tokenStorage;
   }
