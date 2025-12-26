@@ -116,6 +116,7 @@ export class WorkflowsClient extends BaseApiClient {
     workflowId: string,
     request: {
       userPrompt: string;
+      contextJobId?: string;
     },
   ): Promise<{
     workflow_name?: string;

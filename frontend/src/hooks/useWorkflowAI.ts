@@ -18,13 +18,13 @@ export function useWorkflowAI(workflowId: string) {
   const [error, setError] = useState<string | null>(null);
   const [proposal, setProposal] = useState<WorkflowAIEditResponse | null>(null);
 
-  const generateWorkflowEdit = async (userPrompt: string) => {
+  const generateWorkflowEdit = async (userPrompt: string, contextJobId?: string) => {
     setIsGenerating(true);
     setError(null);
     setProposal(null);
 
     try {
-      const response = await api.editWorkflowWithAI(workflowId, { userPrompt });
+      const response = await api.editWorkflowWithAI(workflowId, { userPrompt, contextJobId });
 
       setProposal(response);
       return response;
