@@ -63,7 +63,7 @@ export class TemplateAIService {
     request: TemplateGenerationRequest,
   ): Promise<{ htmlContent: string; usageInfo: UsageInfo }> {
     const { description, tenantId, jobId, brandContext, icpContext } = request;
-    const model = "gpt-5.1-codex";
+    const model = request.model || "gpt-5.2";
 
     if (!description || !description.trim()) {
       throw new ApiError("Description is required", 400);

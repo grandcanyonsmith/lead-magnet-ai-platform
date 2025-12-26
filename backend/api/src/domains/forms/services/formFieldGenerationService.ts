@@ -34,7 +34,7 @@ export class FormFieldGenerationService {
   async generateFormFields(
     description: string,
     workflowName: string,
-    model: string,
+    _model: string,
     tenantId: string,
     jobId?: string,
     brandContext?: string,
@@ -80,20 +80,19 @@ The public_slug should be URL-friendly (lowercase, hyphens only, no spaces).`;
     const formStartTime = Date.now();
     
     const formCompletionParams: any = {
-      model,
+      model: "gpt-5.2",
       instructions: 'You are an expert at creating lead capture forms. Return only valid JSON without markdown formatting.',
       input: formPrompt,
+      reasoning: { effort: "high" },
+      service_tier: "priority",
     };
-    if (!model.startsWith('gpt-5')) {
-      formCompletionParams.temperature = 0.7;
-    }
     const formCompletion = await callResponsesWithTimeout(
       () => this.openai.responses.create(formCompletionParams),
       'form generation'
     );
 
     const formDuration = Date.now() - formStartTime;
-    const formModelUsed = (formCompletion as any).model || model;
+    const formModelUsed = (formCompletion as any).model || formCompletionParams.model;
     console.log('[Form Field Generation Service] Form generation completed', {
       duration: `${formDuration}ms`,
       tokensUsed: formCompletion.usage?.total_tokens,

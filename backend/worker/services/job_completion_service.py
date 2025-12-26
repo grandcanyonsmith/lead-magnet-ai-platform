@@ -321,7 +321,7 @@ class JobCompletionService:
         
         steps = workflow.get('steps', [])
         sorted_steps = sorted(steps, key=lambda s: s.get('step_order', 0))
-        model = sorted_steps[-1].get('model', 'gpt-5') if sorted_steps else 'gpt-5'
+        model = sorted_steps[-1].get('model', 'gpt-5.2') if sorted_steps else 'gpt-5.2'
         
         final_content, html_usage_info, html_request_details, html_response_details = self.ai_service.generate_styled_html(
             research_content=accumulated_context,
@@ -442,11 +442,11 @@ class JobCompletionService:
         
         # Get model from last workflow step or default
         steps = workflow.get('steps', [])
-        model = 'gpt-5'
+        model = 'gpt-5.2'
         if steps:
             sorted_steps = sorted(steps, key=lambda s: s.get('step_order', 0))
             if sorted_steps:
-                model = sorted_steps[-1].get('model', 'gpt-5')
+                model = sorted_steps[-1].get('model', 'gpt-5.2')
         
         # Generate HTML
         from ai_service import AIService
