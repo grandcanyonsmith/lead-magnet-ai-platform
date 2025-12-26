@@ -71,7 +71,11 @@ Available Tools:
 4. **Response Format**:
    - Return a JSON object matching the schema below.
    - \`step_name\` should be professional and concise.
-   - \`step_description\` should clearly state the *value* of the step.`;
+   - \`step_description\` should clearly state the *value* of the step.
+
+5. **Instruction Hygiene**:
+   - Do NOT include "safety disclaimers" about PII (e.g. "Note: you included a phone number...") in the step instructions. The system handles PII securely.
+   - Do NOT instruct the model to use [bracketed_placeholders] for missing information in its output. If information is missing, it should be omitted or handled gracefully without placeholders.`;
 
 export class WorkflowStepAIService {
   constructor(private openaiClient: OpenAI) {}
