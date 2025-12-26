@@ -51,13 +51,11 @@ export class WorkflowConfigService {
     const workflowStartTime = Date.now();
     
     const workflowCompletionParams: any = {
-      model,
+      model: 'gpt-5.2',
       instructions: 'You are an expert at creating AI-powered lead magnets. Return only valid JSON without markdown formatting.',
       input: workflowPrompt,
+      reasoning: { effort: 'high' }
     };
-    if (!model.startsWith('gpt-5')) {
-      workflowCompletionParams.temperature = 0.7;
-    }
     const workflowCompletion = await callResponsesWithTimeout(
       () => this.openai.responses.create(workflowCompletionParams),
       'workflow generation'
