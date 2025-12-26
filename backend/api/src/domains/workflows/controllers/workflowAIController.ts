@@ -346,7 +346,7 @@ export class WorkflowAIController {
             const artId = exJob.artifacts[exJob.artifacts.length - 1];
             const art = await db.get(ARTIFACTS_TABLE, { artifact_id: artId });
             if (art && art.s3_key) {
-               const txt = await fetchS3Text(art.s3_key);
+               const txt = await fetchS3Text(String(art.s3_key));
                if (txt) exData.finalArtifactSummary = txt;
             }
          }
