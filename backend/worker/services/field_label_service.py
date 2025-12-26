@@ -51,3 +51,24 @@ class FieldLabelService:
         """
         return ContextBuilder.format_submission_data_with_labels(data, field_label_map)
 
+    @staticmethod
+    def map_submission_data_keys(
+        data: Dict[str, Any],
+        field_label_map: Dict[str, str]
+    ) -> Dict[str, Any]:
+        """
+        Return a new dictionary where keys are replaced by labels from the map.
+        
+        Args:
+            data: Submission data dictionary
+            field_label_map: Map of field IDs to labels
+            
+        Returns:
+            Dictionary with labeled keys
+        """
+        mapped_data = {}
+        for key, value in data.items():
+            label = field_label_map.get(key, key)
+            mapped_data[label] = value
+        return mapped_data
+
