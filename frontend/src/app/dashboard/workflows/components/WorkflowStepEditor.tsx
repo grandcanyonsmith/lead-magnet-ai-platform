@@ -126,7 +126,7 @@ export default function WorkflowStepEditor({
   );
   const [webhookQueryParams, setWebhookQueryParams] = useState<
     Record<string, string>
-  >((step as any).webhook_query_params || {});
+  >(step.webhook_query_params || {});
   const [httpTestLoading, setHttpTestLoading] = useState(false);
   const [httpTestResult, setHttpTestResult] = useState<any>(null);
   const [httpTestError, setHttpTestError] = useState<string | null>(null);
@@ -277,8 +277,8 @@ export default function WorkflowStepEditor({
       setWebhookHeaders({});
     }
     // Sync webhook query params
-    if ((step as any).webhook_query_params) {
-      setWebhookQueryParams((step as any).webhook_query_params || {});
+    if (step.webhook_query_params) {
+      setWebhookQueryParams(step.webhook_query_params || {});
     } else {
       setWebhookQueryParams({});
     }
@@ -477,10 +477,10 @@ export default function WorkflowStepEditor({
       return;
     }
 
-    const bodyMode = ((localStep as any).webhook_body_mode || "auto") as
+    const bodyMode = (localStep.webhook_body_mode || "auto") as
       | "auto"
       | "custom";
-    const body = String((localStep as any).webhook_body || "");
+    const body = String(localStep.webhook_body || "");
 
     // Testing is only supported for custom bodies (auto payload requires a real run context)
     if (bodyMode !== "custom" || !body.trim()) {
@@ -499,12 +499,12 @@ export default function WorkflowStepEditor({
       const result = await api.post<any>("/admin/http-request/test", {
         url,
         method:
-          (((localStep as any).webhook_method || "POST") as HTTPMethod) ||
+          ((localStep.webhook_method || "POST") as HTTPMethod) ||
           "POST",
         headers: localStep.webhook_headers || {},
-        query_params: (localStep as any).webhook_query_params || {},
+        query_params: localStep.webhook_query_params || {},
         content_type:
-          (localStep as any).webhook_content_type || "application/json",
+          localStep.webhook_content_type || "application/json",
         body,
         test_values: mergedTestValues,
       });
@@ -685,7 +685,7 @@ export default function WorkflowStepEditor({
       if (typeof t === "object" && t.type === "image_generation") {
         const updated: any = {
           ...t,
-          model: newConfig.model || (t as any).model || "gpt-image-1.5",
+          model: newConfig.model || (t as ImageGenerationToolConfig).model || "gpt-image-1.5",
           size: newConfig.size,
           quality: newConfig.quality,
           background: newConfig.background,
@@ -772,12 +772,12 @@ export default function WorkflowStepEditor({
     toast("AI proposal rejected");
   };
 
-  const webhookBodyMode = ((localStep as any).webhook_body_mode ||
-    ((localStep as any).webhook_body ? "custom" : "auto")) as "auto" | "custom";
+  const webhookBodyMode = (localStep.webhook_body_mode ||
+    (localStep.webhook_body ? "custom" : "auto")) as "auto" | "custom";
   const webhookMethod =
-    (((localStep as any).webhook_method || "POST") as HTTPMethod) || "POST";
+    (localStep.webhook_method as HTTPMethod) || "POST";
   const webhookContentType = String(
-    (localStep as any).webhook_content_type || "application/json",
+    localStep.webhook_content_type || "application/json",
   );
 
   return (
@@ -984,18 +984,18 @@ export default function WorkflowStepEditor({
                     ...localStep,
                     step_type: newStepType,
                     webhook_url: localStep.webhook_url || "",
-                    webhook_method: (localStep as any).webhook_method || "POST",
+                    webhook_method: localStep.webhook_method || "POST",
                     webhook_query_params:
-                      (localStep as any).webhook_query_params || {},
+                      localStep.webhook_query_params || {},
                     webhook_content_type:
-                      (localStep as any).webhook_content_type ||
+                      localStep.webhook_content_type ||
                       "application/json",
                     webhook_body_mode:
-                      (localStep as any).webhook_body_mode || "auto",
-                    webhook_body: (localStep as any).webhook_body || "",
+                      localStep.webhook_body_mode || "auto",
+                    webhook_body: localStep.webhook_body || "",
                     webhook_save_response:
-                      (localStep as any).webhook_save_response !== undefined
-                        ? (localStep as any).webhook_save_response
+                      localStep.webhook_save_response !== undefined
+                        ? localStep.webhook_save_response
                         : true,
                     webhook_data_selection:
                       localStep.webhook_data_selection || {
@@ -1675,7 +1675,7 @@ export default function WorkflowStepEditor({
                           const token = e.target.value;
                           if (!token) return;
                           const current = String(
-                            (localStep as any).webhook_body || "",
+                            localStep.webhook_body || "",
                           );
                           handleChange("webhook_body", current + token);
                           e.currentTarget.value = "";
@@ -1725,7 +1725,7 @@ export default function WorkflowStepEditor({
                       </select>
                     </div>
                     <textarea
-                      value={String((localStep as any).webhook_body || "")}
+                      value={String(localStep.webhook_body || "")}
                       onChange={(e) =>
                         handleChange("webhook_body", e.target.value)
                       }
