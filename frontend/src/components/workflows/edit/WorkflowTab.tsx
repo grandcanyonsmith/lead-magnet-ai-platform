@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { FiSave, FiZap } from "react-icons/fi";
+import { Zap } from "lucide-react";
 import WorkflowFlowchart from "@/app/dashboard/workflows/components/WorkflowFlowchart";
 import FlowchartSidePanel from "@/app/dashboard/workflows/components/FlowchartSidePanel";
 import { WorkflowFormData } from "@/hooks/useWorkflowEdit";
@@ -181,10 +181,7 @@ export function WorkflowTab({
 
   return (
     <>
-      <form
-        onSubmit={onSubmit}
-        className="bg-white rounded-lg shadow p-6 space-y-6"
-      >
+      <div className="bg-white rounded-lg shadow p-6 space-y-6">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Lead Magnet Name <span className="text-red-500">*</span>
@@ -225,7 +222,7 @@ export function WorkflowTab({
           >
             <div className="flex items-center gap-3">
               <div className="p-2 bg-white rounded-lg shadow-sm">
-                <FiZap className="w-5 h-5 text-purple-600" />
+                <Zap className="w-5 h-5 text-purple-600" />
               </div>
               <div className="text-left">
                 <h3 className="font-semibold text-gray-900">
@@ -306,7 +303,7 @@ export function WorkflowTab({
                       </>
                     ) : (
                       <>
-                        <FiZap className="w-5 h-5" />
+                        <Zap className="w-5 h-5" />
                         Generate AI Proposal
                       </>
                     )}
@@ -365,25 +362,7 @@ export function WorkflowTab({
             </p>
           </div>
         )}
-
-        <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4 pt-4 border-t">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors touch-target"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="flex items-center justify-center px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-target"
-          >
-            <FiSave className="w-5 h-5 mr-2" />
-            {submitting ? "Saving..." : "Save Changes"}
-          </button>
-        </div>
-      </form>
+      </div>
 
       {/* Step Editor Side Panel */}
       {selectedStepIndex !== null && selectedStepIndex >= 0 && (
