@@ -1,5 +1,6 @@
 "use client";
 
+import { Fragment } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -214,12 +215,13 @@ export function Sidebar({
              <ThemeToggle />
           </div>
           
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className="w-full justify-start px-2 py-6 h-auto hover:bg-accent group"
-              >
+          <div className="relative w-full">
+            <DropdownMenu>
+              <DropdownMenuTrigger as={Fragment}>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start px-2 py-6 h-auto hover:bg-accent group"
+                >
                 <Avatar
                   className="h-9 w-9 rounded-lg border-2 border-background shadow-sm mr-3"
                   fallback={user?.name?.[0] || user?.email?.[0] || "U"}
@@ -244,8 +246,8 @@ export function Sidebar({
               <DropdownMenuSeparator />
               
               <DropdownMenuGroup>
-                <DropdownMenuItem asChild>
-                  <Link href="/dashboard/settings" className="cursor-pointer">
+                <DropdownMenuItem>
+                  <Link href="/dashboard/settings" className="cursor-pointer flex w-full items-center">
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Settings</span>
                   </Link>
@@ -279,6 +281,7 @@ export function Sidebar({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          </div>
         </div>
       </aside>
     </>
