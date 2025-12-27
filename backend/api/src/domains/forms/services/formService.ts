@@ -26,9 +26,9 @@ export function generateSlug(name: string): string {
  */
 export function ensureRequiredFields(fields: any[]): any[] {
   const requiredFields = [
-    { field_id: 'name', field_type: 'text' as const, label: 'Name', placeholder: 'Your name', required: true },
-    { field_id: 'email', field_type: 'email' as const, label: 'Email', placeholder: 'your@email.com', required: true },
-    { field_id: 'phone', field_type: 'tel' as const, label: 'Phone', placeholder: 'Your phone number', required: true },
+    { field_id: 'name', field_type: 'text' as const, label: 'Name', placeholder: 'Your name', required: false },
+    { field_id: 'email', field_type: 'email' as const, label: 'Email', placeholder: 'your@email.com', required: false },
+    { field_id: 'phone', field_type: 'tel' as const, label: 'Phone', placeholder: 'Your phone number', required: false },
   ];
 
   const existingFieldIds = new Set(fields.map((f: any) => f.field_id));
@@ -91,9 +91,9 @@ export class FormService {
 
     // Default form fields if not provided
     const defaultFields = formFields || [
-      { field_id: 'name', field_type: 'text', label: 'Name', placeholder: 'Your name', required: true },
-      { field_id: 'email', field_type: 'email', label: 'Email', placeholder: 'your@email.com', required: true },
-      { field_id: 'phone', field_type: 'tel', label: 'Phone', placeholder: 'Your phone number', required: true },
+      { field_id: 'name', field_type: 'text', label: 'Name', placeholder: 'Your name', required: false },
+      { field_id: 'email', field_type: 'email', label: 'Email', placeholder: 'your@email.com', required: false },
+      { field_id: 'phone', field_type: 'tel', label: 'Phone', placeholder: 'Your phone number', required: false },
     ];
 
     const formFieldsWithRequired = ensureRequiredFields(defaultFields);

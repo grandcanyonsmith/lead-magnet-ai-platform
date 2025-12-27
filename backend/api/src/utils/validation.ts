@@ -382,37 +382,8 @@ export const updateSettingsSchema = z.object({
 });
 
 // Form submission schema
-const hasPhoneValue = (data: Record<string, any>) => {
-  // Prefer explicit phone/phone_number/mobile fields
-  const explicitPhoneFields = [
-    "phone",
-    "phone_number",
-    "phoneNumber",
-    "mobile",
-    "mobile_phone",
-    "contact_phone",
-  ];
-  for (const field of explicitPhoneFields) {
-    if (data[field]) return true;
-  }
-
-  // Fallback: any field containing "phone" or "mobile"
-  return Object.keys(data).some((key) => {
-    const lower = key.toLowerCase();
-    return (lower.includes("phone") || lower.includes("mobile")) && !!data[key];
-  });
-};
-
 export const submitFormSchema = z.object({
-  submission_data: z.record(z.any()).refine(
-    (data) => {
-      // Ensure name, email, and at least one phone-like field are present
-      return !!data.name && !!data.email && hasPhoneValue(data);
-    },
-    {
-      message: "Form submission must include name, email, and a phone number",
-    },
-  ),
+  submission_data: z.record(z.any()),
 });
 
 // Webhook request schema
