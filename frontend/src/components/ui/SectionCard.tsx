@@ -3,9 +3,10 @@
 import { ReactNode } from "react";
 import clsx from "clsx";
 
-type SectionPadding = "sm" | "md" | "lg";
+type SectionPadding = "none" | "sm" | "md" | "lg";
 
 const paddingMap: Record<SectionPadding, string> = {
+  none: "p-0",
   sm: "p-4",
   md: "p-6",
   lg: "p-8",
