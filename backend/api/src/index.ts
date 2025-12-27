@@ -3,6 +3,7 @@ import { routerHandler } from './routes/index';
 import { handleError } from './utils/errors';
 import { logger } from './utils/logger';
 import { handleWorkflowGenerationJob } from '@domains/workflows/handlers/workflowGenerationHandler';
+import { handleWorkflowAIEditJob } from '@domains/workflows/handlers/workflowAIEditHandler';
 import { handleCORS } from './cors-handler';
 import { addSecurityHeaders } from './middleware/securityHeaders';
 import { initErrorReporting } from './services/errorReportingService';
@@ -20,6 +21,20 @@ export const handler = async (
       return await handleWorkflowGenerationJob(event);
     } catch (error: any) {
       logger.error('Error processing workflow generation job', {
+        error: error.message,
+        jobId: event.job_id,
+        stack: error.stack,
+      });
+      throw error;
+    }
+  }
+
+  // Handle workflow AI edit job (async Lambda invocation)
+  if (event.source === 'workflow-ai-edit-job' && event.job_id) {
+    try {
+      return await handleWorkflowAIEditJob(event);
+    } catch (error: any) {
+      logger.error('Error processing workflow AI edit job', {
         error: error.message,
         jobId: event.job_id,
         stack: error.stack,

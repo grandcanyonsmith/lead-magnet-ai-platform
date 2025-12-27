@@ -90,6 +90,22 @@ type WorkflowAIEditResponse = {
   changes_summary: string;
 };
 
+type WorkflowAIEditStartResponse = {
+  job_id: string;
+  status: "pending" | "processing" | "completed" | "failed";
+  message?: string;
+};
+
+type WorkflowAIEditStatusResponse = {
+  job_id: string;
+  status: "pending" | "processing" | "completed" | "failed";
+  result: WorkflowAIEditResponse | null;
+  error_message?: string | null;
+  workflow_id?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
 type JobRerunRequest = {
   step_index: number;
   continue_after?: boolean;
@@ -197,7 +213,14 @@ export const workflowContracts = {
     path: "/admin/workflows/:id/ai-edit",
     description: "Edit an entire workflow using AI assistance.",
     docs: "docs/contracts/README.md#workflows",
-    __types: defineTypes<void, WorkflowAIEditRequest, WorkflowAIEditResponse>(),
+    __types: defineTypes<void, WorkflowAIEditRequest, WorkflowAIEditStartResponse>(),
+  },
+  aiEditStatus: {
+    method: "GET",
+    path: "/admin/workflows/ai-edit-status/:jobId",
+    description: "Poll workflow AI edit job status.",
+    docs: "docs/contracts/README.md#workflows",
+    __types: defineTypes<void, void, WorkflowAIEditStatusResponse>(),
   },
 } satisfies Record<string, ApiEndpointContract<any, any, any>>;
 
