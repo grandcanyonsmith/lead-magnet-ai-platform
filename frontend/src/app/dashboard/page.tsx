@@ -1,70 +1,42 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { api } from "@/lib/api";
-import { authService } from "@/lib/auth";
+import { useAuth } from "@/hooks/useAuth";
+import { useJobs } from "@/hooks/api/useJobs";
+import { useAnalytics } from "@/hooks/api/useAnalytics";
 import {
   DocumentDuplicateIcon,
   Cog6ToothIcon,
   ArrowRightIcon,
   SparklesIcon,
 } from "@heroicons/react/24/outline";
-import { AnalyticsResponse, AnalyticsOverview } from "@/types/analytics";
-import { Job } from "@/types/job";
-import { logger } from "@/utils/logger";
-import { handleError } from "@/utils/error-handling";
+import { AnalyticsOverview } from "@/types/analytics";
 import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { SectionCard } from "@/components/ui/SectionCard";
+import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [analytics, setAnalytics] = useState<AnalyticsResponse | null>(null);
-  const [recentJobs, setRecentJobs] = useState<Job[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
 
-  const loadDashboardData = useCallback(async () => {
-    try {
-      const [analyticsData, jobsData] = await Promise.all([
-        api.getAnalytics({ days: 30 }),
-        api.jobs.getJobs({ limit: 5 }),
-      ]);
-      setAnalytics(analyticsData);
-      setRecentJobs(jobsData.jobs);
-    } catch (error) {
-      handleError(error, {
-        showToast: false,
-        logError: true,
-      });
-      logger.error("Failed to load dashboard data", {
-        error,
-        context: "DashboardPage",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const {
+    jobs: recentJobs,
+    loading: isJobsLoading,
+  } = useJobs({ limit: 5 });
+
+  const {
+    data: analytics,
+    loading: isAnalyticsLoading,
+  } = useAnalytics({ days: 30 });
 
   useEffect(() => {
-    const checkAndLoad = async () => {
-      try {
-        const authenticated = await authService.isAuthenticated();
-        if (!authenticated) {
-          router.push("/auth/login");
-          return;
-        }
-
-        await loadDashboardData();
-      } catch (error) {
-        logger.error("Auth check failed", { error, context: "DashboardPage" });
-        router.push("/auth/login");
-      }
-    };
-
-    checkAndLoad();
-  }, [router, loadDashboardData]);
+    if (!isAuthLoading && !isAuthenticated) {
+      router.push("/auth/login");
+    }
+  }, [isAuthLoading, isAuthenticated, router]);
 
   const overview: AnalyticsOverview = useMemo(
     () =>
@@ -82,40 +54,10 @@ export default function DashboardPage() {
     [analytics?.overview],
   );
 
-  if (loading) {
-    return (
-      <div className="space-y-6 animate-pulse">
-        {/* Header skeleton */}
-        <div className="space-y-2">
-          <div className="h-8 bg-gray-200 rounded w-48"></div>
-          <div className="h-4 bg-gray-200 rounded w-96 max-w-full"></div>
-        </div>
+  const isLoading = isAuthLoading || isJobsLoading || isAnalyticsLoading;
 
-        {/* Stats Grid skeleton */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 h-32"
-            >
-              <div className="flex justify-between items-start mb-4">
-                <div className="h-10 w-10 bg-gray-200 rounded-lg"></div>
-              </div>
-              <div className="space-y-2">
-                <div className="h-8 bg-gray-200 rounded w-16"></div>
-                <div className="h-4 bg-gray-200 rounded w-24"></div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Content skeleton */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 h-64 bg-gray-200 rounded-xl"></div>
-          <div className="h-64 bg-gray-200 rounded-xl"></div>
-        </div>
-      </div>
-    );
+  if (isLoading) {
+    return <DashboardSkeleton />;
   }
 
   return (

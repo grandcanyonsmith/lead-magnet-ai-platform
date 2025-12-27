@@ -16,5 +16,17 @@ export interface AnalyticsOverview {
 
 export interface AnalyticsResponse {
   overview: AnalyticsOverview;
+  trends: {
+    jobs_by_day: Record<string, number>;
+    submissions_by_day: Record<string, number>;
+  };
+  breakdown: {
+    jobs_by_status: {
+      completed: number;
+      failed: number;
+      pending: number;
+    };
+    jobs_by_workflow: Record<string, number>;
+  };
   [key: string]: unknown;
 }
