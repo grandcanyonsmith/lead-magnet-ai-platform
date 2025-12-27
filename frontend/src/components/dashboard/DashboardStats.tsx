@@ -5,7 +5,8 @@ import {
   DocumentCheckIcon,
 } from "@heroicons/react/24/outline";
 import { AnalyticsOverview } from "@/types/analytics";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Card, CardContent } from "@/components/ui/Card";
+import { cn } from "@/lib/utils";
 
 interface DashboardStatsProps {
   overview: AnalyticsOverview;
@@ -20,6 +21,7 @@ export function DashboardStats({ overview }: DashboardStatsProps) {
         icon: UserGroupIcon,
         color: "blue",
         description: "Total submissions across all forms",
+        trend: "+12% from last month", // Placeholder for trend
       },
       {
         label: "Reports Generated",
@@ -27,6 +29,7 @@ export function DashboardStats({ overview }: DashboardStatsProps) {
         icon: DocumentCheckIcon,
         color: "green",
         description: "Successfully processed lead magnets",
+        trend: "+5% from last month", // Placeholder for trend
       },
       {
         label: "Active Magnets",
@@ -34,47 +37,80 @@ export function DashboardStats({ overview }: DashboardStatsProps) {
         icon: BoltIcon,
         color: "purple",
         description: "Workflows currently accepting submissions",
+        trend: "Stable", // Placeholder for trend
       },
     ],
     [overview],
   );
 
-  const colorMap: Record<string, string> = {
-    blue: "bg-blue-100 text-blue-600 ring-blue-500/20",
-    green: "bg-green-100 text-green-600 ring-green-500/20",
-    purple: "bg-purple-100 text-purple-600 ring-purple-500/20",
+  const colorStyles: Record<string, { bg: string; text: string; icon: string }> = {
+    blue: {
+      bg: "bg-blue-50 dark:bg-blue-900/20",
+      text: "text-blue-700 dark:text-blue-300",
+      icon: "text-blue-600 dark:text-blue-400",
+    },
+    green: {
+      bg: "bg-green-50 dark:bg-green-900/20",
+      text: "text-green-700 dark:text-green-300",
+      icon: "text-green-600 dark:text-green-400",
+    },
+    purple: {
+      bg: "bg-purple-50 dark:bg-purple-900/20",
+      text: "text-purple-700 dark:text-purple-300",
+      icon: "text-purple-600 dark:text-purple-400",
+    },
   };
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
-      {stats.map((stat) => {
+      {stats.map((stat, index) => {
         const Icon = stat.icon;
+        const styles = colorStyles[stat.color];
+
         return (
           <Card
             key={stat.label}
-            className="group relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-md border-gray-100"
+            className={cn(
+              "group relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-border/50 bg-card",
+            )}
+            style={{
+              animationDelay: `${index * 100}ms`,
+            }}
           >
-            <div className="absolute right-0 top-0 p-4 opacity-5 transition-transform duration-300 group-hover:scale-110 group-hover:opacity-10">
-              <Icon className="h-24 w-24 text-current" />
+            <div className="absolute right-0 top-0 p-4 opacity-[0.03] dark:opacity-[0.05] transition-transform duration-500 group-hover:scale-110 group-hover:opacity-[0.08]">
+              <Icon className="h-32 w-32 text-foreground" />
             </div>
 
-            <CardContent className="relative z-10 pt-6">
+            <CardContent className="relative z-10 p-6">
               <div className="mb-4 flex items-center justify-between">
                 <div
-                  className={`rounded-xl p-3 ${colorMap[stat.color]} ring-1 ring-inset`}
+                  className={cn(
+                    "rounded-xl p-3 ring-1 ring-inset ring-black/5 dark:ring-white/10 transition-colors duration-300",
+                    styles.bg,
+                    styles.text
+                  )}
                 >
                   <Icon className="h-6 w-6" />
                 </div>
+                {/* <span className="text-xs font-medium text-muted-foreground bg-secondary px-2 py-1 rounded-full">
+                  {stat.trend}
+                </span> */}
               </div>
-              <p className="mb-1 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-                {stat.value.toLocaleString()}
-              </p>
-              <p className="mb-1 text-sm font-medium text-gray-600">
-                {stat.label}
-              </p>
-              <p className="text-xs text-gray-400">
-                {stat.description}
-              </p>
+              
+              <div className="space-y-1">
+                <p className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl tabular-nums">
+                  {stat.value.toLocaleString()}
+                </p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  {stat.label}
+                </p>
+              </div>
+              
+              <div className="mt-4 pt-4 border-t border-border/50">
+                <p className="text-xs text-muted-foreground">
+                  {stat.description}
+                </p>
+              </div>
             </CardContent>
           </Card>
         );
@@ -82,4 +118,3 @@ export function DashboardStats({ overview }: DashboardStatsProps) {
     </div>
   );
 }
-
