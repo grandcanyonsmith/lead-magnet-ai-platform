@@ -28,6 +28,7 @@ import {
   ChevronUpIcon,
 } from "@heroicons/react/24/outline";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
+import { cn } from "@/lib/utils";
 
 export default function DashboardLayout({
   children,
@@ -183,9 +184,9 @@ export default function DashboardLayout({
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
@@ -199,22 +200,22 @@ export default function DashboardLayout({
       onTourComplete={handleTourComplete}
       onTourSkip={handleTourSkip}
     >
-      <div className="min-h-screen bg-zinc-50 lg:flex lg:flex-row">
+      <div className="min-h-screen bg-muted/30 lg:flex lg:flex-row text-foreground font-sans">
         {/* Mobile top bar */}
-        <header className="lg:hidden sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-zinc-200">
+        <header className="lg:hidden sticky top-0 z-30 bg-background/80 backdrop-blur border-b border-border">
           <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="inline-flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-700 shadow-sm hover:bg-zinc-50 shrink-0"
+                className="inline-flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground shadow-sm hover:bg-accent hover:text-foreground shrink-0"
                 aria-label="Open navigation"
               >
                 <Bars3Icon className="h-5 w-5" />
               </button>
               <div className="flex items-center gap-2 min-w-0">
-                <div className="h-8 w-8 sm:h-9 sm:w-9 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center shadow-sm shrink-0">
+                <div className="h-8 w-8 sm:h-9 sm:w-9 bg-primary rounded-lg flex items-center justify-center shadow-sm shrink-0">
                   <svg
-                    className="w-4 h-4 sm:w-5 sm:h-5 text-white"
+                    className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -228,10 +229,10 @@ export default function DashboardLayout({
                   </svg>
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs sm:text-sm font-semibold text-zinc-900 truncate">
+                  <p className="text-xs sm:text-sm font-semibold text-foreground truncate">
                     Lead Magnet AI
                   </p>
-                  <p className="text-[10px] sm:text-xs text-zinc-500 truncate">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
                     Dashboard
                   </p>
                 </div>
@@ -240,7 +241,7 @@ export default function DashboardLayout({
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
               <button
                 onClick={() => setSearchOpen(true)}
-                className="inline-flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-700 shadow-sm hover:bg-zinc-50"
+                className="inline-flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground shadow-sm hover:bg-accent hover:text-foreground"
                 aria-label="Open search"
               >
                 <MagnifyingGlassIcon className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -255,7 +256,7 @@ export default function DashboardLayout({
         {/* Mobile sidebar backdrop */}
         {sidebarOpen && (
           <div
-            className="fixed inset-0 bg-zinc-900/50 z-30 lg:hidden"
+            className="fixed inset-0 bg-background/80 backdrop-blur-sm z-30 lg:hidden"
             onClick={() => {
               setSidebarOpen(false);
             }}
@@ -265,19 +266,19 @@ export default function DashboardLayout({
 
         {/* Sidebar */}
         <aside
-          className={`
-            fixed top-0 left-0 z-40 h-screen w-[280px] max-w-[85vw] sm:max-w-[320px] bg-white shadow-xl border-r border-zinc-200 transform transition-transform duration-300 ease-in-out flex flex-col
-            ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
-            lg:translate-x-0 lg:sticky lg:top-0 lg:shadow-none lg:shrink-0 lg:w-72 lg:max-w-none
-          `}
+          className={cn(
+            "fixed top-0 left-0 z-40 h-screen w-[280px] max-w-[85vw] sm:max-w-[320px] bg-card shadow-xl border-r border-border transform transition-transform duration-300 ease-in-out flex flex-col",
+            sidebarOpen ? "translate-x-0" : "-translate-x-full",
+            "lg:translate-x-0 lg:sticky lg:top-0 lg:shadow-none lg:shrink-0 lg:w-72 lg:max-w-none"
+          )}
           aria-label="Sidebar navigation"
         >
           {/* Mobile sidebar header with close button */}
-          <div className="lg:hidden flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 border-b border-zinc-200 bg-white">
+          <div className="lg:hidden flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 border-b border-border bg-card">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-              <div className="h-8 w-8 sm:h-9 sm:w-9 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center shadow-sm shrink-0">
+              <div className="h-8 w-8 sm:h-9 sm:w-9 bg-primary rounded-lg flex items-center justify-center shadow-sm shrink-0">
                 <svg
-                  className="w-4 h-4 sm:w-5 sm:h-5 text-white"
+                  className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -290,13 +291,13 @@ export default function DashboardLayout({
                   />
                 </svg>
               </div>
-              <span className="text-xs sm:text-sm font-semibold text-zinc-900 truncate">
+              <span className="text-xs sm:text-sm font-semibold text-foreground truncate">
                 Lead Magnet AI
               </span>
             </div>
             <button
               onClick={() => setSidebarOpen(false)}
-              className="inline-flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 shrink-0"
+              className="inline-flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground shrink-0"
               aria-label="Close navigation"
             >
               <XMarkIcon className="h-5 w-5" />
@@ -304,11 +305,11 @@ export default function DashboardLayout({
           </div>
 
           {/* Desktop sidebar header */}
-          <div className="hidden lg:block px-4 py-4 border-b border-zinc-200 bg-white space-y-3">
+          <div className="hidden lg:block px-4 py-4 border-b border-border bg-card space-y-3">
             <div className="flex items-center gap-3">
-              <div className="h-9 w-9 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center shadow-sm">
+              <div className="h-9 w-9 bg-primary rounded-lg flex items-center justify-center shadow-sm">
                 <svg
-                  className="w-5 h-5 text-white"
+                  className="w-5 h-5 text-primary-foreground"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -322,7 +323,7 @@ export default function DashboardLayout({
                 </svg>
               </div>
               <span className="flex flex-col min-w-0">
-                <span className="text-sm font-semibold text-zinc-900 truncate">
+                <span className="text-sm font-semibold text-foreground truncate">
                   Lead Magnet AI
                 </span>
               </span>
@@ -337,19 +338,19 @@ export default function DashboardLayout({
                     setSearchOpen(true);
                     setSidebarOpen(false);
                   }}
-                  className="w-full flex items-center gap-2 sm:gap-3 rounded-xl px-2.5 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm font-medium text-zinc-700 hover:bg-zinc-100/70 transition"
+                  className="w-full flex items-center gap-2 sm:gap-3 rounded-md px-2.5 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition"
                   aria-label="Open search"
                 >
-                  <MagnifyingGlassIcon className="h-4 w-4 sm:h-5 sm:w-5 text-zinc-500 shrink-0" />
+                  <MagnifyingGlassIcon className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
                   <span className="truncate">Search</span>
-                  <kbd className="ml-auto hidden md:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] sm:text-[11px] font-semibold text-zinc-500 bg-white border border-zinc-200 rounded">
+                  <kbd className="ml-auto hidden md:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] sm:text-[11px] font-semibold text-muted-foreground bg-muted border border-border rounded">
                     ⌘K
                   </kbd>
                 </button>
               </div>
 
               <div className="space-y-1">
-                <p className="px-2 text-[10px] sm:text-xs font-semibold uppercase tracking-[0.08em] text-zinc-500">
+                <p className="px-2 text-[10px] sm:text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground/70">
                   Main
                 </p>
                 {navItems.map((item) => {
@@ -369,25 +370,24 @@ export default function DashboardLayout({
                       key={item.href}
                       href={item.href}
                       onClick={() => setSidebarOpen(false)}
-                      className={`
-                        group flex items-center gap-2 sm:gap-3 rounded-xl px-2.5 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all duration-200
-                        ${
-                          isActive
-                            ? "bg-primary-600 text-white shadow-md shadow-primary-600/20"
-                            : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
-                        }
-                      `}
+                      className={cn(
+                        "group flex items-center gap-2 sm:gap-3 rounded-md px-2.5 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all duration-200",
+                        isActive
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                      )}
                     >
                       <Icon
-                        className={`h-4 w-4 sm:h-5 sm:w-5 shrink-0 ${
+                        className={cn(
+                          "h-4 w-4 sm:h-5 sm:w-5 shrink-0",
                           isActive
-                            ? "text-white"
-                            : "text-zinc-400 group-hover:text-zinc-600"
-                        }`}
+                            ? "text-primary-foreground"
+                            : "text-muted-foreground group-hover:text-foreground"
+                        )}
                       />
                       <span className="truncate">{item.label}</span>
                       {isActive && (
-                        <ChevronRightIcon className="ml-auto h-3 w-3 sm:h-4 sm:w-4 text-primary-500 shrink-0" />
+                        <ChevronRightIcon className="ml-auto h-3 w-3 sm:h-4 sm:w-4 text-primary-foreground/80 shrink-0" />
                       )}
                     </Link>
                   );
@@ -396,40 +396,40 @@ export default function DashboardLayout({
             </nav>
           </div>
 
-          <div className="mt-auto px-2 sm:px-3 py-2 sm:py-3 border-t border-zinc-200 bg-white shrink-0">
+          <div className="mt-auto px-2 sm:px-3 py-2 sm:py-3 border-t border-border bg-card shrink-0">
             <div className="relative" ref={userMenuRef}>
               <button
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="w-full flex items-center justify-between rounded-lg px-1.5 sm:px-2 py-1.5 sm:py-2 hover:bg-zinc-50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+                className="w-full flex items-center justify-between rounded-lg px-1.5 sm:px-2 py-1.5 sm:py-2 hover:bg-accent hover:text-accent-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
               >
                 <span className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
-                  <span className="h-7 w-7 sm:h-8 sm:w-8 rounded-md bg-zinc-200 flex items-center justify-center overflow-hidden shrink-0">
-                    <span className="text-[10px] sm:text-xs font-semibold text-zinc-700">
+                  <span className="h-7 w-7 sm:h-8 sm:w-8 rounded-md bg-muted flex items-center justify-center overflow-hidden shrink-0">
+                    <span className="text-[10px] sm:text-xs font-semibold text-muted-foreground">
                       {(user?.name || user?.email || "U")
                         .slice(0, 1)
                         .toUpperCase()}
                     </span>
                   </span>
                   <span className="min-w-0 flex-1 text-left">
-                    <span className="block truncate text-xs sm:text-sm font-medium text-zinc-900">
+                    <span className="block truncate text-xs sm:text-sm font-medium text-foreground">
                       {user?.name || user?.email || "Account"}
                     </span>
                     {user?.email && (
-                      <span className="block truncate text-[10px] sm:text-xs text-zinc-500">
+                      <span className="block truncate text-[10px] sm:text-xs text-muted-foreground">
                         {user.email}
                       </span>
                     )}
                   </span>
                 </span>
                 <ChevronUpIcon
-                  className={`h-3 w-3 sm:h-4 sm:w-4 text-zinc-400 transition-transform shrink-0 ${userMenuOpen ? "rotate-180" : ""}`}
+                  className={`h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground transition-transform shrink-0 ${userMenuOpen ? "rotate-180" : ""}`}
                 />
               </button>
 
               {userMenuOpen && (
-                <div className="absolute bottom-full left-0 mb-2 w-[260px] sm:w-[280px] rounded-lg border border-zinc-200 bg-white shadow-lg ring-1 ring-black/5 z-[50]">
+                <div className="absolute bottom-full left-0 mb-2 w-[260px] sm:w-[280px] rounded-lg border border-border bg-popover text-popover-foreground shadow-lg ring-1 ring-black/5 z-[50]">
                   <div className="px-2.5 sm:px-3 py-2 sm:py-2.5 flex items-center justify-between">
-                    <span className="text-xs sm:text-sm text-zinc-700">
+                    <span className="text-xs sm:text-sm text-foreground">
                       Notifications
                     </span>
                     <NotificationBell layer="account_menu" />
@@ -437,9 +437,9 @@ export default function DashboardLayout({
 
                   {role === "SUPER_ADMIN" && (
                     <>
-                      <div className="h-px bg-zinc-100 my-1" />
+                      <div className="h-px bg-border my-1" />
                       <div className="px-2.5 sm:px-3 py-2">
-                        <div className="mb-1.5 text-xs font-medium text-zinc-500 uppercase tracking-wider">
+                        <div className="mb-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                           Views
                         </div>
                         <ViewSwitcher />
@@ -449,9 +449,9 @@ export default function DashboardLayout({
 
                   {(role === "ADMIN" || role === "SUPER_ADMIN") && (
                     <>
-                      <div className="h-px bg-zinc-100 my-1" />
+                      <div className="h-px bg-border my-1" />
                       <div className="px-2.5 sm:px-3 py-2">
-                        <div className="mb-1.5 text-xs font-medium text-zinc-500 uppercase tracking-wider">
+                        <div className="mb-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                           Impersonation
                         </div>
                         <UserImpersonation />
@@ -459,9 +459,9 @@ export default function DashboardLayout({
                     </>
                   )}
 
-                  <div className="h-px bg-zinc-100 my-1" />
+                  <div className="h-px bg-border my-1" />
                   <button
-                    className="w-full px-2.5 sm:px-3 py-2.5 sm:py-2.5 text-xs sm:text-sm text-zinc-700 text-left hover:bg-zinc-50 transition-colors"
+                    className="w-full px-2.5 sm:px-3 py-2.5 sm:py-2.5 text-xs sm:text-sm text-foreground text-left hover:bg-accent hover:text-accent-foreground transition-colors"
                     onClick={() => {
                       setSidebarOpen(false);
                       setUserMenuOpen(false);
@@ -470,9 +470,9 @@ export default function DashboardLayout({
                   >
                     Settings
                   </button>
-                  <div className="h-px bg-zinc-100 my-1" />
+                  <div className="h-px bg-border my-1" />
                   <button
-                    className="w-full px-2.5 sm:px-3 py-2.5 sm:py-2.5 text-xs sm:text-sm text-red-600 text-left hover:bg-red-50 transition-colors rounded-b-lg"
+                    className="w-full px-2.5 sm:px-3 py-2.5 sm:py-2.5 text-xs sm:text-sm text-destructive text-left hover:bg-destructive/10 transition-colors rounded-b-lg"
                     onClick={() => {
                       setSidebarOpen(false);
                       setUserMenuOpen(false);
@@ -497,7 +497,7 @@ export default function DashboardLayout({
             className={
               isEditorRoute
                 ? "p-0 bg-[#0c0d10] min-h-screen"
-                : "p-3 sm:p-4 md:p-6 lg:p-8 bg-zinc-50 min-h-screen"
+                : "p-3 sm:p-4 md:p-6 lg:p-8 bg-muted/30 min-h-screen"
             }
           >
             {isEditorRoute ? (
