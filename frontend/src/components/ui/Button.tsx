@@ -12,12 +12,12 @@ export interface ButtonProps
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = "default", size = "default", isLoading, children, disabled, ...props }, ref) => {
     const variants = {
-      default: "bg-blue-600 text-white hover:bg-blue-700 shadow-sm",
-      destructive: "bg-red-600 text-white hover:bg-red-700 shadow-sm",
-      outline: "border border-gray-200 bg-white hover:bg-gray-100 hover:text-gray-900 text-gray-700",
-      secondary: "bg-gray-100 text-gray-900 hover:bg-gray-200/80",
-      ghost: "hover:bg-gray-100 hover:text-gray-900 text-gray-600",
-      link: "text-blue-600 underline-offset-4 hover:underline",
+      default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow",
+      destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-sm",
+      outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+      secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+      ghost: "hover:bg-accent hover:text-accent-foreground",
+      link: "text-primary underline-offset-4 hover:underline",
     }
 
     const sizes = {
@@ -30,7 +30,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <button
         className={cn(
-          "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-950 disabled:pointer-events-none disabled:opacity-50",
+          "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
           variants[variant],
           sizes[size],
           className
@@ -48,4 +48,3 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 Button.displayName = "Button"
 
 export { Button }
-
