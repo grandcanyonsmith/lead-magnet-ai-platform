@@ -41,7 +41,7 @@ export function UsageChart({ trends }: UsageChartProps) {
   if (data.length === 0) {
     return (
       <SectionCard title="Usage Trends">
-        <div className="flex h-[300px] items-center justify-center text-gray-400">
+        <div className="flex h-[300px] items-center justify-center text-muted-foreground">
           No data available
         </div>
       </SectionCard>
@@ -58,24 +58,24 @@ export function UsageChart({ trends }: UsageChartProps) {
           >
             <defs>
               <linearGradient id="colorJobs" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#818cf8" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="#818cf8" stopOpacity={0} />
+                <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
               </linearGradient>
               <linearGradient id="colorSubmissions" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#34d399" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="#34d399" stopOpacity={0} />
+                <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
             <XAxis
               dataKey="date"
-              stroke="#9ca3af"
+              stroke="hsl(var(--muted-foreground))"
               fontSize={12}
               tickLine={false}
               axisLine={false}
             />
             <YAxis
-              stroke="#9ca3af"
+              stroke="hsl(var(--muted-foreground))"
               fontSize={12}
               tickLine={false}
               axisLine={false}
@@ -83,19 +83,20 @@ export function UsageChart({ trends }: UsageChartProps) {
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: "#fff",
-                borderRadius: "8px",
-                border: "1px solid #e5e7eb",
+                backgroundColor: "hsl(var(--popover))",
+                borderRadius: "var(--radius)",
+                border: "1px solid hsl(var(--border))",
                 boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                color: "hsl(var(--popover-foreground))",
               }}
               itemStyle={{ fontSize: "12px", fontWeight: 500 }}
-              labelStyle={{ color: "#6b7280", marginBottom: "4px" }}
+              labelStyle={{ color: "hsl(var(--muted-foreground))", marginBottom: "4px" }}
             />
             <Area
               type="monotone"
               dataKey="jobs"
               name="Jobs"
-              stroke="#6366f1"
+              stroke="hsl(var(--primary))"
               fillOpacity={1}
               fill="url(#colorJobs)"
               strokeWidth={2}
@@ -104,7 +105,7 @@ export function UsageChart({ trends }: UsageChartProps) {
               type="monotone"
               dataKey="submissions"
               name="Submissions"
-              stroke="#10b981"
+              stroke="hsl(var(--chart-2))" // Assuming a secondary chart color or just green manually
               fillOpacity={1}
               fill="url(#colorSubmissions)"
               strokeWidth={2}
@@ -115,4 +116,3 @@ export function UsageChart({ trends }: UsageChartProps) {
     </SectionCard>
   );
 }
-

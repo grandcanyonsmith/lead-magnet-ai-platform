@@ -2,6 +2,7 @@
 
 import { ReactNode } from "react";
 import clsx from "clsx";
+import { cn } from "@/lib/utils";
 
 type SectionPadding = "none" | "sm" | "md" | "lg";
 
@@ -43,30 +44,30 @@ export function SectionCard({
 
   return (
     <section
-      className={clsx(
-        "rounded-2xl border border-gray-100 bg-white shadow-sm ring-1 ring-black/[0.02]",
+      className={cn(
+        "rounded-xl border bg-card text-card-foreground shadow-sm",
         className,
       )}
     >
       {hasHeader && (
         <header
-          className={clsx(
-            "flex flex-col gap-3 border-b border-gray-100",
+          className={cn(
+            "flex flex-col gap-3 border-b",
             paddingClass,
-            stickyHeader && "sticky top-0 z-10 bg-white/95 backdrop-blur",
+            stickyHeader && "sticky top-0 z-10 bg-card/95 backdrop-blur",
           )}
         >
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div className="flex items-start gap-3">
-              {icon && <div className="text-primary-600">{icon}</div>}
+              {icon && <div className="text-primary">{icon}</div>}
               <div>
                 {title && (
-                  <h3 className="text-lg font-semibold text-gray-900">
+                  <h3 className="text-lg font-semibold leading-none tracking-tight">
                     {title}
                   </h3>
                 )}
                 {description && (
-                  <p className="text-sm text-gray-500">{description}</p>
+                  <p className="text-sm text-muted-foreground mt-1.5">{description}</p>
                 )}
               </div>
             </div>
