@@ -15,6 +15,7 @@ import {
 import { AnalyticsOverview } from "@/types/analytics";
 import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
+import { UsageChart } from "@/components/dashboard/UsageChart";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
 
@@ -54,6 +55,15 @@ export default function DashboardPage() {
     [analytics?.overview],
   );
 
+  const trends = useMemo(
+    () =>
+      analytics?.trends || {
+        jobs_by_day: {},
+        submissions_by_day: {},
+      },
+    [analytics?.trends],
+  );
+
   const isLoading = isAuthLoading || isJobsLoading || isAnalyticsLoading;
 
   if (isLoading) {
@@ -80,8 +90,9 @@ export default function DashboardPage() {
       <DashboardStats overview={overview} />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 sm:gap-8">
-        {/* Main Content Area - Recent Activity */}
+        {/* Main Content Area - Charts & Activity */}
         <div className="lg:col-span-2 space-y-6">
+          <UsageChart trends={trends} />
           <RecentActivity jobs={recentJobs} />
         </div>
 

@@ -32,9 +32,10 @@ export function RecentActivity({ jobs }: RecentActivityProps) {
       <div className="divide-y divide-gray-50">
         {jobs.length > 0 ? (
           jobs.map((job) => (
-            <div
+            <Link
               key={job.job_id}
-              className="group transition-colors hover:bg-gray-50/50 p-4 sm:p-6"
+              href={`/dashboard/jobs/${job.job_id}`}
+              className="group block transition-colors hover:bg-gray-50/50 p-4 sm:p-6"
             >
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-4 min-w-0">
@@ -43,7 +44,7 @@ export function RecentActivity({ jobs }: RecentActivityProps) {
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="truncate text-sm font-medium text-gray-900">
+                      <p className="truncate text-sm font-medium text-gray-900 group-hover:text-primary-600 transition-colors">
                         Job #{job.job_id.slice(-6)}
                       </p>
                       <span className="text-xs text-gray-400">•</span>
@@ -62,7 +63,7 @@ export function RecentActivity({ jobs }: RecentActivityProps) {
                 </div>
                 <StatusBadge status={job.status} />
               </div>
-            </div>
+            </Link>
           ))
         ) : (
           <div className="p-8 text-center text-gray-500">

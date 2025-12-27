@@ -497,17 +497,15 @@ export default function DashboardLayout({
             className={
               isEditorRoute
                 ? "p-0 bg-[#0c0d10] min-h-screen"
-                : "p-3 sm:p-4 md:p-6 lg:p-8 bg-gray-100 min-h-screen"
+                : "p-3 sm:p-4 md:p-6 lg:p-8 bg-zinc-50 min-h-screen"
             }
           >
             {isEditorRoute ? (
               <div className="w-full">{children}</div>
             ) : (
-              <div className="w-full lg:rounded-xl lg:bg-white lg:p-6 xl:p-8 lg:shadow-md lg:ring-1 lg:ring-gray-200">
-                <div className="mx-auto max-w-6xl w-full">
-                  <Breadcrumbs />
-                  {children}
-                </div>
+              <div className="mx-auto max-w-7xl w-full">
+                <Breadcrumbs />
+                {children}
               </div>
             )}
           </main>
