@@ -38,6 +38,12 @@ export function registerWorkflowRoutes(): void {
     return await workflowAIController.getGenerationStatus(tenantId!, params.jobId);
   });
 
+  // Get workflow AI edit status
+  router.register('GET', '/admin/workflows/ai-edit-status/:jobId', async (params, _body, _query, tenantId) => {
+    logger.info('[Router] Matched /admin/workflows/ai-edit-status/:jobId route', { jobId: params.jobId });
+    return await workflowAIController.getAIEditStatus(tenantId!, params.jobId);
+  });
+
   // Manual job processing (local dev)
   router.register('POST', '/admin/workflows/process-job/:jobId', async (params, _body, _query, tenantId) => {
     logger.info('[Router] Matched /admin/workflows/process-job/:jobId route', { jobId: params.jobId });
