@@ -15,6 +15,12 @@ export { SectionCard } from "./SectionCard";
 export { KeyValueList } from "./KeyValueList";
 export { StatPill } from "./StatPill";
 export { VisuallyHidden } from "./VisuallyHidden";
+export { Button, type ButtonProps } from "./Button";
+export { Input, type InputProps } from "./Input";
+export { Label } from "./Label";
+export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "./Card";
+export { Textarea, type TextareaProps } from "./Textarea";
+export { Select, type SelectProps } from "./Select";
 
 // Legacy components for backward compatibility
 interface LoadingSpinnerProps {
@@ -30,10 +36,14 @@ export function LoadingSpinner({
     sm: "w-4 h-4",
     md: "w-6 h-6",
     lg: "w-8 h-8",
+    icon: "h-4 w-4", // Added for compatibility with button
+    default: "w-6 h-6", // Added for compatibility
   };
 
+  const selectedSize = sizeClasses[size as keyof typeof sizeClasses] || sizeClasses.md;
+
   return (
-    <FiLoader className={`${sizeClasses[size]} animate-spin ${className}`} />
+    <FiLoader className={`${selectedSize} animate-spin ${className}`} />
   );
 }
 
@@ -78,8 +88,8 @@ interface StatusBadgeProps {
 }
 
 export function StatusBadge({ status, className = "" }: StatusBadgeProps) {
-  const label = STATUS_LABELS[status] || status;
-  const color = STATUS_COLORS[status] || "gray";
+  const label = STATUS_LABELS[status as keyof typeof STATUS_LABELS] || status;
+  const color = STATUS_COLORS[status as keyof typeof STATUS_COLORS] || "gray";
 
   const colorClasses: Record<string, string> = {
     blue: "bg-blue-100 text-blue-800",

@@ -8,18 +8,18 @@ import { useState } from "react";
 import Image from "next/image";
 import { Settings } from "@/types";
 import { FormField } from "./FormField";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
+import {
+  PhotoIcon,
+  SparklesIcon,
+  DocumentTextIcon,
+} from "@heroicons/react/24/outline";
 
 interface BrandingSettingsProps {
   settings: Settings;
   onChange: (field: keyof Settings, value: string) => void;
   errors?: Record<string, string>;
 }
-
-import {
-  PhotoIcon,
-  SparklesIcon,
-  DocumentTextIcon,
-} from "@heroicons/react/24/outline";
 
 export function BrandingSettings({
   settings,
@@ -39,22 +39,22 @@ export function BrandingSettings({
   return (
     <div className="space-y-6">
       {/* Visual Identity Section */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="p-6 border-b border-gray-100 bg-gray-50/50">
-          <div className="flex items-center gap-3 mb-2">
+      <Card>
+        <CardHeader className="border-b border-gray-100 bg-gray-50/50">
+          <div className="flex items-center gap-3 mb-1">
             <div className="p-2 bg-purple-50 rounded-lg">
               <PhotoIcon className="w-5 h-5 text-purple-600" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900">
+            <CardTitle className="text-lg">
               Visual Identity
-            </h3>
+            </CardTitle>
           </div>
-          <p className="text-sm text-gray-600 ml-12">
+          <CardDescription className="ml-12">
             Customize how your brand appears on forms and lead magnets.
-          </p>
-        </div>
+          </CardDescription>
+        </CardHeader>
 
-        <div className="p-8">
+        <CardContent className="p-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-6">
               <FormField
@@ -113,27 +113,27 @@ export function BrandingSettings({
               )}
             </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Brand Voice & Context */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="p-6 border-b border-gray-100 bg-gray-50/50">
-          <div className="flex items-center gap-3 mb-2">
+      <Card>
+        <CardHeader className="border-b border-gray-100 bg-gray-50/50">
+          <div className="flex items-center gap-3 mb-1">
             <div className="p-2 bg-indigo-50 rounded-lg">
               <SparklesIcon className="w-5 h-5 text-indigo-600" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900">
+            <CardTitle className="text-lg">
               Brand Identity
-            </h3>
+            </CardTitle>
           </div>
-          <p className="text-sm text-gray-600 ml-12">
+          <CardDescription className="ml-12">
             Train the AI on your brand&apos;s voice, values, and target
             audience.
-          </p>
-        </div>
+          </CardDescription>
+        </CardHeader>
 
-        <div className="p-8 space-y-8">
+        <CardContent className="p-8 space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
               label="Industry"
@@ -205,24 +205,24 @@ export function BrandingSettings({
               placeholder="Always focus on benefits over features..."
             />
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Resources */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="p-6 border-b border-gray-100 bg-gray-50/50">
-          <div className="flex items-center gap-3 mb-2">
+      <Card>
+        <CardHeader className="border-b border-gray-100 bg-gray-50/50">
+          <div className="flex items-center gap-3 mb-1">
             <div className="p-2 bg-amber-50 rounded-lg">
               <DocumentTextIcon className="w-5 h-5 text-amber-600" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900">Resources</h3>
+            <CardTitle className="text-lg">Resources</CardTitle>
           </div>
-          <p className="text-sm text-gray-600 ml-12">
+          <CardDescription className="ml-12">
             External documents to provide additional context.
-          </p>
-        </div>
+          </CardDescription>
+        </CardHeader>
 
-        <div className="p-8">
+        <CardContent className="p-8">
           <FormField
             label="Reference Document (URL)"
             name="icp_document_url"
@@ -233,8 +233,8 @@ export function BrandingSettings({
             helpText="Link to a public PDF or document describing your Ideal Customer Profile"
             placeholder="https://example.com/icp.pdf"
           />
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
