@@ -49,19 +49,19 @@ export class FormFieldGenerationService {
     }
     
     const formPrompt = `You are a Conversion Rate Optimization (CRO) Expert.
-Task: Design the optimal lead capture form for this lead magnet: "${description}"${contextSection}
+    Task: Design the optimal lead capture form for this lead magnet: "${description}"${contextSection}
 
-## Strategy
-Your goal is to balance **Lead Quality** with **Conversion Rate**.
-- Ask enough to allow for *deep personalization* of the AI output.
-- Do not ask for irrelevant data.
-- Every field must have a purpose for the subsequent AI generation.
+    ## Strategy
+    Your goal is to balance **Lead Quality** with **Conversion Rate**.
+    - Ask enough to allow for *deep personalization* of the AI output.
+    - Do not ask for irrelevant data.
+    - Every field must have a purpose for the subsequent AI generation.
 
-## Field Guidelines
-1. **Essential**: Email (always).
-2. **Personalization**: Ask specific questions (e.g., "What is your biggest challenge with X?", "Which industry are you in?").
-3. **Labeling**: Use clear, conversational labels (e.g., instead of "Industry", use "What industry describes you best?").
-4. **Quantity**: Aim for 3-5 high-impact fields.
+    ## Field Guidelines
+    1. **Essential**: Email (optional or required based on context, default to optional).
+    2. **Personalization**: Ask specific questions (e.g., "What is your biggest challenge with X?", "Which industry are you in?").
+    3. **Labeling**: Use clear, conversational labels (e.g., instead of "Industry", use "What industry describes you best?").
+    4. **Quantity**: Aim for 3-5 high-impact fields.
 
 ## Output Format (JSON Only)
 {
@@ -153,14 +153,14 @@ The public_slug should be URL-friendly (lowercase, hyphens only). Return ONLY va
           field_type: 'email',
           label: 'Email Address',
           placeholder: 'your@email.com',
-          required: true,
+          required: false,
         },
         {
           field_id: 'field_2',
           field_type: 'text',
           label: 'Name',
           placeholder: 'Your Name',
-          required: true,
+          required: false,
         },
       ],
     };
