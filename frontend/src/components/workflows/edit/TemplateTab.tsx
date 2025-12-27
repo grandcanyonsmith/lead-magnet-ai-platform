@@ -1,17 +1,17 @@
 "use client";
 
 import {
-  FiSave,
-  FiEye,
-  FiCode,
-  FiCopy,
-  FiMonitor,
-  FiTablet,
-  FiSmartphone,
-  FiZap,
-  FiMousePointer,
-  FiX,
-} from "react-icons/fi";
+  Save,
+  Eye,
+  Code,
+  Copy,
+  Monitor,
+  Tablet,
+  Smartphone,
+  Zap,
+  MousePointer2,
+  X,
+} from "lucide-react";
 import { TemplateData } from "@/hooks/useTemplateEdit";
 import {
   extractPlaceholders,
@@ -118,7 +118,7 @@ export function TemplateTab({
   };
 
   return (
-    <form onSubmit={onSubmit} className="space-y-6">
+    <div className="space-y-6">
       {templateLoading && (
         <div className="bg-white rounded-lg shadow p-12 text-center">
           <p className="text-gray-600">Loading template...</p>
@@ -167,7 +167,7 @@ export function TemplateTab({
           {templateData.html_content.trim() && (
             <div className="bg-white rounded-lg shadow p-4 flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <FiEye className="w-5 h-5 text-gray-500" />
+                <Eye className="w-5 h-5 text-gray-500" />
                 <span className="text-sm font-medium text-gray-700">
                   View Mode
                 </span>
@@ -220,7 +220,7 @@ export function TemplateTab({
               <div className="bg-white rounded-lg shadow">
                 <div className="border-b border-gray-200 px-4 py-3 flex items-center justify-between bg-gray-50">
                   <div className="flex items-center space-x-3">
-                    <FiCode className="w-5 h-5 text-gray-500" />
+                    <Code className="w-5 h-5 text-gray-500" />
                     <h3 className="text-sm font-semibold text-gray-900">
                       HTML Editor
                     </h3>
@@ -280,7 +280,7 @@ export function TemplateTab({
                               title={`Insert {{${placeholder}}}`}
                             >
                               {`{{${placeholder}}}`}
-                              <FiCopy className="w-3 h-3 ml-1" />
+                              <Copy className="w-3 h-3 ml-1" />
                             </button>
                           ))}
                         </div>
@@ -308,7 +308,7 @@ export function TemplateTab({
                 <div className="bg-white rounded-lg shadow">
                   <div className="border-b border-gray-200 px-4 py-3 flex items-center justify-between bg-gray-50">
                     <div className="flex items-center space-x-3">
-                      <FiEye className="w-5 h-5 text-gray-500" />
+                      <Eye className="w-5 h-5 text-gray-500" />
                       <h3 className="text-sm font-semibold text-gray-900">
                         Preview
                       </h3>
@@ -324,7 +324,7 @@ export function TemplateTab({
                         }`}
                         title="Select Elements"
                       >
-                        <FiMousePointer className="w-4 h-4" />
+                        <MousePointer2 className="w-4 h-4" />
                         <span className="text-xs font-medium hidden sm:inline">
                           {isSelectMode ? "Selecting..." : "Select"}
                         </span>
@@ -340,7 +340,7 @@ export function TemplateTab({
                         }`}
                         title="Mobile (375px)"
                       >
-                        <FiSmartphone className="w-4 h-4" />
+                        <Smartphone className="w-4 h-4" />
                       </button>
                       <button
                         type="button"
@@ -352,7 +352,7 @@ export function TemplateTab({
                         }`}
                         title="Tablet (768px)"
                       >
-                        <FiTablet className="w-4 h-4" />
+                        <Tablet className="w-4 h-4" />
                       </button>
                       <button
                         type="button"
@@ -364,7 +364,7 @@ export function TemplateTab({
                         }`}
                         title="Desktop (Full Width)"
                       >
-                        <FiMonitor className="w-4 h-4" />
+                        <Monitor className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
@@ -403,7 +403,7 @@ export function TemplateTab({
             <div className="bg-white rounded-lg shadow border border-green-200">
               <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-green-50 to-teal-50">
                 <div className="flex items-center space-x-2">
-                  <FiZap className="w-5 h-5 text-green-600" />
+                  <Zap className="w-5 h-5 text-green-600" />
                   <h3 className="text-sm font-semibold text-gray-900">
                     AI Refine
                   </h3>
@@ -414,7 +414,7 @@ export function TemplateTab({
                 {selectedSelectors && selectedSelectors.length > 0 && (
                   <div className="bg-blue-50 border border-blue-200 rounded p-2 flex items-center justify-between">
                     <div className="flex items-center text-sm text-blue-700">
-                      <FiMousePointer className="w-4 h-4 mr-2" />
+                      <MousePointer2 className="w-4 h-4 mr-2" />
                       <span className="font-medium">
                         {selectedSelectors.length} elements selected
                       </span>
@@ -425,7 +425,7 @@ export function TemplateTab({
                       className="text-blue-500 hover:text-blue-700 p-1"
                       title="Clear Selection"
                     >
-                      <FiX className="w-4 h-4" />
+                      <X className="w-4 h-4" />
                     </button>
                   </div>
                 )}
@@ -480,7 +480,7 @@ export function TemplateTab({
                     </>
                   ) : (
                     <>
-                      <FiZap className="w-4 h-4 mr-2" />
+                      <Zap className="w-4 h-4 mr-2" />
                       <span>Apply Changes</span>
                     </>
                   )}
@@ -509,26 +509,9 @@ export function TemplateTab({
             </p>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4 pt-4">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors touch-target"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submitting || !templateData.html_content.trim()}
-              className="flex items-center justify-center px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-target"
-            >
-              <FiSave className="w-5 h-5 mr-2" />
-              {submitting ? "Saving..." : "Save Changes"}
-            </button>
-          </div>
+          {/* Action Buttons removed - now in global header */}
         </>
       )}
-    </form>
+    </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { FiSettings, FiFileText, FiLayout } from "react-icons/fi";
+import { Settings, FileText, LayoutTemplate, ChevronLeft, Save, AlertCircle } from "lucide-react";
 import { api } from "@/lib/api";
 import { AIModel, Tool } from "@/types";
 import { useWorkflowEdit } from "@/hooks/useWorkflowEdit";
@@ -13,6 +13,14 @@ import { TemplateTab } from "@/components/workflows/edit/TemplateTab";
 import { extractPlaceholders } from "@/utils/templateUtils";
 import { formatHTML } from "@/utils/templateUtils";
 import { useSettings } from "@/hooks/api/useSettings";
+
+// UI Components
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/Tabs";
+import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
+import { Separator } from "@/components/ui/Separator";
+import { Card } from "@/components/ui/Card";
+import { useRouter } from "next/navigation";
 
 export default function EditWorkflowPage() {
   const [activeTab, setActiveTab] = useState<"workflow" | "form" | "template">(
@@ -112,8 +120,8 @@ export default function EditWorkflowPage() {
     }
   }, [templateId, templateData.html_content, activeTab]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setError(null);
 
     // Validation
@@ -266,172 +274,189 @@ export default function EditWorkflowPage() {
 
   if (loading) {
     return (
-      <div className="text-center py-12">
-        <p className="text-gray-600">Loading workflow...</p>
+      <div className="flex h-[50vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-muted-foreground">Loading workflow...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.back()}
+            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Edit Tool
-            </h1>
-            <p className="text-gray-600">
-              Customize your tool and lead form.
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                Edit Lead Magnet
+              </h1>
+              {workflowEdit.workflowStatus === "draft" && (
+                <Badge variant="warning" className="uppercase tracking-wider">Draft</Badge>
+              )}
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Customize your workflow, form, and design.
             </p>
           </div>
-          {workflowEdit.workflowStatus === "draft" && (
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-              Draft
-            </span>
-          )}
+        </div>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={() => router.back()}
+            disabled={submitting}
+          >
+            Cancel
+          </Button>
+          <Button onClick={() => handleSubmit()} disabled={submitting} isLoading={submitting}>
+            <Save className="mr-2 h-4 w-4" />
+            Save Changes
+          </Button>
         </div>
       </div>
 
+      <Separator />
+
       {error && (
-        <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-          {error}
+        <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-destructive">
+          <div className="flex items-center gap-2 font-medium">
+             <AlertCircle className="h-4 w-4" />
+             Error
+          </div>
+          <p className="mt-1 text-sm opacity-90">{error}</p>
         </div>
       )}
 
       {/* Tabs */}
-      <div className="mb-6 border-b border-gray-200 overflow-x-auto">
-        <nav className="flex space-x-4 sm:space-x-8 min-w-max">
-          <button
-            onClick={() => setActiveTab("workflow")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "workflow"
-                ? "border-primary-500 text-primary-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
-          >
-            <FiSettings className="inline w-4 h-4 mr-2" />
-            Tool Settings
-          </button>
-          <button
-            onClick={() => setActiveTab("form")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "form"
-                ? "border-primary-500 text-primary-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
-          >
-            <FiFileText className="inline w-4 h-4 mr-2" />
-            Form
-          </button>
-          {(templateId || templateData.html_content.trim()) && (
-            <button
-              onClick={() => setActiveTab("template")}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === "template"
-                  ? "border-primary-500 text-primary-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              <FiLayout className="inline w-4 h-4 mr-2" />
-              Design
-            </button>
-          )}
-        </nav>
-      </div>
-
-      {activeTab === "workflow" && (
-        <WorkflowTab
-          workflowId={workflowId || ""}
-          formData={formData}
-          steps={steps}
-          submitting={submitting}
-          selectedStepIndex={selectedStepIndex}
-          isSidePanelOpen={isSidePanelOpen}
-          onFormDataChange={handleChange}
-          onStepsChange={setSteps}
-          onAddStep={handleAddStep}
-          onStepClick={(index) => {
-            if (index === -1 || index === null) {
-              // Close panel
-              setSelectedStepIndex(null);
-              setIsSidePanelOpen(false);
-            } else {
-              // Open panel with selected step
-              setSelectedStepIndex(index);
-              setIsSidePanelOpen(true);
-            }
-          }}
-          onStepsReorder={setSteps}
-          onSubmit={handleSubmit}
-          onCancel={() => router.back()}
-          onDeleteStep={handleDeleteStep}
-          onMoveStepUp={handleMoveStepUp}
-          onMoveStepDown={handleMoveStepDown}
-        />
-      )}
-
-      {activeTab === "form" && formId && (
-        <FormTab
-          formFormData={formFormData}
-          workflowName={formData.workflow_name}
-          submitting={submitting}
-          customDomain={settings?.custom_domain}
-          onFormChange={handleFormChange}
-          onFieldChange={handleFieldChange}
-          onAddField={addField}
-          onRemoveField={removeField}
-          onMoveFieldUp={moveFieldUp}
-          onMoveFieldDown={moveFieldDown}
-          onSubmit={handleSubmit}
-          onCancel={() => router.back()}
-        />
-      )}
-
-      {activeTab === "form" && !formId && (
-        <div className="bg-white rounded-lg shadow p-12 text-center">
-          <p className="text-gray-600 mb-4">
-            No form found for this lead magnet.
-          </p>
-          <p className="text-sm text-gray-500">
-            Forms are automatically created when you create a lead magnet.
-          </p>
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value as any)}
+        className="w-full"
+      >
+        <div className="mb-6">
+          <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
+            <TabsTrigger value="workflow">
+              <Settings className="mr-2 h-4 w-4" />
+              Settings
+            </TabsTrigger>
+            <TabsTrigger value="form">
+              <FileText className="mr-2 h-4 w-4" />
+              Form
+            </TabsTrigger>
+            {(templateId || templateData.html_content.trim()) && (
+              <TabsTrigger value="template">
+                <LayoutTemplate className="mr-2 h-4 w-4" />
+                Design
+              </TabsTrigger>
+            )}
+          </TabsList>
         </div>
-      )}
 
-      {activeTab === "template" && (
-        <TemplateTab
-          templateData={templateData}
-          templateLoading={templateLoading}
-          detectedPlaceholders={detectedPlaceholders}
-          templateViewMode={templateViewMode}
-          devicePreviewSize={devicePreviewSize}
-          previewKey={previewKey}
-          refining={refining}
-          generationStatus={generationStatus}
-          editPrompt={editPrompt}
-          selectedSelectors={selectedSelectors}
-          onSelectionChange={setSelectedSelectors}
-          onTemplateChange={handleTemplateChange}
-          onHtmlChange={handleHtmlChange}
-          onViewModeChange={setTemplateViewMode}
-          onDeviceSizeChange={setDevicePreviewSize}
-          onInsertPlaceholder={insertPlaceholder}
-          onRefine={handleRefineWithError}
-          onEditPromptChange={setEditPrompt}
-          onFormatHtml={handleFormatHtml}
-          onSubmit={handleSubmit}
-          onCancel={() => router.back()}
-          submitting={submitting}
-          onUndo={handleUndo}
-          onRedo={handleRedo}
-          canUndo={canUndo}
-          canRedo={canRedo}
-          history={history}
-          historyIndex={historyIndex}
-          onJumpToHistory={jumpToHistory}
-          onCommitChange={commitHtmlChange}
-        />
-      )}
+        <TabsContent value="workflow" className="mt-0">
+          <WorkflowTab
+            workflowId={workflowId || ""}
+            formData={formData}
+            steps={steps}
+            submitting={submitting}
+            selectedStepIndex={selectedStepIndex}
+            isSidePanelOpen={isSidePanelOpen}
+            onFormDataChange={handleChange}
+            onStepsChange={setSteps}
+            onAddStep={handleAddStep}
+            onStepClick={(index) => {
+              if (index === -1 || index === null) {
+                // Close panel
+                setSelectedStepIndex(null);
+                setIsSidePanelOpen(false);
+              } else {
+                // Open panel with selected step
+                setSelectedStepIndex(index);
+                setIsSidePanelOpen(true);
+              }
+            }}
+            onStepsReorder={setSteps}
+            onSubmit={handleSubmit}
+            onCancel={() => router.back()}
+            onDeleteStep={handleDeleteStep}
+            onMoveStepUp={handleMoveStepUp}
+            onMoveStepDown={handleMoveStepDown}
+          />
+        </TabsContent>
+
+        <TabsContent value="form" className="mt-0">
+          {formId ? (
+            <FormTab
+              formFormData={formFormData}
+              workflowName={formData.workflow_name}
+              submitting={submitting}
+              customDomain={settings?.custom_domain}
+              onFormChange={handleFormChange}
+              onFieldChange={handleFieldChange}
+              onAddField={addField}
+              onRemoveField={removeField}
+              onMoveFieldUp={moveFieldUp}
+              onMoveFieldDown={moveFieldDown}
+              onSubmit={handleSubmit}
+              onCancel={() => router.back()}
+            />
+          ) : (
+            <Card className="flex flex-col items-center justify-center p-12 text-center">
+              <div className="rounded-full bg-muted p-3">
+                <FileText className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <h3 className="mt-4 text-lg font-semibold">No Form Found</h3>
+              <p className="mt-2 text-sm text-muted-foreground max-w-sm">
+                No form found for this lead magnet. Forms are automatically created when you create a lead magnet.
+              </p>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="template" className="mt-0">
+          <TemplateTab
+            templateData={templateData}
+            templateLoading={templateLoading}
+            detectedPlaceholders={detectedPlaceholders}
+            templateViewMode={templateViewMode}
+            devicePreviewSize={devicePreviewSize}
+            previewKey={previewKey}
+            refining={refining}
+            generationStatus={generationStatus}
+            editPrompt={editPrompt}
+            selectedSelectors={selectedSelectors}
+            onSelectionChange={setSelectedSelectors}
+            onTemplateChange={handleTemplateChange}
+            onHtmlChange={handleHtmlChange}
+            onViewModeChange={setTemplateViewMode}
+            onDeviceSizeChange={setDevicePreviewSize}
+            onInsertPlaceholder={insertPlaceholder}
+            onRefine={handleRefineWithError}
+            onEditPromptChange={setEditPrompt}
+            onFormatHtml={handleFormatHtml}
+            onSubmit={handleSubmit}
+            onCancel={() => router.back()}
+            submitting={submitting}
+            onUndo={handleUndo}
+            onRedo={handleRedo}
+            canUndo={canUndo}
+            canRedo={canRedo}
+            history={history}
+            historyIndex={historyIndex}
+            onJumpToHistory={jumpToHistory}
+            onCommitChange={commitHtmlChange}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
