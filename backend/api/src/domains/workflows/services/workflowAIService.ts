@@ -219,7 +219,7 @@ Please generate the updated workflow configuration with all necessary changes.`;
         );
       };
 
-      // Use the Responses API with timeout and retry logic for reliability
+      // Use the Responses API with retry logic for reliability (no timeout - can take up to 5 minutes)
       const completion = await retryWithBackoff(
         () =>
           callResponsesWithTimeout(
@@ -228,11 +228,11 @@ Please generate the updated workflow configuration with all necessary changes.`;
                 model: 'gpt-5.2',
                 instructions: WORKFLOW_AI_SYSTEM_PROMPT,
                 input: userMessage,
-                reasoning: { effort: 'medium' },
+                reasoning: { effort: 'high' },
                 service_tier: 'priority',
               }),
             'Workflow AI Edit',
-            120000, // 2 minute timeout for complex workflow edits
+            0, // No timeout - allow up to 5 minutes for complex workflow edits
           ),
         {
           maxAttempts: 3,
