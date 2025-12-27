@@ -10,6 +10,14 @@ import { FiCopy, FiRefreshCw } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import { useRegenerateWebhookToken } from "@/hooks/api/useSettings";
 import { WebhookTester } from "./WebhookTester";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import {
+  ServerStackIcon,
+  GlobeAltIcon,
+  PhoneIcon,
+} from "@heroicons/react/24/outline";
 
 interface DeliverySettingsProps {
   settings: Settings;
@@ -17,12 +25,6 @@ interface DeliverySettingsProps {
   onSettingsUpdate: (updatedSettings: Settings) => void;
   errors?: Record<string, string>;
 }
-
-import {
-  ServerStackIcon,
-  GlobeAltIcon,
-  PhoneIcon,
-} from "@heroicons/react/24/outline";
 
 export function DeliverySettings({
   settings,
@@ -61,57 +63,61 @@ export function DeliverySettings({
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="p-6 border-b border-gray-100 bg-gray-50/50">
-          <div className="flex items-center gap-3 mb-2">
+      <Card>
+        <CardHeader className="border-b border-gray-100 bg-gray-50/50">
+          <div className="flex items-center gap-3 mb-1">
             <div className="p-2 bg-green-50 rounded-lg">
               <ServerStackIcon className="w-5 h-5 text-green-600" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900">
+            <CardTitle className="text-lg">
               Receive Leads via Webhook
-            </h3>
+            </CardTitle>
           </div>
-          <p className="text-sm text-gray-600 ml-12">
+          <CardDescription className="ml-12">
             Configure endpoints to receive form submissions and trigger automation.
-          </p>
-        </div>
+          </CardDescription>
+        </CardHeader>
 
-        <div className="p-8 space-y-8">
+        <CardContent className="p-8 space-y-8">
           <div>
             <div className="flex items-center justify-between mb-4">
               <label className="block text-sm font-medium text-gray-700">
                 Your Webhook URL
               </label>
               <div className="flex gap-2">
-                <button
+                <Button
+                  variant="outline"
+                  size="sm"
                   type="button"
                   onClick={handleCopyWebhookUrl}
                   disabled={!settings.webhook_url}
-                  className="text-xs flex items-center px-3 py-1.5 bg-white border border-gray-200 text-gray-700 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  className="text-xs h-8"
                 >
                   <FiCopy className="w-3.5 h-3.5 mr-1.5" />
                   Copy URL
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   type="button"
                   onClick={handleRegenerateToken}
                   disabled={isRegenerating || !settings.webhook_url}
-                  className="text-xs flex items-center px-3 py-1.5 bg-white border border-gray-200 text-red-600 rounded-md hover:bg-red-50 transition-colors disabled:opacity-50"
+                  className="text-xs h-8 text-red-600 hover:bg-red-50 border-red-200"
                 >
                   <FiRefreshCw
                     className={`w-3.5 h-3.5 mr-1.5 ${isRegenerating ? "animate-spin" : ""}`}
                   />
                   Regenerate
-                </button>
+                </Button>
               </div>
             </div>
 
             <div className="relative">
-              <input
+              <Input
                 type="text"
                 value={settings.webhook_url || ""}
                 readOnly
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+                className="font-mono text-gray-600 bg-gray-50"
               />
             </div>
             <p className="mt-2 text-sm text-gray-500">
@@ -149,25 +155,25 @@ export function DeliverySettings({
               </div>
             )}
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="p-6 border-b border-gray-100 bg-gray-50/50">
-          <div className="flex items-center gap-3 mb-2">
+      <Card>
+        <CardHeader className="border-b border-gray-100 bg-gray-50/50">
+          <div className="flex items-center gap-3 mb-1">
             <div className="p-2 bg-blue-50 rounded-lg">
               <GlobeAltIcon className="w-5 h-5 text-blue-600" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900">
+            <CardTitle className="text-lg">
               Integrations & Domain
-            </h3>
+            </CardTitle>
           </div>
-          <p className="text-sm text-gray-600 ml-12">
+          <CardDescription className="ml-12">
             Set up external integrations and domain settings.
-          </p>
-        </div>
+          </CardDescription>
+        </CardHeader>
 
-        <div className="p-8 space-y-6">
+        <CardContent className="p-8 space-y-6">
           <FormField
             label="CRM Integration (Webhook)"
             name="ghl_webhook_url"
@@ -202,8 +208,8 @@ export function DeliverySettings({
               placeholder="phone"
             />
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

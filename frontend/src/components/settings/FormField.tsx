@@ -5,6 +5,11 @@
 "use client";
 
 import { ReactNode } from "react";
+import { Label } from "@/components/ui/Label";
+import { Input } from "@/components/ui/Input";
+import { Textarea } from "@/components/ui/Textarea";
+import { Select } from "@/components/ui/Select";
+import { cn } from "@/lib/utils";
 
 interface FormFieldProps {
   label: string | ReactNode;
@@ -41,16 +46,10 @@ export function FormField({
 }: FormFieldProps) {
   const inputId = `field-${name}`;
 
-  const baseInputClasses = `w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all duration-200 ${
-    error
-      ? "border-red-300 focus:ring-red-500 bg-red-50/30"
-      : "border-gray-200 focus:border-primary-500 focus:ring-primary-500/20 hover:border-gray-300"
-  } ${disabled || readOnly ? "bg-gray-50 text-gray-500 cursor-not-allowed" : "bg-white text-gray-900 shadow-sm"} ${className}`;
-
   const renderInput = () => {
     if (type === "textarea") {
       return (
-        <textarea
+        <Textarea
           id={inputId}
           name={name}
           value={value}
@@ -59,7 +58,7 @@ export function FormField({
           required={required}
           disabled={disabled}
           readOnly={readOnly}
-          className={baseInputClasses}
+          className={cn(className, error && "border-red-500 focus-visible:ring-red-500")}
           rows={4}
           data-tour={dataTour}
           aria-describedby={helpText && !error ? `${inputId}-help` : undefined}
@@ -71,14 +70,14 @@ export function FormField({
 
     if (options && options.length > 0) {
       return (
-        <select
+        <Select
           id={inputId}
           name={name}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           required={required}
           disabled={disabled}
-          className={baseInputClasses}
+          className={cn(className, error && "border-red-500 focus-visible:ring-red-500")}
           data-tour={dataTour}
           aria-describedby={helpText && !error ? `${inputId}-help` : undefined}
           aria-invalid={error ? "true" : "false"}
@@ -89,12 +88,12 @@ export function FormField({
               {option.label}
             </option>
           ))}
-        </select>
+        </Select>
       );
     }
 
     return (
-      <input
+      <Input
         id={inputId}
         name={name}
         type={type}
@@ -104,7 +103,7 @@ export function FormField({
         required={required}
         disabled={disabled}
         readOnly={readOnly}
-        className={baseInputClasses}
+        className={cn(className, error && "border-red-500 focus-visible:ring-red-500")}
         data-tour={dataTour}
         aria-describedby={helpText && !error ? `${inputId}-help` : undefined}
         aria-invalid={error ? "true" : "false"}
@@ -114,22 +113,19 @@ export function FormField({
   };
 
   return (
-    <div>
-      <label
-        htmlFor={inputId}
-        className="block text-sm font-medium text-gray-700 mb-2"
-      >
+    <div className="grid gap-2">
+      <Label htmlFor={inputId}>
         {label}
         {required && (
           <span className="text-red-500 ml-1" aria-label="required">
             *
           </span>
         )}
-      </label>
+      </Label>
       {renderInput()}
       {error && (
         <p
-          className="mt-1 text-sm text-red-600"
+          className="text-sm text-red-500 font-medium"
           role="alert"
           aria-live="polite"
         >
@@ -137,7 +133,7 @@ export function FormField({
         </p>
       )}
       {helpText && !error && (
-        <p className="mt-1 text-sm text-gray-500" id={`${inputId}-help`}>
+        <p className="text-sm text-gray-500" id={`${inputId}-help`}>
           {helpText}
         </p>
       )}

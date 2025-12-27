@@ -6,6 +6,8 @@
 
 import { Settings } from "@/types";
 import { FormField } from "./FormField";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
+import { BuildingOfficeIcon } from "@heroicons/react/24/outline";
 
 interface GeneralSettingsProps {
   settings: Settings;
@@ -17,30 +19,28 @@ const AI_MODEL_OPTIONS = [
   { value: "gpt-5.2", label: "GPT-5.2" },
 ];
 
-import { BuildingOfficeIcon } from "@heroicons/react/24/outline";
-
 export function GeneralSettings({
   settings,
   onChange,
   errors,
 }: GeneralSettingsProps) {
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-      <div className="p-6 border-b border-gray-100 bg-gray-50/50">
-        <div className="flex items-center gap-3 mb-2">
+    <Card>
+      <CardHeader className="border-b border-gray-100 bg-gray-50/50">
+        <div className="flex items-center gap-3 mb-1">
           <div className="p-2 bg-blue-50 rounded-lg">
             <BuildingOfficeIcon className="w-5 h-5 text-blue-600" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900">
+          <CardTitle className="text-lg">
             General Information
-          </h3>
+          </CardTitle>
         </div>
-        <p className="text-sm text-gray-600 ml-12">
+        <CardDescription className="ml-12">
           Configure your organization details and default AI model preferences.
-        </p>
-      </div>
+        </CardDescription>
+      </CardHeader>
 
-      <div className="p-8 space-y-8">
+      <CardContent className="space-y-8 pt-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             label="Company Name"
@@ -88,7 +88,7 @@ export function GeneralSettings({
             helpText="Default AI model used for generating lead magnets"
           />
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
