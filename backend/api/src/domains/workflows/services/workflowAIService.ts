@@ -2,7 +2,8 @@ import OpenAI from 'openai';
 import { WorkflowStep, ensureStepDefaults } from './workflow/workflowConfigSupport';
 import { validateDependencies } from '@utils/dependencyResolver';
 import { logger } from '@utils/logger';
-import { stripMarkdownCodeFences } from '@utils/openaiHelpers';
+import { stripMarkdownCodeFences, callResponsesWithTimeout } from '@utils/openaiHelpers';
+import { retryWithBackoff } from '@utils/errorHandling';
 
 export interface WorkflowAIEditRequest {
   userPrompt: string;
@@ -197,14 +198,54 @@ Please generate the updated workflow configuration with all necessary changes.`;
     });
 
     try {
-      // Use the Responses API so we can reliably set reasoning effort + service tier.
-      const completion = await (this.openaiClient as any).responses.create({
-        model: 'gpt-5.2',
-        instructions: WORKFLOW_AI_SYSTEM_PROMPT,
-        input: userMessage,
-        reasoning: { effort: 'medium' },
-        service_tier: 'priority',
-      });
+      // Helper to check if error is retryable (503, 429, timeouts, etc.)
+      const isRetryableError = (err: any): boolean => {
+        const status =
+          typeof err.status === 'number'
+            ? err.status
+            : typeof err.statusCode === 'number'
+              ? err.statusCode
+              : typeof err.response?.status === 'number'
+                ? err.response.status
+                : undefined;
+        if (status === 429 || status === 503) return true;
+        if (typeof status === 'number' && status >= 500) return true;
+        const msg = String(err?.message || '').toLowerCase();
+        return (
+          msg.includes('timeout') ||
+          msg.includes('overloaded') ||
+          msg.includes('service unavailable') ||
+          msg.includes('rate limit')
+        );
+      };
+
+      // Use the Responses API with retry logic for reliability (no timeout - can take up to 5 minutes)
+      const completion = await retryWithBackoff(
+        () =>
+          callResponsesWithTimeout(
+            () =>
+              (this.openaiClient as any).responses.create({
+                model: 'gpt-5.2',
+                instructions: WORKFLOW_AI_SYSTEM_PROMPT,
+                input: userMessage,
+                reasoning: { effort: 'high' },
+                service_tier: 'priority',
+              }),
+            'Workflow AI Edit',
+            0, // No timeout - allow up to 5 minutes for complex workflow edits
+          ),
+        {
+          maxAttempts: 3,
+          initialDelayMs: 1000,
+          retryableErrors: isRetryableError,
+          onRetry: (attempt, error) => {
+            logger.warn('[WorkflowAI] Retrying OpenAI call', {
+              attempt,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          },
+        },
+      );
 
       const outputText = String((completion as any)?.output_text || '');
       const cleaned = stripMarkdownCodeFences(outputText).trim();
@@ -294,10 +335,33 @@ Please generate the updated workflow configuration with all necessary changes.`;
 
       return parsedResponse;
     } catch (error: any) {
+      // Check if this is a service unavailable error
+      const status =
+        typeof error.status === 'number'
+          ? error.status
+          : typeof error.statusCode === 'number'
+            ? error.statusCode
+            : typeof error.response?.status === 'number'
+              ? error.response.status
+              : undefined;
+      
+      const isServiceUnavailable = status === 503 || 
+        String(error?.message || '').toLowerCase().includes('service unavailable');
+
       logger.error('[WorkflowAI] Error editing workflow', {
         error: error.message,
+        status,
+        isServiceUnavailable,
         stack: error.stack,
       });
+
+      if (isServiceUnavailable) {
+        throw new Error(
+          'OpenAI service is temporarily unavailable. Please try again in a few moments. ' +
+          'If the issue persists, the service may be experiencing high load.'
+        );
+      }
+
       throw new Error(`Failed to edit workflow: ${error.message}`);
     }
   }

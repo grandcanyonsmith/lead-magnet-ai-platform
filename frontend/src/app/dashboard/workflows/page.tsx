@@ -509,7 +509,7 @@ export default function WorkflowsPage() {
       };
 
       processPollBatch();
-    }, 5000);
+    }, 10000); // Reduced from 5s to 10s to reduce server load
 
     return () => {
       clearInterval(interval);
