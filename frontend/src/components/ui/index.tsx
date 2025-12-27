@@ -21,6 +21,18 @@ export { Label } from "./Label";
 export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "./Card";
 export { Textarea, type TextareaProps } from "./Textarea";
 export { Select, type SelectProps } from "./Select";
+export { Avatar, type AvatarProps } from "./Avatar";
+export { Badge, type BadgeProps } from "./Badge";
+export {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuGroup,
+  DropdownMenuShortcut,
+} from "./DropdownMenu";
 
 // Legacy components for backward compatibility
 interface LoadingSpinnerProps {

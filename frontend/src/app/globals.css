@@ -234,11 +234,12 @@
 }
 
 /* Smooth transitions */
-* {
+/* Removed universal transition to prevent performance issues and layout jank */
+/* * {
   transition-property: color, background-color, border-color, transform, opacity;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
-}
+} */
 
 /* Mobile optimizations */
 @media (max-width: 640px) {

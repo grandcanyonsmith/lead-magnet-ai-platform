@@ -27,6 +27,16 @@ import {
   ChevronRightIcon,
   ChevronUpIcon,
 } from "@heroicons/react/24/outline";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/DropdownMenu";
+import { Avatar } from "@/components/ui/Avatar";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { cn } from "@/lib/utils";
 
@@ -44,10 +54,6 @@ export default function DashboardLayout({
   const [activeTourId, setActiveTourId] = useState<TourId | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
-
-  // Custom user menu state to avoid Headless UI auto-closing issues with nested interactions
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const userMenuRef = useRef<HTMLDivElement>(null);
 
   const loadSettings = useCallback(async () => {
     try {
@@ -86,26 +92,8 @@ export default function DashboardLayout({
     checkAuth();
   }, [router, loadSettings]);
 
-  // Close user menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        userMenuRef.current &&
-        !userMenuRef.current.contains(event.target as Node)
-      ) {
-        setUserMenuOpen(false);
-      }
-    };
-
-    if (userMenuOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [userMenuOpen]);
-
+  // Close user menu when clicking outside - REMOVED (Handled by Headless UI)
+  
   const handleStartTour = (tourId: TourId) => {
     setActiveTourId(tourId);
   };
@@ -397,19 +385,13 @@ export default function DashboardLayout({
           </div>
 
           <div className="mt-auto px-2 sm:px-3 py-2 sm:py-3 border-t border-border bg-card shrink-0">
-            <div className="relative" ref={userMenuRef}>
-              <button
-                onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="w-full flex items-center justify-between rounded-lg px-1.5 sm:px-2 py-1.5 sm:py-2 hover:bg-accent hover:text-accent-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-              >
+            <DropdownMenu>
+              <DropdownMenuTrigger className="w-full flex items-center justify-between rounded-lg px-1.5 sm:px-2 py-1.5 sm:py-2 hover:bg-accent hover:text-accent-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
                 <span className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
-                  <span className="h-7 w-7 sm:h-8 sm:w-8 rounded-md bg-muted flex items-center justify-center overflow-hidden shrink-0">
-                    <span className="text-[10px] sm:text-xs font-semibold text-muted-foreground">
-                      {(user?.name || user?.email || "U")
-                        .slice(0, 1)
-                        .toUpperCase()}
-                    </span>
-                  </span>
+                  <Avatar
+                    className="h-7 w-7 sm:h-8 sm:w-8 rounded-md"
+                    fallback={user?.name || user?.email || "U"}
+                  />
                   <span className="min-w-0 flex-1 text-left">
                     <span className="block truncate text-xs sm:text-sm font-medium text-foreground">
                       {user?.name || user?.email || "Account"}
@@ -422,69 +404,68 @@ export default function DashboardLayout({
                   </span>
                 </span>
                 <ChevronUpIcon
-                  className={`h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground transition-transform shrink-0 ${userMenuOpen ? "rotate-180" : ""}`}
+                  className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground transition-transform ui-open:rotate-180 data-[headlessui-state=open]:rotate-180"
                 />
-              </button>
+              </DropdownMenuTrigger>
 
-              {userMenuOpen && (
-                <div className="absolute bottom-full left-0 mb-2 w-[260px] sm:w-[280px] rounded-lg border border-border bg-popover text-popover-foreground shadow-lg ring-1 ring-black/5 z-[50]">
-                  <div className="px-2.5 sm:px-3 py-2 sm:py-2.5 flex items-center justify-between">
-                    <span className="text-xs sm:text-sm text-foreground">
-                      Notifications
-                    </span>
-                    <NotificationBell layer="account_menu" />
-                  </div>
+              <DropdownMenuContent className="w-[260px] sm:w-[280px] mb-2" align="start" side="top">
+                <div className="px-2 py-1.5 flex items-center justify-between">
+                  <span className="text-xs sm:text-sm text-foreground">
+                    Notifications
+                  </span>
+                  <NotificationBell layer="account_menu" />
+                </div>
 
-                  {role === "SUPER_ADMIN" && (
-                    <>
-                      <div className="h-px bg-border my-1" />
-                      <div className="px-2.5 sm:px-3 py-2">
-                        <div className="mb-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                          Views
-                        </div>
+                {role === "SUPER_ADMIN" && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuGroup>
+                      <DropdownMenuLabel className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        Views
+                      </DropdownMenuLabel>
+                      <div className="px-2 py-1">
                         <ViewSwitcher />
                       </div>
-                    </>
-                  )}
+                    </DropdownMenuGroup>
+                  </>
+                )}
 
-                  {(role === "ADMIN" || role === "SUPER_ADMIN") && (
-                    <>
-                      <div className="h-px bg-border my-1" />
-                      <div className="px-2.5 sm:px-3 py-2">
-                        <div className="mb-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                          Impersonation
-                        </div>
+                {(role === "ADMIN" || role === "SUPER_ADMIN") && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuGroup>
+                      <DropdownMenuLabel className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        Impersonation
+                      </DropdownMenuLabel>
+                      <div className="px-2 py-1">
                         <UserImpersonation />
                       </div>
-                    </>
-                  )}
+                    </DropdownMenuGroup>
+                  </>
+                )}
 
-                  <div className="h-px bg-border my-1" />
-                  <button
-                    className="w-full px-2.5 sm:px-3 py-2.5 sm:py-2.5 text-xs sm:text-sm text-foreground text-left hover:bg-accent hover:text-accent-foreground transition-colors"
-                    onClick={() => {
-                      setSidebarOpen(false);
-                      setUserMenuOpen(false);
-                      router.push("/dashboard/settings");
-                    }}
-                  >
-                    Settings
-                  </button>
-                  <div className="h-px bg-border my-1" />
-                  <button
-                    className="w-full px-2.5 sm:px-3 py-2.5 sm:py-2.5 text-xs sm:text-sm text-destructive text-left hover:bg-destructive/10 transition-colors rounded-b-lg"
-                    onClick={() => {
-                      setSidebarOpen(false);
-                      setUserMenuOpen(false);
-                      signOut();
-                      router.push("/auth/login");
-                    }}
-                  >
-                    Sign out
-                  </button>
-                </div>
-              )}
-            </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => {
+                    setSidebarOpen(false);
+                    router.push("/dashboard/settings");
+                  }}
+                >
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                  onClick={() => {
+                    setSidebarOpen(false);
+                    signOut();
+                    router.push("/auth/login");
+                  }}
+                >
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </aside>
 
