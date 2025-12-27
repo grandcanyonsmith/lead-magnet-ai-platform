@@ -8,6 +8,7 @@ import { FiLoader } from "react-icons/fi";
 // Export new shared components
 export { LoadingState } from "./LoadingState";
 export { ErrorState } from "./ErrorState";
+export { Skeleton } from "./Skeleton";
 export { EmptyState as EmptyStateNew } from "./EmptyState";
 export { StatusBadge as StatusBadgeNew } from "./StatusBadge";
 export { SectionCard } from "./SectionCard";
