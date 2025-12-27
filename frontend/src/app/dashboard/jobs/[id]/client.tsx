@@ -45,7 +45,7 @@ import type {
 } from "@/types/job";
 import type { WorkflowStep } from "@/types";
 import type { Workflow } from "@/types/workflow";
-import type { FormSubmission } from "@/types/form";
+import type { FormSubmission, Form } from "@/types/form";
 import type { Artifact } from "@/types/artifact";
 
 // ---------------------------------------------------------------------------

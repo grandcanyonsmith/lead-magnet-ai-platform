@@ -1,12 +1,11 @@
 import { ApiError } from '@utils/errors';
 import { RouteResponse } from '@routes/routes';
 import { WorkflowStepAIService, AIStepGenerationRequest } from '@domains/workflows/services/workflowStepAIService';
-import { WorkflowAIService, WorkflowAIEditRequest } from '@domains/workflows/services/workflowAIService';
 import { workflowInstructionsService } from '@domains/workflows/services/workflowInstructionsService';
 import { logger } from '@utils/logger';
 import { getOpenAIClient } from '@services/openaiService';
 import { workflowGenerationJobService } from '@domains/workflows/services/workflowGenerationJobService';
-import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
+import { workflowAIEditJobService } from '@domains/workflows/services/workflowAIEditJobService';
 
 /**
  * Controller for AI-powered workflow operations.
@@ -96,6 +95,36 @@ export class WorkflowAIController {
         result: job.result,
         error_message: job.error_message,
         workflow_id: job.workflow_id, // Include workflow_id if available
+        created_at: job.created_at,
+        updated_at: job.updated_at,
+      },
+    };
+  }
+
+  /**
+   * Get the status of a workflow AI edit job.
+   */
+  async getAIEditStatus(tenantId: string, jobId: string): Promise<RouteResponse> {
+    const job = await workflowAIEditJobService.getJob(jobId);
+
+    if (!job) {
+      throw new ApiError('Job not found', 404);
+    }
+
+    if (job.tenant_id !== tenantId) {
+      throw new ApiError('Unauthorized', 403);
+    }
+
+    await workflowAIEditJobService.ensureLocalProcessing(job);
+
+    return {
+      statusCode: 200,
+      body: {
+        job_id: jobId,
+        status: job.status,
+        result: job.result,
+        error_message: job.error_message,
+        workflow_id: job.workflow_id,
         created_at: job.created_at,
         updated_at: job.updated_at,
       },
@@ -207,10 +236,6 @@ export class WorkflowAIController {
     const { db } = await import('@utils/db');
     const { env } = await import('@utils/env');
     const WORKFLOWS_TABLE = env.workflowsTable;
-    const JOBS_TABLE = env.jobsTable;
-    const SUBMISSIONS_TABLE = env.submissionsTable;
-    const ARTIFACTS_TABLE = env.artifactsTable;
-    const ARTIFACTS_BUCKET = env.artifactsBucket;
 
     // Validate required fields
     // userPrompt can be optional if contextJobId is provided (we can use context to imply improvement)
@@ -232,7 +257,7 @@ export class WorkflowAIController {
       throw new ApiError('You don\'t have permission to access this lead magnet', 403);
     }
 
-    logger.info('[AI Workflow Edit] Starting edit', {
+    logger.info('[AI Workflow Edit] Starting async edit job', {
       workflowId,
       workflowName: workflow.workflow_name,
       userPrompt: userPrompt.substring(0, 100),
@@ -240,210 +265,30 @@ export class WorkflowAIController {
       contextJobId,
     });
 
-    // ---------------------------------------------------------
-    // CONTEXT GATHERING (Parallelized)
-    // ---------------------------------------------------------
-    let executionHistory: any = undefined;
-    const referenceExamples: any[] = [];
-
-    const s3Client = new S3Client({ region: env.awsRegion });
-
-    // Helper to fetch full content from S3
-    const fetchS3Json = async (key: string) => {
-      try {
-        const cmd = new GetObjectCommand({ Bucket: ARTIFACTS_BUCKET, Key: key });
-        const res = await s3Client.send(cmd);
-        if (res.Body) {
-          const str = await res.Body.transformToString();
-          return JSON.parse(str);
-        }
-      } catch (e: any) {
-        logger.warn('[WorkflowAI] Failed to fetch S3 JSON', { key, error: e.message });
-      }
-      return null;
-    };
-
-    const fetchS3Text = async (key: string) => {
-      try {
-        const cmd = new GetObjectCommand({ Bucket: ARTIFACTS_BUCKET, Key: key });
-        const res = await s3Client.send(cmd);
-        if (res.Body) {
-          return await res.Body.transformToString();
-        }
-      } catch (e: any) {
-        logger.warn('[WorkflowAI] Failed to fetch S3 Text', { key, error: e.message });
-      }
-      return null;
-    };
-
-    // Promise for Context Job
-    const contextJobPromise = (async () => {
-      if (!contextJobId) return;
-
-      try {
-        const job = await db.get(JOBS_TABLE, { job_id: contextJobId });
-        if (job && job.tenant_id === tenantId) {
-          const history: any = {};
-
-          // Parallelize sub-fetches for the context job
-          const submissionPromise = job.submission_id
-            ? db.get(SUBMISSIONS_TABLE, { submission_id: job.submission_id })
-            : Promise.resolve(null);
-
-          const stepsPromise = job.execution_steps_s3_key
-            ? fetchS3Json(String(job.execution_steps_s3_key))
-            : Promise.resolve(job.execution_steps || null);
-
-          let artifactPromise: Promise<string | null> = Promise.resolve(null);
-          if (
-            ARTIFACTS_TABLE &&
-            job.artifacts &&
-            job.artifacts.length > 0
-          ) {
-            const finalArtifactId = job.artifacts[job.artifacts.length - 1]; // Naive last
-            artifactPromise = db
-              .get(ARTIFACTS_TABLE!, { artifact_id: finalArtifactId })
-              .then((artifact) => {
-                if (artifact && artifact.s3_key) {
-                  return fetchS3Text(String(artifact.s3_key));
-                }
-                return null;
-              });
-          }
-
-          const [submission, steps, finalArtifactText] = await Promise.all([
-            submissionPromise,
-            stepsPromise,
-            artifactPromise,
-          ]);
-
-          if (submission) {
-            history.submissionData = submission.submission_data;
-          }
-          if (steps) {
-            history.stepExecutionResults = steps;
-          }
-          if (finalArtifactText) {
-            history.finalArtifactSummary = finalArtifactText;
-          }
-
-          executionHistory = history;
-        }
-      } catch (err: any) {
-        logger.error('[WorkflowAI] Failed to fetch context job', {
-          contextJobId,
-          error: err.message,
-        });
-      }
-    })();
-
-    // Promise for Reference Examples
-    const referenceExamplesPromise = (async () => {
-      try {
-        const examplesRes = await db.query(
-          JOBS_TABLE,
-          "gsi_workflow_status",
-          "workflow_id = :wId AND #s = :s",
-          { ":wId": workflowId, ":s": "completed" },
-          { "#s": "status" },
-          5, // fetch 5
-        );
-
-        const potentialExamples = examplesRes.items || [];
-        // Filter out the current context job
-        const filtered = potentialExamples.filter(
-          (j: any) => j.job_id !== contextJobId,
-        );
-
-        // Process top 2 recent in parallel
-        const examplePromises = filtered.slice(0, 2).map(async (exJob: any) => {
-          const exData: any = { jobId: exJob.job_id };
-
-          const subPromise = exJob.submission_id
-            ? db.get(SUBMISSIONS_TABLE, { submission_id: exJob.submission_id })
-            : Promise.resolve(null);
-
-          let artPromise: Promise<string | null> = Promise.resolve(null);
-          if (
-            ARTIFACTS_TABLE &&
-            exJob.artifacts &&
-            exJob.artifacts.length > 0
-          ) {
-            const artId = exJob.artifacts[exJob.artifacts.length - 1];
-            artPromise = db
-              .get(ARTIFACTS_TABLE!, { artifact_id: artId })
-              .then((art) => {
-                if (art && art.s3_key) {
-                  return fetchS3Text(String(art.s3_key));
-                }
-                return null;
-              });
-          }
-
-          const [sub, txt] = await Promise.all([subPromise, artPromise]);
-
-          if (sub) exData.submissionData = sub.submission_data;
-          if (txt) exData.finalArtifactSummary = txt;
-
-          if (exData.submissionData && exData.finalArtifactSummary) {
-            return exData;
-          }
-          return null;
-        });
-
-        const results = await Promise.all(examplePromises);
-        results.forEach((res) => {
-          if (res) referenceExamples.push(res);
-        });
-      } catch (err: any) {
-        logger.warn("[WorkflowAI] Failed to fetch reference examples", {
-          error: err.message,
-        });
-      }
-    })();
-
-    // Wait for context gathering to complete
-    await Promise.all([contextJobPromise, referenceExamplesPromise]);
-
     try {
-      // Get OpenAI client
-      const openai = await getOpenAIClient();
-      const aiService = new WorkflowAIService(openai);
-
-      // Prepare the request
-      const aiRequest: WorkflowAIEditRequest = {
-        userPrompt: userPrompt,
-        workflowContext: {
-          workflow_id: workflowId,
-          workflow_name: workflow.workflow_name || 'Untitled Workflow',
-          workflow_description: workflow.workflow_description || '',
-          template_id: workflow.template_id,
-          current_steps: workflow.steps || [],
-        },
-        executionHistory,
-        referenceExamples
-      };
-
-      // Edit the workflow
-      const result = await aiService.editWorkflow(aiRequest);
-
-      logger.info('[AI Workflow Edit] Edit successful', {
+      const { jobId } = await workflowAIEditJobService.startWorkflowAIEdit({
+        tenantId,
         workflowId,
-        newStepCount: result.steps.length,
-        changesSummary: result.changes_summary,
+        userPrompt,
+        ...(contextJobId ? { contextJobId } : {}),
       });
 
       return {
-        statusCode: 200,
-        body: result,
+        statusCode: 202,
+        body: {
+          job_id: jobId,
+          status: 'pending',
+          message:
+            'Workflow AI edit started. Poll /admin/workflows/ai-edit-status/:jobId for status.',
+        },
       };
     } catch (error: any) {
-      logger.error('[AI Workflow Edit] Error', {
+      logger.error('[AI Workflow Edit] Failed to start job', {
         workflowId,
         error: error.message,
         stack: error.stack,
       });
-      throw new ApiError(`Failed to edit workflow: ${error.message}`, 500);
+      throw new ApiError(`Failed to start workflow edit: ${error.message}`, 500);
     }
   }
 }
