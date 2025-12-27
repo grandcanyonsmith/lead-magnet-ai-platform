@@ -82,7 +82,7 @@ export default function DashboardPage() {
             Welcome back, {firstName}
           </h1>
           <p className="text-muted-foreground mt-1 text-lg">
-            Here's what's happening with your lead magnets today.
+            Here is what is happening with your lead magnets today.
           </p>
         </div>
         <div className="flex gap-3">
