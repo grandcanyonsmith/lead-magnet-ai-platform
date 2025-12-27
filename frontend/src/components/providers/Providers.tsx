@@ -13,19 +13,18 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <Toaster
           position="top-right"
           toastOptions={{
+            className: "bg-background text-foreground border border-border shadow-lg",
             duration: 4000,
             success: {
-              duration: 3000,
-              style: {
-                background: "#10b981",
-                color: "#ffffff",
+              iconTheme: {
+                primary: "hsl(var(--primary))",
+                secondary: "hsl(var(--primary-foreground))",
               },
             },
             error: {
-              duration: 5000,
-              style: {
-                background: "#ef4444",
-                color: "#ffffff",
+              iconTheme: {
+                primary: "hsl(var(--destructive))",
+                secondary: "hsl(var(--destructive-foreground))",
               },
             },
           }}
