@@ -119,13 +119,29 @@ export class WorkflowsClient extends BaseApiClient {
       contextJobId?: string;
     },
   ): Promise<{
-    workflow_name?: string;
-    workflow_description?: string;
-    html_enabled?: boolean;
-    steps: any[];
-    changes_summary: string;
+    job_id: string;
+    status: "pending" | "processing" | "completed" | "failed";
+    message?: string;
   }> {
     return this.post(`/admin/workflows/${workflowId}/ai-edit`, request);
+  }
+
+  async getWorkflowAIEditStatus(jobId: string): Promise<{
+    job_id: string;
+    status: "pending" | "processing" | "completed" | "failed";
+    result: {
+      workflow_name?: string;
+      workflow_description?: string;
+      html_enabled?: boolean;
+      steps: any[];
+      changes_summary: string;
+    } | null;
+    error_message?: string | null;
+    workflow_id?: string | null;
+    created_at?: string;
+    updated_at?: string;
+  }> {
+    return this.get(`/admin/workflows/ai-edit-status/${jobId}`);
   }
 
   // Folder methods
