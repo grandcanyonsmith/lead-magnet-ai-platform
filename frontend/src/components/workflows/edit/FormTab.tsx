@@ -1,16 +1,15 @@
 "use client";
 
 import {
-  FiChevronDown,
-  FiChevronUp,
-  FiEye,
-  FiInfo,
-  FiMinus,
-  FiPlus,
-  FiSave,
-  FiSettings,
-  FiShield,
-} from "react-icons/fi";
+  ChevronDown,
+  ChevronUp,
+  Eye,
+  Info,
+  Minus,
+  Plus,
+  Settings,
+  Shield,
+} from "lucide-react";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { FormFormData, FormField } from "@/hooks/useFormEdit";
 import { getFieldTypeIcon } from "@/utils/formUtils";
@@ -113,11 +112,11 @@ export function FormTab({
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_420px]">
-      <form onSubmit={onSubmit} className="order-2 space-y-6 lg:order-1">
+      <div className="order-2 space-y-6 lg:order-1">
         <SectionCard
           title="Form basics"
           description="Keep your form easy to identify and simple to share."
-          icon={<FiInfo className="h-5 w-5" aria-hidden="true" />}
+          icon={<Info className="h-5 w-5" aria-hidden="true" />}
         >
           <div className="rounded-2xl border border-blue-100/80 bg-blue-50/70 px-4 py-3 text-sm text-blue-900">
             <p>
@@ -179,14 +178,14 @@ export function FormTab({
         <SectionCard
           title="Form fields"
           description="Collect only the information that matters."
-          icon={<FiSettings className="h-5 w-5" aria-hidden="true" />}
+          icon={<Settings className="h-5 w-5" aria-hidden="true" />}
           actions={
             <button
               type="button"
               onClick={onAddField}
               className="inline-flex items-center gap-2 rounded-full border border-primary-600 px-4 py-2 text-sm font-semibold text-primary-700 transition hover:bg-primary-600 hover:text-white"
             >
-              <FiPlus className="h-4 w-4" aria-hidden="true" />
+              <Plus className="h-4 w-4" aria-hidden="true" />
               Add field
             </button>
           }
@@ -226,7 +225,7 @@ export function FormTab({
                       title="Move field up"
                       aria-label={`Move ${field.label || "field"} up`}
                     >
-                      <FiChevronUp className="h-4 w-4" />
+                      <ChevronUp className="h-4 w-4" />
                     </button>
                     <button
                       type="button"
@@ -236,7 +235,7 @@ export function FormTab({
                       title="Move field down"
                       aria-label={`Move ${field.label || "field"} down`}
                     >
-                      <FiChevronDown className="h-4 w-4" />
+                      <ChevronDown className="h-4 w-4" />
                     </button>
                     <button
                       type="button"
@@ -245,7 +244,7 @@ export function FormTab({
                       title="Remove field"
                       aria-label={`Remove ${field.label || "field"}`}
                     >
-                      <FiMinus className="h-4 w-4" />
+                      <Minus className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
@@ -360,7 +359,7 @@ export function FormTab({
         <SectionCard
           title="Security & limits"
           description="Prevent spam and control submission flow."
-          icon={<FiShield className="h-5 w-5" aria-hidden="true" />}
+          icon={<Shield className="h-5 w-5" aria-hidden="true" />}
         >
           <div className="space-y-4">
             <label className="flex items-center gap-3">
@@ -417,7 +416,7 @@ export function FormTab({
         <SectionCard
           title="Confirmation & styling"
           description="Polish the experience after someone submits the form."
-          icon={<FiSettings className="h-5 w-5" aria-hidden="true" />}
+          icon={<Settings className="h-5 w-5" aria-hidden="true" />}
         >
           <div className="space-y-4">
             <div>
@@ -462,32 +461,14 @@ export function FormTab({
             </div>
           </div>
         </SectionCard>
-
-        <div className="flex flex-col gap-3 border-t border-gray-100 pt-4 sm:flex-row sm:justify-end">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="w-full rounded-xl border border-gray-200 px-6 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 sm:w-auto"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-          >
-            <FiSave className="h-4 w-4" aria-hidden="true" />
-            {submitting ? "Saving..." : "Save changes"}
-          </button>
-        </div>
-      </form>
+      </div>
 
       <div className="order-1 lg:order-2">
         <div className="sticky top-6">
           <SectionCard
             title="Live preview"
             description="See exactly what visitors will experience."
-            icon={<FiEye className="h-5 w-5" aria-hidden="true" />}
+            icon={<Eye className="h-5 w-5" aria-hidden="true" />}
             stickyHeader
           >
             <div className="rounded-2xl border border-gray-100 bg-white">
