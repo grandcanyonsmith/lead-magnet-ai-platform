@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { LoadingState } from "@/components/ui/LoadingState";
 
-export default function SettingsRootPage() {
+function SettingsRedirect() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -23,4 +23,12 @@ export default function SettingsRootPage() {
   }, [router, searchParams]);
 
     return <LoadingState message="Loading settings..." fullPage />;
+}
+
+export default function SettingsRootPage() {
+  return (
+    <Suspense fallback={<LoadingState message="Loading settings..." fullPage />}>
+      <SettingsRedirect />
+    </Suspense>
+  );
 }

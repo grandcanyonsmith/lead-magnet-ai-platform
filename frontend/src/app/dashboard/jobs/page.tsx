@@ -7,6 +7,7 @@ import React, {
   useMemo,
   useRef,
   Fragment,
+  Suspense,
 } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
@@ -44,7 +45,7 @@ import type { Workflow } from "@/types/workflow";
 import toast from "react-hot-toast";
 import clsx from "clsx";
 
-export default function JobsPage() {
+function JobsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -638,5 +639,13 @@ export default function JobsPage() {
         )}
       </div>
     </JobFiltersProvider>
+  );
+}
+
+export default function JobsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50" />}>
+      <JobsContent />
+    </Suspense>
   );
 }
