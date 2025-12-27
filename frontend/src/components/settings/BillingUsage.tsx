@@ -24,6 +24,8 @@ import { BillingClient, SubscriptionInfo } from "@/lib/api/billing.client";
 import { authService } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 
 export function BillingUsage() {
   const router = useRouter();
@@ -150,63 +152,39 @@ export function BillingUsage() {
   return (
     <div className="space-y-6">
       {/* Subscription Section */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <Card>
+        <CardHeader className="border-b border-gray-100 bg-gray-50/50 flex flex-row items-center justify-between gap-4 p-6">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-50 rounded-lg">
               <CreditCardIcon className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">
-                Billing & Subscription
-              </h3>
-              <p className="text-sm text-gray-600">
+              <CardTitle className="text-lg">Billing & Subscription</CardTitle>
+              <CardDescription>
                 Manage your subscription plan and payment methods.
-              </p>
+              </CardDescription>
             </div>
           </div>
 
           {subscription?.has_subscription && (
-            <button
+            <Button
+              variant="outline"
+              size="sm"
               onClick={handleManageSubscription}
               disabled={portalLoading}
-              className="flex items-center px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-50 font-medium text-sm"
+              isLoading={portalLoading}
             >
-              {portalLoading ? (
-                <>
-                  <svg
-                    className="animate-spin -ml-1 mr-2 h-4 w-4 text-gray-500"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                  Loading...
-                </>
-              ) : (
+              {!portalLoading && (
                 <>
                   Manage Billing
                   <ArrowTopRightOnSquareIcon className="w-4 h-4 ml-2 text-gray-400" />
                 </>
               )}
-            </button>
+            </Button>
           )}
-        </div>
+        </CardHeader>
 
-        <div className="p-6">
+        <CardContent className="p-6">
           {subscriptionLoading ? (
             <div className="animate-pulse space-y-4">
               <div className="h-4 bg-gray-100 rounded w-1/4"></div>
@@ -262,12 +240,12 @@ export function BillingUsage() {
                         Subscribe now to unlock full access to Lead Magnet AI
                         features.
                       </p>
-                      <button
+                      <Button
                         onClick={() => router.push("/setup-billing")}
-                        className="text-sm bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition-colors font-medium shadow-sm"
+                        className="bg-amber-600 hover:bg-amber-700 text-white border-none"
                       >
                         Start Subscription
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -314,24 +292,22 @@ export function BillingUsage() {
               )}
             </div>
           ) : null}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Usage Analytics Section */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="p-6 border-b border-gray-100 bg-gray-50/50">
+      <Card>
+        <CardHeader className="border-b border-gray-100 bg-gray-50/50 p-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-purple-50 rounded-lg">
                 <ChartBarIcon className="w-5 h-5 text-purple-600" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Usage Analytics
-                </h3>
-                <p className="text-sm text-gray-600">
+                <CardTitle className="text-lg">Usage Analytics</CardTitle>
+                <CardDescription>
                   Track API consumption and costs over time.
-                </p>
+                </CardDescription>
               </div>
             </div>
 
@@ -351,9 +327,9 @@ export function BillingUsage() {
               )}
             </div>
           </div>
-        </div>
+        </CardHeader>
 
-        <div className="p-6">
+        <CardContent className="p-6">
           {loading ? (
             <LoadingState message="Loading usage data..." />
           ) : error ? (
@@ -426,12 +402,16 @@ export function BillingUsage() {
               {/* Usage Charts */}
               {usage.openai?.by_service &&
                 Object.keys(usage.openai.by_service).length > 0 && (
-                  <div className="bg-white border border-gray-200 rounded-xl p-6">
-                    <h4 className="text-base font-semibold text-gray-900 mb-6">
-                      Usage Breakdown
-                    </h4>
-                    <UsageCharts usage={usage} />
-                  </div>
+                  <Card className="border-gray-200 shadow-none">
+                    <CardHeader className="px-6 py-4">
+                      <h4 className="text-base font-semibold text-gray-900">
+                        Usage Breakdown
+                      </h4>
+                    </CardHeader>
+                    <CardContent className="px-6 pb-6 pt-0">
+                      <UsageCharts usage={usage} />
+                    </CardContent>
+                  </Card>
                 )}
 
               {/* Detailed Table */}
@@ -541,8 +521,8 @@ export function BillingUsage() {
               </p>
             </div>
           )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

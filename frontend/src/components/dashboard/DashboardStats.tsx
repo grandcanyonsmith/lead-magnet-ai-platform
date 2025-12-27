@@ -5,6 +5,7 @@ import {
   DocumentCheckIcon,
 } from "@heroicons/react/24/outline";
 import { AnalyticsOverview } from "@/types/analytics";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 
 interface DashboardStatsProps {
   overview: AnalyticsOverview;
@@ -49,15 +50,15 @@ export function DashboardStats({ overview }: DashboardStatsProps) {
       {stats.map((stat) => {
         const Icon = stat.icon;
         return (
-          <div
+          <Card
             key={stat.label}
-            className="group relative overflow-hidden rounded-xl border border-gray-100 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
+            className="group relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-md border-gray-100"
           >
             <div className="absolute right-0 top-0 p-4 opacity-5 transition-transform duration-300 group-hover:scale-110 group-hover:opacity-10">
               <Icon className="h-24 w-24 text-current" />
             </div>
 
-            <div className="relative z-10">
+            <CardContent className="relative z-10 pt-6">
               <div className="mb-4 flex items-center justify-between">
                 <div
                   className={`rounded-xl p-3 ${colorMap[stat.color]} ring-1 ring-inset`}
@@ -74,8 +75,8 @@ export function DashboardStats({ overview }: DashboardStatsProps) {
               <p className="text-xs text-gray-400">
                 {stat.description}
               </p>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         );
       })}
     </div>

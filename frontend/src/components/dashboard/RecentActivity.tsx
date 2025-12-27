@@ -9,6 +9,7 @@ import {
 import { Job } from "@/types/job";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { SectionCard } from "@/components/ui/SectionCard";
+import { Button } from "@/components/ui/Button";
 
 interface RecentActivityProps {
   jobs: Job[];
@@ -20,12 +21,11 @@ export function RecentActivity({ jobs }: RecentActivityProps) {
       title="Recent Activity"
       padding="none"
       actions={
-        <Link
-          href="/dashboard/jobs"
-          className="group flex items-center gap-1 text-sm font-medium text-primary-600 transition-colors hover:text-primary-700"
-        >
-          View all
-          <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+        <Link href="/dashboard/jobs">
+          <Button variant="ghost" size="sm" className="group text-primary-600 hover:text-primary-700 hover:bg-primary-50">
+            View all
+            <ArrowRightIcon className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+          </Button>
         </Link>
       }
     >
@@ -74,11 +74,10 @@ export function RecentActivity({ jobs }: RecentActivityProps) {
             <p className="mb-4 text-sm">
               Create your first lead magnet to get started.
             </p>
-            <Link
-              href="/dashboard/workflows/new"
-              className="inline-flex items-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
-            >
-              Create Lead Magnet
+            <Link href="/dashboard/workflows/new">
+              <Button>
+                Create Lead Magnet
+              </Button>
             </Link>
           </div>
         )}
