@@ -101,18 +101,18 @@ export function WorkflowImprovePanel({
   };
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+    <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-card p-5 shadow-sm">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100">
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-100 dark:ring-indigo-900/30">
               <SparklesIcon className="h-5 w-5" aria-hidden="true" />
             </span>
             <div className="min-w-0">
-              <h3 className="text-sm font-semibold text-gray-900">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
                 Review & improve workflow steps
               </h3>
-              <p className="mt-0.5 text-sm text-gray-600">
+              <p className="mt-0.5 text-sm text-gray-600 dark:text-gray-400">
                 AI will review the final deliverable, artifacts, and execution
                 results, then propose better step instructions/models/tools for
                 future runs.
@@ -139,7 +139,7 @@ export function WorkflowImprovePanel({
       </div>
 
       <div className="mt-4">
-        <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500">
+        <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
           What should be better next time? (optional)
         </label>
         <textarea
@@ -147,9 +147,9 @@ export function WorkflowImprovePanel({
           onChange={(e) => setNotes(e.target.value)}
           placeholder="E.g. better structure, more concise, stronger CTA, avoid hallucinating facts, more on-brand voice…"
           rows={3}
-          className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="mt-2 w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
         />
-        {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
+        {error ? <p className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p> : null}
       </div>
 
       {proposal ? (

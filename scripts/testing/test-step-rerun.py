@@ -21,18 +21,27 @@ from decimal import Decimal
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from lib.common import (
-    get_dynamodb_client,
+    get_dynamodb_resource,
     get_stepfunctions_client,
     get_aws_region,
     get_step_functions_arn,
-    wait_for_job_completion,
     convert_decimals
 )
+
+def wait_for_job_completion(job_id: str, timeout: int = 60) -> Optional[Dict[str, Any]]:
+    """Wait for job to complete."""
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        job = get_job(job_id)
+        if job and job.get("status") in ["completed", "failed"]:
+            return job
+        time.sleep(2)
+    return get_job(job_id)
 
 
 def get_job(job_id: str) -> Optional[Dict[str, Any]]:
     """Get job from DynamoDB."""
-    dynamodb = get_dynamodb_client()
+    dynamodb = get_dynamodb_resource()
     jobs_table = dynamodb.Table("leadmagnet-jobs")
     
     try:
@@ -193,7 +202,7 @@ def test_step_rerun(job_id: str, step_index: int, tenant_id: Optional[str] = Non
     # Step 2: Get the step we're rerunning
     print(f"\nStep 2: Checking step {step_index}...")
     workflow_id = initial_job.get("workflow_id")
-    dynamodb = get_dynamodb_client()
+    dynamodb = get_dynamodb_resource()
     workflows_table = dynamodb.Table("leadmagnet-workflows")
     
     try:
