@@ -699,12 +699,12 @@ export default function WorkflowsPage() {
             <div className="h-10 w-40 bg-gray-200 rounded-lg animate-pulse"></div>
           </div>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="bg-white dark:bg-card rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="h-16 bg-gray-100 rounded-lg animate-pulse"
+                className="h-16 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse"
               ></div>
             ))}
           </div>
@@ -729,10 +729,10 @@ export default function WorkflowsPage() {
 
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
               {currentFolder ? currentFolder.folder_name : "Lead Magnets"}
             </h1>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
               {currentFolder
                 ? `${filteredWorkflows.length} lead magnet${filteredWorkflows.length !== 1 ? "s" : ""} in this folder`
                 : "Manage your AI lead magnets and their forms"}
@@ -774,7 +774,7 @@ export default function WorkflowsPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search lead magnets..."
-              className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm transition-shadow shadow-sm"
+              className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 dark:border-gray-700 rounded-lg leading-5 bg-white dark:bg-card dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm transition-shadow shadow-sm"
             />
           </div>
         </div>
@@ -791,7 +791,7 @@ export default function WorkflowsPage() {
             {folders.map((folder) => (
               <div key={folder.folder_id} className="relative group">
                 {editingFolderId === folder.folder_id ? (
-                  <div className="bg-white rounded-xl border-2 border-primary-500 p-3 shadow-sm">
+                  <div className="bg-white dark:bg-card rounded-xl border-2 border-primary-500 p-3 shadow-sm">
                     <input
                       type="text"
                       value={editingFolderName}
@@ -804,7 +804,7 @@ export default function WorkflowsPage() {
                           setEditingFolderName("");
                         }
                       }}
-                      className="w-full text-sm border-0 border-b border-gray-200 p-0 pb-1 focus:ring-0 focus:border-primary-500 bg-transparent"
+                      className="w-full text-sm border-0 border-b border-gray-200 dark:border-gray-700 p-0 pb-1 focus:ring-0 focus:border-primary-500 bg-transparent dark:text-white"
                       autoFocus
                       disabled={folderActionLoading}
                     />
@@ -831,10 +831,10 @@ export default function WorkflowsPage() {
                 ) : (
                   <div
                     onClick={() => setCurrentFolderId(folder.folder_id)}
-                    className="group/card cursor-pointer w-full bg-white rounded-xl border border-gray-200 p-4 hover:border-primary-200 hover:shadow-md transition-all relative"
+                    className="group/card cursor-pointer w-full bg-white dark:bg-card rounded-xl border border-gray-200 dark:border-gray-700 p-4 hover:border-primary-200 dark:hover:border-primary-800 hover:shadow-md transition-all relative"
                   >
                     <div className="flex items-start justify-between mb-2">
-                      <FolderIcon className="w-8 h-8 text-primary-100 fill-primary-50 group-hover/card:text-primary-200 transition-colors" />
+                      <FolderIcon className="w-8 h-8 text-primary-100 dark:text-primary-900 fill-primary-50 dark:fill-primary-900/30 group-hover/card:text-primary-200 dark:group-hover/card:text-primary-800 transition-colors" />
                       <Menu as="div" className="relative">
                         <MenuButton
                           onClick={(e) => e.stopPropagation()}
@@ -893,10 +893,10 @@ export default function WorkflowsPage() {
                         </Transition>
                       </Menu>
                     </div>
-                    <div className="font-medium text-gray-900 truncate text-sm mb-0.5">
+                    <div className="font-medium text-gray-900 dark:text-white truncate text-sm mb-0.5">
                       {folder.folder_name}
                     </div>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
                       {folder.workflow_count || 0} item
                       {(folder.workflow_count || 0) !== 1 ? "s" : ""}
                     </div>
@@ -910,32 +910,32 @@ export default function WorkflowsPage() {
 
       {/* Main Content Area */}
       {filteredWorkflows.length === 0 && workflows.length > 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center max-w-lg mx-auto mt-12">
-          <div className="mx-auto h-12 w-12 text-gray-300 mb-4">
+        <div className="bg-white dark:bg-card rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-12 text-center max-w-lg mx-auto mt-12">
+          <div className="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600 mb-4">
             <MagnifyingGlassIcon className="h-full w-full" />
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
             No matching lead magnets
           </h3>
-          <p className="text-gray-500 mb-6">
+          <p className="text-gray-500 dark:text-gray-400 mb-6">
             Try adjusting your search query or filters.
           </p>
           <button
             onClick={() => setSearchQuery("")}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
           >
             Clear search
           </button>
         </div>
       ) : workflows.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center max-w-lg mx-auto mt-12">
-          <div className="mx-auto h-12 w-12 bg-primary-100 rounded-xl flex items-center justify-center mb-4">
-            <PlusIcon className="h-6 w-6 text-primary-600" />
+        <div className="bg-white dark:bg-card rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-12 text-center max-w-lg mx-auto mt-12">
+          <div className="mx-auto h-12 w-12 bg-primary-100 dark:bg-primary-900/20 rounded-xl flex items-center justify-center mb-4">
+            <PlusIcon className="h-6 w-6 text-primary-600 dark:text-primary-400" />
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
             No lead magnets yet
           </h3>
-          <p className="text-gray-500 mb-6">
+          <p className="text-gray-500 dark:text-gray-400 mb-6">
             Get started by creating your first AI-powered lead magnet workflow.
           </p>
           <button
@@ -947,15 +947,15 @@ export default function WorkflowsPage() {
           </button>
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-white dark:bg-card rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
           {/* Desktop Table View */}
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50/50">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50/50 dark:bg-gray-800/50">
                 <tr>
                   <th
                     scope="col"
-                    className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100/50 transition-colors select-none"
+                    className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100/50 dark:hover:bg-gray-700/50 transition-colors select-none"
                     onClick={() => handleSort("name")}
                   >
                     <div className="flex items-center gap-1">
@@ -970,7 +970,7 @@ export default function WorkflowsPage() {
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100/50 transition-colors select-none"
+                    className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100/50 dark:hover:bg-gray-700/50 transition-colors select-none"
                     onClick={() => handleSort("form")}
                   >
                     <div className="flex items-center gap-1">
@@ -985,7 +985,7 @@ export default function WorkflowsPage() {
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100/50 transition-colors select-none"
+                    className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100/50 dark:hover:bg-gray-700/50 transition-colors select-none"
                     onClick={() => handleSort("created_at")}
                   >
                     <div className="flex items-center gap-1">
@@ -1000,7 +1000,7 @@ export default function WorkflowsPage() {
                   </th>
                   <th
                     scope="col"
-                    className="hidden xl:table-cell px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100/50 transition-colors select-none"
+                    className="hidden xl:table-cell px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100/50 dark:hover:bg-gray-700/50 transition-colors select-none"
                     onClick={() => handleSort("updated_at")}
                   >
                     <div className="flex items-center gap-1">
@@ -1015,7 +1015,7 @@ export default function WorkflowsPage() {
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100/50 transition-colors select-none"
+                    className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100/50 dark:hover:bg-gray-700/50 transition-colors select-none"
                     onClick={() => handleSort("last_generated")}
                   >
                     <div className="flex items-center gap-1">
@@ -1030,7 +1030,7 @@ export default function WorkflowsPage() {
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                   >
                     Latest Report
                   </th>
@@ -1039,7 +1039,7 @@ export default function WorkflowsPage() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white dark:bg-card divide-y divide-gray-200 dark:divide-gray-700">
                 {filteredWorkflows.map((workflow) => {
                   const formUrl = workflow.form
                     ? publicUrlFor(workflow.form)
@@ -1058,7 +1058,7 @@ export default function WorkflowsPage() {
                   return (
                     <tr
                       key={workflow.workflow_id}
-                      className="hover:bg-gray-50/50 transition-colors cursor-pointer group"
+                      className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer group"
                       onClick={() =>
                         router.push(
                           `/dashboard/workflows/${workflow.workflow_id}`,
@@ -1067,22 +1067,22 @@ export default function WorkflowsPage() {
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center">
-                          <div className="flex-shrink-0 h-10 w-10 bg-primary-50 rounded-lg flex items-center justify-center text-primary-600">
+                          <div className="flex-shrink-0 h-10 w-10 bg-primary-50 dark:bg-primary-900/20 rounded-lg flex items-center justify-center text-primary-600 dark:text-primary-400">
                             <DocumentTextIcon className="h-6 w-6" />
                           </div>
                           <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900 group-hover:text-primary-600 transition-colors">
+                            <div className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
                               {workflow.workflow_name}
                             </div>
                             {workflow.workflow_description && (
-                              <div className="text-sm text-gray-500 truncate max-w-xs">
+                              <div className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-xs">
                                 {workflow.workflow_description}
                               </div>
                             )}
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
+                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                         {workflow.form ? (
                           formUrl ? (
                             <a
@@ -1098,7 +1098,7 @@ export default function WorkflowsPage() {
                               <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5 flex-shrink-0" />
                             </a>
                           ) : (
-                            <span className="text-gray-900">
+                            <span className="text-gray-900 dark:text-white">
                               {workflow.form.form_name}
                             </span>
                           )
@@ -1108,43 +1108,43 @@ export default function WorkflowsPage() {
                           </span>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         <div className="flex items-center gap-1.5">
                           {formatRelativeTime(workflow.created_at)}
                         </div>
                       </td>
-                      <td className="hidden xl:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="hidden xl:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         <div className="flex items-center gap-1.5">
-                          <ClockIcon className="w-4 h-4 text-gray-400" />
+                          <ClockIcon className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                           {formatRelativeTime(
                             workflow.updated_at || workflow.created_at,
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         {latestJob ? (
-                          <div className="flex items-center gap-1.5 text-gray-900">
+                          <div className="flex items-center gap-1.5 text-gray-900 dark:text-white">
                             {formatRelativeTime(latestJob.created_at)}
                           </div>
                         ) : (
-                          <span className="text-gray-400 text-xs">-</span>
+                          <span className="text-gray-400 dark:text-gray-600 text-xs">-</span>
                         )}
                       </td>
                       <td className="px-6 py-4">
                         {loadingJobs[workflow.workflow_id] ? (
-                          <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                          <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200">
                             <ArrowPathIcon className="w-3 h-3 mr-1 animate-spin" />
                             Loading
                           </div>
                         ) : processingJobs.length > 0 ? (
-                          <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200">
                             <ArrowPathIcon className="w-3 h-3 mr-1 animate-spin" />
                             Processing ({processingJobs.length})
                           </div>
                         ) : completedJobs.length > 0 ? (
                           <div className="flex flex-col gap-1">
                             <div className="flex items-center gap-2">
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200">
                                 {completedJobs.length} generated
                               </span>
                               {completedJobs[0]?.output_url && (
@@ -1164,7 +1164,7 @@ export default function WorkflowsPage() {
                             </div>
                           </div>
                         ) : (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
                             No documents
                           </span>
                         )}
@@ -1192,7 +1192,7 @@ export default function WorkflowsPage() {
                             leaveFrom="transform opacity-100 scale-100"
                             leaveTo="transform opacity-0 scale-95"
                           >
-                            <MenuItems className="absolute right-0 mt-2 w-48 origin-top-right divide-y divide-gray-100 rounded-lg bg-white shadow-lg ring-1 ring-black/5 focus:outline-none z-20">
+                            <MenuItems className="absolute right-0 mt-2 w-48 origin-top-right divide-y divide-gray-100 dark:divide-gray-700 rounded-lg bg-white dark:bg-gray-800 shadow-lg ring-1 ring-black/5 dark:ring-white/10 focus:outline-none z-20">
                               <div className="px-1 py-1">
                                 <MenuItem>
                                   {({ active }) => (
@@ -1205,8 +1205,8 @@ export default function WorkflowsPage() {
                                       }}
                                       className={clsx(
                                         active
-                                          ? "bg-primary-50 text-primary-700"
-                                          : "text-gray-700",
+                                          ? "bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300"
+                                          : "text-gray-700 dark:text-gray-300",
                                         "group flex w-full items-center rounded-md px-2 py-2 text-sm",
                                       )}
                                     >
@@ -1229,8 +1229,8 @@ export default function WorkflowsPage() {
                                       }}
                                       className={clsx(
                                         active
-                                          ? "bg-primary-50 text-primary-700"
-                                          : "text-gray-700",
+                                          ? "bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300"
+                                          : "text-gray-700 dark:text-gray-300",
                                         "group flex w-full items-center rounded-md px-2 py-2 text-sm",
                                       )}
                                     >
@@ -1254,7 +1254,7 @@ export default function WorkflowsPage() {
                                         );
                                       }}
                                       className={clsx(
-                                        active ? "bg-gray-50" : "text-gray-700",
+                                        active ? "bg-gray-50 dark:bg-gray-700" : "text-gray-700 dark:text-gray-300",
                                         "group flex w-full items-center rounded-md px-2 py-2 text-sm",
                                       )}
                                     >
@@ -1279,8 +1279,8 @@ export default function WorkflowsPage() {
                                         }}
                                         className={clsx(
                                           active
-                                            ? "bg-gray-50"
-                                            : "text-gray-700",
+                                            ? "bg-gray-50 dark:bg-gray-700"
+                                            : "text-gray-700 dark:text-gray-300",
                                           "group flex w-full items-center rounded-md px-2 py-2 text-sm",
                                         )}
                                       >
@@ -1304,8 +1304,8 @@ export default function WorkflowsPage() {
                                       }}
                                       className={clsx(
                                         active
-                                          ? "bg-red-50 text-red-700"
-                                          : "text-red-600",
+                                          ? "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300"
+                                          : "text-red-600 dark:text-red-400",
                                         "group flex w-full items-center rounded-md px-2 py-2 text-sm",
                                       )}
                                     >
@@ -1361,10 +1361,10 @@ export default function WorkflowsPage() {
                 leaveFrom="opacity-100 scale-100"
                 leaveTo="opacity-0 scale-95"
               >
-                <DialogPanel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
+                <DialogPanel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white dark:bg-card p-6 text-left align-middle shadow-xl transition-all">
                   <DialogTitle
                     as="h3"
-                    className="text-lg font-medium leading-6 text-gray-900 flex items-center justify-between"
+                    className="text-lg font-medium leading-6 text-gray-900 dark:text-white flex items-center justify-between"
                   >
                     Create New Folder
                     <button
@@ -1383,7 +1383,7 @@ export default function WorkflowsPage() {
                         if (e.key === "Enter") handleCreateFolder();
                       }}
                       placeholder="Folder name (e.g., Marketing, Sales)"
-                      className="w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                      className="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white shadow-sm focus:border-primary-500 focus:ring-primary-500"
                       autoFocus
                     />
                   </div>
@@ -1391,7 +1391,7 @@ export default function WorkflowsPage() {
                   <div className="mt-6 flex justify-end gap-3">
                     <button
                       type="button"
-                      className="inline-flex justify-center rounded-lg border border-transparent bg-gray-100 px-4 py-2 text-sm font-medium text-gray-900 hover:bg-gray-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
+                      className="inline-flex justify-center rounded-lg border border-transparent bg-gray-100 dark:bg-gray-800 px-4 py-2 text-sm font-medium text-gray-900 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
                       onClick={() => setShowCreateFolderModal(false)}
                     >
                       Cancel
@@ -1442,10 +1442,10 @@ export default function WorkflowsPage() {
                 leaveFrom="opacity-100 scale-100"
                 leaveTo="opacity-0 scale-95"
               >
-                <DialogPanel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
+                <DialogPanel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white dark:bg-card p-6 text-left align-middle shadow-xl transition-all">
                   <DialogTitle
                     as="h3"
-                    className="text-lg font-medium leading-6 text-gray-900 flex items-center justify-between"
+                    className="text-lg font-medium leading-6 text-gray-900 dark:text-white flex items-center justify-between"
                   >
                     Move to Folder
                     <button
@@ -1461,10 +1461,10 @@ export default function WorkflowsPage() {
                         showMoveFolderModal &&
                         handleMoveToFolder(showMoveFolderModal, null)
                       }
-                      className="w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors flex items-center gap-3 group"
+                      className="w-full text-left px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-3 group"
                     >
-                      <FolderIcon className="w-5 h-5 text-gray-400 group-hover:text-gray-600" />
-                      <span className="text-sm font-medium text-gray-700">
+                      <FolderIcon className="w-5 h-5 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
                         Root (No folder)
                       </span>
                     </button>
@@ -1478,10 +1478,10 @@ export default function WorkflowsPage() {
                             folder.folder_id,
                           )
                         }
-                        className="w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors flex items-center gap-3 group"
+                        className="w-full text-left px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-3 group"
                       >
                         <FolderIcon className="w-5 h-5 text-primary-200 group-hover:text-primary-400" />
-                        <span className="text-sm font-medium text-gray-700">
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
                           {folder.folder_name}
                         </span>
                       </button>

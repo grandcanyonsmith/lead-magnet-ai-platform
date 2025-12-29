@@ -427,10 +427,10 @@ function JobsContent() {
         <div className="mb-6 sm:mb-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
                 Leads & Results
               </h1>
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 Track your collected leads and generated reports.
               </p>
               <LeadMagnetsTabs className="mt-3" />
@@ -464,7 +464,7 @@ function JobsContent() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by lead magnet name..."
-              className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm transition-shadow shadow-sm"
+              className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 dark:border-gray-700 rounded-lg leading-5 bg-white dark:bg-card dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm transition-shadow shadow-sm"
             />
           </div>
 
@@ -476,7 +476,7 @@ function JobsContent() {
                   setWorkflowFilter(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="appearance-none block w-full px-4 py-2.5 pr-10 border border-gray-300 rounded-lg bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 transition-all cursor-pointer shadow-sm"
+                className="appearance-none block w-full px-4 py-2.5 pr-10 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-card text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 transition-all cursor-pointer shadow-sm"
               >
                 <option value="all">All Lead Magnets</option>
                 {workflows.map((wf: Workflow) => (
@@ -493,14 +493,14 @@ function JobsContent() {
         </div>
 
         {sorting.sortedJobs.length === 0 ? (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center max-w-lg mx-auto mt-8">
-            <div className="mx-auto h-12 w-12 text-gray-300 mb-4">
+          <div className="bg-white dark:bg-card rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-12 text-center max-w-lg mx-auto mt-8">
+            <div className="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600 mb-4">
               <ClockIcon className="h-full w-full" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
               No leads found
             </h3>
-            <p className="text-gray-500 mb-6">
+            <p className="text-gray-500 dark:text-gray-400 mb-6">
               Generated reports will appear here once visitors submit your forms.
             </p>
             {(statusFilter !== "all" ||
@@ -508,7 +508,7 @@ function JobsContent() {
               searchQuery !== "") && (
               <button
                 onClick={handleClearFilters}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
               >
                 <XMarkIcon
                   className="-ml-1 mr-2 h-5 w-5 text-gray-400"
@@ -537,16 +537,16 @@ function JobsContent() {
             />
 
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-2">
-              <div className="text-sm font-medium text-gray-500">
+              <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
                 Showing{" "}
-                <span className="text-gray-900">
+                <span className="text-gray-900 dark:text-white">
                   {(currentPage - 1) * pageSize + 1}
                 </span>{" "}
                 to{" "}
-                <span className="text-gray-900">
+                <span className="text-gray-900 dark:text-white">
                   {Math.min(currentPage * pageSize, totalJobs)}
                 </span>{" "}
-                of <span className="text-gray-900">{totalJobs}</span> runs
+                of <span className="text-gray-900 dark:text-white">{totalJobs}</span> runs
               </div>
               <div className="flex items-center gap-2">
                 <nav
@@ -561,7 +561,7 @@ function JobsContent() {
                       }
                     }}
                     disabled={currentPage === 1}
-                    className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <span className="sr-only">Previous</span>
                     <ChevronLeftIcon className="h-5 w-5" aria-hidden="true" />
@@ -601,7 +601,7 @@ function JobsContent() {
                             "relative inline-flex items-center px-4 py-2 text-sm font-semibold focus:z-20",
                             currentPage === displayPage
                               ? "z-10 bg-primary-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
-                              : "text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0",
+                              : "text-gray-900 dark:text-gray-200 ring-1 ring-inset ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 focus:outline-offset-0",
                           )}
                         >
                           {displayPage}
@@ -618,7 +618,7 @@ function JobsContent() {
                       }
                     }}
                     disabled={!hasMore && currentPage * pageSize >= totalJobs}
-                    className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <span className="sr-only">Next</span>
                     <ChevronRightIcon className="h-5 w-5" aria-hidden="true" />
@@ -631,7 +631,7 @@ function JobsContent() {
 
         {hasProcessingJobs && (
           <div className="fixed bottom-6 right-6 z-30">
-            <div className="bg-white rounded-full shadow-lg border border-primary-100 px-4 py-2 flex items-center gap-2 text-sm font-bold text-primary-700 animate-in slide-in-from-bottom-4 duration-300">
+            <div className="bg-white dark:bg-card rounded-full shadow-lg border border-primary-100 dark:border-primary-900 px-4 py-2 flex items-center gap-2 text-sm font-bold text-primary-700 dark:text-primary-300 animate-in slide-in-from-bottom-4 duration-300">
               <ArrowPathIcon className="h-4 w-4 animate-spin" />
               Updating progress...
             </div>

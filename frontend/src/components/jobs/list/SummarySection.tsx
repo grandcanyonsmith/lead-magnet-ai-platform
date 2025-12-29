@@ -46,10 +46,10 @@ export function SummarySection({
     <div className="mb-6 space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-end">
         <div>
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 tracking-tight">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white tracking-tight">
             Generated
           </h2>
-          <p className="text-sm text-gray-500 mt-1 max-w-2xl">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-2xl">
             Track generation progress, errors, and delivery status for recent
             runs.
           </p>
@@ -84,7 +84,7 @@ export function SummarySection({
           type="button"
           onClick={onRefresh}
           disabled={refreshing}
-          className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-all hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+          className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 shadow-sm transition-all hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
         >
           <ArrowPathIcon
             className={clsx(
@@ -101,21 +101,21 @@ export function SummarySection({
           <div
             key={card.label}
             className={clsx(
-              "relative overflow-hidden rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition-all hover:shadow-md",
+              "relative overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-card p-5 shadow-sm transition-all hover:shadow-md",
             )}
           >
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-gray-400">
+                <p className="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
                   {card.label}
                 </p>
                 <div className="mt-2 flex items-baseline gap-2">
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
                     {card.value}
                   </p>
                 </div>
                 {card.subtext && (
-                  <p className="mt-1 text-xs text-gray-500 font-medium">
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 font-medium">
                     {card.subtext}
                   </p>
                 )}
@@ -149,7 +149,7 @@ export function SummarySection({
                 "inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold transition-all border",
                 isActive
                   ? "border-primary-600 bg-primary-600 text-white shadow-sm"
-                  : "border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:text-gray-700",
+                  : "border-gray-200 dark:border-gray-700 bg-white dark:bg-card text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-700 dark:hover:text-gray-200",
               )}
               title={filter.description}
             >
@@ -159,7 +159,7 @@ export function SummarySection({
                   "ml-1 rounded-full px-1.5 py-0.5 text-[10px]",
                   isActive
                     ? "bg-white/20 text-white"
-                    : "bg-gray-100 text-gray-500",
+                    : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400",
                 )}
               >
                 {filter.count}
