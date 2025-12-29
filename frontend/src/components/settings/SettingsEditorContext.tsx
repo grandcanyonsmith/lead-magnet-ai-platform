@@ -60,7 +60,7 @@ function sanitizeUrl(value?: string): string | undefined {
   try {
     const url = new URL(value.trim());
     return url.protocol === "http:" || url.protocol === "https:"
-      ? value.trim()
+      ? url.href
       : undefined;
   } catch {
     return undefined;
@@ -155,10 +155,10 @@ export function SettingsEditorProvider({
       const initialFormData: Partial<Settings> = {
         organization_name: settings.organization_name || "",
         contact_email: settings.contact_email || "",
-        website_url: settings.website_url || "",
+        website_url: sanitizeUrl(settings.website_url) || "",
         default_ai_model: settings.default_ai_model || "gpt-5.2",
-        logo_url: settings.logo_url || "",
-        ghl_webhook_url: settings.ghl_webhook_url || "",
+        logo_url: sanitizeUrl(settings.logo_url) || "",
+        ghl_webhook_url: sanitizeUrl(settings.ghl_webhook_url) || "",
         custom_domain: settings.custom_domain || "",
         lead_phone_field: settings.lead_phone_field || "",
         // Brand information fields
@@ -169,7 +169,7 @@ export function SettingsEditorProvider({
         industry: settings.industry || "",
         company_size: settings.company_size || "",
         brand_messaging_guidelines: settings.brand_messaging_guidelines || "",
-        icp_document_url: settings.icp_document_url || "",
+        icp_document_url: sanitizeUrl(settings.icp_document_url) || "",
         // Values that can be updated outside of this form (e.g. regenerate token)
         webhook_url: settings.webhook_url || "",
       };
@@ -270,10 +270,10 @@ export function SettingsEditorProvider({
         : {
             organization_name: settings.organization_name || "",
             contact_email: settings.contact_email || "",
-            website_url: settings.website_url || "",
+            website_url: sanitizeUrl(settings.website_url) || "",
             default_ai_model: settings.default_ai_model || "gpt-5.2",
-            logo_url: settings.logo_url || "",
-            ghl_webhook_url: settings.ghl_webhook_url || "",
+            logo_url: sanitizeUrl(settings.logo_url) || "",
+            ghl_webhook_url: sanitizeUrl(settings.ghl_webhook_url) || "",
             custom_domain: settings.custom_domain || "",
             lead_phone_field: settings.lead_phone_field || "",
             brand_description: settings.brand_description || "",
@@ -283,7 +283,7 @@ export function SettingsEditorProvider({
             industry: settings.industry || "",
             company_size: settings.company_size || "",
             brand_messaging_guidelines: settings.brand_messaging_guidelines || "",
-            icp_document_url: settings.icp_document_url || "",
+            icp_document_url: sanitizeUrl(settings.icp_document_url) || "",
             webhook_url: settings.webhook_url || "",
           };
     setFormData((prev) => ({ ...prev, ...reset }));

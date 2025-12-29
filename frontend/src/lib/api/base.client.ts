@@ -82,10 +82,40 @@ export class BaseApiClient {
     // Response interceptor - handle errors and auth
     this.client.interceptors.response.use(
       (response) => response,
-      (error) => {
+      async (error) => {
         if (error.response?.status === 401) {
           this.handleUnauthorized(error);
         }
+        
+        // Retry logic for network errors and 5xx errors
+        const config = error.config;
+        if (config && !config._retry) {
+          const shouldRetry = this.shouldRetry(error);
+          if (shouldRetry) {
+            config._retry = true;
+            config._retryCount = (config._retryCount || 0) + 1;
+            const maxRetries = 3;
+            const retryDelay = Math.min(
+              1000 * Math.pow(2, config._retryCount - 1),
+              10000
+            );
+
+            if (config._retryCount <= maxRetries) {
+              logger.info("Retrying request", {
+                context: "BaseApiClient",
+                data: {
+                  url: config.url,
+                  retryCount: config._retryCount,
+                  delay: retryDelay,
+                },
+              });
+
+              await new Promise((resolve) => setTimeout(resolve, retryDelay));
+              return this.client(config);
+            }
+          }
+        }
+
         return Promise.reject(ApiError.fromAxiosError(error));
       },
     );
@@ -136,6 +166,33 @@ export class BaseApiClient {
         window.location.href = "/auth/login";
       }
     }
+  }
+
+  private shouldRetry(error: unknown): boolean {
+    if (!error || typeof error !== "object") {
+      return false;
+    }
+
+    // Don't retry if request was cancelled
+    if (axios.isCancel(error)) {
+      return false;
+    }
+
+    // Retry on network errors
+    if (!("response" in error)) {
+      return true;
+    }
+
+    const axiosError = error as { response?: { status?: number } };
+    const status = axiosError.response?.status;
+
+    // Retry on 5xx errors and 429 (rate limit)
+    if (status && (status >= 500 || status === 429)) {
+      return true;
+    }
+
+    // Don't retry on 4xx errors (except 429)
+    return false;
   }
 
   private clearAuthTokens(): void {
