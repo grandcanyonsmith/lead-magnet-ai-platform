@@ -189,6 +189,8 @@ class ShellExecutorService:
 
         # Poll S3 for the executor result JSON
         start = time.time()
+        last_task_check = 0.0
+        task_check_interval_s = 5.0
         while (time.time() - start) < max_wait_seconds:
             try:
                 obj = self._s3.get_object(Bucket=bucket, Key=result_key)
@@ -210,6 +212,33 @@ class ShellExecutorService:
                 return parsed
             except ClientError as e:
                 if _is_no_such_key(e):
+                    # If the ECS task has already stopped, fail fast instead of waiting
+                    # for the full timeout (prevents Lambda timeouts when uploads fail).
+                    now = time.time()
+                    if task_arn and (now - last_task_check) >= task_check_interval_s:
+                        last_task_check = now
+                        try:
+                            desc = self._ecs.describe_tasks(cluster=cluster_arn, tasks=[task_arn])
+                            task = (desc.get("tasks") or [{}])[0] or {}
+                            if task.get("lastStatus") == "STOPPED":
+                                containers = task.get("containers") or []
+                                runner = next((c for c in containers if c.get("name") == "runner"), None) or (containers[0] if containers else {})
+                                exit_code = runner.get("exitCode")
+                                reason = runner.get("reason") or task.get("stoppedReason") or "unknown"
+                                raise RuntimeError(
+                                    f"Shell executor task stopped before uploading result "
+                                    f"(job_id={job_id}, task_arn={task_arn}, exit_code={exit_code}): {reason}"
+                                )
+                        except RuntimeError:
+                            # Fail fast (this is intentional).
+                            raise
+                        except Exception as check_err:
+                            # Best-effort only; don't crash polling due to DescribeTasks errors.
+                            logger.warning("[ShellExecutorService] Failed to check ECS task status", extra={
+                                "job_id": job_id,
+                                "task_arn": task_arn,
+                                "error": str(check_err),
+                            })
                     time.sleep(0.5)
                     continue
                 raise
