@@ -120,11 +120,11 @@ export function Sidebar({
         </div>
 
         {/* Desktop Header */}
-        <div className="hidden lg:flex items-center justify-between px-6 py-5 border-b border-border/40">
+        <div className="hidden lg:flex items-center justify-between px-6 py-5 border-b border-border/40 bg-card/50 backdrop-blur-sm">
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 bg-primary rounded-lg flex items-center justify-center shadow-sm">
+            <div className="h-9 w-9 bg-primary/10 rounded-lg flex items-center justify-center shadow-sm border border-primary/20">
               <svg
-                className="w-5 h-5 text-primary-foreground"
+                className="w-5 h-5 text-primary"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -137,7 +137,7 @@ export function Sidebar({
                 />
               </svg>
             </div>
-            <span className="font-bold text-lg tracking-tight">
+            <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
               Lead Magnet AI
             </span>
           </div>
@@ -148,7 +148,7 @@ export function Sidebar({
             <div className="space-y-1">
               <Button
                 variant="outline"
-                className="w-full justify-start text-muted-foreground font-normal bg-muted/50 hover:bg-muted border-muted-foreground/10"
+                className="w-full justify-start text-muted-foreground font-normal bg-background/50 hover:bg-accent hover:text-accent-foreground border-border/50 shadow-sm"
                 onClick={() => {
                   onSearchClick();
                   setIsOpen(false);
@@ -163,9 +163,12 @@ export function Sidebar({
             </div>
 
             <nav className="space-y-1.5">
-              <p className="px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 mb-3 mt-2">
-                Platform
-              </p>
+              <div className="px-3 mb-2 mt-4 flex items-center gap-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+                  Platform
+                </p>
+                <div className="h-px bg-border/50 flex-1" />
+              </div>
               {navItems.map((item) => {
                 const isActive = item.exact
                   ? pathname === item.href
@@ -184,11 +187,11 @@ export function Sidebar({
                     href={item.href}
                     onClick={() => setIsOpen(false)}
                     className={cn(
-                      "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 border border-transparent",
-                      isActive
-                        ? "bg-primary/10 text-primary border-primary/10 shadow-sm"
-                        : "text-muted-foreground hover:bg-accent hover:text-foreground hover:border-border/50"
-                    )}
+                  "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 border-l-2",
+                  isActive
+                    ? "bg-primary/5 text-primary border-l-primary shadow-sm"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground hover:border-l-transparent border-l-transparent"
+                )}
                   >
                     <item.icon
                       className={cn(
@@ -220,7 +223,7 @@ export function Sidebar({
               <DropdownMenuTrigger as={Fragment}>
                 <Button
                   variant="ghost"
-                  className="w-full justify-start px-2 py-6 h-auto hover:bg-accent group"
+                  className="w-full justify-start px-3 py-3 h-auto hover:bg-accent/50 border border-transparent hover:border-border/50 rounded-xl transition-all duration-200 group"
                 >
                 <Avatar
                   className="h-9 w-9 rounded-lg border-2 border-background shadow-sm mr-3"

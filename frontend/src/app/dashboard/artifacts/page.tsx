@@ -2,11 +2,16 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { api } from "@/lib/api";
-import { FiRefreshCw, FiInbox } from "react-icons/fi";
+import { FiRefreshCw, FiInbox, FiClock, FiHardDrive } from "react-icons/fi";
 import { PreviewCard } from "@/components/artifacts/PreviewCard";
 import { FiltersBar } from "@/components/artifacts/FiltersBar";
 import { PaginationControls } from "@/components/artifacts/PaginationControls";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { logger } from "@/utils/logger";
+import { Badge } from "@/components/ui/Badge";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 type Artifact = {
   artifact_id: string;
@@ -33,6 +38,7 @@ export default function ArtifactsPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState("");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
@@ -43,9 +49,6 @@ export default function ArtifactsPage() {
     try {
       const data = await api.getArtifacts({ limit: 500 });
       const artifactsList = data.artifacts || [];
-
-      // Don't sort here - sorting will be done in filteredArtifacts useMemo
-      // to group by workflow/job, then by created_at
       setArtifacts(artifactsList);
     } catch (error) {
       logger.error("Failed to load artifacts", {
@@ -89,24 +92,22 @@ export default function ArtifactsPage() {
       return matchesSearch && matchesType;
     });
 
-    // Sort by created_at DESC (most recent first), then by workflow_id/job_id as secondary sort
+    // Sort by created_at based on sortOrder
     filtered.sort((a: Artifact, b: Artifact) => {
-      // Primary sort: created_at DESC (most recent first)
       const dateA = new Date(a.created_at || 0).getTime();
       const dateB = new Date(b.created_at || 0).getTime();
 
       if (dateB !== dateA) {
-        return dateB - dateA;
+        return sortOrder === "desc" ? dateB - dateA : dateA - dateB;
       }
 
-      // Secondary sort: by workflow_id/job_id for consistency when dates are the same
       const groupA = a.workflow_id || a.job_id || `no-group-${a.artifact_id}`;
       const groupB = b.workflow_id || b.job_id || `no-group-${b.artifact_id}`;
       return groupA.localeCompare(groupB);
     });
 
     return filtered;
-  }, [artifacts, searchQuery, selectedType]);
+  }, [artifacts, searchQuery, selectedType, sortOrder]);
 
   const totalPages = Math.ceil(filteredArtifacts.length / ITEMS_PER_PAGE);
 
@@ -116,95 +117,137 @@ export default function ArtifactsPage() {
     return filteredArtifacts.slice(startIndex, endIndex);
   }, [filteredArtifacts, currentPage]);
 
+  const totalSize = useMemo(() => {
+    const bytes = filteredArtifacts.reduce(
+      (acc, curr) => acc + (curr.size_bytes || curr.file_size_bytes || 0),
+      0
+    );
+    if (bytes === 0) return "0 B";
+    const k = 1024;
+    const sizes = ["B", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
+  }, [filteredArtifacts]);
+
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, selectedType]);
+  }, [searchQuery, selectedType, sortOrder]);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-24">
-        <div className="text-center">
-          <div className="inline-block w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mb-4"></div>
-          <p className="text-gray-600">Loading downloads...</p>
+      <div className="space-y-6">
+        <PageHeader heading="Downloads" description="Manage your generated files">
+          <Button variant="outline" disabled>
+            <FiRefreshCw className="w-4 h-4 mr-2" />
+            Refresh
+          </Button>
+        </PageHeader>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <div className="lg:col-span-1">
+            <Skeleton className="h-64 w-full" />
+          </div>
+          <div className="lg:col-span-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[...Array(6)].map((_, i) => (
+                <Skeleton key={i} className="aspect-[4/3] rounded-lg" />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Downloads</h1>
-          <p className="text-gray-600 mt-1">
-            {filteredArtifacts.length}{" "}
-            {filteredArtifacts.length === 1 ? "file" : "files"} available
-          </p>
-        </div>
-        <button
-          onClick={refresh}
-          disabled={refreshing}
-          className="inline-flex items-center px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <FiRefreshCw
-            className={`w-4 h-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
-          />
-          Refresh
-        </button>
-      </div>
-
-      {artifacts.length > 0 && (
-        <FiltersBar
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          selectedType={selectedType}
-          onTypeChange={setSelectedType}
-          artifactTypes={artifactTypes}
-        />
-      )}
-
-      {filteredArtifacts.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-16 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
-            <FiInbox className="w-8 h-8 text-gray-400" />
+    <div className="space-y-6">
+      <PageHeader
+        heading="Downloads"
+        description="Manage and preview your generated files"
+      >
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
+            <FiInbox className="w-4 h-4" />
+            <span className="font-medium">{filteredArtifacts.length}</span>
+            <span className="hidden sm:inline">files</span>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            {artifacts.length === 0 ? "No downloads yet" : "No matching files"}
-          </h3>
-          <p className="text-gray-600">
-            {artifacts.length === 0
-              ? "Generated files will appear here after you run workflows"
-              : "Try adjusting your search or filter criteria"}
-          </p>
-          {(searchQuery || selectedType) && (
-            <button
-              onClick={() => {
-                setSearchQuery("");
-                setSelectedType("");
-              }}
-              className="mt-4 text-primary-600 hover:text-primary-700 font-medium"
-            >
-              Clear filters
-            </button>
+          <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
+            <FiHardDrive className="w-4 h-4" />
+            <span className="font-medium">{totalSize}</span>
+          </div>
+          <Button
+            variant="outline"
+            onClick={refresh}
+            disabled={refreshing}
+            isLoading={refreshing}
+            className="ml-2"
+          >
+            <FiRefreshCw className="w-4 h-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
+      </PageHeader>
+
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+        <div className="lg:col-span-1">
+          <div className="sticky top-6">
+            <FiltersBar
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              selectedType={selectedType}
+              onTypeChange={setSelectedType}
+              sortOrder={sortOrder}
+              onSortChange={setSortOrder}
+              artifactTypes={artifactTypes}
+            />
+          </div>
+        </div>
+
+        <div className="lg:col-span-3 space-y-6">
+          {filteredArtifacts.length === 0 ? (
+            <EmptyState
+              title={
+                artifacts.length === 0 ? "No downloads yet" : "No matching files"
+              }
+              message={
+                artifacts.length === 0
+                  ? "Generated files will appear here after you run workflows"
+                  : "Try adjusting your search or filter criteria"
+              }
+              icon={<FiInbox className="h-12 w-12 text-muted-foreground" />}
+              action={
+                searchQuery || selectedType
+                  ? {
+                      label: "Clear filters",
+                      onClick: () => {
+                        setSearchQuery("");
+                        setSelectedType("");
+                        setSortOrder("desc");
+                      },
+                    }
+                  : undefined
+              }
+            />
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {paginatedArtifacts.map((artifact) => (
+                  <PreviewCard key={artifact.artifact_id} artifact={artifact} />
+                ))}
+              </div>
+
+              <div className="border-t pt-6">
+                <PaginationControls
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={filteredArtifacts.length}
+                  itemsPerPage={ITEMS_PER_PAGE}
+                  onPageChange={setCurrentPage}
+                />
+              </div>
+            </>
           )}
         </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {paginatedArtifacts.map((artifact) => (
-              <PreviewCard key={artifact.artifact_id} artifact={artifact} />
-            ))}
-          </div>
-
-          <PaginationControls
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={filteredArtifacts.length}
-            itemsPerPage={ITEMS_PER_PAGE}
-            onPageChange={setCurrentPage}
-          />
-        </>
-      )}
+      </div>
     </div>
   );
 }

@@ -1,4 +1,6 @@
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import { Button } from "@/components/ui/Button";
+import { cn } from "@/lib/utils";
 
 interface PaginationControlsProps {
   currentPage: number;
@@ -6,6 +8,7 @@ interface PaginationControlsProps {
   totalItems: number;
   itemsPerPage: number;
   onPageChange: (page: number) => void;
+  className?: string;
 }
 
 export function PaginationControls({
@@ -14,6 +17,7 @@ export function PaginationControls({
   totalItems,
   itemsPerPage,
   onPageChange,
+  className,
 }: PaginationControlsProps) {
   if (totalPages <= 1) return null;
 
@@ -56,54 +60,57 @@ export function PaginationControls({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 px-6 py-4 mt-6">
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="text-sm text-gray-700">
-          Showing <span className="font-medium">{startItem}</span> to{" "}
-          <span className="font-medium">{endItem}</span> of{" "}
-          <span className="font-medium">{totalItems}</span> downloads
-        </div>
-
-        <nav className="flex items-center gap-1">
-          <button
-            onClick={() => onPageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-            className="p-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-colors"
-            aria-label="Previous page"
-          >
-            <FiChevronLeft className="w-5 h-5" />
-          </button>
-
-          {getPageNumbers().map((page, idx) =>
-            page === "..." ? (
-              <span key={`ellipsis-${idx}`} className="px-3 py-2 text-gray-500">
-                ...
-              </span>
-            ) : (
-              <button
-                key={page}
-                onClick={() => onPageChange(page as number)}
-                className={`min-w-[2.5rem] px-3 py-2 rounded-lg font-medium transition-colors ${
-                  currentPage === page
-                    ? "bg-primary-600 text-white"
-                    : "border border-gray-300 text-gray-700 hover:bg-gray-50"
-                }`}
-              >
-                {page}
-              </button>
-            ),
-          )}
-
-          <button
-            onClick={() => onPageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className="p-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-colors"
-            aria-label="Next page"
-          >
-            <FiChevronRight className="w-5 h-5" />
-          </button>
-        </nav>
+    <div className={cn("flex flex-col sm:flex-row items-center justify-between gap-4", className)}>
+      <div className="text-sm text-muted-foreground">
+        Showing <span className="font-medium text-foreground">{startItem}</span> to{" "}
+        <span className="font-medium text-foreground">{endItem}</span> of{" "}
+        <span className="font-medium text-foreground">{totalItems}</span> results
       </div>
+
+      <nav className="flex items-center gap-1" role="navigation" aria-label="Pagination">
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-8 w-8"
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          aria-label="Previous page"
+        >
+          <FiChevronLeft className="w-4 h-4" />
+        </Button>
+
+        {getPageNumbers().map((page, idx) =>
+          page === "..." ? (
+            <span key={`ellipsis-${idx}`} className="px-2 text-muted-foreground text-sm">
+              ...
+            </span>
+          ) : (
+            <Button
+              key={page}
+              variant={currentPage === page ? "default" : "outline"}
+              size="sm"
+              onClick={() => onPageChange(page as number)}
+              className={cn(
+                "h-8 min-w-[2rem] px-3",
+                currentPage === page && "pointer-events-none"
+              )}
+            >
+              {page}
+            </Button>
+          ),
+        )}
+
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-8 w-8"
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          aria-label="Next page"
+        >
+          <FiChevronRight className="w-4 h-4" />
+        </Button>
+      </nav>
     </div>
   );
 }
