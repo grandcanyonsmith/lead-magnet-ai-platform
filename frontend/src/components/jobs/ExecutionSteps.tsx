@@ -89,13 +89,13 @@ export function ExecutionSteps({
 
   return (
     <ErrorBoundary>
-      <div className="mt-4 sm:mt-6 bg-white rounded-2xl border border-gray-300 shadow p-4 sm:p-6 ring-1 ring-black/[0.04]">
+      <div className="mt-4 sm:mt-6 bg-white dark:bg-card rounded-2xl border border-gray-300 dark:border-gray-700 shadow p-4 sm:p-6 ring-1 ring-black/[0.04] dark:ring-white/5">
         <button
           onClick={onToggleShow}
           className="flex items-center justify-between w-full text-left mb-6 touch-target min-h-[48px] sm:min-h-0 group"
         >
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            <h2 className="text-lg font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
               Execution Timeline
             </h2>
             <div className="hidden sm:block flex-1 max-w-md">
@@ -125,13 +125,13 @@ export function ExecutionSteps({
         {showExecutionSteps && (
           <div className="relative pl-4 sm:pl-6 space-y-0">
             {/* Vertical timeline line */}
-            <div className="absolute left-4 sm:left-6 top-4 bottom-4 w-px bg-gray-200" />
+            <div className="absolute left-4 sm:left-6 top-4 bottom-4 w-px bg-gray-200 dark:bg-gray-700" />
 
             {submission?.form_data &&
               onResubmit &&
               typeof resubmitting === "boolean" && (
                 <div key="form-submission" className="relative pb-8">
-                  <div className="absolute left-[-5px] top-6 h-2.5 w-2.5 rounded-full ring-4 ring-white bg-green-500" />
+                  <div className="absolute left-[-5px] top-6 h-2.5 w-2.5 rounded-full ring-4 ring-white dark:ring-gray-900 bg-green-500" />
                   <div className="ml-6">
                     <SubmissionSummary
                       submission={submission}
@@ -153,18 +153,18 @@ export function ExecutionSteps({
                 <div key={stepOrder} className="relative pb-8 last:pb-0">
                   {/* Timeline dot */}
                   <div
-                    className={`absolute left-[-5px] top-6 h-2.5 w-2.5 rounded-full ring-4 ring-white ${
+                    className={`absolute left-[-5px] top-6 h-2.5 w-2.5 rounded-full ring-4 ring-white dark:ring-gray-900 ${
                       stepStatus === "completed"
                         ? "bg-green-500"
                         : stepStatus === "in_progress"
                           ? "bg-blue-500 animate-pulse"
                           : stepStatus === "failed"
                             ? "bg-red-500"
-                            : "bg-gray-300"
+                            : "bg-gray-300 dark:bg-gray-600"
                     }`}
                   />
 
-                  <div className="ml-6 rounded-xl border border-gray-300 bg-white shadow transition-all hover:shadow-md hover:border-gray-400">
+                  <div className="ml-6 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-card shadow transition-all hover:shadow-md hover:border-gray-400 dark:hover:border-gray-600">
                     <StepHeader
                       step={step}
                       status={stepStatus}
@@ -180,7 +180,7 @@ export function ExecutionSteps({
                       {({ open }) => (
                         <>
                           <DisclosureButton
-                            className="w-full flex justify-center py-2 border-t border-gray-100 hover:bg-gray-50 transition-colors text-xs font-medium text-gray-500"
+                            className="w-full flex justify-center py-2 border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-xs font-medium text-gray-500 dark:text-gray-400"
                             onClick={() => onToggleStep(stepOrder)}
                           >
                             {open ? (
@@ -197,7 +197,7 @@ export function ExecutionSteps({
                           </DisclosureButton>
                           <DisclosurePanel static>
                             {open && (
-                              <div className="border-t border-gray-200 bg-gray-50">
+                              <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30">
                                 <StepInputOutput
                                   step={step}
                                   status={stepStatus}

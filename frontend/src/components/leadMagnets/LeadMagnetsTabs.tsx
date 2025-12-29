@@ -32,7 +32,7 @@ export function LeadMagnetsTabs({ className }: LeadMagnetsTabsProps) {
   return (
     <div
       className={clsx(
-        "inline-flex items-center gap-1 rounded-xl border border-gray-200 bg-white p-1 shadow-sm",
+        "inline-flex items-center gap-1 rounded-xl border border-gray-200 bg-white dark:bg-card dark:border-gray-700 p-1 shadow-sm",
         className,
       )}
       role="tablist"
@@ -54,7 +54,7 @@ export function LeadMagnetsTabs({ className }: LeadMagnetsTabsProps) {
               "inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition",
               isActive
                 ? "bg-primary-600 text-white shadow-sm"
-                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
+                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white",
             )}
           >
             <Icon

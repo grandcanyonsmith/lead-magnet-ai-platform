@@ -14,7 +14,7 @@ export function DashboardSkeleton() {
         {[1, 2, 3].map((i) => (
           <div
             key={i}
-            className="h-32 rounded-xl border border-gray-100 bg-white p-6 shadow-sm"
+            className="h-32 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-card p-6 shadow-sm"
           >
             <div className="mb-4 flex items-start justify-between">
               <Skeleton className="h-10 w-10 rounded-lg" />

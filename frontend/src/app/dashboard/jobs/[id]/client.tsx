@@ -290,9 +290,9 @@ export default function JobDetailClient() {
   // ---------------------------------------------------------------------------
 
   const errorFallback = (
-    <div className="border border-red-300 rounded-lg p-6 bg-red-50">
-      <p className="text-red-800 font-medium">Error loading job details</p>
-      <p className="text-red-600 text-sm mt-1">
+    <div className="border border-red-300 dark:border-red-900 rounded-lg p-6 bg-red-50 dark:bg-red-900/20">
+      <p className="text-red-800 dark:text-red-200 font-medium">Error loading job details</p>
+      <p className="text-red-600 dark:text-red-300 text-sm mt-1">
         Please refresh the page or try again.
       </p>
     </div>
@@ -520,7 +520,7 @@ function JobTabs({
   return (
     <div className="mt-8">
       <TabGroup selectedIndex={selectedIndex} onChange={setSelectedIndex}>
-        <TabList className="flex space-x-8 border-b border-gray-300">
+        <TabList className="flex space-x-8 border-b border-gray-300 dark:border-gray-700">
           {tabs.map((tab) => (
             <Tab
               key={tab.name}
@@ -528,7 +528,7 @@ function JobTabs({
                 `whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium outline-none transition-colors ${
                   selected
                     ? "border-primary-500 text-primary-600"
-                    : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                    : "border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-700 dark:hover:text-gray-200"
                 }`
               }
             >
@@ -592,7 +592,7 @@ function RawJsonPanel({ data }: { data: unknown }) {
 
   if (!hasData) {
     return (
-      <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50/80 p-4 text-sm text-gray-600">
+      <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/80 p-4 text-sm text-gray-600 dark:text-gray-400">
         No raw JSON data is available for this run.
       </div>
     );
