@@ -84,10 +84,12 @@ class ShellExecutorService:
         job_request_key = f"shell-jobs/{job_id}.json"
 
         # Generate presigned PUT URL for result
+        # Expiration must be longer than max task duration (20 min per command) + buffer
+        # Set to 30 minutes (1800 seconds) to ensure URL doesn't expire before task completes
         put_url = self._s3.generate_presigned_url(
             ClientMethod="put_object",
             Params={"Bucket": bucket, "Key": result_key, "ContentType": "application/json"},
-            ExpiresIn=300,
+            ExpiresIn=1800,  # 30 minutes
         )
 
         # Build job request

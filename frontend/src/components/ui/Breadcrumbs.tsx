@@ -24,7 +24,7 @@ export function Breadcrumbs() {
           <div>
             <Link 
               href="/dashboard" 
-              className="text-gray-400 hover:text-gray-500 transition-colors"
+              className="text-muted-foreground hover:text-foreground transition-colors"
             >
               <HomeIcon className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" aria-hidden="true" />
               <span className="sr-only">Dashboard</span>
@@ -53,15 +53,15 @@ export function Breadcrumbs() {
             <li key={href}>
               <div className="flex items-center">
                 <ChevronRightIcon
-                  className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-gray-400"
+                  className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-muted-foreground/50"
                   aria-hidden="true"
                 />
                 <Link
                   href={href}
                   className={`ml-2 text-xs sm:text-sm font-medium transition-colors ${
                     isLast
-                      ? "text-gray-700 pointer-events-none"
-                      : "text-gray-500 hover:text-gray-700"
+                      ? "text-foreground pointer-events-none"
+                      : "text-muted-foreground hover:text-foreground"
                   }`}
                   aria-current={isLast ? "page" : undefined}
                 >
