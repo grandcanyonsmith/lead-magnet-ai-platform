@@ -162,8 +162,8 @@ export function Sidebar({
               </Button>
             </div>
 
-            <nav className="space-y-1">
-              <p className="px-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/50 mb-2">
+            <nav className="space-y-1.5">
+              <p className="px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 mb-3 mt-2">
                 Platform
               </p>
               {navItems.map((item) => {
@@ -184,23 +184,23 @@ export function Sidebar({
                     href={item.href}
                     onClick={() => setIsOpen(false)}
                     className={cn(
-                      "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                      "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 border border-transparent",
                       isActive
-                        ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
-                        : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                        ? "bg-primary/10 text-primary border-primary/10 shadow-sm"
+                        : "text-muted-foreground hover:bg-accent hover:text-foreground hover:border-border/50"
                     )}
                   >
                     <item.icon
                       className={cn(
                         "h-5 w-5 shrink-0 transition-colors",
                         isActive
-                          ? "text-primary-foreground"
+                          ? "text-primary"
                           : "text-muted-foreground group-hover:text-foreground"
                       )}
                     />
                     <span className="truncate">{item.label}</span>
                     {isActive && (
-                      <ChevronRight className="ml-auto h-4 w-4 text-primary-foreground/50" />
+                      <ChevronRight className="ml-auto h-4 w-4 text-primary/50" />
                     )}
                   </Link>
                 );

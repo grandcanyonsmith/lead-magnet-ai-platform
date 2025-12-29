@@ -19,6 +19,7 @@ import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { UsageChart } from "@/components/dashboard/UsageChart";
 import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
 import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
 import {
   Card,
   CardContent,
@@ -87,24 +88,17 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between border-b border-border/50 pb-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">
-            {greeting}, {firstName}
-          </h1>
-          <p className="text-muted-foreground mt-1 text-lg">
-            Here&apos;s what&apos;s happening with your lead magnets today.
-          </p>
-        </div>
-        <div className="flex gap-3">
-          <Link href="/dashboard/workflows/new">
-            <Button className="gap-2 shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-shadow">
-              <Sparkles className="h-4 w-4" />
-              Create Lead Magnet
-            </Button>
-          </Link>
-        </div>
-      </div>
+      <PageHeader
+        heading={`${greeting}, ${firstName}`}
+        description="Here's what's happening with your lead magnets today."
+      >
+        <Link href="/dashboard/workflows/new">
+          <Button className="gap-2 shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-shadow">
+            <Sparkles className="h-4 w-4" />
+            Create Lead Magnet
+          </Button>
+        </Link>
+      </PageHeader>
 
       {/* Stats Grid */}
       <DashboardStats overview={overview} />
