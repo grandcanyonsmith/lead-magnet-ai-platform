@@ -84,7 +84,7 @@ function renderToolBadges(
 ) {
   if (!tools || !Array.isArray(tools) || tools.length === 0) {
     return showLabel ? (
-      <span className="px-2 py-0.5 text-xs bg-gray-50 text-gray-600 rounded border border-gray-200">
+      <span className="px-2 py-0.5 text-xs bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded border border-gray-200 dark:border-gray-700">
         None
       </span>
     ) : null;
@@ -97,7 +97,7 @@ function renderToolBadges(
         return (
           <span
             key={toolIdx}
-            className="px-2 py-0.5 text-xs bg-blue-50 text-blue-700 rounded border border-blue-200 whitespace-nowrap"
+            className="px-2 py-0.5 text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded border border-blue-200 dark:border-blue-800/30 whitespace-nowrap"
           >
             {toolName}
           </span>
@@ -164,8 +164,8 @@ function renderPreviousStepsContext(
   }
 
   return (
-    <div className="mb-5 md:mb-4 pb-5 md:pb-4 border-b border-gray-200">
-      <div className="text-sm md:text-xs font-medium text-gray-700 mb-3 md:mb-2">
+    <div className="mb-5 md:mb-4 pb-5 md:pb-4 border-b border-gray-200 dark:border-gray-700">
+      <div className="text-sm md:text-xs font-medium text-gray-700 dark:text-gray-300 mb-3 md:mb-2">
         Context from Previous Steps:
       </div>
 
@@ -194,10 +194,10 @@ function renderPreviousStepsContext(
 
           return (
             <div className="mb-2">
-              <div className="text-sm md:text-xs font-medium text-gray-600 mb-2 md:mb-1">
-                Form Submission <span className="text-gray-500">(Step 0)</span>
+              <div className="text-sm md:text-xs font-medium text-gray-600 dark:text-gray-400 mb-2 md:mb-1">
+                Form Submission <span className="text-gray-500 dark:text-gray-500">(Step 0)</span>
               </div>
-              <div className="text-sm md:text-xs text-gray-700 whitespace-pre-wrap font-mono overflow-x-auto bg-gray-50 p-3 md:p-2.5 rounded-lg border border-gray-200 max-h-32 overflow-y-auto scrollbar-hide-until-hover leading-relaxed">
+              <div className="text-sm md:text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono overflow-x-auto bg-gray-50 dark:bg-gray-900/50 p-3 md:p-2.5 rounded-lg border border-gray-200 dark:border-gray-700 max-h-32 overflow-y-auto scrollbar-hide-until-hover leading-relaxed">
                 {renderTextWithImages(formText)}
               </div>
               {/* Render images found in form submission */}
@@ -231,11 +231,11 @@ function renderPreviousStepsContext(
             key={`${currentStepOrder}-prev-${step.step_order}-${index}`}
             className="mb-2 last:mb-0"
           >
-            <div className="text-sm md:text-xs font-medium text-gray-600 mb-2 md:mb-1">
+            <div className="text-sm md:text-xs font-medium text-gray-600 dark:text-gray-400 mb-2 md:mb-1">
               {step.step_name || `Step ${step.step_order}`}{" "}
-              <span className="text-gray-500">(Step {step.step_order})</span>
+              <span className="text-gray-500 dark:text-gray-500">(Step {step.step_order})</span>
             </div>
-            <div className="text-sm md:text-xs text-gray-700 whitespace-pre-wrap font-mono overflow-x-auto bg-gray-50 p-3 md:p-2.5 rounded-lg border border-gray-200 max-h-32 overflow-y-auto scrollbar-hide-until-hover leading-relaxed">
+            <div className="text-sm md:text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono overflow-x-auto bg-gray-50 dark:bg-gray-900/50 p-3 md:p-2.5 rounded-lg border border-gray-200 dark:border-gray-700 max-h-32 overflow-y-auto scrollbar-hide-until-hover leading-relaxed">
               {renderTextWithImages(stepOutput)}
             </div>
             {/* Render images found in step output */}
@@ -253,7 +253,7 @@ function renderPreviousStepsContext(
             {/* Also show image_urls if they exist (for backwards compatibility) */}
             {step.image_urls && step.image_urls.length > 0 && (
               <div className="mt-4 md:mt-2">
-                <div className="text-sm md:text-xs font-medium text-gray-600 mb-3 md:mb-1">
+                <div className="text-sm md:text-xs font-medium text-gray-600 dark:text-gray-400 mb-3 md:mb-1">
                   Generated Images:
                 </div>
                 <div className="space-y-4 md:space-y-2">
@@ -377,132 +377,132 @@ export function StepInputOutput({
     const hasTools = tools && Array.isArray(tools) && tools.length > 0;
 
     return (
-      <div className="mt-3 md:mt-2.5 pt-3 md:pt-2.5 border-t border-gray-200">
-        {/* Show model and tools when image generation is used */}
-        {(modelString || hasTools) && (
-          <div className="flex items-center gap-2 mb-3 md:mb-2 flex-wrap">
-            {modelString && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800 border border-purple-200">
-                <FiCpu className="w-3 h-3" />
-                {modelString}
-              </span>
-            )}
-            {hasTools && (
-              <div className="flex items-center gap-1.5">
-                {renderToolBadges(step.input?.tools || step.tools)}
+    <div className="mt-3 md:mt-2.5 pt-3 md:pt-2.5 border-t border-gray-200 dark:border-gray-700">
+      {/* Show model and tools when image generation is used */}
+      {(modelString || hasTools) && (
+        <div className="flex items-center gap-2 mb-3 md:mb-2 flex-wrap">
+          {modelString && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-purple-100 dark:bg-purple-900/20 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800/30">
+              <FiCpu className="w-3 h-3" />
+              {modelString}
+            </span>
+          )}
+          {hasTools && (
+            <div className="flex items-center gap-1.5">
+              {renderToolBadges(step.input?.tools || step.tools)}
+            </div>
+          )}
+        </div>
+      )}
+
+      <span className="text-sm md:text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2.5 md:mb-2 block">
+        Generated Images:
+      </span>
+
+      {/* Loading state */}
+      {loadingImageArtifacts && !hasImageUrls && (
+        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 py-2">
+          <FiLoader className="w-3.5 h-3.5 animate-spin" />
+          <span>Loading images...</span>
+        </div>
+      )}
+
+      {/* Render from image_urls if available */}
+      {hasImageUrls && step.image_urls ? (
+        <div className="grid grid-cols-1 gap-2.5 md:gap-2">
+          {step.image_urls.map((imageUrl: string, imgIdx: number) => (
+            <div
+              key={`url-${imgIdx}`}
+              className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden"
+            >
+              <div className="aspect-video bg-gray-100 dark:bg-gray-800">
+                <PreviewRenderer
+                  contentType="image/png"
+                  objectUrl={imageUrl}
+                  fileName={`Generated image ${imgIdx + 1}`}
+                  className="w-full h-full"
+                />
               </div>
-            )}
-          </div>
-        )}
-
-        <span className="text-sm md:text-xs font-semibold text-gray-700 mb-2.5 md:mb-2 block">
-          Generated Images:
-        </span>
-
-        {/* Loading state */}
-        {loadingImageArtifacts && !hasImageUrls && (
-          <div className="flex items-center gap-2 text-xs text-gray-500 py-2">
-            <FiLoader className="w-3.5 h-3.5 animate-spin" />
-            <span>Loading images...</span>
-          </div>
-        )}
-
-        {/* Render from image_urls if available */}
-        {hasImageUrls && step.image_urls ? (
+              <div className="p-3 md:p-2 bg-gray-100 dark:bg-gray-800">
+                <a
+                  href={imageUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm md:text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 active:text-blue-900 dark:active:text-blue-200 break-all block touch-target py-2 md:py-1 min-h-[44px] md:min-h-0"
+                  title={imageUrl}
+                >
+                  {truncateUrl(imageUrl)}
+                </a>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        /* Fallback: Render from artifacts */
+        hasImageArtifacts && (
           <div className="grid grid-cols-1 gap-2.5 md:gap-2">
-            {step.image_urls.map((imageUrl: string, imgIdx: number) => (
-              <div
-                key={`url-${imgIdx}`}
-                className="border border-gray-200 rounded-xl overflow-hidden"
-              >
-                <div className="aspect-video bg-gray-100">
-                  <PreviewRenderer
-                    contentType="image/png"
-                    objectUrl={imageUrl}
-                    fileName={`Generated image ${imgIdx + 1}`}
-                    className="w-full h-full"
-                  />
-                </div>
-                <div className="p-3 md:p-2 bg-gray-100">
-                  <a
-                    href={imageUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm md:text-xs text-blue-600 hover:text-blue-800 active:text-blue-900 break-all block touch-target py-2 md:py-1 min-h-[44px] md:min-h-0"
-                    title={imageUrl}
-                  >
-                    {truncateUrl(imageUrl)}
-                  </a>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          /* Fallback: Render from artifacts */
-          hasImageArtifacts && (
-            <div className="grid grid-cols-1 gap-2.5 md:gap-2">
-              {imageArtifacts.map((artifact: Artifact, imgIdx: number) => {
-                const artifactUrl = artifact.object_url || artifact.public_url;
-                if (!artifactUrl) return null;
+            {imageArtifacts.map((artifact: Artifact, imgIdx: number) => {
+              const artifactUrl = artifact.object_url || artifact.public_url;
+              if (!artifactUrl) return null;
 
-                return (
-                  <div
-                    key={`artifact-${artifact.artifact_id || imgIdx}`}
-                    className="border border-gray-200 rounded-lg overflow-hidden"
-                  >
-                    <div className="aspect-video bg-gray-100">
-                      <PreviewRenderer
-                        contentType={artifact.content_type || "image/png"}
-                        objectUrl={artifactUrl}
-                        fileName={
+              return (
+                <div
+                  key={`artifact-${artifact.artifact_id || imgIdx}`}
+                  className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden"
+                >
+                  <div className="aspect-video bg-gray-100 dark:bg-gray-800">
+                    <PreviewRenderer
+                      contentType={artifact.content_type || "image/png"}
+                      objectUrl={artifactUrl}
+                      fileName={
+                        artifact.file_name ||
+                        artifact.artifact_name ||
+                        `Image ${imgIdx + 1}`
+                      }
+                      className="w-full h-full"
+                      artifactId={artifact.artifact_id}
+                    />
+                  </div>
+                  <div className="p-3 md:p-2 bg-gray-100 dark:bg-gray-800">
+                    <div className="flex items-center justify-between gap-2">
+                      <a
+                        href={artifactUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs md:text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 active:text-blue-900 dark:active:text-blue-200 truncate flex-1 min-w-0"
+                        title={
                           artifact.file_name ||
                           artifact.artifact_name ||
-                          `Image ${imgIdx + 1}`
+                          artifactUrl
                         }
-                        className="w-full h-full"
-                        artifactId={artifact.artifact_id}
-                      />
-                    </div>
-                    <div className="p-3 md:p-2 bg-gray-100">
-                      <div className="flex items-center justify-between gap-2">
-                        <a
-                          href={artifactUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs md:text-xs text-blue-600 hover:text-blue-800 active:text-blue-900 truncate flex-1 min-w-0"
-                          title={
-                            artifact.file_name ||
-                            artifact.artifact_name ||
-                            artifactUrl
-                          }
-                        >
-                          {artifact.file_name ||
-                            artifact.artifact_name ||
-                            truncateUrl(artifactUrl)}
-                        </a>
-                      </div>
+                      >
+                        {artifact.file_name ||
+                          artifact.artifact_name ||
+                          truncateUrl(artifactUrl)}
+                      </a>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          )
-        )}
-      </div>
-    );
-  };
+                </div>
+              );
+            })}
+          </div>
+        )
+      )}
+    </div>
+  );
+};
 
   // Check if image generation was used
   const usedImageGeneration = hasImageGeneration(step, imageArtifacts);
 
   return (
-    <div className="px-3 sm:px-3 pb-3 sm:pb-3 pt-3 border-t border-gray-100">
+    <div className="px-3 sm:px-3 pb-3 sm:pb-3 pt-3 border-t border-gray-100 dark:border-gray-700">
       <div className="mt-0">
         {isPending ? (
           /* For pending steps, show configuration only */
-          <div className="border border-gray-300 rounded-lg overflow-hidden bg-white shadow-sm">
-            <div className="bg-slate-50 px-3 py-2 md:py-1.5 border-b border-gray-300 flex items-center justify-between">
-              <span className="text-sm md:text-xs font-semibold text-gray-700">
+          <div className="border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-card shadow-sm">
+            <div className="bg-slate-50 dark:bg-slate-900/50 px-3 py-2 md:py-1.5 border-b border-gray-300 dark:border-gray-700 flex items-center justify-between">
+              <span className="text-sm md:text-xs font-semibold text-gray-700 dark:text-gray-300">
                 Configuration
               </span>
               {canEdit &&
@@ -518,7 +518,7 @@ export function StepInputOutput({
                       const workflowStepIndex = step.step_order - 1;
                       onEditStep(workflowStepIndex);
                     }}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-primary-600 hover:text-primary-800 hover:bg-primary-50 rounded-lg transition-colors"
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
                     title="Edit workflow step"
                   >
                     <FiEdit className="w-4 h-4" />
@@ -526,13 +526,13 @@ export function StepInputOutput({
                   </button>
                 )}
             </div>
-            <div className="p-4 md:p-3 bg-white space-y-3 md:space-y-2">
+            <div className="p-4 md:p-3 bg-white dark:bg-card space-y-3 md:space-y-2">
               {step.instructions && (
                 <div>
-                  <span className="text-xs font-semibold text-gray-600 uppercase">
+                  <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">
                     Instructions
                   </span>
-                  <pre className="text-sm text-gray-700 mt-1 whitespace-pre-wrap font-sans bg-gray-50 p-2.5 rounded border border-gray-200">
+                  <pre className="text-sm text-gray-700 dark:text-gray-300 mt-1 whitespace-pre-wrap font-sans bg-gray-50 dark:bg-gray-900/50 p-2.5 rounded border border-gray-200 dark:border-gray-700">
                     {step.instructions}
                   </pre>
                 </div>
@@ -543,10 +543,10 @@ export function StepInputOutput({
           /* For completed/in-progress steps, show Input and Output side by side on desktop, stacked on mobile */
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-3">
             {/* Input Section */}
-            <div className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
-              <div className="bg-gray-50 px-3 py-2 md:px-3 md:py-1.5 border-b border-gray-200">
+            <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-card shadow-sm">
+              <div className="bg-gray-50 dark:bg-gray-900/50 px-3 py-2 md:px-3 md:py-1.5 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm md:text-xs font-semibold text-gray-700">
+                  <span className="text-sm md:text-xs font-semibold text-gray-700 dark:text-gray-300">
                     Input
                   </span>
                   <div className="flex items-center gap-1.5">
@@ -563,7 +563,7 @@ export function StepInputOutput({
                             const workflowStepIndex = step.step_order - 1;
                             onEditStep(workflowStepIndex);
                           }}
-                          className="flex items-center gap-1 px-1.5 py-1 text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded transition-colors"
+                          className="flex items-center gap-1 px-1.5 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
                           title="Edit workflow step"
                         >
                           <FiEdit className="w-3 h-3" />
@@ -594,7 +594,7 @@ export function StepInputOutput({
                         }
                         onCopy(text);
                       }}
-                      className="text-xs text-gray-500 hover:text-gray-700 active:text-gray-900 flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-200 active:bg-gray-300 touch-target min-h-[44px] sm:min-h-0"
+                      className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 active:text-gray-900 dark:active:text-white flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 active:bg-gray-300 dark:active:bg-gray-600 touch-target min-h-[44px] sm:min-h-0"
                     >
                       <FiCopy className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                       <span className="hidden sm:inline">Copy</span>
@@ -604,7 +604,7 @@ export function StepInputOutput({
               </div>
               <div
                 ref={inputScrollRef}
-                className="p-3 md:p-2.5 bg-white max-h-[350px] md:max-h-72 overflow-y-auto scrollbar-hide-until-hover"
+                className="p-3 md:p-2.5 bg-white dark:bg-card max-h-[350px] md:max-h-72 overflow-y-auto scrollbar-hide-until-hover"
               >
                 {/* Previous Steps Context */}
                 {renderPreviousStepsContext(
@@ -623,10 +623,10 @@ export function StepInputOutput({
             </div>
 
             {/* Output Section */}
-            <div className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
-              <div className="bg-gray-50 px-3 py-2 md:px-3 md:py-1.5 border-b border-gray-200">
+            <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-card shadow-sm">
+              <div className="bg-gray-50 dark:bg-gray-900/50 px-3 py-2 md:px-3 md:py-1.5 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm md:text-xs font-semibold text-gray-700">
+                  <span className="text-sm md:text-xs font-semibold text-gray-700 dark:text-gray-300">
                     Output
                   </span>
                   <div className="flex items-center gap-1.5">
@@ -641,7 +641,7 @@ export function StepInputOutput({
                               : JSON.stringify(formatted.content, null, 2);
                         onCopy(text);
                       }}
-                      className="text-xs text-gray-500 hover:text-gray-700 active:text-gray-900 flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-200 active:bg-gray-300 touch-target min-h-[44px] sm:min-h-0"
+                      className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 active:text-gray-900 dark:active:text-white flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 active:bg-gray-300 dark:active:bg-gray-600 touch-target min-h-[44px] sm:min-h-0"
                     >
                       <FiCopy className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                       <span className="hidden sm:inline">Copy</span>
@@ -651,7 +651,7 @@ export function StepInputOutput({
               </div>
               <div
                 ref={outputScrollRef}
-                className="p-3 md:p-2.5 bg-white max-h-[350px] md:max-h-72 overflow-y-auto scrollbar-hide-until-hover"
+                className="p-3 md:p-2.5 bg-white dark:bg-card max-h-[350px] md:max-h-72 overflow-y-auto scrollbar-hide-until-hover"
               >
                 {usedImageGeneration ? (
                   /* For image generation steps, only show the image URL, not markdown preview */
