@@ -8,7 +8,12 @@ FROM node:22-slim
 # - linux/arm64  -> awscli-exe-linux-aarch64-<version>.zip
 ARG AWS_CLI_VERSION=2.27.54
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates bash curl unzip \
+  && apt-get install -y --no-install-recommends \
+    ca-certificates bash curl unzip \
+    # Playwright / Chromium dependencies
+    libglib2.0-0 libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
+    libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 \
+    libpango-1.0-0 libpangocairo-1.0-0 libgtk-3-0 \
   # Install AWS CLI v2 (pinned for reproducibility)
   && ARCH="$(uname -m)" \
   && case "${ARCH}" in \
