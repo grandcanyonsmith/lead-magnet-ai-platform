@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'infrastructure/**'
+      - 'backend/shell-executor/**'
       - '.github/workflows/cdk-infra.yml'
   workflow_dispatch:
 
