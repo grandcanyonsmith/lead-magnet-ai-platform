@@ -308,9 +308,9 @@ export function PreviewRenderer({
   if (!objectUrl && !artifactId) {
     return (
       <div
-        className={`flex items-center justify-center bg-gray-100 ${className}`}
+        className={`flex items-center justify-center bg-gray-100 dark:bg-gray-800 ${className}`}
       >
-        <FiFile className="w-12 h-12 text-gray-400" />
+        <FiFile className="w-12 h-12 text-gray-400 dark:text-gray-500" />
       </div>
     );
   }
@@ -350,13 +350,13 @@ export function PreviewRenderer({
       return (
         <div className="relative w-full h-full flex items-center justify-center min-h-0">
           {!imageLoaded && !imageError && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-              <FiImage className="w-12 h-12 text-gray-400 animate-pulse" />
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+              <FiImage className="w-12 h-12 text-gray-400 dark:text-gray-500 animate-pulse" />
             </div>
           )}
           {imageError && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-              <FiImage className="w-12 h-12 text-gray-400" />
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+              <FiImage className="w-12 h-12 text-gray-400 dark:text-gray-500" />
             </div>
           )}
           {isInView && objectUrl && (
@@ -379,7 +379,7 @@ export function PreviewRenderer({
 
     if (effectiveContentType === "application/pdf") {
       return (
-        <div className="relative w-full h-full bg-white">
+        <div className="relative w-full h-full bg-white dark:bg-gray-950">
           {isInView && objectUrl ? (
             <iframe
               src={`${objectUrl}#toolbar=0&navpanes=0&scrollbar=0`}
@@ -387,8 +387,8 @@ export function PreviewRenderer({
               title={fileName || "PDF Preview"}
             />
           ) : (
-            <div className="flex items-center justify-center h-full bg-gray-100">
-              <FiFileText className="w-12 h-12 text-red-400" />
+            <div className="flex items-center justify-center h-full bg-gray-100 dark:bg-gray-800">
+              <FiFileText className="w-12 h-12 text-red-400 dark:text-red-300" />
             </div>
           )}
         </div>
@@ -402,17 +402,17 @@ export function PreviewRenderer({
       if (isFullScreen) {
         // Full-screen HTML rendering with view mode support
         return (
-          <div className="relative w-full h-full bg-white flex flex-col">
+          <div className="relative w-full h-full bg-white dark:bg-gray-950 flex flex-col">
             {/* Header with view mode switcher */}
             {onViewModeChange && (
-              <div className="flex items-center justify-between px-4 py-3 bg-gray-100 border-b border-gray-200">
+              <div className="flex items-center justify-between px-4 py-3 bg-gray-100 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex gap-2">
                   <button
                     onClick={() => onViewModeChange("desktop")}
                     className={`p-2 rounded-lg transition-colors ${
                       viewMode === "desktop"
-                        ? "bg-gray-700 text-white"
-                        : "bg-white text-gray-700 hover:bg-gray-200"
+                        ? "bg-gray-700 text-white dark:bg-gray-200 dark:text-gray-900"
+                        : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700"
                     }`}
                     aria-label="Desktop view"
                     title="Desktop view"
@@ -423,8 +423,8 @@ export function PreviewRenderer({
                     onClick={() => onViewModeChange("tablet")}
                     className={`p-2 rounded-lg transition-colors ${
                       viewMode === "tablet"
-                        ? "bg-gray-700 text-white"
-                        : "bg-white text-gray-700 hover:bg-gray-200"
+                        ? "bg-gray-700 text-white dark:bg-gray-200 dark:text-gray-900"
+                        : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700"
                     }`}
                     aria-label="Tablet view"
                     title="Tablet view"
@@ -435,8 +435,8 @@ export function PreviewRenderer({
                     onClick={() => onViewModeChange("mobile")}
                     className={`p-2 rounded-lg transition-colors ${
                       viewMode === "mobile"
-                        ? "bg-gray-700 text-white"
-                        : "bg-white text-gray-700 hover:bg-gray-200"
+                        ? "bg-gray-700 text-white dark:bg-gray-200 dark:text-gray-900"
+                        : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700"
                     }`}
                     aria-label="Mobile view"
                     title="Mobile view"
@@ -445,7 +445,7 @@ export function PreviewRenderer({
                   </button>
                 </div>
                 {fileName && (
-                  <div className="text-sm font-medium text-gray-700 truncate max-w-md">
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate max-w-md">
                     {fileName}
                   </div>
                 )}
@@ -456,17 +456,17 @@ export function PreviewRenderer({
             <div className="flex-1 min-h-0">
               {isInView ? (
                 htmlError ? (
-                  <div className="flex items-center justify-center h-full bg-gray-50">
+                  <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
                     <div className="text-center">
-                      <FiCode className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                      <p className="text-xs text-gray-500">
+                      <FiCode className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
                         Failed to load HTML
                       </p>
                     </div>
                   </div>
                 ) : htmlContent ? (
                   <div
-                    className={`bg-white transition-all duration-300 h-full ${
+                    className={`bg-white dark:bg-gray-950 transition-all duration-300 h-full ${
                       viewMode === "tablet"
                         ? "w-[768px] max-w-[768px] mx-auto"
                         : viewMode === "mobile"
@@ -503,13 +503,15 @@ export function PreviewRenderer({
 
       // Regular HTML rendering
       return (
-        <div className="relative w-full h-full bg-white">
+        <div className="relative w-full h-full bg-white dark:bg-gray-950">
           {isInView ? (
             htmlError ? (
-              <div className="flex items-center justify-center h-full bg-gray-50">
+              <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
                 <div className="text-center">
-                  <FiCode className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                  <p className="text-xs text-gray-500">Failed to load HTML</p>
+                  <FiCode className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Failed to load HTML
+                  </p>
                 </div>
               </div>
             ) : htmlContent ? (
@@ -521,16 +523,18 @@ export function PreviewRenderer({
                 referrerPolicy="no-referrer"
               />
             ) : (
-              <div className="flex items-center justify-center h-full bg-gray-50">
+              <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
                 <div className="text-center">
-                  <FiCode className="w-12 h-12 text-blue-400 mx-auto mb-2 animate-pulse" />
-                  <p className="text-xs text-gray-500">Loading HTML...</p>
+                  <FiCode className="w-12 h-12 text-blue-400 dark:text-blue-300 mx-auto mb-2 animate-pulse" />
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Loading HTML...
+                  </p>
                 </div>
               </div>
             )
           ) : (
-            <div className="flex items-center justify-center h-full bg-gray-100">
-              <FiCode className="w-12 h-12 text-blue-400" />
+            <div className="flex items-center justify-center h-full bg-gray-100 dark:bg-gray-800">
+              <FiCode className="w-12 h-12 text-blue-400 dark:text-blue-300" />
             </div>
           )}
         </div>
@@ -541,17 +545,17 @@ export function PreviewRenderer({
       if (isFullScreen) {
         // Full-screen markdown rendering with scrolling + view mode support (desktop/tablet/mobile)
         return (
-          <div className="relative w-full h-full bg-white flex flex-col">
+          <div className="relative w-full h-full bg-white dark:bg-gray-950 flex flex-col">
             {/* Header with view mode switcher */}
             {onViewModeChange && (
-              <div className="flex items-center justify-between px-4 py-3 bg-gray-100 border-b border-gray-200">
+              <div className="flex items-center justify-between px-4 py-3 bg-gray-100 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex gap-2">
                   <button
                     onClick={() => onViewModeChange("desktop")}
                     className={`p-2 rounded-lg transition-colors ${
                       viewMode === "desktop"
-                        ? "bg-gray-700 text-white"
-                        : "bg-white text-gray-700 hover:bg-gray-200"
+                        ? "bg-gray-700 text-white dark:bg-gray-200 dark:text-gray-900"
+                        : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700"
                     }`}
                     aria-label="Desktop view"
                     title="Desktop view"
@@ -562,8 +566,8 @@ export function PreviewRenderer({
                     onClick={() => onViewModeChange("tablet")}
                     className={`p-2 rounded-lg transition-colors ${
                       viewMode === "tablet"
-                        ? "bg-gray-700 text-white"
-                        : "bg-white text-gray-700 hover:bg-gray-200"
+                        ? "bg-gray-700 text-white dark:bg-gray-200 dark:text-gray-900"
+                        : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700"
                     }`}
                     aria-label="Tablet view"
                     title="Tablet view"
@@ -574,8 +578,8 @@ export function PreviewRenderer({
                     onClick={() => onViewModeChange("mobile")}
                     className={`p-2 rounded-lg transition-colors ${
                       viewMode === "mobile"
-                        ? "bg-gray-700 text-white"
-                        : "bg-white text-gray-700 hover:bg-gray-200"
+                        ? "bg-gray-700 text-white dark:bg-gray-200 dark:text-gray-900"
+                        : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700"
                     }`}
                     aria-label="Mobile view"
                     title="Mobile view"
@@ -584,7 +588,7 @@ export function PreviewRenderer({
                   </button>
                 </div>
                 {fileName && (
-                  <div className="text-sm font-medium text-gray-700 truncate max-w-md">
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate max-w-md">
                     {fileName}
                   </div>
                 )}
@@ -594,10 +598,10 @@ export function PreviewRenderer({
             <div className="flex-1 min-h-0 overflow-y-auto">
               {isInView ? (
                 markdownError ? (
-                  <div className="flex items-center justify-center h-full bg-gray-50">
+                  <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
                     <div className="text-center">
-                      <FiFileText className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                      <p className="text-xs text-gray-500">
+                      <FiFileText className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
                         Failed to load markdown
                       </p>
                     </div>
@@ -612,7 +616,7 @@ export function PreviewRenderer({
                           : "w-full"
                     }`}
                   >
-                    <div className="p-8 prose prose-lg max-w-none">
+                    <div className="p-8 prose prose-lg max-w-none dark:prose-invert">
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>
                         {markdownContent}
                       </ReactMarkdown>
@@ -643,36 +647,40 @@ export function PreviewRenderer({
 
       // Regular markdown rendering
       return (
-        <div className="relative w-full h-full bg-white overflow-auto">
+        <div className="relative w-full h-full bg-white dark:bg-gray-950 overflow-auto">
           {isInView ? (
             markdownError ? (
-              <div className="flex items-center justify-center h-full bg-gray-50">
+              <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
                 <div className="text-center">
-                  <FiFileText className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                  <p className="text-xs text-gray-500">
+                  <FiFileText className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
                     Failed to load markdown
                   </p>
                 </div>
               </div>
             ) : markdownContent ? (
-              <div className="p-4 prose prose-sm max-w-none">
+              <div className="p-4 prose prose-sm max-w-none dark:prose-invert">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {markdownContent}
                 </ReactMarkdown>
               </div>
             ) : (
-              <div className="flex items-center justify-center h-full bg-gray-50">
+              <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
                 <div className="text-center">
-                  <FiFileText className="w-12 h-12 text-gray-400 mx-auto mb-2 animate-pulse" />
-                  <p className="text-xs text-gray-500">Loading markdown...</p>
+                  <FiFileText className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-2 animate-pulse" />
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Loading markdown...
+                  </p>
                 </div>
               </div>
             )
           ) : (
-            <div className="flex items-center justify-center h-full bg-gray-50">
+            <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
               <div className="text-center">
-                <FiFileText className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                <p className="text-xs text-gray-500">Markdown File</p>
+                <FiFileText className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Markdown File
+                </p>
               </div>
             </div>
           )}
@@ -682,10 +690,10 @@ export function PreviewRenderer({
 
     if (effectiveContentType.startsWith("text/")) {
       return (
-        <div className="flex items-center justify-center bg-gray-50 h-full">
+        <div className="flex items-center justify-center bg-gray-50 dark:bg-gray-900 h-full">
           <div className="text-center">
-            <FiFileText className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-            <p className="text-xs text-gray-500">Text File</p>
+            <FiFileText className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+            <p className="text-xs text-gray-500 dark:text-gray-400">Text File</p>
           </div>
         </div>
       );
@@ -698,9 +706,9 @@ export function PreviewRenderer({
         : FiFile;
 
     return (
-      <div className="flex items-center justify-center bg-gray-100 h-full">
+      <div className="flex items-center justify-center bg-gray-100 dark:bg-gray-800 h-full">
         {icon === FiFile ? (
-          <FiFile className="w-12 h-12 text-gray-400" />
+          <FiFile className="w-12 h-12 text-gray-400 dark:text-gray-500" />
         ) : null}
       </div>
     );

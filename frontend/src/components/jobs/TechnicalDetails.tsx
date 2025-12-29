@@ -163,26 +163,26 @@ export function TechnicalDetails({
   }, [job?.job_id, showTechnicalDetails]);
 
   return (
-    <div className="mt-4 sm:mt-6 bg-white rounded-2xl border border-gray-300 shadow p-4 sm:p-6 ring-1 ring-black/[0.04]">
+    <div className="mt-4 sm:mt-6 bg-white dark:bg-card rounded-2xl border border-gray-300 dark:border-gray-700 shadow p-4 sm:p-6 ring-1 ring-black/[0.04] dark:ring-white/5">
       <div className="flex items-center justify-between mb-4">
         <button
           onClick={() => setShowTechnicalDetails(!showTechnicalDetails)}
           className="flex items-center justify-between flex-1 text-left touch-target"
         >
-          <h2 className="text-lg font-semibold text-gray-900">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
             Technical Details
           </h2>
           {showTechnicalDetails ? (
-            <FiChevronUp className="w-5 h-5 text-gray-500 flex-shrink-0 ml-2" />
+            <FiChevronUp className="w-5 h-5 text-gray-500 dark:text-gray-400 flex-shrink-0 ml-2" />
           ) : (
-            <FiChevronDown className="w-5 h-5 text-gray-500 flex-shrink-0 ml-2" />
+            <FiChevronDown className="w-5 h-5 text-gray-500 dark:text-gray-400 flex-shrink-0 ml-2" />
           )}
         </button>
         {showTechnicalDetails && (
           <button
             onClick={copyAllToClipboard}
             disabled={copyingAll}
-            className="ml-4 flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-target flex-shrink-0"
+            className="ml-4 flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-target flex-shrink-0"
             title="Copy all artifacts text, image URLs, and form submission to clipboard"
           >
             {copyingAll ? (
@@ -201,16 +201,18 @@ export function TechnicalDetails({
       </div>
 
       {showTechnicalDetails && (
-        <div className="space-y-4 pt-4 border-t border-gray-200">
+        <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Job ID
             </label>
             <div className="flex items-center space-x-2">
-              <p className="text-sm font-mono text-gray-900">{job.job_id}</p>
+              <p className="text-sm font-mono text-gray-900 dark:text-gray-200">
+                {job.job_id}
+              </p>
               <button
                 onClick={() => copyToClipboard(job.job_id)}
-                className="text-gray-500 hover:text-gray-700 p-2 touch-target"
+                className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-2 touch-target"
                 title="Copy Job ID"
               >
                 <FiCopy className="w-4 h-4" />
@@ -220,7 +222,7 @@ export function TechnicalDetails({
 
           {job.submission_id && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Submission ID
               </label>
               <div className="flex items-center space-x-2">
@@ -232,20 +234,20 @@ export function TechnicalDetails({
                     )}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sm font-mono text-primary-600 hover:text-primary-900 hover:underline"
+                    className="text-sm font-mono text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-300 hover:underline"
                     onClick={(e) => e.stopPropagation()}
                   >
                     {job.submission_id}
                     <FiExternalLink className="w-3 h-3 ml-1 inline" />
                   </a>
                 ) : (
-                  <p className="text-sm font-mono text-gray-900">
+                  <p className="text-sm font-mono text-gray-900 dark:text-gray-200">
                     {job.submission_id}
                   </p>
                 )}
                 <button
                   onClick={() => copyToClipboard(job.submission_id)}
-                  className="text-gray-500 hover:text-gray-700 p-2 touch-target"
+                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-2 touch-target"
                   title="Copy Submission ID"
                 >
                   <FiCopy className="w-4 h-4" />
@@ -256,16 +258,16 @@ export function TechnicalDetails({
 
           {job.workflow_id && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Workflow ID
               </label>
               <div className="flex items-center space-x-2">
-                <p className="text-sm font-mono text-gray-900">
+                <p className="text-sm font-mono text-gray-900 dark:text-gray-200">
                   {job.workflow_id}
                 </p>
                 <button
                   onClick={() => copyToClipboard(job.workflow_id)}
-                  className="text-gray-500 hover:text-gray-700 p-2 touch-target"
+                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-2 touch-target"
                   title="Copy Workflow ID"
                 >
                   <FiCopy className="w-4 h-4" />
@@ -276,16 +278,16 @@ export function TechnicalDetails({
 
           {job.tenant_id && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Tenant ID
               </label>
               <div className="flex items-center space-x-2">
-                <p className="text-sm font-mono text-gray-900">
+                <p className="text-sm font-mono text-gray-900 dark:text-gray-200">
                   {job.tenant_id}
                 </p>
                 <button
                   onClick={() => copyToClipboard(job.tenant_id)}
-                  className="text-gray-500 hover:text-gray-700 p-2 touch-target"
+                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-2 touch-target"
                   title="Copy Tenant ID"
                 >
                   <FiCopy className="w-4 h-4" />
@@ -296,11 +298,11 @@ export function TechnicalDetails({
 
           {job.started_at && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Started At
               </label>
               <div className="flex items-center space-x-2">
-                <p className="text-sm text-gray-900">
+                <p className="text-sm text-gray-900 dark:text-gray-200">
                   {(() => {
                     try {
                       const date = new Date(job.started_at);
@@ -324,7 +326,7 @@ export function TechnicalDetails({
                 </p>
                 <button
                   onClick={() => copyToClipboard(job.started_at)}
-                  className="text-gray-500 hover:text-gray-700 p-2 touch-target"
+                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-2 touch-target"
                   title="Copy Started At"
                 >
                   <FiCopy className="w-4 h-4" />
@@ -335,11 +337,11 @@ export function TechnicalDetails({
 
           {job.updated_at && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Last Updated
               </label>
               <div className="flex items-center space-x-2">
-                <p className="text-sm text-gray-900">
+                <p className="text-sm text-gray-900 dark:text-gray-200">
                   {(() => {
                     try {
                       const date = new Date(job.updated_at);
@@ -363,7 +365,7 @@ export function TechnicalDetails({
                 </p>
                 <button
                   onClick={() => copyToClipboard(job.updated_at)}
-                  className="text-gray-500 hover:text-gray-700 p-2 touch-target"
+                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-2 touch-target"
                   title="Copy Last Updated"
                 >
                   <FiCopy className="w-4 h-4" />
@@ -375,12 +377,12 @@ export function TechnicalDetails({
           {(job.artifacts && job.artifacts.length > 0) ||
           artifacts.length > 0 ? (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Artifacts
               </label>
 
               {loadingArtifacts ? (
-                <div className="flex items-center gap-2 text-sm text-gray-500 py-4">
+                <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 py-4">
                   <FiLoader className="w-4 h-4 animate-spin" />
                   <span>Loading artifacts...</span>
                 </div>
@@ -397,9 +399,9 @@ export function TechnicalDetails({
                     return (
                       <div
                         key={artifact.artifact_id}
-                        className="border border-gray-300 rounded-lg overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow"
+                        className="border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-card shadow-sm hover:shadow-md transition-shadow"
                       >
-                        <div className="aspect-video bg-gray-100">
+                        <div className="aspect-video bg-gray-100 dark:bg-gray-800">
                           {artifactUrl ? (
                             <PreviewRenderer
                               contentType={artifact.content_type}
@@ -409,16 +411,16 @@ export function TechnicalDetails({
                               artifactId={artifact.artifact_id}
                             />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-gray-400">
+                            <div className="w-full h-full flex items-center justify-center text-gray-400 dark:text-gray-500">
                               <FiFile className="w-8 h-8" />
                             </div>
                           )}
                         </div>
-                        <div className="p-3 bg-gray-50 border-t border-gray-200">
+                        <div className="p-3 bg-gray-50 dark:bg-gray-900/40 border-t border-gray-200 dark:border-gray-700">
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex-1 min-w-0">
                               <p
-                                className="text-xs font-medium text-gray-900 truncate"
+                                className="text-xs font-medium text-gray-900 dark:text-gray-200 truncate"
                                 title={fileName}
                               >
                                 {fileName}
@@ -431,7 +433,7 @@ export function TechnicalDetails({
                                     artifactUrl || artifact.artifact_id,
                                   )
                                 }
-                                className="text-gray-500 hover:text-gray-700 p-1.5 touch-target"
+                                className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-1.5 touch-target"
                                 title={
                                   artifactUrl ? "Copy Link" : "Copy Artifact ID"
                                 }
@@ -443,7 +445,7 @@ export function TechnicalDetails({
                                   href={artifactUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-gray-500 hover:text-gray-700 p-1.5 touch-target"
+                                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-1.5 touch-target"
                                   title="Open in new tab"
                                   onClick={(e) => e.stopPropagation()}
                                 >
@@ -463,7 +465,7 @@ export function TechnicalDetails({
                   <button
                     type="button"
                     onClick={() => router.push("/dashboard/artifacts")}
-                    className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 hover:border-gray-400"
+                    className="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-400 dark:hover:border-gray-500"
                   >
                     <FiExternalLink className="w-4 h-4" />
                     View artifacts
@@ -476,10 +478,10 @@ export function TechnicalDetails({
 
           {job.error_message && job.status === "failed" && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Raw Error Details
               </label>
-              <div className="bg-gray-50 rounded-lg p-4 font-mono text-xs text-gray-800 whitespace-pre-wrap break-all">
+              <div className="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-4 font-mono text-xs text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-all">
                 {job.error_message}
               </div>
             </div>
