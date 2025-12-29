@@ -35,7 +35,7 @@ export function useKeyboardShortcuts({
         target.isContentEditable;
 
       // Cmd/Ctrl+K or Cmd/Ctrl+Space: Open search
-      if (modKey && (e.key === "k" || e.key === " " || e.code === "Space") && onSearch) {
+      if (modKey && (e.key === "k" || e.key === " ") && onSearch) {
         e.preventDefault();
         e.stopPropagation();
         onSearch();

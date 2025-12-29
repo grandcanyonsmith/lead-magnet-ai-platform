@@ -81,19 +81,22 @@ export async function runShellExecutorJob(
   }
 
   const jobId = ulid();
-  const key = `shell-results/${jobId}.json`;
+  const resultKey = `shell-results/${jobId}.json`;
+  const jobRequestKey = `shell-jobs/${jobId}.json`;
   const bucket = env.shellExecutorResultsBucket;
 
+  // Generate presigned PUT URL for result
   const putUrl = await getSignedUrl(
     s3Client,
     new PutObjectCommand({
       Bucket: bucket,
-      Key: key,
+      Key: resultKey,
       ContentType: "application/json",
     }),
     { expiresIn: 300 },
   );
 
+  // Build job request
   const jobRequest = shellExecutorJobRequestSchema.parse({
     version: SHELL_EXECUTOR_CONTRACT_VERSION,
     job_id: jobId,
@@ -104,14 +107,64 @@ export async function runShellExecutorJob(
     result_content_type: "application/json",
   });
 
-  const jobB64 = Buffer.from(JSON.stringify(jobRequest), "utf8").toString(
-    "base64",
+  // Upload job request to S3 and generate presigned GET URL
+  // This avoids the 8192 character limit for container overrides
+  const jobRequestJson = JSON.stringify(jobRequest);
+  const jobRequestSize = Buffer.byteLength(jobRequestJson, "utf8");
+
+  logger.info("[ShellExecutor] Uploading job request to S3", {
+    jobId,
+    jobRequestSizeBytes: jobRequestSize,
+    commandsCount: args.commands.length,
+  });
+
+  // Upload job request JSON to S3
+  await s3Client.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: jobRequestKey,
+      Body: jobRequestJson,
+      ContentType: "application/json",
+    }),
   );
+
+  // Generate presigned GET URL for job request (valid for 15 minutes)
+  const jobRequestGetUrl = await getSignedUrl(
+    s3Client,
+    new GetObjectCommand({
+      Bucket: bucket,
+      Key: jobRequestKey,
+    }),
+    { expiresIn: 900 }, // 15 minutes
+  );
+
+  // Check if the GET URL would exceed container override limits
+  // ECS container overrides have a limit of 8192 characters total
+  // A presigned URL is typically 500-800 characters, well under the limit
+  const getUrlSize = jobRequestGetUrl.length;
+  if (getUrlSize > 8000) {
+    // Clean up uploaded job request
+    try {
+      await s3Client.send(
+        new DeleteObjectCommand({
+          Bucket: bucket,
+          Key: jobRequestKey,
+        }),
+      );
+    } catch {
+      // Ignore cleanup errors
+    }
+    throw new ApiError(
+      `Job request GET URL too large (${getUrlSize} chars). Consider splitting commands into multiple jobs.`,
+      400,
+    );
+  }
 
   logger.info("[ShellExecutor] Launching task", {
     jobId,
     commands: args.commands.length,
     clusterArn: env.shellExecutorClusterArn,
+    jobRequestGetUrlSize: getUrlSize,
   });
 
   const runResp = await ecsClient.send(
@@ -131,7 +184,9 @@ export async function runShellExecutorJob(
         containerOverrides: [
           {
             name: "runner",
-            environment: [{ name: "SHELL_EXECUTOR_JOB_B64", value: jobB64 }],
+            environment: [
+              { name: "SHELL_EXECUTOR_JOB_GET_URL", value: jobRequestGetUrl },
+            ],
           },
         ],
       },
@@ -162,19 +217,23 @@ export async function runShellExecutorJob(
   while (Date.now() - pollStart < maxWaitMs) {
     try {
       const obj = await s3Client.send(
-        new GetObjectCommand({ Bucket: bucket, Key: key }),
+        new GetObjectCommand({ Bucket: bucket, Key: resultKey }),
       );
       const raw = await readBodyAsString((obj as any).Body);
       const parsed = JSON.parse(raw);
       const result = shellExecutorJobResultSchema.parse(parsed);
 
-      // Best-effort cleanup (bucket also has lifecycle rules).
+      // Best-effort cleanup: delete both result and job request
+      // Bucket also has lifecycle rules, but cleanup immediately if possible
       try {
         await s3Client.send(
-          new DeleteObjectCommand({ Bucket: bucket, Key: key }),
+          new DeleteObjectCommand({ Bucket: bucket, Key: resultKey }),
+        );
+        await s3Client.send(
+          new DeleteObjectCommand({ Bucket: bucket, Key: jobRequestKey }),
         );
       } catch {
-        // ignore
+        // ignore cleanup errors
       }
 
       return result;
@@ -196,6 +255,15 @@ export async function runShellExecutorJob(
       });
       throw new ApiError("Failed to fetch shell executor result", 500);
     }
+  }
+
+  // Clean up job request if we timed out
+  try {
+    await s3Client.send(
+      new DeleteObjectCommand({ Bucket: bucket, Key: jobRequestKey }),
+    );
+  } catch {
+    // ignore cleanup errors
   }
 
   logger.warn("[ShellExecutor] Timed out waiting for result", {

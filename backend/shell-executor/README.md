@@ -1,7 +1,7 @@
 # Shell Executor (ECS Task) — Local Dev
 
 The ECS shell executor image (`backend/shell-executor`) runs `runner.js`, which:
-- Reads a job payload from `SHELL_EXECUTOR_JOB_B64` or `SHELL_EXECUTOR_JOB_JSON`
+- Reads a job payload from `SHELL_EXECUTOR_JOB_GET_URL` (presigned S3 URL) or legacy `SHELL_EXECUTOR_JOB_B64`/`SHELL_EXECUTOR_JOB_JSON`
 - Executes the requested shell commands
 - Uploads a result JSON to a presigned S3 PUT URL
 
@@ -27,7 +27,7 @@ docker build -t leadmagnet-shell-executor:dev .
 # Mount your local AWS config (read-only) and run a simple aws command via the runner
 docker run --rm \
   -v "$HOME/.aws:/home/runner/.aws:ro" \
-  -e SHELL_EXECUTOR_JOB_JSON='{"version":"2025-12-18","job_id":"local-aws","commands":["aws --version"],"result_put_url":"https://example.com/","result_content_type":"application/json","timeout_ms":60000}' \
+  -e SHELL_EXECUTOR_JOB_JSON='{"version":"2025-12-29","job_id":"local-aws","commands":["aws --version"],"result_put_url":"https://example.com/","result_content_type":"application/json","timeout_ms":60000}' \
   leadmagnet-shell-executor:dev
 ```
 

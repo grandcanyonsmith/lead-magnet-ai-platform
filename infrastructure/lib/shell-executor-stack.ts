@@ -66,6 +66,13 @@ export class ShellExecutorStack extends cdk.Stack {
           expiration: cdk.Duration.days(1),
           abortIncompleteMultipartUploadAfter: cdk.Duration.days(1),
         },
+        {
+          id: 'expire-shell-jobs-fast',
+          enabled: true,
+          prefix: 'shell-jobs/',
+          expiration: cdk.Duration.days(1),
+          abortIncompleteMultipartUploadAfter: cdk.Duration.days(1),
+        },
       ],
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
