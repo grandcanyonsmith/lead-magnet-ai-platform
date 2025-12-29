@@ -86,6 +86,8 @@ export async function runShellExecutorJob(
   const bucket = env.shellExecutorResultsBucket;
 
   // Generate presigned PUT URL for result
+  // Expiration must be longer than max task duration (20 min per command) + buffer
+  // Set to 30 minutes (1800 seconds) to ensure URL doesn't expire before task completes
   const putUrl = await getSignedUrl(
     s3Client,
     new PutObjectCommand({
@@ -93,7 +95,7 @@ export async function runShellExecutorJob(
       Key: resultKey,
       ContentType: "application/json",
     }),
-    { expiresIn: 300 },
+    { expiresIn: 1800 }, // 30 minutes
   );
 
   // Build job request
