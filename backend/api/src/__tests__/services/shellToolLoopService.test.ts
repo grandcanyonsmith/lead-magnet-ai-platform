@@ -44,7 +44,7 @@ describe('shellToolLoopService', () => {
     });
 
     (runShellExecutorJob as any).mockResolvedValue({
-      version: '2025-12-18',
+      version: '2025-12-29',
       job_id: 'job_1',
       max_output_length: 4096,
       output: [

@@ -55,7 +55,11 @@ export const workflowStepSchema = z
     webhook_url: z.preprocess(
       (val) =>
         val === "" || val === null || val === undefined ? undefined : val,
-      z.string().url().optional(),
+      z
+        .string()
+        .url()
+        .transform((val) => new URL(val).href)
+        .optional(),
     ),
     webhook_method: z
       .enum(["GET", "POST", "PUT", "PATCH", "DELETE"])
@@ -123,7 +127,11 @@ const baseWorkflowSchema = z.object({
   delivery_webhook_url: z.preprocess(
     (val) =>
       val === "" || val === null || val === undefined ? undefined : val,
-    z.string().url().optional(),
+    z
+      .string()
+      .url()
+      .transform((val) => new URL(val).href)
+      .optional(),
   ),
   delivery_webhook_headers: z.record(z.string()).optional(),
   delivery_sms_enabled: z.boolean().default(false),
@@ -317,17 +325,29 @@ export const updateSettingsSchema = z.object({
   website_url: z.preprocess(
     (val) =>
       val === "" || val === null || val === undefined ? undefined : val,
-    z.string().url().optional(),
+    z
+      .string()
+      .url()
+      .transform((val) => new URL(val).href)
+      .optional(),
   ),
   logo_url: z.preprocess(
     (val) =>
       val === "" || val === null || val === undefined ? undefined : val,
-    z.string().url().optional(),
+    z
+      .string()
+      .url()
+      .transform((val) => new URL(val).href)
+      .optional(),
   ),
   avatar_url: z.preprocess(
     (val) =>
       val === "" || val === null || val === undefined ? undefined : val,
-    z.string().url().optional(),
+    z
+      .string()
+      .url()
+      .transform((val) => new URL(val).href)
+      .optional(),
   ),
   branding_colors: z
     .object({
@@ -348,11 +368,17 @@ export const updateSettingsSchema = z.object({
       return strVal;
     }
   }, z.string().url().optional()),
-  webhooks: z.array(z.string().url()).optional(),
+  webhooks: z
+    .array(z.string().url().transform((val) => new URL(val).href))
+    .optional(),
   ghl_webhook_url: z.preprocess(
     (val) =>
       val === "" || val === null || val === undefined ? undefined : val,
-    z.string().url().optional(),
+    z
+      .string()
+      .url()
+      .transform((val) => new URL(val).href)
+      .optional(),
   ),
   lead_phone_field: z.string().optional(),
   // Brand information fields
@@ -366,7 +392,11 @@ export const updateSettingsSchema = z.object({
   icp_document_url: z.preprocess(
     (val) =>
       val === "" || val === null || val === undefined ? undefined : val,
-    z.string().url().optional(),
+    z
+      .string()
+      .url()
+      .transform((val) => new URL(val).href)
+      .optional(),
   ),
   // Onboarding fields
   onboarding_survey_completed: z.boolean().optional(),

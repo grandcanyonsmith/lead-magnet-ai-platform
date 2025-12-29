@@ -114,7 +114,7 @@ export default function EditWorkflowPage() {
 
   // Switch away from template tab if no template
   useEffect(() => {
-    const hasTemplate = templateId || templateData.html_content.trim();
+    const hasTemplate = templateId || (templateData.html_content?.trim() || "");
     if (!hasTemplate && activeTab === "template") {
       setActiveTab("workflow");
     }
@@ -163,7 +163,7 @@ export default function EditWorkflowPage() {
     }
 
     // Template validation - if template tab is accessible, ensure template exists
-    const hasTemplate = templateId || templateData.html_content.trim();
+    const hasTemplate = templateId || (templateData.html_content?.trim() || "");
     if (activeTab === "template" && !hasTemplate) {
       setError("Template HTML content is required");
       return;
@@ -174,7 +174,7 @@ export default function EditWorkflowPage() {
     try {
       // Create or update template if template content exists
       let finalTemplateId = templateId;
-      if (templateData.html_content.trim()) {
+      if (templateData.html_content?.trim()) {
         const placeholders = extractPlaceholders(templateData.html_content);
 
         if (templateId) {
@@ -183,7 +183,7 @@ export default function EditWorkflowPage() {
             template_name: templateData.template_name.trim(),
             template_description:
               templateData.template_description.trim() || undefined,
-            html_content: templateData.html_content.trim(),
+            html_content: templateData.html_content?.trim() || "",
             placeholder_tags:
               placeholders.length > 0 ? placeholders : undefined,
             is_published: templateData.is_published,
@@ -195,7 +195,7 @@ export default function EditWorkflowPage() {
             template_name: templateData.template_name.trim(),
             template_description:
               templateData.template_description.trim() || "",
-            html_content: templateData.html_content.trim(),
+            html_content: templateData.html_content?.trim() || "",
             placeholder_tags:
               placeholders.length > 0 ? placeholders : undefined,
             is_published: templateData.is_published,
@@ -268,6 +268,7 @@ export default function EditWorkflowPage() {
   };
 
   const handleFormatHtml = () => {
+    if (!templateData.html_content) return;
     const formatted = formatHTML(templateData.html_content);
     handleTemplateChange("html_content", formatted);
   };
@@ -353,7 +354,7 @@ export default function EditWorkflowPage() {
               <FileText className="mr-2 h-4 w-4" />
               Form
             </TabsTrigger>
-            {(templateId || templateData.html_content.trim()) && (
+            {(templateId || (templateData.html_content?.trim() || "")) && (
               <TabsTrigger value="template">
                 <LayoutTemplate className="mr-2 h-4 w-4" />
                 Design

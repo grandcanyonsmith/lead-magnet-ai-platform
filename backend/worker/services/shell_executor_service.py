@@ -8,7 +8,6 @@ This mirrors the Node orchestrator logic implemented in backend/api, but is used
 from the Python worker so workflow steps can use the `shell` tool.
 """
 
-import base64
 import json
 import logging
 import os
@@ -21,7 +20,7 @@ from botocore.exceptions import ClientError
 
 logger = logging.getLogger(__name__)
 
-CONTRACT_VERSION = "2025-12-18"
+CONTRACT_VERSION = "2025-12-29"
 
 
 def _parse_subnet_ids(raw: str) -> List[str]:
@@ -81,14 +80,17 @@ class ShellExecutorService:
             raise RuntimeError("SHELL_EXECUTOR_SUBNET_IDS is not set")
 
         job_id = uuid.uuid4().hex
-        key = f"shell-results/{job_id}.json"
+        result_key = f"shell-results/{job_id}.json"
+        job_request_key = f"shell-jobs/{job_id}.json"
 
+        # Generate presigned PUT URL for result
         put_url = self._s3.generate_presigned_url(
             ClientMethod="put_object",
-            Params={"Bucket": bucket, "Key": key, "ContentType": "application/json"},
+            Params={"Bucket": bucket, "Key": result_key, "ContentType": "application/json"},
             ExpiresIn=300,
         )
 
+        # Build job request
         job_request: Dict[str, Any] = {
             "version": CONTRACT_VERSION,
             "job_id": job_id,
@@ -101,12 +103,52 @@ class ShellExecutorService:
         if max_output_length and int(max_output_length) > 0:
             job_request["max_output_length"] = int(max_output_length)
 
-        job_b64 = base64.b64encode(json.dumps(job_request).encode("utf-8")).decode("ascii")
+        # Upload job request to S3 and generate presigned GET URL
+        # This avoids the 8192 character limit for container overrides
+        job_request_json = json.dumps(job_request)
+        job_request_size = len(job_request_json.encode("utf-8"))
+        
+        logger.info("[ShellExecutorService] Uploading job request to S3", extra={
+            "job_id": job_id,
+            "job_request_size_bytes": job_request_size,
+            "commands_count": len(commands),
+        })
+
+        # Upload job request JSON to S3
+        self._s3.put_object(
+            Bucket=bucket,
+            Key=job_request_key,
+            Body=job_request_json.encode("utf-8"),
+            ContentType="application/json",
+        )
+
+        # Generate presigned GET URL for job request (valid for 15 minutes)
+        job_request_get_url = self._s3.generate_presigned_url(
+            ClientMethod="get_object",
+            Params={"Bucket": bucket, "Key": job_request_key},
+            ExpiresIn=900,  # 15 minutes
+        )
+
+        # Check if the GET URL would exceed container override limits
+        # ECS container overrides have a limit of 8192 characters total
+        # A presigned URL is typically 500-800 characters, well under the limit
+        get_url_size = len(job_request_get_url)
+        if get_url_size > 8000:
+            # Clean up uploaded job request
+            try:
+                self._s3.delete_object(Bucket=bucket, Key=job_request_key)
+            except Exception:
+                pass
+            raise RuntimeError(
+                f"Job request GET URL too large ({get_url_size} chars). "
+                f"Consider splitting commands into multiple jobs."
+            )
 
         logger.info("[ShellExecutorService] Starting ECS task", extra={
             "job_id": job_id,
             "commands_count": len(commands),
             "cluster_arn": cluster_arn,
+            "job_request_get_url_size": get_url_size,
         })
 
         run_resp = self._ecs.run_task(
@@ -126,7 +168,7 @@ class ShellExecutorService:
                     {
                         "name": "runner",
                         "environment": [
-                            {"name": "SHELL_EXECUTOR_JOB_B64", "value": job_b64},
+                            {"name": "SHELL_EXECUTOR_JOB_GET_URL", "value": job_request_get_url},
                         ],
                     }
                 ]
@@ -147,13 +189,15 @@ class ShellExecutorService:
         start = time.time()
         while (time.time() - start) < max_wait_seconds:
             try:
-                obj = self._s3.get_object(Bucket=bucket, Key=key)
+                obj = self._s3.get_object(Bucket=bucket, Key=result_key)
                 body = obj["Body"].read().decode("utf-8")
                 parsed = json.loads(body)
 
-                # Best-effort cleanup; bucket has lifecycle rule too.
+                # Best-effort cleanup: delete both result and job request
+                # Bucket has lifecycle rule too, but cleanup immediately if possible
                 try:
-                    self._s3.delete_object(Bucket=bucket, Key=key)
+                    self._s3.delete_object(Bucket=bucket, Key=result_key)
+                    self._s3.delete_object(Bucket=bucket, Key=job_request_key)
                 except Exception:
                     pass
 
@@ -167,6 +211,12 @@ class ShellExecutorService:
                     time.sleep(0.5)
                     continue
                 raise
+
+        # Clean up job request if we timed out
+        try:
+            self._s3.delete_object(Bucket=bucket, Key=job_request_key)
+        except Exception:
+            pass
 
         raise TimeoutError(f"Timed out waiting for shell executor result (job_id={job_id}, task_arn={task_arn})")
 

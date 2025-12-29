@@ -20,7 +20,6 @@ const AI_MODELS: AIModel[] = [
 
 const TOOL_TYPES: ToolType[] = [
   "web_search",
-  "web_search",
   "image_generation",
   "computer_use_preview",
   "file_search",
