@@ -40,6 +40,7 @@ import {
 } from "@/components/jobs/list/SummarySection";
 import { JobsMobileList } from "@/components/jobs/list/MobileList";
 import { JobsDesktopTable } from "@/components/jobs/list/DesktopTable";
+import { PageHeader } from "@/components/ui/PageHeader";
 import type { Job } from "@/types/job";
 import type { Workflow } from "@/types/workflow";
 import toast from "react-hot-toast";
@@ -424,19 +425,11 @@ function JobsContent() {
       workflows={workflows}
     >
       <div className="max-w-7xl mx-auto">
-        <div className="mb-6 sm:mb-8">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
-                Leads & Results
-              </h1>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Track your collected leads and generated reports.
-              </p>
-              <LeadMagnetsTabs className="mt-3" />
-            </div>
-          </div>
-        </div>
+        <PageHeader
+          heading="Leads & Results"
+          description="Track your collected leads and generated reports."
+          bottomContent={<LeadMagnetsTabs />}
+        />
 
         <SummarySection
           jobCount={totalJobs}

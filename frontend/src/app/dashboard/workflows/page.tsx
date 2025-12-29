@@ -50,6 +50,7 @@ import {
   MenuItems,
 } from "@headlessui/react";
 import { Folder } from "@/types";
+import { PageHeader } from "@/components/ui/PageHeader";
 import toast from "react-hot-toast";
 import clsx from "clsx";
 
@@ -716,47 +717,43 @@ export default function WorkflowsPage() {
   return (
     <div className="max-w-7xl mx-auto">
       {/* Header Section */}
-      <div className="mb-6 sm:mb-8">
+      <div className="mb-2">
         {currentFolderId && (
           <button
             onClick={() => setCurrentFolderId(null)}
-            className="group flex items-center text-sm font-medium text-gray-500 hover:text-gray-900 mb-4 transition-colors"
+            className="group flex items-center text-sm font-medium text-muted-foreground hover:text-foreground mb-4 transition-colors"
           >
             <ArrowLeftIcon className="w-4 h-4 mr-1 group-hover:-translate-x-0.5 transition-transform" />
             Back to All Lead Magnets
           </button>
         )}
 
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
-              {currentFolder ? currentFolder.folder_name : "Lead Magnets"}
-            </h1>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              {currentFolder
-                ? `${filteredWorkflows.length} lead magnet${filteredWorkflows.length !== 1 ? "s" : ""} in this folder`
-                : "Manage your AI lead magnets and their forms"}
-            </p>
-            <LeadMagnetsTabs className="mt-3" />
-          </div>
-
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <button
-              onClick={() => setShowCreateFolderModal(true)}
-              className="flex items-center justify-center px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 text-sm"
-            >
-              <FolderPlusIcon className="w-5 h-5 mr-2 text-gray-400" />
-              New Folder
-            </button>
-            <button
-              onClick={() => router.push("/dashboard/workflows/new")}
-              className="flex items-center justify-center px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 text-sm flex-1 sm:flex-none"
-            >
-              <PlusIcon className="w-5 h-5 mr-2" />
-              Create Lead Magnet
-            </button>
-          </div>
-        </div>
+        <PageHeader
+          heading={currentFolder ? currentFolder.folder_name : "Lead Magnets"}
+          description={
+            currentFolder
+              ? `${filteredWorkflows.length} lead magnet${
+                  filteredWorkflows.length !== 1 ? "s" : ""
+                } in this folder`
+              : "Manage your AI lead magnets and their forms"
+          }
+          bottomContent={<LeadMagnetsTabs />}
+        >
+          <button
+            onClick={() => setShowCreateFolderModal(true)}
+            className="flex items-center justify-center px-4 py-2 border border-border text-foreground font-medium rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary text-sm"
+          >
+            <FolderPlusIcon className="w-5 h-5 mr-2 text-muted-foreground" />
+            New Folder
+          </button>
+          <button
+            onClick={() => router.push("/dashboard/workflows/new")}
+            className="flex items-center justify-center px-4 py-2 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary text-sm flex-1 sm:flex-none"
+          >
+            <PlusIcon className="w-5 h-5 mr-2" />
+            Create Lead Magnet
+          </button>
+        </PageHeader>
       </div>
 
       {/* Search Bar */}
