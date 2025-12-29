@@ -226,7 +226,7 @@ export default function DashboardLayout({
             {isEditorRoute ? (
               <div className="w-full">{children}</div>
             ) : (
-              <div className="mx-auto max-w-7xl w-full">
+              <div className="mx-auto max-w-[1600px] w-full">
                 <Breadcrumbs />
                 {children}
               </div>
