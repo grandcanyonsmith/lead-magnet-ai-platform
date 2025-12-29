@@ -17,6 +17,8 @@ const fs = require('fs');
 
 const CONTRACT_VERSION = '2025-12-29';
 
+let currentJobId = undefined;
+
 function nowIso() {
   return new Date().toISOString();
 }
@@ -30,6 +32,18 @@ function clampInt(value, { min, max, fallback }) {
 function getEnv(name) {
   const v = process.env[name];
   return typeof v === 'string' ? v : undefined;
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isRetryableHttpStatus(status) {
+  return status === 429 || (status >= 500 && status <= 599);
+}
+
+function jitterMs(maxJitterMs) {
+  return Math.floor(Math.random() * Math.max(0, maxJitterMs));
 }
 
 async function readJobRequest() {
@@ -205,23 +219,91 @@ async function runCommand(command, opts) {
   });
 }
 
-async function uploadJson(url, jsonStr, contentType) {
+async function uploadJsonOnce(url, bodyBuf, contentType) {
   const res = await fetch(url, {
     method: 'PUT',
     headers: {
+      // IMPORTANT: Explicitly set content-length to avoid chunked encoding surprises.
       'content-type': contentType || 'application/json',
+      'content-length': String(bodyBuf.length),
     },
-    body: jsonStr,
+    body: bodyBuf,
   });
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`Failed to upload result: HTTP ${res.status} ${res.statusText} ${text}`.trim());
+  if (res.ok) return;
+
+  const text = await res.text().catch(() => '');
+  const err = new Error(
+    `[job_id=${currentJobId || 'unknown'}] Failed to upload result: HTTP ${res.status} ${res.statusText} ${text}`.trim(),
+  );
+  err.status = res.status;
+  throw err;
+}
+
+async function uploadJson(url, jsonStr, contentType) {
+  const bodyBuf = Buffer.from(String(jsonStr), 'utf8');
+
+  // Retries for transient S3 / network flakiness.
+  const maxAttempts = clampInt(getEnv('SHELL_EXECUTOR_UPLOAD_MAX_ATTEMPTS'), {
+    min: 1,
+    max: 10,
+    fallback: 6,
+  });
+  const baseDelayMs = clampInt(getEnv('SHELL_EXECUTOR_UPLOAD_RETRY_BASE_DELAY_MS'), {
+    min: 50,
+    max: 5_000,
+    fallback: 250,
+  });
+  const maxDelayMs = clampInt(getEnv('SHELL_EXECUTOR_UPLOAD_RETRY_MAX_DELAY_MS'), {
+    min: 100,
+    max: 60_000,
+    fallback: 10_000,
+  });
+  const jitterMaxMs = clampInt(getEnv('SHELL_EXECUTOR_UPLOAD_RETRY_JITTER_MS'), {
+    min: 0,
+    max: 2_000,
+    fallback: 250,
+  });
+
+  let lastErr;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      await uploadJsonOnce(url, bodyBuf, contentType);
+      return;
+    } catch (err) {
+      lastErr = err;
+      const status = err && typeof err === 'object' ? err.status : undefined;
+      const retryable = status ? isRetryableHttpStatus(Number(status)) : true; // network errors have no status
+      if (!retryable || attempt >= maxAttempts) {
+        throw err;
+      }
+
+      const delayMs = Math.min(maxDelayMs, baseDelayMs * Math.pow(2, attempt - 1)) + jitterMs(jitterMaxMs);
+      process.stderr.write(
+        JSON.stringify({
+          msg: 'shell-executor upload retry',
+          job_id: currentJobId || 'unknown',
+          attempt,
+          max_attempts: maxAttempts,
+          delay_ms: delayMs,
+          status,
+          error: (err && err.message) || String(err),
+        }) + '\n',
+      );
+
+      // eslint-disable-next-line no-await-in-loop
+      await sleep(delayMs);
+    }
   }
+
+  // Should be unreachable, but keep it safe.
+  throw lastErr || new Error(`[job_id=${currentJobId || 'unknown'}] Failed to upload result (unknown error)`);
 }
 
 async function main() {
   const job = await readJobRequest();
+  currentJobId = job.job_id;
   const cwd = ensureWorkspace();
   maybeLinkAwsConfig(cwd);
 
@@ -247,6 +329,16 @@ async function main() {
 
   const startedAt = nowIso();
   const t0 = Date.now();
+
+  // Useful for correlating task logs to job_id when debugging.
+  process.stdout.write(
+    JSON.stringify({
+      msg: 'shell-executor started',
+      job_id: job.job_id,
+      commands: Array.isArray(job.commands) ? job.commands.length : 0,
+      started_at: startedAt,
+    }) + '\n',
+  );
 
   const output = [];
   for (const cmd of job.commands) {
