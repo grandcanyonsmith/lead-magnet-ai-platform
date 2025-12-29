@@ -6,6 +6,8 @@ FROM node:22-slim
 # NOTE: We install the AWS CLI that matches the container CPU architecture:
 # - linux/amd64  -> awscli-exe-linux-x86_64-<version>.zip
 # - linux/arm64  -> awscli-exe-linux-aarch64-<version>.zip
+#
+# Updated 2025-12-29: Added Playwright dependencies (libglib, libnss, etc)
 ARG AWS_CLI_VERSION=2.27.54
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
