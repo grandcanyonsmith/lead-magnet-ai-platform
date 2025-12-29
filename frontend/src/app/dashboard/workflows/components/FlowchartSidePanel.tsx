@@ -77,42 +77,42 @@ export default function FlowchartSidePanel({
 
       {/* Side Panel */}
       <div
-        className={`fixed right-0 top-0 h-full w-full max-w-2xl bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
+        className={`fixed right-0 top-0 h-full w-full max-w-2xl bg-white dark:bg-gray-950 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
           isOpen ? "translate-x-0" : "translate-x-full"
         } overflow-y-auto`}
       >
-        <div className="sticky top-0 z-10 border-b border-slate-200 bg-gradient-to-r from-white via-white to-slate-50/60 px-6 py-5 shadow-sm backdrop-blur">
+        <div className="sticky top-0 z-10 border-b border-slate-200 dark:border-gray-800 bg-gradient-to-r from-white via-white to-slate-50/60 dark:from-gray-950 dark:via-gray-950 dark:to-gray-900/60 px-6 py-5 shadow-sm backdrop-blur">
           <div className="flex items-center justify-between">
             <div
               onClick={(e) => e.stopPropagation()}
               onMouseDown={(e) => e.stopPropagation()}
             >
-              <div className="text-xs font-semibold uppercase tracking-widest text-slate-400 select-none">
+              <div className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-gray-400 select-none">
                 Step {index + 1} of {totalSteps}
               </div>
-              <h2 className="mt-1 text-2xl font-semibold text-slate-900">
+              <h2 className="mt-1 text-2xl font-semibold text-slate-900 dark:text-white">
                 {step.step_name || `Step ${index + 1}`}
               </h2>
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-sm text-slate-500 dark:text-gray-400">
                 {step.step_description ||
                   "Configure what this step should accomplish."}
               </p>
             </div>
             <button
               onClick={handleClose}
-              className="rounded-full border border-slate-200 bg-white p-2 text-slate-400 shadow-sm transition hover:border-primary-200 hover:text-primary-600"
+              className="rounded-full border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-900/40 p-2 text-slate-400 dark:text-gray-400 shadow-sm transition hover:border-primary-200 dark:hover:border-primary-800 hover:text-primary-600 dark:hover:text-primary-300"
               aria-label="Close panel"
             >
               <FiX className="h-5 w-5" aria-hidden />
             </button>
           </div>
 
-          <div className="mt-4 grid grid-cols-2 gap-3 text-[11px] font-medium text-slate-500 md:grid-cols-4">
-            <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
-              <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+          <div className="mt-4 grid grid-cols-2 gap-3 text-[11px] font-medium text-slate-500 dark:text-gray-400 md:grid-cols-4">
+            <div className="rounded-xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-900/40 px-3 py-2 shadow-sm">
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-gray-500">
                 Model
               </div>
-              <div className="mt-1 text-sm font-semibold text-slate-700">
+              <div className="mt-1 text-sm font-semibold text-slate-700 dark:text-gray-200">
                 {step.model === "computer-use-preview"
                   ? "Computer Use Preview"
                   : step.model
@@ -120,27 +120,27 @@ export default function FlowchartSidePanel({
                       .replace("turbo", "Turbo")}
               </div>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
-              <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <div className="rounded-xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-900/40 px-3 py-2 shadow-sm">
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-gray-500">
                 Tools
               </div>
-              <div className="mt-1 text-sm font-semibold text-slate-700">
+              <div className="mt-1 text-sm font-semibold text-slate-700 dark:text-gray-200">
                 {step.tools?.length ? `${step.tools.length} enabled` : "None"}
               </div>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
-              <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <div className="rounded-xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-900/40 px-3 py-2 shadow-sm">
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-gray-500">
                 Tool Choice
               </div>
-              <div className="mt-1 text-sm font-semibold text-slate-700 capitalize">
+              <div className="mt-1 text-sm font-semibold text-slate-700 dark:text-gray-200 capitalize">
                 {step.tool_choice ? step.tool_choice : "Auto"}
               </div>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
-              <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <div className="rounded-xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-900/40 px-3 py-2 shadow-sm">
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-gray-500">
                 Instructions
               </div>
-              <div className="mt-1 text-sm font-semibold text-slate-700">
+              <div className="mt-1 text-sm font-semibold text-slate-700 dark:text-gray-200">
                 {step.instructions?.trim()
                   ? `${step.instructions.trim().split(/\s+/).length} words`
                   : "Not set"}
@@ -149,7 +149,7 @@ export default function FlowchartSidePanel({
           </div>
         </div>
 
-        <div className="space-y-6 bg-gradient-to-b from-white via-white to-slate-50 px-6 py-6">
+        <div className="space-y-6 bg-gradient-to-b from-white via-white to-slate-50 dark:from-gray-950 dark:via-gray-950 dark:to-gray-900/40 px-6 py-6">
           {localStep && (
             <WorkflowStepEditor
               step={localStep}
