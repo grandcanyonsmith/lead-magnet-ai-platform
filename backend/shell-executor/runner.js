@@ -15,7 +15,7 @@
 const { spawn } = require('child_process');
 const fs = require('fs');
 
-const CONTRACT_VERSION = '2025-12-18';
+const CONTRACT_VERSION = '2025-12-29';
 
 function nowIso() {
   return new Date().toISOString();
@@ -32,17 +32,35 @@ function getEnv(name) {
   return typeof v === 'string' ? v : undefined;
 }
 
-function readJobRequest() {
+async function readJobRequest() {
+  // New contract (2025-12-29+): Read from presigned GET URL
+  const getUrl = getEnv('SHELL_EXECUTOR_JOB_GET_URL');
+  
+  // Legacy contract (2025-12-18): Support base64/env var for backward compatibility
   const b64 = getEnv('SHELL_EXECUTOR_JOB_B64');
   const json = getEnv('SHELL_EXECUTOR_JOB_JSON');
 
   let payloadStr;
-  if (b64 && b64.trim().length > 0) {
+  
+  if (getUrl && getUrl.trim().length > 0) {
+    // Fetch job request from presigned GET URL
+    try {
+      const res = await fetch(getUrl);
+      if (!res.ok) {
+        throw new Error(`Failed to fetch job request: HTTP ${res.status} ${res.statusText}`);
+      }
+      payloadStr = await res.text();
+    } catch (err) {
+      throw new Error(`Failed to fetch job request from URL: ${(err && err.message) || String(err)}`);
+    }
+  } else if (b64 && b64.trim().length > 0) {
+    // Legacy: base64 encoded
     payloadStr = Buffer.from(b64, 'base64').toString('utf8');
   } else if (json && json.trim().length > 0) {
+    // Legacy: direct JSON string
     payloadStr = json;
   } else {
-    throw new Error('Missing SHELL_EXECUTOR_JOB_B64 or SHELL_EXECUTOR_JOB_JSON');
+    throw new Error('Missing SHELL_EXECUTOR_JOB_GET_URL, SHELL_EXECUTOR_JOB_B64, or SHELL_EXECUTOR_JOB_JSON');
   }
 
   let payload;
@@ -203,7 +221,7 @@ async function uploadJson(url, jsonStr, contentType) {
 }
 
 async function main() {
-  const job = readJobRequest();
+  const job = await readJobRequest();
   const cwd = ensureWorkspace();
   maybeLinkAwsConfig(cwd);
 
