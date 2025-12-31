@@ -8,7 +8,9 @@ logger = logging.getLogger(__name__)
 class ToolValidator:
     """Validates and filters tools for OpenAI API compatibility."""
     
-    TOOLS_REQUIRING_CONTAINER = {"code_interpreter", "computer_use_preview"}  # Both require container parameter for OpenAI API
+    # NOTE: `computer_use_preview` no longer accepts a `container` param in the Responses API.
+    # Keep this list minimal; add only when OpenAI explicitly requires it.
+    TOOLS_REQUIRING_CONTAINER = {"code_interpreter"}
     
     @staticmethod
     def requires_container(tool_type: str) -> bool:
@@ -44,6 +46,13 @@ class ToolValidator:
         # Warn if tool type is missing
         if not tool_type:
             logger.warning(f"Tool missing 'type' key: {tool}")
+            return tool
+
+        # `computer_use_preview` must NOT include a `container` param (OpenAI returns unknown_parameter).
+        if tool_type == "computer_use_preview":
+            if "container" in tool:
+                logger.info("Removing unsupported container parameter from computer_use_preview tool")
+                tool.pop("container", None)
             return tool
         
         # Check if this tool type requires container parameter

@@ -28,6 +28,9 @@ class StreamingHandler:
         """
         Process CUA request and stream events.
         """
+        # Explicitly reference json module to avoid UnboundLocalError
+        _json = json
+        
         job_id = event.get('job_id')
         tenant_id = event.get('tenant_id')
         model = event.get('model', 'computer-use-preview')
@@ -38,6 +41,32 @@ class StreamingHandler:
         params = event.get('params', {})
         max_iterations = event.get('max_iterations', 50)
         max_duration = event.get('max_duration_seconds', 300)
+
+        # Validate model compatibility: computer_use_preview tool requires computer-use-preview model
+        has_computer_use = any(
+            (isinstance(t, str) and t == 'computer_use_preview') or
+            (isinstance(t, dict) and t.get('type') == 'computer_use_preview')
+            for t in tools
+        )
+        original_model = model
+        if has_computer_use and model != 'computer-use-preview':
+            logger.warning(f"[CUA] Overriding model from {model} to computer-use-preview (required for computer_use_preview tool)")
+            model = 'computer-use-preview'
+            # #region agent log
+            try:
+                with open('/Users/canyonsmith/lead-magnent-ai/.cursor/debug.log', 'a') as f:
+                    f.write(_json.dumps({
+                        'sessionId': 'debug-session',
+                        'runId': 'post-fix',
+                        'hypothesisId': 'H4',
+                        'location': 'lambda_handler.py:45',
+                        'message': 'Model override for CUA',
+                        'data': {'original_model': original_model, 'final_model': model, 'has_computer_use': has_computer_use},
+                        'timestamp': time.time() * 1000
+                    }) + '\n')
+            except:
+                pass
+            # #endregion
 
         # Initialize deps
         env = PlaywrightEnvironment()
@@ -62,10 +91,10 @@ class StreamingHandler:
             ):
                 # Convert dataclass to dict and yield as JSON line
                 data = dataclasses.asdict(event_obj)
-                yield json.dumps(data) + "\n"
+                yield _json.dumps(data) + "\n"
         except Exception as e:
             logger.error(f"Streaming error: {e}", exc_info=True)
-            yield json.dumps({"type": "error", "message": str(e)}) + "\n"
+            yield _json.dumps({"type": "error", "message": str(e)}) + "\n"
 
 # Entry point for Lambda
 # Note: This requires a runtime wrapper that supports async generators or response streaming

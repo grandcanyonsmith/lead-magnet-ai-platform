@@ -166,16 +166,29 @@ app.all('*', async (req, res) => {
     console.log(`[Local Server] ${req.method} ${req.path} [${context.awsRequestId}]`);
     
     const event = createApiGatewayEvent(req);
+    // Attach res to event for local streaming support
+    event.res = res;
+    
     const result = await handler(event, context);
+    
+    // If result indicates handled (e.g. streaming), don't send response
+    if (result && result.handled) {
+        return;
+    }
     
     sendResponse(res, result);
   } catch (error) {
     console.error(`[Local Server] Error [${context.awsRequestId}]:`, error);
-    res.status(500).json({
-      error: 'Internal Server Error',
-      message: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
-    });
+    // Don't send error response if headers were already sent (streaming started)
+    if (!res.headersSent && !res.writableEnded) {
+      res.status(500).json({
+        error: 'Internal Server Error',
+        message: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      });
+    } else {
+      console.warn(`[Local Server] Cannot send error response - headers already sent or stream ended`);
+    }
   }
 });
 

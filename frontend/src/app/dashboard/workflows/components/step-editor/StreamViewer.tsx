@@ -20,6 +20,7 @@ interface LogEntry {
 export default function StreamViewer({ endpoint, requestBody, onClose }: StreamViewerProps) {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
+  const [screenshotBase64, setScreenshotBase64] = useState<string | null>(null);
   const [status, setStatus] = useState<"connecting" | "streaming" | "completed" | "error">("connecting");
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -66,6 +67,7 @@ export default function StreamViewer({ endpoint, requestBody, onClose }: StreamV
             if (!line.trim()) continue;
             try {
               const event = JSON.parse(line);
+              console.log("[StreamViewer] Received event:", event.type, event);
               
               if (active) {
                 handleEvent(event);
@@ -99,7 +101,13 @@ export default function StreamViewer({ endpoint, requestBody, onClose }: StreamV
     if (event.type === 'log') {
         setLogs(prev => [...prev, event]);
     } else if (event.type === 'screenshot') {
-        setScreenshotUrl(event.url);
+        // Store both URL and base64 for fallback
+        if (event.url) {
+            setScreenshotUrl(event.url);
+        }
+        if (event.base64) {
+            setScreenshotBase64(event.base64);
+        }
     } else if (event.type === 'complete') {
         setLogs(prev => [...prev, { 
             type: 'log', 
@@ -160,8 +168,20 @@ export default function StreamViewer({ endpoint, requestBody, onClose }: StreamV
              <FiImage /> Latest Screenshot
            </div>
            <div className="flex-1 bg-gray-200 dark:bg-gray-800 rounded-md flex items-center justify-center overflow-hidden relative">
-             {screenshotUrl ? (
-               <img src={screenshotUrl} alt="Screenshot" className="max-w-full max-h-full object-contain" />
+             {screenshotUrl || screenshotBase64 ? (
+               <img 
+                 src={screenshotUrl || (screenshotBase64 ? `data:image/jpeg;base64,${screenshotBase64}` : '')} 
+                 alt="Screenshot" 
+                 className="max-w-full max-h-full object-contain"
+                 onError={(e) => {
+                   console.error("[StreamViewer] Failed to load screenshot from URL:", screenshotUrl);
+                   // Fallback to base64 if URL fails
+                   if (screenshotBase64 && screenshotUrl) {
+                     const target = e.target as HTMLImageElement;
+                     target.src = `data:image/jpeg;base64,${screenshotBase64}`;
+                   }
+                 }}
+               />
              ) : (
                <div className="text-gray-400 text-xs text-center p-4">
                  No screenshot yet
