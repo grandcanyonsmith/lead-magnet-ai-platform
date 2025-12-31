@@ -16,6 +16,7 @@ import AIAssist from "./step-editor/AIAssist";
 import WebhookConfig from "./step-editor/WebhookConfig";
 import ComputerUseConfig from "./step-editor/ComputerUseConfig";
 import ImageGenerationConfig from "./step-editor/ImageGenerationConfig";
+import StepTester from "./step-editor/StepTester";
 
 interface WorkflowStepEditorProps {
   step: WorkflowStep;
@@ -770,6 +771,8 @@ export default function WorkflowStepEditor({
               </p>
             )}
           </div>
+          
+          <StepTester step={localStep} index={index} />
         </div>
       </div>
     </ErrorBoundary>
