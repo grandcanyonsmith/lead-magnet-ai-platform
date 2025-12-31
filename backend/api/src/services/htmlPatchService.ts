@@ -13,7 +13,7 @@ type PatchHtmlArgs = {
   selectedOuterHtml?: string | null;
   pageUrl?: string | null;
   model?: string;
-  reasoningEffort?: "low" | "medium" | "high" | null;
+  reasoningEffort?: "none" | "low" | "medium" | "high" | "xhigh" | null;
 };
 
 export type PatchHtmlResult = {

@@ -11,7 +11,9 @@ export const workflowStepSchema = z
       .optional()
       .describe("Deprecated: All steps are now generic steps"),
     model: z.string().min(1).optional().default("gpt-5.2"),
-    reasoning_effort: z.enum(["low", "medium", "high"]).optional().default("high"),
+    reasoning_effort: z.enum(["none", "low", "medium", "high", "xhigh"]).optional().default("high"),
+    text_verbosity: z.enum(["low", "medium", "high"]).optional(),
+    max_output_tokens: z.number().int().min(1).optional(),
     instructions: z.string().optional().default(""), 
     step_order: z.number().int().min(0).optional(),
     depends_on: z.array(z.number().int().min(0)).optional(), // Array of step indices this step depends on

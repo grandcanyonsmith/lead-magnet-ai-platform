@@ -93,6 +93,8 @@ class ShellLoopService:
         tool_choice: str,
         params: Dict[str, Any],
         reasoning_effort: Optional[str] = None,
+        text_verbosity: Optional[str] = None,
+        max_output_tokens: Optional[int] = None,
         max_iterations: int = 25,
         max_duration_seconds: int = 300,
         job_id: Optional[str] = None,
@@ -208,6 +210,8 @@ class ShellLoopService:
                 tool_choice=next_tool_choice,
                 has_computer_use=False,
                 reasoning_effort=reasoning_effort,
+                text_verbosity=text_verbosity,
+                max_output_tokens=max_output_tokens,
             )
 
             if previous_response_id:
