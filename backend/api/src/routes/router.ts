@@ -96,7 +96,7 @@ class SimpleRouter {
     const { extractAuthContext } = await import("../utils/authContext");
     const authContext = await extractAuthContext(event);
 
-    // Try to match a route
+    // Match a route
     for (const route of this.routes) {
       if (route.method !== method && route.method !== "*") {
         continue;
@@ -130,10 +130,12 @@ class SimpleRouter {
       const query = event.queryStringParameters || {};
 
       // Create request context with auth
-      const context: RequestContext = {
+      const context: RequestContext & { res?: any } = {
         sourceIp: event.requestContext.http.sourceIp,
         event,
         auth: authContext || undefined,
+        // Pass response object if available in original event/context
+        res: (event as any).res
       };
 
       // For backward compatibility, use customerId as tenantId if available

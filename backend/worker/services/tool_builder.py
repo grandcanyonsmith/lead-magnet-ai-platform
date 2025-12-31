@@ -16,7 +16,8 @@ class ToolBuilder:
         """
         Clean tools before sending to OpenAI API.
         
-        - Keep container parameter (required by API for code_interpreter and computer_use_preview)
+        - Keep container parameter ONLY when explicitly required by the API (e.g. code_interpreter)
+        - Strip unsupported container parameter from computer_use_preview
         - Recursively convert all Decimal values to int (for display_width, display_height, etc.)
         
         Args:
@@ -45,6 +46,13 @@ class ToolBuilder:
             if isinstance(tool, dict):
                 cleaned_tool = tool.copy()
                 
+                # OpenAI rejects `container` on `computer_use_preview` (unknown_parameter).
+                if cleaned_tool.get("type") == "computer_use_preview" and "container" in cleaned_tool:
+                    logger.info(
+                        f"Removing unsupported container parameter from tool[{idx}] (computer_use_preview)"
+                    )
+                    cleaned_tool.pop("container", None)
+
                 # Defensive check: Ensure container parameter is present for tools that require it
                 tool_type = cleaned_tool.get("type")
                 if tool_type and ToolValidator.requires_container(tool_type):
