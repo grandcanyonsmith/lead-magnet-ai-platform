@@ -13,6 +13,9 @@ import logging
 import os
 import time
 import uuid
+import subprocess
+import shutil
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 import boto3
@@ -75,6 +78,19 @@ class ShellExecutorService:
 
         if not commands or not isinstance(commands, list):
             raise ValueError("commands must be a non-empty list of strings")
+
+        # ------------------------------------------------------------------
+        # Local dev mode: execute commands on the local machine (no ECS/EFS).
+        # This is ONLY enabled when IS_LOCAL=true to avoid accidental use in prod.
+        # ------------------------------------------------------------------
+        if (os.environ.get("IS_LOCAL") or "").strip().lower() == "true":
+            return self._run_shell_job_local(
+                commands=commands,
+                timeout_ms=timeout_ms,
+                max_output_length=max_output_length,
+                workspace_id=workspace_id,
+                reset_workspace=reset_workspace,
+            )
 
         # Load configuration
         bucket = settings.SHELL_EXECUTOR_RESULTS_BUCKET or os.environ.get("SHELL_EXECUTOR_RESULTS_BUCKET")
@@ -220,6 +236,107 @@ class ShellExecutorService:
             job_id=job_id,
             max_wait_seconds=max_wait_seconds
         )
+
+    def _run_shell_job_local(
+        self,
+        *,
+        commands: List[str],
+        timeout_ms: Optional[int],
+        max_output_length: Optional[int],
+        workspace_id: Optional[str],
+        reset_workspace: Optional[bool],
+    ) -> Dict[str, Any]:
+        """
+        Local fallback for running shell commands without ECS.
+
+        Returns a result compatible with OpenAI `shell_call_output.output[]`.
+        """
+        started_at = time.time()
+        job_id = uuid.uuid4().hex
+
+        root = Path(os.environ.get("SHELL_EXECUTOR_LOCAL_ROOT") or "/tmp/leadmagnet-shell-executor")
+        session_dir = root / "sessions" / (workspace_id.strip() if isinstance(workspace_id, str) and workspace_id.strip() else job_id)
+
+        if reset_workspace:
+            try:
+                shutil.rmtree(session_dir, ignore_errors=True)
+            except Exception:
+                pass
+
+        session_dir.mkdir(parents=True, exist_ok=True)
+
+        per_cmd_timeout_s: Optional[float] = None
+        if timeout_ms and int(timeout_ms) > 0:
+            per_cmd_timeout_s = float(int(timeout_ms)) / 1000.0
+
+        max_len = int(max_output_length) if max_output_length and int(max_output_length) > 0 else None
+
+        logger.info("[ShellExecutorService] Local mode: executing commands", extra={
+            "job_id": job_id,
+            "workspace_id": str(workspace_id) if workspace_id else None,
+            "commands_count": len(commands),
+            "cwd": str(session_dir),
+        })
+
+        output_items: List[Dict[str, Any]] = []
+        for cmd in commands:
+            cmd_str = str(cmd)
+            try:
+                completed = subprocess.run(
+                    ["bash", "-lc", cmd_str],
+                    cwd=str(session_dir),
+                    capture_output=True,
+                    text=True,
+                    timeout=per_cmd_timeout_s,
+                )
+                stdout = completed.stdout or ""
+                stderr = completed.stderr or ""
+
+                if max_len is not None:
+                    stdout = stdout[:max_len]
+                    stderr = stderr[:max_len]
+
+                output_items.append({
+                    "stdout": stdout,
+                    "stderr": stderr,
+                    "outcome": {"type": "exit", "exit_code": int(completed.returncode)},
+                })
+            except subprocess.TimeoutExpired as te:
+                stdout = te.stdout or ""
+                stderr = te.stderr or ""
+                if not isinstance(stdout, str):
+                    try:
+                        stdout = stdout.decode("utf-8", errors="replace")
+                    except Exception:
+                        stdout = ""
+                if not isinstance(stderr, str):
+                    try:
+                        stderr = stderr.decode("utf-8", errors="replace")
+                    except Exception:
+                        stderr = ""
+                if max_len is not None:
+                    stdout = stdout[:max_len]
+                    stderr = stderr[:max_len]
+                output_items.append({
+                    "stdout": stdout,
+                    "stderr": stderr,
+                    "outcome": {"type": "timeout"},
+                })
+
+        finished_at = time.time()
+        return {
+            "version": CONTRACT_VERSION,
+            "job_id": job_id,
+            "commands": [str(c) for c in commands],
+            **({"max_output_length": max_len} if max_len is not None else {}),
+            "output": output_items,
+            "meta": {
+                "started_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(started_at)),
+                "finished_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(finished_at)),
+                "duration_ms": int((finished_at - started_at) * 1000),
+                "runner": "local-subprocess",
+            },
+        }
 
     def _cleanup_s3_objects(self, bucket: str, keys: List[str]) -> None:
         """Best-effort cleanup of S3 objects."""

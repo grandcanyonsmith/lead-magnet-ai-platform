@@ -7,9 +7,11 @@ import logging
 from datetime import datetime
 import os
 import re
+from urllib.parse import urlparse
 from typing import Dict, Any, List, Optional, Tuple
 
 import boto3
+import requests
 
 from ai_service import AIService
 try:
@@ -114,6 +116,20 @@ class StepProcessor:
                 step_tools.append(tool)
         
         step_tool_choice = step.get('tool_choice', 'auto')
+
+        # If the instructions request publishing to S3, avoid `code_interpreter`.
+        # The OpenAI code interpreter sandbox cannot access your AWS env vars (and typically has no network),
+        # so it will often produce "run this aws s3 cp ..." instructions instead of usable HTML output.
+        instructions = step.get("instructions", "")
+        if self._parse_s3_upload_target_from_instructions(instructions):
+            before = len(step_tools)
+            step_tools = [
+                t
+                for t in step_tools
+                if not (isinstance(t, dict) and t.get("type") == "code_interpreter")
+            ]
+            if len(step_tools) != before and str(step_tool_choice).strip().lower() == "required" and len(step_tools) == 0:
+                step_tool_choice = "none"
         
         return step_model, step_tools, step_tool_choice
 
@@ -131,7 +147,10 @@ class StepProcessor:
         if not isinstance(instructions, str):
             return None
         lower = instructions.lower()
-        if "upload" not in lower or "s3" not in lower:
+        if "s3" not in lower:
+            return None
+        # Accept common intent verbs beyond "upload" (e.g., "write an html file to an s3 bucket").
+        if not any(k in lower for k in ["upload", "write", "save", "put", "copy"]):
             return None
 
         bucket = None
@@ -145,6 +164,14 @@ class StepProcessor:
             m2 = re.search(r"\bbucket\s+([a-z0-9][a-z0-9.-]{1,61}[a-z0-9])\b", lower)
             if m2:
                 bucket = m2.group(1)
+
+        if not bucket:
+            # Fallback: "<bucket> s3 bucket" (common phrasing)
+            m2b = re.search(
+                r"\b([a-z0-9][a-z0-9.-]{1,61}[a-z0-9])\s+s3\s+bucket\b", lower
+            )
+            if m2b:
+                bucket = m2b.group(1)
 
         if not bucket:
             return None
@@ -168,6 +195,64 @@ class StepProcessor:
     def _get_allowed_s3_upload_buckets(self) -> List[str]:
         raw = (os.environ.get("SHELL_S3_UPLOAD_ALLOWED_BUCKETS") or "cc360-pages").strip()
         return [b.strip() for b in raw.split(",") if b and b.strip()]
+
+    def _auto_webhook_from_instructions_enabled(self) -> bool:
+        return (os.environ.get("AUTO_WEBHOOK_FROM_INSTRUCTIONS") or "").strip().lower() == "true"
+
+    def _get_auto_webhook_allowed_hosts(self) -> List[str]:
+        """
+        Comma-separated list of allowed webhook hosts for AUTO_WEBHOOK_FROM_INSTRUCTIONS.
+
+        Defaults to an empty allowlist (disabled unless explicitly configured).
+        """
+        raw = (os.environ.get("AUTO_WEBHOOK_ALLOWED_HOSTS") or "").strip()
+        return [h.strip().lower() for h in raw.split(",") if h and h.strip()]
+
+    def _parse_object_url_webhook_target_from_instructions(self, instructions: Any) -> Optional[str]:
+        """
+        Best-effort extraction of an "object_url webhook" target from free-form instructions.
+
+        This is ONLY used when AUTO_WEBHOOK_FROM_INSTRUCTIONS=true, and ONLY for hosts in
+        AUTO_WEBHOOK_ALLOWED_HOSTS to reduce SSRF/exfil risk.
+        """
+        if not self._auto_webhook_from_instructions_enabled():
+            return None
+        if not isinstance(instructions, str):
+            return None
+
+        lower = instructions.lower()
+        if (
+            "object url" not in lower
+            and "object_url" not in lower
+            and "object-url" not in lower
+        ):
+            return None
+        if "send" not in lower and "post" not in lower:
+            return None
+
+        urls = re.findall(r"https?://[^\s<>\"]+", instructions)
+        if not urls:
+            return None
+
+        allowed_hosts = set(self._get_auto_webhook_allowed_hosts())
+        if not allowed_hosts:
+            return None
+
+        for raw_url in urls:
+            url = str(raw_url).rstrip(").,;\"'")
+            try:
+                parsed = urlparse(url)
+                host = (parsed.netloc or "").lower()
+                if not host:
+                    continue
+                # Strip userinfo + port if present
+                host = host.split("@")[-1].split(":")[0]
+                if host in allowed_hosts:
+                    return url
+            except Exception:
+                continue
+
+        return None
 
     def _get_s3_upload_key_prefix(self, *, tenant_id: str, job_id: str) -> str:
         # Default prefix keeps uploads scoped and traceable.
@@ -294,6 +379,298 @@ class StepProcessor:
         if current_step_context and isinstance(current_step_context, str) and current_step_context.strip():
             return f"{current_step_context}\n\n{block}"
         return block
+
+    def _maybe_inject_s3_publish_output_only_context(
+        self,
+        *,
+        step: Dict[str, Any],
+        current_step_context: str,
+    ) -> str:
+        """
+        If the instructions look like "generate an HTML file and publish it to S3",
+        inject a note telling the model to output ONLY the HTML (no AWS commands).
+
+        The worker will handle the actual S3 upload server-side.
+        """
+        instructions = step.get("instructions", "")
+        target = self._parse_s3_upload_target_from_instructions(instructions)
+        if not target:
+            return current_step_context
+
+        if not isinstance(instructions, str):
+            return current_step_context
+        lower = instructions.lower()
+
+        # Heuristic: only inject when the step appears to be generating HTML content (not merely uploading a prior artifact).
+        looks_like_html_generation = (
+            ("html" in lower or "website" in lower or "landing page" in lower)
+            and any(k in lower for k in ["write", "create", "generate", "build", "design"])
+        )
+        if not looks_like_html_generation:
+            return current_step_context
+
+        bucket = target["bucket"]
+        region = target["region"]
+
+        block = "\n".join([
+            "=== S3 Publish Note ===",
+            "This platform will upload your final HTML output to S3 after you respond.",
+            f"Target: s3://{bucket} ({region})",
+            "",
+            "IMPORTANT:",
+            "- Do NOT include AWS CLI commands, curl commands, or webhook calls.",
+            "- Output MUST be the complete HTML file contents only (valid HTML5).",
+            "- No Markdown, no explanations, no code fences.",
+        ])
+
+        if current_step_context and isinstance(current_step_context, str) and current_step_context.strip():
+            return f"{current_step_context}\n\n{block}"
+        return block
+
+    def _maybe_publish_current_step_output_to_s3(
+        self,
+        *,
+        step: Dict[str, Any],
+        step_index: int,
+        tenant_id: str,
+        job_id: str,
+        step_name: str,
+        step_output_result: Dict[str, Any],
+    ) -> Optional[Dict[str, Any]]:
+        """
+        If this step's instructions ask to upload the *generated HTML output* to an allowed S3 bucket,
+        perform the upload server-side (using this worker's AWS credentials / IAM role).
+
+        This avoids relying on OpenAI's `code_interpreter` sandbox having access to your AWS env vars.
+        """
+        instructions = step.get("instructions", "")
+        target = self._parse_s3_upload_target_from_instructions(instructions)
+        if not target:
+            return None
+
+        output_text = step_output_result.get("output")
+        if not isinstance(output_text, str) or not output_text.strip():
+            return None
+
+        artifact_id = step_output_result.get("artifact_id")
+        if not isinstance(artifact_id, str) or not artifact_id.strip():
+            return None
+        artifact_id = artifact_id.strip()
+
+        # Fetch artifact metadata (best-effort) so we can (a) pick a stable filename and (b) avoid
+        # mistakenly uploading JSON/non-HTML outputs for "upload previous artifact" style steps.
+        artifact: Optional[Dict[str, Any]] = None
+        try:
+            artifact = self.db.get_artifact(artifact_id)
+        except Exception:
+            artifact = None
+
+        artifact_name = None
+        mime_type = None
+        if isinstance(artifact, dict):
+            artifact_name = artifact.get("artifact_name") or artifact.get("file_name")
+            mime_type = artifact.get("mime_type")
+
+        # Only auto-publish when the current step output is HTML.
+        is_html = False
+        if isinstance(mime_type, str) and "text/html" in mime_type.lower():
+            is_html = True
+        else:
+            stripped = output_text.lstrip()
+            lower_head = stripped[:200].lower()
+            is_html = (
+                lower_head.startswith("<!doctype")
+                or lower_head.startswith("<html")
+                or any(tag in lower_head for tag in ["<head", "<body", "<div", "<p>", "<h1", "<h2", "<h3"])
+            )
+        if not is_html:
+            return None
+
+        bucket = target["bucket"]
+        region = target["region"]
+
+        allowed = set(self._get_allowed_s3_upload_buckets())
+        if bucket not in allowed:
+            # Block uploads to unexpected buckets (security).
+            err = (
+                f"S3 upload bucket '{bucket}' is not allowed. "
+                f"Set SHELL_S3_UPLOAD_ALLOWED_BUCKETS to include it."
+            )
+            logger.warning("[StepProcessor] Blocked S3 publish (bucket not allowed)", extra={
+                "job_id": job_id,
+                "tenant_id": tenant_id,
+                "step_index": step_index,
+                "dest_bucket": bucket,
+                "dest_region": region,
+            })
+            step_output_result["published_s3"] = {"success": False, "error": err}
+            return {
+                "step_name": f"{step_name} — Publish to S3",
+                "step_order": step_index + 1,
+                "step_type": "s3_upload",
+                "success": False,
+                "input": {"bucket": bucket, "region": region},
+                "output": {"success": False, "error": err},
+                "timestamp": datetime.utcnow().isoformat(),
+                "duration_ms": 0,
+            }
+
+        prefix = self._get_s3_upload_key_prefix(tenant_id=tenant_id, job_id=job_id)
+        filename = self._sanitize_s3_key_filename(str(artifact_name or f"{artifact_id}.html"))
+        if not filename.lower().endswith(".html"):
+            filename = f"{filename}.html"
+
+        dest_key = f"{prefix}{artifact_id}-{filename}"
+        content_type = str(mime_type or "text/html").strip() or "text/html"
+        if content_type.lower().startswith("text/") and "charset=" not in content_type.lower():
+            content_type = f"{content_type}; charset=utf-8"
+
+        publish_started_at = datetime.utcnow()
+        try:
+            s3 = boto3.client("s3", region_name=region)
+            s3.put_object(
+                Bucket=bucket,
+                Key=dest_key,
+                Body=output_text.encode("utf-8"),
+                ContentType=content_type,
+            )
+
+            duration_ms = int(
+                (datetime.utcnow() - publish_started_at).total_seconds() * 1000
+            )
+            object_url = f"https://{bucket}.s3.{region}.amazonaws.com/{dest_key}"
+
+            publish_output = {
+                "success": True,
+                "bucket": bucket,
+                "region": region,
+                "key": dest_key,
+                "content_type": content_type,
+                "s3_uri": f"s3://{bucket}/{dest_key}",
+                "object_url": object_url,
+                "source_artifact_id": artifact_id,
+            }
+
+            # Optional: if the instructions explicitly request sending the object URL to a webhook,
+            # and AUTO_WEBHOOK_FROM_INSTRUCTIONS=true with an allowlisted host, do it here.
+            webhook_url = self._parse_object_url_webhook_target_from_instructions(instructions)
+            if webhook_url:
+                webhook_started_at = datetime.utcnow()
+                webhook_payload = {"object_url": object_url}
+                webhook_headers = {"Content-Type": "application/json"}
+                try:
+                    resp = requests.post(
+                        webhook_url,
+                        json=webhook_payload,
+                        headers=webhook_headers,
+                        timeout=30,
+                    )
+                    response_body = None
+                    try:
+                        response_body = resp.text
+                        if response_body and len(response_body) > 10000:
+                            response_body = response_body[:10000] + "... (truncated)"
+                    except Exception:
+                        response_body = None
+
+                    webhook_duration_ms = int(
+                        (datetime.utcnow() - webhook_started_at).total_seconds() * 1000
+                    )
+                    webhook_success = 200 <= int(resp.status_code) < 300
+                    webhook_result = {
+                        "success": webhook_success,
+                        "webhook_url": webhook_url,
+                        "request": webhook_payload,
+                        "response_status": int(resp.status_code),
+                        "response_body": response_body,
+                        "duration_ms": webhook_duration_ms,
+                        "error": None if webhook_success else f"HTTP {resp.status_code}",
+                    }
+                except Exception as e:
+                    webhook_duration_ms = int(
+                        (datetime.utcnow() - webhook_started_at).total_seconds() * 1000
+                    )
+                    webhook_result = {
+                        "success": False,
+                        "webhook_url": webhook_url,
+                        "request": webhook_payload,
+                        "response_status": None,
+                        "response_body": None,
+                        "duration_ms": webhook_duration_ms,
+                        "error": str(e),
+                    }
+
+                publish_output["webhook"] = webhook_result
+                step_output_result["published_webhook"] = webhook_result
+            step_output_result["published_s3"] = publish_output
+
+            logger.info("[StepProcessor] Published step output to S3", extra={
+                "job_id": job_id,
+                "tenant_id": tenant_id,
+                "step_index": step_index,
+                "dest_bucket": bucket,
+                "dest_region": region,
+                "dest_key": dest_key,
+                "source_artifact_id": artifact_id,
+            })
+
+            return {
+                "step_name": f"{step_name} — Publish to S3",
+                "step_order": step_index + 1,
+                "step_type": "s3_upload",
+                "success": True,
+                "input": {
+                    "bucket": bucket,
+                    "region": region,
+                    "source_artifact_id": artifact_id,
+                },
+                "output": publish_output,
+                "timestamp": publish_started_at.isoformat(),
+                "duration_ms": duration_ms,
+            }
+        except Exception as e:
+            duration_ms = int(
+                (datetime.utcnow() - publish_started_at).total_seconds() * 1000
+            )
+            err = str(e)
+            logger.warning("[StepProcessor] Failed to publish step output to S3", extra={
+                "job_id": job_id,
+                "tenant_id": tenant_id,
+                "step_index": step_index,
+                "dest_bucket": bucket,
+                "dest_region": region,
+                "dest_key": dest_key,
+                "error_type": type(e).__name__,
+                "error_message": err,
+            }, exc_info=True)
+
+            publish_output = {
+                "success": False,
+                "bucket": bucket,
+                "region": region,
+                "key": dest_key,
+                "content_type": content_type,
+                "s3_uri": f"s3://{bucket}/{dest_key}",
+                "object_url": f"https://{bucket}.s3.{region}.amazonaws.com/{dest_key}",
+                "source_artifact_id": artifact_id,
+                "error": err,
+            }
+            step_output_result["published_s3"] = publish_output
+
+            return {
+                "step_name": f"{step_name} — Publish to S3",
+                "step_order": step_index + 1,
+                "step_type": "s3_upload",
+                "success": False,
+                "input": {
+                    "bucket": bucket,
+                    "region": region,
+                    "source_artifact_id": artifact_id,
+                },
+                "output": publish_output,
+                "timestamp": publish_started_at.isoformat(),
+                "duration_ms": duration_ms,
+            }
 
     def _execute_ai_step(
         self,
@@ -491,6 +868,10 @@ class StepProcessor:
                 step_outputs=step_outputs,
                 step_tools=step_tools,
             )
+            current_step_context = self._maybe_inject_s3_publish_output_only_context(
+                step=step,
+                current_step_context=current_step_context,
+            )
             
             # Collect previous image URLs for image generation steps
             previous_image_urls = None
@@ -525,10 +906,23 @@ class StepProcessor:
                 step_tools=step_tools,
                 step_tool_choice=step_tool_choice
             )
+
+            # Optional post-processing: If the step explicitly asks to upload the generated HTML to S3,
+            # do it server-side so we don't depend on OpenAI tool sandboxes having AWS credentials.
+            s3_publish_step = self._maybe_publish_current_step_output_to_s3(
+                step=step,
+                step_index=step_index,
+                tenant_id=tenant_id,
+                job_id=job_id,
+                step_name=step_name,
+                step_output_result=step_output_result,
+            )
             
             # Update state
             all_image_artifact_ids.extend(image_artifact_ids)
             execution_steps.append(execution_step_data)
+            if s3_publish_step:
+                execution_steps.append(s3_publish_step)
             self.db.update_job(job_id, {'execution_steps': execution_steps}, s3_service=self.s3)
             
             return step_output_result, image_artifact_ids
@@ -961,16 +1355,23 @@ class StepProcessor:
                 'previous_steps_with_images': len([s for s in execution_steps if s.get('step_type') == 'ai_generation' and normalize_step_order(s) < current_step_order and s.get('image_urls')])
             })
             
+            # Build step_outputs from existing execution_steps (used for S3 upload context injection)
+            step_outputs = self._build_step_outputs_from_execution_steps(execution_steps, steps)
+            
             # Current step context
             current_step_context = ContextBuilder.get_current_step_context(step_index, initial_context)
             current_step_context = self._maybe_inject_s3_upload_context(
                 step=step,
                 step_index=step_index,
-                tenant_id=tenant_id,
+                tenant_id=job['tenant_id'],
                 job_id=job_id,
                 current_step_context=current_step_context,
                 step_outputs=step_outputs,
                 step_tools=step_tools,
+            )
+            current_step_context = self._maybe_inject_s3_publish_output_only_context(
+                step=step,
+                current_step_context=current_step_context,
             )
             
             # Collect previous image URLs for image generation steps
@@ -1038,6 +1439,24 @@ class StepProcessor:
                 step_order=step_index + 1,
                 step_type='ai_generation'
             )
+
+            # Optional post-processing: If the step explicitly asks to upload the generated HTML to S3,
+            # do it server-side so we don't depend on OpenAI tool sandboxes having AWS credentials.
+            s3_publish_step = self._maybe_publish_current_step_output_to_s3(
+                step=step,
+                step_index=step_index,
+                tenant_id=job['tenant_id'],
+                job_id=job_id,
+                step_name=step_name,
+                step_output_result=step_output_result,
+            )
+            if s3_publish_step:
+                self._update_execution_steps_with_rerun_support(
+                    execution_steps=execution_steps,
+                    step_data=s3_publish_step,
+                    step_order=step_index + 1,
+                    step_type='s3_upload'
+                )
             
             # Update job with execution steps and add artifacts to job's artifacts list
             step_artifact_id = step_output_result['artifact_id']

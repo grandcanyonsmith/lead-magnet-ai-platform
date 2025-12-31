@@ -9,26 +9,6 @@ import { logger } from "../utils/logger";
 import { trackingService } from "../services/trackingService";
 import { db } from "../utils/db";
 import { env } from "../utils/env";
-import fs from "fs";
-
-const DEBUG_LOG_PATH = "/Users/canyonsmith/lead-magnent-ai/.cursor/debug.log";
-
-const appendDebugLog = (payload: Record<string, unknown>) => {
-  try {
-    fs.appendFileSync(
-      DEBUG_LOG_PATH,
-      JSON.stringify({
-        sessionId: "debug-session",
-        runId: "run-tracking",
-        ...payload,
-        timestamp: Date.now(),
-      }) + "\n",
-      { encoding: "utf8" },
-    );
-  } catch {
-    // swallow logging errors to avoid impacting handler
-  }
-};
 
 const JOBS_TABLE = env.jobsTable;
 
@@ -100,12 +80,6 @@ class TrackingController {
    * Get tracking statistics for a job (requires auth).
    */
   async getJobStats(tenantId: string, jobId: string): Promise<RouteResponse> {
-    appendDebugLog({
-      hypothesisId: "F",
-      location: "tracking.ts:getJobStats:entry",
-      data: { tenantId, jobId },
-      message: "getJobStats entry",
-    });
     logger.info("[Tracking Controller] Getting job stats", { tenantId, jobId });
 
     // Verify job belongs to tenant
@@ -124,24 +98,11 @@ class TrackingController {
 
       const stats = await trackingService.getJobStats(jobId, tenantId);
 
-      appendDebugLog({
-        hypothesisId: "F",
-        location: "tracking.ts:getJobStats:success",
-        message: "getJobStats success",
-        data: { jobId, tenantId, hasStats: !!stats },
-      });
-
       return {
         statusCode: 200,
         body: stats,
       };
     } catch (err: any) {
-      appendDebugLog({
-        hypothesisId: "F",
-        location: "tracking.ts:getJobStats:error",
-        message: "getJobStats error",
-        data: { jobId, tenantId, error: err?.message || String(err) },
-      });
       throw err;
     }
   }
@@ -154,12 +115,6 @@ class TrackingController {
     jobId: string,
     queryParams: Record<string, any>,
   ): Promise<RouteResponse> {
-    appendDebugLog({
-      hypothesisId: "G",
-      location: "tracking.ts:getJobEvents:entry",
-      message: "getJobEvents entry",
-      data: { tenantId, jobId, queryParams },
-    });
     logger.info("[Tracking Controller] Getting job events", {
       tenantId,
       jobId,
@@ -192,24 +147,11 @@ class TrackingController {
         lastEvaluatedKey,
       );
 
-      appendDebugLog({
-        hypothesisId: "G",
-        location: "tracking.ts:getJobEvents:success",
-        message: "getJobEvents success",
-        data: { jobId, tenantId, count: result?.events?.length || 0 },
-      });
-
       return {
         statusCode: 200,
         body: result,
       };
     } catch (err: any) {
-      appendDebugLog({
-        hypothesisId: "G",
-        location: "tracking.ts:getJobEvents:error",
-        message: "getJobEvents error",
-        data: { jobId, tenantId, error: err?.message || String(err) },
-      });
       throw err;
     }
   }

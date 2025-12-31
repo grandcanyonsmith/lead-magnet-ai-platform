@@ -472,8 +472,8 @@ export default function WorkflowStepEditor({
         </div>
       }
     >
-      <div className="border border-gray-300 dark:border-gray-700 rounded-lg p-6 bg-white dark:bg-card shadow-sm">
-        <div className="flex items-start justify-between mb-4">
+      <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-6 bg-white dark:bg-card shadow-sm ring-1 ring-black/[0.04] dark:ring-white/5">
+        <div className="flex items-start justify-between pb-4 mb-6 border-b border-gray-100 dark:border-gray-800">
           <div
             className="flex items-center gap-3"
             onClick={(e) => e.stopPropagation()}
@@ -491,7 +491,7 @@ export default function WorkflowStepEditor({
               type="button"
               onClick={() => onMoveUp(index)}
               disabled={index === 0}
-              className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white disabled:text-gray-300 dark:disabled:text-gray-700 disabled:cursor-not-allowed touch-target"
+              className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900/40 p-2 text-gray-600 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed touch-target"
               aria-label="Move step up"
             >
               <FiChevronUp className="w-5 h-5" />
@@ -500,7 +500,7 @@ export default function WorkflowStepEditor({
               type="button"
               onClick={() => onMoveDown(index)}
               disabled={index === totalSteps - 1}
-              className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white disabled:text-gray-300 dark:disabled:text-gray-700 disabled:cursor-not-allowed touch-target"
+              className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900/40 p-2 text-gray-600 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed touch-target"
               aria-label="Move step down"
             >
               <FiChevronDown className="w-5 h-5" />
@@ -508,7 +508,7 @@ export default function WorkflowStepEditor({
             <button
               type="button"
               onClick={() => onDelete(index)}
-              className="p-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 touch-target"
+              className="rounded-lg border border-red-200 dark:border-red-900/50 bg-white dark:bg-gray-900/40 p-2 text-red-600 dark:text-red-400 shadow-sm hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700 dark:hover:text-red-300 touch-target"
               aria-label="Delete step"
             >
               <FiTrash2 className="w-5 h-5" />
@@ -527,96 +527,108 @@ export default function WorkflowStepEditor({
           }}
         />
 
-        <div className="space-y-4">
-          <div>
-            <label
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-              htmlFor={`step-name-${index}`}
-            >
-              Instruction Name *
-            </label>
-            <input
-              id={`step-name-${index}`}
-              type="text"
-              value={localStep.step_name}
-              onChange={(e) => handleChange("step_name", e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-              placeholder="e.g., Deep Research"
-              required
-              aria-label="Instruction name"
-              aria-required="true"
-            />
+        <div className="space-y-6">
+          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/30 p-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  htmlFor={`step-name-${index}`}
+                >
+                  Instruction Name *
+                </label>
+                <input
+                  id={`step-name-${index}`}
+                  type="text"
+                  value={localStep.step_name}
+                  onChange={(e) => handleChange("step_name", e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                  placeholder="e.g., Deep Research"
+                  required
+                  aria-label="Instruction name"
+                  aria-required="true"
+                />
+              </div>
+
+              <div>
+                <label
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  htmlFor={`step-description-${index}`}
+                >
+                  Description (optional)
+                </label>
+                <textarea
+                  id={`step-description-${index}`}
+                  value={localStep.step_description || ""}
+                  onChange={(e) =>
+                    handleChange("step_description", e.target.value)
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                  placeholder="Brief description of what this does"
+                  rows={2}
+                  aria-label="Instruction description"
+                />
+              </div>
+            </div>
           </div>
 
-          <div>
-            <label
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-              htmlFor={`step-description-${index}`}
-            >
-              Description (optional)
-            </label>
-            <textarea
-              id={`step-description-${index}`}
-              value={localStep.step_description || ""}
-              onChange={(e) => handleChange("step_description", e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-              placeholder="Brief description of what this does"
-              rows={2}
-              aria-label="Instruction description"
-            />
+          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/30 p-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  htmlFor={`ai-model-${index}`}
+                >
+                  AI Brain *
+                </label>
+                <select
+                  id={`ai-model-${index}`}
+                  value={localStep.model}
+                  onChange={(e) =>
+                    handleChange("model", e.target.value as AIModel)
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                  required
+                  aria-label="AI model"
+                  aria-required="true"
+                >
+                  {MODEL_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  htmlFor={`reasoning-effort-${index}`}
+                >
+                  Thinking Power
+                </label>
+                <select
+                  id={`reasoning-effort-${index}`}
+                  value={localStep.reasoning_effort || ""}
+                  onChange={(e) =>
+                    handleChange("reasoning_effort", e.target.value || undefined)
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                  aria-label="Reasoning effort"
+                >
+                  <option value="">Standard</option>
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Optional. Controls how much the AI thinks before answering.
+                </p>
+              </div>
+            </div>
           </div>
 
-          <div>
-            <label
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-              htmlFor={`ai-model-${index}`}
-            >
-              AI Brain *
-            </label>
-            <select
-              id={`ai-model-${index}`}
-              value={localStep.model}
-              onChange={(e) => handleChange("model", e.target.value as AIModel)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-              required
-              aria-label="AI model"
-              aria-required="true"
-            >
-              {MODEL_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-              htmlFor={`reasoning-effort-${index}`}
-            >
-              Thinking Power
-            </label>
-            <select
-              id={`reasoning-effort-${index}`}
-              value={localStep.reasoning_effort || ""}
-              onChange={(e) =>
-                handleChange("reasoning_effort", e.target.value || undefined)
-              }
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-              aria-label="Reasoning effort"
-            >
-              <option value="">Standard</option>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-            </select>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Optional. Controls how much the AI thinks before answering.
-            </p>
-          </div>
-
-          <div>
+          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/30 p-4">
             <label
               className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
               htmlFor={`instructions-${index}`}
@@ -627,66 +639,82 @@ export default function WorkflowStepEditor({
               id={`instructions-${index}`}
               value={localStep.instructions}
               onChange={(e) => handleChange("instructions", e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 font-mono text-sm leading-relaxed"
               placeholder="Detailed instructions for what this step should do..."
-              rows={6}
+              rows={7}
               required
               aria-label="Step instructions"
               aria-required="true"
             />
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              These instructions will be passed to the AI model along with
-              context from previous steps.
+            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              Passed to the model along with context from previous steps.
             </p>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Capabilities
-            </label>
-            <div className="space-y-2 mb-3">
-              {AVAILABLE_TOOLS.map((tool) => (
-                <label
-                  key={tool.value}
-                  className="flex items-start space-x-2 cursor-pointer"
-                >
-                  <input
-                    type="checkbox"
-                    checked={isToolSelected(tool.value)}
-                    onChange={() => handleToolToggle(tool.value)}
-                    className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                  />
-                  <div>
-                    <span className="text-sm font-medium text-gray-900 dark:text-gray-200">
-                      {tool.label}
-                    </span>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {tool.description}
-                    </p>
-                  </div>
-                </label>
-              ))}
+          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/30 p-4">
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Capabilities
+              </label>
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                Tools the model may use
+              </span>
+            </div>
+
+            <div className="grid gap-2">
+              {AVAILABLE_TOOLS.map((tool) => {
+                const selected = isToolSelected(tool.value);
+                return (
+                  <label
+                    key={tool.value}
+                    className={`flex items-start gap-3 rounded-xl border p-3 cursor-pointer transition-colors ${
+                      selected
+                        ? "border-primary-200 dark:border-primary-800/40 bg-primary-50/60 dark:bg-primary-900/10"
+                        : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/70"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selected}
+                      onChange={() => handleToolToggle(tool.value)}
+                      className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
+                    />
+                    <div className="min-w-0">
+                      <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                        {tool.label}
+                      </span>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        {tool.description}
+                      </p>
+                    </div>
+                  </label>
+                );
+              })}
             </div>
 
             {isToolSelected("computer_use_preview") && (
-              <ComputerUseConfig
-                config={computerUseConfig}
-                onChange={handleComputerUseConfigChange}
-                index={index}
-              />
+              <div className="mt-4">
+                <ComputerUseConfig
+                  config={computerUseConfig}
+                  onChange={handleComputerUseConfigChange}
+                  index={index}
+                />
+              </div>
             )}
 
             {isToolSelected("image_generation") && (
-              <ImageGenerationConfig
-                config={imageGenerationConfig}
-                onChange={(field, value) =>
-                  handleImageGenerationConfigChange(field, value)
-                }
-              />
+              <div className="mt-4">
+                <ImageGenerationConfig
+                  config={imageGenerationConfig}
+                  onChange={(field, value) =>
+                    handleImageGenerationConfigChange(field, value)
+                  }
+                />
+              </div>
             )}
           </div>
 
-          <div>
+          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/30 p-4">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Tool Choice
             </label>
@@ -698,7 +726,7 @@ export default function WorkflowStepEditor({
                   e.target.value as "auto" | "required" | "none",
                 )
               }
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
             >
               {TOOL_CHOICE_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -722,23 +750,25 @@ export default function WorkflowStepEditor({
             />
           </CollapsibleSection>
 
-          <div>
+          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/30 p-4">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Dependencies (optional)
             </label>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
               Select which steps must complete before this step runs. Leave empty
               to auto-detect from step order.
             </p>
-            <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+            <div className="space-y-2 max-h-44 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 p-3">
               {allSteps.length > 0 ? (
                 allSteps.map((otherStep, otherIndex) => {
                   if (otherIndex === index) return null; // Can't depend on itself
-                  const isSelected = (localStep.depends_on || []).includes(otherIndex);
+                  const isSelected = (localStep.depends_on || []).includes(
+                    otherIndex,
+                  );
                   return (
                     <label
                       key={otherIndex}
-                      className="flex items-center space-x-2 cursor-pointer"
+                      className="flex items-start gap-2 cursor-pointer"
                     >
                       <input
                         type="checkbox"
@@ -747,10 +777,12 @@ export default function WorkflowStepEditor({
                           const currentDeps = localStep.depends_on || [];
                           const newDeps = e.target.checked
                             ? [...currentDeps, otherIndex]
-                            : currentDeps.filter((dep: number) => dep !== otherIndex);
+                            : currentDeps.filter(
+                                (dep: number) => dep !== otherIndex,
+                              );
                           handleChange("depends_on", newDeps);
                         }}
-                        className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                        className="mt-0.5 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
                       />
                       <span className="text-sm text-gray-900 dark:text-gray-200">
                         Step {otherIndex + 1}: {otherStep.step_name}
@@ -767,7 +799,9 @@ export default function WorkflowStepEditor({
             {localStep.depends_on && localStep.depends_on.length > 0 && (
               <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
                 Depends on:{" "}
-                {localStep.depends_on.map((dep: number) => `Step ${dep + 1}`).join(", ")}
+                {localStep.depends_on
+                  .map((dep: number) => `Step ${dep + 1}`)
+                  .join(", ")}
               </p>
             )}
           </div>
