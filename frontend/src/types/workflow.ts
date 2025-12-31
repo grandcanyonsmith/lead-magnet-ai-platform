@@ -18,7 +18,9 @@ export type AIModel =
 
 export type ToolChoice = "auto" | "required" | "none";
 
-export type ReasoningEffort = "low" | "medium" | "high";
+export type ReasoningEffort = "none" | "low" | "medium" | "high" | "xhigh";
+
+export type TextVerbosity = "low" | "medium" | "high";
 
 export type ToolType =
   | "web_search"
@@ -58,6 +60,8 @@ export interface WorkflowStep {
   step_type?: "ai_generation" | "webhook";
   model: AIModel;
   reasoning_effort?: ReasoningEffort;
+  text_verbosity?: TextVerbosity;
+  max_output_tokens?: number;
   instructions: string;
   step_order?: number;
   tools?: Tool[];

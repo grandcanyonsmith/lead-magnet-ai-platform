@@ -41,7 +41,9 @@ export interface WorkflowStep {
   /** @deprecated All steps are now generic steps */
   step_type?: "ai_generation" | "webhook";
   model: string;
-  reasoning_effort?: "low" | "medium" | "high";
+  reasoning_effort?: "none" | "low" | "medium" | "high" | "xhigh";
+  text_verbosity?: "low" | "medium" | "high";
+  max_output_tokens?: number;
   instructions: string;
   step_order: number;
   depends_on?: number[];
