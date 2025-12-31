@@ -439,12 +439,6 @@ class JobProcessor:
         Returns:
             Dictionary with success status, step output, and metadata
         """
-        # #region agent log
-        import json; import time; 
-        try:
-            with open('/Users/canyonsmith/lead-magnent-ai/.cursor/debug.log', 'a') as f: f.write(json.dumps({"location": "processor.py:process_single_step", "message": "Entering process_single_step", "data": {"job_id": job_id, "step_index": step_index, "step_type": step_type}, "timestamp": int(time.time() * 1000), "sessionId": "debug-session", "hypothesisId": "processor-start"}) + "\n")
-        except Exception as e: pass
-        # #endregion
 
         try:
             # Load all required data

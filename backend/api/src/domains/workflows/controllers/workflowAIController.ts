@@ -27,10 +27,6 @@ export class WorkflowAIController {
 
     const { step, input } = body;
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'workflowAIController.ts:testStep',message:'Test step request received',data:{tenantId, jobId, stepName: step?.step_name},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'backend-req'})}).catch(()=>{});
-    // #endregion
-
     if (!step) {
       throw new ApiError('Step configuration is required', 400);
     }
@@ -111,33 +107,55 @@ export class WorkflowAIController {
           PYTHONUNBUFFERED: '1'
         };
 
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'workflowAIController.ts:testStep',message:'Spawning local worker',data:{workerScript, envVars: { JOB_ID: jobId, STEP_INDEX: '0' }},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'worker-spawn'})}).catch(()=>{});
-        // #endregion
-
         logger.info('[Test Step] Spawning local worker', { script: workerScript, jobId });
         
+        // Mark job as processing for better UX while the local worker runs.
+        try {
+          await db.update(JOBS_TABLE, { job_id: jobId }, { status: 'processing', updated_at: new Date().toISOString() });
+        } catch (e: any) {
+          logger.warn('[Test Step] Failed to mark job as processing', { jobId, error: e?.message || String(e) });
+        }
+
         const worker = spawn('python3', [workerScript], { env: envVars });
+
+        let stderrTail = '';
         
         worker.stdout.on('data', (data) => {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'workflowAIController.ts:workerOutput',message:'Worker stdout',data:{output: data.toString()},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'worker-output'})}).catch(()=>{});
-          // #endregion
           logger.info(`[Worker Output] ${data}`);
         });
         
         worker.stderr.on('data', (data) => {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'workflowAIController.ts:workerError',message:'Worker stderr',data:{error: data.toString()},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'worker-error'})}).catch(()=>{});
-          // #endregion
+          try {
+            stderrTail = (stderrTail + data.toString()).slice(-2000);
+          } catch {
+            // ignore
+          }
           logger.error(`[Worker Error] ${data}`);
         });
         
         worker.on('close', (code) => {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'workflowAIController.ts:workerClose',message:'Worker closed',data:{code},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'worker-exit'})}).catch(()=>{});
-          // #endregion
           logger.info('[Test Step] Worker finished', { code });
+
+          // Update job status based on local worker completion so the UI (and jobs list)
+          // doesn't show test jobs stuck in "pending"/"processing".
+          void (async () => {
+            const now = new Date().toISOString();
+            try {
+              if (code === 0) {
+                await db.update(JOBS_TABLE, { job_id: jobId }, { status: 'completed', updated_at: now, completed_at: now });
+              } else {
+                await db.update(JOBS_TABLE, { job_id: jobId }, {
+                  status: 'failed',
+                  updated_at: now,
+                  completed_at: now,
+                  error_message: stderrTail ? stderrTail.slice(-1000) : 'Local worker exited non-zero',
+                  error_type: 'LocalWorkerError',
+                });
+              }
+            } catch (e: any) {
+              logger.error('[Test Step] Failed to update test job status after worker finished', { jobId, code, error: e?.message || String(e) });
+            }
+          })();
         });
 
       } else {

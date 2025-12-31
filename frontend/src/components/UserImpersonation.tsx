@@ -49,20 +49,6 @@ export function UserImpersonation() {
   }, [searchTerm]);
 
   const toggleOpen = () => {
-    // #region agent log
-    fetch("http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        location: "UserImpersonation.tsx:toggle",
-        message: "toggleOpen called",
-        data: { isOpen: !isOpen },
-        timestamp: Date.now(),
-        sessionId: "debug-session",
-        hypothesisId: "fix-nesting",
-      }),
-    }).catch(() => {});
-    // #endregion
     setIsOpen(!isOpen);
     if (!isOpen) {
       // Focus input when opening - using a small timeout to ensure render
@@ -79,39 +65,8 @@ export function UserImpersonation() {
   }
 
   const handleImpersonate = async (targetUserId: string) => {
-    // #region agent log
-    fetch("http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        location: "UserImpersonation.tsx:53",
-        message: "handleImpersonate called",
-        data: { targetUserId },
-        timestamp: Date.now(),
-        sessionId: "debug-session",
-        hypothesisId: "3",
-      }),
-    }).catch(() => {});
-    // #endregion
     setIsImpersonating(true);
     try {
-      // #region agent log
-      fetch(
-        "http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "UserImpersonation.tsx:56",
-            message: "Calling impersonate API",
-            data: { targetUserId },
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            hypothesisId: "3",
-          }),
-        },
-      ).catch(() => {});
-      // #endregion
       const response = await api.post<{ session_id: string }>(
         "/admin/impersonate",
         {
@@ -129,23 +84,6 @@ export function UserImpersonation() {
       setSearchTerm("");
       setUsers([]);
     } catch (error) {
-      // #region agent log
-      fetch(
-        "http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "UserImpersonation.tsx:69",
-            message: "Error impersonating",
-            data: { error: String(error) },
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            hypothesisId: "3",
-          }),
-        },
-      ).catch(() => {});
-      // #endregion
       console.error("Error starting impersonation:", error);
       toast.error("Failed to start impersonation");
     } finally {

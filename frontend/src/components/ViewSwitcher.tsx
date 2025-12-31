@@ -64,39 +64,11 @@ export function ViewSwitcher() {
   }
 
   const handleSwitchToAgency = () => {
-    // #region agent log
-    fetch("http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        location: "ViewSwitcher.tsx:49",
-        message: "handleSwitchToAgency called",
-        data: { currentViewMode: viewMode },
-        timestamp: Date.now(),
-        sessionId: "debug-session",
-        hypothesisId: "2",
-      }),
-    }).catch(() => {});
-    // #endregion
     setViewMode("agency");
     // No need to set isOpen, Menu handles it
   };
 
   const handleSwitchToSubaccount = (customerId?: string) => {
-    // #region agent log
-    fetch("http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        location: "ViewSwitcher.tsx:55",
-        message: "handleSwitchToSubaccount called",
-        data: { customerId, currentViewMode: viewMode },
-        timestamp: Date.now(),
-        sessionId: "debug-session",
-        hypothesisId: "2",
-      }),
-    }).catch(() => {});
-    // #endregion
     setViewMode("subaccount", customerId);
     // No need to set isOpen, Menu handles it
   };
