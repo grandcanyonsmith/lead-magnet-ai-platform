@@ -22,59 +22,15 @@ export function JobTrackingStats({ jobId }: JobTrackingStatsProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const sendDebugLog = (payload: Record<string, unknown>) => {
-    // Avoid mixed-content/CORS when served over HTTPS (production)
-    if (
-      typeof window !== "undefined" &&
-      window.location.protocol === "https:"
-    ) {
-      return;
-    }
-    // #region agent log
-    fetch("http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    }).catch(() => {});
-    // #endregion
-  };
-
   useEffect(() => {
     async function loadStats() {
       try {
         setLoading(true);
         setError(null);
-        sendDebugLog({
-          sessionId: "debug-session",
-          runId: "run-tracking",
-          hypothesisId: "A",
-          location: "JobTrackingStats.tsx:20",
-          message: "Fetching job tracking stats",
-          data: { jobId },
-          timestamp: Date.now(),
-        });
         const data = await getJobStats(jobId);
         setStats(data);
-        sendDebugLog({
-          sessionId: "debug-session",
-          runId: "run-tracking",
-          hypothesisId: "A",
-          location: "JobTrackingStats.tsx:24",
-          message: "Fetched job tracking stats success",
-          data: { jobId, hasData: !!data, keys: data ? Object.keys(data) : [] },
-          timestamp: Date.now(),
-        });
       } catch (err: any) {
         setError(err.message || "Failed to load tracking stats");
-        sendDebugLog({
-          sessionId: "debug-session",
-          runId: "run-tracking",
-          hypothesisId: "B",
-          location: "JobTrackingStats.tsx:29",
-          message: "Error fetching tracking stats",
-          data: { jobId, error: err?.message || String(err) },
-          timestamp: Date.now(),
-        });
       } finally {
         setLoading(false);
       }

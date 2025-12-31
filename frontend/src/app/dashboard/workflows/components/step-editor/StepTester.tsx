@@ -1,10 +1,21 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { FiPlay, FiChevronDown, FiChevronUp, FiRefreshCw } from "react-icons/fi";
+import {
+  FiPlay,
+  FiStopCircle,
+  FiChevronDown,
+  FiChevronUp,
+  FiRefreshCw,
+  FiCheckCircle,
+  FiXCircle,
+  FiTrash2,
+  FiCopy,
+} from "react-icons/fi";
 import { WorkflowStep } from "@/types/workflow";
 import { api } from "@/lib/api";
 import toast from "react-hot-toast";
+import { JsonViewer } from "@/components/ui/JsonViewer";
 
 interface StepTesterProps {
   step: WorkflowStep;
@@ -16,7 +27,9 @@ export default function StepTester({ step, index }: StepTesterProps) {
   const [testInput, setTestInput] = useState("{}");
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<any>(null);
-  const [pollInterval, setPollInterval] = useState<NodeJS.Timeout | null>(null);
+  const [pollInterval, setPollInterval] = useState<ReturnType<
+    typeof setInterval
+  > | null>(null);
 
   // Clean up polling on unmount
   useEffect(() => {
@@ -25,56 +38,132 @@ export default function StepTester({ step, index }: StepTesterProps) {
     };
   }, [pollInterval]);
 
+  const handleStopTest = () => {
+    if (pollInterval) {
+      clearInterval(pollInterval);
+    }
+    setPollInterval(null);
+    setIsTesting(false);
+    toast("Test cancelled");
+  };
+
+  const getPrimaryOutput = (result: any): string | null => {
+    if (!result) return null;
+    if (typeof result.primary_output === "string" && result.primary_output) {
+      return result.primary_output;
+    }
+    const steps = result?.execution_steps;
+    if (Array.isArray(steps) && steps.length > 0) {
+      // Prefer S3 publish step output (object_url) if present
+      for (let i = steps.length - 1; i >= 0; i--) {
+        const s = steps[i];
+        if (!s || typeof s !== "object") continue;
+        if (s.step_type !== "s3_upload") continue;
+        const out = (s as any).output;
+        const objectUrl =
+          out && typeof out === "object" && "object_url" in out
+            ? String((out as any).object_url || "")
+            : "";
+        if (objectUrl) return objectUrl;
+      }
+
+      // Fall back to first non-empty string output (e.g., AI generation HTML)
+      for (const s of steps) {
+        const out = s?.output;
+        if (typeof out === "string" && out) return out;
+      }
+    }
+    return null;
+  };
+
+  const copyText = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(`${label} copied`);
+    } catch {
+      toast.error("Unable to copy");
+    }
+  };
+
   const handleTestStep = async () => {
     try {
       let inputData = {};
       try {
         inputData = JSON.parse(testInput);
-      } catch (e) {
+      } catch {
         toast.error("Invalid JSON input");
         return;
+      }
+
+      if (pollInterval) {
+        clearInterval(pollInterval);
+        setPollInterval(null);
       }
 
       setIsTesting(true);
       setTestResult(null);
 
-      const { job_id } = await api.testStep({
+      const testStartResp = await api.testStep({
         step,
         input: inputData,
       });
+      const job_id = (testStartResp as any)?.job_id;
+
+      if (!job_id || typeof job_id !== "string") {
+        setIsTesting(false);
+        setTestResult({ error: "No job_id returned from test-step endpoint" });
+        toast.error("Failed to start test (missing job_id)");
+        return;
+      }
 
       toast.success("Test started");
 
       // Start polling
+      let pollCount = 0;
       const interval = setInterval(async () => {
         try {
-          // Use getJob for status check as we use a temporary job
-          const job = await api.getJob(job_id);
-          
-          if (job.status === "completed" || job.status === "failed") {
+          pollCount += 1;
+          if (pollCount > 90) {
             clearInterval(interval);
             setPollInterval(null);
             setIsTesting(false);
-            
-            if (job.status === "failed") {
-                setTestResult({ error: job.error_message || "Unknown error" });
-                toast.error("Test failed");
-            } else {
-                // Get execution step output
-                const output = job.execution_steps?.[0]?.output || "No output";
-                const details = job.execution_steps?.[0] || {};
-                setTestResult({ output, ...details });
-                toast.success("Test completed");
-            }
+            setTestResult({ error: "Timed out waiting for a result" });
+            toast.error("Test timed out");
+            return;
+          }
+          // 1) Check job status/errors
+          const job = await api.getJob(job_id);
+
+          if (job.status === "failed" || job.error_message) {
+            clearInterval(interval);
+            setPollInterval(null);
+            setIsTesting(false);
+            setTestResult({ error: job.error_message || "Unknown error" });
+            toast.error("Test failed");
+            return;
+          }
+
+          // 2) Fetch execution steps (source of truth for step output)
+          const steps = await api.getExecutionSteps(job_id);
+          if (Array.isArray(steps) && steps.length > 0) {
+            clearInterval(interval);
+            setPollInterval(null);
+            setIsTesting(false);
+
+            setTestResult({
+              execution_steps: steps,
+              primary_output: steps[0]?.output,
+            });
+            toast.success("Test completed");
+            return;
           }
         } catch (err) {
           console.error("Polling error", err);
           // Don't stop polling immediately on transient errors
         }
       }, 2000);
-      
-      setPollInterval(interval);
 
+      setPollInterval(interval);
     } catch (err: any) {
       setIsTesting(false);
       toast.error(err.message || "Failed to start test");
@@ -82,52 +171,93 @@ export default function StepTester({ step, index }: StepTesterProps) {
   };
 
   return (
-    <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-4">
+    <div className="mt-8 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm">
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+        className={`w-full flex items-center justify-between px-5 py-4 transition-colors ${
+          isOpen
+            ? "bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700"
+            : "bg-white dark:bg-card hover:bg-gray-50 dark:hover:bg-gray-800/50"
+        }`}
       >
-        <div className="flex items-center gap-2">
-          <FiPlay className="w-5 h-5 text-green-600" />
-          <span className="font-semibold text-gray-900 dark:text-gray-100">Test Step</span>
+        <div className="flex items-center gap-3">
+          <div
+            className={`p-2 rounded-lg ${
+              isOpen
+                ? "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400"
+                : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+            }`}
+          >
+            <FiPlay className="w-4 h-4" />
+          </div>
+          <div className="text-left">
+            <span className="block font-semibold text-gray-900 dark:text-gray-100 text-sm">
+              Test Step
+            </span>
+            <span className="block text-xs text-gray-500 dark:text-gray-400 font-normal mt-0.5">
+              Run this step individually with custom input
+            </span>
+          </div>
         </div>
         {isOpen ? (
-          <FiChevronUp className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+          <FiChevronUp className="w-5 h-5 text-gray-400" />
         ) : (
-          <FiChevronDown className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+          <FiChevronDown className="w-5 h-5 text-gray-400" />
         )}
       </button>
 
       {isOpen && (
-        <div className="mt-3 p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900">
+        <div className="p-5 bg-white dark:bg-card space-y-6">
           <div className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 Test Input (JSON)
               </label>
+              <button
+                type="button"
+                onClick={() => setTestInput("{}")}
+                className="text-xs text-gray-500 hover:text-red-500 flex items-center gap-1 transition-colors"
+                title="Reset to empty object"
+              >
+                <FiTrash2 className="w-3 h-3" />
+                Clear
+              </button>
+            </div>
+            <div className="relative">
               <textarea
                 value={testInput}
                 onChange={(e) => setTestInput(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-mono text-xs focus:outline-none focus:ring-2 focus:ring-primary-500"
-                rows={4}
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-mono text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all resize-y min-h-[120px]"
+                rows={5}
                 placeholder="{}"
               />
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Optional input data to simulate context.
-              </p>
+              <div className="absolute bottom-3 right-3 pointer-events-none">
+                <span className="text-[10px] text-gray-400 px-2 py-1 bg-white/50 dark:bg-black/50 rounded-md backdrop-blur-sm border border-gray-200 dark:border-gray-700">
+                  JSON
+                </span>
+              </div>
             </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 ml-1">
+              Provide input variables that this step expects (e.g., from
+              previous steps).
+            </p>
+          </div>
 
+          <div className="pt-2">
             <button
               type="button"
-              onClick={handleTestStep}
-              disabled={isTesting}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm transition-colors"
+              onClick={isTesting ? handleStopTest : handleTestStep}
+              className={`w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-medium text-sm transition-all transform active:scale-[0.98] ${
+                isTesting
+                  ? "bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+                  : "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white shadow-md hover:shadow-lg shadow-green-900/20"
+              }`}
             >
               {isTesting ? (
                 <>
-                  <FiRefreshCw className="w-4 h-4 animate-spin" />
-                  Testing...
+                  <FiStopCircle className="w-4 h-4" />
+                  Stop Test
                 </>
               ) : (
                 <>
@@ -136,21 +266,70 @@ export default function StepTester({ step, index }: StepTesterProps) {
                 </>
               )}
             </button>
+          </div>
 
-            {testResult && (
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Result
-                </label>
-                <div className="bg-gray-900 text-gray-100 rounded-lg p-3 overflow-x-auto text-xs font-mono max-h-96">
-                  <pre>{JSON.stringify(testResult, null, 2)}</pre>
+          {testResult && (
+            <div className="mt-6">
+              <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+                <div className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                  <span>Result</span>
+                  {testResult.error ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-medium">
+                      <FiXCircle className="w-3 h-3" />
+                      Failed
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-medium">
+                      <FiCheckCircle className="w-3 h-3" />
+                      Success
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {(() => {
+                    const primaryOutput = getPrimaryOutput(testResult);
+                    if (!primaryOutput) return null;
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => copyText(primaryOutput, "Output")}
+                        className="inline-flex items-center gap-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900/40 px-3 py-2 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+                        title="Copy primary output"
+                      >
+                        <FiCopy className="w-4 h-4" />
+                        Copy output
+                      </button>
+                    );
+                  })()}
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      copyText(JSON.stringify(testResult, null, 2), "JSON")
+                    }
+                    className="inline-flex items-center gap-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900/40 px-3 py-2 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+                    title="Copy full result JSON"
+                  >
+                    <FiCopy className="w-4 h-4" />
+                    Copy JSON
+                  </button>
                 </div>
               </div>
-            )}
-          </div>
+              <div className="bg-[#1e1e1e] rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-inner">
+                <div className="p-1">
+                  <JsonViewer
+                    value={testResult}
+                    raw={JSON.stringify(testResult, null, 2)}
+                    defaultMode="tree"
+                    defaultExpandedDepth={2}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 }
-

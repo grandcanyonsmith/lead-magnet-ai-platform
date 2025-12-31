@@ -4,6 +4,8 @@ import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { WorkflowStep, HTTPMethod } from "@/types/workflow";
 import { api } from "@/lib/api";
+import { FiCopy, FiTrash2, FiPlus } from "react-icons/fi";
+import { JsonViewer } from "@/components/ui/JsonViewer";
 
 interface WebhookConfigProps {
   step: WorkflowStep;
@@ -271,6 +273,17 @@ export default function WebhookConfig({
     step.webhook_content_type || "application/json",
   );
 
+  const copyJson = async (value: unknown, label: string) => {
+    try {
+      const text =
+        typeof value === "string" ? value : JSON.stringify(value, null, 2);
+      await navigator.clipboard.writeText(text);
+      toast.success(`${label} copied`);
+    } catch {
+      toast.error("Unable to copy");
+    }
+  };
+
   return (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -286,7 +299,7 @@ export default function WebhookConfig({
                 e.target.value as HTTPMethod,
               )
             }
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
           >
             <option value="POST">POST</option>
             <option value="GET">GET</option>
@@ -305,7 +318,7 @@ export default function WebhookConfig({
             onChange={(e) =>
               onChange("webhook_content_type", e.target.value)
             }
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
             placeholder="application/json"
           />
         </div>
@@ -319,7 +332,7 @@ export default function WebhookConfig({
           type="url"
           value={step.webhook_url || ""}
           onChange={(e) => onChange("webhook_url", e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
           placeholder="https://api.example.com/endpoint"
           required
         />
@@ -335,10 +348,10 @@ export default function WebhookConfig({
         <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
           Add query parameters to append to the URL.
         </p>
-        <div className="space-y-2">
+        <div className="space-y-3">
           {Object.entries(webhookQueryParams).map(
             ([key, value], idx) => (
-              <div key={idx} className="flex gap-2">
+              <div key={idx} className="flex gap-2 items-center">
                 <input
                   type="text"
                   value={key}
@@ -350,7 +363,7 @@ export default function WebhookConfig({
                     onChange("webhook_query_params", newParams);
                   }}
                   placeholder="Param name"
-                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm transition-all"
                 />
                 <input
                   type="text"
@@ -364,7 +377,7 @@ export default function WebhookConfig({
                     onChange("webhook_query_params", newParams);
                   }}
                   placeholder="Param value"
-                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm transition-all"
                 />
                 <button
                   type="button"
@@ -374,9 +387,10 @@ export default function WebhookConfig({
                     setWebhookQueryParams(newParams);
                     onChange("webhook_query_params", newParams);
                   }}
-                  className="px-3 py-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 text-sm"
+                  className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                  title="Remove parameter"
                 >
-                  Remove
+                  <FiTrash2 className="w-4 h-4" />
                 </button>
               </div>
             ),
@@ -387,9 +401,10 @@ export default function WebhookConfig({
               const newParams = { ...webhookQueryParams, "": "" };
               setWebhookQueryParams(newParams);
             }}
-            className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
+            className="flex items-center gap-1.5 text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium px-1 py-0.5 rounded-md hover:bg-primary-50 dark:hover:bg-primary-900/10 transition-colors w-fit"
           >
-            + Add Query Parameter
+            <FiPlus className="w-3.5 h-3.5" />
+            Add Query Parameter
           </button>
         </div>
       </div>
@@ -402,9 +417,9 @@ export default function WebhookConfig({
           Add custom headers to include in the HTTP request (e.g.,
           Authorization).
         </p>
-        <div className="space-y-2">
+        <div className="space-y-3">
           {Object.entries(webhookHeaders).map(([key, value], idx) => (
-            <div key={idx} className="flex gap-2">
+            <div key={idx} className="flex gap-2 items-center">
               <input
                 type="text"
                 value={key}
@@ -416,7 +431,7 @@ export default function WebhookConfig({
                   onChange("webhook_headers", newHeaders);
                 }}
                 placeholder="Header name"
-                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm transition-all"
               />
               <input
                 type="text"
@@ -430,7 +445,7 @@ export default function WebhookConfig({
                   onChange("webhook_headers", newHeaders);
                 }}
                 placeholder="Header value"
-                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm transition-all"
               />
               <button
                 type="button"
@@ -440,9 +455,10 @@ export default function WebhookConfig({
                   setWebhookHeaders(newHeaders);
                   onChange("webhook_headers", newHeaders);
                 }}
-                className="px-3 py-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 text-sm"
+                className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                title="Remove header"
               >
-                Remove
+                <FiTrash2 className="w-4 h-4" />
               </button>
             </div>
           ))}
@@ -452,9 +468,10 @@ export default function WebhookConfig({
               const newHeaders = { ...webhookHeaders, "": "" };
               setWebhookHeaders(newHeaders);
             }}
-            className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
+            className="flex items-center gap-1.5 text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium px-1 py-0.5 rounded-md hover:bg-primary-50 dark:hover:bg-primary-900/10 transition-colors w-fit"
           >
-            + Add Header
+            <FiPlus className="w-3.5 h-3.5" />
+            Add Header
           </button>
         </div>
       </div>
@@ -510,7 +527,7 @@ export default function WebhookConfig({
                   onChange("webhook_body", current + token);
                   e.currentTarget.value = "";
                 }}
-                className="text-xs border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                className="text-xs border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-white transition-all hover:border-gray-400 dark:hover:border-gray-500"
                 aria-label="Insert variable"
                 title="Insert a variable token"
               >
@@ -559,7 +576,7 @@ export default function WebhookConfig({
               onChange={(e) =>
                 onChange("webhook_body", e.target.value)
               }
-              className="w-full min-h-[180px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono text-sm"
+              className="w-full min-h-[180px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono text-sm transition-all"
               placeholder={`{\n  \"example\": \"{{some_value}}\"\n}`}
             />
             <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -703,236 +720,256 @@ export default function WebhookConfig({
         )}
       </div>
 
-      <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50">
-        <div className="flex items-center justify-between gap-3">
+      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-card shadow-sm overflow-hidden mt-6">
+        <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/20 flex items-center justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
               Test request
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              Sends the request server-side and shows what was sent and
-              what came back.
+            </h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Sends the request server-side and shows what was sent and what came back.
             </p>
           </div>
           <button
             type="button"
             onClick={handleTestHttpRequest}
-            disabled={
-              httpTestLoading ||
-              (selectedRunId ? selectedRunLoading : false)
-            }
-            className="px-3 py-2 text-sm font-medium bg-gray-900 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-gray-600 disabled:opacity-50"
+            disabled={httpTestLoading || (selectedRunId ? selectedRunLoading : false)}
+            className={`px-4 py-2 text-sm font-medium rounded-lg transition-all active:scale-[0.98] ${
+              httpTestLoading
+                ? "bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed border border-gray-200 dark:border-gray-700"
+                : "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-200 shadow-sm"
+            }`}
           >
-            {httpTestLoading
-              ? "Testing…"
-              : httpTestResult
-                ? "Test Again"
-                : "Test"}
+            {httpTestLoading ? "Testing…" : httpTestResult ? "Test Again" : "Test Request"}
           </button>
         </div>
 
-        <div className="mt-3">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Use data from a previous run (optional)
-          </label>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-            Select a completed run so placeholders like{" "}
-            <span className="font-mono">{"{{steps.0.output}}"}</span>{" "}
-            and{" "}
-            <span className="font-mono">
-              {"{{steps.0.artifact_url}}"}
-            </span>{" "}
-            resolve to that run’s step outputs and artifact URLs during
-            testing.
-          </p>
-
-          {!workflowId ? (
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Save this workflow to enable run selection.
+        <div className="p-4 space-y-5">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Use data from a previous run (optional)
+            </label>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+              Select a completed run so placeholders like{" "}
+              <span className="font-mono">{"{{steps.0.output}}"}</span> and{" "}
+              <span className="font-mono">{"{{steps.0.artifact_url}}"}</span>{" "}
+              resolve during testing.
             </p>
-          ) : (
-            <>
-              <select
-                value={selectedRunId}
-                onChange={(e) => {
-                  setSelectedRunId(e.target.value);
-                  setHttpTestResult(null);
-                  setHttpTestError(null);
-                }}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-              >
-                <option value="">No run selected</option>
-                {(availableRuns || []).map((job: any) => {
-                  const createdAt = job?.created_at
-                    ? new Date(job.created_at).toLocaleString()
-                    : "";
-                  const label = `${job?.job_id || "job"}${createdAt ? ` • ${createdAt}` : ""}`;
-                  return (
-                    <option key={job.job_id} value={job.job_id}>
-                      {label}
-                    </option>
-                  );
-                })}
-              </select>
 
-              {selectedRunId && (
-                <div className="mt-2">
-                  {selectedRunLoading && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Loading run data…
-                    </p>
-                  )}
-                  {selectedRunError && (
-                    <p className="text-xs text-red-700 dark:text-red-400">
-                      {selectedRunError}
-                    </p>
-                  )}
-                  {selectedRunVars?.steps &&
-                    Array.isArray(selectedRunVars.steps) && (
+            {!workflowId ? (
+              <div className="rounded-lg border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30 px-3 py-2 text-xs text-gray-500 dark:text-gray-400">
+                Save this workflow to enable run selection.
+              </div>
+            ) : (
+              <>
+                <select
+                  value={selectedRunId}
+                  onChange={(e) => {
+                    setSelectedRunId(e.target.value);
+                    setHttpTestResult(null);
+                    setHttpTestError(null);
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm transition-all"
+                >
+                  <option value="">No run selected</option>
+                  {(availableRuns || []).map((job: any) => {
+                    const createdAt = job?.created_at
+                      ? new Date(job.created_at).toLocaleString()
+                      : "";
+                    const label = `${job?.job_id || "job"}${
+                      createdAt ? ` • ${createdAt}` : ""
+                    }`;
+                    return (
+                      <option key={job.job_id} value={job.job_id}>
+                        {label}
+                      </option>
+                    );
+                  })}
+                </select>
+
+                {selectedRunId && (
+                  <div className="mt-2">
+                    {selectedRunLoading && (
                       <p className="text-xs text-gray-500 dark:text-gray-400">
-                        Loaded{" "}
-                        <span className="font-medium">
-                          {selectedRunVars.steps.length}
-                        </span>{" "}
-                        step outputs from this run.
+                        Loading run data…
                       </p>
                     )}
+                    {selectedRunError && (
+                      <p className="text-xs text-red-700 dark:text-red-400">
+                        {selectedRunError}
+                      </p>
+                    )}
+                    {selectedRunVars?.steps &&
+                      Array.isArray(selectedRunVars.steps) && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Loaded{" "}
+                          <span className="font-medium">
+                            {selectedRunVars.steps.length}
+                          </span>{" "}
+                          step outputs from this run.
+                        </p>
+                      )}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Test values (optional)
+              </label>
+              <button
+                type="button"
+                onClick={() => setHttpTestValues({ ...httpTestValues, "": "" })}
+                className="flex items-center gap-1.5 text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-semibold px-2 py-1 hover:bg-primary-50 dark:hover:bg-primary-900/10 rounded-lg transition-colors"
+              >
+                <FiPlus className="w-3.5 h-3.5" />
+                Add value
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+              These replace <span className="font-mono">{"{{key}}"}</span>{" "}
+              placeholders during testing.
+            </p>
+
+            <div className="space-y-3">
+              {Object.entries(httpTestValues).map(([key, value], idx) => (
+                <div key={idx} className="flex gap-2 items-center">
+                  <input
+                    type="text"
+                    value={key}
+                    onChange={(e) => {
+                      const newVals = { ...httpTestValues };
+                      delete newVals[key];
+                      newVals[e.target.value] = value;
+                      setHttpTestValues(newVals);
+                    }}
+                    placeholder="key"
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm transition-all"
+                  />
+                  <input
+                    type="text"
+                    value={value}
+                    onChange={(e) => {
+                      const newVals = {
+                        ...httpTestValues,
+                        [key]: e.target.value,
+                      };
+                      setHttpTestValues(newVals);
+                    }}
+                    placeholder="value"
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newVals = { ...httpTestValues };
+                      delete newVals[key];
+                      setHttpTestValues(newVals);
+                    }}
+                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                    title="Remove value"
+                  >
+                    <FiTrash2 className="w-4 h-4" />
+                  </button>
                 </div>
-              )}
-            </>
+              ))}
+            </div>
+          </div>
+
+          {httpTestError && (
+            <div className="rounded-lg border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-900/20 px-3 py-2 text-sm text-red-800 dark:text-red-200">
+              {httpTestError}
+            </div>
           )}
-        </div>
 
-        <div className="mt-3">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Test values (optional)
-          </label>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-            These replace <span className="font-mono">{"{{key}}"}</span>{" "}
-            placeholders during testing.
-          </p>
-          <div className="space-y-2">
-            {Object.entries(httpTestValues).map(([key, value], idx) => (
-              <div key={idx} className="flex gap-2">
-                <input
-                  type="text"
-                  value={key}
-                  onChange={(e) => {
-                    const newVals = { ...httpTestValues };
-                    delete newVals[key];
-                    newVals[e.target.value] = value;
-                    setHttpTestValues(newVals);
-                  }}
-                  placeholder="key"
-                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-                />
-                <input
-                  type="text"
-                  value={value}
-                  onChange={(e) => {
-                    const newVals = {
-                      ...httpTestValues,
-                      [key]: e.target.value,
-                    };
-                    setHttpTestValues(newVals);
-                  }}
-                  placeholder="value"
-                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    const newVals = { ...httpTestValues };
-                    delete newVals[key];
-                    setHttpTestValues(newVals);
-                  }}
-                  className="px-3 py-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 text-sm"
+          {httpTestResult && (() => {
+            const sentPayload = {
+              method: httpTestResult.request?.method,
+              url: httpTestResult.request?.url,
+              headers: httpTestResult.request?.headers,
+              body:
+                httpTestResult.request?.body_json !== null &&
+                httpTestResult.request?.body_json !== undefined
+                  ? httpTestResult.request?.body_json
+                  : httpTestResult.request?.body,
+            };
+            const responsePayload = {
+              status: httpTestResult.response?.status,
+              headers: httpTestResult.response?.headers,
+              body:
+                httpTestResult.response?.body_json !== null &&
+                httpTestResult.response?.body_json !== undefined
+                  ? httpTestResult.response?.body_json
+                  : httpTestResult.response?.body,
+            };
+
+            return (
+              <div className="space-y-3">
+                <div
+                  className={`rounded-lg border px-3 py-2 text-sm ${
+                    httpTestResult.ok
+                      ? "border-green-200 dark:border-green-900 bg-green-50 dark:bg-green-900/20 text-green-900 dark:text-green-200"
+                      : "border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-900/20 text-red-900 dark:text-red-200"
+                  }`}
                 >
-                  Remove
-                </button>
+                  {httpTestResult.ok ? "Request success" : "Request completed"} with status:{" "}
+                  <span className="font-mono">
+                    {httpTestResult.response?.status ?? "N/A"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
+                    <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                      <span>Sent</span>
+                      <button
+                        type="button"
+                        onClick={() => copyJson(sentPayload, "Request")}
+                        className="inline-flex items-center gap-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+                      >
+                        <FiCopy className="w-3.5 h-3.5" />
+                        Copy
+                      </button>
+                    </div>
+                    <div className="p-3">
+                      <JsonViewer
+                        value={sentPayload}
+                        raw={JSON.stringify(sentPayload, null, 2)}
+                        defaultMode="tree"
+                        defaultExpandedDepth={2}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
+                    <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                      <span>Response</span>
+                      <button
+                        type="button"
+                        onClick={() => copyJson(responsePayload, "Response")}
+                        className="inline-flex items-center gap-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+                      >
+                        <FiCopy className="w-3.5 h-3.5" />
+                        Copy
+                      </button>
+                    </div>
+                    <div className="p-3">
+                      <JsonViewer
+                        value={responsePayload}
+                        raw={JSON.stringify(responsePayload, null, 2)}
+                        defaultMode="tree"
+                        defaultExpandedDepth={2}
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
-            ))}
-            <button
-              type="button"
-              onClick={() =>
-                setHttpTestValues({ ...httpTestValues, "": "" })
-              }
-              className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
-            >
-              + Add value
-            </button>
-          </div>
+            );
+          })()}
         </div>
-
-        {httpTestError && (
-          <div className="mt-3 rounded-lg border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-900/20 px-3 py-2 text-sm text-red-800 dark:text-red-200">
-            {httpTestError}
-          </div>
-        )}
-
-        {httpTestResult && (
-          <div className="mt-3 space-y-3">
-            <div
-              className={`rounded-lg border px-3 py-2 text-sm ${
-                httpTestResult.ok
-                  ? "border-green-200 dark:border-green-900 bg-green-50 dark:bg-green-900/20 text-green-900 dark:text-green-200"
-                  : "border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-900/20 text-red-900 dark:text-red-200"
-              }`}
-            >
-              {httpTestResult.ok
-                ? "Request success"
-                : "Request completed"}{" "}
-              with status:{" "}
-              <span className="font-mono">
-                {httpTestResult.response?.status ?? "N/A"}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                  Sent
-                </div>
-                <pre className="p-3 text-xs overflow-x-auto whitespace-pre-wrap text-gray-900 dark:text-gray-100">
-                  {JSON.stringify(
-                    {
-                      method: httpTestResult.request?.method,
-                      url: httpTestResult.request?.url,
-                      headers: httpTestResult.request?.headers,
-                      body:
-                        httpTestResult.request?.body_json !== null &&
-                        httpTestResult.request?.body_json !== undefined
-                          ? httpTestResult.request?.body_json
-                          : httpTestResult.request?.body,
-                    },
-                    null,
-                    2,
-                  )}
-                </pre>
-              </div>
-              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                  Response
-                </div>
-                <pre className="p-3 text-xs overflow-x-auto whitespace-pre-wrap text-gray-900 dark:text-gray-100">
-                  {JSON.stringify(
-                    {
-                      status: httpTestResult.response?.status,
-                      headers: httpTestResult.response?.headers,
-                      body:
-                        httpTestResult.response?.body_json !== null &&
-                        httpTestResult.response?.body_json !== undefined
-                          ? httpTestResult.response?.body_json
-                          : httpTestResult.response?.body,
-                    },
-                    null,
-                    2,
-                  )}
-                </pre>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </>
   );
