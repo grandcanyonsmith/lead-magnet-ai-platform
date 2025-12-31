@@ -80,6 +80,7 @@ export class ComputeStack extends cdk.Stack {
               memorySize: LAMBDA_DEFAULTS.JOB_PROCESSOR.MEMORY_SIZE,
               environment: lambdaEnv,
               logGroup: logGroup,
+              tracing: lambda.Tracing.ACTIVE,
             }
           );
         } else {
@@ -107,6 +108,7 @@ export class ComputeStack extends cdk.Stack {
               memorySize: LAMBDA_DEFAULTS.JOB_PROCESSOR.MEMORY_SIZE,
               environment: lambdaEnv,
               logGroup: logGroup,
+              tracing: lambda.Tracing.ACTIVE,
             }
           );
         }
@@ -158,6 +160,17 @@ export class ComputeStack extends cdk.Stack {
         );
       }
     }
+
+    // Shell tool: allow the worker to sign presigned PUT URLs for controlled uploads to an allowlisted bucket.
+    // This is required because presigned URLs are authorized as the signing principal at request time.
+    // Scope tightly to a dedicated prefix.
+    this.jobProcessorLambda.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ['s3:PutObject'],
+        resources: ['arn:aws:s3:::cc360-pages/leadmagnet/*'],
+      })
+    );
 
     // Create IAM role for Step Functions
     const stateMachineRole = new iam.Role(this, 'StateMachineRole', {

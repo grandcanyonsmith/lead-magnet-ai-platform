@@ -61,6 +61,7 @@ export const STACK_NAMES = {
   SHELL_EXECUTOR: 'leadmagnet-shell-executor',
   COMPUTE: 'leadmagnet-compute',
   API: 'leadmagnet-api',
+  DASHBOARD: 'leadmagnet-dashboard',
 } as const;
 
 /**

@@ -58,14 +58,14 @@ export function SummarySection({
               <span
                 className={clsx(
                   "h-1.5 w-1.5 rounded-full",
-                  refreshing ? "bg-primary-500 animate-pulse" : "bg-gray-300",
+                  refreshing ? "bg-primary-500 dark:bg-primary animate-pulse" : "bg-gray-300 dark:bg-secondary",
                 )}
               />
               {lastRefreshedLabel
                 ? `Refreshed ${lastRefreshedLabel}`
                 : "Waiting for refresh"}
             </span>
-            <span className="h-3 w-px bg-gray-200" />
+            <span className="h-3 w-px bg-gray-200 dark:bg-border" />
             <span>
               {jobCount} {jobCount === 1 ? "job" : "jobs"} visible
             </span>

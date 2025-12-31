@@ -32,6 +32,7 @@ from services.job_completion_service import JobCompletionService
 from services.job_error_handler import JobErrorHandler
 from services.data_loader_service import DataLoaderService
 from dependency_resolver import resolve_execution_groups, validate_dependencies
+from core import log_context
 
 logger = logging.getLogger(__name__)
 
@@ -39,30 +40,57 @@ logger = logging.getLogger(__name__)
 class JobProcessor:
     """Processes lead magnet generation jobs."""
     
-    def __init__(self, db_service: DynamoDBService, s3_service: S3Service):
+    def __init__(
+        self,
+        db_service: DynamoDBService,
+        s3_service: S3Service,
+        ai_service: Optional[AIService] = None,
+        template_service: Optional[TemplateService] = None,
+        artifact_service: Optional[ArtifactService] = None,
+        delivery_service: Optional[DeliveryService] = None,
+        usage_service: Optional[UsageService] = None,
+        image_artifact_service: Optional[Any] = None,
+        job_completion_service: Optional[JobCompletionService] = None,
+        step_processor: Optional[StepProcessor] = None,
+        workflow_orchestrator: Optional[WorkflowOrchestrator] = None,
+        data_loader: Optional[DataLoaderService] = None
+    ):
         """
         Initialize job processor with all required services.
         
         Args:
             db_service: DynamoDB service instance
             s3_service: S3 service instance
+            ai_service: Optional AI service instance
+            template_service: Optional Template service instance
+            artifact_service: Optional Artifact service instance
+            delivery_service: Optional Delivery service instance
+            usage_service: Optional Usage service instance
+            image_artifact_service: Optional Image Artifact service instance
+            job_completion_service: Optional Job Completion service instance
+            step_processor: Optional Step Processor instance
+            workflow_orchestrator: Optional Workflow Orchestrator instance
+            data_loader: Optional Data Loader service instance
         """
         self.db = db_service
         self.s3 = s3_service
-        self.ai_service = AIService()
-        self.template_service = TemplateService()
+        self.ai_service = ai_service or AIService()
+        self.template_service = template_service or TemplateService()
         
         # Initialize core services
-        self.artifact_service = ArtifactService(db_service, s3_service)
-        self.delivery_service = DeliveryService(db_service, self.ai_service, s3_service)
-        self.usage_service = UsageService(db_service)
+        self.artifact_service = artifact_service or ArtifactService(db_service, s3_service)
+        self.delivery_service = delivery_service or DeliveryService(db_service, self.ai_service, s3_service)
+        self.usage_service = usage_service or UsageService(db_service)
         
         # Initialize image artifact service
-        from services.image_artifact_service import ImageArtifactService
-        self.image_artifact_service = ImageArtifactService(self.artifact_service)
+        if image_artifact_service:
+            self.image_artifact_service = image_artifact_service
+        else:
+            from services.image_artifact_service import ImageArtifactService
+            self.image_artifact_service = ImageArtifactService(self.artifact_service)
         
         # Initialize job completion service (needed by workflow orchestrator)
-        self.job_completion_service = JobCompletionService(
+        self.job_completion_service = job_completion_service or JobCompletionService(
             artifact_service=self.artifact_service,
             db_service=self.db,
             s3_service=self.s3,
@@ -71,7 +99,7 @@ class JobProcessor:
         )
         
         # Initialize step processor
-        self.step_processor = StepProcessor(
+        self.step_processor = step_processor or StepProcessor(
             ai_service=self.ai_service,
             artifact_service=self.artifact_service,
             db_service=self.db,
@@ -81,7 +109,7 @@ class JobProcessor:
         )
         
         # Initialize workflow orchestrator
-        self.workflow_orchestrator = WorkflowOrchestrator(
+        self.workflow_orchestrator = workflow_orchestrator or WorkflowOrchestrator(
             step_processor=self.step_processor,
             ai_service=self.ai_service,
             db_service=self.db,
@@ -90,7 +118,7 @@ class JobProcessor:
         )
         
         # Initialize data loader service for parallel data loading
-        self.data_loader = DataLoaderService(self.db)
+        self.data_loader = data_loader or DataLoaderService(self.db)
     
     def resolve_step_dependencies(self, steps: List[Step]) -> Dict[str, Any]:
         """
@@ -156,6 +184,14 @@ class JobProcessor:
         workflow = data['workflow']
         submission = data['submission']
         form = data['form']
+        
+        # Bind correlation context
+        log_context.bind(
+            tenant_id=job.get('tenant_id'),
+            workflow_id=workflow.get('workflow_id'),
+            submission_id=submission.get('submission_id'),
+            workflow_name=workflow.get('workflow_name')
+        )
         
         logger.info(f"[JobProcessor] Job data loaded successfully", extra={
             'job_id': job_id,
@@ -341,6 +377,14 @@ class JobProcessor:
             raise ValueError(f"Job {job_id} is missing required field 'workflow_id'")
         if not job.get('submission_id'):
             raise ValueError(f"Job {job_id} is missing required field 'submission_id'")
+        
+        # Bind correlation context
+        log_context.bind(
+            tenant_id=job.get('tenant_id'),
+            workflow_id=workflow.get('workflow_id'),
+            submission_id=submission.get('submission_id'),
+            workflow_name=workflow.get('workflow_name')
+        )
         
         return job, workflow, submission, form
     

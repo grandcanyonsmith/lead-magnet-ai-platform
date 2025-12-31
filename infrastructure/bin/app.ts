@@ -8,6 +8,7 @@ import { WorkerStack } from '../lib/worker-stack';
 import { ComputeStack } from '../lib/compute-stack';
 import { ApiStack } from '../lib/api-stack';
 import { ShellExecutorStack } from '../lib/shell-executor-stack';
+import { DashboardStack } from '../lib/dashboard-stack';
 import { STACK_NAMES, DEFAULT_REGION, SHELL_EXECUTOR_TASK_FAMILY } from '../lib/config/constants';
 
 /**
@@ -144,6 +145,19 @@ function createStacks(app: cdk.App, env: cdk.Environment): void {
       resultsBucketName: shellExecutorStack.resultsBucket.bucketName,
     },
   });
+
+  // Stack 7: Dashboard - Observability layer
+  // Depends on: ApiStack, ComputeStack, ShellExecutorStack
+  new DashboardStack(app, 'LeadMagnetDashboardStack', {
+    env,
+    stackName: STACK_NAMES.DASHBOARD,
+    description: 'CloudWatch Dashboard for Lead Magnet Platform',
+    api: apiStack.api,
+    apiFunction: apiStack.apiFunction,
+    jobProcessorFunction: computeStack.jobProcessorLambda,
+    stateMachine: computeStack.stateMachine,
+    shellExecutorCluster: shellExecutorStack.cluster,
+  });
 }
 
 /**
@@ -162,6 +176,11 @@ function main(): void {
 
     // Create all stacks
     createStacks(app, env);
+
+    // Add tags to all resources
+    cdk.Tags.of(app).add('Project', 'LeadMagnet');
+    cdk.Tags.of(app).add('Environment', process.env.ENVIRONMENT || 'dev');
+    cdk.Tags.of(app).add('ManagedBy', 'CDK');
 
     // Synthesize CloudFormation templates
     app.synth();

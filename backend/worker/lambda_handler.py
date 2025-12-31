@@ -7,6 +7,8 @@ import os
 import logging
 from typing import Dict, Any
 
+from core.logger import setup_logging, get_logger
+from core import log_context
 from processor import JobProcessor
 from db_service import DynamoDBService
 from s3_service import S3Service
@@ -14,11 +16,8 @@ from services.job_error_handler import JobErrorHandler
 from services.lambda_router import LambdaRouter
 
 # Setup logging
-logging.basicConfig(
-    level=os.environ.get('LOG_LEVEL', 'INFO').upper(),
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+setup_logging(level=os.environ.get('LOG_LEVEL', 'INFO').upper())
+logger = get_logger(__name__)
 
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
@@ -41,8 +40,30 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     Returns:
         Dictionary with success status and optional error
     """
-    # Extract job_id from event
+    # 1. Clear previous context (Lambda container reuse)
+    log_context.clear()
+    
+    # 2. Extract context fields
     job_id = event.get('job_id')
+    step_index = event.get('step_index')
+    step_type = event.get('step_type', 'workflow_step')
+    action = event.get('action')
+    
+    request_id = getattr(context, 'aws_request_id', None) if context else None
+    function_name = getattr(context, 'function_name', None) if context else None
+    
+    # 3. Bind context
+    log_context.bind(
+        service="worker-lambda",
+        job_id=job_id,
+        step_index=step_index,
+        step_type=step_type,
+        action=action,
+        request_id=request_id,
+        function_name=function_name,
+        aws_region=os.environ.get('AWS_REGION')
+    )
+    
     if not job_id:
         logger.error("[LambdaHandler] job_id not provided in event", extra={'event_keys': list(event.keys())})
         return {
@@ -51,20 +72,13 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             'error_type': 'ValueError'
         }
     
-    step_index = event.get('step_index')
-    step_type = event.get('step_type', 'workflow_step')
-    
     logger.info(f"[LambdaHandler] Starting Lambda handler", extra={
-        'job_id': job_id,
-        'step_index': step_index,
-        'step_type': step_type,
-        'request_id': getattr(context, 'aws_request_id', None) if context else None,
-        'function_name': getattr(context, 'function_name', None) if context else None
+        'event_keys': list(event.keys())
     })
     
     try:
         # Initialize services
-        logger.debug(f"[LambdaHandler] Initializing services", extra={'job_id': job_id})
+        logger.debug(f"[LambdaHandler] Initializing services")
         db_service = DynamoDBService()
         s3_service = S3Service()
         processor = JobProcessor(db_service, s3_service)

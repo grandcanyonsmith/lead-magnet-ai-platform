@@ -481,7 +481,7 @@ export function TechnicalDetails({
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Raw Error Details
               </label>
-              <div className="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-4 font-mono text-xs text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-all">
+              <div className="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-4 font-mono text-xs text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words">
                 {job.error_message}
               </div>
             </div>

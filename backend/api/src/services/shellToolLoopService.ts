@@ -5,6 +5,7 @@ import { logger } from "../utils/logger";
 import { ApiError } from "../utils/errors";
 import { env } from "../utils/env";
 import { runShellExecutorJob } from "./shellExecutorService";
+import { ulid } from "ulid";
 
 type ShellCall = {
   call_id: string;
@@ -60,11 +61,14 @@ export type RunShellToolLoopArgs = {
   instructions?: string;
   input: string;
   maxSteps?: number;
+  workspaceId?: string;
+  resetWorkspace?: boolean;
 };
 
 export type RunShellToolLoopResult = {
   responseId: string;
   outputText: string;
+  workspaceId: string;
 };
 
 /**
@@ -78,6 +82,22 @@ export async function runShellToolLoop(
   if (!env.shellToolEnabled) {
     throw new ApiError("Shell tool is disabled", 404);
   }
+
+  const rawWorkspaceId =
+    typeof args.workspaceId === "string" ? args.workspaceId.trim() : "";
+  const providedWorkspaceId = rawWorkspaceId.length > 0 ? rawWorkspaceId : undefined;
+  if (
+    providedWorkspaceId &&
+    !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(providedWorkspaceId)
+  ) {
+    throw new ApiError("Invalid workspace_id", 400);
+  }
+
+  const workspaceId = providedWorkspaceId || `api_${ulid()}`;
+  // Only reset by default when we generate a new workspace id for this loop.
+  // If the caller supplies a workspace_id, treat it as a continuation unless reset is explicitly requested.
+  let resetWorkspaceNext =
+    providedWorkspaceId ? Boolean(args.resetWorkspace) : args.resetWorkspace ?? true;
 
   const model = "gpt-5.2";
   const maxSteps = Number.isFinite(args.maxSteps)
@@ -109,6 +129,7 @@ export async function runShellToolLoop(
       return {
         responseId: (response as any).id,
         outputText: String(outputText),
+        workspaceId,
       };
     }
 
@@ -143,7 +164,11 @@ export async function runShellToolLoop(
         commands,
         timeoutMs: call.action.timeout_ms || 120000,
         maxOutputLength: call.action.max_output_length || 4096,
+        workspaceId,
+        resetWorkspace: resetWorkspaceNext,
       });
+      // Only reset once, on the first actual task execution.
+      resetWorkspaceNext = false;
 
       toolOutputs.push({
         type: "shell_call_output",

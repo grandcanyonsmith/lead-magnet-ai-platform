@@ -110,7 +110,8 @@ class AIStepProcessor:
                 tenant_id=tenant_id,
                 job_id=job_id,
                 previous_image_urls=previous_image_urls,
-                reasoning_effort=step_reasoning_effort
+                reasoning_effort=step_reasoning_effort,
+                step_index=step_index,
             )
         finally:
             # Clean up step context

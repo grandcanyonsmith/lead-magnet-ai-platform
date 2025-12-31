@@ -197,9 +197,9 @@ export default function EditFormClient() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="h-8 bg-gray-200 rounded w-48 animate-pulse"></div>
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="h-64 bg-gray-200 rounded animate-pulse"></div>
+        <div className="h-8 bg-gray-200 dark:bg-secondary rounded w-48 animate-pulse"></div>
+        <div className="bg-white dark:bg-card rounded-lg shadow p-6 border border-gray-200 dark:border-border">
+          <div className="h-64 bg-gray-200 dark:bg-secondary rounded animate-pulse"></div>
         </div>
       </div>
     );
