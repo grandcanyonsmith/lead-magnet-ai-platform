@@ -1,6 +1,7 @@
 import logging
 import time
 import warnings
+import asyncio
 from typing import List, Dict, Any, Optional, AsyncGenerator
 from services.cua.types import (
     LogEvent, ActionCallEvent, ScreenshotEvent, 
@@ -61,8 +62,51 @@ class CUAgent:
                     display_height = int(tool.get('display_height', 768))
                     break
 
-            self.env.initialize(display_width, display_height)
+            await self.env.initialize(display_width, display_height)
             yield LogEvent(type='log', timestamp=time.time(), level='info', message='Environment ready.')
+
+            # Check if input_text contains a URL and navigate there
+            import re
+            # Try to extract URL from input_text
+            # Pattern 1: Full URL (http:// or https://)
+            url_pattern = r'https?://[^\s<>"\'\)]+'
+            url_match = re.search(url_pattern, input_text)
+            initial_url = None
+            
+            if url_match:
+                initial_url = url_match.group(0).rstrip('.,;!?)')
+            else:
+                # Pattern 2: Domain-like patterns (e.g., "bing.com", "go to example.com")
+                domain_pattern = r'(?:go to |visit |navigate to |open )?([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+)'
+                domain_match = re.search(domain_pattern, input_text, re.IGNORECASE)
+                if domain_match:
+                    domain = domain_match.group(1)
+                    # Don't match common non-URL words
+                    if domain and not domain.lower() in ['com', 'org', 'net', 'io', 'ai', 'the', 'and', 'for']:
+                        initial_url = f"https://{domain}"
+            
+            # Navigate to URL if found, otherwise use default
+            target_url = initial_url if initial_url else "https://www.bing.com"
+            if not initial_url:
+                yield LogEvent(type='log', timestamp=time.time(), level='info', message=f'No URL found in input, using default: {target_url}')
+            
+            try:
+                await self.env.execute_action({'type': 'navigate', 'url': target_url})
+                # Capture screenshot after navigation
+                screenshot_b64 = await self.env.capture_screenshot()
+                current_url = await self.env.get_current_url()
+                url = self.image_handler.upload_base64_image_to_s3(
+                    screenshot_b64, 'image/jpeg', tenant_id=tenant_id, job_id=job_id
+                )
+                yield ScreenshotEvent(
+                    type='screenshot', timestamp=time.time(),
+                    url=url or '', current_url=current_url, base64=screenshot_b64
+                )
+                if url:
+                    screenshot_urls.append(url)
+            except Exception as e:
+                logger.warning(f"Failed to navigate to {target_url}: {e}")
+                yield LogEvent(type='log', timestamp=time.time(), level='warning', message=f'Navigation failed: {e}')
 
             # 2. Initial Request
             initial_params = openai_client.build_api_params(
@@ -77,6 +121,9 @@ class CUAgent:
             if params:
                 initial_params.update(params)
 
+            # Skip initial screenshot - we'll capture after navigation instead
+            # This saves time and avoids blank screenshots
+            
             yield LogEvent(type='log', timestamp=time.time(), level='info', message='Sending initial request to model...')
             
             # This is sync in existing code, but we are in async def. 
@@ -155,7 +202,7 @@ class CUAgent:
 
                 # Execute
                 try:
-                    self.env.execute_action(action)
+                    await self.env.execute_action(action)
                     yield ActionExecutedEvent(
                         type='action_executed', timestamp=time.time(),
                         action_type=action.get('type', 'unknown'), success=True
@@ -168,24 +215,30 @@ class CUAgent:
                     )
                     # We continue to take screenshot even if action failed
                 
-                # Sleep a bit
-                time.sleep(1)
-
                 # Screenshot
                 try:
-                    screenshot_b64 = self.env.capture_screenshot()
-                    current_url = self.env.get_current_url()
+                    screenshot_b64 = await self.env.capture_screenshot()
+                    current_url = await self.env.get_current_url()
                     
-                    # Upload
+                    # Log screenshot size for debugging
+                    logger.info(f"[CUAgent] Captured screenshot, base64 length: {len(screenshot_b64)}, current_url: {current_url}")
+                    
+                    # Upload (using jpeg for faster uploads)
                     url = self.image_handler.upload_base64_image_to_s3(
-                        screenshot_b64, 'image/png', tenant_id=tenant_id, job_id=job_id
+                        screenshot_b64, 'image/jpeg', tenant_id=tenant_id, job_id=job_id
                     )
+                    logger.info(f"[CUAgent] Screenshot uploaded, URL: {url}")
+                    
+                    # Always include base64 for local dev fallback, even if URL exists
+                    screenshot_event = ScreenshotEvent(
+                        type='screenshot', timestamp=time.time(),
+                        url=url or '', current_url=current_url, base64=screenshot_b64
+                    )
+                    logger.info(f"[CUAgent] Yielding screenshot event, URL: {url[:50] if url else 'None'}..., base64 length: {len(screenshot_b64)}")
+                    yield screenshot_event
+                    
                     if url:
                         screenshot_urls.append(url)
-                        yield ScreenshotEvent(
-                            type='screenshot', timestamp=time.time(),
-                            url=url, current_url=current_url
-                        )
                     
                     # Prepare next input
                     next_input = [{
@@ -233,5 +286,8 @@ class CUAgent:
                     break
         
         finally:
-            self.env.cleanup()
+            try:
+                await self.env.cleanup()
+            except Exception:
+                pass
 

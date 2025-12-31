@@ -5,7 +5,6 @@ import {
 import { env } from "../utils/env";
 import { logger } from "../utils/logger";
 import { ApiError } from "../utils/errors";
-import { Readable } from "stream";
 
 // Initialize Lambda Client
 const lambdaClient = new LambdaClient({ region: env.awsRegion });
@@ -51,8 +50,18 @@ export class CUAController {
             throw new Error("Local execution requires response object for streaming");
         }
         
+        const path = require('path');
         const { spawn } = require('child_process');
-        const pythonProcess = spawn('python3', ['backend/worker/run_cua_local.py'], {
+        
+        // Resolve script path relative to CWD (backend/api) to point to backend/worker/run_cua_local.py
+        // If CWD is backend/api, we need to go up to backend, then into worker
+        const scriptPath = path.resolve(process.cwd(), '../worker/run_cua_local.py');
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'cuaController.ts:60',message:'Spawning python process',data:{cwd: process.cwd(), scriptPath: scriptPath},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
+        // #endregion
+
+        const pythonProcess = spawn('python3', [scriptPath], {
             cwd: process.cwd(), // Assumes running from root
             env: { ...process.env, PYTHONPATH: 'backend/worker' }
         });
@@ -73,21 +82,35 @@ export class CUAController {
 
         pythonProcess.stderr.on('data', (data: any) => {
             logger.error(`[CUA Local] Stderr: ${data}`);
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H1',location:'cuaController.ts:84',message:'Python stderr',data:{stderrPreview:String(data).slice(0,240)},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
             // Optionally stream stderr as log event?
             // res.write(JSON.stringify({ type: 'log', level: 'error', message: data.toString(), timestamp: Date.now() / 1000 }) + "\n");
         });
 
-        await new Promise<void>((resolve, reject) => {
+        await new Promise<void>((resolve, _reject) => {
             pythonProcess.on('close', (code: number) => {
                 logger.info(`[CUA Local] Process exited with code ${code}`);
                 res.end();
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H3',location:'cuaController.ts:90',message:'Python process closed',data:{exitCode:code,writableEnded:!!res.writableEnded},timestamp:Date.now()})}).catch(()=>{});
+                // #endregion
                 resolve();
             });
-            pythonProcess.on('error', (err: any) => {
-                logger.error(`[CUA Local] Process error: ${err}`);
-                res.end();
-                reject(err);
-            });
+        pythonProcess.on('error', (err: any) => {
+            logger.error(`[CUA Local] Process error: ${err}`);
+            // If we haven't closed the stream yet, try to send error event
+            try {
+                if (!res.writableEnded) {
+                    res.write(JSON.stringify({ type: 'error', message: `Spawn error: ${err.message}` }) + "\n");
+                    res.end();
+                }
+            } catch (e) {
+                logger.error(`[CUA Local] Failed to write error to stream: ${e}`);
+            }
+            resolve(); // Resolve promise to prevent server-local.js from catching and trying to send 500 response
+        });
         });
         return;
     }
@@ -116,8 +139,11 @@ export class CUAController {
 
           for await (const event of response.EventStream) {
             if (event.PayloadChunk) {
-              const chunk = Buffer.from(event.PayloadChunk.Payload).toString("utf-8");
-              res.write(chunk);
+              const payload = event.PayloadChunk.Payload;
+              if (payload) {
+                const chunk = Buffer.from(payload).toString("utf-8");
+                res.write(chunk);
+              }
             }
             if (event.InvokeComplete) {
                 // End of stream
@@ -131,7 +157,10 @@ export class CUAController {
             let fullBody = "";
             for await (const event of response.EventStream) {
                  if (event.PayloadChunk) {
-                     fullBody += Buffer.from(event.PayloadChunk.Payload).toString("utf-8");
+                     const payload = event.PayloadChunk.Payload;
+                     if (payload) {
+                         fullBody += Buffer.from(payload).toString("utf-8");
+                     }
                  }
             }
             return JSON.parse(fullBody.split("\n").filter(Boolean).map(l => JSON.parse(l)).pop() || "{}"); // Crude approximation
