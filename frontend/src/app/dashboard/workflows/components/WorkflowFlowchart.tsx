@@ -108,7 +108,7 @@ function FlowchartContent({
       position: { x: START_NODE_X - NODE_SPACING * 0.7, y: NODE_Y },
       data: {
         label: (
-          <div className="flex h-20 w-24 flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white/80 text-xs font-semibold text-slate-500 shadow-sm backdrop-blur">
+          <div className="flex h-20 w-24 flex-col items-center justify-center rounded-2xl border border-slate-200 dark:border-border bg-white/80 dark:bg-card/80 text-xs font-semibold text-slate-500 dark:text-muted-foreground shadow-sm backdrop-blur">
             Start
           </div>
         ),
@@ -152,7 +152,7 @@ function FlowchartContent({
       position: { x: getBasePosition(steps.length), y: NODE_Y },
       data: {
         label: (
-          <div className="flex h-20 w-24 flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white/80 text-xs font-semibold text-slate-500 shadow-sm backdrop-blur">
+          <div className="flex h-20 w-24 flex-col items-center justify-center rounded-2xl border border-slate-200 dark:border-border bg-white/80 dark:bg-card/80 text-xs font-semibold text-slate-500 dark:text-muted-foreground shadow-sm backdrop-blur">
             End
           </div>
         ),
@@ -311,7 +311,7 @@ function FlowchartContent({
   }, [steps.length, fitView]);
 
   return (
-    <div className="relative h-[600px] w-full overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-primary-50/20 shadow-inner shadow-white/70">
+    <div className="relative h-[600px] w-full overflow-hidden rounded-3xl border border-slate-200 dark:border-border bg-gradient-to-br from-slate-50 dark:from-secondary/30 via-white dark:via-card to-primary-50/20 dark:to-primary/10 shadow-inner shadow-white/70 dark:shadow-black/20">
       <ReactFlow
         nodes={nodesState}
         edges={edgesState}
@@ -339,13 +339,13 @@ function FlowchartContent({
         }}
         className="workflow-flow-canvas"
       >
-        <Background color="#dbeafe" gap={30} size={1} />
+        <Background color="#dbeafe" gap={30} size={1} className="dark:opacity-20" />
         <Controls
           showInteractive={false}
-          className="rounded-full border border-slate-200 bg-white/90 shadow-sm backdrop-blur"
+          className="rounded-full border border-slate-200 dark:border-border bg-white/90 dark:bg-card/90 shadow-sm backdrop-blur"
         />
         <MiniMap
-          className="rounded-xl border border-slate-200 bg-white/90 shadow-sm"
+          className="rounded-xl border border-slate-200 dark:border-border bg-white/90 dark:bg-card/90 shadow-sm"
           pannable
           zoomable
           nodeColor={(node) => {
@@ -361,8 +361,8 @@ function FlowchartContent({
 
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(37,99,235,0.06),transparent_55%)]" />
 
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-white/95 via-white/60 to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white/95 via-white/60 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-white/95 dark:from-card/95 via-white/60 dark:via-card/60 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white/95 dark:from-card/95 via-white/60 dark:via-card/60 to-transparent" />
 
       <div className="pointer-events-auto absolute left-3 sm:left-6 top-3 sm:top-6 z-10 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
         <button
@@ -375,7 +375,7 @@ function FlowchartContent({
         </button>
         <button
           onClick={() => fitView({ padding: 0.25, duration: 300 })}
-          className="flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white/90 px-3 sm:px-4 py-2 text-sm text-slate-600 shadow-sm transition hover:border-primary-200 hover:text-primary-600 touch-target"
+          className="flex items-center justify-center gap-2 rounded-full border border-slate-200 dark:border-border bg-white/90 dark:bg-card/90 px-3 sm:px-4 py-2 text-sm text-slate-600 dark:text-foreground shadow-sm transition hover:border-primary-200 dark:hover:border-primary hover:text-primary-600 dark:hover:text-primary touch-target"
           title="Fit view"
         >
           <FiMaximize2 className="h-4 w-4" aria-hidden />
@@ -395,11 +395,11 @@ function FlowchartContent({
 
       {steps.length === 0 && (
         <div className="absolute inset-0 z-10 flex items-center justify-center">
-          <div className="rounded-2xl border border-dashed border-primary-200 bg-white/90 px-10 py-12 text-center shadow-lg shadow-primary-100/50 backdrop-blur">
-            <p className="text-base font-semibold text-slate-700">
+          <div className="rounded-2xl border border-dashed border-primary-200 dark:border-primary/30 bg-white/90 dark:bg-card/90 px-10 py-12 text-center shadow-lg shadow-primary-100/50 dark:shadow-primary/20 backdrop-blur">
+            <p className="text-base font-semibold text-slate-700 dark:text-foreground">
               No workflow steps yet
             </p>
-            <p className="mt-2 text-sm text-slate-500">
+            <p className="mt-2 text-sm text-slate-500 dark:text-muted-foreground">
               Build your automation by adding research, generation, and delivery
               steps.
             </p>

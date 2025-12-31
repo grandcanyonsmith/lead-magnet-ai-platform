@@ -64,10 +64,10 @@ export function DeliverySettings({
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader className="border-b border-gray-100 bg-gray-50/50">
+        <CardHeader className="border-b border-gray-100 dark:border-border bg-gray-50/50 dark:bg-secondary/30">
           <div className="flex items-center gap-3 mb-1">
-            <div className="p-2 bg-green-50 rounded-lg">
-              <ServerStackIcon className="w-5 h-5 text-green-600" />
+            <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded-lg">
+              <ServerStackIcon className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
             <CardTitle className="text-lg">
               Receive Leads via Webhook
@@ -81,7 +81,7 @@ export function DeliverySettings({
         <CardContent className="p-8 space-y-8">
           <div>
             <div className="flex items-center justify-between mb-4">
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-gray-700 dark:text-foreground">
                 Your Webhook URL
               </label>
               <div className="flex gap-2">
@@ -102,7 +102,7 @@ export function DeliverySettings({
                   type="button"
                   onClick={handleRegenerateToken}
                   disabled={isRegenerating || !settings.webhook_url}
-                  className="text-xs h-8 text-red-600 hover:bg-red-50 border-red-200"
+                  className="text-xs h-8 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-800"
                 >
                   <FiRefreshCw
                     className={`w-3.5 h-3.5 mr-1.5 ${isRegenerating ? "animate-spin" : ""}`}
@@ -117,23 +117,23 @@ export function DeliverySettings({
                 type="text"
                 value={settings.webhook_url || ""}
                 readOnly
-                className="font-mono text-gray-600 bg-gray-50"
+                className="font-mono text-gray-600 dark:text-foreground bg-gray-50 dark:bg-secondary"
               />
             </div>
-            <p className="mt-2 text-sm text-gray-500">
-              POST requests to this URL with <code>workflow_id</code> and{" "}
-              <code>form_data</code> will trigger workflow execution.
+            <p className="mt-2 text-sm text-gray-500 dark:text-muted-foreground">
+              POST requests to this URL with <code className="text-gray-700 dark:text-foreground bg-gray-100 dark:bg-secondary px-1 rounded">workflow_id</code> and{" "}
+              <code className="text-gray-700 dark:text-foreground bg-gray-100 dark:bg-secondary px-1 rounded">form_data</code> will trigger workflow execution.
             </p>
 
             {settings.webhook_url && (
-              <div className="mt-6 border border-gray-200 rounded-lg overflow-hidden">
-                <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 flex justify-between items-center">
-                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <div className="mt-6 border border-gray-200 dark:border-border rounded-lg overflow-hidden">
+                <div className="bg-gray-50 dark:bg-secondary px-4 py-2 border-b border-gray-200 dark:border-border flex justify-between items-center">
+                  <span className="text-xs font-medium text-gray-500 dark:text-muted-foreground uppercase tracking-wider">
                     Example Usage
                   </span>
                 </div>
-                <div className="bg-gray-900 p-4 overflow-x-auto">
-                  <pre className="text-xs text-blue-300 font-mono">
+                <div className="bg-gray-900 dark:bg-gray-950 p-4 overflow-x-auto">
+                  <pre className="text-xs text-blue-300 dark:text-blue-400 font-mono">
                     {`curl -X POST "${settings.webhook_url}" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -159,10 +159,10 @@ export function DeliverySettings({
       </Card>
 
       <Card>
-        <CardHeader className="border-b border-gray-100 bg-gray-50/50">
+        <CardHeader className="border-b border-gray-100 dark:border-border bg-gray-50/50 dark:bg-secondary/30">
           <div className="flex items-center gap-3 mb-1">
-            <div className="p-2 bg-blue-50 rounded-lg">
-              <GlobeAltIcon className="w-5 h-5 text-blue-600" />
+            <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <GlobeAltIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
             <CardTitle className="text-lg">
               Integrations & Domain

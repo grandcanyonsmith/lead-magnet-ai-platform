@@ -6,6 +6,10 @@
  *
  * Contract version is pinned to the API's `SHELL_EXECUTOR_CONTRACT_VERSION`.
  *
+ * Workspace persistence note:
+ * - When running with an EFS-mounted `/workspace`, callers may provide `workspace_id`
+ *   and `reset_workspace` to persist files across multiple executor tasks.
+ *
  * Security posture note:
  * - This is intentionally capable of running free-form shell commands.
  * - Safety MUST be enforced by infrastructure controls (no task role creds,
@@ -44,6 +48,35 @@ function isRetryableHttpStatus(status) {
 
 function jitterMs(maxJitterMs) {
   return Math.floor(Math.random() * Math.max(0, maxJitterMs));
+}
+
+function parseWorkspaceId(value) {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== 'string') throw new Error('workspace_id must be a string if provided');
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return undefined;
+  // Avoid path traversal or weird filesystem behavior by restricting characters.
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(trimmed)) {
+    throw new Error('workspace_id contains invalid characters');
+  }
+  return trimmed;
+}
+
+function ensureDir(dir) {
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+  } catch {
+    // ignore
+  }
+}
+
+function resetDir(dir) {
+  try {
+    fs.rmSync(dir, { recursive: true, force: true });
+  } catch {
+    // ignore
+  }
+  ensureDir(dir);
 }
 
 async function readJobRequest() {
@@ -96,6 +129,12 @@ async function readJobRequest() {
   if (payload.max_output_length !== undefined && (!Number.isFinite(payload.max_output_length) || payload.max_output_length <= 0)) {
     throw new Error('max_output_length must be a positive number if provided');
   }
+  if (payload.workspace_id !== undefined && typeof payload.workspace_id !== 'string') {
+    throw new Error('workspace_id must be a string if provided');
+  }
+  if (payload.reset_workspace !== undefined && typeof payload.reset_workspace !== 'boolean') {
+    throw new Error('reset_workspace must be a boolean if provided');
+  }
 
   return payload;
 }
@@ -103,7 +142,7 @@ async function readJobRequest() {
 function ensureWorkspace() {
   const dir = '/workspace';
   try {
-    fs.mkdirSync(dir, { recursive: true });
+    ensureDir(dir);
   } catch {
     // ignore
   }
@@ -304,7 +343,25 @@ async function uploadJson(url, jsonStr, contentType) {
 async function main() {
   const job = await readJobRequest();
   currentJobId = job.job_id;
-  const cwd = ensureWorkspace();
+  const workspaceRoot = ensureWorkspace();
+
+  const workspaceId = parseWorkspaceId(job.workspace_id);
+  const resetWorkspace = Boolean(job.reset_workspace);
+
+  // If a workspace_id is provided, execute inside an isolated per-session directory.
+  // This enables multi-turn loops to persist files across separate ECS tasks.
+  const cwd = workspaceId
+    ? `${workspaceRoot}/sessions/${workspaceId}`
+    : workspaceRoot;
+
+  // Best-effort initialization/reset.
+  if (workspaceId && resetWorkspace) {
+    resetDir(cwd);
+  } else {
+    ensureDir(cwd);
+  }
+
+  // Local dev convenience (mounted ~/.aws). Not used in production.
   maybeLinkAwsConfig(cwd);
 
   const perCommandTimeoutMs = clampInt(job.timeout_ms || getEnv('SHELL_EXECUTOR_TIMEOUT_MS'), {

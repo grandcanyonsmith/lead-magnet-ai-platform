@@ -29,6 +29,7 @@ import { FullScreenPreviewModal } from "@/components/ui/FullScreenPreviewModal";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
+import { JsonViewer } from "@/components/ui/JsonViewer";
 
 import FlowchartSidePanel from "@/app/dashboard/workflows/components/FlowchartSidePanel";
 import {
@@ -624,9 +625,14 @@ function RawJsonPanel({ data }: { data: unknown }) {
         </button>
       </div>
 
-      <pre className="overflow-auto text-xs leading-relaxed p-4 text-gray-100">
-        {jsonString}
-      </pre>
+      <div className="p-4">
+        <JsonViewer
+          value={data}
+          raw={jsonString}
+          defaultMode="tree"
+          defaultExpandedDepth={2}
+        />
+      </div>
     </div>
   );
 }

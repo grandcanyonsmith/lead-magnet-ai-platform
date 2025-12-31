@@ -117,9 +117,9 @@ export function WebhookTester({ webhookUrl }: WebhookTesterProps) {
   };
 
   return (
-    <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+    <div className="mt-6 p-4 bg-gray-50 dark:bg-secondary/30 rounded-lg border border-gray-200 dark:border-border">
       <div className="flex items-center justify-between mb-4">
-        <h4 className="text-sm font-semibold text-gray-900">Test Webhook</h4>
+        <h4 className="text-sm font-semibold text-gray-900 dark:text-foreground">Test Webhook</h4>
         <button
           type="button"
           onClick={handleTest}
@@ -141,20 +141,20 @@ export function WebhookTester({ webhookUrl }: WebhookTesterProps) {
       </div>
 
       <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-gray-700 dark:text-foreground mb-2">
           Test Payload (JSON)
         </label>
         <textarea
           value={testPayload}
           onChange={(e) => setTestPayload(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono text-sm"
+          className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary font-mono text-sm bg-white dark:bg-card text-gray-900 dark:text-foreground placeholder-gray-500 dark:placeholder-muted-foreground"
           rows={8}
           placeholder='{"workflow_id": "wf_xxxxx", "form_data": {...}}'
         />
       </div>
 
       {result && (
-        <div className="mt-4 p-4 bg-white rounded-lg border border-gray-200">
+        <div className="mt-4 p-4 bg-white dark:bg-card rounded-lg border border-gray-200 dark:border-border">
           <div className="flex items-center gap-2 mb-3">
             {result.success ? (
               <>
@@ -172,7 +172,7 @@ export function WebhookTester({ webhookUrl }: WebhookTesterProps) {
               </>
             )}
             {result.duration && (
-              <span className="text-xs text-gray-500 ml-auto">
+              <span className="text-xs text-gray-500 dark:text-muted-foreground ml-auto">
                 ({result.duration}ms)
               </span>
             )}
@@ -180,7 +180,7 @@ export function WebhookTester({ webhookUrl }: WebhookTesterProps) {
 
           {result.status !== undefined && (
             <div className="mb-3">
-              <span className="text-xs font-medium text-gray-700">
+              <span className="text-xs font-medium text-gray-700 dark:text-foreground">
                 Status:{" "}
               </span>
               <span className="text-xs font-mono">
@@ -190,17 +190,17 @@ export function WebhookTester({ webhookUrl }: WebhookTesterProps) {
           )}
 
           {result.error && (
-            <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+            <div className="mb-3 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-sm text-red-700 dark:text-red-300">
               {result.error}
             </div>
           )}
 
           {result.headers && Object.keys(result.headers).length > 0 && (
             <div className="mb-3">
-              <span className="text-xs font-medium text-gray-700">
+              <span className="text-xs font-medium text-gray-700 dark:text-foreground">
                 Response Headers:
               </span>
-              <pre className="mt-1 p-2 bg-gray-50 rounded text-xs overflow-x-auto">
+              <pre className="mt-1 p-2 bg-gray-50 dark:bg-secondary rounded text-xs overflow-x-auto text-gray-900 dark:text-foreground">
                 {JSON.stringify(result.headers, null, 2)}
               </pre>
             </div>
@@ -208,10 +208,10 @@ export function WebhookTester({ webhookUrl }: WebhookTesterProps) {
 
           {result.body !== undefined && (
             <div>
-              <span className="text-xs font-medium text-gray-700">
+              <span className="text-xs font-medium text-gray-700 dark:text-foreground">
                 Response Body:
               </span>
-              <pre className="mt-1 p-2 bg-gray-50 rounded text-xs overflow-x-auto">
+              <pre className="mt-1 p-2 bg-gray-50 dark:bg-secondary rounded text-xs overflow-x-auto text-gray-900 dark:text-foreground">
                 {typeof result.body === "string"
                   ? result.body
                   : JSON.stringify(result.body, null, 2)}

@@ -21,11 +21,11 @@ export const SkeletonLoader = React.memo(function SkeletonLoader({
   showButton = false,
   variant = "text",
 }: SkeletonLoaderProps) {
-  const baseClasses = "animate-pulse bg-gray-200 rounded";
+  const baseClasses = "animate-pulse bg-gray-200 dark:bg-secondary rounded";
 
   if (variant === "card") {
     return (
-      <div className={clsx("bg-white rounded-lg shadow-sm border border-gray-200 p-6", className)}>
+      <div className={clsx("bg-white dark:bg-card rounded-lg shadow-sm border border-gray-200 dark:border-border p-6", className)}>
         {showAvatar && (
           <div className="flex items-center space-x-4 mb-4">
             <div className={clsx(baseClasses, "h-12 w-12 rounded-full")}></div>
@@ -76,7 +76,7 @@ export const SkeletonLoader = React.memo(function SkeletonLoader({
     return (
       <div className={clsx("space-y-3", className)}>
         {/* Table header */}
-        <div className="flex space-x-4 pb-2 border-b border-gray-200">
+        <div className="flex space-x-4 pb-2 border-b border-gray-200 dark:border-border">
           <div className={clsx(baseClasses, "h-4 w-24")}></div>
           <div className={clsx(baseClasses, "h-4 w-32")}></div>
           <div className={clsx(baseClasses, "h-4 w-20")}></div>

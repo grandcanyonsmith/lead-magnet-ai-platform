@@ -390,16 +390,16 @@ function JobsContent() {
       <div className="space-y-8 animate-pulse max-w-7xl mx-auto">
         <div className="flex justify-between items-end">
           <div className="space-y-3">
-            <div className="h-8 bg-gray-200 rounded w-64"></div>
-            <div className="h-4 bg-gray-100 rounded w-96"></div>
+            <div className="h-8 bg-gray-200 dark:bg-secondary rounded w-64"></div>
+            <div className="h-4 bg-gray-100 dark:bg-secondary/70 rounded w-96"></div>
           </div>
-          <div className="h-10 bg-gray-200 rounded-lg w-32"></div>
+          <div className="h-10 bg-gray-200 dark:bg-secondary rounded-lg w-32"></div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
             <div
               key={i}
-              className="h-32 bg-gray-50 border border-gray-100 rounded-xl"
+              className="h-32 bg-gray-50 dark:bg-secondary/50 border border-gray-100 dark:border-border rounded-xl"
             ></div>
           ))}
         </div>

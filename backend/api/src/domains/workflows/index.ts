@@ -14,6 +14,7 @@ export {
 export type { UsageInfo as WorkflowGenerationUsageInfo } from './services/workflowGenerationService';
 export * from './services/workflowInstructionsService';
 export * from './services/workflowStepAIService';
+export * from './services/workflowCrudService';
 export * from './services/workflow/workflowConfigSupport';
 export * from './services/workflow/workflowContextService';
 export * from './services/workflow/workflowJobProcessingService';

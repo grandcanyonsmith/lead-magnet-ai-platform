@@ -1,18 +1,16 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { FiChevronDown, FiChevronUp } from "react-icons/fi";
 import {
   extractImageUrls,
   extractImageUrlsFromObject,
 } from "@/utils/imageUtils";
 import { InlineImage } from "./InlineImage";
-
-const MAX_PREVIEW_LENGTH = 1000;
+import { JsonViewer } from "@/components/ui/JsonViewer";
 
 interface StepContentProps {
   formatted: {
@@ -71,57 +69,6 @@ function renderTextWithImages(text: string): React.ReactNode {
   return <>{parts}</>;
 }
 
-// Inline expandable content component
-function ExpandableContent({
-  content,
-  renderContent,
-  maxLength = MAX_PREVIEW_LENGTH,
-}: {
-  content: string;
-  renderContent: (
-    displayContent: string,
-    isExpanded: boolean,
-  ) => React.ReactNode;
-  maxLength?: number;
-}) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const isLongContent = content.length > maxLength;
-  const displayContent =
-    isLongContent && !isExpanded
-      ? content.substring(0, maxLength) + "..."
-      : content;
-
-  return (
-    <div>
-      {isLongContent && (
-        <div className="flex justify-end mb-2">
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="text-xs text-blue-600 hover:text-blue-800 active:text-blue-900 flex items-center gap-1 px-2 py-1.5 rounded touch-target min-h-[44px] sm:min-h-0"
-          >
-            {isExpanded ? (
-              <>
-                <FiChevronUp className="w-3 h-3" />
-                <span className="sm:inline">Show Less</span>
-              </>
-            ) : (
-              <>
-                <FiChevronDown className="w-3 h-3" />
-                <span className="sm:inline">Show More</span>
-                <span className="hidden sm:inline">
-                  {" "}
-                  ({content.length.toLocaleString()} chars)
-                </span>
-              </>
-            )}
-          </button>
-        </div>
-      )}
-      {renderContent(displayContent, isExpanded)}
-    </div>
-  );
-}
-
 export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
   const [showRendered, setShowRendered] = useState(true);
 
@@ -133,6 +80,28 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
   };
 
   const contentString = getContentString();
+
+  const normalizedJsonValue = useMemo(() => {
+    if (formatted.type !== "json") return undefined;
+    if (typeof formatted.content === "string") {
+      try {
+        return JSON.parse(formatted.content);
+      } catch {
+        return formatted.content;
+      }
+    }
+    return formatted.content;
+  }, [formatted.content, formatted.type]);
+
+  const normalizedJsonRaw = useMemo(() => {
+    if (formatted.type !== "json") return "";
+    if (typeof normalizedJsonValue === "string") return normalizedJsonValue;
+    try {
+      return JSON.stringify(normalizedJsonValue, null, 2);
+    } catch {
+      return String(normalizedJsonValue);
+    }
+  }, [formatted.type, normalizedJsonValue]);
 
   // Render inline images from imageUrls prop
   const renderInlineImages = () => {
@@ -209,8 +178,13 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
       formatted.structure === "ai_input" &&
       typeof formatted.content === "object";
 
-    // Extract image URLs from the JSON object
-    const extractedImageUrls = extractImageUrlsFromObject(formatted.content);
+    // Extract image URLs from the JSON object (or from raw string if not parseable)
+    const extractedImageUrls =
+      normalizedJsonValue && typeof normalizedJsonValue === "object"
+        ? extractImageUrlsFromObject(normalizedJsonValue)
+        : typeof normalizedJsonValue === "string"
+          ? extractImageUrls(normalizedJsonValue)
+          : [];
 
     return (
       <div className="space-y-4">
@@ -223,44 +197,27 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
               </span>
             </div>
           )}
-          <ExpandableContent
-            content={contentString}
-            renderContent={(displayContent, isExpanded) => (
-              <>
-                <div className="rounded-xl overflow-hidden border border-gray-200 scrollbar-hide-until-hover">
-                  <SyntaxHighlighter
-                    language="json"
-                    style={vscDarkPlus}
-                    customStyle={{
-                      margin: 0,
-                      padding: "16px",
-                      fontSize: "13px",
-                      maxHeight: isExpanded ? "none" : "400px",
-                      overflow: "auto",
-                      lineHeight: "1.6",
-                    }}
-                    showLineNumbers={contentString.length > 500}
-                  >
-                    {displayContent}
-                  </SyntaxHighlighter>
-                </div>
-                {/* Render images found in JSON */}
-                {extractedImageUrls.length > 0 && (
-                  <div className="mt-5 md:mt-4 space-y-4 md:space-y-2">
-                    {extractedImageUrls.map((url) => (
-                      <InlineImage
-                        key={`json-image-${url}`}
-                        url={url}
-                        alt={`Image from JSON`}
-                      />
-                    ))}
-                  </div>
-                )}
-                {/* Render images from imageUrls prop */}
-                {renderInlineImages()}
-              </>
-            )}
+          <JsonViewer
+            value={normalizedJsonValue}
+            raw={normalizedJsonRaw || contentString}
+            defaultMode="tree"
+            defaultExpandedDepth={2}
           />
+
+          {/* Render images found in JSON */}
+          {extractedImageUrls.length > 0 && (
+            <div className="mt-5 md:mt-4 space-y-4 md:space-y-2">
+              {extractedImageUrls.map((url) => (
+                <InlineImage
+                  key={`json-image-${url}`}
+                  url={url}
+                  alt={`Image from JSON`}
+                />
+              ))}
+            </div>
+          )}
+          {/* Render images from imageUrls prop */}
+          {renderInlineImages()}
         </div>
       </div>
     );
@@ -317,28 +274,31 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
           </>
         ) : (
           <>
-            <ExpandableContent
-              content={htmlContent}
-              renderContent={(displayContent) => (
-                <div className="rounded-xl overflow-hidden border border-gray-200">
-                  <SyntaxHighlighter
-                    language="html"
-                    style={vscDarkPlus}
-                    customStyle={{
-                      margin: 0,
-                      padding: "16px",
-                      fontSize: "13px",
-                      maxHeight: "400px",
-                      overflow: "auto",
-                      lineHeight: "1.6",
-                    }}
-                    showLineNumbers={htmlContent.length > 500}
-                  >
-                    {displayContent}
-                  </SyntaxHighlighter>
-                </div>
-              )}
-            />
+            <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
+              <SyntaxHighlighter
+                language="html"
+                style={vscDarkPlus}
+                customStyle={{
+                  margin: 0,
+                  padding: "16px",
+                  fontSize: "13px",
+                  overflowX: "hidden",
+                  overflowY: "visible",
+                  lineHeight: "1.65",
+                  background: "transparent",
+                }}
+                codeTagProps={{
+                  style: {
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                  },
+                }}
+                wrapLongLines
+                showLineNumbers={htmlContent.length > 500}
+              >
+                {htmlContent}
+              </SyntaxHighlighter>
+            </div>
             {/* Extract and render images from HTML source */}
             {(() => {
               const extractedUrls = extractImageUrls(htmlContent);
@@ -392,32 +352,27 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
               </span>
             </div>
           )}
-          <ExpandableContent
-            content={markdownText}
-            renderContent={(displayContent) => (
-              <>
-                <div className="prose prose-sm max-w-none bg-white p-4 md:p-4 rounded-xl border border-gray-200 max-h-[600px] overflow-y-auto scrollbar-hide-until-hover leading-relaxed">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {displayContent}
-                  </ReactMarkdown>
-                </div>
-                {/* Render plain image URLs that aren't in markdown format */}
-                {extractedImageUrls.length > 0 && (
-                  <div className="mt-5 md:mt-4 space-y-4 md:space-y-2">
-                    {extractedImageUrls.map((url) => (
-                      <InlineImage
-                        key={`md-image-${url}`}
-                        url={url}
-                        alt={`Image from markdown`}
-                      />
-                    ))}
-                  </div>
-                )}
-                {/* Render images from imageUrls prop */}
-                {renderInlineImages()}
-              </>
+          <>
+            <div className="prose prose-sm max-w-none bg-white dark:bg-card p-4 md:p-4 rounded-xl border border-gray-200 dark:border-gray-700 leading-relaxed break-words">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {markdownText}
+              </ReactMarkdown>
+            </div>
+            {/* Render plain image URLs that aren't in markdown format */}
+            {extractedImageUrls.length > 0 && (
+              <div className="mt-5 md:mt-4 space-y-4 md:space-y-2">
+                {extractedImageUrls.map((url) => (
+                  <InlineImage
+                    key={`md-image-${url}`}
+                    url={url}
+                    alt={`Image from markdown`}
+                  />
+                ))}
+              </div>
             )}
-          />
+            {/* Render images from imageUrls prop */}
+            {renderInlineImages()}
+          </>
         </div>
       </div>
     );
@@ -425,41 +380,31 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
 
   // Render plain text content
   const renderTextContent = () => {
+    // Check if there are image URLs in the text
+    const extractedUrls = extractImageUrls(contentString);
+
+    if (extractedUrls.length === 0 && (!imageUrls || imageUrls.length === 0)) {
+      // No images in text or prop, render as plain text
+      return (
+        <>
+          <pre className="text-sm md:text-xs whitespace-pre-wrap break-words font-mono bg-gray-50 dark:bg-gray-900/50 p-4 md:p-4 rounded-xl border border-gray-200 dark:border-gray-700 leading-relaxed">
+            {contentString}
+          </pre>
+          {/* Always check for images from prop */}
+          {renderInlineImages()}
+        </>
+      );
+    }
+
+    // Has images in text, render with inline images
     return (
-      <ExpandableContent
-        content={contentString}
-        renderContent={(displayContent) => {
-          // Check if there are image URLs in the text
-          const extractedUrls = extractImageUrls(displayContent);
-
-          if (
-            extractedUrls.length === 0 &&
-            (!imageUrls || imageUrls.length === 0)
-          ) {
-            // No images in text or prop, render as plain text
-            return (
-              <>
-                <pre className="text-sm md:text-xs whitespace-pre-wrap font-mono bg-gray-50 p-4 md:p-4 rounded-xl border border-gray-200 max-h-[500px] md:max-h-[600px] overflow-y-auto scrollbar-hide-until-hover leading-relaxed">
-                  {displayContent}
-                </pre>
-                {/* Always check for images from prop */}
-                {renderInlineImages()}
-              </>
-            );
-          }
-
-          // Has images in text, render with inline images
-          return (
-            <div className="bg-gray-50 p-4 md:p-4 rounded-xl border border-gray-200 max-h-[500px] md:max-h-[600px] overflow-y-auto scrollbar-hide-until-hover">
-              <pre className="text-sm md:text-xs whitespace-pre-wrap font-mono leading-relaxed">
-                {renderTextWithImages(displayContent)}
-              </pre>
-              {/* Render images from imageUrls prop */}
-              {renderInlineImages()}
-            </div>
-          );
-        }}
-      />
+      <div className="bg-gray-50 dark:bg-gray-900/50 p-4 md:p-4 rounded-xl border border-gray-200 dark:border-gray-700">
+        <pre className="text-sm md:text-xs whitespace-pre-wrap break-words font-mono leading-relaxed">
+          {renderTextWithImages(contentString)}
+        </pre>
+        {/* Render images from imageUrls prop */}
+        {renderInlineImages()}
+      </div>
     );
   };
 
