@@ -220,21 +220,16 @@ class CUAgent:
                     screenshot_b64 = await self.env.capture_screenshot()
                     current_url = await self.env.get_current_url()
                     
-                    # Log screenshot size for debugging
-                    logger.info(f"[CUAgent] Captured screenshot, base64 length: {len(screenshot_b64)}, current_url: {current_url}")
-                    
                     # Upload (using jpeg for faster uploads)
                     url = self.image_handler.upload_base64_image_to_s3(
                         screenshot_b64, 'image/jpeg', tenant_id=tenant_id, job_id=job_id
                     )
-                    logger.info(f"[CUAgent] Screenshot uploaded, URL: {url}")
                     
                     # Always include base64 for local dev fallback, even if URL exists
                     screenshot_event = ScreenshotEvent(
                         type='screenshot', timestamp=time.time(),
                         url=url or '', current_url=current_url, base64=screenshot_b64
                     )
-                    logger.info(f"[CUAgent] Yielding screenshot event, URL: {url[:50] if url else 'None'}..., base64 length: {len(screenshot_b64)}")
                     yield screenshot_event
                     
                     if url:

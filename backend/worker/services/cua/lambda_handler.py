@@ -48,25 +48,9 @@ class StreamingHandler:
             (isinstance(t, dict) and t.get('type') == 'computer_use_preview')
             for t in tools
         )
-        original_model = model
         if has_computer_use and model != 'computer-use-preview':
             logger.warning(f"[CUA] Overriding model from {model} to computer-use-preview (required for computer_use_preview tool)")
             model = 'computer-use-preview'
-            # #region agent log
-            try:
-                with open('/Users/canyonsmith/lead-magnent-ai/.cursor/debug.log', 'a') as f:
-                    f.write(_json.dumps({
-                        'sessionId': 'debug-session',
-                        'runId': 'post-fix',
-                        'hypothesisId': 'H4',
-                        'location': 'lambda_handler.py:45',
-                        'message': 'Model override for CUA',
-                        'data': {'original_model': original_model, 'final_model': model, 'has_computer_use': has_computer_use},
-                        'timestamp': time.time() * 1000
-                    }) + '\n')
-            except:
-                pass
-            # #endregion
 
         # Initialize deps
         env = PlaywrightEnvironment()
