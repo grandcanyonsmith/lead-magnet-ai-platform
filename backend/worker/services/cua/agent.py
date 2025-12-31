@@ -369,6 +369,27 @@ class CUAgent:
                     yield LogEvent(type='log', timestamp=time.time(), level='info', message='Sending feedback to model...')
                     response = openai_client.make_api_call(next_params)
                     previous_response_id = getattr(response, 'id', None)
+                    
+                    # Log reasoning/text from response
+                    if hasattr(response, 'output') and response.output:
+                        for item in response.output:
+                            item_type = getattr(item, 'type', '')
+                            if item_type == 'reasoning':
+                                summary = getattr(item, 'summary', [])
+                                for s in summary:
+                                    if hasattr(s, 'text'):
+                                        reasoning_text = getattr(s, 'text', '')
+                                        if reasoning_text:
+                                            yield LogEvent(type='log', timestamp=time.time(), level='info', 
+                                                         message=f'💭 {reasoning_text}')
+                                    elif isinstance(s, dict) and 'text' in s:
+                                        yield LogEvent(type='log', timestamp=time.time(), level='info', 
+                                                     message=f'💭 {s.get("text", "")}')
+                            elif item_type == 'text' or item_type == 'output_text':
+                                text_content = getattr(item, 'text', '') or getattr(item, 'content', '')
+                                if text_content:
+                                    yield LogEvent(type='log', timestamp=time.time(), level='info', 
+                                                 message=f'📝 {text_content}')
 
                 except Exception as e:
                     logger.error(f"Error in loop: {e}", exc_info=True)
