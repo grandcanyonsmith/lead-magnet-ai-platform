@@ -43,6 +43,13 @@ def signal_handler(signum, frame):
 def main():
     """Main entry point for the worker."""
 
+    # #region agent log
+    import json; import time; 
+    try:
+        with open('/Users/canyonsmith/lead-magnent-ai/.cursor/debug.log', 'a') as f: f.write(json.dumps({"location": "worker.py:main", "message": "Worker process started", "data": {"job_id": os.environ.get("JOB_ID"), "step_index": os.environ.get("STEP_INDEX")}, "timestamp": int(time.time() * 1000), "sessionId": "debug-session", "hypothesisId": "worker-start"}) + "\n")
+    except Exception as e: pass
+    # #endregion
+
     process_start_time = time.monotonic()
 
     # Suppress Pydantic warnings at the very start
