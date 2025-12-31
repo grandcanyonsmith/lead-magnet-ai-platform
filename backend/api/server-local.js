@@ -66,7 +66,7 @@ const mockClaims = {
 };
 
 // Create mock Lambda context (will be created per request)
-function createMockContext() {
+function createMockContext(res) {
   return {
     callbackWaitsForEmptyEventLoop: false,
     functionName: 'local-dev-server',
@@ -80,6 +80,7 @@ function createMockContext() {
     done: () => {},
     fail: () => {},
     succeed: () => {},
+    res, // Expose Express response object for streaming
   };
 }
 
@@ -160,7 +161,7 @@ function sendResponse(res, apiResponse) {
 
 // Handle all routes
 app.all('*', async (req, res) => {
-  const context = createMockContext();
+  const context = createMockContext(res);
   try {
     console.log(`[Local Server] ${req.method} ${req.path} [${context.awsRequestId}]`);
     

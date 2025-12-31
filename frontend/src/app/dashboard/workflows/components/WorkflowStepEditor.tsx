@@ -81,6 +81,22 @@ const TOOL_CHOICE_OPTIONS = [
   { value: "none", label: "None", description: "Disable tools entirely" },
 ];
 
+const SECTION_SHELL =
+  "rounded-xl border border-border/60 bg-muted/40 p-5 shadow-sm";
+const SECTION_HEADER = "mb-4 border-b border-border/60 pb-3";
+const SECTION_TITLE = "text-sm font-semibold text-foreground";
+const SECTION_SUBTITLE = "mt-1 text-xs text-muted-foreground";
+
+const FIELD_LABEL =
+  "flex items-center gap-1.5 text-sm font-medium text-foreground/90";
+const FIELD_OPTIONAL = "text-xs font-normal text-muted-foreground";
+const FIELD_REQUIRED = "text-destructive";
+
+const CONTROL_BASE =
+  "w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring/40 disabled:cursor-not-allowed disabled:opacity-50";
+const SELECT_CONTROL = `${CONTROL_BASE} pr-9`;
+const HELP_TEXT = "mt-2 text-xs leading-relaxed text-muted-foreground";
+
 type ComputerUseConfigState = {
   display_width: number;
   display_height: number;
@@ -472,17 +488,17 @@ export default function WorkflowStepEditor({
         </div>
       }
     >
-      <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-6 bg-white dark:bg-card shadow-sm ring-1 ring-black/[0.04] dark:ring-white/5">
-        <div className="flex items-start justify-between pb-4 mb-6 border-b border-gray-100 dark:border-gray-800">
+      <div className="rounded-2xl border border-border bg-card p-6 shadow-sm ring-1 ring-black/[0.04] dark:ring-white/5">
+        <div className="flex items-start justify-between pb-4 mb-6 border-b border-border/60">
           <div
             className="flex items-center gap-3"
             onClick={(e) => e.stopPropagation()}
             onMouseDown={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center gap-1 text-gray-400 dark:text-gray-500">
+            <div className="flex items-center gap-1 text-muted-foreground">
               <span className="text-xs">⋮⋮</span>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white select-none">
+            <h3 className="text-lg font-semibold text-foreground select-none">
               Step {index + 1}
             </h3>
           </div>
@@ -491,7 +507,7 @@ export default function WorkflowStepEditor({
               type="button"
               onClick={() => onMoveUp(index)}
               disabled={index === 0}
-              className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900/40 p-2 text-gray-600 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed touch-target"
+              className="rounded-lg border border-border bg-background/60 p-2 text-muted-foreground shadow-sm hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed touch-target"
               aria-label="Move step up"
             >
               <FiChevronUp className="w-5 h-5" />
@@ -500,7 +516,7 @@ export default function WorkflowStepEditor({
               type="button"
               onClick={() => onMoveDown(index)}
               disabled={index === totalSteps - 1}
-              className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900/40 p-2 text-gray-600 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed touch-target"
+              className="rounded-lg border border-border bg-background/60 p-2 text-muted-foreground shadow-sm hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed touch-target"
               aria-label="Move step down"
             >
               <FiChevronDown className="w-5 h-5" />
@@ -508,7 +524,7 @@ export default function WorkflowStepEditor({
             <button
               type="button"
               onClick={() => onDelete(index)}
-              className="rounded-lg border border-red-200 dark:border-red-900/50 bg-white dark:bg-gray-900/40 p-2 text-red-600 dark:text-red-400 shadow-sm hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700 dark:hover:text-red-300 touch-target"
+              className="rounded-lg border border-destructive/30 bg-background/60 p-2 text-destructive shadow-sm hover:bg-destructive/10 hover:text-destructive touch-target"
               aria-label="Delete step"
             >
               <FiTrash2 className="w-5 h-5" />
@@ -528,30 +544,30 @@ export default function WorkflowStepEditor({
         />
 
         <div className="space-y-6">
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/30 p-5">
-            <div className="mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
-              <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+          <div className={SECTION_SHELL}>
+            <div className={SECTION_HEADER}>
+              <h4 className={SECTION_TITLE}>
                 Step Information
               </h4>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              <p className={SECTION_SUBTITLE}>
                 Basic details about this workflow step
               </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="space-y-1">
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-5 md:gap-6">
+              <div className="space-y-1 md:col-span-2">
                 <label
-                  className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300"
+                  className={FIELD_LABEL}
                   htmlFor={`step-name-${index}`}
                 >
                   <span>Step Name</span>
-                  <span className="text-red-500">*</span>
+                  <span className={FIELD_REQUIRED}>*</span>
                 </label>
                 <input
                   id={`step-name-${index}`}
                   type="text"
                   value={localStep.step_name}
                   onChange={(e) => handleChange("step_name", e.target.value)}
-                  className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors placeholder:text-gray-400 dark:placeholder:text-gray-500"
+                  className={CONTROL_BASE}
                   placeholder="e.g., Deep Research"
                   required
                   aria-label="Instruction name"
@@ -559,13 +575,13 @@ export default function WorkflowStepEditor({
                 />
               </div>
 
-              <div className="space-y-1">
+              <div className="space-y-1 md:col-span-3">
                 <label
-                  className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300"
+                  className={FIELD_LABEL}
                   htmlFor={`step-description-${index}`}
                 >
                   <span>Description</span>
-                  <span className="text-xs font-normal text-gray-400 dark:text-gray-500">(Optional)</span>
+                  <span className={FIELD_OPTIONAL}>(Optional)</span>
                 </label>
                 <textarea
                   id={`step-description-${index}`}
@@ -573,32 +589,32 @@ export default function WorkflowStepEditor({
                   onChange={(e) =>
                     handleChange("step_description", e.target.value)
                   }
-                  className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors placeholder:text-gray-400 dark:placeholder:text-gray-500 resize-none"
+                  className={`${CONTROL_BASE} min-h-[96px] resize-y leading-relaxed`}
                   placeholder="Brief description of what this step does"
-                  rows={2}
+                  rows={3}
                   aria-label="Instruction description"
                 />
               </div>
             </div>
           </div>
 
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/30 p-5">
-            <div className="mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
-              <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+          <div className={SECTION_SHELL}>
+            <div className={SECTION_HEADER}>
+              <h4 className={SECTION_TITLE}>
                 AI Configuration
               </h4>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              <p className={SECTION_SUBTITLE}>
                 Configure the AI model and reasoning parameters
               </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
               <div className="space-y-1">
                 <label
-                  className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300"
+                  className={FIELD_LABEL}
                   htmlFor={`ai-model-${index}`}
                 >
                   <span>AI Model</span>
-                  <span className="text-red-500">*</span>
+                  <span className={FIELD_REQUIRED}>*</span>
                 </label>
                 <select
                   id={`ai-model-${index}`}
@@ -606,7 +622,7 @@ export default function WorkflowStepEditor({
                   onChange={(e) =>
                     handleChange("model", e.target.value as AIModel)
                   }
-                  className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
+                  className={SELECT_CONTROL}
                   required
                   aria-label="AI model"
                   aria-required="true"
@@ -621,11 +637,11 @@ export default function WorkflowStepEditor({
 
               <div className="space-y-1">
                 <label
-                  className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300"
+                  className={FIELD_LABEL}
                   htmlFor={`reasoning-effort-${index}`}
                 >
                   <span>Reasoning Depth</span>
-                  <span className="text-xs font-normal text-gray-400 dark:text-gray-500">(Optional)</span>
+                  <span className={FIELD_OPTIONAL}>(Optional)</span>
                 </label>
                 <select
                   id={`reasoning-effort-${index}`}
@@ -633,7 +649,7 @@ export default function WorkflowStepEditor({
                   onChange={(e) =>
                     handleChange("reasoning_effort", e.target.value || undefined)
                   }
-                  className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
+                  className={SELECT_CONTROL}
                   aria-label="Reasoning effort"
                 >
                   <option value="">Standard (Auto)</option>
@@ -643,30 +659,30 @@ export default function WorkflowStepEditor({
                   <option value="high">High - Thorough</option>
                   <option value="xhigh">Extra High - Maximum</option>
                 </select>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed">
+                <p className={HELP_TEXT}>
                   Controls how deeply the AI reasons before responding. Higher values improve quality but increase latency.
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/30 p-5">
-            <div className="mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
-              <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+          <div className={SECTION_SHELL}>
+            <div className={SECTION_HEADER}>
+              <h4 className={SECTION_TITLE}>
                 Output Settings
               </h4>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              <p className={SECTION_SUBTITLE}>
                 Control the length and detail level of AI responses
               </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
               <div className="space-y-1">
                 <label
-                  className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300"
+                  className={FIELD_LABEL}
                   htmlFor={`text-verbosity-${index}`}
                 >
                   <span>Output Verbosity</span>
-                  <span className="text-xs font-normal text-gray-400 dark:text-gray-500">(Optional)</span>
+                  <span className={FIELD_OPTIONAL}>(Optional)</span>
                 </label>
                 <select
                   id={`text-verbosity-${index}`}
@@ -674,7 +690,7 @@ export default function WorkflowStepEditor({
                   onChange={(e) =>
                     handleChange("text_verbosity", e.target.value || undefined)
                   }
-                  className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
+                  className={SELECT_CONTROL}
                   aria-label="Text verbosity"
                 >
                   <option value="">Default</option>
@@ -682,18 +698,18 @@ export default function WorkflowStepEditor({
                   <option value="medium">Medium - Balanced</option>
                   <option value="high">High - Detailed</option>
                 </select>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed">
-                  Adjusts how detailed and verbose the AI's output will be.
+                <p className={HELP_TEXT}>
+                  Adjusts how detailed and verbose the AI&apos;s output will be.
                 </p>
               </div>
 
               <div className="space-y-1">
                 <label
-                  className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300"
+                  className={FIELD_LABEL}
                   htmlFor={`max-output-tokens-${index}`}
                 >
                   <span>Max Output Tokens</span>
-                  <span className="text-xs font-normal text-gray-400 dark:text-gray-500">(Optional)</span>
+                  <span className={FIELD_OPTIONAL}>(Optional)</span>
                 </label>
                 <input
                   id={`max-output-tokens-${index}`}
@@ -707,27 +723,27 @@ export default function WorkflowStepEditor({
                       e.target.value ? parseInt(e.target.value, 10) : undefined
                     )
                   }
-                  className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors placeholder:text-gray-400 dark:placeholder:text-gray-500"
+                  className={CONTROL_BASE}
                   placeholder="e.g., 4000"
                   aria-label="Max output tokens"
                 />
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed">
+                <p className={HELP_TEXT}>
                   Maximum number of tokens the AI can generate. Leave empty for no limit.
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/30 p-5">
-            <div className="mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
+          <div className={SECTION_SHELL}>
+            <div className={SECTION_HEADER}>
               <label
-                className="flex items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-white"
+                className="flex items-center gap-1.5 text-sm font-semibold text-foreground"
                 htmlFor={`instructions-${index}`}
               >
                 <span>Instructions</span>
-                <span className="text-red-500">*</span>
+                <span className={FIELD_REQUIRED}>*</span>
               </label>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              <p className={SECTION_SUBTITLE}>
                 Detailed instructions that will be passed to the AI model along with context from previous steps
               </p>
             </div>
@@ -735,7 +751,7 @@ export default function WorkflowStepEditor({
               id={`instructions-${index}`}
               value={localStep.instructions}
               onChange={(e) => handleChange("instructions", e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 font-mono text-sm leading-relaxed transition-colors placeholder:text-gray-400 dark:placeholder:text-gray-500 resize-y min-h-[140px]"
+              className="w-full min-h-[160px] resize-y rounded-lg border border-input bg-background px-4 py-3 font-mono text-sm leading-relaxed text-foreground shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring/40"
               placeholder="Enter detailed instructions for what this step should do..."
               rows={7}
               required
@@ -744,17 +760,17 @@ export default function WorkflowStepEditor({
             />
           </div>
 
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/30 p-5">
-            <div className="mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
-              <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+          <div className={SECTION_SHELL}>
+            <div className={SECTION_HEADER}>
+              <h4 className={SECTION_TITLE}>
                 Capabilities
               </h4>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              <p className={SECTION_SUBTITLE}>
                 Select tools the AI model can use to complete this step
               </p>
             </div>
 
-            <div className="grid gap-2">
+            <div className="grid gap-3">
               {AVAILABLE_TOOLS.map((tool) => {
                 const selected = isToolSelected(tool.value);
                 return (
@@ -762,21 +778,21 @@ export default function WorkflowStepEditor({
                     key={tool.value}
                     className={`flex items-start gap-3 rounded-xl border p-3 cursor-pointer transition-colors ${
                       selected
-                        ? "border-primary-200 dark:border-primary-800/40 bg-primary-50/60 dark:bg-primary-900/10"
-                        : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/70"
+                        ? "border-primary/30 bg-primary/5"
+                        : "border-border/60 bg-background/60 hover:bg-muted/40"
                     }`}
                   >
                     <input
                       type="checkbox"
                       checked={selected}
                       onChange={() => handleToolToggle(tool.value)}
-                      className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
+                      className="mt-1 h-4 w-4 rounded border-input text-primary focus:ring-2 focus:ring-ring/30"
                     />
                     <div className="min-w-0">
-                      <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                      <span className="text-sm font-semibold text-foreground">
                         {tool.label}
                       </span>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      <p className="mt-1 text-xs text-muted-foreground">
                         {tool.description}
                       </p>
                     </div>
@@ -807,22 +823,22 @@ export default function WorkflowStepEditor({
             )}
           </div>
 
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/30 p-5">
-            <div className="mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
-              <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+          <div className={SECTION_SHELL}>
+            <div className={SECTION_HEADER}>
+              <h4 className={SECTION_TITLE}>
                 Tool Usage
               </h4>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              <p className={SECTION_SUBTITLE}>
                 Control how the AI model uses the selected tools
               </p>
             </div>
             <div className="space-y-1">
               <label
-                className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300"
+                className={FIELD_LABEL}
                 htmlFor={`tool-choice-${index}`}
               >
                 <span>Tool Choice</span>
-                <span className="text-xs font-normal text-gray-400 dark:text-gray-500">(Optional)</span>
+                <span className={FIELD_OPTIONAL}>(Optional)</span>
               </label>
               <select
                 id={`tool-choice-${index}`}
@@ -833,7 +849,7 @@ export default function WorkflowStepEditor({
                     e.target.value as "auto" | "required" | "none",
                   )
                 }
-                className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
+                className={SELECT_CONTROL}
               >
                 {TOOL_CHOICE_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -841,7 +857,7 @@ export default function WorkflowStepEditor({
                   </option>
                 ))}
               </select>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed">
+              <p className={HELP_TEXT}>
                 Determines whether the model must use tools, can choose to use them, or should not use them.
               </p>
             </div>
@@ -861,15 +877,15 @@ export default function WorkflowStepEditor({
             />
           </CollapsibleSection>
 
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/30 p-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <div className={`${SECTION_SHELL} p-4 md:p-5`}>
+            <label className="block text-sm font-medium text-foreground/90 mb-1">
               Dependencies (optional)
             </label>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            <p className="text-xs text-muted-foreground mb-3">
               Select which steps must complete before this step runs. Leave empty
               to auto-detect from step order.
             </p>
-            <div className="space-y-2 max-h-44 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 p-3">
+            <div className="space-y-2 max-h-44 overflow-y-auto rounded-xl border border-border/60 bg-background/60 p-3">
               {allSteps.length > 0 ? (
                 allSteps.map((otherStep, otherIndex) => {
                   if (otherIndex === index) return null; // Can't depend on itself
@@ -893,22 +909,22 @@ export default function WorkflowStepEditor({
                               );
                           handleChange("depends_on", newDeps);
                         }}
-                        className="mt-0.5 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
+                        className="mt-0.5 h-4 w-4 rounded border-input text-primary focus:ring-2 focus:ring-ring/30"
                       />
-                      <span className="text-sm text-gray-900 dark:text-gray-200">
+                      <span className="text-sm text-foreground">
                         Step {otherIndex + 1}: {otherStep.step_name}
                       </span>
                     </label>
                   );
                 })
               ) : (
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-sm text-muted-foreground">
                   No other steps available
                 </p>
               )}
             </div>
             {localStep.depends_on && localStep.depends_on.length > 0 && (
-              <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+              <p className="mt-2 text-xs text-muted-foreground">
                 Depends on:{" "}
                 {localStep.depends_on
                   .map((dep: number) => `Step ${dep + 1}`)
