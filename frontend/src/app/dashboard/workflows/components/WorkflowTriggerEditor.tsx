@@ -103,7 +103,7 @@ export default function WorkflowTriggerEditor({
          <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg border border-gray-200 dark:border-gray-800">
             <p className="text-sm text-gray-600 dark:text-gray-400">
               The workflow will be triggered automatically when the associated form is submitted.
-              You can customize the form in the "Form" tab.
+              You can customize the form in the &quot;Form&quot; tab.
             </p>
          </div>
        )}

@@ -92,75 +92,90 @@ class JobsController {
     const hasMore = jobs.length > offset + pageSize;
 
     // Fetch submission preview data for jobs that have submission_id
-    // This allows the frontend to display submission names/identifiers in the list
-    const jobsWithSubmissions = await Promise.all(
-      paginatedJobs.map(async (job: any) => {
-        if (job.submission_id) {
+    // Use batchGet to avoid N+1 query problem
+    const submissionIds = [
+      ...new Set(
+        paginatedJobs
+          .map((j: any) => j.submission_id)
+          .filter((id) => id !== undefined && id !== null),
+      ),
+    ];
+
+    const submissionKeys = submissionIds.map((id) => ({ submission_id: id }));
+    const submissionsMap = new Map();
+
+    if (submissionKeys.length > 0) {
+      try {
+        const submissions = await db.batchGet(SUBMISSIONS_TABLE, submissionKeys);
+        submissions.forEach((s) => submissionsMap.set(s.submission_id, s));
+      } catch (error) {
+        logger.warn("Failed to batch fetch submissions", { error });
+      }
+    }
+
+    const jobsWithSubmissions = paginatedJobs.map((job: any) => {
+      if (job.submission_id) {
+        const submission = submissionsMap.get(job.submission_id);
+        if (submission) {
           try {
-            const submission = await db.get(SUBMISSIONS_TABLE, {
-              submission_id: job.submission_id,
-            });
-            if (submission) {
-              // Extract name field from submission_data if available
-              // Prioritize "name" field from form submission data
-              let nameFromData = null;
-              if (submission.submission_data) {
-                // Look for "name" field specifically (most common)
-                nameFromData =
-                  submission.submission_data.name ||
-                  submission.submission_data.full_name ||
-                  submission.submission_data.first_name ||
-                  submission.submission_data.Name || // Case variations
-                  null;
-              }
-
-              // Build form_data_preview with name field first if it exists
-              let formDataPreview = null;
-              if (submission.submission_data) {
-                const entries = Object.entries(submission.submission_data);
-                // Prioritize name-related fields first
-                const nameFields = ["name", "Name", "full_name", "first_name"];
-                const nameEntries: [string, any][] = [];
-                const otherEntries: [string, any][] = [];
-
-                entries.forEach(([key, value]) => {
-                  if (nameFields.includes(key)) {
-                    nameEntries.push([key, value]);
-                  } else {
-                    otherEntries.push([key, value]);
-                  }
-                });
-
-                // Combine: name fields first, then others (up to 5 total)
-                const prioritizedEntries = [
-                  ...nameEntries,
-                  ...otherEntries,
-                ].slice(0, 5);
-                formDataPreview = Object.fromEntries(prioritizedEntries);
-              }
-
-              // Include lightweight submission preview fields
-              // submitter_name takes precedence (set during submission), but fallback to name from form data
-              job.submission_preview = {
-                submitter_name:
-                  submission.submitter_name || nameFromData || null,
-                submitter_email: submission.submitter_email || null,
-                submitter_phone: submission.submitter_phone || null,
-                // Include form data preview with name field prioritized
-                form_data_preview: formDataPreview,
-              };
+            // Extract name field from submission_data if available
+            // Prioritize "name" field from form submission data
+            let nameFromData = null;
+            if (submission.submission_data) {
+              // Look for "name" field specifically (most common)
+              nameFromData =
+                submission.submission_data.name ||
+                submission.submission_data.full_name ||
+                submission.submission_data.first_name ||
+                submission.submission_data.Name || // Case variations
+                null;
             }
+
+            // Build form_data_preview with name field first if it exists
+            let formDataPreview = null;
+            if (submission.submission_data) {
+              const entries = Object.entries(submission.submission_data);
+              // Prioritize name-related fields first
+              const nameFields = ["name", "Name", "full_name", "first_name"];
+              const nameEntries: [string, any][] = [];
+              const otherEntries: [string, any][] = [];
+
+              entries.forEach(([key, value]) => {
+                if (nameFields.includes(key)) {
+                  nameEntries.push([key, value]);
+                } else {
+                  otherEntries.push([key, value]);
+                }
+              });
+
+              // Combine: name fields first, then others (up to 5 total)
+              const prioritizedEntries = [
+                ...nameEntries,
+                ...otherEntries,
+              ].slice(0, 5);
+              formDataPreview = Object.fromEntries(prioritizedEntries);
+            }
+
+            // Include lightweight submission preview fields
+            // submitter_name takes precedence (set during submission), but fallback to name from form data
+            job.submission_preview = {
+              submitter_name: submission.submitter_name || nameFromData || null,
+              submitter_email: submission.submitter_email || null,
+              submitter_phone: submission.submitter_phone || null,
+              // Include form data preview with name field prioritized
+              form_data_preview: formDataPreview,
+            };
           } catch (error) {
-            // If submission fetch fails, continue without preview
+            // If processing fails, continue without preview
             logger.debug(
-              `Failed to fetch submission preview for job ${job.job_id}`,
+              `Failed to process submission preview for job ${job.job_id}`,
               { error },
             );
           }
         }
-        return job;
-      }),
-    );
+      }
+      return job;
+    });
 
     return {
       statusCode: 200,
@@ -281,11 +296,19 @@ class JobsController {
         // Prefer the true final artifact (html_final/markdown_final). Images are often appended later.
         if (ARTIFACTS_TABLE) {
           const artifactsReversed = [...job.artifacts].reverse();
-          for (const artifactId of artifactsReversed) {
-            try {
-              const artifact = await db.get(ARTIFACTS_TABLE, {
-                artifact_id: artifactId,
-              });
+          // Use batchGet to fetch all artifacts at once
+          const artifactKeys = artifactsReversed.map((id) => ({
+            artifact_id: id,
+          }));
+
+          try {
+            const artifacts = await db.batchGet(ARTIFACTS_TABLE, artifactKeys);
+            const artifactMap = new Map(
+              artifacts.map((a) => [a.artifact_id, a]),
+            );
+
+            for (const artifactId of artifactsReversed) {
+              const artifact = artifactMap.get(artifactId);
               if (
                 artifact &&
                 (artifact.artifact_type === "html_final" ||
@@ -294,12 +317,12 @@ class JobsController {
                 finalArtifactId = artifactId;
                 break;
               }
-            } catch (error) {
-              logger.warn(
-                `Failed to fetch artifact ${artifactId} while refreshing output_url for job ${jobId}`,
-                { error },
-              );
             }
+          } catch (error) {
+            logger.warn(
+              `Failed to batch fetch artifacts while refreshing output_url for job ${jobId}`,
+              { error },
+            );
           }
         }
 
@@ -371,11 +394,17 @@ class JobsController {
 
     // Look for html_final or markdown_final artifact (check in reverse order)
     const artifactsReversed = [...job.artifacts].reverse();
-    for (const artifactId of artifactsReversed) {
-      try {
-        const artifact = await db.get(ARTIFACTS_TABLE, {
-          artifact_id: artifactId,
-        });
+    // Use batchGet to fetch all artifacts at once
+    const artifactKeys = artifactsReversed.map((id) => ({
+      artifact_id: id,
+    }));
+
+    try {
+      const artifacts = await db.batchGet(ARTIFACTS_TABLE, artifactKeys);
+      const artifactMap = new Map(artifacts.map((a) => [a.artifact_id, a]));
+
+      for (const artifactId of artifactsReversed) {
+        const artifact = artifactMap.get(artifactId);
         if (
           artifact &&
           (artifact.artifact_type === "html_final" ||
@@ -384,9 +413,11 @@ class JobsController {
           finalArtifactId = artifactId;
           break;
         }
-      } catch (error) {
-        logger.warn(`Failed to fetch artifact ${artifactId}`, { error });
       }
+    } catch (error) {
+      logger.warn(`Failed to batch fetch artifacts for job ${jobId}`, {
+        error,
+      });
     }
 
     // Fallback to last artifact if no final artifact found
@@ -559,11 +590,17 @@ class JobsController {
     let finalArtifactId: string | null = null;
 
     const artifactsReversed = [...job.artifacts].reverse();
-    for (const artifactId of artifactsReversed) {
-      try {
-        const artifact = await db.get(ARTIFACTS_TABLE, {
-          artifact_id: artifactId,
-        });
+    // Use batchGet to fetch all artifacts at once
+    const artifactKeys = artifactsReversed.map((id) => ({
+      artifact_id: id,
+    }));
+
+    try {
+      const artifacts = await db.batchGet(ARTIFACTS_TABLE, artifactKeys);
+      const artifactMap = new Map(artifacts.map((a) => [a.artifact_id, a]));
+
+      for (const artifactId of artifactsReversed) {
+        const artifact = artifactMap.get(artifactId);
         if (
           artifact &&
           (artifact.artifact_type === "html_final" ||
@@ -572,12 +609,12 @@ class JobsController {
           finalArtifactId = artifactId;
           break;
         }
-      } catch (error) {
-        logger.warn(
-          `Failed to fetch artifact ${artifactId} for public document route`,
-          { error },
-        );
       }
+    } catch (error) {
+      logger.warn(
+        `Failed to batch fetch artifacts for public document route`,
+        { error },
+      );
     }
 
     if (!finalArtifactId) {
