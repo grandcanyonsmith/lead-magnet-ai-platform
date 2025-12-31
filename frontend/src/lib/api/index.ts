@@ -253,6 +253,10 @@ class ApiClientImpl extends BaseApiClient implements ApiClient {
     return this.workflows.getWorkflowAIEditStatus(jobId);
   }
 
+  async testStep(request: Parameters<WorkflowsClient["testStep"]>[0]) {
+    return this.workflows.testStep(request);
+  }
+
   // Folders - delegate to workflows client
   async getFolders() {
     return this.workflows.getFolders();
