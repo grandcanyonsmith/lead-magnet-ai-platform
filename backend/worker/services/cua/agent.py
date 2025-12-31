@@ -125,12 +125,36 @@ class CUAgent:
             # This saves time and avoids blank screenshots
             
             yield LogEvent(type='log', timestamp=time.time(), level='info', message='Sending initial request to model...')
+            if input_text:
+                yield LogEvent(type='log', timestamp=time.time(), level='info', 
+                             message=f'📋 Task: {input_text}')
             
             # This is sync in existing code, but we are in async def. 
             # Ideally openai_client should be async, but if it's sync, we block.
             # Assuming it's the sync client from the existing service.
             response = openai_client.make_api_call(initial_params)
             previous_response_id = getattr(response, 'id', None)
+            
+            # Log initial reasoning/text if present
+            if hasattr(response, 'output') and response.output:
+                for item in response.output:
+                    item_type = getattr(item, 'type', '')
+                    if item_type == 'reasoning':
+                        summary = getattr(item, 'summary', [])
+                        for s in summary:
+                            if hasattr(s, 'text'):
+                                reasoning_text = getattr(s, 'text', '')
+                                if reasoning_text:
+                                    yield LogEvent(type='log', timestamp=time.time(), level='info', 
+                                                 message=f'💭 {reasoning_text}')
+                            elif isinstance(s, dict) and 'text' in s:
+                                yield LogEvent(type='log', timestamp=time.time(), level='info', 
+                                             message=f'💭 {s.get("text", "")}')
+                    elif item_type == 'text' or item_type == 'output_text':
+                        text_content = getattr(item, 'text', '') or getattr(item, 'content', '')
+                        if text_content:
+                            yield LogEvent(type='log', timestamp=time.time(), level='info', 
+                                         message=f'📝 {text_content}')
 
             while iteration < max_iterations:
                 elapsed = time.time() - start_time
@@ -146,15 +170,44 @@ class CUAgent:
                 iteration += 1
                 yield LogEvent(type='log', timestamp=time.time(), level='info', message=f'Iteration {iteration}')
 
-                # Parse response
+                # Parse response - log reasoning and text content
                 computer_calls = []
+                reasoning_items = []
+                text_outputs = []
+                
                 if hasattr(response, 'output') and response.output:
                     for item in response.output:
-                        if getattr(item, 'type', '') == 'computer_call':
+                        item_type = getattr(item, 'type', '')
+                        if item_type == 'computer_call':
                             computer_calls.append(item)
+                        elif item_type == 'reasoning':
+                            # Extract reasoning summary
+                            summary = getattr(item, 'summary', [])
+                            if summary:
+                                for s in summary:
+                                    if hasattr(s, 'text'):
+                                        reasoning_text = getattr(s, 'text', '')
+                                        if reasoning_text:
+                                            reasoning_items.append(reasoning_text)
+                                    elif isinstance(s, dict) and 'text' in s:
+                                        reasoning_items.append(s.get('text', ''))
+                        elif item_type == 'text' or item_type == 'output_text':
+                            text_content = getattr(item, 'text', '') or getattr(item, 'content', '')
+                            if text_content:
+                                text_outputs.append(text_content)
+                
+                # Log reasoning items
+                for reasoning_text in reasoning_items:
+                    yield LogEvent(type='log', timestamp=time.time(), level='info', 
+                                 message=f'💭 {reasoning_text}')
+                
+                # Log text outputs
+                for text_content in text_outputs:
+                    yield LogEvent(type='log', timestamp=time.time(), level='info', 
+                                 message=f'📝 {text_content}')
                 
                 if not computer_calls:
-                    final_text = getattr(response, 'output_text', '')
+                    final_text = getattr(response, 'output_text', '') or ' '.join(text_outputs)
                     usage_info = {}
                     if hasattr(response, 'usage'):
                         usage_info = {
@@ -162,7 +215,12 @@ class CUAgent:
                             'output_tokens': response.usage.output_tokens,
                             'total_tokens': response.usage.total_tokens
                         }
-                    yield LogEvent(type='log', timestamp=time.time(), level='info', message='Task completed by model.')
+                    if final_text:
+                        yield LogEvent(type='log', timestamp=time.time(), level='info', 
+                                     message=f'✅ Task completed: {final_text}')
+                    else:
+                        yield LogEvent(type='log', timestamp=time.time(), level='info', 
+                                     message='✅ Task completed by model.')
                     yield LoopCompleteEvent(
                         type='complete', timestamp=time.time(),
                         final_text=final_text, screenshots=screenshot_urls,
@@ -195,6 +253,43 @@ class CUAgent:
                     yield LogEvent(type='log', timestamp=time.time(), level='warning', message='Auto-acknowledging safety checks...')
                     acknowledged_safety_checks = checks_data
 
+                # Log action details before execution
+                action_type = action.get('type', 'unknown')
+                action_details = []
+                
+                if action_type == 'click':
+                    x = action.get('x', '?')
+                    y = action.get('y', '?')
+                    button = action.get('button', 'left')
+                    action_details.append(f"🖱️ Click at ({x}, {y}) with {button} button")
+                elif action_type == 'type':
+                    text = action.get('text', '')
+                    action_details.append(f"⌨️ Type: {text[:100]}{'...' if len(text) > 100 else ''}")
+                elif action_type == 'scroll':
+                    scroll_x = action.get('scroll_x', action.get('delta_x', 0))
+                    scroll_y = action.get('scroll_y', action.get('delta_y', 0))
+                    x = action.get('x', '?')
+                    y = action.get('y', '?')
+                    action_details.append(f"📜 Scroll at ({x}, {y}): x={scroll_x}, y={scroll_y}")
+                elif action_type == 'keypress':
+                    keys = action.get('keys', [])
+                    key = action.get('key', '')
+                    if keys:
+                        action_details.append(f"⌨️ Keypress: {', '.join(str(k) for k in keys)}")
+                    elif key:
+                        action_details.append(f"⌨️ Keypress: {key}")
+                elif action_type == 'wait':
+                    duration_ms = action.get('duration_ms', 1000)
+                    action_details.append(f"⏳ Wait: {duration_ms}ms")
+                elif action_type == 'navigate':
+                    url = action.get('url', '')
+                    action_details.append(f"🌐 Navigate to: {url}")
+                else:
+                    action_details.append(f"🔧 Action: {action_type} - {str(action)[:200]}")
+                
+                for detail in action_details:
+                    yield LogEvent(type='log', timestamp=time.time(), level='info', message=detail)
+                
                 yield ActionCallEvent(
                     type='action_call', timestamp=time.time(),
                     call_id=call_id, action=action
@@ -205,14 +300,18 @@ class CUAgent:
                     await self.env.execute_action(action)
                     yield ActionExecutedEvent(
                         type='action_executed', timestamp=time.time(),
-                        action_type=action.get('type', 'unknown'), success=True
+                        action_type=action_type, success=True
                     )
+                    yield LogEvent(type='log', timestamp=time.time(), level='info', 
+                                 message=f'✅ Action executed successfully: {action_type}')
                 except Exception as e:
                     logger.error(f"Action failed: {e}")
                     yield ActionExecutedEvent(
                         type='action_executed', timestamp=time.time(),
-                        action_type=action.get('type', 'unknown'), success=False, error=str(e)
+                        action_type=action_type, success=False, error=str(e)
                     )
+                    yield LogEvent(type='log', timestamp=time.time(), level='error', 
+                                 message=f'❌ Action failed: {action_type} - {str(e)}')
                     # We continue to take screenshot even if action failed
                 
                 # Screenshot
