@@ -49,6 +49,8 @@ class AIService:
         previous_image_urls: Optional[List[str]] = None,
         reasoning_effort: Optional[str] = None,
         step_index: Optional[int] = None,
+        text_verbosity: Optional[str] = None,
+        max_output_tokens: Optional[int] = None,
     ) -> Tuple[str, Dict, Dict, Dict]:
         """
         Generate a report using OpenAI with configurable tools.
@@ -175,6 +177,8 @@ class AIService:
                     job_id=job_id,
                     tenant_id=tenant_id,
                     reasoning_effort=reasoning_effort,
+                    text_verbosity=text_verbosity,
+                    max_output_tokens=max_output_tokens,
                 )
                 
                 # Run CUA loop
@@ -276,6 +280,8 @@ class AIService:
                     job_id=job_id,
                     tenant_id=tenant_id,
                     reasoning_effort=reasoning_effort,
+                    text_verbosity=text_verbosity,
+                    max_output_tokens=max_output_tokens,
                 )
 
                 final_response = self.shell_loop_service.run_shell_loop(
@@ -287,6 +293,8 @@ class AIService:
                     tool_choice=normalized_tool_choice,
                     params=params,
                     reasoning_effort=reasoning_effort,
+                    text_verbosity=text_verbosity,
+                    max_output_tokens=max_output_tokens,
                     max_iterations=25,
                     # Keep this below the 15-minute Lambda timeout (job processor) with buffer.
                     # Shell commands themselves can be long-running; if you need > ~14 minutes,
@@ -341,6 +349,8 @@ class AIService:
                 job_id=job_id,
                 tenant_id=tenant_id,
                 reasoning_effort=reasoning_effort,
+                text_verbosity=text_verbosity,
+                max_output_tokens=max_output_tokens,
             )
             
             logger.debug(f"[AI Service] API params built successfully", extra={

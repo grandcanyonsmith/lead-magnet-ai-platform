@@ -116,6 +116,8 @@ class OpenAIClient:
         tenant_id: Optional[str] = None,
         reasoning_effort: Optional[str] = None,
         service_tier: Optional[str] = None,
+        text_verbosity: Optional[str] = None,
+        max_output_tokens: Optional[int] = None,
     ) -> Dict:
         """Build Responses API params (delegates to OpenAIRequestBuilder)."""
         return OpenAIRequestBuilder.build_api_params(
@@ -131,6 +133,8 @@ class OpenAIClient:
             tenant_id=tenant_id,
             reasoning_effort=reasoning_effort,
             service_tier=service_tier,
+            text_verbosity=text_verbosity,
+            max_output_tokens=max_output_tokens,
         )
 
     def create_response(self, **params):
