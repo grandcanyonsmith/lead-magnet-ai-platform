@@ -528,21 +528,30 @@ export default function WorkflowStepEditor({
         />
 
         <div className="space-y-6">
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/30 p-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
+          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/30 p-5">
+            <div className="mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+                Step Information
+              </h4>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Basic details about this workflow step
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="space-y-1">
                 <label
-                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300"
                   htmlFor={`step-name-${index}`}
                 >
-                  Instruction Name *
+                  <span>Step Name</span>
+                  <span className="text-red-500">*</span>
                 </label>
                 <input
                   id={`step-name-${index}`}
                   type="text"
                   value={localStep.step_name}
                   onChange={(e) => handleChange("step_name", e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                  className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors placeholder:text-gray-400 dark:placeholder:text-gray-500"
                   placeholder="e.g., Deep Research"
                   required
                   aria-label="Instruction name"
@@ -550,12 +559,13 @@ export default function WorkflowStepEditor({
                 />
               </div>
 
-              <div>
+              <div className="space-y-1">
                 <label
-                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300"
                   htmlFor={`step-description-${index}`}
                 >
-                  Description (optional)
+                  <span>Description</span>
+                  <span className="text-xs font-normal text-gray-400 dark:text-gray-500">(Optional)</span>
                 </label>
                 <textarea
                   id={`step-description-${index}`}
@@ -563,8 +573,8 @@ export default function WorkflowStepEditor({
                   onChange={(e) =>
                     handleChange("step_description", e.target.value)
                   }
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-                  placeholder="Brief description of what this does"
+                  className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors placeholder:text-gray-400 dark:placeholder:text-gray-500 resize-none"
+                  placeholder="Brief description of what this step does"
                   rows={2}
                   aria-label="Instruction description"
                 />
@@ -572,14 +582,23 @@ export default function WorkflowStepEditor({
             </div>
           </div>
 
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/30 p-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
+          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/30 p-5">
+            <div className="mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+                AI Configuration
+              </h4>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Configure the AI model and reasoning parameters
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="space-y-1">
                 <label
-                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300"
                   htmlFor={`ai-model-${index}`}
                 >
-                  AI Brain *
+                  <span>AI Model</span>
+                  <span className="text-red-500">*</span>
                 </label>
                 <select
                   id={`ai-model-${index}`}
@@ -587,7 +606,7 @@ export default function WorkflowStepEditor({
                   onChange={(e) =>
                     handleChange("model", e.target.value as AIModel)
                   }
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                  className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
                   required
                   aria-label="AI model"
                   aria-required="true"
@@ -600,12 +619,13 @@ export default function WorkflowStepEditor({
                 </select>
               </div>
 
-              <div>
+              <div className="space-y-1">
                 <label
-                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300"
                   htmlFor={`reasoning-effort-${index}`}
                 >
-                  Thinking Power
+                  <span>Reasoning Depth</span>
+                  <span className="text-xs font-normal text-gray-400 dark:text-gray-500">(Optional)</span>
                 </label>
                 <select
                   id={`reasoning-effort-${index}`}
@@ -613,52 +633,125 @@ export default function WorkflowStepEditor({
                   onChange={(e) =>
                     handleChange("reasoning_effort", e.target.value || undefined)
                   }
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                  className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
                   aria-label="Reasoning effort"
                 >
-                  <option value="">Standard</option>
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
+                  <option value="">Standard (Auto)</option>
+                  <option value="none">None - Fastest</option>
+                  <option value="low">Low - Quick</option>
+                  <option value="medium">Medium - Balanced</option>
+                  <option value="high">High - Thorough</option>
+                  <option value="xhigh">Extra High - Maximum</option>
                 </select>
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Optional. Controls how much the AI thinks before answering.
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed">
+                  Controls how deeply the AI reasons before responding. Higher values improve quality but increase latency.
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/30 p-4">
-            <label
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-              htmlFor={`instructions-${index}`}
-            >
-              Instructions *
-            </label>
+          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/30 p-5">
+            <div className="mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+                Output Settings
+              </h4>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Control the length and detail level of AI responses
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="space-y-1">
+                <label
+                  className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300"
+                  htmlFor={`text-verbosity-${index}`}
+                >
+                  <span>Output Verbosity</span>
+                  <span className="text-xs font-normal text-gray-400 dark:text-gray-500">(Optional)</span>
+                </label>
+                <select
+                  id={`text-verbosity-${index}`}
+                  value={localStep.text_verbosity || ""}
+                  onChange={(e) =>
+                    handleChange("text_verbosity", e.target.value || undefined)
+                  }
+                  className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
+                  aria-label="Text verbosity"
+                >
+                  <option value="">Default</option>
+                  <option value="low">Low - Concise</option>
+                  <option value="medium">Medium - Balanced</option>
+                  <option value="high">High - Detailed</option>
+                </select>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed">
+                  Adjusts how detailed and verbose the AI's output will be.
+                </p>
+              </div>
+
+              <div className="space-y-1">
+                <label
+                  className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300"
+                  htmlFor={`max-output-tokens-${index}`}
+                >
+                  <span>Max Output Tokens</span>
+                  <span className="text-xs font-normal text-gray-400 dark:text-gray-500">(Optional)</span>
+                </label>
+                <input
+                  id={`max-output-tokens-${index}`}
+                  type="number"
+                  min="1"
+                  step="100"
+                  value={localStep.max_output_tokens || ""}
+                  onChange={(e) =>
+                    handleChange(
+                      "max_output_tokens",
+                      e.target.value ? parseInt(e.target.value, 10) : undefined
+                    )
+                  }
+                  className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors placeholder:text-gray-400 dark:placeholder:text-gray-500"
+                  placeholder="e.g., 4000"
+                  aria-label="Max output tokens"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed">
+                  Maximum number of tokens the AI can generate. Leave empty for no limit.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/30 p-5">
+            <div className="mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
+              <label
+                className="flex items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-white"
+                htmlFor={`instructions-${index}`}
+              >
+                <span>Instructions</span>
+                <span className="text-red-500">*</span>
+              </label>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Detailed instructions that will be passed to the AI model along with context from previous steps
+              </p>
+            </div>
             <textarea
               id={`instructions-${index}`}
               value={localStep.instructions}
               onChange={(e) => handleChange("instructions", e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 font-mono text-sm leading-relaxed"
-              placeholder="Detailed instructions for what this step should do..."
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 font-mono text-sm leading-relaxed transition-colors placeholder:text-gray-400 dark:placeholder:text-gray-500 resize-y min-h-[140px]"
+              placeholder="Enter detailed instructions for what this step should do..."
               rows={7}
               required
               aria-label="Step instructions"
               aria-required="true"
             />
-            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              Passed to the model along with context from previous steps.
-            </p>
           </div>
 
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/30 p-4">
-            <div className="flex items-center justify-between gap-3 mb-3">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/30 p-5">
+            <div className="mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
                 Capabilities
-              </label>
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                Tools the model may use
-              </span>
+              </h4>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Select tools the AI model can use to complete this step
+              </p>
             </div>
 
             <div className="grid gap-2">
@@ -714,26 +807,44 @@ export default function WorkflowStepEditor({
             )}
           </div>
 
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/30 p-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Tool Choice
-            </label>
-            <select
-              value={localStep.tool_choice || "auto"}
-              onChange={(e) =>
-                handleChange(
-                  "tool_choice",
-                  e.target.value as "auto" | "required" | "none",
-                )
-              }
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-            >
-              {TOOL_CHOICE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label} - {option.description}
-                </option>
-              ))}
-            </select>
+          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/30 p-5">
+            <div className="mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+                Tool Usage
+              </h4>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Control how the AI model uses the selected tools
+              </p>
+            </div>
+            <div className="space-y-1">
+              <label
+                className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300"
+                htmlFor={`tool-choice-${index}`}
+              >
+                <span>Tool Choice</span>
+                <span className="text-xs font-normal text-gray-400 dark:text-gray-500">(Optional)</span>
+              </label>
+              <select
+                id={`tool-choice-${index}`}
+                value={localStep.tool_choice || "auto"}
+                onChange={(e) =>
+                  handleChange(
+                    "tool_choice",
+                    e.target.value as "auto" | "required" | "none",
+                  )
+                }
+                className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
+              >
+                {TOOL_CHOICE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label} - {option.description}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed">
+                Determines whether the model must use tools, can choose to use them, or should not use them.
+              </p>
+            </div>
           </div>
 
           <CollapsibleSection

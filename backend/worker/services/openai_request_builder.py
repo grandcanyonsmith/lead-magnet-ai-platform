@@ -42,7 +42,9 @@ class OpenAIRequestBuilder:
         job_id: Optional[str] = None,
         tenant_id: Optional[str] = None,
         reasoning_effort: Optional[str] = None,
-        service_tier: Optional[str] = None
+        service_tier: Optional[str] = None,
+        text_verbosity: Optional[str] = None,
+        max_output_tokens: Optional[int] = None
     ) -> Dict:
         """
         Build parameters for OpenAI Responses API call.
@@ -56,8 +58,10 @@ class OpenAIRequestBuilder:
             has_computer_use: Whether computer_use_preview is in tools
             reasoning_level: Reasoning level (deprecated, kept for compatibility)
             previous_image_urls: Optional list of image URLs from previous steps to include in input
-            reasoning_effort: Reasoning effort for supported models ('low'|'medium'|'high')
+            reasoning_effort: Reasoning effort for supported models ('none'|'low'|'medium'|'high'|'xhigh')
             service_tier: Service tier / speed preference (e.g., 'default' for fast)
+            text_verbosity: Output verbosity ('low'|'medium'|'high')
+            max_output_tokens: Maximum number of output tokens
             
         Returns:
             API parameters dictionary for Responses API
@@ -113,6 +117,14 @@ class OpenAIRequestBuilder:
 
         if service_tier:
             params["service_tier"] = service_tier
+
+        # Output verbosity control
+        if text_verbosity:
+            params["text"] = {"verbosity": text_verbosity}
+
+        # Maximum output tokens
+        if max_output_tokens is not None:
+            params["max_output_tokens"] = max_output_tokens
         
         return params
 

@@ -79,8 +79,13 @@ class AIStepProcessor:
         if step_model != 'gpt-5.2':
             step_model = 'gpt-5.2'
         step_instructions = step.get('instructions', '')
-        # Force max reasoning for all steps (platform-wide standard).
-        step_reasoning_effort = 'high'
+        # Extract reasoning effort from step config, default to 'high' for GPT-5 family
+        step_reasoning_effort = step.get('reasoning_effort')
+        if step_reasoning_effort is None and isinstance(step_model, str) and step_model.startswith('gpt-5'):
+            step_reasoning_effort = 'high'
+        # Extract text verbosity and max_output_tokens from step config
+        step_text_verbosity = step.get('text_verbosity')
+        step_max_output_tokens = step.get('max_output_tokens')
         
         logger.info(f"[AIStepProcessor] Processing AI step {step_index + 1}", extra={
             'job_id': job_id,
@@ -112,6 +117,8 @@ class AIStepProcessor:
                 previous_image_urls=previous_image_urls,
                 reasoning_effort=step_reasoning_effort,
                 step_index=step_index,
+                text_verbosity=step_text_verbosity,
+                max_output_tokens=step_max_output_tokens,
             )
         finally:
             # Clean up step context

@@ -104,7 +104,7 @@ Available Tools:
     "step_name": "string",
     "step_description": "string",
     "model": "string",
-    "reasoning_effort": "low" | "medium" | "high",
+    "reasoning_effort": "none" | "low" | "medium" | "high" | "xhigh",
     "instructions": "string",
     "tools": [
       "string" OR 
@@ -244,7 +244,7 @@ Please generate the workflow step configuration.`;
       }
 
       // Validate reasoning_effort
-      if (!['low', 'medium', 'high'].includes(parsedResponse.step.reasoning_effort || '')) {
+      if (!['none', 'low', 'medium', 'high', 'xhigh'].includes(parsedResponse.step.reasoning_effort || '')) {
         parsedResponse.step.reasoning_effort = 'high';
       }
 

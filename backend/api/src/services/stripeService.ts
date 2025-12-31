@@ -13,6 +13,8 @@ import { logger } from "../utils/logger";
 import { env } from "../utils/env";
 import { db } from "../utils/db";
 
+import { resolveModelPriceKey } from "../config/billing";
+
 interface ReportUsageParams {
   customerId: string;
   model: string;
@@ -141,34 +143,8 @@ export class StripeService {
   }
 
   private normalizeModelName(model: string): string {
-    // Normalize model names to match price map keys
-    // Handle variants like "gpt-5-2025-08-07" -> "gpt-5", "gpt-4o-2024-08-06" -> "gpt-4o"
-    const normalized = model.toLowerCase().trim();
-
-    // Map known variants to base model names
-    // Force all GPT-5* usage onto the gpt-5.2 meter (platform-wide standard).
-    if (normalized.startsWith("gpt-5.2")) return "gpt-5.2";
-    if (normalized.startsWith("gpt-5")) return "gpt-5.2";
-    if (normalized.startsWith("gpt-4.1")) return "gpt-4.1";
-    if (normalized.startsWith("gpt-4o-mini")) return "gpt-4o-mini";
-    if (normalized.startsWith("gpt-4o")) return "gpt-4o";
-    if (normalized.startsWith("gpt-4-turbo")) return "gpt-4-turbo";
-    if (normalized.startsWith("gpt-3.5-turbo")) return "gpt-3.5-turbo";
-    if (normalized.startsWith("computer-use-preview"))
-      return "computer-use-preview";
-    if (
-      normalized.includes("o4-mini-deep-research") ||
-      normalized.includes("o4-mini-deep")
-    )
-      return "o4-mini-deep-research";
-    if (
-      normalized.includes("o3-deep-research") ||
-      normalized.includes("o3-deep")
-    )
-      return "o4-mini-deep-research"; // Map o3 to o4-mini price
-
-    // Return as-is if no variant detected
-    return normalized;
+    // Delegate to centralized configuration
+    return resolveModelPriceKey(model);
   }
 
   private getMeteredPriceIdForModel(model: string): string | undefined {
