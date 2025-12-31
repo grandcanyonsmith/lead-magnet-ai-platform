@@ -32,6 +32,7 @@ interface WorkflowFlowchartProps {
   onAddStep: () => void;
   onStepsReorder: (newSteps: WorkflowStep[]) => void;
   activeStepIndex?: number | null;
+  onTriggerClick?: () => void;
 }
 
 const NODE_SPACING = 320;
@@ -74,6 +75,7 @@ function FlowchartContent({
   onAddStep,
   onStepsReorder,
   activeStepIndex,
+  onTriggerClick,
 }: WorkflowFlowchartProps) {
   const { fitView } = useReactFlow();
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -108,7 +110,10 @@ function FlowchartContent({
       position: { x: START_NODE_X - NODE_SPACING * 0.7, y: NODE_Y },
       data: {
         label: (
-          <div className="flex h-20 w-24 flex-col items-center justify-center rounded-2xl border border-slate-200 dark:border-border bg-white/80 dark:bg-card/80 text-xs font-semibold text-slate-500 dark:text-muted-foreground shadow-sm backdrop-blur">
+          <div 
+            onClick={() => onTriggerClick?.()}
+            className="flex h-20 w-24 flex-col items-center justify-center rounded-2xl border border-slate-200 dark:border-border bg-white/80 dark:bg-card/80 text-xs font-semibold text-slate-500 dark:text-muted-foreground shadow-sm backdrop-blur cursor-pointer hover:border-primary-500 hover:text-primary-600 transition-colors"
+          >
             Start
           </div>
         ),
@@ -166,6 +171,7 @@ function FlowchartContent({
   }, [
     steps,
     onStepClick,
+    onTriggerClick,
     activeStepIndex,
     hoveredIndex,
     dragState.nodeId,

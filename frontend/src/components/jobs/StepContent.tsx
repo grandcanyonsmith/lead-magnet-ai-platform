@@ -353,7 +353,7 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
             </div>
           )}
           <>
-            <div className="prose prose-sm max-w-none bg-white dark:bg-card p-4 md:p-4 rounded-xl border border-gray-200 dark:border-gray-700 leading-relaxed break-words">
+            <div className="prose prose-sm dark:prose-invert max-w-none bg-white dark:bg-card p-4 md:p-4 rounded-xl border border-gray-200 dark:border-gray-700 leading-relaxed break-words">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                 {markdownText}
               </ReactMarkdown>
@@ -387,7 +387,7 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
       // No images in text or prop, render as plain text
       return (
         <>
-          <pre className="text-sm md:text-xs whitespace-pre-wrap break-words font-mono bg-gray-50 dark:bg-gray-900/50 p-4 md:p-4 rounded-xl border border-gray-200 dark:border-gray-700 leading-relaxed">
+          <pre className="text-sm md:text-xs text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words font-mono bg-gray-50 dark:bg-gray-900/50 p-4 md:p-4 rounded-xl border border-gray-200 dark:border-gray-700 leading-relaxed">
             {contentString}
           </pre>
           {/* Always check for images from prop */}
@@ -399,7 +399,7 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
     // Has images in text, render with inline images
     return (
       <div className="bg-gray-50 dark:bg-gray-900/50 p-4 md:p-4 rounded-xl border border-gray-200 dark:border-gray-700">
-        <pre className="text-sm md:text-xs whitespace-pre-wrap break-words font-mono leading-relaxed">
+        <pre className="text-sm md:text-xs text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words font-mono leading-relaxed">
           {renderTextWithImages(contentString)}
         </pre>
         {/* Render images from imageUrls prop */}
