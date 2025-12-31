@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import clsx from "clsx";
-import { FiChevronRight } from "react-icons/fi";
+import { FiChevronRight, FiCopy } from "react-icons/fi";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 
@@ -19,6 +19,56 @@ interface JsonViewerProps {
 const MAX_SYNTAX_HIGHLIGHT_CHARS = 50_000;
 const MAX_CHILDREN_PREVIEW = 60;
 const MAX_STRING_PREVIEW = 280;
+const MAX_STRING_PREVIEW_LINES = 14;
+
+function getLineCount(text: string): number {
+  let count = 1;
+  for (let i = 0; i < text.length; i++) {
+    if (text.charCodeAt(i) === 10) count += 1; // '\n'
+  }
+  return count;
+}
+
+function takeFirstLines(text: string, maxLines: number): string {
+  if (maxLines <= 0) return "";
+  let lineCount = 1;
+  for (let i = 0; i < text.length; i++) {
+    if (text.charCodeAt(i) === 10) {
+      lineCount += 1;
+      if (lineCount > maxLines) {
+        return text.slice(0, i);
+      }
+    }
+  }
+  return text;
+}
+
+type FencedBlock = {
+  prefix: string;
+  language?: string;
+  code: string;
+  suffix: string;
+};
+
+function extractFirstFencedBlock(text: string): FencedBlock | null {
+  const open = text.indexOf("```");
+  if (open === -1) return null;
+
+  const openLineEnd = text.indexOf("\n", open + 3);
+  if (openLineEnd === -1) return null;
+
+  const language = text.slice(open + 3, openLineEnd).trim() || undefined;
+  const codeStart = openLineEnd + 1;
+
+  const close = text.indexOf("```", codeStart);
+  if (close === -1) return null;
+
+  const prefix = text.slice(0, open);
+  const code = text.slice(codeStart, close);
+  const suffix = text.slice(close + 3).replace(/^\n/, "");
+
+  return { prefix, language, code, suffix };
+}
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
@@ -55,25 +105,129 @@ function JsonLeafRow({
 
 function JsonStringValue({ value }: { value: string }) {
   const [expanded, setExpanded] = useState(false);
-  const isLong = value.length > MAX_STRING_PREVIEW;
+  const lineCount = getLineCount(value);
+  const isMultiline = lineCount > 1;
+  const isLongSingleLine = !isMultiline && value.length > MAX_STRING_PREVIEW;
+  const isLongMultiline =
+    isMultiline &&
+    (lineCount > MAX_STRING_PREVIEW_LINES || value.length > MAX_STRING_PREVIEW);
+  const shouldCollapse = isLongSingleLine || isLongMultiline;
+  const shouldScrollExpanded =
+    expanded && (lineCount > 80 || value.length > 8_000);
+
+  const fenced = value.includes("```") ? extractFirstFencedBlock(value) : null;
+
+  const previewText = isMultiline
+    ? takeFirstLines(value, MAX_STRING_PREVIEW_LINES)
+    : value.slice(0, MAX_STRING_PREVIEW);
+
   const displayValue =
-    !expanded && isLong ? `${value.slice(0, MAX_STRING_PREVIEW)}…` : value;
+    !expanded && shouldCollapse ? `${previewText}…` : value;
+
+  const displayFenced = (() => {
+    if (!fenced) return null;
+    if (expanded || !shouldCollapse) return fenced;
+
+    const previewCode = takeFirstLines(fenced.code, MAX_STRING_PREVIEW_LINES);
+    const codeNeedsEllipsis = previewCode.length < fenced.code.length;
+    return {
+      ...fenced,
+      code: codeNeedsEllipsis ? `${previewCode}…` : previewCode,
+      suffix: "",
+    };
+  })();
+
+  const copyValue = async () => {
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(value);
+      }
+    } catch {
+      // noop
+    }
+  };
 
   return (
     <div className="min-w-0">
-      <span className="text-amber-200 whitespace-pre-wrap break-words">
-        &quot;{displayValue}&quot;
-      </span>
-      {isLong && (
-        <button
-          type="button"
-          className="ml-2 text-[11px] text-sky-300 hover:text-sky-200 active:text-sky-100 underline underline-offset-2"
-          onClick={() => setExpanded((v) => !v)}
-        >
-          {expanded
-            ? "less"
-            : `more (${value.length.toLocaleString()} chars)`}
-        </button>
+      {isMultiline || value.length > MAX_STRING_PREVIEW ? (
+        <div className="rounded-lg border border-gray-700/40 bg-black/20">
+          <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 border-b border-gray-700/30">
+            <span className="text-[11px] text-gray-400">
+              {isMultiline ? `${lineCount.toLocaleString()} lines • ` : ""}
+              {value.length.toLocaleString()} chars
+              {displayFenced?.language ? ` • ${displayFenced.language}` : ""}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={copyValue}
+                className="inline-flex items-center gap-1 text-[11px] text-gray-300 hover:text-white"
+                title="Copy value"
+              >
+                <FiCopy className="h-3.5 w-3.5" />
+                Copy
+              </button>
+              {shouldCollapse && (
+                <button
+                  type="button"
+                  className="text-[11px] text-sky-300 hover:text-sky-200 active:text-sky-100 underline underline-offset-2"
+                  onClick={() => setExpanded((v) => !v)}
+                >
+                  {expanded ? "less" : "more"}
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="p-2.5">
+            {displayFenced ? (
+              <div className="space-y-2">
+                {displayFenced.prefix.trim() ? (
+                  <div className="text-gray-200 whitespace-pre-wrap break-words">
+                    {displayFenced.prefix.trim()}
+                  </div>
+                ) : null}
+                <pre
+                  className={clsx(
+                    "rounded-md border border-gray-700/40 bg-black/25 p-3 text-gray-100 whitespace-pre-wrap break-words leading-relaxed",
+                    shouldScrollExpanded && "max-h-80 overflow-auto",
+                  )}
+                >
+                  {displayFenced.code}
+                </pre>
+                {displayFenced.suffix.trim() ? (
+                  <div className="text-gray-200 whitespace-pre-wrap break-words">
+                    {displayFenced.suffix.trim()}
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <pre
+                className={clsx(
+                  "text-gray-100 whitespace-pre-wrap break-words leading-relaxed",
+                  shouldScrollExpanded && "max-h-80 overflow-auto",
+                )}
+              >
+                {displayValue}
+              </pre>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-start gap-2 min-w-0">
+          <span className="text-amber-200 whitespace-pre-wrap break-words">
+            &quot;{displayValue}&quot;
+          </span>
+          <button
+            type="button"
+            onClick={copyValue}
+            className="mt-0.5 text-gray-400 hover:text-gray-200"
+            title="Copy value"
+            aria-label="Copy value"
+          >
+            <FiCopy className="h-3.5 w-3.5" />
+          </button>
+        </div>
       )}
     </div>
   );
