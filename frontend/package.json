@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "node -e \"require('fs').rmSync('.next-dev',{recursive:true,force:true})\" && next dev -p 3000 -H 0.0.0.0",
+    "dev": "next dev -p ${PORT:-3000} -H 0.0.0.0",
+    "clean:dev": "node -e \"require('fs').rmSync('.next-dev',{recursive:true,force:true})\"",
+    "dev:clean": "npm run clean:dev && npm run dev",
     "build": "next build",
     "start": "next start -p 5000 -H 0.0.0.0",
     "start:deploy": "next start -p ${PORT:-80} -H 0.0.0.0",

@@ -6,7 +6,7 @@ export function registerCUARoutes(): void {
   router.register(
     "POST",
     "/admin/cua/execute",
-    async (params, body, query, tenantId, context) => {
+    async (_params, body, _query, tenantId, context) => {
       logger.info("[Router] Matched /admin/cua/execute route");
       
       // We need to bypass the default response handling to support streaming.

@@ -307,10 +307,20 @@ export default function StepTester({ step, index }: StepTesterProps) {
                     let inputData: any = {};
                     try { inputData = JSON.parse(testInput); } catch {}
                     
-                    const model = step.model || "computer-use-preview";
                     const instructions = step.instructions || "";
                     const tools = step.tools || [];
                     const toolChoice = step.tool_choice || "auto";
+                    
+                    // Enforce computer-use-preview model when computer_use_preview tool is present
+                    let model = step.model || "computer-use-preview";
+                    const hasComputerUse = Array.isArray(tools) && tools.some((t: any) => 
+                        (typeof t === 'string' && t === 'computer_use_preview') || 
+                        (typeof t === 'object' && t.type === 'computer_use_preview')
+                    );
+                    if (hasComputerUse && model !== "computer-use-preview") {
+                        console.warn(`[StepTester] Overriding model from ${model} to computer-use-preview (required for computer_use_preview tool)`);
+                        model = "computer-use-preview";
+                    }
                     
                     // Determine input_text from testInput or default
                     let inputText = inputData.input_text || inputData.user_prompt || "Start the task.";

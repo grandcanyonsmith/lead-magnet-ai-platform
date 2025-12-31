@@ -197,6 +197,7 @@ class OpenAIClient:
         error_message = str(error)
         error_body = getattr(error, "body", {}) or {}
         error_info = error_body.get("error", {}) if isinstance(error_body, dict) else {}
+        error_param = error_info.get("param") if isinstance(error_info, dict) else None
 
         unsupported: List[str] = []
 
@@ -214,12 +215,28 @@ class OpenAIClient:
         ):
             unsupported.append("service_tier")
 
+        # Tool schema drift: OpenAI rejects `tools[*].container` for computer_use_preview.
+        # If we see that exact failure, strip `container` from all tools and retry once.
+        if (
+            isinstance(error_param, str)
+            and error_param.startswith("tools[")
+            and error_param.endswith(".container")
+        ) or ("Unknown parameter" in error_message and "tools[" in error_message and ".container" in error_message):
+            unsupported.append("tools.container")
+
         if not unsupported:
             return None
 
         retry_params = dict(params)
         for key in unsupported:
-            retry_params.pop(key, None)
+            if key == "tools.container":
+                tools = retry_params.get("tools")
+                if isinstance(tools, list):
+                    for t in tools:
+                        if isinstance(t, dict) and "container" in t:
+                            t.pop("container", None)
+            else:
+                retry_params.pop(key, None)
 
         logger.warning("[OpenAI Client] Retrying without unsupported params", extra={
             "job_id": params.get("job_id"),

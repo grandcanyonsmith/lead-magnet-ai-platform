@@ -87,6 +87,10 @@ export const handler = async (
     // Router will extract auth context internally and use customerId as tenantId
     const result = await routerHandler(apiEvent, undefined);
 
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.ts:88',message:'Router result',data:{resultKeys:Object.keys(result || {}), handled: (result as any).handled},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
+    // #endregion
+
     // Format response
     const contentType = result.headers?.['Content-Type'] || 'application/json';
     const isTextContent = contentType.startsWith('text/') || contentType.includes('markdown');
