@@ -140,7 +140,7 @@ export function FormTab({
                 required
               />
               <p className="mt-2 text-xs text-gray-500 dark:text-muted-foreground">
-                Automatically set to "{workflowName} Form".
+                Automatically set to &quot;{workflowName} Form&quot;.
               </p>
             </div>
 
