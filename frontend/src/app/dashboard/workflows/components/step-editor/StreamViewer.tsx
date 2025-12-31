@@ -67,7 +67,6 @@ export default function StreamViewer({ endpoint, requestBody, onClose }: StreamV
             if (!line.trim()) continue;
             try {
               const event = JSON.parse(line);
-              console.log("[StreamViewer] Received event:", event.type, event);
               
               if (active) {
                 handleEvent(event);
