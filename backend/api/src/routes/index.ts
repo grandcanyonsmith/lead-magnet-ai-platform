@@ -11,6 +11,7 @@ import { registerFileRoutes } from "./fileRoutes";
 import { registerImpersonationRoutes } from "@domains/impersonation";
 import { registerAuthRoutes } from "./authRoutes";
 import { registerFolderRoutes } from "./folderRoutes";
+import { registerCUARoutes } from "./cuaRoutes";
 
 // Re-export RouteResponse for use in other modules
 export type { RouteResponse };
@@ -26,6 +27,7 @@ registerFileRoutes();
 registerImpersonationRoutes();
 registerAuthRoutes();
 registerFolderRoutes();
+registerCUARoutes();
 
 /**
  * Main router function.

@@ -877,15 +877,15 @@ export default function WorkflowStepEditor({
             />
           </CollapsibleSection>
 
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/30 p-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <div className={`${SECTION_SHELL} p-4 md:p-5`}>
+            <label className="block text-sm font-medium text-foreground/90 mb-1">
               Dependencies (optional)
             </label>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            <p className="text-xs text-muted-foreground mb-3">
               Select which steps must complete before this step runs. Leave empty
               to auto-detect from step order.
             </p>
-            <div className="space-y-2 max-h-44 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 p-3">
+            <div className="space-y-2 max-h-44 overflow-y-auto rounded-xl border border-border/60 bg-background/60 p-3">
               {allSteps.length > 0 ? (
                 allSteps.map((otherStep, otherIndex) => {
                   if (otherIndex === index) return null; // Can't depend on itself
@@ -909,22 +909,22 @@ export default function WorkflowStepEditor({
                               );
                           handleChange("depends_on", newDeps);
                         }}
-                        className="mt-0.5 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
+                        className="mt-0.5 h-4 w-4 rounded border-input text-primary focus:ring-2 focus:ring-ring/30"
                       />
-                      <span className="text-sm text-gray-900 dark:text-gray-200">
+                      <span className="text-sm text-foreground">
                         Step {otherIndex + 1}: {otherStep.step_name}
                       </span>
                     </label>
                   );
                 })
               ) : (
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-sm text-muted-foreground">
                   No other steps available
                 </p>
               )}
             </div>
             {localStep.depends_on && localStep.depends_on.length > 0 && (
-              <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+              <p className="mt-2 text-xs text-muted-foreground">
                 Depends on:{" "}
                 {localStep.depends_on
                   .map((dep: number) => `Step ${dep + 1}`)
