@@ -2,6 +2,7 @@ import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ecrAssets from 'aws-cdk-lib/aws-ecr-assets';
+import * as efs from 'aws-cdk-lib/aws-efs';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
@@ -43,6 +44,11 @@ export class ShellExecutorStack extends cdk.Stack {
           subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
         },
       ],
+      gatewayEndpoints: {
+        S3: {
+          service: ec2.GatewayVpcEndpointAwsService.S3,
+        },
+      },
     });
 
     this.subnetIds = this.vpc.privateSubnets.map((s) => s.subnetId);
@@ -94,6 +100,48 @@ export class ShellExecutorStack extends cdk.Stack {
     this.securityGroup.addEgressRule(ec2.Peer.ipv4(this.vpc.vpcCidrBlock), ec2.Port.udp(53), 'Allow DNS UDP within VPC');
     this.securityGroup.addEgressRule(ec2.Peer.ipv4(this.vpc.vpcCidrBlock), ec2.Port.tcp(53), 'Allow DNS TCP within VPC');
 
+    // Persistent workspace (EFS) for cookbook-style multi-turn shell sessions.
+    //
+    // NOTE: This preserves files between shell_call rounds, but does not preserve running processes.
+    // Keep access tightly scoped: only allow NFS between the executor SG and the EFS SG.
+    const efsSecurityGroup = new ec2.SecurityGroup(this, 'ShellExecutorEfsSg', {
+      vpc: this.vpc,
+      // EFS doesn't initiate outbound connections; leaving default outbound is fine.
+      description: 'Security group for shell executor EFS filesystem (NFS only)',
+    });
+    // Allow the executor tasks to mount the EFS filesystem via NFS.
+    efsSecurityGroup.addIngressRule(
+      this.securityGroup,
+      ec2.Port.tcp(2049),
+      'Allow NFS from shell executor tasks',
+    );
+    // Executor SG is egress-restricted; explicitly allow NFS to the EFS SG.
+    this.securityGroup.addEgressRule(
+      ec2.Peer.securityGroupId(efsSecurityGroup.securityGroupId),
+      ec2.Port.tcp(2049),
+      'Allow NFS to EFS',
+    );
+
+    const fileSystem = new efs.FileSystem(this, 'ShellExecutorEfs', {
+      vpc: this.vpc,
+      encrypted: true,
+      securityGroup: efsSecurityGroup,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    // Access point ensures a stable root directory and correct ownership for the non-root container user.
+    // The container runs as uid/gid 10001 (see backend/shell-executor/Dockerfile).
+    const accessPoint = new efs.AccessPoint(this, 'ShellExecutorEfsAccessPoint', {
+      fileSystem,
+      path: '/shell-executor',
+      posixUser: { uid: '10001', gid: '10001' },
+      createAcl: {
+        ownerUid: '10001',
+        ownerGid: '10001',
+        permissions: '750',
+      },
+    });
+
     const logGroup = new logs.LogGroup(this, 'ShellExecutorLogGroup', {
       logGroupName: `/aws/ecs/${SHELL_EXECUTOR_TASK_FAMILY}`,
       retention: logs.RetentionDays.ONE_WEEK,
@@ -112,8 +160,19 @@ export class ShellExecutorStack extends cdk.Stack {
     const cfnTaskDef = this.taskDefinition.node.defaultChild as ecs.CfnTaskDefinition;
     cfnTaskDef.addPropertyDeletionOverride('TaskRoleArn');
 
-    // Ephemeral writable volume for /workspace (root FS is read-only).
-    this.taskDefinition.addVolume({ name: 'workspace' });
+    // Persistent writable volume for /workspace (EFS-backed).
+    // We intentionally avoid task role credentials; EFS is accessed via VPC network controls.
+    this.taskDefinition.addVolume({
+      name: 'workspace',
+      efsVolumeConfiguration: {
+        fileSystemId: fileSystem.fileSystemId,
+        transitEncryption: 'ENABLED',
+        authorizationConfig: {
+          accessPointId: accessPoint.accessPointId,
+          iam: 'DISABLED',
+        },
+      },
+    });
 
     const container = this.taskDefinition.addContainer('runner', {
       // IMPORTANT: Force-build an x86_64 (linux/amd64) image. Without this, Docker

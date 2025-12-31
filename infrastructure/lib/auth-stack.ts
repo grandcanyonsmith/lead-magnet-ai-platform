@@ -68,6 +68,7 @@ export class AuthStack extends cdk.Stack {
       },
       accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
       removalPolicy: cdk.RemovalPolicy.RETAIN,
+      deletionProtection: true,
       lambdaTriggers: {
         preSignUp: autoConfirmLambda,
         postConfirmation: postConfirmationLambda,

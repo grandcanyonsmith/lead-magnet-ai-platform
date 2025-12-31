@@ -329,7 +329,7 @@ export default function EditWorkflowPage() {
       <Separator />
 
       {error && (
-        <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-destructive">
+        <div className="rounded-lg border border-destructive/20 dark:border-destructive/40 bg-destructive/10 dark:bg-destructive/20 p-4 text-destructive dark:text-destructive">
           <div className="flex items-center gap-2 font-medium">
              <AlertCircle className="h-4 w-4" />
              Error

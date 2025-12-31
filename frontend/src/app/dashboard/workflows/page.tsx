@@ -694,10 +694,10 @@ export default function WorkflowsPage() {
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-          <div className="h-8 bg-gray-200 rounded w-48 animate-pulse"></div>
+          <div className="h-8 bg-gray-200 dark:bg-secondary rounded w-48 animate-pulse"></div>
           <div className="flex gap-2">
-            <div className="h-10 w-32 bg-gray-200 rounded-lg animate-pulse"></div>
-            <div className="h-10 w-40 bg-gray-200 rounded-lg animate-pulse"></div>
+            <div className="h-10 w-32 bg-gray-200 dark:bg-secondary rounded-lg animate-pulse"></div>
+            <div className="h-10 w-40 bg-gray-200 dark:bg-secondary rounded-lg animate-pulse"></div>
           </div>
         </div>
         <div className="bg-white dark:bg-card rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
@@ -705,7 +705,7 @@ export default function WorkflowsPage() {
             {[1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="h-16 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse"
+                className="h-16 bg-gray-100 dark:bg-secondary/50 rounded-lg animate-pulse"
               ></div>
             ))}
           </div>

@@ -34,7 +34,7 @@ export const LoadingState = React.memo(function LoadingState({
   const renderSpinner = () => (
     <div
       className={clsx(
-        "inline-block animate-spin rounded-full border-b-2 border-primary-600",
+        "inline-block animate-spin rounded-full border-b-2 border-primary-600 dark:border-primary",
         sizeClasses[size]
       )}
       aria-hidden="true"
@@ -47,7 +47,7 @@ export const LoadingState = React.memo(function LoadingState({
         <div
           key={i}
           className={clsx(
-            "rounded-full bg-primary-600 animate-pulse",
+            "rounded-full bg-primary-600 dark:bg-primary animate-pulse",
             size === "sm" ? "h-2 w-2" : size === "md" ? "h-3 w-3" : "h-4 w-4"
           )}
           style={{
@@ -62,7 +62,7 @@ export const LoadingState = React.memo(function LoadingState({
   const renderPulse = () => (
     <div
       className={clsx(
-        "rounded-full bg-primary-600 animate-pulse",
+        "rounded-full bg-primary-600 dark:bg-primary animate-pulse",
         sizeClasses[size]
       )}
       aria-hidden="true"
@@ -90,7 +90,7 @@ export const LoadingState = React.memo(function LoadingState({
       <div className="text-center">
         <div className="mb-4 flex justify-center">{renderLoader()}</div>
         {message && (
-          <p className="text-gray-600 text-sm sm:text-base">{message}</p>
+          <p className="text-gray-600 dark:text-muted-foreground text-sm sm:text-base">{message}</p>
         )}
       </div>
     </div>

@@ -116,8 +116,8 @@ export const UserMenu: React.FC = () => {
               <div className="flex-1 min-w-0">
                 {isLoading ? (
                   <>
-                    <div className="h-4 bg-gray-200 rounded w-24 mb-2 animate-pulse" />
-                    <div className="h-3 bg-gray-200 rounded w-32 animate-pulse" />
+                    <div className="h-4 bg-gray-200 dark:bg-secondary rounded w-24 mb-2 animate-pulse" />
+                    <div className="h-3 bg-gray-200 dark:bg-secondary rounded w-32 animate-pulse" />
                   </>
                 ) : (
                   <>

@@ -11,6 +11,7 @@ Implements the OpenAI Responses API tool loop for the `shell` tool:
 
 import logging
 import time
+import hashlib
 from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
@@ -42,6 +43,17 @@ def _get_attr_or_key(obj: Any, key: str) -> Any:
     if isinstance(obj, dict):
         return obj.get(key)
     return getattr(obj, key, None)
+
+def _derive_workspace_id(*, tenant_id: Optional[str], job_id: Optional[str], step_index: Optional[int]) -> str:
+    """
+    Deterministically derive a safe workspace_id for the shell executor.
+
+    This keeps shell tool runs for the same (tenant_id, job_id, step_index) in the same EFS-backed
+    directory, while avoiding path traversal issues (hex-only).
+    """
+    base = f"{tenant_id or 'unknown'}:{job_id or 'unknown'}:{step_index if step_index is not None else 'unknown'}"
+    digest = hashlib.sha256(base.encode("utf-8")).hexdigest()[:32]
+    return f"w_{digest}"
 
 
 class ShellLoopService:
@@ -85,6 +97,7 @@ class ShellLoopService:
         max_duration_seconds: int = 300,
         job_id: Optional[str] = None,
         tenant_id: Optional[str] = None,
+        step_index: Optional[int] = None,
     ) -> Any:
         """
         Run the shell tool loop and return the final OpenAI response object.
@@ -98,10 +111,15 @@ class ShellLoopService:
         logger.info("[ShellLoopService] Starting shell loop", extra={
             "job_id": job_id,
             "tenant_id": tenant_id,
+            "step_index": step_index,
             "model": model,
             "max_iterations": max_iterations,
             "max_duration_seconds": max_duration_seconds,
         })
+
+        workspace_id = _derive_workspace_id(tenant_id=tenant_id, job_id=job_id, step_index=step_index)
+        # Reset the workspace once at the beginning of the loop to avoid stale state across retries.
+        reset_workspace_next = True
 
         start_time = time.time()
         iteration = 0
@@ -157,7 +175,10 @@ class ShellLoopService:
                     commands=[str(c) for c in commands],
                     timeout_ms=int(timeout_ms) if timeout_ms is not None else None,
                     max_output_length=int(max_output_length) if max_output_length is not None else None,
+                    workspace_id=workspace_id,
+                    reset_workspace=reset_workspace_next,
                 )
+                reset_workspace_next = False
 
                 # Contract supports returning max_output_length in result; fall back to the requested value.
                 result_max_len = exec_result.get("max_output_length", max_output_length)

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { FiX, FiSave, FiLoader, FiZap } from "react-icons/fi";
 import { api } from "@/lib/api";
 import { toast } from "react-hot-toast";
+import { JsonViewer } from "@/components/ui/JsonViewer";
 
 interface QuickEditStepModalProps {
   isOpen: boolean;
@@ -199,9 +200,18 @@ export function QuickEditStepModal({
                       </span>
                     </div>
                     <div className="p-4 bg-white dark:bg-card max-h-96 overflow-y-auto">
-                      <pre className="text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap font-sans">
-                        {formatOutput(proposedChanges.original_output)}
-                      </pre>
+                      {typeof proposedChanges.original_output === "string" ? (
+                        <pre className="text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap break-words font-mono">
+                          {proposedChanges.original_output}
+                        </pre>
+                      ) : (
+                        <JsonViewer
+                          value={proposedChanges.original_output}
+                          raw={formatOutput(proposedChanges.original_output)}
+                          defaultMode="tree"
+                          defaultExpandedDepth={2}
+                        />
+                      )}
                     </div>
                   </div>
 
@@ -213,9 +223,18 @@ export function QuickEditStepModal({
                       </span>
                     </div>
                     <div className="p-4 bg-white dark:bg-card max-h-96 overflow-y-auto">
-                      <pre className="text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap font-sans">
-                        {formatOutput(proposedChanges.edited_output)}
-                      </pre>
+                      {typeof proposedChanges.edited_output === "string" ? (
+                        <pre className="text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap break-words font-mono">
+                          {proposedChanges.edited_output}
+                        </pre>
+                      ) : (
+                        <JsonViewer
+                          value={proposedChanges.edited_output}
+                          raw={formatOutput(proposedChanges.edited_output)}
+                          defaultMode="tree"
+                          defaultExpandedDepth={2}
+                        />
+                      )}
                     </div>
                   </div>
                 </div>

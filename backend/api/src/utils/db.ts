@@ -10,6 +10,8 @@ import {
 } from "@aws-sdk/lib-dynamodb";
 import { env } from "./env";
 
+console.log("Initializing DB module");
+
 const client = new DynamoDBClient({
   region: env.awsRegion,
 });
@@ -24,6 +26,8 @@ export const docClient = DynamoDBDocumentClient.from(client, {
   },
 });
 
+console.log("docClient initialized:", docClient);
+
 export class DynamoDBService {
   async get(tableName: string, key: Record<string, any>) {
     const command = new GetCommand({
@@ -31,6 +35,7 @@ export class DynamoDBService {
       Key: key,
     });
 
+    // ... existing code ...
     const result = await docClient.send(command);
     return result.Item;
   }

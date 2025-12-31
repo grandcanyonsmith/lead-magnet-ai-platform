@@ -87,6 +87,12 @@ export function registerWorkflowRoutes(): void {
     return await workflowAIController.aiEditWorkflow(tenantId!, params.id, body);
   });
 
+  // Test workflow step
+  router.register('POST', '/admin/workflows/test-step', async (_params, body, _query, tenantId) => {
+    logger.info('[Router] Matched /admin/workflows/test-step route');
+    return await workflowAIController.testStep(tenantId!, body);
+  });
+
   // Get workflow
   router.register('GET', '/admin/workflows/:id', async (params, _body, _query, tenantId) => {
     return await workflowsController.get(tenantId!, params.id);

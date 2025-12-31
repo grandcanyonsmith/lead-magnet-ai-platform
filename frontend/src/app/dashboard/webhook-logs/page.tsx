@@ -154,13 +154,13 @@ export default function WebhookLogsPage() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="h-8 bg-gray-200 rounded w-48 animate-pulse"></div>
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="h-8 bg-gray-200 dark:bg-secondary rounded w-48 animate-pulse"></div>
+        <div className="bg-white dark:bg-card rounded-lg shadow overflow-hidden border border-gray-200 dark:border-border">
           <div className="p-6 space-y-4">
             {[1, 2, 3, 4, 5].map((i) => (
               <div
                 key={i}
-                className="h-16 bg-gray-200 rounded animate-pulse"
+                className="h-16 bg-gray-200 dark:bg-secondary rounded animate-pulse"
               ></div>
             ))}
           </div>

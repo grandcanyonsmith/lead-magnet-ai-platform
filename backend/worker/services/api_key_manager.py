@@ -9,7 +9,10 @@ import json
 import boto3
 from typing import Optional
 
-logger = logging.getLogger(__name__)
+from core.config import settings
+from core.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class APIKeyManager:
@@ -32,15 +35,14 @@ class APIKeyManager:
             Exception: If secret retrieval fails
         """
         # Local/dev/test override: allow providing the key via env var to avoid Secrets Manager dependency.
-        env_key = os.environ.get("OPENAI_API_KEY")
-        if env_key and env_key.strip():
+        if settings.OPENAI_API_KEY and settings.OPENAI_API_KEY.strip():
             logger.info("[APIKeyManager] Using OPENAI_API_KEY from environment", extra={
-                'key_length': len(env_key.strip())
+                'key_length': len(settings.OPENAI_API_KEY.strip())
             })
-            return env_key.strip()
+            return settings.OPENAI_API_KEY.strip()
 
         secret_name = secret_name or os.environ.get('OPENAI_SECRET_NAME', 'leadmagnet/openai-api-key')
-        region = region or os.environ.get('AWS_REGION', 'us-east-1')
+        region = region or settings.AWS_REGION
         
         logger.info(f"[APIKeyManager] Retrieving API key from Secrets Manager", extra={
             'secret_name': secret_name,
