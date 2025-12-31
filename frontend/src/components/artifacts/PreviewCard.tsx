@@ -67,9 +67,9 @@ export function PreviewCard({ artifact }: PreviewCardProps) {
   const downloadUrl = artifact.object_url || artifact.public_url;
 
   return (
-    <Card className="group overflow-hidden transition-all duration-300 hover:shadow-md hover:border-primary/50 flex flex-col h-full">
+    <Card className="group overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-primary/50 flex flex-col h-full">
       <div 
-        className="relative aspect-[16/10] bg-muted cursor-pointer"
+        className="relative aspect-video bg-muted cursor-pointer group-hover:opacity-95 transition-opacity"
         onClick={() => setIsFullScreenOpen(true)}
       >
         <PreviewRenderer
@@ -82,7 +82,7 @@ export function PreviewCard({ artifact }: PreviewCardProps) {
         
         {/* Type Badge Overlay */}
         <div className="absolute top-2 right-2 z-10">
-          <Badge variant="secondary" className="font-bold text-[10px] shadow-sm bg-background/90 backdrop-blur-sm">
+          <Badge variant="secondary" className="font-bold text-[11px] shadow-sm bg-background/90 backdrop-blur-sm">
             {getFileExtension(
               artifact.file_name || artifact.artifact_name,
               artifact.content_type || artifact.mime_type,
@@ -91,20 +91,20 @@ export function PreviewCard({ artifact }: PreviewCardProps) {
         </div>
 
         {/* Hover Overlay for Quick Expand */}
-        <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-          <div className="bg-background/80 backdrop-blur-sm p-2 rounded-full shadow-sm text-foreground">
+        <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+          <div className="bg-background/90 backdrop-blur-sm p-3 rounded-full shadow-md text-foreground transform scale-90 group-hover:scale-100 transition-transform">
              <FiMaximize2 className="w-5 h-5" />
           </div>
         </div>
       </div>
 
-      <CardContent className="p-3 flex-1 space-y-2">
+      <CardContent className="p-4 flex-1 space-y-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
-            <h3 className="font-medium text-sm truncate" title={artifact.file_name || artifact.artifact_name || "Artifact"}>
+            <h3 className="font-medium text-sm truncate leading-none" title={artifact.file_name || artifact.artifact_name || "Artifact"}>
               {artifact.file_name || artifact.artifact_name || "Artifact"}
             </h3>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1.5">
               <span className="flex items-center gap-1">
                 <FiClock className="w-3 h-3" />
                 {formatDate(artifact.created_at)}
@@ -118,22 +118,22 @@ export function PreviewCard({ artifact }: PreviewCardProps) {
         </div>
         
         {artifact.artifact_type && (
-          <div className="flex flex-wrap gap-1.5 pt-1">
-            <Badge variant="outline" className="text-[10px] font-normal px-1.5 h-5">
+          <div className="flex flex-wrap gap-1.5">
+            <Badge variant="outline" className="text-[10px] font-normal px-2 h-5">
               {artifact.artifact_type}
             </Badge>
           </div>
         )}
       </CardContent>
 
-      <CardFooter className="p-2 pt-0 grid grid-cols-2 gap-2">
+      <CardFooter className="p-4 pt-0 grid grid-cols-2 gap-3">
         <Button
           variant="secondary"
           size="sm"
-          className="w-full h-8 text-xs"
+          className="w-full h-9 text-xs font-medium"
           onClick={() => setIsFullScreenOpen(true)}
         >
-          <FiMaximize2 className="w-3 h-3 mr-1.5" />
+          <FiMaximize2 className="w-3.5 h-3.5 mr-1.5" />
           Preview
         </Button>
         {downloadUrl ? (
@@ -147,13 +147,13 @@ export function PreviewCard({ artifact }: PreviewCardProps) {
             className="w-full"
             onClick={(e) => e.stopPropagation()}
           >
-            <Button variant="default" size="sm" className="w-full h-8 text-xs">
-              <FiDownload className="w-3 h-3 mr-1.5" />
+            <Button variant="default" size="sm" className="w-full h-9 text-xs font-medium">
+              <FiDownload className="w-3.5 h-3.5 mr-1.5" />
               Download
             </Button>
           </a>
         ) : (
-          <Button variant="ghost" size="sm" className="w-full h-8 text-xs" disabled>
+          <Button variant="ghost" size="sm" className="w-full h-9 text-xs" disabled>
             No URL
           </Button>
         )}

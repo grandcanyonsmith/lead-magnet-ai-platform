@@ -1,4 +1,4 @@
-import { ECSClient, RunTaskCommand } from "@aws-sdk/client-ecs";
+import { ECSClient, RunTaskCommand, DescribeTasksCommand } from "@aws-sdk/client-ecs";
 import {
   DeleteObjectCommand,
   GetObjectCommand,
@@ -216,6 +216,9 @@ export async function runShellExecutorJob(
     perCommandTimeoutMs * Math.max(1, args.commands.length) + 30_000,
   );
 
+  let lastTaskCheck = 0;
+  const taskCheckIntervalMs = 5000;
+
   while (Date.now() - pollStart < maxWaitMs) {
     try {
       const obj = await s3Client.send(
@@ -241,6 +244,41 @@ export async function runShellExecutorJob(
       return result;
     } catch (error: any) {
       if (isNoSuchKey(error)) {
+        // Fast failure check: If task stopped without result, fail immediately
+        const now = Date.now();
+        if (taskArn && now - lastTaskCheck >= taskCheckIntervalMs) {
+          lastTaskCheck = now;
+          try {
+            const desc = await ecsClient.send(
+              new DescribeTasksCommand({
+                cluster: env.shellExecutorClusterArn,
+                tasks: [taskArn],
+              }),
+            );
+            const task = desc.tasks?.[0];
+            if (task?.lastStatus === "STOPPED") {
+              const container =
+                task.containers?.find((c) => c.name === "runner") ||
+                task.containers?.[0];
+              const exitCode = container?.exitCode;
+              const reason =
+                container?.reason || task.stoppedReason || "unknown";
+
+              throw new ApiError(
+                `Shell executor task stopped before uploading result (exit_code=${exitCode}): ${reason}`,
+                500,
+              );
+            }
+          } catch (checkErr) {
+            if (checkErr instanceof ApiError) throw checkErr;
+            // Ignore other check errors to avoid crashing the polling loop
+            logger.warn("[ShellExecutor] Failed to check task status", {
+              jobId,
+              error: checkErr,
+            });
+          }
+        }
+
         await delay(500);
         continue;
       }

@@ -14,6 +14,19 @@ import { ApiError } from "../utils/errors";
  * These routes are accessible without tenant authentication.
  */
 export function registerPublicRoutes(): void {
+  // Health check
+  router.register(
+    "GET",
+    "/health",
+    async () => {
+      return {
+        statusCode: 200,
+        body: { status: "ok" },
+      };
+    },
+    false,
+  );
+
   // Public form rendering
   router.register(
     "GET",
