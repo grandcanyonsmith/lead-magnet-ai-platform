@@ -13,6 +13,7 @@ import {
   XCircleIcon,
 } from "@heroicons/react/24/outline";
 import { openJobDocumentInNewTab } from "@/utils/jobs/openJobDocument";
+import { JobPreviewThumbnail } from "./JobPreviewThumbnail";
 import type { Job } from "@/types/job";
 import clsx from "clsx";
 
@@ -119,11 +120,13 @@ export function JobsMobileList({
               </div>
 
               <div className="mt-3 flex items-center justify-between gap-4">
-                {job.output_url ? (
-                  <div
-                    data-tour="view-artifacts"
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                <div
+                  className="flex items-center gap-3"
+                  data-tour="view-artifacts"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <JobPreviewThumbnail job={job} size="sm" showOnHover={false} />
+                  {job.output_url ? (
                     <button
                       type="button"
                       onClick={() => handleViewDocument(job)}
@@ -137,10 +140,8 @@ export function JobsMobileList({
                       )}
                       {openingJobId === job.job_id ? "Opening" : "View asset"}
                     </button>
-                  </div>
-                ) : (
-                  <div />
-                )}
+                  ) : null}
+                </div>
 
                 <div className="flex items-center gap-1 text-xs font-bold text-gray-400 dark:text-muted-foreground">
                   View details
