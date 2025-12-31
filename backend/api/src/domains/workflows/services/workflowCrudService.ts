@@ -1,21 +1,20 @@
 import { ulid } from 'ulid';
 import { db } from '@utils/db';
-import { validate, createWorkflowSchema, updateWorkflowSchema } from '@utils/validation';
 import { ApiError } from '@utils/errors';
-import { RouteResponse } from '@routes/routes';
 import { formService } from '@domains/forms/services/formService';
-import { ensureStepDefaults, WorkflowStep } from '@domains/workflows/services/workflow/workflowConfigSupport';
+import { ensureStepDefaults, WorkflowStep } from './workflow/workflowConfigSupport';
 import { logger } from '@utils/logger';
 import { env } from '@utils/env';
+import { validate, createWorkflowSchema, updateWorkflowSchema } from '@utils/validation';
 
 const WORKFLOWS_TABLE = env.workflowsTable;
 
 if (!WORKFLOWS_TABLE) {
-  logger.error('[Workflows Controller] WORKFLOWS_TABLE environment variable is not set');
+  logger.error('[WorkflowCrudService] WORKFLOWS_TABLE environment variable is not set');
 }
 
-class WorkflowsController {
-  async list(tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {
+export class WorkflowCrudService {
+  async listWorkflows(tenantId: string, queryParams: Record<string, any>): Promise<{ workflows: any[], count: number }> {
     if (!WORKFLOWS_TABLE) {
       throw new ApiError('WORKFLOWS_TABLE environment variable is not configured', 500);
     }
@@ -30,7 +29,7 @@ class WorkflowsController {
       try {
         if (status) {
           const result = await db.query(
-            WORKFLOWS_TABLE!,
+            WORKFLOWS_TABLE,
             'gsi_tenant_status',
             'tenant_id = :tenant_id AND #status = :status',
             { ':tenant_id': tenantId, ':status': status },
@@ -40,7 +39,7 @@ class WorkflowsController {
           workflows = result.items;
         } else {
           const result = await db.query(
-            WORKFLOWS_TABLE!,
+            WORKFLOWS_TABLE,
             'gsi_tenant_status',
             'tenant_id = :tenant_id',
             { ':tenant_id': tenantId },
@@ -128,27 +127,10 @@ class WorkflowsController {
         })
       );
 
-      logger.info('[Workflows List] Query completed', {
-        tenantId,
-        workflowsFound: workflowsWithForms.length,
-      });
-
-      const response = {
-        statusCode: 200,
-        body: {
-          workflows: workflowsWithForms,
-          count: workflowsWithForms.length,
-        },
+      return {
+        workflows: workflowsWithForms,
+        count: workflowsWithForms.length,
       };
-
-      logger.info('[Workflows List] Returning response', {
-        statusCode: response.statusCode,
-        bodyKeys: Object.keys(response.body),
-        workflowsCount: response.body.count,
-        workflowsLength: response.body.workflows?.length,
-      });
-
-      return response;
     } catch (error: any) {
       logger.error('[Workflows List] Error', {
         error: error.message,
@@ -160,12 +142,12 @@ class WorkflowsController {
     }
   }
 
-  async get(tenantId: string, workflowId: string): Promise<RouteResponse> {
+  async getWorkflow(tenantId: string, workflowId: string): Promise<any> {
     if (!WORKFLOWS_TABLE) {
       throw new ApiError('WORKFLOWS_TABLE environment variable is not configured', 500);
     }
 
-    const workflow = await db.get(WORKFLOWS_TABLE!, { workflow_id: workflowId });
+    const workflow = await db.get(WORKFLOWS_TABLE, { workflow_id: workflowId });
 
     if (!workflow || workflow.deleted_at) {
       throw new ApiError('This lead magnet doesn\'t exist or has been removed', 404);
@@ -189,15 +171,12 @@ class WorkflowsController {
     const form = await formService.getFormForWorkflow(workflowId);
 
     return {
-      statusCode: 200,
-      body: {
-        ...workflow,
-        form,
-      },
+      ...workflow,
+      form,
     };
   }
 
-  async create(tenantId: string, body: any): Promise<RouteResponse> {
+  async createWorkflow(tenantId: string, body: any): Promise<any> {
     if (!WORKFLOWS_TABLE) {
       throw new ApiError('WORKFLOWS_TABLE environment variable is not configured', 500);
     }
@@ -228,7 +207,7 @@ class WorkflowsController {
       updated_at: new Date().toISOString(),
     };
 
-    await db.put(WORKFLOWS_TABLE!, workflow);
+    await db.put(WORKFLOWS_TABLE, workflow);
 
     // Auto-create form for the workflow
     let formId: string | null = null;
@@ -241,7 +220,7 @@ class WorkflowsController {
       );
       
       // Update workflow with form_id
-      await db.update(WORKFLOWS_TABLE!, { workflow_id: workflowId }, {
+      await db.update(WORKFLOWS_TABLE, { workflow_id: workflowId }, {
         form_id: formId,
       });
       (workflow as any).form_id = formId;
@@ -258,6 +237,7 @@ class WorkflowsController {
 
     // Create notification for workflow creation
     try {
+      // Dynamic import to avoid circular dependencies if any
       const { notificationsController } = await import('@controllers/notifications');
       await notificationsController.create(
         tenantId,
@@ -273,15 +253,12 @@ class WorkflowsController {
     }
 
     return {
-      statusCode: 201,
-      body: {
-        ...workflow,
-        form,
-      },
+      ...workflow,
+      form,
     };
   }
 
-  async update(tenantId: string, workflowId: string, body: any): Promise<RouteResponse> {
+  async updateWorkflow(tenantId: string, workflowId: string, body: any): Promise<any> {
     if (!WORKFLOWS_TABLE) {
       throw new ApiError('WORKFLOWS_TABLE environment variable is not configured', 500);
     }
@@ -342,20 +319,20 @@ class WorkflowsController {
     // If steps are being updated, ensure they have proper defaults
     if (hasStepsInUpdate) {
       updateData.steps = ensureStepDefaults(data.steps);
-      console.log('[Workflows Update] After ensureStepDefaults', {
+      logger.info('[Workflows Update] After ensureStepDefaults', {
         workflowId,
         stepsToSave: updateData.steps?.length || 0,
         stepNames: updateData.steps?.map((s: any) => s.step_name) || [],
       });
     }
 
-    const updated = await db.update(WORKFLOWS_TABLE!, { workflow_id: workflowId }, {
+    const updated = await db.update(WORKFLOWS_TABLE, { workflow_id: workflowId }, {
       ...updateData,
       updated_at: new Date().toISOString(),
     });
     
     if (updated) {
-      console.log('[Workflows Update] After DB update', {
+      logger.info('[Workflows Update] After DB update', {
         workflowId,
         savedStepsCount: updated.steps?.length || 0,
         savedStepNames: updated.steps?.map((s: any) => s.step_name) || [],
@@ -378,15 +355,12 @@ class WorkflowsController {
     const form = await formService.getFormForWorkflow(workflowId);
 
     return {
-      statusCode: 200,
-      body: {
-        ...updated,
-        form,
-      },
+      ...updated,
+      form,
     };
   }
 
-  async delete(tenantId: string, workflowId: string): Promise<RouteResponse> {
+  async deleteWorkflow(tenantId: string, workflowId: string): Promise<void> {
     if (!WORKFLOWS_TABLE) {
       throw new ApiError('WORKFLOWS_TABLE environment variable is not configured', 500);
     }
@@ -402,7 +376,7 @@ class WorkflowsController {
     }
 
     // Soft delete workflow
-    await db.update(WORKFLOWS_TABLE!, { workflow_id: workflowId }, {
+    await db.update(WORKFLOWS_TABLE, { workflow_id: workflowId }, {
       deleted_at: new Date().toISOString(),
     });
 
@@ -416,12 +390,8 @@ class WorkflowsController {
       });
       // Continue even if form deletion fails
     }
-
-    return {
-      statusCode: 204,
-      body: {},
-    };
   }
 }
 
-export const workflowsController = new WorkflowsController();
+export const workflowCrudService = new WorkflowCrudService();
+

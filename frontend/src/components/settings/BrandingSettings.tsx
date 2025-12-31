@@ -40,10 +40,10 @@ export function BrandingSettings({
     <div className="space-y-6">
       {/* Visual Identity Section */}
       <Card>
-        <CardHeader className="border-b border-gray-100 bg-gray-50/50">
+        <CardHeader className="border-b border-gray-100 dark:border-border bg-gray-50/50 dark:bg-secondary/30">
           <div className="flex items-center gap-3 mb-1">
-            <div className="p-2 bg-purple-50 rounded-lg">
-              <PhotoIcon className="w-5 h-5 text-purple-600" />
+            <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+              <PhotoIcon className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
             <CardTitle className="text-lg">
               Visual Identity
@@ -62,7 +62,7 @@ export function BrandingSettings({
                   <>
                     Logo URL
                     <span
-                      className="ml-2 text-xs text-gray-500"
+                      className="ml-2 text-xs text-gray-500 dark:text-muted-foreground"
                       title="Logo URL that will appear on all forms"
                     >
                       ℹ️
@@ -79,9 +79,9 @@ export function BrandingSettings({
               />
 
               {imageError && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
-                  <span className="text-red-500 mt-0.5">⚠️</span>
-                  <p className="text-sm text-red-700">
+                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2">
+                  <span className="text-red-500 dark:text-red-400 mt-0.5">⚠️</span>
+                  <p className="text-sm text-red-700 dark:text-red-300">
                     Failed to load image. Please check that the URL is correct
                     and public.
                   </p>
@@ -89,8 +89,8 @@ export function BrandingSettings({
               )}
             </div>
 
-            <div className="bg-gray-50 rounded-xl border border-gray-200 p-6 flex flex-col items-center justify-center min-h-[160px]">
-              <p className="text-xs font-medium text-gray-500 mb-4 uppercase tracking-wider">
+            <div className="bg-gray-50 dark:bg-secondary/30 rounded-xl border border-gray-200 dark:border-border p-6 flex flex-col items-center justify-center min-h-[160px]">
+              <p className="text-xs font-medium text-gray-500 dark:text-muted-foreground mb-4 uppercase tracking-wider">
                 Logo Preview
               </p>
               {settings.logo_url && !imageError ? (
@@ -106,7 +106,7 @@ export function BrandingSettings({
                   />
                 </div>
               ) : (
-                <div className="text-center text-gray-400">
+                <div className="text-center text-gray-400 dark:text-muted-foreground/70">
                   <PhotoIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
                   <span className="text-sm">No logo set</span>
                 </div>
@@ -118,10 +118,10 @@ export function BrandingSettings({
 
       {/* Brand Voice & Context */}
       <Card>
-        <CardHeader className="border-b border-gray-100 bg-gray-50/50">
+        <CardHeader className="border-b border-gray-100 dark:border-border bg-gray-50/50 dark:bg-secondary/30">
           <div className="flex items-center gap-3 mb-1">
-            <div className="p-2 bg-indigo-50 rounded-lg">
-              <SparklesIcon className="w-5 h-5 text-indigo-600" />
+            <div className="p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
+              <SparklesIcon className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
             </div>
             <CardTitle className="text-lg">
               Brand Identity
@@ -210,10 +210,10 @@ export function BrandingSettings({
 
       {/* Resources */}
       <Card>
-        <CardHeader className="border-b border-gray-100 bg-gray-50/50">
+        <CardHeader className="border-b border-gray-100 dark:border-border bg-gray-50/50 dark:bg-secondary/30">
           <div className="flex items-center gap-3 mb-1">
-            <div className="p-2 bg-amber-50 rounded-lg">
-              <DocumentTextIcon className="w-5 h-5 text-amber-600" />
+            <div className="p-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+              <DocumentTextIcon className="w-5 h-5 text-amber-600 dark:text-amber-400" />
             </div>
             <CardTitle className="text-lg">Resources</CardTitle>
           </div>

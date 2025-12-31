@@ -86,6 +86,17 @@ export class ApiStack extends cdk.Stack {
       );
     }
 
+    // Shell tool: allow the API Lambda to sign presigned PUT URLs for controlled uploads to an allowlisted bucket.
+    // This enables the public `/v1/tools/shell` endpoint to support upload workflows safely without giving the
+    // executor a task role. Scope tightly to a dedicated prefix.
+    lambdaRole.addToPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ['s3:PutObject'],
+        resources: ['arn:aws:s3:::cc360-pages/leadmagnet/*'],
+      })
+    );
+
     // Grant Step Functions permissions
     lambdaRole.addToPolicy(
       new iam.PolicyStatement({
@@ -197,6 +208,38 @@ export class ApiStack extends cdk.Stack {
         maxAge: cdk.Duration.days(1),
       },
     });
+
+    // Access logging
+    const logGroup = new logs.LogGroup(this, 'ApiAccessLogs', {
+      logGroupName: `/aws/http-api/${RESOURCE_PREFIXES.API_NAME}-access-logs`,
+      retention: logs.RetentionDays.ONE_WEEK,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    const stage = this.api.defaultStage?.node.defaultChild as apigateway.CfnStage;
+    if (stage) {
+      stage.accessLogSettings = {
+        destinationArn: logGroup.logGroupArn,
+        format: JSON.stringify({
+          requestId: '$context.requestId',
+          ip: '$context.identity.sourceIp',
+          requestTime: '$context.requestTime',
+          httpMethod: '$context.httpMethod',
+          routeKey: '$context.routeKey',
+          status: '$context.status',
+          protocol: '$context.protocol',
+          responseLength: '$context.responseLength',
+          integrationError: '$context.integrationErrorMessage',
+          errorMessage: '$context.error.message',
+          user: '$context.authorizer.claims.sub',
+        }),
+      };
+
+      stage.defaultRouteSettings = {
+        throttlingBurstLimit: 500,
+        throttlingRateLimit: 1000,
+      };
+    }
 
     // Provide the API base URL to the Lambda itself so it can persist it onto Jobs for downstream
     // worker-side tracking injection (avoids cyclic cross-stack dependency with ComputeStack).

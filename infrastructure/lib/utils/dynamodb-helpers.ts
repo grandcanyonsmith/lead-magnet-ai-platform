@@ -17,6 +17,7 @@ export function createTable(
     sortKey: config.sortKey,
     billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
     pointInTimeRecovery: true,
+    deletionProtection: true,
     removalPolicy: cdk.RemovalPolicy.RETAIN,
     encryption: dynamodb.TableEncryption.AWS_MANAGED,
     timeToLiveAttribute: config.timeToLiveAttribute,

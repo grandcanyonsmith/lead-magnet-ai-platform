@@ -181,16 +181,16 @@ export function WorkflowTab({
 
   return (
     <>
-      <div className="bg-white rounded-lg shadow p-6 space-y-6">
+      <div className="bg-white dark:bg-card rounded-lg shadow p-6 space-y-6 border border-gray-200 dark:border-border">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Lead Magnet Name <span className="text-red-500">*</span>
+          <label className="block text-sm font-medium text-gray-700 dark:text-foreground mb-2">
+            Lead Magnet Name <span className="text-red-500 dark:text-red-400">*</span>
           </label>
           <input
             type="text"
             value={formData.workflow_name}
             onChange={(e) => onFormDataChange("workflow_name", e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg bg-white dark:bg-secondary text-gray-900 dark:text-foreground placeholder-gray-500 dark:placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary"
             placeholder="Course Idea Validator"
             maxLength={200}
             required
@@ -198,7 +198,7 @@ export function WorkflowTab({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-foreground mb-2">
             Description
           </label>
           <textarea
@@ -206,7 +206,7 @@ export function WorkflowTab({
             onChange={(e) =>
               onFormDataChange("workflow_description", e.target.value)
             }
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg bg-white dark:bg-secondary text-gray-900 dark:text-foreground placeholder-gray-500 dark:placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary"
             placeholder="Describe what this lead magnet does (e.g., validates course ideas and provides market research)..."
             rows={3}
             maxLength={1000}
@@ -214,27 +214,27 @@ export function WorkflowTab({
         </div>
 
         {/* AI Workflow Assistant */}
-        <div className="pt-6 border-t">
+        <div className="pt-6 border-t border-gray-200 dark:border-border">
           <button
             type="button"
             onClick={() => setShowAIAssist(!showAIAssist)}
-            className="w-full flex items-center justify-between px-4 py-3 bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200 rounded-lg hover:from-purple-100 hover:to-blue-100 transition-all"
+            className="w-full flex items-center justify-between px-4 py-3 bg-gradient-to-r from-purple-50 dark:from-purple-900/20 to-blue-50 dark:to-blue-900/20 border-2 border-purple-200 dark:border-purple-800 rounded-lg hover:from-purple-100 dark:hover:from-purple-900/30 hover:to-blue-100 dark:hover:to-blue-900/30 transition-all"
           >
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-white rounded-lg shadow-sm">
-                <Zap className="w-5 h-5 text-purple-600" />
+              <div className="p-2 bg-white dark:bg-card rounded-lg shadow-sm">
+                <Zap className="w-5 h-5 text-purple-600 dark:text-purple-400" />
               </div>
               <div className="text-left">
-                <h3 className="font-semibold text-gray-900">
+                <h3 className="font-semibold text-gray-900 dark:text-foreground">
                   AI Workflow Assistant
                 </h3>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-600 dark:text-muted-foreground">
                   Restructure your entire workflow with AI
                 </p>
               </div>
             </div>
             <svg
-              className={`w-5 h-5 text-gray-500 transition-transform ${showAIAssist ? "rotate-180" : ""}`}
+              className={`w-5 h-5 text-gray-500 dark:text-muted-foreground transition-transform ${showAIAssist ? "rotate-180" : ""}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -249,25 +249,25 @@ export function WorkflowTab({
           </button>
 
           {showAIAssist && (
-            <div className="mt-4 p-6 bg-gray-50 border border-gray-200 rounded-lg space-y-4">
+            <div className="mt-4 p-6 bg-gray-50 dark:bg-secondary/50 border border-gray-200 dark:border-border rounded-lg space-y-4">
               {!proposal ? (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-foreground mb-2">
                       What would you like to change?
                     </label>
                     <textarea
                       value={aiPrompt}
                       onChange={(e) => setAiPrompt(e.target.value)}
                       placeholder="Examples:&#10;• Add a research step at the beginning using web search&#10;• Simplify this to just 3 main steps&#10;• Change all steps to use GPT-5&#10;• Remove step 2 and combine steps 3 and 4"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-border rounded-lg bg-white dark:bg-secondary text-gray-900 dark:text-foreground placeholder-gray-500 dark:placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 focus:border-transparent resize-none"
                       rows={4}
                       disabled={isGenerating}
                     />
                   </div>
 
                   {aiError && (
-                    <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                    <div className="px-4 py-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-400">
                       {aiError}
                     </div>
                   )}
@@ -276,7 +276,7 @@ export function WorkflowTab({
                     type="button"
                     onClick={handleGenerateAI}
                     disabled={isGenerating || !aiPrompt.trim()}
-                    className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-purple-600 dark:bg-purple-500 text-white rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     {isGenerating ? (
                       <>
@@ -327,12 +327,12 @@ export function WorkflowTab({
         </div>
 
         {/* Workflow Steps - Flowchart Visualization */}
-        <div className="space-y-4 pt-6 border-t">
+        <div className="space-y-4 pt-6 border-t border-gray-200 dark:border-border">
           <div className="mb-4">
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-foreground mb-2">
               Workflow Steps
             </h2>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-muted-foreground">
               Define the steps your workflow will execute. Each step receives
               context from all previous steps. Click on a step to edit its
               details.
@@ -355,8 +355,8 @@ export function WorkflowTab({
         </div>
 
         {formData.template_id && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="text-sm text-blue-800">
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <p className="text-sm text-blue-800 dark:text-blue-300">
               <strong>Note:</strong> Templates are managed in the Template tab
               above.
             </p>

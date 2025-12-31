@@ -72,11 +72,11 @@ export function FiltersBar({
             <div className="flex items-center justify-between">
               <label className="text-xs text-muted-foreground font-medium">Type</label>
             </div>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-2">
               <Badge
                 variant={!selectedType ? "default" : "outline"}
                 className={cn(
-                  "cursor-pointer hover:bg-primary/90 transition-colors",
+                  "cursor-pointer hover:bg-primary/90 transition-colors px-2 py-1",
                   !selectedType && "hover:bg-primary"
                 )}
                 onClick={() => onTypeChange("")}
@@ -88,7 +88,7 @@ export function FiltersBar({
                   key={type}
                   variant={selectedType === type ? "default" : "outline"}
                   className={cn(
-                    "cursor-pointer hover:bg-primary/90 transition-colors",
+                    "cursor-pointer hover:bg-primary/90 transition-colors px-2 py-1",
                     selectedType === type && "hover:bg-primary"
                   )}
                   onClick={() => onTypeChange(type)}
@@ -105,7 +105,7 @@ export function FiltersBar({
               <Button
                 variant={sortOrder === "desc" ? "default" : "ghost"}
                 size="sm"
-                className="flex-1 h-7 text-xs"
+                className="flex-1 h-8 text-xs"
                 onClick={() => onSortChange("desc")}
               >
                 <FiArrowDown className="w-3 h-3 mr-1.5" />
@@ -114,7 +114,7 @@ export function FiltersBar({
               <Button
                 variant={sortOrder === "asc" ? "default" : "ghost"}
                 size="sm"
-                className="flex-1 h-7 text-xs"
+                className="flex-1 h-8 text-xs"
                 onClick={() => onSortChange("asc")}
               >
                 <FiArrowUp className="w-3 h-3 mr-1.5" />

@@ -13,21 +13,27 @@ import logging
 import os
 import time
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import boto3
 from botocore.exceptions import ClientError
+
+from core.config import settings
 
 logger = logging.getLogger(__name__)
 
 CONTRACT_VERSION = "2025-12-29"
 
 
-def _parse_subnet_ids(raw: str) -> List[str]:
-    return [s.strip() for s in (raw or "").split(",") if s and s.strip()]
+def _parse_subnet_ids(raw: Optional[str]) -> List[str]:
+    """Parse comma-separated subnet IDs."""
+    if not raw:
+        return []
+    return [s.strip() for s in raw.split(",") if s and s.strip()]
 
 
 def _is_no_such_key(err: Exception) -> bool:
+    """Check if the error is a NoSuchKey/NotFound error from S3."""
     if not isinstance(err, ClientError):
         return False
     code = (err.response or {}).get("Error", {}).get("Code") or ""
@@ -37,37 +43,48 @@ def _is_no_such_key(err: Exception) -> bool:
 class ShellExecutorService:
     """Executes commands via ECS Fargate shell executor task."""
 
-    def __init__(self):
-        self._ecs = boto3.client("ecs")
-        self._s3 = boto3.client("s3")
+    def __init__(
+        self,
+        ecs_client: Optional[Any] = None,
+        s3_client: Optional[Any] = None
+    ):
+        """
+        Initialize the shell executor service.
+        
+        Args:
+            ecs_client: Optional boto3 ECS client (for testing/DI)
+            s3_client: Optional boto3 S3 client (for testing/DI)
+        """
+        self._ecs = ecs_client or boto3.client("ecs", region_name=settings.AWS_REGION)
+        self._s3 = s3_client or boto3.client("s3", region_name=settings.AWS_REGION)
 
     def run_shell_job(
         self,
         commands: List[str],
         timeout_ms: Optional[int] = None,
         max_output_length: Optional[int] = None,
+        workspace_id: Optional[str] = None,
+        reset_workspace: Optional[bool] = None,
         max_wait_seconds: int = 600,
     ) -> Dict[str, Any]:
         """
         Run a one-shot executor job and return the parsed result JSON.
 
-        Environment variables required:
-        - SHELL_EXECUTOR_RESULTS_BUCKET
-        - SHELL_EXECUTOR_CLUSTER_ARN
-        - SHELL_EXECUTOR_TASK_DEFINITION_ARN
-        - SHELL_EXECUTOR_SECURITY_GROUP_ID
-        - SHELL_EXECUTOR_SUBNET_IDS (comma-separated)
+        Uses configuration from core.config.settings.
         """
 
         if not commands or not isinstance(commands, list):
             raise ValueError("commands must be a non-empty list of strings")
 
-        bucket = (os.environ.get("SHELL_EXECUTOR_RESULTS_BUCKET") or "").strip()
-        cluster_arn = (os.environ.get("SHELL_EXECUTOR_CLUSTER_ARN") or "").strip()
-        task_def_arn = (os.environ.get("SHELL_EXECUTOR_TASK_DEFINITION_ARN") or "").strip()
-        security_group_id = (os.environ.get("SHELL_EXECUTOR_SECURITY_GROUP_ID") or "").strip()
-        subnet_ids = _parse_subnet_ids(os.environ.get("SHELL_EXECUTOR_SUBNET_IDS") or "")
+        # Load configuration
+        bucket = settings.SHELL_EXECUTOR_RESULTS_BUCKET or os.environ.get("SHELL_EXECUTOR_RESULTS_BUCKET")
+        cluster_arn = settings.SHELL_EXECUTOR_CLUSTER_ARN or os.environ.get("SHELL_EXECUTOR_CLUSTER_ARN")
+        task_def_arn = settings.SHELL_EXECUTOR_TASK_DEFINITION_ARN or os.environ.get("SHELL_EXECUTOR_TASK_DEFINITION_ARN")
+        security_group_id = settings.SHELL_EXECUTOR_SECURITY_GROUP_ID or os.environ.get("SHELL_EXECUTOR_SECURITY_GROUP_ID")
+        subnet_ids_raw = settings.SHELL_EXECUTOR_SUBNET_IDS or os.environ.get("SHELL_EXECUTOR_SUBNET_IDS")
+        subnet_ids = _parse_subnet_ids(subnet_ids_raw)
 
+        # Validate configuration
         if not bucket:
             raise RuntimeError("SHELL_EXECUTOR_RESULTS_BUCKET is not set")
         if not cluster_arn:
@@ -100,6 +117,10 @@ class ShellExecutorService:
             "result_put_url": put_url,
             "result_content_type": "application/json",
         }
+        if workspace_id and isinstance(workspace_id, str) and workspace_id.strip():
+            job_request["workspace_id"] = str(workspace_id).strip()
+            if reset_workspace is not None:
+                job_request["reset_workspace"] = bool(reset_workspace)
         if timeout_ms and int(timeout_ms) > 0:
             job_request["timeout_ms"] = int(timeout_ms)
         if max_output_length and int(max_output_length) > 0:
@@ -137,10 +158,7 @@ class ShellExecutorService:
         get_url_size = len(job_request_get_url)
         if get_url_size > 8000:
             # Clean up uploaded job request
-            try:
-                self._s3.delete_object(Bucket=bucket, Key=job_request_key)
-            except Exception:
-                pass
+            self._cleanup_s3_objects(bucket, [job_request_key])
             raise RuntimeError(
                 f"Job request GET URL too large ({get_url_size} chars). "
                 f"Consider splitting commands into multiple jobs."
@@ -153,33 +171,39 @@ class ShellExecutorService:
             "job_request_get_url_size": get_url_size,
         })
 
-        run_resp = self._ecs.run_task(
-            cluster=cluster_arn,
-            taskDefinition=task_def_arn,
-            launchType="FARGATE",
-            platformVersion="LATEST",
-            networkConfiguration={
-                "awsvpcConfiguration": {
-                    "assignPublicIp": "DISABLED",
-                    "subnets": subnet_ids,
-                    "securityGroups": [security_group_id],
-                }
-            },
-            overrides={
-                "containerOverrides": [
-                    {
-                        "name": "runner",
-                        "environment": [
-                            {"name": "SHELL_EXECUTOR_JOB_GET_URL", "value": job_request_get_url},
-                        ],
+        try:
+            run_resp = self._ecs.run_task(
+                cluster=cluster_arn,
+                taskDefinition=task_def_arn,
+                launchType="FARGATE",
+                platformVersion="LATEST",
+                networkConfiguration={
+                    "awsvpcConfiguration": {
+                        "assignPublicIp": "DISABLED",
+                        "subnets": subnet_ids,
+                        "securityGroups": [security_group_id],
                     }
-                ]
-            },
-            startedBy="leadmagnet-worker",
-        )
+                },
+                overrides={
+                    "containerOverrides": [
+                        {
+                            "name": "runner",
+                            "environment": [
+                                {"name": "SHELL_EXECUTOR_JOB_GET_URL", "value": job_request_get_url},
+                            ],
+                        }
+                    ]
+                },
+                startedBy="leadmagnet-worker",
+            )
+        except Exception as e:
+            # Clean up if run_task fails
+            self._cleanup_s3_objects(bucket, [job_request_key])
+            raise RuntimeError(f"Failed to run ECS task: {e}") from e
 
         failures = run_resp.get("failures") or []
         if failures:
+            self._cleanup_s3_objects(bucket, [job_request_key])
             raise RuntimeError(f"ECS RunTask failures: {failures}")
 
         task_arn = None
@@ -187,68 +211,105 @@ class ShellExecutorService:
         if tasks and isinstance(tasks, list):
             task_arn = (tasks[0] or {}).get("taskArn")
 
-        # Poll S3 for the executor result JSON
+        return self._poll_for_result(
+            bucket=bucket,
+            result_key=result_key,
+            job_request_key=job_request_key,
+            cluster_arn=cluster_arn,
+            task_arn=task_arn,
+            job_id=job_id,
+            max_wait_seconds=max_wait_seconds
+        )
+
+    def _cleanup_s3_objects(self, bucket: str, keys: List[str]) -> None:
+        """Best-effort cleanup of S3 objects."""
+        for key in keys:
+            try:
+                self._s3.delete_object(Bucket=bucket, Key=key)
+            except Exception:
+                pass
+
+    def _poll_for_result(
+        self,
+        bucket: str,
+        result_key: str,
+        job_request_key: str,
+        cluster_arn: str,
+        task_arn: Optional[str],
+        job_id: str,
+        max_wait_seconds: int
+    ) -> Dict[str, Any]:
+        """Poll S3 for the result file."""
         start = time.time()
         last_task_check = 0.0
         task_check_interval_s = 5.0
+
         while (time.time() - start) < max_wait_seconds:
             try:
                 obj = self._s3.get_object(Bucket=bucket, Key=result_key)
                 body = obj["Body"].read().decode("utf-8")
                 parsed = json.loads(body)
 
-                # Best-effort cleanup: delete both result and job request
-                # Bucket has lifecycle rule too, but cleanup immediately if possible
-                try:
-                    self._s3.delete_object(Bucket=bucket, Key=result_key)
-                    self._s3.delete_object(Bucket=bucket, Key=job_request_key)
-                except Exception:
-                    pass
+                # Cleanup
+                self._cleanup_s3_objects(bucket, [result_key, job_request_key])
 
                 logger.info("[ShellExecutorService] Result received", extra={
                     "job_id": job_id,
                     "task_arn": task_arn,
                 })
                 return parsed
+
             except ClientError as e:
-                if _is_no_such_key(e):
-                    # If the ECS task has already stopped, fail fast instead of waiting
-                    # for the full timeout (prevents Lambda timeouts when uploads fail).
-                    now = time.time()
-                    if task_arn and (now - last_task_check) >= task_check_interval_s:
-                        last_task_check = now
-                        try:
-                            desc = self._ecs.describe_tasks(cluster=cluster_arn, tasks=[task_arn])
-                            task = (desc.get("tasks") or [{}])[0] or {}
-                            if task.get("lastStatus") == "STOPPED":
-                                containers = task.get("containers") or []
-                                runner = next((c for c in containers if c.get("name") == "runner"), None) or (containers[0] if containers else {})
-                                exit_code = runner.get("exitCode")
-                                reason = runner.get("reason") or task.get("stoppedReason") or "unknown"
-                                raise RuntimeError(
-                                    f"Shell executor task stopped before uploading result "
-                                    f"(job_id={job_id}, task_arn={task_arn}, exit_code={exit_code}): {reason}"
-                                )
-                        except RuntimeError:
-                            # Fail fast (this is intentional).
-                            raise
-                        except Exception as check_err:
-                            # Best-effort only; don't crash polling due to DescribeTasks errors.
-                            logger.warning("[ShellExecutorService] Failed to check ECS task status", extra={
-                                "job_id": job_id,
-                                "task_arn": task_arn,
-                                "error": str(check_err),
-                            })
-                    time.sleep(0.5)
-                    continue
-                raise
+                if not _is_no_such_key(e):
+                    raise
 
-        # Clean up job request if we timed out
-        try:
-            self._s3.delete_object(Bucket=bucket, Key=job_request_key)
-        except Exception:
-            pass
+                # Check if task failed/stopped
+                now = time.time()
+                if task_arn and (now - last_task_check) >= task_check_interval_s:
+                    last_task_check = now
+                    if self._check_task_stopped(cluster_arn, task_arn, job_id):
+                        # Task stopped but no result -> it failed
+                        raise RuntimeError(
+                            f"Shell executor task stopped without result (job_id={job_id})"
+                        )
+                
+                time.sleep(0.5)
+                continue
 
+        # Timeout
+        self._cleanup_s3_objects(bucket, [job_request_key])
         raise TimeoutError(f"Timed out waiting for shell executor result (job_id={job_id}, task_arn={task_arn})")
 
-
+    def _check_task_stopped(self, cluster_arn: str, task_arn: str, job_id: str) -> bool:
+        """
+        Check if the ECS task has stopped.
+        Returns True if stopped, False if running/unknown.
+        Raises RuntimeError if task stopped with error.
+        """
+        try:
+            desc = self._ecs.describe_tasks(cluster=cluster_arn, tasks=[task_arn])
+            task = (desc.get("tasks") or [{}])[0] or {}
+            
+            if task.get("lastStatus") == "STOPPED":
+                containers = task.get("containers") or []
+                runner = next((c for c in containers if c.get("name") == "runner"), None) or (containers[0] if containers else {})
+                exit_code = runner.get("exitCode")
+                reason = runner.get("reason") or task.get("stoppedReason") or "unknown"
+                
+                # If we get here, it means the task stopped but we didn't find the result in S3 yet.
+                # This is likely a failure.
+                raise RuntimeError(
+                    f"Shell executor task stopped before uploading result "
+                    f"(job_id={job_id}, task_arn={task_arn}, exit_code={exit_code}): {reason}"
+                )
+                
+            return False
+        except RuntimeError:
+            raise
+        except Exception as check_err:
+            logger.warning("[ShellExecutorService] Failed to check ECS task status", extra={
+                "job_id": job_id,
+                "task_arn": task_arn,
+                "error": str(check_err),
+            })
+            return False

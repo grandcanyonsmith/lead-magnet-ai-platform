@@ -133,7 +133,7 @@ export function FormField({
         </p>
       )}
       {helpText && !error && (
-        <p className="text-sm text-gray-500" id={`${inputId}-help`}>
+        <p className="text-sm text-gray-500 dark:text-muted-foreground" id={`${inputId}-help`}>
           {helpText}
         </p>
       )}

@@ -132,22 +132,22 @@ function FlowchartNode({ data, selected }: NodeProps<FlowchartNodeData>) {
       onMouseLeave={() => onHover?.(false)}
       className={[
         "group relative w-[260px] max-w-[280px] cursor-pointer select-none rounded-2xl border transition-all duration-200",
-        "bg-white/90 backdrop-blur-sm px-4 pb-4 pt-3 shadow-[0_12px_30px_-15px_rgba(30,64,175,0.45)]",
+        "bg-white/90 dark:bg-card/90 backdrop-blur-sm px-4 pb-4 pt-3 shadow-[0_12px_30px_-15px_rgba(30,64,175,0.45)] dark:shadow-[0_12px_30px_-15px_rgba(0,0,0,0.6)]",
         isActive
-          ? "border-primary-200 ring-2 ring-primary-300 shadow-primary-200/70"
-          : "border-slate-200 hover:border-primary-200 hover:ring-1 hover:ring-primary-200/70",
+          ? "border-primary-200 dark:border-primary/50 ring-2 ring-primary-300 dark:ring-primary/40 shadow-primary-200/70 dark:shadow-primary/30"
+          : "border-slate-200 dark:border-border hover:border-primary-200 dark:hover:border-primary/50 hover:ring-1 hover:ring-primary-200/70 dark:hover:ring-primary/30",
         isHovered ? "translate-y-[-2px]" : "",
         isDropTarget
-          ? "border-dashed border-primary-400 shadow-[0_0_35px_-20px,#2563eb]"
+          ? "border-dashed border-primary-400 dark:border-primary shadow-[0_0_35px_-20px,#2563eb] dark:shadow-[0_0_35px_-20px,rgba(59,130,246,0.6)]"
           : "",
         isDragging
-          ? "scale-[1.02] shadow-xl shadow-primary-200/60 opacity-95"
+          ? "scale-[1.02] shadow-xl shadow-primary-200/60 dark:shadow-primary/40 opacity-95"
           : "",
         animateIn ? "flow-node-animate-in" : "",
       ].join(" ")}
     >
       <div
-        className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${modelStyle.accent} to-white opacity-70`}
+        className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${modelStyle.accent} to-white dark:to-card opacity-70 dark:opacity-50`}
       />
 
       <Handle
@@ -158,22 +158,22 @@ function FlowchartNode({ data, selected }: NodeProps<FlowchartNodeData>) {
 
       <div className="relative z-10 space-y-3">
         <div className="flex items-center justify-between">
-          <span className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+          <span className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-muted-foreground">
             Step {index + 1}
             {isActive && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-primary-100 px-2 py-0.5 text-[10px] font-semibold text-primary-700">
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary-100 dark:bg-primary/20 px-2 py-0.5 text-[10px] font-semibold text-primary-700 dark:text-primary-300">
                 <FiCheckCircle className="h-3 w-3" aria-hidden />
                 Active
               </span>
             )}
             {isDropTarget && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-300">
                 Drop Here
               </span>
             )}
           </span>
           <button
-            className="flow-node-drag-handle inline-flex items-center gap-1 rounded-full bg-white/70 px-2 py-1 text-[11px] font-medium text-slate-500 shadow-sm transition-colors hover:text-slate-700"
+            className="flow-node-drag-handle inline-flex items-center gap-1 rounded-full bg-white/70 dark:bg-card/70 px-2 py-1 text-[11px] font-medium text-slate-500 dark:text-muted-foreground shadow-sm transition-colors hover:text-slate-700 dark:hover:text-foreground"
             onMouseDown={(event) => event.stopPropagation()}
             onClick={(event) => event.stopPropagation()}
             aria-label={`Drag step ${index + 1}`}
@@ -184,24 +184,24 @@ function FlowchartNode({ data, selected }: NodeProps<FlowchartNodeData>) {
         </div>
 
         <div className="space-y-1">
-          <h3 className="line-clamp-2 text-base font-semibold text-slate-900">
+          <h3 className="line-clamp-2 text-base font-semibold text-slate-900 dark:text-foreground">
             {step.step_name || `Step ${index + 1}`}
           </h3>
-          <p className="line-clamp-2 text-sm text-slate-500">
+          <p className="line-clamp-2 text-sm text-slate-500 dark:text-muted-foreground">
             {step.step_description || "No description provided yet."}
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <span
-            className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-semibold ${modelStyle.badge}`}
+            className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-semibold ${modelStyle.badge} dark:opacity-80`}
           >
             {step.model === "computer-use-preview"
               ? "Computer Use Preview"
               : step.model.replace("gpt-", "GPT-").replace("turbo", "Turbo")}
           </span>
           {step.tool_choice && step.tool_choice !== "none" && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-primary-50 px-2 py-0.5 text-[11px] font-medium text-primary-700">
+            <span className="inline-flex items-center gap-1 rounded-full bg-primary-50 dark:bg-primary/20 px-2 py-0.5 text-[11px] font-medium text-primary-700 dark:text-primary-300">
               {step.tool_choice === "required"
                 ? "Tools Required"
                 : "Tools Auto"}
@@ -210,7 +210,7 @@ function FlowchartNode({ data, selected }: NodeProps<FlowchartNodeData>) {
         </div>
 
         {hasTools && (
-          <div className="flex flex-wrap items-center gap-2 rounded-xl bg-slate-50/80 px-3 py-2 text-[11px] text-slate-500">
+          <div className="flex flex-wrap items-center gap-2 rounded-xl bg-slate-50/80 dark:bg-secondary/50 px-3 py-2 text-[11px] text-slate-500 dark:text-muted-foreground">
             {tools.slice(0, 3).map((tool, idx) => {
               const toolKey = typeof tool === "string" ? tool : tool.type;
               const toolMeta = TOOL_ICONS[toolKey] || {
@@ -231,14 +231,14 @@ function FlowchartNode({ data, selected }: NodeProps<FlowchartNodeData>) {
               );
             })}
             {tools.length > 3 && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-slate-200/70 px-2 py-1 font-medium text-slate-600">
+              <span className="inline-flex items-center gap-1 rounded-full bg-slate-200/70 dark:bg-secondary px-2 py-1 font-medium text-slate-600 dark:text-muted-foreground">
                 +{tools.length - 3} more
               </span>
             )}
           </div>
         )}
 
-        <div className="flex items-center justify-between text-[11px] text-slate-400">
+        <div className="flex items-center justify-between text-[11px] text-slate-400 dark:text-muted-foreground/70">
           <span>
             {step.instructions?.trim()
               ? `${step.instructions.trim().split(" ").length} words`
@@ -250,12 +250,12 @@ function FlowchartNode({ data, selected }: NodeProps<FlowchartNodeData>) {
         </div>
 
         {hasWarnings && (
-          <div className="space-y-1 rounded-xl bg-rose-50 px-3 py-2 text-[11px] text-rose-600 shadow-inner shadow-rose-100/60">
-            <div className="flex items-center gap-2 font-semibold uppercase tracking-wide text-rose-500">
+          <div className="space-y-1 rounded-xl bg-rose-50 dark:bg-rose-900/20 px-3 py-2 text-[11px] text-rose-600 dark:text-rose-400 shadow-inner shadow-rose-100/60 dark:shadow-rose-900/30">
+            <div className="flex items-center gap-2 font-semibold uppercase tracking-wide text-rose-500 dark:text-rose-400">
               <FiAlertCircle className="h-4 w-4" aria-hidden />
               Attention Needed
             </div>
-            <ul className="ml-5 list-disc space-y-1 marker:text-rose-400">
+            <ul className="ml-5 list-disc space-y-1 marker:text-rose-400 dark:marker:text-rose-500">
               {warnings.map((warning, idx) => (
                 <li key={idx}>{warning}</li>
               ))}

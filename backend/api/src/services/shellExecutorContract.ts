@@ -54,6 +54,16 @@ export type ShellCommandOutput = z.infer<typeof shellCommandOutputSchema>;
 export const shellExecutorJobRequestSchema = z.object({
   version: z.literal(SHELL_EXECUTOR_CONTRACT_VERSION),
   job_id: z.string().min(1),
+  /**
+   * Optional persistent workspace identifier (used when the executor mounts EFS at /workspace).
+   * When provided, the runner will execute commands in `/workspace/sessions/<workspace_id>`.
+   */
+  workspace_id: z.string().min(1).optional(),
+  /**
+   * If true (and workspace_id is provided), the runner will wipe the workspace directory
+   * before executing commands. Intended to be set only on the first call in a loop/session.
+   */
+  reset_workspace: z.boolean().optional(),
   commands: z.array(z.string().min(1)).min(1),
   timeout_ms: z.number().int().positive().optional(),
   max_output_length: z.number().int().positive().optional(),

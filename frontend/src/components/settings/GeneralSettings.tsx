@@ -26,10 +26,10 @@ export function GeneralSettings({
 }: GeneralSettingsProps) {
   return (
     <Card>
-      <CardHeader className="border-b border-gray-100 bg-gray-50/50">
+      <CardHeader className="border-b border-gray-100 dark:border-border bg-gray-50/50 dark:bg-secondary/30">
         <div className="flex items-center gap-3 mb-1">
-          <div className="p-2 bg-blue-50 rounded-lg">
-            <BuildingOfficeIcon className="w-5 h-5 text-blue-600" />
+          <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+            <BuildingOfficeIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
           </div>
           <CardTitle className="text-lg">
             General Information

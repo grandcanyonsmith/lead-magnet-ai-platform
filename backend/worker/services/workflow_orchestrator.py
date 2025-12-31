@@ -12,6 +12,7 @@ from s3_service import S3Service
 from services.step_processor import StepProcessor
 from services.field_label_service import FieldLabelService
 from services.job_completion_service import JobCompletionService
+from utils.html_utils import strip_html_tags
 
 logger = logging.getLogger(__name__)
 
@@ -178,24 +179,6 @@ class WorkflowOrchestrator:
         Returns:
             Tuple of (final_content, final_artifact_type, final_filename)
         """
-        import re
-
-        def _strip_html_tags(text: str) -> str:
-            """
-            Best-effort conversion of HTML-ish strings to plain text so the final
-            template render doesn't anchor on intermediate HTML from earlier steps.
-            """
-            if not text:
-                return ""
-            # Remove script/style blocks first
-            text = re.sub(r"<script[^>]*>.*?</script>", "", text, flags=re.IGNORECASE | re.DOTALL)
-            text = re.sub(r"<style[^>]*>.*?</style>", "", text, flags=re.IGNORECASE | re.DOTALL)
-            # Remove remaining tags
-            text = re.sub(r"<[^>]+>", "", text)
-            # Normalize whitespace a bit
-            text = re.sub(r"\n{3,}", "\n\n", text)
-            return text.strip()
-
         template_id = workflow.get('template_id')
         
         # Check if template exists
@@ -217,7 +200,7 @@ class WorkflowOrchestrator:
         if template:
             # Always generate the deliverable from the template when a template is configured.
             # This avoids treating intermediate HTML (e.g., "HTML Packaging") as the final deliverable.
-            safe_accumulated_context = _strip_html_tags(accumulated_context)
+            safe_accumulated_context = strip_html_tags(accumulated_context)
             final_content, final_artifact_type, final_filename = self.job_completion_service.generate_html_from_accumulated_context(
                 accumulated_context=safe_accumulated_context,
                 submission_data=submission_data,
@@ -233,4 +216,3 @@ class WorkflowOrchestrator:
             final_filename = 'final.md'
         
         return final_content, final_artifact_type, final_filename
-

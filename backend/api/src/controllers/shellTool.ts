@@ -16,6 +16,8 @@ const shellToolRequestSchema = z.object({
   model: z.string().optional(),
   instructions: z.string().optional(),
   max_steps: z.number().int().min(1).max(25).optional(),
+  workspace_id: z.string().min(1).optional(),
+  reset_workspace: z.boolean().optional(),
 });
 
 class ShellToolController {
@@ -53,6 +55,8 @@ class ShellToolController {
           model: parsed.data.model,
           instructions: parsed.data.instructions,
           maxSteps: parsed.data.max_steps,
+          workspaceId: parsed.data.workspace_id,
+          resetWorkspace: parsed.data.reset_workspace,
         });
       } finally {
         await slot.release();
@@ -63,6 +67,7 @@ class ShellToolController {
         body: {
           response_id: result.responseId,
           output_text: result.outputText,
+          workspace_id: result.workspaceId,
         },
       };
     } catch (error: any) {

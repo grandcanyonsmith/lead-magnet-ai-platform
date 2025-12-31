@@ -79,34 +79,34 @@ export function JobHeader({ error, job }: JobHeaderProps) {
     <div className="mb-8">
       <button
         onClick={() => router.back()}
-        className="group inline-flex items-center gap-2 rounded-lg px-2 py-2 text-sm font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors touch-target min-h-[44px] sm:min-h-0"
+        className="group inline-flex items-center gap-2 rounded-lg px-2 py-2 text-sm font-medium text-gray-500 dark:text-muted-foreground hover:text-gray-900 dark:hover:text-foreground hover:bg-gray-50 dark:hover:bg-secondary transition-colors touch-target min-h-[44px] sm:min-h-0"
       >
         <ArrowLeftIcon className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
         Back to Lead Magnets
       </button>
       {error && (
-        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 shadow-sm">
+        <div className="mb-6 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-3 text-red-700 dark:text-red-400 shadow-sm">
           {error}
         </div>
       )}
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-foreground tracking-tight">
             Lead Report
           </h1>
-          <p className="mt-2 text-sm text-gray-500 leading-relaxed">
+          <p className="mt-2 text-sm text-gray-500 dark:text-muted-foreground leading-relaxed">
             View the generated report and data for this lead.
           </p>
         </div>
 
         {totalCost !== null && (
           <div className="flex items-start justify-end">
-            <div className="inline-flex items-center gap-3 rounded-2xl border border-gray-300 bg-white px-4 py-3 shadow">
+            <div className="inline-flex items-center gap-3 rounded-2xl border border-gray-300 dark:border-border bg-white dark:bg-card px-4 py-3 shadow">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-muted-foreground">
                   Total cost
                 </p>
-                <p className="text-lg font-semibold text-gray-900">
+                <p className="text-lg font-semibold text-gray-900 dark:text-foreground">
                   ${totalCost.toFixed(4)}
                 </p>
               </div>

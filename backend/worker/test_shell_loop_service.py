@@ -57,11 +57,21 @@ class DummyShellExecutor:
     def __init__(self):
         self.calls = []
 
-    def run_shell_job(self, commands, timeout_ms=None, max_output_length=None, max_wait_seconds=600):
+    def run_shell_job(
+        self,
+        commands,
+        timeout_ms=None,
+        max_output_length=None,
+        workspace_id=None,
+        reset_workspace=None,
+        max_wait_seconds=600,
+    ):
         self.calls.append({
             "commands": commands,
             "timeout_ms": timeout_ms,
             "max_output_length": max_output_length,
+            "workspace_id": workspace_id,
+            "reset_workspace": reset_workspace,
         })
         return {
             "max_output_length": max_output_length or 4096,

@@ -120,7 +120,7 @@ export function JobOverviewSection({
               )}
               {lastRefreshedLabel && (
                 <>
-                  <span className="mx-2 text-gray-300">•</span>
+                  <span className="mx-2 text-gray-300 dark:text-muted-foreground/50">•</span>
                   <span>Viewed {lastRefreshedLabel}</span>
                 </>
               )}

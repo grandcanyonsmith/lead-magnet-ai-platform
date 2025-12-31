@@ -152,35 +152,35 @@ export default function NewWorkflowPage() {
     return (
       <div>
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-foreground">
             Creating Your Lead Magnet
           </h1>
-          <p className="text-gray-600">
+          <p className="text-gray-600 dark:text-muted-foreground">
             AI is generating your lead magnet configuration...
           </p>
         </div>
 
         {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg">
             {error}
           </div>
         )}
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-8 text-center">
+        <div className="bg-white dark:bg-card rounded-lg shadow p-6 border border-gray-200 dark:border-border">
+          <div className="bg-gradient-to-r from-purple-50 dark:from-purple-900/20 to-blue-50 dark:to-blue-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-8 text-center">
             <div className="flex flex-col items-center justify-center space-y-4">
-              <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-purple-600"></div>
+              <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-purple-600 dark:border-purple-400"></div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-foreground mb-2">
                   {aiGeneration.generationStatus ||
                     "Creating your lead magnet..."}
                 </h3>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-600 dark:text-muted-foreground">
                   This may take a minute. We&apos;ll automatically take you to
                   the edit page when it&apos;s ready.
                 </p>
                 {generationJobId && (
-                  <p className="text-xs text-gray-500 mt-2 font-mono">
+                  <p className="text-xs text-gray-500 dark:text-muted-foreground/70 mt-2 font-mono">
                     Job ID: {generationJobId}
                   </p>
                 )}
@@ -197,30 +197,30 @@ export default function NewWorkflowPage() {
     return (
       <div>
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-foreground">
             Create Lead Magnet
           </h1>
-          <p className="text-gray-600">
+          <p className="text-gray-600 dark:text-muted-foreground">
             Describe what you want to build, and AI will generate everything for
             you
           </p>
         </div>
 
         {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg">
             {error}
           </div>
         )}
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-6 mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center">
+        <div className="bg-white dark:bg-card rounded-lg shadow p-6 border border-gray-200 dark:border-border">
+          <div className="bg-gradient-to-r from-purple-50 dark:from-purple-900/20 to-blue-50 dark:to-blue-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-6 mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-foreground mb-2 flex items-center">
               <FiZap
-                className={`w-5 h-5 mr-2 text-purple-600 ${aiGeneration.isGenerating ? "animate-pulse" : ""}`}
+                className={`w-5 h-5 mr-2 text-purple-600 dark:text-purple-400 ${aiGeneration.isGenerating ? "animate-pulse" : ""}`}
               />
               What do you want to build?
             </h3>
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-gray-600 dark:text-muted-foreground mb-4">
               Describe your lead magnet idea. AI will generate the name,
               description, research instructions, and template HTML for you.
             </p>
@@ -229,16 +229,16 @@ export default function NewWorkflowPage() {
               <textarea
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg bg-white dark:bg-secondary text-gray-900 dark:text-foreground placeholder-gray-500 dark:placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 disabled:bg-gray-100 dark:disabled:bg-secondary disabled:cursor-not-allowed"
                 placeholder="e.g., A course idea validator that analyzes market demand, competition, target audience, and provides actionable recommendations for course creators..."
                 rows={6}
                 disabled={aiGeneration.isGenerating}
               />
 
               {aiGeneration.generationStatus && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-3"></div>
-                  <span className="text-sm text-blue-800 font-medium">
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 dark:border-blue-400 mr-3"></div>
+                  <span className="text-sm text-blue-800 dark:text-blue-300 font-medium">
                     {aiGeneration.generationStatus}
                   </span>
                 </div>
@@ -248,7 +248,7 @@ export default function NewWorkflowPage() {
                 type="button"
                 onClick={handleGenerateWithAI}
                 disabled={aiGeneration.isGenerating || !prompt.trim()}
-                className="flex items-center justify-center px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
+                className="flex items-center justify-center px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 dark:from-purple-500 dark:to-blue-500 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 dark:hover:from-purple-600 dark:hover:to-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
               >
                 {aiGeneration.isGenerating ? (
                   <>
@@ -273,33 +273,33 @@ export default function NewWorkflowPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Create Lead Magnet</h1>
-        <p className="text-gray-600">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-foreground">Create Lead Magnet</h1>
+        <p className="text-gray-600 dark:text-muted-foreground">
           Review and edit the generated configuration
         </p>
       </div>
 
       {error && (
-        <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+        <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg">
           {error}
         </div>
       )}
 
       {aiGeneration.generationStatus && (
-        <div className="mb-6 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+        <div className="mb-6 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 px-4 py-3 rounded-lg">
           {aiGeneration.generationStatus}
         </div>
       )}
 
       {/* Info Box */}
-      <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h3 className="text-sm font-semibold text-blue-900 mb-2">
+      <div className="mb-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+        <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-2">
           How it works
         </h3>
-        <p className="text-sm text-blue-800 mb-2">
+        <p className="text-sm text-blue-800 dark:text-blue-300 mb-2">
           This tool will generate a personalized report for your leads.
         </p>
-        <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
+        <ul className="text-sm text-blue-800 dark:text-blue-300 space-y-1 list-disc list-inside">
           <li>
             <strong>Research + Design:</strong> AI gathers data and creates a beautiful report.
           </li>
@@ -314,7 +314,7 @@ export default function NewWorkflowPage() {
 
       <form
         onSubmit={handleSubmit}
-        className="bg-white rounded-lg shadow p-6 space-y-6"
+        className="bg-white dark:bg-card rounded-lg shadow p-6 space-y-6 border border-gray-200 dark:border-border"
         data-tour="workflow-form"
       >
         {/* Workflow Basic Fields */}
@@ -324,21 +324,21 @@ export default function NewWorkflowPage() {
         />
 
         {/* Workflow Steps */}
-        <div className="space-y-4 pt-6 border-t" data-tour="workflow-steps">
+        <div className="space-y-4 pt-6 border-t border-gray-200 dark:border-border" data-tour="workflow-steps">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-900">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-foreground">
               AI Instructions
             </h2>
             <button
               type="button"
               onClick={workflowSteps.addStep}
-              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors touch-target"
+              className="flex items-center gap-2 px-4 py-2 bg-primary-600 dark:bg-primary text-white dark:text-primary-foreground rounded-lg hover:bg-primary-700 dark:hover:bg-primary/90 transition-colors touch-target"
             >
               <FiPlus className="w-4 h-4" />
               Add Instruction
             </button>
           </div>
-          <p className="text-sm text-gray-600 mb-4">
+          <p className="text-sm text-gray-600 dark:text-muted-foreground mb-4">
             Tell the AI what to do. Each instruction builds on the previous one.
           </p>
 
@@ -383,11 +383,11 @@ export default function NewWorkflowPage() {
           onChange={workflowForm.updateFormData}
         />
 
-        <div className="flex justify-end space-x-4 pt-4 border-t">
+        <div className="flex justify-end space-x-4 pt-4 border-t border-gray-200 dark:border-border">
           <button
             type="submit"
             disabled={submission.isSubmitting}
-            className="flex items-center px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center px-6 py-2 bg-primary-600 dark:bg-primary text-white dark:text-primary-foreground rounded-lg hover:bg-primary-700 dark:hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             data-tour="create-workflow-button"
           >
             <FiSave className="w-5 h-5 mr-2" />
