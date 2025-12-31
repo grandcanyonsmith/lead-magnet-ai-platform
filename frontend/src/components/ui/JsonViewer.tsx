@@ -3,8 +3,11 @@
 import React, { useState } from "react";
 import clsx from "clsx";
 import { FiChevronRight, FiCopy } from "react-icons/fi";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { vscDarkPlus, vs } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { useTheme } from "next-themes";
 
 type JsonViewMode = "tree" | "raw";
 
@@ -70,6 +73,17 @@ function extractFirstFencedBlock(text: string): FencedBlock | null {
   return { prefix, language, code, suffix };
 }
 
+function looksLikeMarkdown(text: string): boolean {
+  if (!text) return false;
+  if (text.includes("```")) return true;
+  if (/(^|\n)#{1,6}\s+\S/.test(text)) return true;
+  if (/(^|\n)[*-]\s+\S/.test(text)) return true;
+  if (/(^|\n)\d+\.\s+\S/.test(text)) return true;
+  if (/\|.+\|\n\|[-:\s|]+\|/.test(text)) return true;
+  if (/\*\*[^*]+\*\*/.test(text)) return true;
+  return false;
+}
+
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return false;
@@ -96,7 +110,7 @@ function JsonLeafRow({
   return (
     <div className="flex items-start gap-2 py-0.5 min-w-0">
       {name !== undefined && (
-        <span className="text-sky-300 shrink-0">{name}:</span>
+        <span className="text-sky-600 dark:text-sky-300 shrink-0">{name}:</span>
       )}
       <div className="min-w-0 flex-1">{children}</div>
     </div>
@@ -115,6 +129,12 @@ function JsonStringValue({ value }: { value: string }) {
   const shouldScrollExpanded =
     expanded && (lineCount > 80 || value.length > 8_000);
 
+  const canRenderMarkdown = looksLikeMarkdown(value) && value.length < 250_000;
+  const [view, setView] = useState<"text" | "rendered">(() => {
+    if (!canRenderMarkdown) return "text";
+    return lineCount > 6 || value.length > 900 ? "rendered" : "text";
+  });
+
   const fenced = value.includes("```") ? extractFirstFencedBlock(value) : null;
 
   const previewText = isMultiline
@@ -123,6 +143,9 @@ function JsonStringValue({ value }: { value: string }) {
 
   const displayValue =
     !expanded && shouldCollapse ? `${previewText}…` : value;
+
+  const shouldRenderMarkdown =
+    canRenderMarkdown && view === "rendered" && (!shouldCollapse || expanded);
 
   const displayFenced = (() => {
     if (!fenced) return null;
@@ -150,18 +173,48 @@ function JsonStringValue({ value }: { value: string }) {
   return (
     <div className="min-w-0">
       {isMultiline || value.length > MAX_STRING_PREVIEW ? (
-        <div className="rounded-lg border border-gray-700/40 bg-black/20">
-          <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 border-b border-gray-700/30">
-            <span className="text-[11px] text-gray-400">
+        <div className="rounded-lg border border-gray-200 dark:border-gray-700/40 bg-gray-50 dark:bg-black/20">
+          <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 border-b border-gray-200 dark:border-gray-700/30">
+            <span className="text-[11px] text-gray-500 dark:text-gray-400">
               {isMultiline ? `${lineCount.toLocaleString()} lines • ` : ""}
               {value.length.toLocaleString()} chars
               {displayFenced?.language ? ` • ${displayFenced.language}` : ""}
             </span>
             <div className="flex items-center gap-2">
+              {canRenderMarkdown && (
+                <div className="inline-flex rounded-md border border-gray-200 dark:border-gray-700/40 overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setView("rendered")}
+                    className={clsx(
+                      "px-2 py-1 text-[11px] font-semibold transition-colors",
+                      view === "rendered"
+                        ? "bg-sky-600 text-white"
+                        : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-black/20",
+                    )}
+                    title="Render markdown"
+                  >
+                    Render
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setView("text")}
+                    className={clsx(
+                      "px-2 py-1 text-[11px] font-semibold transition-colors border-l border-gray-200 dark:border-gray-700/40",
+                      view === "text"
+                        ? "bg-gray-800 text-white"
+                        : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-black/20",
+                    )}
+                    title="Show plain text"
+                  >
+                    Text
+                  </button>
+                </div>
+              )}
               <button
                 type="button"
                 onClick={copyValue}
-                className="inline-flex items-center gap-1 text-[11px] text-gray-300 hover:text-white"
+                className="inline-flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
                 title="Copy value"
               >
                 <FiCopy className="h-3.5 w-3.5" />
@@ -170,7 +223,7 @@ function JsonStringValue({ value }: { value: string }) {
               {shouldCollapse && (
                 <button
                   type="button"
-                  className="text-[11px] text-sky-300 hover:text-sky-200 active:text-sky-100 underline underline-offset-2"
+                  className="text-[11px] text-sky-600 dark:text-sky-300 hover:text-sky-500 dark:hover:text-sky-200 active:text-sky-700 dark:active:text-sky-100 underline underline-offset-2"
                   onClick={() => setExpanded((v) => !v)}
                 >
                   {expanded ? "less" : "more"}
@@ -180,23 +233,71 @@ function JsonStringValue({ value }: { value: string }) {
           </div>
 
           <div className="p-2.5">
-            {displayFenced ? (
+            {shouldRenderMarkdown ? (
+              <div
+                className={clsx(
+                  "font-sans text-sm text-gray-900 dark:text-gray-100",
+                  shouldScrollExpanded && "max-h-[60vh] overflow-auto",
+                )}
+              >
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    pre: ({ children }) => <>{children}</>,
+                    code: ({ inline, children }) => {
+                      if (inline) {
+                        return (
+                          <code className="rounded bg-gray-200 dark:bg-black/30 px-1 py-0.5 font-mono text-[0.85em] text-amber-700 dark:text-amber-200">
+                            {children}
+                          </code>
+                        );
+                      }
+                      const text = String(children).replace(/\n$/, "");
+                      return (
+                        <pre className="rounded-md border border-gray-200 dark:border-gray-700/40 bg-gray-100 dark:bg-black/25 p-3 overflow-auto">
+                          <code className="font-mono text-xs leading-relaxed text-gray-800 dark:text-gray-100 whitespace-pre">
+                            {text}
+                          </code>
+                        </pre>
+                      );
+                    },
+                    table: ({ children }) => (
+                      <div className="overflow-x-auto">
+                        <table className="w-full">{children}</table>
+                      </div>
+                    ),
+                    th: ({ children }) => (
+                      <th className="border-b border-gray-200 dark:border-gray-700/50 px-2 py-1 text-left text-gray-900 dark:text-gray-100">
+                        {children}
+                      </th>
+                    ),
+                    td: ({ children }) => (
+                      <td className="border-b border-gray-100 dark:border-gray-800/60 px-2 py-1 text-gray-700 dark:text-gray-200 align-top">
+                        {children}
+                      </td>
+                    ),
+                  }}
+                >
+                  {value}
+                </ReactMarkdown>
+              </div>
+            ) : displayFenced ? (
               <div className="space-y-2">
                 {displayFenced.prefix.trim() ? (
-                  <div className="text-gray-200 whitespace-pre-wrap break-words">
+                  <div className="text-gray-700 dark:text-gray-200 whitespace-pre-wrap break-words">
                     {displayFenced.prefix.trim()}
                   </div>
                 ) : null}
                 <pre
                   className={clsx(
-                    "rounded-md border border-gray-700/40 bg-black/25 p-3 text-gray-100 whitespace-pre-wrap break-words leading-relaxed",
-                    shouldScrollExpanded && "max-h-80 overflow-auto",
+                    "rounded-md border border-gray-200 dark:border-gray-700/40 bg-gray-100 dark:bg-black/25 p-3 text-gray-800 dark:text-gray-100 whitespace-pre-wrap break-words leading-relaxed",
+                    shouldScrollExpanded && "max-h-[60vh] overflow-auto",
                   )}
                 >
                   {displayFenced.code}
                 </pre>
                 {displayFenced.suffix.trim() ? (
-                  <div className="text-gray-200 whitespace-pre-wrap break-words">
+                  <div className="text-gray-700 dark:text-gray-200 whitespace-pre-wrap break-words">
                     {displayFenced.suffix.trim()}
                   </div>
                 ) : null}
@@ -204,8 +305,8 @@ function JsonStringValue({ value }: { value: string }) {
             ) : (
               <pre
                 className={clsx(
-                  "text-gray-100 whitespace-pre-wrap break-words leading-relaxed",
-                  shouldScrollExpanded && "max-h-80 overflow-auto",
+                  "text-gray-800 dark:text-gray-100 whitespace-pre-wrap break-words leading-relaxed",
+                  shouldScrollExpanded && "max-h-[60vh] overflow-auto",
                 )}
               >
                 {displayValue}
@@ -215,13 +316,13 @@ function JsonStringValue({ value }: { value: string }) {
         </div>
       ) : (
         <div className="flex items-start gap-2 min-w-0">
-          <span className="text-amber-200 whitespace-pre-wrap break-words">
+          <span className="text-amber-700 dark:text-amber-200 whitespace-pre-wrap break-words">
             &quot;{displayValue}&quot;
           </span>
           <button
             type="button"
             onClick={copyValue}
-            className="mt-0.5 text-gray-400 hover:text-gray-200"
+            className="mt-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
             title="Copy value"
             aria-label="Copy value"
           >
@@ -235,24 +336,24 @@ function JsonStringValue({ value }: { value: string }) {
 
 function JsonPrimitiveValue({ value }: { value: unknown }) {
   if (value === null) {
-    return <span className="text-gray-400">null</span>;
+    return <span className="text-gray-500 dark:text-gray-400">null</span>;
   }
   if (value === undefined) {
-    return <span className="text-gray-400">undefined</span>;
+    return <span className="text-gray-500 dark:text-gray-400">undefined</span>;
   }
   if (typeof value === "string") {
     return <JsonStringValue value={value} />;
   }
   if (typeof value === "number") {
-    return <span className="text-emerald-200">{String(value)}</span>;
+    return <span className="text-emerald-600 dark:text-emerald-200">{String(value)}</span>;
   }
   if (typeof value === "boolean") {
-    return <span className="text-purple-200">{value ? "true" : "false"}</span>;
+    return <span className="text-purple-600 dark:text-purple-200">{value ? "true" : "false"}</span>;
   }
   if (typeof value === "bigint") {
-    return <span className="text-emerald-200">{String(value)}n</span>;
+    return <span className="text-emerald-600 dark:text-emerald-200">{String(value)}n</span>;
   }
-  return <span className="text-gray-200">{String(value)}</span>;
+  return <span className="text-gray-700 dark:text-gray-200">{String(value)}</span>;
 }
 
 function JsonNode({
@@ -305,20 +406,20 @@ function JsonNode({
         <summary className="list-none cursor-pointer flex items-start gap-2 py-0.5">
           <FiChevronRight
             className={clsx(
-              "mt-0.5 h-3.5 w-3.5 text-gray-400 shrink-0 transition-transform",
+              "mt-0.5 h-3.5 w-3.5 text-gray-500 dark:text-gray-400 shrink-0 transition-transform",
               isOpen && "rotate-90",
             )}
           />
           <div className="min-w-0 flex-1">
-            <span className="text-sky-300">{name ?? "(root)"}</span>
-            <span className="text-gray-400">: </span>
-            <span className="text-gray-200">[</span>
-            <span className="text-gray-400">{formatItemCount(total)}</span>
-            <span className="text-gray-200">]</span>
+            <span className="text-sky-600 dark:text-sky-300">{name ?? "(root)"}</span>
+            <span className="text-gray-500 dark:text-gray-400">: </span>
+            <span className="text-gray-700 dark:text-gray-200">[</span>
+            <span className="text-gray-500 dark:text-gray-400">{formatItemCount(total)}</span>
+            <span className="text-gray-700 dark:text-gray-200">]</span>
           </div>
         </summary>
 
-        <div className="pl-5 ml-[7px] border-l border-gray-700/60">
+        <div className="pl-5 ml-[7px] border-l border-gray-200 dark:border-gray-700/60">
           {value.slice(0, shown).map((item, idx) => (
             <JsonNode
               key={`${name ?? "root"}-idx-${idx}`}
@@ -332,7 +433,7 @@ function JsonNode({
           {remaining > 0 && (
             <button
               type="button"
-              className="mt-1 text-[11px] text-sky-300 hover:text-sky-200 active:text-sky-100 underline underline-offset-2"
+              className="mt-1 text-[11px] text-sky-600 dark:text-sky-300 hover:text-sky-500 dark:hover:text-sky-200 active:text-sky-700 dark:active:text-sky-100 underline underline-offset-2"
               onClick={() => setShowAllChildren(true)}
             >
               Show {remaining.toLocaleString()} more…
@@ -362,27 +463,27 @@ function JsonNode({
         <summary className="list-none cursor-pointer flex items-start gap-2 py-0.5">
           <FiChevronRight
             className={clsx(
-              "mt-0.5 h-3.5 w-3.5 text-gray-400 shrink-0 transition-transform",
+              "mt-0.5 h-3.5 w-3.5 text-gray-500 dark:text-gray-400 shrink-0 transition-transform",
               isOpen && "rotate-90",
             )}
           />
           <div className="min-w-0 flex-1">
-            <span className="text-sky-300">{name ?? "(root)"}</span>
-            <span className="text-gray-400">: </span>
-            <span className="text-gray-200">{"{"}</span>
-            <span className="text-gray-400">{formatKeyCount(total)}</span>
+            <span className="text-sky-600 dark:text-sky-300">{name ?? "(root)"}</span>
+            <span className="text-gray-500 dark:text-gray-400">: </span>
+            <span className="text-gray-700 dark:text-gray-200">{"{"}</span>
+            <span className="text-gray-500 dark:text-gray-400">{formatKeyCount(total)}</span>
             {previewKeys.length > 0 && (
-              <span className="text-gray-500">
+              <span className="text-gray-500 dark:text-gray-400">
                 {" "}
                 • {previewKeys.join(", ")}
                 {total > previewKeys.length ? ", …" : ""}
               </span>
             )}
-            <span className="text-gray-200">{"}"}</span>
+            <span className="text-gray-700 dark:text-gray-200">{"}"}</span>
           </div>
         </summary>
 
-        <div className="pl-5 ml-[7px] border-l border-gray-700/60">
+        <div className="pl-5 ml-[7px] border-l border-gray-200 dark:border-gray-700/60">
           {keys.slice(0, shown).map((key) => (
             <JsonNode
               key={`${name ?? "root"}-key-${key}`}
@@ -396,7 +497,7 @@ function JsonNode({
           {remaining > 0 && (
             <button
               type="button"
-              className="mt-1 text-[11px] text-sky-300 hover:text-sky-200 active:text-sky-100 underline underline-offset-2"
+              className="mt-1 text-[11px] text-sky-600 dark:text-sky-300 hover:text-sky-500 dark:hover:text-sky-200 active:text-sky-700 dark:active:text-sky-100 underline underline-offset-2"
               onClick={() => setShowAllChildren(true)}
             >
               Show {remaining.toLocaleString()} more…
@@ -411,7 +512,7 @@ function JsonNode({
   if (isObjectLike) {
     return (
       <JsonLeafRow name={name}>
-        <span className="text-gray-200">
+        <span className="text-gray-700 dark:text-gray-200">
           {Object.prototype.toString.call(value)}
         </span>
       </JsonLeafRow>
@@ -434,7 +535,7 @@ function JsonTree({
 }) {
   return (
     <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
-      <div className="bg-[#1e1e1e] text-gray-100 font-mono text-xs leading-relaxed p-4">
+      <div className="bg-gray-50 dark:bg-[#1e1e1e] text-gray-900 dark:text-gray-100 font-mono text-xs leading-relaxed p-4">
         <JsonNode
           value={value}
           depth={0}
@@ -453,6 +554,7 @@ export function JsonViewer({
   className = "",
   defaultExpandedDepth = 2,
 }: JsonViewerProps) {
+  const { resolvedTheme } = useTheme();
   const [mode, setMode] = useState<JsonViewMode>(defaultMode);
   const [wrapLongLines, setWrapLongLines] = useState(true);
   const [forceHighlight, setForceHighlight] = useState(false);
@@ -528,7 +630,7 @@ export function JsonViewer({
             <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
               <SyntaxHighlighter
                 language="json"
-                style={vscDarkPlus}
+                style={resolvedTheme === "dark" ? vscDarkPlus : vs}
                 customStyle={{
                   margin: 0,
                   padding: "16px",
@@ -551,7 +653,7 @@ export function JsonViewer({
               </SyntaxHighlighter>
             </div>
           ) : (
-            <pre className="rounded-xl border border-gray-200 dark:border-gray-700 bg-[#1e1e1e] text-gray-100 font-mono text-xs leading-relaxed p-4 whitespace-pre-wrap break-words">
+            <pre className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1e1e1e] text-gray-900 dark:text-gray-100 font-mono text-xs leading-relaxed p-4 whitespace-pre-wrap break-words">
               {raw}
             </pre>
           )}

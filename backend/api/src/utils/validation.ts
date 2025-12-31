@@ -114,6 +114,12 @@ const baseWorkflowSchema = z.object({
   status: z.enum(["draft", "active", "inactive"]).optional(),
   // Folder organization
   folder_id: z.string().nullable().optional(),
+  // Trigger configuration
+  trigger: z
+    .object({
+      type: z.enum(["form", "webhook"]),
+    })
+    .optional(),
   // Legacy fields (kept for backward compatibility in database, but not used for new workflows)
   ai_model: z.string().optional(),
   ai_instructions: z.string().optional(),
