@@ -2,6 +2,7 @@ import { APIGatewayProxyEventV2 } from "aws-lambda";
 import { RouteResponse } from "./routes";
 import { ApiError } from "../utils/errors";
 import { logger } from "../utils/logger";
+import { rateLimiters } from "../middleware/rateLimiter";
 
 import { AuthContext } from "../utils/authContext";
 
@@ -139,13 +140,25 @@ class SimpleRouter {
       const effectiveTenantId = authContext?.customerId || tenantId;
 
       // Execute handler
-      return await route.handler(
-        params,
-        body,
-        query,
-        effectiveTenantId,
-        context,
-      );
+      const executeHandler = () =>
+        route.handler(
+          params,
+          body,
+          query,
+          effectiveTenantId,
+          context,
+        );
+
+      // Apply rate limiting
+      // Select appropriate rate limiter based on route path
+      let limiter = rateLimiters.standard;
+      
+      // Use form submission limiter (10 req/hour per IP) for form submissions to prevent spam
+      if (route.path === "/v1/forms/:slug/submit") {
+        limiter = rateLimiters.formSubmission;
+      }
+
+      return await limiter(event, executeHandler);
     }
 
     logger.warn("[Router] No route matched", {
