@@ -16,6 +16,7 @@ import { WorkflowStep } from "@/types/workflow";
 import { api } from "@/lib/api";
 import toast from "react-hot-toast";
 import { JsonViewer } from "@/components/ui/JsonViewer";
+import StreamViewer from "./StreamViewer";
 
 interface StepTesterProps {
   step: WorkflowStep;
@@ -27,9 +28,24 @@ export default function StepTester({ step, index }: StepTesterProps) {
   const [testInput, setTestInput] = useState("{}");
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<any>(null);
+  const [showStream, setShowStream] = useState(false);
   const [pollInterval, setPollInterval] = useState<ReturnType<
     typeof setInterval
   > | null>(null);
+
+  // Helper to determine API URL (duplicated from base.client.ts)
+  const getApiUrl = () => {
+    const envUrl = (process.env.NEXT_PUBLIC_API_URL || "").trim();
+    if (envUrl) return envUrl;
+    if (typeof window !== "undefined") {
+      const host = window.location.hostname;
+      if (host === "localhost" || host === "127.0.0.1") {
+        const origin = window.location.origin || "http://localhost:3000";
+        return origin.replace(/:\d+$/, ":3001");
+      }
+    }
+    return "https://czp5b77azd.execute-api.us-east-1.amazonaws.com";
+  };
 
   // Clean up polling on unmount
   useEffect(() => {
@@ -44,6 +60,7 @@ export default function StepTester({ step, index }: StepTesterProps) {
     }
     setPollInterval(null);
     setIsTesting(false);
+    setShowStream(false);
     toast("Test cancelled");
   };
 
@@ -102,6 +119,20 @@ export default function StepTester({ step, index }: StepTesterProps) {
 
       setIsTesting(true);
       setTestResult(null);
+      setShowStream(false);
+
+      // Check if this is a CUA step (computer use)
+      const tools = step.tools || [];
+      const hasComputerUse = Array.isArray(tools) && tools.some((t: any) => 
+        (typeof t === 'string' && t === 'computer_use_preview') || 
+        (typeof t === 'object' && t.type === 'computer_use_preview')
+      );
+
+      if (hasComputerUse) {
+        setShowStream(true);
+        // We don't start polling here; StreamViewer will handle the request
+        return;
+      }
 
       const testStartResp = await api.testStep({
         step,
@@ -268,7 +299,41 @@ export default function StepTester({ step, index }: StepTesterProps) {
             </button>
           </div>
 
-          {testResult && (
+          {showStream && (
+             <div className="mt-6">
+               <StreamViewer 
+                 endpoint={`${getApiUrl()}/admin/cua/execute`}
+                 requestBody={(() => {
+                    let inputData: any = {};
+                    try { inputData = JSON.parse(testInput); } catch {}
+                    
+                    const model = step.model || "computer-use-preview";
+                    const instructions = step.instructions || "";
+                    const tools = step.tools || [];
+                    const toolChoice = step.tool_choice || "auto";
+                    
+                    // Determine input_text from testInput or default
+                    let inputText = inputData.input_text || inputData.user_prompt || "Start the task.";
+                    
+                    return {
+                        job_id: `test-cua-${Date.now()}`,
+                        model,
+                        instructions,
+                        input_text: inputText,
+                        tools,
+                        tool_choice: toolChoice,
+                        params: inputData
+                    };
+                 })()}
+                 onClose={() => {
+                    setShowStream(false);
+                    setIsTesting(false);
+                 }}
+               />
+             </div>
+          )}
+
+          {!showStream && testResult && (
             <div className="mt-6">
               <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
                 <div className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">

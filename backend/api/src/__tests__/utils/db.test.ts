@@ -16,6 +16,7 @@ process.env.TEMPLATES_TABLE = "templates";
 process.env.SUBMISSIONS_TABLE = "submissions";
 process.env.NOTIFICATIONS_TABLE = "notifications";
 process.env.USER_SETTINGS_TABLE = "settings";
+process.env.AWS_REGION = "us-east-1";
 
 import { db, normalizeQueryResult, docClient } from "../../utils/db";
 

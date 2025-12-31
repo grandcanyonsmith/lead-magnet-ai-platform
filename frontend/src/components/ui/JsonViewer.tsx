@@ -244,17 +244,17 @@ function JsonStringValue({ value }: { value: string }) {
                   remarkPlugins={[remarkGfm]}
                   components={{
                     pre: ({ children }) => <>{children}</>,
-                    code: ({ inline, children }) => {
+                    code: ({ inline, children, ...props }: any) => {
                       if (inline) {
                         return (
-                          <code className="rounded bg-gray-200 dark:bg-black/30 px-1 py-0.5 font-mono text-[0.85em] text-amber-700 dark:text-amber-200">
+                          <code className="rounded bg-gray-200 dark:bg-black/30 px-1 py-0.5 font-mono text-[0.85em] text-amber-700 dark:text-amber-200" {...props}>
                             {children}
                           </code>
                         );
                       }
                       const text = String(children).replace(/\n$/, "");
                       return (
-                        <pre className="rounded-md border border-gray-200 dark:border-gray-700/40 bg-gray-100 dark:bg-black/25 p-3 overflow-auto">
+                        <pre className="rounded-md border border-gray-200 dark:border-gray-700/40 bg-gray-100 dark:bg-black/25 p-3 overflow-auto" {...props}>
                           <code className="font-mono text-xs leading-relaxed text-gray-800 dark:text-gray-100 whitespace-pre">
                             {text}
                           </code>
