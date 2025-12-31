@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { AIModel, Tool } from "@/types";
-import { WorkflowStep } from "@/types/workflow";
+import { WorkflowStep, WorkflowTrigger } from "@/types/workflow";
 import { useWorkflowId } from "./useWorkflowId";
 
 export interface WorkflowFormData {
@@ -12,6 +12,7 @@ export interface WorkflowFormData {
   workflow_description: string;
   template_id: string;
   template_version: number;
+  trigger?: WorkflowTrigger;
 }
 
 export function useWorkflowEdit() {
@@ -51,6 +52,7 @@ export function useWorkflowEdit() {
         workflow_description: workflow.workflow_description || "",
         template_id: workflow.template_id || "",
         template_version: workflow.template_version || 0,
+        trigger: workflow.trigger || { type: "form" },
       });
 
       // Load steps - all workflows must have steps

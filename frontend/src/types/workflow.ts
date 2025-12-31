@@ -81,6 +81,12 @@ export interface WorkflowStep {
 
 export type DeliveryMethod = "webhook" | "sms" | "none";
 
+export type WorkflowTriggerType = "form" | "webhook";
+
+export interface WorkflowTrigger {
+  type: WorkflowTriggerType;
+}
+
 export interface WorkflowDeliveryConfig {
   delivery_method: DeliveryMethod;
   delivery_webhook_url: string;
@@ -126,6 +132,7 @@ export interface Workflow extends BaseEntity {
   steps?: WorkflowStep[];
   status: "active" | "inactive" | "draft";
   folder_id?: string | null; // Folder this workflow belongs to
+  trigger?: WorkflowTrigger;
   form?: {
     form_id: string;
     form_name: string;
@@ -147,6 +154,7 @@ export interface WorkflowCreateRequest {
   template_id?: string;
   template_version?: number;
   steps?: WorkflowStep[];
+  trigger?: WorkflowTrigger;
   // Legacy fields (deprecated - kept for backward compatibility, but ignored)
   ai_model?: AIModel;
   ai_instructions?: string;

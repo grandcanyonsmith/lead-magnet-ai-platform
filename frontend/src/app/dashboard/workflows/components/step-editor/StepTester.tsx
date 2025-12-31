@@ -316,7 +316,7 @@ export default function StepTester({ step, index }: StepTesterProps) {
                   </button>
                 </div>
               </div>
-              <div className="bg-[#1e1e1e] rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-inner">
+              <div className="bg-gray-50 dark:bg-[#1e1e1e] rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-inner">
                 <div className="p-1">
                   <JsonViewer
                     value={testResult}
