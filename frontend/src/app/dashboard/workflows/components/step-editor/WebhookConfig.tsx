@@ -275,7 +275,7 @@ export default function WebhookConfig({
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Method
           </label>
           <select
@@ -286,7 +286,7 @@ export default function WebhookConfig({
                 e.target.value as HTTPMethod,
               )
             }
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
           >
             <option value="POST">POST</option>
             <option value="GET">GET</option>
@@ -296,7 +296,7 @@ export default function WebhookConfig({
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Content-Type
           </label>
           <input
@@ -305,34 +305,34 @@ export default function WebhookConfig({
             onChange={(e) =>
               onChange("webhook_content_type", e.target.value)
             }
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
             placeholder="application/json"
           />
         </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
           HTTP URL *
         </label>
         <input
           type="url"
           value={step.webhook_url || ""}
           onChange={(e) => onChange("webhook_url", e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
           placeholder="https://api.example.com/endpoint"
           required
         />
-        <p className="mt-1 text-sm text-gray-500">
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           The URL where the HTTP request will be sent.
         </p>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
           Query Parameters (optional)
         </label>
-        <p className="text-xs text-gray-500 mb-2">
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
           Add query parameters to append to the URL.
         </p>
         <div className="space-y-2">
@@ -350,7 +350,7 @@ export default function WebhookConfig({
                     onChange("webhook_query_params", newParams);
                   }}
                   placeholder="Param name"
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
                 />
                 <input
                   type="text"
@@ -364,7 +364,7 @@ export default function WebhookConfig({
                     onChange("webhook_query_params", newParams);
                   }}
                   placeholder="Param value"
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
                 />
                 <button
                   type="button"
@@ -374,7 +374,7 @@ export default function WebhookConfig({
                     setWebhookQueryParams(newParams);
                     onChange("webhook_query_params", newParams);
                   }}
-                  className="px-3 py-2 text-red-600 hover:text-red-700 text-sm"
+                  className="px-3 py-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 text-sm"
                 >
                   Remove
                 </button>
@@ -387,7 +387,7 @@ export default function WebhookConfig({
               const newParams = { ...webhookQueryParams, "": "" };
               setWebhookQueryParams(newParams);
             }}
-            className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+            className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
           >
             + Add Query Parameter
           </button>
@@ -395,10 +395,10 @@ export default function WebhookConfig({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
           HTTP Headers (optional)
         </label>
-        <p className="text-xs text-gray-500 mb-2">
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
           Add custom headers to include in the HTTP request (e.g.,
           Authorization).
         </p>
@@ -416,7 +416,7 @@ export default function WebhookConfig({
                   onChange("webhook_headers", newHeaders);
                 }}
                 placeholder="Header name"
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
               />
               <input
                 type="text"
@@ -430,7 +430,7 @@ export default function WebhookConfig({
                   onChange("webhook_headers", newHeaders);
                 }}
                 placeholder="Header value"
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
               />
               <button
                 type="button"
@@ -440,7 +440,7 @@ export default function WebhookConfig({
                   setWebhookHeaders(newHeaders);
                   onChange("webhook_headers", newHeaders);
                 }}
-                className="px-3 py-2 text-red-600 hover:text-red-700 text-sm"
+                className="px-3 py-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 text-sm"
               >
                 Remove
               </button>
@@ -452,7 +452,7 @@ export default function WebhookConfig({
               const newHeaders = { ...webhookHeaders, "": "" };
               setWebhookHeaders(newHeaders);
             }}
-            className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+            className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
           >
             + Add Header
           </button>
@@ -460,22 +460,22 @@ export default function WebhookConfig({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Body
         </label>
-        <p className="text-xs text-gray-500 mb-3">
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
           Choose whether to send an auto-generated payload (submission +
           step outputs) or write a custom body.
         </p>
 
-        <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1">
+        <div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-1">
           <button
             type="button"
             onClick={() => onChange("webhook_body_mode", "auto")}
             className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
               webhookBodyMode === "auto"
-                ? "bg-gray-900 text-white"
-                : "text-gray-700 hover:bg-gray-50"
+                ? "bg-gray-900 dark:bg-gray-700 text-white"
+                : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
             }`}
           >
             Auto payload
@@ -485,8 +485,8 @@ export default function WebhookConfig({
             onClick={() => onChange("webhook_body_mode", "custom")}
             className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
               webhookBodyMode === "custom"
-                ? "bg-gray-900 text-white"
-                : "text-gray-700 hover:bg-gray-50"
+                ? "bg-gray-900 dark:bg-gray-700 text-white"
+                : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
             }`}
           >
             Custom body
@@ -496,7 +496,7 @@ export default function WebhookConfig({
         {webhookBodyMode === "custom" ? (
           <div className="mt-3 space-y-2">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-semibold text-gray-600 uppercase">
+              <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">
                 Raw body
               </span>
               <select
@@ -510,7 +510,7 @@ export default function WebhookConfig({
                   onChange("webhook_body", current + token);
                   e.currentTarget.value = "";
                 }}
-                className="text-xs border border-gray-300 rounded-md px-2 py-1 bg-white"
+                className="text-xs border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                 aria-label="Insert variable"
                 title="Insert a variable token"
               >
@@ -559,10 +559,10 @@ export default function WebhookConfig({
               onChange={(e) =>
                 onChange("webhook_body", e.target.value)
               }
-              className="w-full min-h-[180px] px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono text-sm"
+              className="w-full min-h-[180px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono text-sm"
               placeholder={`{\n  \"example\": \"{{some_value}}\"\n}`}
             />
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               You can reference variables like{" "}
               <span className="font-mono">{"{{job.job_id}}"}</span>,{" "}
               <span className="font-mono">
@@ -580,10 +580,10 @@ export default function WebhookConfig({
           </div>
         ) : (
           <div className="mt-3">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Data Selection
             </label>
-            <p className="text-xs text-gray-500 mb-3">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
               Choose which data to include in the HTTP request payload.
               All step outputs are included by default.
             </p>
@@ -608,9 +608,9 @@ export default function WebhookConfig({
                       include_submission: e.target.checked,
                     });
                   }}
-                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
                 />
-                <span className="text-sm text-gray-900">
+                <span className="text-sm text-gray-900 dark:text-gray-100">
                   Include submission data
                 </span>
               </label>
@@ -634,23 +634,23 @@ export default function WebhookConfig({
                       include_job_info: e.target.checked,
                     });
                   }}
-                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
                 />
-                <span className="text-sm text-gray-900">
+                <span className="text-sm text-gray-900 dark:text-gray-100">
                   Include job information
                 </span>
               </label>
 
               {allSteps.length > 0 && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Exclude Step Outputs (optional)
                   </label>
-                  <p className="text-xs text-gray-500 mb-2">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
                     All step outputs are included by default. Check
                     steps to exclude from the payload.
                   </p>
-                  <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-3">
+                  <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-3 bg-white dark:bg-gray-800">
                     {allSteps.map((otherStep, otherIndex) => {
                       if (otherIndex >= index) return null; // Can't exclude future steps
                       const isExcluded = (
@@ -685,9 +685,9 @@ export default function WebhookConfig({
                                 exclude_step_indices: newExcluded,
                               });
                             }}
-                            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
                           />
-                          <span className="text-sm text-gray-900">
+                          <span className="text-sm text-gray-900 dark:text-gray-100">
                             Exclude:{" "}
                             {otherStep.step_name ||
                               `Step ${otherIndex + 1}`}
@@ -703,13 +703,13 @@ export default function WebhookConfig({
         )}
       </div>
 
-      <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+      <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-semibold text-gray-900">
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
               Test request
             </p>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
               Sends the request server-side and shows what was sent and
               what came back.
             </p>
@@ -721,7 +721,7 @@ export default function WebhookConfig({
               httpTestLoading ||
               (selectedRunId ? selectedRunLoading : false)
             }
-            className="px-3 py-2 text-sm font-medium bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:opacity-50"
+            className="px-3 py-2 text-sm font-medium bg-gray-900 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-gray-600 disabled:opacity-50"
           >
             {httpTestLoading
               ? "Testing…"
@@ -732,10 +732,10 @@ export default function WebhookConfig({
         </div>
 
         <div className="mt-3">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Use data from a previous run (optional)
           </label>
-          <p className="text-xs text-gray-500 mb-2">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
             Select a completed run so placeholders like{" "}
             <span className="font-mono">{"{{steps.0.output}}"}</span>{" "}
             and{" "}
@@ -747,7 +747,7 @@ export default function WebhookConfig({
           </p>
 
           {!workflowId ? (
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               Save this workflow to enable run selection.
             </p>
           ) : (
@@ -759,7 +759,7 @@ export default function WebhookConfig({
                   setHttpTestResult(null);
                   setHttpTestError(null);
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm bg-white"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
               >
                 <option value="">No run selected</option>
                 {(availableRuns || []).map((job: any) => {
@@ -778,18 +778,18 @@ export default function WebhookConfig({
               {selectedRunId && (
                 <div className="mt-2">
                   {selectedRunLoading && (
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
                       Loading run data…
                     </p>
                   )}
                   {selectedRunError && (
-                    <p className="text-xs text-red-700">
+                    <p className="text-xs text-red-700 dark:text-red-400">
                       {selectedRunError}
                     </p>
                   )}
                   {selectedRunVars?.steps &&
                     Array.isArray(selectedRunVars.steps) && (
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
                         Loaded{" "}
                         <span className="font-medium">
                           {selectedRunVars.steps.length}
@@ -804,10 +804,10 @@ export default function WebhookConfig({
         </div>
 
         <div className="mt-3">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Test values (optional)
           </label>
-          <p className="text-xs text-gray-500 mb-2">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
             These replace <span className="font-mono">{"{{key}}"}</span>{" "}
             placeholders during testing.
           </p>
@@ -824,7 +824,7 @@ export default function WebhookConfig({
                     setHttpTestValues(newVals);
                   }}
                   placeholder="key"
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm bg-white"
+                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
                 />
                 <input
                   type="text"
@@ -837,7 +837,7 @@ export default function WebhookConfig({
                     setHttpTestValues(newVals);
                   }}
                   placeholder="value"
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm bg-white"
+                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
                 />
                 <button
                   type="button"
@@ -846,7 +846,7 @@ export default function WebhookConfig({
                     delete newVals[key];
                     setHttpTestValues(newVals);
                   }}
-                  className="px-3 py-2 text-red-600 hover:text-red-700 text-sm"
+                  className="px-3 py-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 text-sm"
                 >
                   Remove
                 </button>
@@ -857,7 +857,7 @@ export default function WebhookConfig({
               onClick={() =>
                 setHttpTestValues({ ...httpTestValues, "": "" })
               }
-              className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+              className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
             >
               + Add value
             </button>
@@ -865,7 +865,7 @@ export default function WebhookConfig({
         </div>
 
         {httpTestError && (
-          <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+          <div className="mt-3 rounded-lg border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-900/20 px-3 py-2 text-sm text-red-800 dark:text-red-200">
             {httpTestError}
           </div>
         )}
@@ -875,8 +875,8 @@ export default function WebhookConfig({
             <div
               className={`rounded-lg border px-3 py-2 text-sm ${
                 httpTestResult.ok
-                  ? "border-green-200 bg-green-50 text-green-900"
-                  : "border-red-200 bg-red-50 text-red-900"
+                  ? "border-green-200 dark:border-green-900 bg-green-50 dark:bg-green-900/20 text-green-900 dark:text-green-200"
+                  : "border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-900/20 text-red-900 dark:text-red-200"
               }`}
             >
               {httpTestResult.ok
@@ -889,11 +889,11 @@ export default function WebhookConfig({
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                <div className="px-3 py-2 border-b border-gray-200 bg-gray-50 text-sm font-semibold text-gray-700">
+              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-sm font-semibold text-gray-700 dark:text-gray-300">
                   Sent
                 </div>
-                <pre className="p-3 text-xs overflow-x-auto whitespace-pre-wrap">
+                <pre className="p-3 text-xs overflow-x-auto whitespace-pre-wrap text-gray-900 dark:text-gray-100">
                   {JSON.stringify(
                     {
                       method: httpTestResult.request?.method,
@@ -910,11 +910,11 @@ export default function WebhookConfig({
                   )}
                 </pre>
               </div>
-              <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                <div className="px-3 py-2 border-b border-gray-200 bg-gray-50 text-sm font-semibold text-gray-700">
+              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-sm font-semibold text-gray-700 dark:text-gray-300">
                   Response
                 </div>
-                <pre className="p-3 text-xs overflow-x-auto whitespace-pre-wrap">
+                <pre className="p-3 text-xs overflow-x-auto whitespace-pre-wrap text-gray-900 dark:text-gray-100">
                   {JSON.stringify(
                     {
                       status: httpTestResult.response?.status,

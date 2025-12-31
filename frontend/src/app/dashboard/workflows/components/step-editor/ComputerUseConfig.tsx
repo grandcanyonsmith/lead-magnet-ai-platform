@@ -21,14 +21,14 @@ export default function ComputerUseConfig({
   index,
 }: ComputerUseConfigProps) {
   return (
-    <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-      <label className="block text-sm font-medium text-gray-700 mb-3">
+    <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
         Computer Use Preview Configuration
       </label>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
         <div>
           <label
-            className="block text-xs font-medium text-gray-600 mb-1"
+            className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1"
             htmlFor={`display-width-${index}`}
           >
             Display Width
@@ -49,7 +49,7 @@ export default function ComputerUseConfig({
               }
             }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
             min="100"
             max="4096"
             aria-label="Display width in pixels"
@@ -58,14 +58,14 @@ export default function ComputerUseConfig({
             }
           />
           {(config.display_width < 100 || config.display_width > 4096) && (
-            <p className="mt-1 text-xs text-red-600">
+            <p className="mt-1 text-xs text-red-600 dark:text-red-400">
               Width must be between 100 and 4096 pixels
             </p>
           )}
         </div>
         <div>
           <label
-            className="block text-xs font-medium text-gray-600 mb-1"
+            className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1"
             htmlFor={`display-height-${index}`}
           >
             Display Height
@@ -86,7 +86,7 @@ export default function ComputerUseConfig({
               }
             }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
             min="100"
             max="4096"
             aria-label="Display height in pixels"
@@ -95,20 +95,20 @@ export default function ComputerUseConfig({
             }
           />
           {(config.display_height < 100 || config.display_height > 4096) && (
-            <p className="mt-1 text-xs text-red-600">
+            <p className="mt-1 text-xs text-red-600 dark:text-red-400">
               Height must be between 100 and 4096 pixels
             </p>
           )}
         </div>
       </div>
       <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1">
+        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
           Environment
         </label>
         <select
           value={config.environment}
           onChange={(e) => onChange("environment", e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
         >
           <option value="browser">Browser</option>
           <option value="mac">macOS</option>
