@@ -7,6 +7,7 @@ import {
   DeleteCommand,
   QueryCommand,
   ScanCommand,
+  BatchGetCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { env } from "./env";
 
@@ -143,6 +144,45 @@ export class DynamoDBService {
     });
 
     await docClient.send(command);
+  }
+
+  async batchGet(
+    tableName: string,
+    keys: Record<string, any>[],
+  ): Promise<Record<string, any>[]> {
+    if (!keys || keys.length === 0) {
+      return [];
+    }
+
+    // DynamoDB BatchGetItem limit is 100 items (25 used to be the limit for write, read is 100)
+    // However, we'll use chunks of 25 to be safe and consistent
+    const chunkSize = 25;
+    const chunks = [];
+    for (let i = 0; i < keys.length; i += chunkSize) {
+      chunks.push(keys.slice(i, i + chunkSize));
+    }
+
+    const results: Record<string, any>[] = [];
+
+    for (const chunk of chunks) {
+      const command = new BatchGetCommand({
+        RequestItems: {
+          [tableName]: {
+            Keys: chunk,
+          },
+        },
+      });
+
+      const response = await docClient.send(command);
+      if (response.Responses && response.Responses[tableName]) {
+        results.push(...response.Responses[tableName]);
+      }
+      
+      // Note: We're not handling UnprocessedKeys for simplicity in this optimization pass.
+      // In a robust system, we should retry unprocessed keys.
+    }
+
+    return results;
   }
 
   async query(

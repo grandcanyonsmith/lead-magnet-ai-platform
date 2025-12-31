@@ -83,28 +83,24 @@ class TrackingController {
     logger.info("[Tracking Controller] Getting job stats", { tenantId, jobId });
 
     // Verify job belongs to tenant
-    try {
-      const job = await db.get(JOBS_TABLE, { job_id: jobId });
-      if (!job) {
-        throw new ApiError("Job not found", 404);
-      }
-
-      if (job.tenant_id !== tenantId) {
-        throw new ApiError(
-          "You do not have permission to access this job",
-          403,
-        );
-      }
-
-      const stats = await trackingService.getJobStats(jobId, tenantId);
-
-      return {
-        statusCode: 200,
-        body: stats,
-      };
-    } catch (err: any) {
-      throw err;
+    const job = await db.get(JOBS_TABLE, { job_id: jobId });
+    if (!job) {
+      throw new ApiError("Job not found", 404);
     }
+
+    if (job.tenant_id !== tenantId) {
+      throw new ApiError(
+        "You do not have permission to access this job",
+        403,
+      );
+    }
+
+    const stats = await trackingService.getJobStats(jobId, tenantId);
+
+    return {
+      statusCode: 200,
+      body: stats,
+    };
   }
 
   /**
@@ -122,38 +118,34 @@ class TrackingController {
     });
 
     // Verify job belongs to tenant
-    try {
-      const job = await db.get(JOBS_TABLE, { job_id: jobId });
-      if (!job) {
-        throw new ApiError("Job not found", 404);
-      }
-
-      if (job.tenant_id !== tenantId) {
-        throw new ApiError(
-          "You do not have permission to access this job",
-          403,
-        );
-      }
-
-      const limit = queryParams.limit ? parseInt(queryParams.limit) : 100;
-      const lastEvaluatedKey = queryParams.lastEvaluatedKey
-        ? JSON.parse(decodeURIComponent(queryParams.lastEvaluatedKey))
-        : undefined;
-
-      const result = await trackingService.getJobEvents(
-        jobId,
-        tenantId,
-        limit,
-        lastEvaluatedKey,
-      );
-
-      return {
-        statusCode: 200,
-        body: result,
-      };
-    } catch (err: any) {
-      throw err;
+    const job = await db.get(JOBS_TABLE, { job_id: jobId });
+    if (!job) {
+      throw new ApiError("Job not found", 404);
     }
+
+    if (job.tenant_id !== tenantId) {
+      throw new ApiError(
+        "You do not have permission to access this job",
+        403,
+      );
+    }
+
+    const limit = queryParams.limit ? parseInt(queryParams.limit) : 100;
+    const lastEvaluatedKey = queryParams.lastEvaluatedKey
+      ? JSON.parse(decodeURIComponent(queryParams.lastEvaluatedKey))
+      : undefined;
+
+    const result = await trackingService.getJobEvents(
+      jobId,
+      tenantId,
+      limit,
+      lastEvaluatedKey,
+    );
+
+    return {
+      statusCode: 200,
+      body: result,
+    };
   }
 }
 
