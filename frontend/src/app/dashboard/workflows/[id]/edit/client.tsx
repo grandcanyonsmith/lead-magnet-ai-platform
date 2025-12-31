@@ -205,10 +205,11 @@ export default function EditWorkflowPage() {
         }
       }
 
-      // Update workflow with steps
+        // Update workflow with steps
       await api.updateWorkflow(workflowId, {
         workflow_name: formData.workflow_name.trim(),
         workflow_description: formData.workflow_description.trim() || undefined,
+        trigger: formData.trigger,
         steps: steps.map((step, index: number) => {
           // Clean up tools if tool_choice is 'none'
           const cleanedTools =
@@ -391,6 +392,7 @@ export default function EditWorkflowPage() {
             onDeleteStep={handleDeleteStep}
             onMoveStepUp={handleMoveStepUp}
             onMoveStepDown={handleMoveStepDown}
+            settings={settings}
           />
         </TabsContent>
 

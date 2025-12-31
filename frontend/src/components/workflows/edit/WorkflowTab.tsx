@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Zap } from "lucide-react";
 import WorkflowFlowchart from "@/app/dashboard/workflows/components/WorkflowFlowchart";
 import FlowchartSidePanel from "@/app/dashboard/workflows/components/FlowchartSidePanel";
+import WorkflowTriggerSidePanel from "@/app/dashboard/workflows/components/WorkflowTriggerSidePanel";
 import { WorkflowFormData } from "@/hooks/useWorkflowEdit";
 import { WorkflowStep } from "@/types/workflow";
 import { useWorkflowAI } from "@/hooks/useWorkflowAI";
@@ -28,6 +29,7 @@ interface WorkflowTabProps {
   onDeleteStep?: (index: number) => void;
   onMoveStepUp?: (index: number) => void;
   onMoveStepDown?: (index: number) => void;
+  settings?: any;
 }
 
 export function WorkflowTab({
@@ -47,6 +49,7 @@ export function WorkflowTab({
   onDeleteStep,
   onMoveStepUp,
   onMoveStepDown,
+  settings,
 }: WorkflowTabProps) {
   const [showAIAssist, setShowAIAssist] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
@@ -173,6 +176,8 @@ export function WorkflowTab({
   const handleCloseSidePanel = () => {
     onStepClick(-1); // Pass -1 to close the panel
   };
+
+  const isTriggerSelected = selectedStepIndex === -2;
 
   const selectedStep =
     selectedStepIndex !== null && selectedStepIndex >= 0
@@ -343,6 +348,7 @@ export function WorkflowTab({
             steps={steps}
             activeStepIndex={selectedStepIndex}
             onStepClick={onStepClick}
+            onTriggerClick={() => onStepClick(-2)}
             onAddStep={onAddStep}
             onStepsReorder={(newSteps) => {
               const reorderedSteps = newSteps.map((step, index) => ({
@@ -378,6 +384,18 @@ export function WorkflowTab({
           onMoveUp={handleMoveStepUp}
           onMoveDown={handleMoveStepDown}
           workflowId={workflowId}
+        />
+      )}
+
+      {/* Trigger Side Panel */}
+      {isTriggerSelected && (
+        <WorkflowTriggerSidePanel
+          trigger={formData.trigger || { type: "form" }}
+          isOpen={isSidePanelOpen}
+          onClose={handleCloseSidePanel}
+          onChange={(trigger) => onFormDataChange("trigger", trigger)}
+          workflowId={workflowId}
+          settings={settings}
         />
       )}
     </>
