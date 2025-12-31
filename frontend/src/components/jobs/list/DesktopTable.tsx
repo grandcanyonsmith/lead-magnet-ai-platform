@@ -16,6 +16,7 @@ import {
   ChevronRightIcon,
 } from "@heroicons/react/24/outline";
 import { openJobDocumentInNewTab } from "@/utils/jobs/openJobDocument";
+import { JobPreviewThumbnail } from "./JobPreviewThumbnail";
 import type { Job } from "@/types/job";
 import clsx from "clsx";
 
@@ -182,31 +183,39 @@ export function JobsDesktopTable({
                     )}
                   </td>
                   <td
-                    className="px-6 py-4 whitespace-nowrap"
+                    className="px-6 py-4"
                     data-tour="view-artifacts"
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    {job.output_url ? (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleViewDocument(job);
-                        }}
-                        disabled={disableView}
-                        className="inline-flex items-center gap-1.5 text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 text-xs font-bold transition-colors disabled:opacity-50"
-                      >
-                        {isOpening ? (
-                          <ArrowPathIcon className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5" />
-                        )}
-                        {isOpening ? "Opening" : "View asset"}
-                      </button>
-                    ) : (
-                      <span className="text-xs font-bold text-gray-300 dark:text-gray-600">
-                        No asset
-                      </span>
-                    )}
+                    <div className="flex items-center gap-3">
+                      <JobPreviewThumbnail
+                        job={job}
+                        size="sm"
+                        showOnHover={true}
+                      />
+                      {job.output_url ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewDocument(job);
+                          }}
+                          disabled={disableView}
+                          className="inline-flex items-center gap-1.5 text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 text-xs font-bold transition-colors disabled:opacity-50"
+                        >
+                          {isOpening ? (
+                            <ArrowPathIcon className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5" />
+                          )}
+                          {isOpening ? "Opening" : "View asset"}
+                        </button>
+                      ) : (
+                        <span className="text-xs font-bold text-gray-300 dark:text-gray-600">
+                          No asset
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-right">
                     <ChevronRightIcon className="h-5 w-5 text-gray-300 dark:text-gray-600 group-hover:text-primary-400 dark:group-hover:text-primary-500 transition-colors inline-block" />
