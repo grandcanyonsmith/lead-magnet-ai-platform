@@ -6,12 +6,108 @@ import { logger } from '@utils/logger';
 import { getOpenAIClient } from '@services/openaiService';
 import { workflowGenerationJobService } from '@domains/workflows/services/workflowGenerationJobService';
 import { workflowAIEditJobService } from '@domains/workflows/services/workflowAIEditJobService';
+import { ulid } from 'ulid';
 
 /**
  * Controller for AI-powered workflow operations.
  * Handles workflow generation, refinement, and AI editing.
  */
 export class WorkflowAIController {
+  /**
+   * Test a single workflow step.
+   */
+  async testStep(tenantId: string, body: any): Promise<RouteResponse> {
+    const { db } = await import('@utils/db');
+    const { env } = await import('@utils/env');
+    const { JobProcessingUtils } = await import('@domains/workflows/services/workflow/workflowJobProcessingService');
+    
+    const WORKFLOWS_TABLE = env.workflowsTable;
+    const SUBMISSIONS_TABLE = env.submissionsTable;
+    const JOBS_TABLE = env.jobsTable;
+
+    const { step, input } = body;
+
+    if (!step) {
+      throw new ApiError('Step configuration is required', 400);
+    }
+
+    const testId = ulid();
+    const workflowId = `test-workflow-${testId}`;
+    const submissionId = `test-submission-${testId}`;
+    const jobId = `test-job-${testId}`;
+
+    logger.info('[Test Step] Starting step test', {
+      tenantId,
+      jobId,
+      stepName: step.step_name
+    });
+
+    try {
+      // 1. Create temporary workflow
+      const workflow = {
+        workflow_id: workflowId,
+        tenant_id: tenantId,
+        workflow_name: 'Test Step Workflow',
+        workflow_description: 'Temporary workflow for testing a step',
+        steps: [step],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        is_test: true // Marker for cleanup
+      };
+      await db.put(WORKFLOWS_TABLE, workflow);
+
+      // 2. Create temporary submission
+      const submission = {
+        submission_id: submissionId,
+        tenant_id: tenantId,
+        form_id: 'test-form', // Dummy
+        submission_data: input || {}, // User provided input
+        created_at: new Date().toISOString()
+      };
+      await db.put(SUBMISSIONS_TABLE, submission);
+
+      // 3. Create job
+      const job = {
+        job_id: jobId,
+        tenant_id: tenantId,
+        workflow_id: workflowId,
+        submission_id: submissionId,
+        status: 'pending',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        is_test: true
+      };
+      await db.put(JOBS_TABLE, job);
+
+      // 4. Trigger worker for single step
+      await JobProcessingUtils.triggerAsyncProcessing(
+        jobId,
+        tenantId,
+        {
+          job_id: jobId,
+          step_index: 0,
+          step_type: 'workflow_step'
+        }
+      );
+
+      return {
+        statusCode: 202,
+        body: {
+          job_id: jobId,
+          status: 'pending',
+          message: 'Step test started'
+        }
+      };
+
+    } catch (error: any) {
+      logger.error('[Test Step] Failed to start test', {
+        error: error.message,
+        stack: error.stack
+      });
+      throw new ApiError(`Failed to start step test: ${error.message}`, 500);
+    }
+  }
+
   /**
    * Generate a workflow with AI (async).
    * Creates a job and triggers async processing.
