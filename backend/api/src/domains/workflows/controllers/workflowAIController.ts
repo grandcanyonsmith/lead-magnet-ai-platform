@@ -27,6 +27,10 @@ export class WorkflowAIController {
 
     const { step, input } = body;
 
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'workflowAIController.ts:testStep',message:'Test step request received',data:{tenantId, jobId, stepName: step?.step_name},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'backend-req'})}).catch(()=>{});
+    // #endregion
+
     if (!step) {
       throw new ApiError('Step configuration is required', 400);
     }
@@ -80,15 +84,73 @@ export class WorkflowAIController {
       await db.put(JOBS_TABLE, job);
 
       // 4. Trigger worker for single step
-      await JobProcessingUtils.triggerAsyncProcessing(
-        jobId,
-        tenantId,
-        {
-          job_id: jobId,
-          step_index: 0,
-          step_type: 'workflow_step'
+      if (env.isDevelopment()) {
+        // Spawn local worker process for Python execution
+        const { spawn } = await import('child_process');
+        const path = await import('path');
+        
+        // Determine worker path - assume running from backend/api
+        // Try multiple paths to be safe
+        let workerScript = path.resolve(process.cwd(), '../worker/worker.py');
+        const fs = await import('fs');
+        if (!fs.existsSync(workerScript)) {
+           // Try relative to this file? No, too hard with TS build.
+           // Try project root assumption
+           workerScript = path.resolve(process.cwd(), 'backend/worker/worker.py');
         }
-      );
+        
+        if (!fs.existsSync(workerScript)) {
+            logger.error('[Test Step] Could not find worker script', { searchPath: workerScript });
+            // Fallback or throw?
+        }
+
+        const envVars = {
+          ...process.env,
+          JOB_ID: jobId,
+          STEP_INDEX: '0',
+          PYTHONUNBUFFERED: '1'
+        };
+
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'workflowAIController.ts:testStep',message:'Spawning local worker',data:{workerScript, envVars: { JOB_ID: jobId, STEP_INDEX: '0' }},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'worker-spawn'})}).catch(()=>{});
+        // #endregion
+
+        logger.info('[Test Step] Spawning local worker', { script: workerScript, jobId });
+        
+        const worker = spawn('python3', [workerScript], { env: envVars });
+        
+        worker.stdout.on('data', (data) => {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'workflowAIController.ts:workerOutput',message:'Worker stdout',data:{output: data.toString()},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'worker-output'})}).catch(()=>{});
+          // #endregion
+          logger.info(`[Worker Output] ${data}`);
+        });
+        
+        worker.stderr.on('data', (data) => {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'workflowAIController.ts:workerError',message:'Worker stderr',data:{error: data.toString()},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'worker-error'})}).catch(()=>{});
+          // #endregion
+          logger.error(`[Worker Error] ${data}`);
+        });
+        
+        worker.on('close', (code) => {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'workflowAIController.ts:workerClose',message:'Worker closed',data:{code},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'worker-exit'})}).catch(()=>{});
+          // #endregion
+          logger.info('[Test Step] Worker finished', { code });
+        });
+
+      } else {
+        await JobProcessingUtils.triggerAsyncProcessing(
+            jobId,
+            tenantId,
+            {
+            job_id: jobId,
+            step_index: 0,
+            step_type: 'workflow_step'
+            }
+        );
+      }
 
       return {
         statusCode: 202,

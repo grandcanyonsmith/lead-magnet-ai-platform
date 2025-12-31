@@ -93,9 +93,9 @@ export default function StepTester({ step, index }: StepTesterProps) {
           <span className="font-semibold text-gray-900 dark:text-gray-100">Test Step</span>
         </div>
         {isOpen ? (
-          <FiChevronUp className="w-5 h-5 text-gray-500" />
+          <FiChevronUp className="w-5 h-5 text-gray-500 dark:text-gray-400" />
         ) : (
-          <FiChevronDown className="w-5 h-5 text-gray-500" />
+          <FiChevronDown className="w-5 h-5 text-gray-500 dark:text-gray-400" />
         )}
       </button>
 
@@ -113,7 +113,7 @@ export default function StepTester({ step, index }: StepTesterProps) {
                 rows={4}
                 placeholder="{}"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 Optional input data to simulate context.
               </p>
             </div>

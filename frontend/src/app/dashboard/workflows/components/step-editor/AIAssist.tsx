@@ -72,39 +72,39 @@ export default function AIAssist({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg hover:from-purple-100 hover:to-blue-100 transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/30 dark:to-blue-900/30 border border-purple-200 dark:border-purple-800 rounded-lg hover:from-purple-100 hover:to-blue-100 dark:hover:from-purple-900/40 dark:hover:to-blue-900/40 transition-colors"
       >
         <div className="flex items-center gap-2">
-          <FiZap className="w-5 h-5 text-purple-600" />
-          <span className="font-semibold text-purple-900">AI Assist</span>
-          <span className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded-full">
+          <FiZap className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+          <span className="font-semibold text-purple-900 dark:text-purple-200">AI Assist</span>
+          <span className="text-xs text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/50 px-2 py-1 rounded-full">
             Beta
           </span>
         </div>
         {isOpen ? (
-          <FiChevronUp className="w-5 h-5 text-purple-600" />
+          <FiChevronUp className="w-5 h-5 text-purple-600 dark:text-purple-400" />
         ) : (
-          <FiChevronDown className="w-5 h-5 text-purple-600" />
+          <FiChevronDown className="w-5 h-5 text-purple-600 dark:text-purple-400" />
         )}
       </button>
 
       {isOpen && (
-        <div className="mt-3 p-4 border border-purple-200 rounded-lg bg-white">
-          <p className="text-sm text-gray-600 mb-3">
+        <div className="mt-3 p-4 border border-purple-200 dark:border-purple-800 rounded-lg bg-white dark:bg-gray-800">
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
             Describe how you want to change this step, and AI will generate an
             updated configuration for you to review.
           </p>
 
           <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 What would you like to change?
               </label>
               <textarea
                 value={aiPrompt}
                 onChange={(e) => setAiPrompt(e.target.value)}
                 placeholder="e.g., 'Change the model to GPT-4o and add web search tool' or 'Update instructions to focus on competitive analysis'"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                 rows={3}
                 disabled={isGenerating}
               />
@@ -130,7 +130,7 @@ export default function AIAssist({
             </button>
 
             {aiError && (
-              <div className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded border border-red-200">
+              <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded border border-red-200 dark:border-red-900">
                 {aiError}
               </div>
             )}

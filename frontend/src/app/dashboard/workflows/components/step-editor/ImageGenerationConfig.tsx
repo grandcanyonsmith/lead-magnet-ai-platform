@@ -25,32 +25,32 @@ export default function ImageGenerationConfig({
   onChange,
 }: ImageGenerationConfigProps) {
   return (
-    <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-      <label className="block text-sm font-medium text-gray-700 mb-3">
+    <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
         Image Generation Configuration
       </label>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="sm:col-span-2">
-          <label className="block text-xs font-medium text-gray-600 mb-1">
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
             Model
           </label>
           <select
             value={config.model}
             onChange={(e) => onChange("model", e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
           >
             <option value="gpt-image-1.5">gpt-image-1.5</option>
           </select>
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
             Size
           </label>
           <select
             value={config.size}
             onChange={(e) => onChange("size", e.target.value as any)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
           >
             <option value="auto">Auto (default)</option>
             <option value="1024x1024">1024x1024 (Square)</option>
@@ -60,13 +60,13 @@ export default function ImageGenerationConfig({
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
             Quality
           </label>
           <select
             value={config.quality}
             onChange={(e) => onChange("quality", e.target.value as any)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
           >
             <option value="auto">Auto (default)</option>
             <option value="low">Low</option>
@@ -76,7 +76,7 @@ export default function ImageGenerationConfig({
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
             Format
           </label>
           <select
@@ -84,7 +84,7 @@ export default function ImageGenerationConfig({
             onChange={(e) =>
               onChange("format", (e.target.value || undefined) as any)
             }
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
           >
             <option value="">Default (PNG)</option>
             <option value="png">PNG</option>
@@ -94,13 +94,13 @@ export default function ImageGenerationConfig({
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
             Background
           </label>
           <select
             value={config.background}
             onChange={(e) => onChange("background", e.target.value as any)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
           >
             <option value="auto">Auto (default)</option>
             <option value="transparent">Transparent</option>
@@ -110,7 +110,7 @@ export default function ImageGenerationConfig({
 
         {(config.format === "jpeg" || config.format === "webp") && (
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
+            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
               Compression ({config.compression ?? 85}%)
             </label>
             <input
@@ -123,7 +123,7 @@ export default function ImageGenerationConfig({
               }
               className="w-full"
             />
-            <div className="flex justify-between text-xs text-gray-500 mt-1">
+            <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
               <span>0%</span>
               <span>100%</span>
             </div>
@@ -131,7 +131,7 @@ export default function ImageGenerationConfig({
         )}
 
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
             Input Fidelity
           </label>
           <select
@@ -139,7 +139,7 @@ export default function ImageGenerationConfig({
             onChange={(e) =>
               onChange("input_fidelity", (e.target.value || undefined) as any)
             }
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
           >
             <option value="">Default</option>
             <option value="low">Low</option>
