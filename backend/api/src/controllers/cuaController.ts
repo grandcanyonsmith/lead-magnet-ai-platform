@@ -2,6 +2,8 @@ import {
   LambdaClient,
   InvokeWithResponseStreamCommand,
 } from "@aws-sdk/client-lambda";
+import { spawn } from "child_process";
+import * as path from "path";
 import { env } from "../utils/env";
 import { logger } from "../utils/logger";
 import { ApiError } from "../utils/errors";
@@ -50,16 +52,9 @@ export class CUAController {
             throw new Error("Local execution requires response object for streaming");
         }
         
-        const path = require('path');
-        const { spawn } = require('child_process');
-        
         // Resolve script path relative to CWD (backend/api) to point to backend/worker/run_cua_local.py
         // If CWD is backend/api, we need to go up to backend, then into worker
         const scriptPath = path.resolve(process.cwd(), '../worker/run_cua_local.py');
-        
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'cuaController.ts:60',message:'Spawning python process',data:{cwd: process.cwd(), scriptPath: scriptPath},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
-        // #endregion
 
         const pythonProcess = spawn('python3', [scriptPath], {
             cwd: process.cwd(), // Assumes running from root
@@ -82,20 +77,12 @@ export class CUAController {
 
         pythonProcess.stderr.on('data', (data: any) => {
             logger.error(`[CUA Local] Stderr: ${data}`);
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H1',location:'cuaController.ts:84',message:'Python stderr',data:{stderrPreview:String(data).slice(0,240)},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
-            // Optionally stream stderr as log event?
-            // res.write(JSON.stringify({ type: 'log', level: 'error', message: data.toString(), timestamp: Date.now() / 1000 }) + "\n");
         });
 
         await new Promise<void>((resolve, _reject) => {
             pythonProcess.on('close', (code: number) => {
                 logger.info(`[CUA Local] Process exited with code ${code}`);
                 res.end();
-                // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H3',location:'cuaController.ts:90',message:'Python process closed',data:{exitCode:code,writableEnded:!!res.writableEnded},timestamp:Date.now()})}).catch(()=>{});
-                // #endregion
                 resolve();
             });
         pythonProcess.on('error', (err: any) => {

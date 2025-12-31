@@ -47,6 +47,7 @@ export class EnvConfig {
   // Secrets Configuration
   readonly openaiSecretName: string;
   readonly stripeSecretName: string;
+  readonly scrapyApiKey: string | undefined;
 
   // Security Configuration
   readonly superAdminEmails: string[];
@@ -77,6 +78,10 @@ export class EnvConfig {
   readonly shellExecutorTaskDefinitionArn: string | undefined;
   readonly shellExecutorSubnetIds: string[];
   readonly shellExecutorSecurityGroupId: string | undefined;
+
+  // Scrapy Bara API Configuration
+  readonly scrapyBaraEnabled: boolean;
+  readonly scrapyBaraApiUrl: string | undefined;
 
   constructor() {
     // DynamoDB Tables - required
@@ -157,6 +162,7 @@ export class EnvConfig {
       "STRIPE_SECRET_NAME",
       "leadmagnet/stripe-api-key",
     );
+    this.scrapyApiKey = this.getOptional("SCRAPY_API_KEY");
 
     // Security Configuration
     const superAdminEmailsStr = this.getOptional("SUPER_ADMIN_EMAILS") || "";
@@ -291,6 +297,13 @@ export class EnvConfig {
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean);
+
+    // Scrapy Bara API Configuration
+    this.scrapyBaraEnabled =
+      (this.getOptional("SCRAPY_BARA_ENABLED") || "").trim() === "true";
+    this.scrapyBaraApiUrl = (
+      this.getOptional("SCRAPY_BARA_API_URL") || ""
+    ).trim() || undefined;
 
     // Validate critical configuration
     this.validate();
