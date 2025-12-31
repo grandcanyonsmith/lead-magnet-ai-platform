@@ -4,6 +4,7 @@ import { jobRerunController } from "../controllers/jobRerunController";
 import { router } from "./router";
 import { ApiError } from "../utils/errors";
 import { logger } from "../utils/logger";
+import { cacheMiddleware } from "../utils/cache";
 
 /**
  * Job-related admin routes.
@@ -13,8 +14,14 @@ export function registerJobRoutes(): void {
   router.register(
     "GET",
     "/admin/jobs",
-    async (_params, _body, query, tenantId) => {
-      return await jobsController.list(tenantId!, query);
+    async (_params, _body, query, tenantId, context) => {
+      // Cache job list for 10 seconds to reduce DB load on rapid refreshes
+      const cacheHandler = cacheMiddleware(10 * 1000);
+      return await cacheHandler(
+        context?.event,
+        tenantId,
+        async () => await jobsController.list(tenantId!, query),
+      );
     },
   );
 
@@ -95,8 +102,15 @@ export function registerJobRoutes(): void {
   router.register(
     "GET",
     "/admin/jobs/:id",
-    async (params, _body, _query, tenantId) => {
-      return await jobsController.get(tenantId!, params.id);
+    async (params, _body, _query, tenantId, context) => {
+      // Cache job details for 30 seconds
+      // Note: If job status updates frequently, we might need shorter TTL or cache invalidation
+      const cacheHandler = cacheMiddleware(30 * 1000);
+      return await cacheHandler(
+        context?.event,
+        tenantId,
+        async () => await jobsController.get(tenantId!, params.id),
+      );
     },
   );
 }
