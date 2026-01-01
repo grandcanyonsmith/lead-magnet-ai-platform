@@ -6,6 +6,7 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
+import * as sqs from 'aws-cdk-lib/aws-sqs';
 import { Construct } from 'constructs';
 import { TableMap, TableKey } from './types';
 import { createLambdaWithTables, grantSecretsAccess, grantDynamoDBPermissions, grantS3Permissions } from './utils/lambda-helpers';
@@ -40,6 +41,13 @@ export class ComputeStack extends cdk.Stack {
       logGroupName: '/aws/lambda/leadmagnet-job-processor',
       retention: logs.RetentionDays.ONE_WEEK,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    // Create Dead Letter Queue for job processor
+    const dlq = new sqs.Queue(this, 'JobProcessorDlq', {
+      queueName: 'leadmagnet-job-processor-dlq',
+      retentionPeriod: cdk.Duration.days(14),
+      encryption: sqs.QueueEncryption.KMS_MANAGED,
     });
 
         // Use container image if ECR repository is provided, otherwise use zip deployment
@@ -81,6 +89,7 @@ export class ComputeStack extends cdk.Stack {
               environment: lambdaEnv,
               logGroup: logGroup,
               tracing: lambda.Tracing.ACTIVE,
+              deadLetterQueue: dlq,
             }
           );
         } else {
@@ -109,6 +118,7 @@ export class ComputeStack extends cdk.Stack {
               environment: lambdaEnv,
               logGroup: logGroup,
               tracing: lambda.Tracing.ACTIVE,
+              deadLetterQueue: dlq,
             }
           );
         }

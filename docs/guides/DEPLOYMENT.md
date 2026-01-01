@@ -1,8 +1,8 @@
 # Lead Magnet AI Platform - Deployment Guide
 
-> **Last Updated**: 2025-12-17  
+> **Last Updated**: 2026-01-01  
 > **Status**: Current  
-> **Related Docs**: [Architecture Overview](./ARCHITECTURE.md), [Quick Start Guide](./QUICK_START.md), [Resources](./RESOURCES.md), [Troubleshooting Guide](./TROUBLESHOOTING.md)
+> **Related Docs**: [Architecture Overview](../architecture/ARCHITECTURE.md), [Quick Start Guide](./QUICK_START.md), [Resources](../reference/RESOURCES.md), [Troubleshooting Guide](../troubleshooting/README.md)
 
 This guide covers the complete deployment process for the Lead Magnet AI Platform.
 
@@ -271,6 +271,16 @@ git push origin main
 
 GitHub Actions will automatically deploy all components.
 
+## Advanced Deployment Scenarios
+
+For specialized deployment needs, see the following guides:
+
+| Scenario | Guide |
+|----------|-------|
+| **Computer Use Agent (CUA)** | [🚀 CUA Deployment](./CUA_DEPLOYMENT.md) |
+| **Webhooks** | [🌐 Webhook Deployment](./WEBHOOK_DEPLOYMENT.md) |
+| **Lambda Configuration** | [⚙️ Lambda Build Options](./LAMBDA_BUILD_OPTIONS.md) |
+
 ## Verification
 
 ### 1. Check Infrastructure
@@ -417,169 +427,11 @@ For issues or questions:
 2. Review this documentation
 3. Open an issue in the GitHub repository
 
-## Deployment Report
-
-### ✅ Deployment Complete!
-
-**Date:** October 17, 2025  
-**AWS Account:** 471112574622  
-**Region:** us-east-1
-
-### Infrastructure Deployed
-
-#### 1. **Database (DynamoDB)** ✅
-- `leadmagnet-workflows` - Workflow configurations
-- `leadmagnet-forms` - Public forms
-- `leadmagnet-submissions` - Form submissions
-- `leadmagnet-jobs` - Job processing status
-- `leadmagnet-artifacts` - Generated artifacts
-- `leadmagnet-templates` - HTML templates
-- `leadmagnet-user-settings` - User preferences
-- (plus additional billing/ops tables: notifications, users/customers, sessions, tracking, rate limits, etc.)
-
-**Status:** Tables created with GSIs configured
-
-#### 2. **Authentication (Cognito)** ✅
-- User Pool ID: `us-east-1_asu0YOrBD`
-- Client ID: `4lb3j8kqfvfgkvfeb4h4naani5`
-- Domain: `leadmagnet-471112574622.auth.us-east-1.amazoncognito.com`
-
-**Status:** User pool active, test user created
-
-#### 3. **Storage (S3 + CloudFront)** ✅
-- S3 Bucket: `leadmagnet-artifacts-471112574622`
-- CloudFront Distribution: `E1GPKD58HXUDIV`
-- CloudFront Domain: `dmydkyj79auy7.cloudfront.net`
-
-**Status:** Bucket created, CloudFront distribution deployed
-
-#### 4. **Compute (Step Functions + Lambda)** ✅
-- State Machine: `leadmagnet-job-processor`
-- State Machine ARN: `arn:aws:states:us-east-1:471112574622:stateMachine:leadmagnet-job-processor`
-- Job Processor Lambda: `leadmagnet-job-processor` (container image)
-
-**Status:** State machine active, job processor Lambda deployed
-
-#### 5. **API (API Gateway + Lambda)** ✅
-- API URL: `https://czp5b77azd.execute-api.us-east-1.amazonaws.com`
-- Lambda Function: `leadmagnet-api-handler`
-- Function ARN: `arn:aws:lambda:us-east-1:471112574622:function:leadmagnet-api-handler`
-
-**Status:** API Gateway deployed, Lambda function active and tested
-
-#### 6. **Worker (ECR + Lambda container image)** ✅
-- ECR Repository: `leadmagnet/worker`
-- ECR URI: `471112574622.dkr.ecr.us-east-1.amazonaws.com/leadmagnet/worker`
-- Used by: Job processor Lambda (container image)
-
-**Status:** Docker image built and pushed to ECR, Lambda updated to new image
-
-#### 7. **Secrets Manager** ✅
-- OpenAI API Key: `leadmagnet/openai-api-key`
-
-**Status:** Secret created and accessible
-
-#### 8. **Frontend (Next.js Static Site)** ✅
-- Deployment Location: `s3://leadmagnet-artifacts-471112574622/`
-- CloudFront URL: `https://dmydkyj79auy7.cloudfront.net/`
-
-**Status:** Built and deployed to S3
-
-### 🧪 Test Results
-
-#### End-to-End Testing Completed ✅
-
-All tests passed successfully:
-
-| Test | Status | Details |
-|------|--------|---------|
-| **API Gateway Accessible** | ✅ PASS | API responding on all endpoints |
-| **Form Retrieval** | ✅ PASS | GET `/v1/forms/{slug}` working |
-| **Form Submission** | ✅ PASS | POST `/v1/forms/{slug}/submit` working |
-| **Job Creation** | ✅ PASS | Jobs created in DynamoDB |
-| **Step Functions** | ✅ PASS | State machine executions successful |
-| **DynamoDB Tables** | ✅ PASS | Tables accessible |
-| **Worker Image** | ✅ PASS | Docker image in ECR |
-| **Frontend Build** | ✅ PASS | Static site generated |
-
-### 🔑 Access Information
-
-**API Base URL:** `https://czp5b77azd.execute-api.us-east-1.amazonaws.com`
-
-**Frontend URL:** `https://dmydkyj79auy7.cloudfront.net/`
- 
-
-**Test User:**
-- Email: `test@example.com`
-- Password: `TempPass123!` (temporary - must be changed on first login)
-- Tenant ID: `tenant_test_001`
-
-### 💰 Cost Estimate
-
-Based on current deployment:
-
-| Resource | Monthly Cost (Estimate) |
-|----------|------------------------|
-| DynamoDB (multiple tables, on-demand) | $5-15 |
-| Lambda (API handler) | $0-5 (free tier) |
-| S3 (artifacts storage) | $1-5 |
-| CloudFront | $1-5 |
-| WAFv2 | $1-10 |
-| Step Functions | $0-1 |
-| Cognito | $0-5 |
-| **OpenAI API** | **$10-100 (varies)** |
-| **Total** | **~$20-150/month** |
-
-*Note: Actual costs depend on usage volume*
-
-### 🛠️ Maintenance Tasks
-
-**Weekly:**
-- Review CloudWatch logs for errors
-- Check job success rates in analytics
-- Monitor API response times
-
-**Monthly:**
-- Review cost usage in AWS Cost Explorer
-- Update dependencies (npm, pip)
-- Review and rotate secrets if needed
-- Check S3 storage usage
-
-**As Needed:**
-- Increase job processor Lambda memory/timeout if processing is slow
-- Adjust DynamoDB capacity if throttling occurs
-- Update Lambda memory if timeouts occur
-
-### 🔒 Security Checklist
-
-- ✅ Multi-tenant isolation implemented
-- ✅ JWT authentication configured
-- ✅ Secrets stored in Secrets Manager
-- ✅ Encrypted data at rest (S3, DynamoDB)
-- ✅ HTTPS/TLS everywhere
-- ✅ IAM least privilege configured
-- ✅ CloudFront with secure headers
-- ✅ WAF rules (API; optional CloudFront WAF in us-east-1)
-- ✅ Rate limiting (WAF + DynamoDB-backed per-IP/per-form submit limits)
-- ⏳ Custom domain with SSL (recommended)
-
-## Next Steps
-
-- Configure custom domain with Route 53
-- Set up monitoring alerts
-- Configure backup policies for DynamoDB
-- Tune WAF rate limits based on real traffic
-- Add custom AI models
-- Integrate with external services
-
 ## Related Documentation
 
-- [Architecture Overview](./ARCHITECTURE.md) - System architecture and design
+- [Architecture Overview](../architecture/ARCHITECTURE.md) - System architecture and design
 - [Quick Start Guide](./QUICK_START.md) - Quick setup and testing
-- [Resources](./RESOURCES.md) - AWS resource inventory and management
-- [Troubleshooting Guide](./TROUBLESHOOTING.md) - Common deployment issues
-- [Flow Diagram](./FLOW_DIAGRAM.md) - Process flow visualization
-- [Changelog](./CHANGELOG.md) - Recent changes and updates
-
----
-
+- [Resources](../reference/RESOURCES.md) - AWS resource inventory and management
+- [Troubleshooting Guide](../troubleshooting/README.md) - Common deployment issues
+- [Flow Diagram](../architecture/FLOW_DIAGRAM.md) - Process flow visualization
+- [Changelog](../CHANGELOG.md) - Recent changes and updates

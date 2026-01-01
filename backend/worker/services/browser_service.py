@@ -1,6 +1,7 @@
 """Browser automation service using Playwright."""
 import logging
 import base64
+import time
 from typing import Optional, Dict, Any
 from playwright.sync_api import sync_playwright, Browser, Page, BrowserContext  # type: ignore
 from utils.decimal_utils import convert_decimals_to_float
@@ -108,10 +109,11 @@ class BrowserService:
         
         # Check if page/context/browser is still valid
         if self.page.is_closed():
-            raise RuntimeError("Page has been closed. Browser may have crashed.")
+             # Instead of generic error, try to be specific so caller can handle gracefully
+            raise RuntimeError("Browser closed unexpectedly (page.is_closed=True)")
         
         if self.browser and not self.browser.is_connected():
-            raise RuntimeError("Browser has been disconnected.")
+             raise RuntimeError("Browser closed unexpectedly (browser.is_connected=False)")
         
         try:
             screenshot_bytes = self.page.screenshot()
@@ -119,10 +121,12 @@ class BrowserService:
             logger.info(f"Screenshot captured ({len(screenshot_b64)} chars)")
             return screenshot_b64
         except Exception as e:
+            error_str = str(e)
+            if "Target page, context or browser has been closed" in error_str:
+                logger.warning(f"Browser closed during screenshot: {e}")
+                raise RuntimeError("Browser closed unexpectedly during screenshot")
+            
             logger.error(f"Failed to capture screenshot: {e}", exc_info=True)
-            # Check if browser crashed
-            if self.page.is_closed() or (self.browser and not self.browser.is_connected()):
-                raise RuntimeError(f"Browser crashed during screenshot: {e}")
             raise
     
     def get_current_url(self) -> str:
@@ -130,6 +134,16 @@ class BrowserService:
         if not self.page:
             raise RuntimeError("Browser not initialized. Call initialize() first.")
         return self.page.url
+
+    def get_accessibility_tree(self) -> Optional[Dict[str, Any]]:
+        """Get the accessibility tree of the current page."""
+        if not self.page:
+            return None
+        try:
+            return self.page.accessibility.snapshot()
+        except Exception as e:
+            logger.warning(f"Failed to get accessibility tree: {e}")
+            return None
     
     def execute_action(self, action: Dict[str, Any]):
         """
@@ -149,22 +163,37 @@ class BrowserService:
         if self.browser and not self.browser.is_connected():
             raise RuntimeError("Browser has been disconnected.")
         
-        action_type = action.get('type', '').lower()
+        action_type = action.get('type', '').lower().strip()
+        # Log raw action type for debugging "Unsupported action type" errors
+        logger.debug(f"Received action type: '{action_type}' (raw: '{action.get('type')}')")
         
         try:
-            if action_type == 'click':
+            if action_type == 'click' or action_type == 'left_click':
                 self._execute_click(action)
-            elif action_type == 'type':
+            elif action_type == 'right_click':
+                action['button'] = 'right'
+                self._execute_click(action)
+            elif action_type == 'type' or action_type == 'input_text' or action_type == 'typing':
                 self._execute_type(action)
-            elif action_type == 'scroll':
+            elif action_type == 'scroll' or action_type == 'scroll_to':
                 self._execute_scroll(action)
-            elif action_type == 'keypress':
+            elif action_type == 'keypress' or action_type == 'key_press':
                 self._execute_keypress(action)
             elif action_type == 'wait':
                 self._execute_wait(action)
+            elif action_type == 'hover' or action_type == 'move' or action_type == 'mouse_move':
+                self._execute_hover(action)
+            elif action_type == 'drag_and_drop' or action_type == 'drag' or action_type == 'dragdrop':
+                self._execute_drag_and_drop(action)
+            elif action_type == 'double_click' or action_type == 'doubleclick':
+                self._execute_double_click(action)
+            elif action_type == 'screenshot' or action_type == 'capture_screenshot':
+                # No-op, the loop will capture a screenshot after this action returns
+                logger.debug("Executed screenshot action (no-op)")
             else:
-                logger.warning(f"Unknown action type: {action_type}")
-                raise ValueError(f"Unsupported action type: {action_type}")
+                available_types = ['click', 'right_click', 'type', 'scroll', 'keypress', 'wait', 'hover', 'drag_and_drop', 'double_click', 'screenshot']
+                logger.warning(f"Unknown action type: '{action_type}'. Available: {available_types}")
+                raise ValueError(f"Unsupported action type: '{action_type}'. Supported: {', '.join(available_types)}")
             
             logger.info(f"Executed action: {action_type}")
             
@@ -172,25 +201,185 @@ class BrowserService:
             logger.error(f"Failed to execute action {action_type}: {e}", exc_info=True)
             raise
     
+    def _update_cursor_visuals(self, x: int, y: int, click: bool = False):
+        """
+        Inject/Update visual cursor in the DOM for debugging and screenshot clarity.
+        """
+        if not self.page:
+            return
+
+        try:
+            self.page.evaluate("""
+                ({ x, y, click }) => {
+                    let cursor = document.getElementById('ai-cursor');
+                    if (!cursor) {
+                        cursor = document.createElement('div');
+                        cursor.id = 'ai-cursor';
+                        cursor.style.position = 'fixed';
+                        cursor.style.width = '20px';
+                        cursor.style.height = '20px';
+                        cursor.style.borderRadius = '50%';
+                        cursor.style.backgroundColor = 'rgba(255, 0, 0, 0.5)';
+                        cursor.style.border = '2px solid red';
+                        cursor.style.zIndex = '2147483647'; // Max z-index
+                        cursor.style.pointerEvents = 'none';
+                        cursor.style.transform = 'translate(-50%, -50%)';
+                        cursor.style.transition = 'all 0.1s ease';
+                        document.body.appendChild(cursor);
+                    }
+                    cursor.style.left = x + 'px';
+                    cursor.style.top = y + 'px';
+                    
+                    if (click) {
+                        const ripple = document.createElement('div');
+                        ripple.style.position = 'fixed';
+                        ripple.style.left = x + 'px';
+                        ripple.style.top = y + 'px';
+                        ripple.style.width = '20px';
+                        ripple.style.height = '20px';
+                        ripple.style.borderRadius = '50%';
+                        ripple.style.backgroundColor = 'rgba(255, 0, 0, 0.5)';
+                        ripple.style.transform = 'translate(-50%, -50%) scale(1)';
+                        ripple.style.transition = 'transform 0.5s, opacity 0.5s';
+                        ripple.style.zIndex = '2147483646';
+                        ripple.style.pointerEvents = 'none';
+                        document.body.appendChild(ripple);
+                        requestAnimationFrame(() => {
+                            ripple.style.transform = 'translate(-50%, -50%) scale(3)';
+                            ripple.style.opacity = '0';
+                        });
+                        setTimeout(() => ripple.remove(), 500);
+                    }
+                }
+            """, {'x': x, 'y': y, 'click': click})
+        except Exception as e:
+            logger.warning(f"Failed to update visual cursor: {e}")
+
+    def _get_element_center(self, selector: str) -> Optional[tuple[int, int]]:
+        """Get center coordinates of an element."""
+        try:
+            element = self.page.locator(selector).first
+            box = element.bounding_box()
+            if box:
+                return int(box['x'] + box['width'] / 2), int(box['y'] + box['height'] / 2)
+        except Exception:
+            pass
+        return None
+
     def _execute_click(self, action: Dict[str, Any]):
         """Execute a click action."""
         # Click actions can have coordinates (x, y) or selector
         x = action.get('x')
         y = action.get('y')
         selector = action.get('selector')
+        button = action.get('button', 'left')
+        click_count = action.get('click_count', 1)
+        modifiers = action.get('modifiers', [])
         
+        target_x, target_y = None, None
+
         if x is not None and y is not None:
             # Click at coordinates
-            self.page.mouse.click(x, y)
-            logger.debug(f"Clicked at coordinates ({x}, {y})")
+            target_x, target_y = x, y
+            self.page.mouse.click(
+                x, 
+                y, 
+                button=button, 
+                click_count=click_count,
+                modifiers=modifiers
+            )
+            logger.debug(f"Clicked at coordinates ({x}, {y}) with button={button}, count={click_count}")
         elif selector:
             # Click element by selector
+            center = self._get_element_center(selector)
+            if center:
+                target_x, target_y = center
+                
             element = self.page.locator(selector).first
-            element.click(timeout=5000)
-            logger.debug(f"Clicked element: {selector}")
+            element.click(
+                button=button, 
+                click_count=click_count, 
+                modifiers=modifiers,
+                timeout=5000
+            )
+            logger.debug(f"Clicked element: {selector} with button={button}, count={click_count}")
         else:
             raise ValueError("Click action requires either (x, y) coordinates or selector")
+            
+        if target_x is not None and target_y is not None:
+            self._update_cursor_visuals(target_x, target_y, click=True)
+
+    def _execute_hover(self, action: Dict[str, Any]):
+        """Execute a hover action."""
+        x = action.get('x')
+        y = action.get('y')
+        selector = action.get('selector')
+        
+        target_x, target_y = None, None
+
+        if x is not None and y is not None:
+            target_x, target_y = x, y
+            self.page.mouse.move(x, y)
+            logger.debug(f"Hovered at coordinates ({x}, {y})")
+        elif selector:
+            center = self._get_element_center(selector)
+            if center:
+                target_x, target_y = center
+
+            element = self.page.locator(selector).first
+            element.hover(timeout=5000)
+            logger.debug(f"Hovered element: {selector}")
+        else:
+            raise ValueError("Hover action requires either (x, y) coordinates or selector")
+            
+        if target_x is not None and target_y is not None:
+            self._update_cursor_visuals(target_x, target_y)
+
+    def _execute_drag_and_drop(self, action: Dict[str, Any]):
+        """Execute a drag and drop action."""
+        source_x = action.get('source_x')
+        source_y = action.get('source_y')
+        target_x = action.get('target_x')
+        target_y = action.get('target_y')
+        source_selector = action.get('source_selector')
+        target_selector = action.get('target_selector')
+        
+        final_x, final_y = None, None
+
+        if source_selector and target_selector:
+            # For selector based DnD, we try to estimate end position for cursor update
+            center = self._get_element_center(target_selector)
+            if center:
+                final_x, final_y = center
+            
+            self.page.drag_and_drop(source_selector, target_selector, timeout=5000)
+            logger.debug(f"Dragged {source_selector} to {target_selector}")
+        elif source_x is not None and source_y is not None and target_x is not None and target_y is not None:
+            final_x, final_y = target_x, target_y
+            
+            # Move to start
+            self.page.mouse.move(source_x, source_y)
+            self._update_cursor_visuals(source_x, source_y)
+            
+            self.page.mouse.down()
+            
+            # Move to end
+            self.page.mouse.move(target_x, target_y)
+            self.page.mouse.up()
+            logger.debug(f"Dragged from ({source_x}, {source_y}) to ({target_x}, {target_y})")
+        else:
+            raise ValueError("Drag and drop requires either both selectors or all 4 coordinates")
+            
+        if final_x is not None and final_y is not None:
+            self._update_cursor_visuals(final_x, final_y)
+
     
+    def _execute_double_click(self, action: Dict[str, Any]):
+        """Execute a double click action."""
+        # Reuse click implementation with count=2
+        action['click_count'] = 2
+        self._execute_click(action)
+
     def _execute_type(self, action: Dict[str, Any]):
         """Execute a type action."""
         text = action.get('text', '')
@@ -236,41 +425,125 @@ class BrowserService:
         if not key:
             raise ValueError("Keypress action requires 'key' parameter")
         
-        # Map common key names to Playwright key names
+        # Normalize key separator to '+'
+        # Handle "Ctrl + C", "Alt, PrintScreen", "Shift Space" etc.
+        # Replace comma and space with + if they seem to be separators
+        normalized_key = key
+        if ',' in normalized_key:
+            normalized_key = normalized_key.replace(',', '+')
+        if ' ' in normalized_key and '+' not in normalized_key:
+            # Only replace space if there are no plusses, to avoid messing up "Ctrl + C" -> "Ctrl+++C"
+            normalized_key = normalized_key.replace(' ', '+')
+            
+        parts = [p.strip() for p in normalized_key.split('+') if p.strip()]
+        
+        # Map common key names to Playwright key names (case insensitive lookup)
+        # See https://playwright.dev/python/docs/api/class-keyboard#keyboard-press
         key_mapping = {
-            'Enter': 'Enter',
-            'Tab': 'Tab',
-            'Escape': 'Escape',
-            'Backspace': 'Backspace',
-            'Delete': 'Delete',
-            'ArrowUp': 'ArrowUp',
-            'ArrowDown': 'ArrowDown',
-            'ArrowLeft': 'ArrowLeft',
-            'ArrowRight': 'ArrowRight',
-            'Home': 'Home',
-            'End': 'End',
-            'PageUp': 'PageUp',
-            'PageDown': 'PageDown',
+            'enter': 'Enter',
+            'return': 'Enter',
+            'tab': 'Tab',
+            'escape': 'Escape',
+            'esc': 'Escape',
+            'backspace': 'Backspace',
+            'delete': 'Delete',
+            'del': 'Delete',
+            'arrowup': 'ArrowUp',
+            'up': 'ArrowUp',
+            'arrowdown': 'ArrowDown',
+            'down': 'ArrowDown',
+            'arrowleft': 'ArrowLeft',
+            'left': 'ArrowLeft',
+            'arrowright': 'ArrowRight',
+            'right': 'ArrowRight',
+            'home': 'Home',
+            'end': 'End',
+            'pageup': 'PageUp',
+            'pagedown': 'PageDown',
+            'printscreen': 'PrintScreen',
+            'prtscr': 'PrintScreen',
+            'print': 'PrintScreen',
+            'insert': 'Insert',
+            'f1': 'F1',
+            'f2': 'F2',
+            'f3': 'F3',
+            'f4': 'F4',
+            'f5': 'F5',
+            'f6': 'F6',
+            'f7': 'F7',
+            'f8': 'F8',
+            'f9': 'F9',
+            'f10': 'F10',
+            'f11': 'F11',
+            'f12': 'F12',
+            'shift': 'Shift',
+            'control': 'Control',
+            'ctrl': 'Control',
+            'alt': 'Alt',
+            'meta': 'Meta',
+            'command': 'Meta',
+            'cmd': 'Meta',
+            'win': 'Meta',
+            'windows': 'Meta',
+            'super': 'Meta',
+            'space': 'Space',
+            'scr': 'PrintScreen',
+            'snapshot': 'PrintScreen',
+            'prntscr': 'PrintScreen',
+            'prntscrn': 'PrintScreen',
+            'menu': 'ContextMenu',
+            'apps': 'ContextMenu',
+            'scroll': 'ScrollLock',
+            'scrolllock': 'ScrollLock',
+            'num': 'NumLock',
+            'numlock': 'NumLock',
+            'caps': 'CapsLock',
+            'capslock': 'CapsLock',
+            'pause': 'Pause',
+            'break': 'Pause',
         }
         
-        playwright_key = key_mapping.get(key, key)
-        self.page.keyboard.press(playwright_key)
-        logger.debug(f"Pressed key: {key}")
+        mapped_parts = []
+        for part in parts:
+            # Try exact match first, then lower case lookup
+            mapped_part = key_mapping.get(part.lower(), part)
+            
+            # If the key is just a single character, it's likely fine as is
+            # If it's a longer string not in mapping, try to title case it (e.g. "Enter" -> "Enter")
+            if len(mapped_part) > 1 and mapped_part not in key_mapping.values():
+                 mapped_part = mapped_part.title()
+            
+            mapped_parts.append(mapped_part)
+
+        final_key = '+'.join(mapped_parts)
+        # Log the mapping for debugging
+        if final_key != key:
+            logger.info(f"Mapped key '{key}' -> '{final_key}'")
+            
+        self.page.keyboard.press(final_key)
+        logger.debug(f"Pressed key: {key} (mapped to {final_key})")
     
     def _execute_wait(self, action: Dict[str, Any]):
         """Execute a wait action."""
-        duration_ms = action.get('duration_ms', 1000)
+        duration_ms = action.get('duration_ms')
         selector = action.get('selector')
+        state = action.get('state')  # 'load', 'domcontentloaded', 'networkidle'
         
-        if selector:
+        if state:
+             self.page.wait_for_load_state(state=state, timeout=duration_ms or 30000)
+             logger.debug(f"Waited for load state: {state}")
+        elif selector:
             # Wait for element to appear
-            self.page.wait_for_selector(selector, timeout=duration_ms)
+            self.page.wait_for_selector(selector, timeout=duration_ms or 5000)
             logger.debug(f"Waited for selector: {selector}")
-        else:
+        elif duration_ms:
             # Wait for duration
-            import time
             time.sleep(duration_ms / 1000.0)
             logger.debug(f"Waited for {duration_ms}ms")
+        else:
+             # Default wait
+             time.sleep(1)
+             logger.debug("Waited for default 1s")
     
     def cleanup(self):
         """Clean up browser resources."""

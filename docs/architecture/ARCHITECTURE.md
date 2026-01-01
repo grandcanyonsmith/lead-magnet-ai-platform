@@ -2,7 +2,7 @@
 
 > **Last Updated**: 2025-12-17  
 > **Status**: Current  
-> **Related Docs**: [Flow Diagram](./FLOW_DIAGRAM.md), [Deployment Guide](./DEPLOYMENT.md), [Resources](./RESOURCES.md), [Quick Start](./QUICK_START.md)
+> **Related Docs**: [Flow Diagram](./FLOW_DIAGRAM.md), [Deployment Guide](../guides/DEPLOYMENT.md), [Resources](../reference/RESOURCES.md), [Quick Start](../guides/QUICK_START.md)
 
 A comprehensive multi-tenant SaaS platform for automated AI-powered lead magnet generation.
 
@@ -193,7 +193,7 @@ The `ai_service.py` module handles all OpenAI API interactions. It has been refa
 - Step order is normalized to handle DynamoDB type mismatches
 - Context accumulation ensures continuity across workflow steps
 
-See [AI_SERVICE_REFACTORING.md](./AI_SERVICE_REFACTORING.md) for detailed refactoring documentation.
+See [AI_SERVICE_REFACTORING.md](../archive/AI_SERVICE_REFACTORING.md) for detailed refactoring documentation.
 
 ## 📊 Database Schema
 
@@ -207,7 +207,7 @@ See [AI_SERVICE_REFACTORING.md](./AI_SERVICE_REFACTORING.md) for detailed refact
 6. **templates** - HTML templates with versioning
 7. **user_settings** - User preferences and config
 
-See [FLOW_DIAGRAM.md](../FLOW_DIAGRAM.md) for detailed process flow.
+See [FLOW_DIAGRAM.md](./FLOW_DIAGRAM.md) for detailed process flow.
 
 ## 🔒 Security
 
@@ -322,7 +322,7 @@ MIT License - See LICENSE file for details
 
 ## 🆘 Support
 
-- **Documentation**: See [DEPLOYMENT.md](./DEPLOYMENT.md) for deployment help
+- **Documentation**: See [DEPLOYMENT.md](../guides/DEPLOYMENT.md) for deployment help
 - **Issues**: Open an issue on GitHub
 - **Logs**: Check CloudWatch logs for troubleshooting
 
@@ -342,12 +342,12 @@ MIT License - See LICENSE file for details
 ## Related Documentation
 
 - [Flow Diagram](./FLOW_DIAGRAM.md) - Visual process flow diagrams
-- [Deployment Guide](./DEPLOYMENT.md) - Complete deployment instructions
-- [Quick Start Guide](./QUICK_START.md) - Getting started quickly
-- [Resources](./RESOURCES.md) - AWS resource inventory
-- [Troubleshooting Guide](./TROUBLESHOOTING.md) - Common issues and solutions
-- [AI Service Refactoring](./AI_SERVICE_REFACTORING.md) - AI service architecture details
-- [Changelog](./CHANGELOG.md) - Version history and changes
+- [Deployment Guide](../guides/DEPLOYMENT.md) - Complete deployment instructions
+- [Quick Start Guide](../guides/QUICK_START.md) - Getting started quickly
+- [Resources](../reference/RESOURCES.md) - AWS resource inventory
+- [Troubleshooting Guide](../troubleshooting/README.md) - Common issues and solutions
+- [AI Service Refactoring](../archive/AI_SERVICE_REFACTORING.md) - AI service architecture details
+- [Changelog](../CHANGELOG.md) - Version history and changes
 
 ---
 

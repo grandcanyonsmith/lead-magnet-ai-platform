@@ -1,0 +1,43 @@
+name: 'Setup AWS Credentials'
+description: 'Configure AWS credentials using OIDC or Access Keys'
+inputs:
+  role-arn:
+    description: 'AWS Role ARN for OIDC'
+    required: false
+  region:
+    description: 'AWS Region'
+    required: true
+    default: 'us-east-1'
+  access-key-id:
+    description: 'AWS Access Key ID'
+    required: false
+  secret-access-key:
+    description: 'AWS Secret Access Key'
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    - name: Configure AWS credentials (OIDC)
+      if: inputs.role-arn != ''
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ inputs.role-arn }}
+        aws-region: ${{ inputs.region }}
+
+    - name: Configure AWS credentials (Access Keys)
+      if: inputs.role-arn == '' && inputs.access-key-id != ''
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ inputs.access-key-id }}
+        aws-secret-access-key: ${{ inputs.secret-access-key }}
+        aws-region: ${{ inputs.region }}
+
+    - name: Verify AWS credentials
+      shell: bash
+      run: |
+        if ! aws sts get-caller-identity &>/dev/null; then
+          echo "Error: AWS credentials not configured properly"
+          exit 1
+        fi
+        echo "AWS credentials verified"

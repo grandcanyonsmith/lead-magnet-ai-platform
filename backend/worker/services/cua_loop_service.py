@@ -110,9 +110,21 @@ class CUALoopService:
             
             # Build initial request params using build_api_params to ensure proper tool cleaning
             # This ensures container parameters are removed and Decimal values are converted
+            
+            # Enforce "Autonomy Mode": Modify instructions to prevent asking for permission.
+            enhanced_instructions = instructions
+            if "do not ask for permission" not in enhanced_instructions.lower():
+                enhanced_instructions += (
+                    "\n\n[COMPUTER USE GUIDELINES]\n"
+                    "1. AUTONOMY: You are an autonomous agent. Do NOT ask for permission to proceed. Do NOT ask 'Should I...?'\n"
+                    "2. COMPLETION: Execute all necessary steps to achieve the goal fully. Only stop when the request is strictly satisfied.\n"
+                    "3. IF STUCK: Try alternative paths (e.g. scroll, search, different selectors) before giving up.\n"
+                    "4. UPLOADS: If the task involves uploading a screenshot, the system automatically uploads it. Use the provided URL.\n"
+                )
+
             initial_params = openai_client.build_api_params(
                 model=model,
-                instructions=instructions,
+                instructions=enhanced_instructions,
                 input_text=input_text,
                 tools=tools,
                 tool_choice=tool_choice,
@@ -178,16 +190,22 @@ class CUALoopService:
                     ]
                 
                 # Execute action
+                execution_error = None
                 try:
                     import warnings
                     with warnings.catch_warnings():
                         warnings.filterwarnings('ignore', category=UserWarning, module='pydantic')
                         warnings.filterwarnings('ignore', message='.*PydanticSerializationUnexpectedValue.*')
                         action_dict = action if isinstance(action, dict) else action.model_dump() if hasattr(action, 'model_dump') else {}
-                    logger.info(f"[CUALoopService] Executing action: {action_dict.get('type', 'unknown')}")
+                    
+                    # Log action details for debugging
+                    action_type = action_dict.get('type', 'unknown')
+                    logger.info(f"[CUALoopService] Executing action: {action_type}", extra={'action': action_dict})
+                    
                     browser.execute_action(action_dict)
                 except Exception as e:
                     logger.error(f"[CUALoopService] Error executing action: {e}", exc_info=True)
+                    execution_error = str(e)
                     # Continue anyway - capture screenshot of current state
                 
                 # Small delay to allow page to update
@@ -210,6 +228,8 @@ class CUALoopService:
                     if screenshot_url:
                         screenshot_urls.append(screenshot_url)
                         logger.info(f"[CUALoopService] Screenshot captured and uploaded: {screenshot_url}")
+                        # Print for visibility in test runner output
+                        print(f"🖼️ Object URL: {screenshot_url}", flush=True)
                     else:
                         logger.warning(f"[CUALoopService] Failed to upload screenshot")
                 except Exception as e:
@@ -227,9 +247,27 @@ class CUALoopService:
                         }
                     }]
                     
+                    # Add execution error if present
+                    if execution_error:
+                        next_input[0]['error'] = execution_error
+                        next_input[0]['is_error'] = True
+                    
                     # Add current_url if available
                     if current_url:
                         next_input[0]['current_url'] = current_url
+                    
+                    # Provide the S3 URL of the screenshot to the model
+                    if screenshot_url:
+                         # Append it as a hidden field or explicit message in the output
+                        next_input[0]['output']['screenshot_s3_url'] = screenshot_url
+                        
+                        # Also add a clear system note about the screenshot location
+                        # This helps the model answer "return the object url" queries immediately
+                        # without needing to run extra tools.
+                        next_input[0]['output']['system_note'] = (
+                            f"Screenshot captured and uploaded to: {screenshot_url}. "
+                            "You can return this URL as the object URL."
+                        )
                     
                     # Add acknowledged safety checks if any
                     if acknowledged_safety_checks:
@@ -243,7 +281,7 @@ class CUALoopService:
                 # Build next request params using build_api_params to ensure proper tool cleaning
                 next_params = openai_client.build_api_params(
                     model=model,
-                    instructions=instructions,  # Keep same instructions
+                    instructions=enhanced_instructions,  # Keep same instructions
                     input_text='',  # Will be replaced with next_input
                     tools=tools,
                     tool_choice=tool_choice,
