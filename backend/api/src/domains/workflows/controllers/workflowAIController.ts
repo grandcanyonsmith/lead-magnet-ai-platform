@@ -16,7 +16,7 @@ export class WorkflowAIController {
   /**
    * Get available AI models.
    */
-  async getModels(tenantId: string): Promise<RouteResponse> {
+  async getModels(_tenantId: string): Promise<RouteResponse> {
     const { MODEL_DESCRIPTIONS_DETAILED, AVAILABLE_MODELS } = await import('@domains/workflows/services/workflow/modelDescriptions');
     
     // Map models to a more frontend-friendly format

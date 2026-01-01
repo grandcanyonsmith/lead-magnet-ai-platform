@@ -146,7 +146,7 @@ export default function WorkflowStepEditor({
   // Always call hook unconditionally to comply with Rules of Hooks
   const workflowStepAI = useWorkflowStepAI(workflowId);
 
-  const { models, loading: modelsLoading } = useAIModels();
+  const { models, loading: modelsLoading, error: modelsError } = useAIModels();
 
   // Sync localStep when step prop changes
   useEffect(() => {
@@ -620,16 +620,20 @@ export default function WorkflowStepEditor({
                   required
                   aria-label="AI model"
                   aria-required="true"
-                  disabled={modelsLoading}
+                  disabled={modelsLoading || !!modelsError}
                 >
                   {modelsLoading ? (
                     <option>Loading models...</option>
-                  ) : (
+                  ) : modelsError ? (
+                     <option>Error loading models</option>
+                  ) : models.length > 0 ? (
                     models.map((model) => (
                       <option key={model.id} value={model.id}>
                         {model.name}
                       </option>
                     ))
+                  ) : (
+                    <option value="gpt-5.2">GPT-5.2 (Default)</option>
                   )}
                 </select>
               </div>
