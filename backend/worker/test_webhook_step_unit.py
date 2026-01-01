@@ -30,7 +30,7 @@ def test_webhook_step_payload_structure():
     """Test that webhook payload has the correct nested structure."""
     logger.info("Testing webhook payload structure...")
     
-    service = WebhookStepService()
+    service = WebhookStepService(db_service=Mock(), s3_service=Mock())
     
     # Mock data
     step = {
@@ -123,7 +123,7 @@ def test_webhook_step_exclude_steps():
     """Test that excluded steps are not included in payload."""
     logger.info("Testing webhook step exclusion...")
     
-    service = WebhookStepService()
+    service = WebhookStepService(db_service=Mock(), s3_service=Mock())
     
     step_outputs = [
         {'step_name': 'Step 1', 'output': 'Output 1', 'artifact_id': 'art_1', 'image_urls': []},
@@ -167,7 +167,7 @@ def test_webhook_step_exclude_steps():
     return True
 
 
-@patch('services.webhook_step_service.requests.request')
+@patch('services.webhooks.adapters.generic_http.requests.request')
 def test_webhook_step_execution_success(mock_request):
     """Test successful webhook step execution."""
     logger.info("Testing webhook step execution (success case)...")
@@ -179,7 +179,7 @@ def test_webhook_step_execution_success(mock_request):
     mock_response.raise_for_status = Mock()
     mock_request.return_value = mock_response
     
-    service = WebhookStepService()
+    service = WebhookStepService(db_service=Mock(), s3_service=Mock())
     
     step = {
         'step_name': 'Test Webhook',
@@ -210,19 +210,21 @@ def test_webhook_step_execution_success(mock_request):
     
     # Verify request was made correctly
     mock_request.assert_called_once()
-    call_args = mock_request.call_args
-    assert call_args[0][0] == 'POST'
-    assert call_args[0][1] == 'https://example.com/webhook'
-    assert 'json' in call_args[1]
-    assert 'headers' in call_args[1]
-    assert call_args[1]['headers']['X-Custom'] == 'value'
-    assert call_args[1]['headers']['Content-Type'] == 'application/json'
+    # Call args may be positional or keyword depending on implementation
+    # GenericHttpAdapter uses keyword args for method, url, json, headers
+    call_kwargs = mock_request.call_args.kwargs
+    assert call_kwargs.get('method') == 'POST'
+    assert call_kwargs.get('url') == 'https://example.com/webhook'
+    assert 'json' in call_kwargs
+    assert 'headers' in call_kwargs
+    assert call_kwargs['headers']['X-Custom'] == 'value'
+    assert call_kwargs['headers']['Content-Type'] == 'application/json'
     
     logger.info("✅ Webhook execution success test passed!")
     return True
 
 
-@patch('services.webhook_step_service.requests.request')
+@patch('services.webhooks.adapters.generic_http.requests.request')
 def test_webhook_step_execution_failure(mock_request):
     """Test webhook step execution failure handling."""
     logger.info("Testing webhook step execution (failure case)...")
@@ -236,7 +238,7 @@ def test_webhook_step_execution_failure(mock_request):
     mock_error.response = mock_response
     mock_request.side_effect = mock_error
     
-    service = WebhookStepService()
+    service = WebhookStepService(db_service=Mock(), s3_service=Mock())
     
     step = {
         'step_name': 'Test Webhook',
