@@ -174,6 +174,6 @@ npm run dev
 ## Next Steps
 
 - See [README.md](../README.md) for full project documentation
-- See [DEPLOYMENT.md](../DEPLOYMENT.md) for deployment instructions
-- See [QUICK_REFERENCE.md](../QUICK_REFERENCE.md) for API endpoints
+- See [DEPLOYMENT.md](./DEPLOYMENT.md) for deployment instructions
+- See [API Contracts](../reference/contracts/README.md) for API endpoints
 

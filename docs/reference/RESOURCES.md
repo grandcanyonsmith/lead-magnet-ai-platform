@@ -1,10 +1,19 @@
 # Lead Magnet AI Platform - Resource Inventory
 
-> **Last Updated**: 2025-12-17  
+> **Last Updated**: 2026-01-01  
 > **Status**: Current  
-> **Related Docs**: [Architecture Overview](./ARCHITECTURE.md), [Deployment Guide](./DEPLOYMENT.md), [Quick Start Guide](./QUICK_START.md)
+> **Related Docs**: [Architecture Overview](../architecture/ARCHITECTURE.md), [Deployment Guide](../guides/DEPLOYMENT.md), [Quick Start Guide](../guides/QUICK_START.md)
 
 Complete inventory of AWS resources deployed for the Lead Magnet AI Platform.
+
+---
+
+## ⚠️ Important Note on IDs
+
+**Do NOT rely on hardcoded IDs found in documentation examples.** 
+The IDs shown in this document (e.g., `us-east-1_asu0YOrBD`, `471112574622`) are examples from a specific deployment. **Your deployed resources will have different IDs.**
+
+Always use the AWS CLI commands below to find your specific resource values.
 
 ---
 
@@ -72,7 +81,7 @@ aws cloudformation describe-stacks --stack-name leadmagnet-{stack-name} \
 ### Step Functions
 | State Machine | ARN | Status |
 |---------------|-----|--------|
-| leadmagnet-job-processor | arn:aws:states:us-east-1:471112574622:stateMachine:leadmagnet-job-processor | Active |
+| leadmagnet-job-processor | `arn:aws:states:us-east-1:{ACCOUNT_ID}:stateMachine:leadmagnet-job-processor` | Active |
 
 ---
 
@@ -81,12 +90,12 @@ aws cloudformation describe-stacks --stack-name leadmagnet-{stack-name} \
 ### S3 Buckets
 | Bucket | Purpose | Versioning | Encryption |
 |--------|---------|------------|------------|
-| leadmagnet-artifacts-471112574622 | Artifacts & Frontend | Enabled | AWS-Managed |
+| leadmagnet-artifacts-{ACCOUNT_ID} | Artifacts & Frontend | Enabled | AWS-Managed |
 
 ### CloudFront
 | Distribution ID | Domain | Status |
 |-----------------|--------|--------|
-| E1GPKD58HXUDIV | dmydkyj79auy7.cloudfront.net | Deployed |
+| {DISTRIBUTION_ID} | {DOMAIN}.cloudfront.net | Deployed |
 
 ### WAFv2 (optional)
 - CloudFront WAF ARN: `CloudFrontWebAclArn` (CloudFormation output on `leadmagnet-storage`, created only in `us-east-1`)
@@ -94,7 +103,7 @@ aws cloudformation describe-stacks --stack-name leadmagnet-{stack-name} \
 ### ECR
 | Repository | URI |
 |------------|-----|
-| leadmagnet/worker | 471112574622.dkr.ecr.us-east-1.amazonaws.com/leadmagnet/worker |
+| leadmagnet/worker | {ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/leadmagnet/worker |
 
 ---
 
@@ -103,9 +112,9 @@ aws cloudformation describe-stacks --stack-name leadmagnet-{stack-name} \
 ### Cognito
 | Resource | Value |
 |----------|-------|
-| User Pool ID | us-east-1_asu0YOrBD |
-| Client ID | 4lb3j8kqfvfgkvfeb4h4naani5 |
-| Domain | leadmagnet-471112574622.auth.us-east-1.amazoncognito.com |
+| User Pool ID | `us-east-1_{ID}` |
+| Client ID | `{CLIENT_ID}` |
+| Domain | `leadmagnet-{ACCOUNT_ID}.auth.us-east-1.amazoncognito.com` |
 
 ### Secrets Manager
 | Secret Name | Purpose |
@@ -133,8 +142,8 @@ so outbound calls (OpenAI/Stripe/webhooks) can still reach the internet.
 
 | Resource | Value |
 |----------|-------|
-| API ID | czp5b77azd |
-| API URL | https://czp5b77azd.execute-api.us-east-1.amazonaws.com |
+| API ID | {API_ID} |
+| API URL | `https://{API_ID}.execute-api.us-east-1.amazonaws.com` |
 | Protocol | HTTP API (v2) |
 
 ### Routes
@@ -145,30 +154,6 @@ so outbound calls (OpenAI/Stripe/webhooks) can still reach the internet.
 - `PUT /admin/{proxy+}` - Admin routes (JWT required)
 - `PATCH /admin/{proxy+}` - Admin routes (JWT required)
 - `DELETE /admin/{proxy+}` - Admin routes (JWT required)
-
----
-
-## Test Data Created
-
-### Template
-- **ID:** tmpl_test001
-- **Name:** Test Template
-- **Version:** 1
-
-### Workflow
-- **ID:** wf_test001
-- **Name:** Test Workflow
-- **Status:** active
-
-### Form
-- **ID:** form_test001
-- **Name:** Test Form
-- **Slug:** test-form
-- **URL:** /v1/forms/test-form
-
-### User
-- **Email:** test@example.com
-- **Tenant:** tenant_test_001
 
 ---
 
@@ -202,25 +187,6 @@ so outbound calls (OpenAI/Stripe/webhooks) can still reach the internet.
 
 ---
 
-## File Structure Summary
-
-```
-lead-magnent-ai/
-├── infrastructure/          (8 files - AWS CDK)
-│   ├── bin/app.ts
-│   └── lib/*.ts
-├── backend/
-│   ├── api/                (13 files - TypeScript)
-│   └── worker/             (8 files - Python)
-├── frontend/               (20+ files - Next.js)
-│   └── src/app/
-├── .github/workflows/      (4 files - CI/CD)
-├── scripts/                (3 files - Helpers)
-└── docs/                   (7 markdown files)
-```
-
----
-
 ## Access URLs Summary
 
 Retrieve your URLs using CloudFormation outputs:
@@ -245,39 +211,10 @@ export TEST_FORM="$API_URL/v1/forms/{your-form-slug}"
 
 ---
 
-## Management Commands
-
-### View All Stacks
-```bash
-aws cloudformation list-stacks --stack-status-filter CREATE_COMPLETE
-```
-
-### View All Tables
-```bash
-aws dynamodb list-tables
-```
-
-### View Lambda Functions
-```bash
-aws lambda list-functions --query 'Functions[?contains(FunctionName, `leadmagnet`)].FunctionName'
-```
-
-### View ECR Repositories
-```bash
-aws ecr describe-repositories --query 'repositories[?contains(repositoryName, `leadmagnet`)].repositoryName'
-```
-
----
-
 ## Related Documentation
 
-- [Architecture Overview](./ARCHITECTURE.md) - System architecture and design
-- [Deployment Guide](./DEPLOYMENT.md) - Deployment instructions
-- [Quick Start Guide](./QUICK_START.md) - Quick setup and testing
-- [Troubleshooting Guide](./TROUBLESHOOTING.md) - Common issues and solutions
-- [Flow Diagram](./FLOW_DIAGRAM.md) - Process flow visualization
-
----
-
-**Last Updated:** 2025-12-17  
-**Status:** Current - Use CloudFormation outputs to find specific resource values
+- [Architecture Overview](../architecture/ARCHITECTURE.md) - System architecture and design
+- [Deployment Guide](../guides/DEPLOYMENT.md) - Deployment instructions
+- [Quick Start Guide](../guides/QUICK_START.md) - Quick setup and testing
+- [Troubleshooting Guide](../troubleshooting/README.md) - Common issues and solutions
+- [Flow Diagram](../architecture/FLOW_DIAGRAM.md) - Process flow visualization

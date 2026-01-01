@@ -7,11 +7,69 @@ on:
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend-deploy.yml'
+  pull_request:
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-deploy.yml'
   workflow_dispatch:
 
+concurrency:
+  group: frontend-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  build-and-deploy:
+  build_and_test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: ./.github/actions/setup-node-app
+        with:
+          node-version: '20'
+          working-directory: 'frontend'
+
+      - name: Security Audit
+        working-directory: frontend
+        run: npm audit --audit-level=high || echo "Audit failed but proceeding"
+
+      - name: Install Playwright Browsers
+        working-directory: frontend
+        run: npx playwright install --with-deps
+
+      - name: Run E2E Tests
+        working-directory: frontend
+        run: npm run test:e2e
+
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Build
+        working-directory: frontend
+        env:
+          NODE_ENV: production
+          # Secrets are required for build if they are embedded in client-side code
+          NEXT_PUBLIC_API_URL: ${{ secrets.API_URL || 'https://api.example.com' }}
+          NEXT_PUBLIC_COGNITO_USER_POOL_ID: ${{ secrets.COGNITO_USER_POOL_ID || 'dummy' }}
+          NEXT_PUBLIC_COGNITO_CLIENT_ID: ${{ secrets.COGNITO_CLIENT_ID || 'dummy' }}
+          NEXT_PUBLIC_AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
+        run: npm run build
+      
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-out
+          path: frontend/out
+          retention-days: 1
+
+  deploy:
+    needs: build_and_test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       id-token: write
       contents: read
@@ -22,55 +80,19 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
     
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v5
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
         with:
-          node-version: '20.x'
-          check-latest: true
+          name: frontend-out
+          path: frontend/out
       
-      - name: Install dependencies
-        working-directory: frontend
-        run: npm install --no-audit --no-fund
-
-      - name: Lint
-        working-directory: frontend
-        run: npm run lint
-      
-      - name: Build
-        working-directory: frontend
-        env:
-          NODE_ENV: production
-          NEXT_PUBLIC_API_URL: ${{ secrets.API_URL }}
-          NEXT_PUBLIC_COGNITO_USER_POOL_ID: ${{ secrets.COGNITO_USER_POOL_ID }}
-          NEXT_PUBLIC_COGNITO_CLIENT_ID: ${{ secrets.COGNITO_CLIENT_ID }}
-          NEXT_PUBLIC_AWS_REGION: ${{ env.AWS_REGION }}
-        run: npm run build
-      
-      - name: Configure AWS credentials (OIDC)
-        if: env.AWS_ROLE_ARN != ''
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Configure AWS credentials
+        uses: ./.github/actions/setup-aws
         with:
-          role-to-assume: ${{ env.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
-      
-      - name: Configure AWS credentials (Access Keys)
-        if: env.AWS_ROLE_ARN == '' && env.AWS_ACCESS_KEY_ID != ''
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-      
-      - name: Verify AWS credentials
-        run: |
-          if ! aws sts get-caller-identity &>/dev/null; then
-            echo "Error: AWS credentials not configured properly"
-            exit 1
-          fi
-          echo "AWS credentials verified"
+          role-arn: ${{ env.AWS_ROLE_ARN }}
+          access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          region: ${{ env.AWS_REGION }}
       
       - name: Deploy to S3
         working-directory: frontend
@@ -78,7 +100,7 @@ jobs:
           S3_BUCKET: ${{ secrets.FRONTEND_BUCKET }}
         run: |
           if [ ! -d "out" ]; then
-            echo "Error: out directory not found. Build may have failed."
+            echo "Error: out directory not found."
             exit 1
           fi
 
@@ -86,8 +108,7 @@ jobs:
           aws s3 sync out/_next s3://$S3_BUCKET/_next --delete \
             --cache-control "public,max-age=31536000,immutable"
 
-          # 2) Upload HTML + route payloads with no-cache (prevents stale app shell in browsers)
-          # Also exclude artifact prefixes so `--delete` doesn't wipe job outputs.
+          # 2) Upload HTML + route payloads with no-cache
           aws s3 sync out s3://$S3_BUCKET/ --delete \
             --exclude "_next/*" \
             --exclude "*/jobs/*" \
@@ -99,4 +120,3 @@ jobs:
           CF_DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
         run: |
           aws cloudfront create-invalidation --distribution-id $CF_DISTRIBUTION_ID --paths '/*'
-

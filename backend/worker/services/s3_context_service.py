@@ -213,27 +213,21 @@ class S3ContextService:
         dest_object_url = f"https://{bucket}.s3.{region}.amazonaws.com/{dest_key}"
 
         block = "\n".join([
-            "=== S3 Upload (Shell Tool) ===",
-            "Upload the SOURCE file to the DEST bucket using the presigned PUT URL.",
+            "=== S3 Upload (Computer Use / Shell Tool) ===",
+            "Use the 'shell' tool (if available) or built-in file upload capability to upload the artifact.",
+            "If using 'shell', run:",
+            f"curl -X PUT -T <file> -H 'Content-Type: {content_type}' '{dest_put_url}'",
             "",
-            f"SOURCE_ARTIFACT_ID: {source_artifact_id}",
-            f"SOURCE_ARTIFACT_URL: {source_url}",
+            "If this step involves capturing a screenshot or generating a file:",
+            f"TARGET_BUCKET: {bucket}",
+            f"TARGET_KEY: {dest_key}",
+            f"PRESIGNED_PUT_URL: {dest_put_url}",
+            f"FINAL_OBJECT_URL: {dest_object_url}",
             "",
-            f"DEST_BUCKET: {bucket}",
-            f"DEST_REGION: {region}",
-            f"DEST_KEY: {dest_key}",
-            f"DEST_CONTENT_TYPE: {content_type}",
-            f"DEST_PUT_URL: {dest_put_url}",
-            f"DEST_OBJECT_URL: {dest_object_url}",
-            "",
-            "Execute this as shell commands (example — replace the <> placeholders with the values above):",
-            "  set -euo pipefail",
-            "  LOCAL_FILE=\"source_file\"",
-            "  curl -fsSL \"<SOURCE_ARTIFACT_URL>\" -o \"$LOCAL_FILE\"",
-            "  curl -fsS -X PUT -H \"Content-Type: <DEST_CONTENT_TYPE>\" --upload-file \"$LOCAL_FILE\" \"<DEST_PUT_URL>\"",
-            "",
-            "Then respond with EXACTLY ONE LINE of JSON (no extra text):",
-            f"{{\"bucket\":\"{bucket}\",\"region\":\"{region}\",\"key\":\"{dest_key}\",\"content_type\":\"{content_type}\",\"s3_uri\":\"s3://{bucket}/{dest_key}\",\"object_url\":\"{dest_object_url}\"}}",
+            "If using 'computer_use_preview' to browse and capture a screenshot:",
+            "The screenshot is automatically uploaded. To use a custom bucket/key, you must use the URL below.",
+            "However, currently automatic screenshots use a system bucket.",
+            "=============================="
         ])
 
         logger.info("[S3ContextService] Injected S3 upload context", extra={
