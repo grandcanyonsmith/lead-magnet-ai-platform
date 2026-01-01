@@ -553,6 +553,36 @@ class CUAgent:
                     except Exception:
                         pass
                     # #endregion
+                    # #region agent-typed-url
+                    try:
+                        if action_type == "type":
+                            typed = action.get("text")
+                            if isinstance(typed, str):
+                                t = typed.strip()
+                                if t.lower().startswith(("http://", "https://")):
+                                    with open("/Users/canyonsmith/lead-magnent-ai/.cursor/debug.log", "a") as f:
+                                        f.write(
+                                            json.dumps(
+                                                {
+                                                    "sessionId": "debug-session",
+                                                    "runId": "nav-pre-fix",
+                                                    "hypothesisId": "H7-nav-or-screenshot-stale",
+                                                    "location": "agent.py:run_loop",
+                                                    "timestamp": int(time.time() * 1000),
+                                                    "message": "Model is typing a URL via type action",
+                                                    "data": {
+                                                        "iteration": iteration,
+                                                        "call_id": call_id,
+                                                        "typed_url_preview": t[:160],
+                                                        "prev_action_signature": (recent_actions[-1] if recent_actions else None),
+                                                    },
+                                                }
+                                            )
+                                            + "\n"
+                                        )
+                    except Exception:
+                        pass
+                    # #endregion
                     action_details = []
                     
                     if action_type == 'click':
@@ -699,6 +729,30 @@ class CUAgent:
                         url = self.image_handler.upload_base64_image_to_s3(
                             screenshot_b64, 'image/jpeg', tenant_id=tenant_id, job_id=job_id
                         )
+
+                        # #region agent-nav-debug
+                        try:
+                            with open('/Users/canyonsmith/lead-magnent-ai/.cursor/debug.log', 'a') as f:
+                                f.write(json.dumps({
+                                    "sessionId": "debug-session",
+                                    "runId": "nav-pre-fix",
+                                    "hypothesisId": "H7-nav-or-screenshot-stale",
+                                    "location": "agent.py:run_loop",
+                                    "timestamp": int(time.time() * 1000),
+                                    "message": "Captured screenshot after computer action",
+                                    "data": {
+                                        "iteration": iteration,
+                                        "call_id": call_id,
+                                        "action_type": action_type,
+                                        "current_url": current_url,
+                                        "uploaded_url_present": bool(url),
+                                        "uploaded_url_preview": (url[:120] if url else ""),
+                                        "screenshot_b64_len": len(screenshot_b64) if screenshot_b64 else 0,
+                                    }
+                                }) + '\n')
+                        except Exception:
+                            pass
+                        # #endregion
                         
                         screenshot_event = ScreenshotEvent(
                             type='screenshot', timestamp=time.time(),

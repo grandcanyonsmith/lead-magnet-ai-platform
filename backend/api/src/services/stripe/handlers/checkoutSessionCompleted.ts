@@ -3,7 +3,7 @@ import { logger } from '../../../utils/logger';
 
 export const handleCheckoutSessionCompleted = async (
   event: Stripe.Event,
-  stripe: Stripe
+  _stripe: Stripe
 ): Promise<void> => {
   const session = event.data.object as Stripe.Checkout.Session;
   logger.info('Handling checkout.session.completed', { sessionId: session.id });

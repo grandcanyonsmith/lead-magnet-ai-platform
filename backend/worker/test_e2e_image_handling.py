@@ -118,7 +118,6 @@ def test_e2e_workflow_step():
     assert img_gen_in_params.get('background') == 'transparent', "Background should be preserved"
     
     print("\n✅ End-to-end test passed!")
-    return True
 
 def main():
     """Run end-to-end test."""
