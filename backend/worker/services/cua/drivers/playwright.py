@@ -116,6 +116,14 @@ class PlaywrightEnvironment(Environment):
                 button = "left"
             await self.page.mouse.click(x, y, button=button)
 
+        elif action_type in ("move", "hover", "mouse_move"):
+            # "move" is emitted by the model in some flows (e.g. to hover/reposition cursor)
+            x = action.get("x")
+            y = action.get("y")
+            if x is None or y is None:
+                raise ValueError("Move action requires x and y")
+            await self.page.mouse.move(x, y)
+
         elif action_type == "type":
             text = action.get("text", "")
             if not text:
