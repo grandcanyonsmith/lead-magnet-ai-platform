@@ -17,7 +17,7 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Determine lockfile path
+    - name: Determine lockfile path and install strategy
       shell: bash
       id: lockfile
       run: |
@@ -34,18 +34,23 @@ runs:
         if [ -f "${WORK_DIR}/package-lock.json" ]; then
           echo "path=${WORK_DIR}/package-lock.json" >> $GITHUB_OUTPUT
           echo "dir=${WORK_DIR}" >> $GITHUB_OUTPUT
+          echo "use-ci=true" >> $GITHUB_OUTPUT
         # Check root lockfile (for workspace setups)
         elif [ -f "package-lock.json" ]; then
           echo "path=package-lock.json" >> $GITHUB_OUTPUT
           echo "dir=." >> $GITHUB_OUTPUT
+          echo "use-ci=true" >> $GITHUB_OUTPUT
         else
-          echo "Error: No package-lock.json found in ${WORK_DIR} or root"
-          echo "Current directory: $(pwd)"
-          echo "Working directory: ${WORK_DIR}"
-          echo "GITHUB_WORKSPACE: ${GITHUB_WORKSPACE}"
-          ls -la "${WORK_DIR}/" 2>/dev/null || echo "Cannot list ${WORK_DIR}/"
-          ls -la package-lock.json 2>/dev/null || echo "Cannot find root package-lock.json"
-          exit 1
+          # No lockfile found - use npm install instead of npm ci
+          # Use package.json for cache path when lockfile doesn't exist
+          echo "Warning: No package-lock.json found, using npm install instead of npm ci"
+          if [ -f "${WORK_DIR}/package.json" ]; then
+            echo "path=${WORK_DIR}/package.json" >> $GITHUB_OUTPUT
+          elif [ -f "package.json" ]; then
+            echo "path=package.json" >> $GITHUB_OUTPUT
+          fi
+          echo "dir=${WORK_DIR}" >> $GITHUB_OUTPUT
+          echo "use-ci=false" >> $GITHUB_OUTPUT
         fi
 
     - name: Setup Node.js
@@ -58,4 +63,10 @@ runs:
     - name: Install dependencies
       shell: bash
       working-directory: ${{ steps.lockfile.outputs.dir }}
-      run: ${{ inputs.install-command }}
+      run: |
+        if [ "${{ steps.lockfile.outputs.use-ci }}" = "true" ]; then
+          ${{ inputs.install-command }}
+        else
+          # Fallback to npm install when lockfile doesn't exist
+          npm install
+        fi
