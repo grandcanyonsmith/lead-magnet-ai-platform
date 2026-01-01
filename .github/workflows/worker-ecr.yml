@@ -49,6 +49,8 @@ jobs:
           AWS_SECRET_ACCESS_KEY: testing
           AWS_SECURITY_TOKEN: testing
           AWS_SESSION_TOKEN: testing
+          # Set PYTHONPATH so Python can find the core module and other local imports
+          PYTHONPATH: ${{ github.workspace }}/backend/worker
         run: |
           # Exclude integration-style tests that require full AWS table/bucket wiring.
           pytest -q \
