@@ -198,6 +198,10 @@ class ImageHandler:
                 # Fallback to images/ prefix for backwards compatibility
                 s3_key = f"images/{filename}"
             
+            # If bucket is explicitly specified in instructions or context, we might want to respect it
+            # But currently S3Service uses a configured bucket.
+            # We can however return the full S3 URL if needed.
+            
             # Upload using upload_image which accepts bytes
             s3_url, public_url = self.s3_service.upload_image(
                 key=s3_key,

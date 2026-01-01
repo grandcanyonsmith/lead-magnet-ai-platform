@@ -20,72 +20,158 @@ A production-ready SaaS platform that helps business owners create and manage AI
 
 This platform enables business owners to create and manage AI-powered lead magnets without technical expertise:
 
+### The Complete Workflow
+
 1. **Create Lead Magnets** - Define what information to collect and how AI should personalize the deliverable
-2. **Build Forms** - Generate public forms with custom fields to collect lead information (name, email, and phone are always collected automatically)
+   - Configure AI instructions and models
+   - Design custom HTML templates
+   - Set up delivery methods (webhook or SMS)
+
+2. **Build Forms** - Generate public forms with custom fields to collect lead information
+   - Name, email, and phone are always collected automatically
+   - Add custom fields (text, textarea, select, etc.)
+   - Get a unique public URL for each form
+
 3. **Collect Leads** - Share form URLs with your audience
+   - Forms are mobile-responsive and SEO-friendly
+   - Built-in rate limiting and spam protection
+   - Real-time submission tracking
+
 4. **AI Generates Personalized Content** - When a lead submits the form, AI creates personalized content:
    - **Optional Research Step**: AI can research and generate a report based on form answers (this research then becomes context for the final deliverable)
    - **HTML Deliverable**: AI rewrites your HTML template using the user context (form inputs + research outputs if enabled), template, and instructions to create the final personalized lead magnet
+   - **Multi-Step Workflows**: Chain multiple AI steps with dependencies and parallel execution
+
 5. **Deliver Results** - The lead magnet HTML file is delivered via webhook or SMS to your leads
+   - **Webhook Delivery**: Send to any endpoint with dynamic values (e.g., `{{submission.email}}`, `{{artifact_url}}`)
+   - **SMS Delivery**: Send directly to lead's phone via Twilio (manual or AI-generated SMS content)
+   - All deliverables stored in S3 with public CloudFront URLs
+
 6. **View Submissions** - Businesses can see all form submission details (name, email, phone, and custom answers) for follow-up marketing/sales
+   - Real-time dashboard with analytics
+   - Export submission data
+   - Track job status and costs
 
 **Business Model:** Pay-per-usage at the end of each billing cycle. No upfront payment, no subscription - you only pay for what you use.
 
 ## ✨ Features
 
-- 🤖 **AI-Powered Generation** - OpenAI GPT-4o integration for personalized content
-- 📝 **Flexible Workflow Options** - Optional research step and HTML conversion
-- 🎨 **Custom Templates** - Create your own HTML templates for branding
-- 🏢 **Multi-Tenant** - Complete tenant isolation
-- 📝 **Dynamic Forms** - Schema-driven forms with validation
-- 🔄 **Template Versioning** - Version control for HTML templates
-- 📊 **Analytics Dashboard** - Track usage and performance
-- 🔒 **Secure** - JWT auth, encrypted storage, HTTPS
-- ⚡ **Serverless** - Auto-scaling Lambda functions, pay-per-use
+### Core Capabilities
+
+- 🤖 **AI-Powered Generation** - OpenAI GPT-4o, GPT-4 Turbo, GPT-3.5 Turbo integration for personalized content
+- 📝 **Flexible Workflow Options** - Multi-step workflows with dependencies, parallel execution, and optional research steps
+- 🎨 **Custom Templates** - Create your own HTML templates for branding with `{{PLACEHOLDER}}` syntax
+- 🏢 **Multi-Tenant** - Complete tenant isolation with secure data separation
+- 📝 **Dynamic Forms** - Schema-driven forms with validation, custom fields, and public URLs
+- 🔄 **Template Versioning** - Version control for HTML templates with rollback support
+- 📊 **Analytics Dashboard** - Track usage, performance, costs, and submission analytics
+- 🔒 **Secure** - JWT auth (Cognito), encrypted storage, HTTPS/TLS everywhere, IAM least privilege
+- ⚡ **Serverless** - Auto-scaling Lambda functions, pay-per-use, no infrastructure management
 - 📱 **Flexible Delivery** - Webhook delivery to any endpoint or SMS delivery via Twilio
 - 🤖 **AI SMS Generation** - Optionally have AI generate SMS content based on lead magnet context
-- 🔄 **CI/CD Ready** - GitHub Actions workflows included
+- 🖼️ **Image Generation** - DALL-E integration for generating images in workflows
+- 🔍 **Web Search** - Built-in web search tool for research workflows
+- 💻 **Code Interpreter** - Execute Python code in workflows for data processing
+- 🔄 **CI/CD Ready** - GitHub Actions workflows included for automated deployments
+
+### Advanced Features
+
+- **Multi-Step Workflows**: Chain multiple AI steps with dependencies and parallel execution
+- **Tool Support**: Web search, file search, code interpreter, image generation, computer use preview
+- **Cost Tracking**: Real-time cost tracking per job and workflow
+- **Execution History**: Complete execution step history stored in S3
+- **Artifact Management**: S3 + CloudFront CDN for fast artifact delivery
+- **Rate Limiting**: Built-in rate limiting and spam protection
+- **Webhook Logs**: Complete webhook delivery logs for debugging
+- **Impersonation**: Support/admin impersonation for customer support
+- **Agency View**: Multi-customer management for agencies
 
 ## 🧭 Architecture at a Glance
 
 | Pillar | What to read first | Context Pack |
 | --- | --- | --- |
-| Backend API | `backend/api` TypeScript Lambda powering `/admin/*` and `/v1/forms/*`. | [`docs/context-packs/backend/CONTEXT.md`](docs/context-packs/backend/CONTEXT.md) |
-| Worker | Python workflow runner invoked by Step Functions. | [`docs/context-packs/worker/CONTEXT.md`](docs/context-packs/worker/CONTEXT.md) |
-| Infrastructure | AWS CDK definitions for API Gateway, DynamoDB, Step Functions, buckets, alarms. | [`docs/context-packs/infrastructure/CONTEXT.md`](docs/context-packs/infrastructure/CONTEXT.md) |
-| Workflow Automation | Cross-layer guidance for workflow CRUD + generation flows. | [`docs/context-packs/workflows/CONTEXT.md`](docs/context-packs/workflows/CONTEXT.md) |
+| Backend API | `backend/api` TypeScript Lambda powering `/admin/*` and `/v1/forms/*`. | [`docs/reference/context-packs/backend/CONTEXT.md`](docs/reference/context-packs/backend/CONTEXT.md) |
+| Worker | Python workflow runner invoked by Step Functions. | [`docs/reference/context-packs/worker/CONTEXT.md`](docs/reference/context-packs/worker/CONTEXT.md) |
+| Infrastructure | AWS CDK definitions for API Gateway, DynamoDB, Step Functions, buckets, alarms. | [`docs/reference/context-packs/infrastructure/CONTEXT.md`](docs/reference/context-packs/infrastructure/CONTEXT.md) |
+| Workflow Automation | Cross-layer guidance for workflow CRUD + generation flows. | [`docs/reference/context-packs/workflows/CONTEXT.md`](docs/reference/context-packs/workflows/CONTEXT.md) |
 
-For endpoint specifics, see [`docs/contracts/README.md`](docs/contracts/README.md); for typed HTTP mappings, see `frontend/src/lib/api/contracts.ts`. Testing playbooks now live under [`docs/testing/`](docs/testing/README.md).
+For endpoint specifics, see [`docs/reference/contracts/README.md`](docs/reference/contracts/README.md); for typed HTTP mappings, see `frontend/src/lib/api/contracts.ts`. Testing playbooks now live under [`docs/testing/`](docs/testing/README.md).
 
 ## 🚀 How It Works
 
 ### Complete Flow
 
 ```
-1. Lead submits form with their information (name, email, phone + custom answers)
-   ↓
-2. System creates job and triggers lead magnet generation
-   ↓
-3. AI Research (Optional Precursor Step)
-   - If research enabled: AI generates personalized research report based on form answers
-   - Research output is stored and becomes context for the final deliverable
-   ↓
-4. AI HTML Generation (Final Deliverable)
-   - AI rewrites your HTML template using:
-     * User Context: Form inputs + research outputs (if research was performed)
-     * HTML Template: Your custom template
-     * Instructions: Any special instructions you've configured
-   - The result is a beautifully styled, personalized HTML lead magnet
-   ↓
-5. Lead magnet stored in S3 with public URL
-   ↓
-6. Delivery (Your Choice)
-   - Option A: Webhook delivery - Send to any webhook URL with dynamic values (e.g., {{submission.email}}, {{artifact_url}})
-   - Option B: SMS delivery via Twilio - Send directly to lead's phone (manual or AI-generated SMS content)
-   ↓
-7. Lead receives personalized lead magnet
-   ↓
-8. Business accesses all form submission details (name, email, phone, custom answers) for marketing/sales
+┌─────────────────────────────────────────────────────────────────┐
+│ 1. Lead Submits Form                                            │
+│    • Name, email, phone (always collected)                      │
+│    • Custom form fields (project, industry, etc.)                │
+│    • Form URL: /v1/forms/{slug}                                 │
+└────────────────────┬────────────────────────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ 2. System Creates Job                                           │
+│    • Job ID generated                                           │
+│    • Submission stored in DynamoDB                              │
+│    • Step Functions execution triggered                         │
+└────────────────────┬────────────────────────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ 3. AI Research (Optional Precursor Step)                        │
+│    • If research enabled: AI generates personalized research     │
+│    • Uses web_search tool for real-time data                    │
+│    • Research output stored and becomes context                 │
+│    • Can include multiple parallel research steps               │
+└────────────────────┬────────────────────────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ 4. AI HTML Generation (Final Deliverable)                      │
+│    • AI rewrites your HTML template using:                      │
+│      - User Context: Form inputs + research outputs             │
+│      - HTML Template: Your custom template                     │
+│      - Instructions: Special instructions configured            │
+│    • Can include image generation (DALL-E)                      │
+│    • Result: Beautifully styled, personalized HTML              │
+└────────────────────┬────────────────────────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ 5. Lead Magnet Stored                                           │
+│    • HTML file uploaded to S3                                   │
+│    • Public CloudFront URL generated                            │
+│    • Artifact metadata stored in DynamoDB                       │
+│    • Execution steps stored in S3                               │
+└────────────────────┬────────────────────────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ 6. Delivery (Your Choice)                                      │
+│    • Option A: Webhook Delivery                                 │
+│      - Send to any webhook URL                                  │
+│      - Dynamic values: {{submission.email}}, {{artifact_url}}   │
+│      - Custom headers and payload                               │
+│    • Option B: SMS Delivery via Twilio                         │
+│      - Send directly to lead's phone                            │
+│      - Manual SMS or AI-generated SMS content                   │
+└────────────────────┬────────────────────────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ 7. Lead Receives Personalized Lead Magnet                      │
+│    • Via webhook (your system) or SMS                          │
+│    • Beautiful HTML file ready to view                         │
+└────────────────────┬────────────────────────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ 8. Business Accesses Submission Data                            │
+│    • View all form submissions in dashboard                     │
+│    • Export data for marketing/sales                           │
+│    • Track costs and analytics                                  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ### Lead Magnet Configuration
@@ -240,22 +326,43 @@ lead-magnent-ai/
 
 ## 📖 Documentation
 
-**Main Documentation:**
-- **[Documentation Index](./docs/README.md)** - Complete documentation navigation and index
-- **[Quick Start Guide](./docs/QUICK_START.md)** - Quick start guide with setup instructions
-- **[Deployment Guide](./docs/DEPLOYMENT.md)** - Complete deployment guide with step-by-step instructions
-- **[Architecture Overview](./docs/ARCHITECTURE.md)** - Architecture overview, technology stack, and development guide
-- **[Resources](./docs/RESOURCES.md)** - AWS resource inventory and management commands
-- **[Flow Diagram](./docs/FLOW_DIAGRAM.md)** - Complete process flow diagram
+### 🚀 Getting Started
 
-**Additional Guides:**
-- **[Local Development](./docs/LOCAL_DEVELOPMENT.md)** - Local development setup
-- **[Frontend Test Guide](./docs/testing/FRONTEND_TEST_GUIDE.md)** - Frontend testing guide
-- **[GitHub Secrets Setup](./docs/GITHUB_SECRETS_SETUP.md)** - GitHub Actions secrets configuration
-- **[Quick GitHub Setup](./docs/QUICK_GITHUB_SETUP.md)** - Quick GitHub repository setup
-- **[Lambda Build Options](./docs/LAMBDA_BUILD_OPTIONS.md)** - Lambda build and deployment options
+- **[📚 Documentation Index](./docs/README.md)** - Complete documentation navigation and index
+- **[⚡ Quick Start Guide](./docs/guides/QUICK_START.md)** - Get up and running in minutes
+- **[🚀 Deployment Guide](./docs/guides/DEPLOYMENT.md)** - Complete deployment guide with step-by-step instructions
+- **[🏗️ Architecture Overview](./docs/architecture/ARCHITECTURE.md)** - System architecture, technology stack, and development guide
 
-For complete documentation, see the [Documentation Index](./docs/README.md).
+### 📋 Reference Documentation
+
+- **[📊 Resources](./docs/reference/RESOURCES.md)** - AWS resource inventory and management commands
+- **[🔄 Flow Diagram](./docs/architecture/FLOW_DIAGRAM.md)** - Complete process flow diagram
+- **[📝 API Contracts](./docs/reference/contracts/README.md)** - API endpoint definitions and contracts
+- **[📖 Glossary](./docs/reference/GLOSSARY.md)** - Key terms and concepts
+- **[🔐 Authentication](./docs/architecture/AUTHENTICATION.md)** - Authentication and authorization details
+
+### 🛠️ Development Guides
+
+- **[💻 Local Development](./docs/guides/LOCAL_DEVELOPMENT.md)** - Local development setup and workflow
+- **[📝 API Examples](./docs/guides/API_EXAMPLES.md)** - Practical API usage examples and code snippets
+- **[✨ Best Practices](./docs/guides/BEST_PRACTICES.md)** - Recommended practices for workflows, templates, and development
+- **[🧪 Frontend Test Guide](./docs/testing/FRONTEND_TEST_GUIDE.md)** - Frontend testing guide
+- **[🔧 GitHub Secrets Setup](./docs/guides/GITHUB_SECRETS_SETUP.md)** - GitHub Actions secrets configuration
+- **[⚙️ Lambda Build Options](./docs/guides/LAMBDA_BUILD_OPTIONS.md)** - Lambda build and deployment options
+- **[🔗 Webhooks Guide](./docs/guides/WEBHOOKS.md)** - Using webhook delivery feature
+
+### 🐛 Troubleshooting
+
+- **[🔍 Troubleshooting Guide](./docs/troubleshooting/README.md)** - Common issues and solutions
+- **[📋 Changelog](./docs/CHANGELOG.md)** - Version history and changes
+
+### 📚 Additional Resources
+
+- **[🧪 Testing Documentation](./docs/testing/README.md)** - Complete testing guide
+- **[📝 Contributing Guide](./docs/guides/CONTRIBUTING.md)** - Guidelines for contributing
+- **[🗺️ Repository Map](./docs/reference/REPO_MAP.md)** - Codebase structure overview
+
+**💡 Tip:** Start with the [Quick Start Guide](./docs/guides/QUICK_START.md) if you're new, or jump to the [Architecture Overview](./docs/architecture/ARCHITECTURE.md) for deep technical details.
 
 ## 🔐 Security
 
@@ -275,10 +382,16 @@ Estimated monthly cost: **$50-150**
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
+We welcome contributions! Here's how to get started:
+
+1. **Fork the repository** - Create your own fork
+2. **Create a feature branch** - `git checkout -b feature/amazing-feature`
+3. **Make your changes** - Follow our [coding standards](./docs/reference/CODING_STANDARDS.md)
+4. **Add tests** - Ensure all tests pass
+5. **Update documentation** - Keep docs up to date
+6. **Submit a pull request** - We'll review and merge
+
+**Important:** Please read our [Contributing Guide](./docs/guides/CONTRIBUTING.md) for detailed guidelines, especially the critical rule about **NEVER using strict timeouts for AI operations**.
 
 ## 📝 License
 
@@ -289,8 +402,8 @@ MIT License
 - **Documentation:** See [Documentation Index](./docs/README.md) for complete documentation
 - **Issues:** Open an issue on GitHub
 - **Logs:** Check CloudWatch logs
-- **Local Development:** See [LOCAL_DEVELOPMENT.md](./docs/LOCAL_DEVELOPMENT.md)
-- **Deployment Help:** See [Deployment Guide](./docs/DEPLOYMENT.md)
+- **Local Development:** See [LOCAL_DEVELOPMENT.md](./docs/guides/LOCAL_DEVELOPMENT.md)
+- **Deployment Help:** See [Deployment Guide](./docs/guides/DEPLOYMENT.md)
 
 ## 🎉 Status
 

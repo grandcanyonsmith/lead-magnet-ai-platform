@@ -28,6 +28,12 @@ class ToolBuilder:
         """
         cleaned_tools = []
         
+        # Check if computer_use_preview is present in the list
+        has_computer_use = any(
+            (t == 'computer_use_preview') or (isinstance(t, dict) and t.get('type') == 'computer_use_preview')
+            for t in tools
+        )
+
         for idx, tool in enumerate(tools):
             # Convert string tools to dict format first
             if isinstance(tool, str):
@@ -40,12 +46,58 @@ class ToolBuilder:
                         "quality": "auto",
                         "background": "auto"
                     }
+                elif tool == 'shell' and has_computer_use:
+                    # Convert shell to function tool if computer_use is present
+                    # to bypass OpenAI's incompatibility check
+                    logger.info("Converting shell tool to function definition to avoid incompatibility with computer_use_preview")
+                    tool = {
+                        "type": "function",
+                        "name": "execute_shell_command", # Renamed to avoid ambiguity with UI shell
+                        "function": {
+                            "name": "execute_shell_command",
+                            "description": "EXECUTE a shell command on the backend server (e.g. ls, git, curl). Use this function to run commands directly. DO NOT try to find a terminal in the browser UI.",
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "commands": {
+                                        "type": "array",
+                                        "items": { "type": "string" },
+                                        "description": "List of shell commands to execute."
+                                    }
+                                },
+                                "required": ["commands"]
+                            }
+                        }
+                    }
                 else:
                     tool = {"type": tool}
             
             if isinstance(tool, dict):
                 cleaned_tool = tool.copy()
                 
+                # Also handle if it came in as a dict with type="shell"
+                if cleaned_tool.get("type") == "shell" and has_computer_use:
+                    logger.info("Converting shell tool dict to function definition to avoid incompatibility with computer_use_preview")
+                    cleaned_tool = {
+                        "type": "function",
+                        "name": "execute_shell_command", # Renamed to avoid ambiguity with UI shell
+                        "function": {
+                            "name": "execute_shell_command",
+                            "description": "EXECUTE a shell command on the backend server (e.g. ls, git, curl). Use this function to run commands directly. DO NOT try to find a terminal in the browser UI.",
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "commands": {
+                                        "type": "array",
+                                        "items": { "type": "string" },
+                                        "description": "List of shell commands to execute."
+                                    }
+                                },
+                                "required": ["commands"]
+                            }
+                        }
+                    }
+
                 # OpenAI rejects `container` on `computer_use_preview` (unknown_parameter).
                 if cleaned_tool.get("type") == "computer_use_preview" and "container" in cleaned_tool:
                     logger.info(

@@ -7,11 +7,57 @@ on:
     paths:
       - 'backend/api/**'
       - '.github/workflows/api-deploy.yml'
+  pull_request:
+    paths:
+      - 'backend/api/**'
+      - '.github/workflows/api-deploy.yml'
   workflow_dispatch:
 
+concurrency:
+  group: api-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  deploy:
+  build_and_test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: ./.github/actions/setup-node-app
+        with:
+          node-version: '20'
+          working-directory: '.'
+      
+      - name: Security Audit
+        run: npm audit --audit-level=high --workspace backend/api || echo "Audit failed but proceeding (non-blocking for now)"
+
+      - name: Lint
+        working-directory: backend/api
+        run: npm run lint
+      
+      - name: Unit tests
+        working-directory: backend/api
+        run: npm test
+      
+      - name: Package Lambda
+        working-directory: backend/api
+        run: npm run package:lambda
+      
+      - name: Upload Lambda Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-bundle
+          path: backend/api/api-bundle.zip
+          retention-days: 1
+
+  deploy:
+    needs: build_and_test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       id-token: write
       contents: read
@@ -24,60 +70,32 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      
-      - name: Install dependencies
-        working-directory: backend/api
-        run: npm install --no-audit --no-fund
 
-      - name: Lint
-        working-directory: backend/api
-        run: npm run lint
-
-      - name: Unit tests
-        working-directory: backend/api
-        run: npm test
-      
-      - name: Configure AWS credentials (OIDC)
-        if: env.AWS_ROLE_ARN != ''
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Download Lambda Artifact
+        uses: actions/download-artifact@v4
         with:
-          role-to-assume: ${{ env.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
+          name: api-bundle
+          path: backend/api
       
-      - name: Configure AWS credentials (Access Keys)
-        if: env.AWS_ROLE_ARN == '' && env.AWS_ACCESS_KEY_ID != ''
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Configure AWS credentials
+        uses: ./.github/actions/setup-aws
         with:
-          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-      
-      - name: Verify AWS credentials
-        run: |
-          if ! aws sts get-caller-identity &>/dev/null; then
-            echo "Error: AWS credentials not configured properly"
-            exit 1
-          fi
-          echo "AWS credentials verified"
-      
-      - name: Package Lambda
-        working-directory: backend/api
-        run: npm run package:lambda
+          role-arn: ${{ env.AWS_ROLE_ARN }}
+          access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          region: ${{ env.AWS_REGION }}
       
       - name: Deploy to Lambda
         working-directory: backend/api
         run: |
           if [ ! -f "api-bundle.zip" ]; then
-            echo "Error: api-bundle.zip not found. Build may have failed."
+            echo "Error: api-bundle.zip not found."
             exit 1
           fi
           aws lambda update-function-code \
             --function-name leadmagnet-api-handler \
             --zip-file fileb://api-bundle.zip \
             --region ${{ env.AWS_REGION }}
-
+          
+          # Optional: Wait for update to be successful
+          aws lambda wait function-updated --function-name leadmagnet-api-handler
