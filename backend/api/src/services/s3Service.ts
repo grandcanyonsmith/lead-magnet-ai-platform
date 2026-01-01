@@ -214,6 +214,47 @@ export class S3Service {
     const expectedPrefix = `customers/${customerId}/`;
     return s3Key.startsWith(expectedPrefix);
   }
+
+  /**
+   * Get a presigned URL for file upload (PUT)
+   * @param bucket - S3 bucket name
+   * @param key - S3 object key
+   * @param contentType - MIME type
+   * @param expiresIn - URL expiration time in seconds (default: 1 hour)
+   * @returns Presigned URL
+   */
+  async getPresignedPutUrl(
+    bucket: string,
+    key: string,
+    contentType: string,
+    expiresIn: number = 3600,
+  ): Promise<string> {
+    try {
+      const command = new PutObjectCommand({
+        Bucket: bucket,
+        Key: key,
+        ContentType: contentType,
+      });
+
+      const url = await getSignedUrl(s3Client, command, { expiresIn });
+
+      logger.debug("[S3Service] Generated presigned PUT URL", {
+        bucket,
+        key,
+        contentType,
+        expiresIn,
+      });
+
+      return url;
+    } catch (error) {
+      logger.error("[S3Service] Error generating presigned PUT URL", {
+        error: error instanceof Error ? error.message : String(error),
+        bucket,
+        key,
+      });
+      throw new ApiError("Failed to generate upload URL", 500);
+    }
+  }
 }
 
 // Export singleton instance

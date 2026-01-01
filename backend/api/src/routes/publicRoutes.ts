@@ -174,6 +174,17 @@ export function registerPublicRoutes(): void {
     false,
   );
 
+  // Tracking recording URL endpoint (public, no auth required)
+  router.register(
+    "POST",
+    "/v1/tracking/recording-url",
+    async (_params, body, _query, _tenantId, _context) => {
+      logger.info("[Public Routes] POST /v1/tracking/recording-url");
+      return await trackingController.getRecordingUploadUrl(body);
+    },
+    false,
+  );
+
   // Shell tool endpoint (public, no auth required)
   router.register(
     "POST",

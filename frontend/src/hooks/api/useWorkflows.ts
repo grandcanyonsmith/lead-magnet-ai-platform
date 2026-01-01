@@ -13,6 +13,7 @@ import {
   WorkflowCreateRequest,
   WorkflowUpdateRequest,
   WorkflowListResponse,
+  AIModelConfig,
 } from "@/types";
 import { normalizeError, extractListData } from "./hookHelpers";
 
@@ -24,6 +25,7 @@ export const workflowKeys = {
     [...workflowKeys.lists(), params] as const,
   details: () => [...workflowKeys.all, "detail"] as const,
   detail: (id: string) => [...workflowKeys.details(), id] as const,
+  models: () => [...workflowKeys.all, "models"] as const,
 };
 
 interface UseWorkflowsResult {
@@ -179,6 +181,31 @@ export function useDeleteWorkflow(): UseDeleteWorkflowResult {
       }
     },
     loading: isPending,
+    error: normalizeError(error),
+  };
+}
+
+interface UseAIModelsResult {
+  models: AIModelConfig[];
+  loading: boolean;
+  error: string | null;
+}
+
+export function useAIModels(): UseAIModelsResult {
+  const queryKey = useMemo(() => workflowKeys.models(), []);
+
+  const { data, isLoading, error } = useQuery<{ models: AIModelConfig[] }>(
+    queryKey,
+    () => api.getModels(),
+    {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      retry: 3,
+    },
+  );
+
+  return {
+    models: data?.models ?? [],
+    loading: isLoading,
     error: normalizeError(error),
   };
 }

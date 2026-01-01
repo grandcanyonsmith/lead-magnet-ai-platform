@@ -479,6 +479,16 @@ class JobCompletionService:
             api_url=job.get('api_url') or None
         )
 
+        # Inject recording script into HTML (rrweb)
+        from services.recording_script_generator import RecordingScriptGenerator
+        recording_generator = RecordingScriptGenerator()
+        final_content = recording_generator.inject_recording_script(
+            html_content=final_content,
+            job_id=job_id,
+            tenant_id=job['tenant_id'],
+            api_url=job.get('api_url') or None
+        )
+
         # Inject editor overlay into HTML (dormant unless ?editMode=true)
         from services.editor_overlay_generator import EditorOverlayGenerator
         editor_generator = EditorOverlayGenerator()

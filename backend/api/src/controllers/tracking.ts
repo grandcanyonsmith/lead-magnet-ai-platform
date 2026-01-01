@@ -7,12 +7,60 @@ import { RouteResponse } from "../routes";
 import { ApiError } from "../utils/errors";
 import { logger } from "../utils/logger";
 import { trackingService } from "../services/trackingService";
+import { s3Service } from "../services/s3Service";
 import { db } from "../utils/db";
 import { env } from "../utils/env";
 
 const JOBS_TABLE = env.jobsTable;
 
 class TrackingController {
+  /**
+   * Get a presigned URL for uploading session recording (public endpoint)
+   */
+  async getRecordingUploadUrl(body: any): Promise<RouteResponse> {
+    logger.info("[Tracking Controller] Getting recording upload URL", {
+      jobId: body.job_id,
+      sessionId: body.session_id,
+      part: body.part_number,
+    });
+
+    if (!body.job_id || !body.session_id) {
+      throw new ApiError("Missing required fields: job_id, session_id", 400);
+    }
+
+    // Verify job exists (security check)
+    const job = await db.get(JOBS_TABLE, { job_id: body.job_id });
+    if (!job) {
+      throw new ApiError("Job not found", 404);
+    }
+
+    const tenantId = job.tenant_id;
+    // Use fixed bucket as requested
+    // Ensure this bucket is accessible by the lambda role
+    const bucket = "cc360-pages"; 
+    const timestamp = body.timestamp || Date.now();
+    const part = body.part_number || "full";
+    
+    // Key structure: leadmagnet/recordings/{tenantId}/{jobId}/{sessionId}/{timestamp}_{part}.json
+    const key = `leadmagnet/recordings/${tenantId}/${body.job_id}/${body.session_id}/${timestamp}_${part}.json`;
+
+    // Generate presigned URL (valid for 15 minutes)
+    const uploadUrl = await s3Service.getPresignedPutUrl(
+      bucket,
+      key,
+      "application/json",
+      900,
+    );
+
+    return {
+      statusCode: 200,
+      body: {
+        uploadUrl,
+        key,
+      },
+    };
+  }
+
   /**
    * Record a tracking event (public endpoint, no auth required).
    */

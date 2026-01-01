@@ -14,6 +14,28 @@ import { ulid } from 'ulid';
  */
 export class WorkflowAIController {
   /**
+   * Get available AI models.
+   */
+  async getModels(_tenantId: string): Promise<RouteResponse> {
+    const { MODEL_DESCRIPTIONS_DETAILED, AVAILABLE_MODELS } = await import('@domains/workflows/services/workflow/modelDescriptions');
+    
+    // Map models to a more frontend-friendly format
+    const models = AVAILABLE_MODELS.map(id => ({
+      id,
+      name: id === 'gpt-5.2' ? 'GPT-5.2' : id, // Basic formatting, could be enhanced
+      description: MODEL_DESCRIPTIONS_DETAILED[id]?.bestFor || '',
+      ...MODEL_DESCRIPTIONS_DETAILED[id]
+    }));
+
+    return {
+      statusCode: 200,
+      body: {
+        models
+      }
+    };
+  }
+
+  /**
    * Test a single workflow step.
    */
   async testStep(tenantId: string, body: any): Promise<RouteResponse> {
