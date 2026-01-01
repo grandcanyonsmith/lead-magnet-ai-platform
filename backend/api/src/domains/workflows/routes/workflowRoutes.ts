@@ -9,6 +9,12 @@ import { workflowGenerationJobService } from '../services/workflowGenerationJobS
  * Workflow-related admin routes.
  */
 export function registerWorkflowRoutes(): void {
+  // Get available models
+  router.register('GET', '/admin/workflows/models', async (_params, _body, _query, tenantId) => {
+    logger.info('[Router] Matched /admin/workflows/models route');
+    return await workflowAIController.getModels(tenantId!);
+  });
+
   // List workflows
   router.register('GET', '/admin/workflows', async (_params, _body, query, tenantId) => {
     logger.info('[Router] Matched /admin/workflows GET route');

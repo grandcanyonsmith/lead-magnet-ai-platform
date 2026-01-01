@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { FiTrash2, FiChevronUp, FiChevronDown, FiGlobe } from "react-icons/fi";
 import { useWorkflowStepAI } from "@/hooks/useWorkflowStepAI";
+import { useAIModels } from "@/hooks/api/useWorkflows";
 import {
   WorkflowStep,
   AIModel,
@@ -29,10 +30,6 @@ interface WorkflowStepEditorProps {
   onMoveDown: (index: number) => void;
   workflowId?: string; // Required for AI features
 }
-
-const MODEL_OPTIONS = [
-  { value: "gpt-5.2", label: "GPT-5.2" },
-];
 
 const AVAILABLE_TOOLS = [
   {
@@ -149,17 +146,14 @@ export default function WorkflowStepEditor({
   // Always call hook unconditionally to comply with Rules of Hooks
   const workflowStepAI = useWorkflowStepAI(workflowId);
 
+  const { models, loading: modelsLoading, error: modelsError } = useAIModels();
+
   // Sync localStep when step prop changes
   useEffect(() => {
     // Reset conversion tracking when step prop changes (new step or step updated externally)
     hasConvertedToolsRef.current = false;
 
-    const stepWithType = { ...step };
-    // Force GPT-5.2 as the only supported model.
-    stepWithType.model = "gpt-5.2";
-    stepWithType.reasoning_effort = "high";
-
-    setLocalStep(stepWithType);
+    setLocalStep({ ...step });
 
     // Extract computer_use_preview config if present
     const computerUseTool = (step.tools || []).find(
@@ -626,12 +620,21 @@ export default function WorkflowStepEditor({
                   required
                   aria-label="AI model"
                   aria-required="true"
+                  disabled={modelsLoading || !!modelsError}
                 >
-                  {MODEL_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
+                  {modelsLoading ? (
+                    <option>Loading models...</option>
+                  ) : modelsError ? (
+                     <option>Error loading models</option>
+                  ) : models.length > 0 ? (
+                    models.map((model) => (
+                      <option key={model.id} value={model.id}>
+                        {model.name}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="gpt-5.2">GPT-5.2 (Default)</option>
+                  )}
                 </select>
               </div>
 
