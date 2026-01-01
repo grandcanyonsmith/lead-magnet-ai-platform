@@ -131,31 +131,6 @@ function createApiGatewayEvent(req) {
 
 // Convert API Gateway response to Express response
 function sendResponse(res, apiResponse) {
-  // #region debug log
-  (globalThis.fetch
-    ? globalThis.fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'server-local.js:sendResponse',
-          message: 'sendResponse called',
-          data: {
-            headersSent: !!res.headersSent,
-            writableEnded: !!res.writableEnded,
-            apiResponseType: typeof apiResponse,
-            apiResponseKeys: apiResponse ? Object.keys(apiResponse) : null,
-            statusCode: apiResponse?.statusCode ?? null,
-            handled: apiResponse?.handled ?? null,
-          },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'pre-fix',
-          hypothesisId: 'H6-ERR_HTTP_HEADERS_SENT',
-        }),
-      }).catch(() => {})
-    : undefined);
-  // #endregion
-
   // If a streaming handler already wrote/ended the response, do not attempt to set headers/body again.
   if (res.headersSent || res.writableEnded) {
     return;
