@@ -11,8 +11,7 @@ class HtmlStepHandler(AbstractStepHandler):
     def __init__(self, services: Dict[str, Any]):
         super().__init__(services)
         self.html_generator = HTMLGenerator(
-            ai_service=services['ai_service'],
-            artifact_service=services['artifact_service']
+            openai_client=services['ai_service'].openai_client
         )
 
     def execute(
