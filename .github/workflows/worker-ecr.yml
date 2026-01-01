@@ -49,9 +49,10 @@ jobs:
           AWS_SECRET_ACCESS_KEY: testing
           AWS_SECURITY_TOKEN: testing
           AWS_SESSION_TOKEN: testing
-          # Set PYTHONPATH so Python can find the core module and other local imports
-          PYTHONPATH: ${{ github.workspace }}/backend/worker
         run: |
+          # Set PYTHONPATH to include current directory so Python can find the core module
+          export PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}$(pwd)"
+          echo "PYTHONPATH=$PYTHONPATH"
           # Exclude integration-style tests that require full AWS table/bucket wiring.
           pytest -q \
             --ignore=test_webhook_artifacts.py \
