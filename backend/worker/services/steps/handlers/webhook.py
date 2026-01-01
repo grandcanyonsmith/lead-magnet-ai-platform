@@ -51,14 +51,8 @@ class WebhookStepHandler(AbstractStepHandler):
                 submission = {'submission_data': {}}
 
             # Execute webhook
-            # Need to get sorted_steps from services or context if available, otherwise reconstruct
-            # For simplicity assuming passed context implies we can proceed.
-            # In new architecture, we might need to pass full workflow steps. 
-            # For now, we will use an empty list for sorted_steps as it's primarily used for context building in webhook service
-            # which might be acceptable if we pass the fully resolved context.
-            
-            # TODO: Improve sorted_steps availability. For now using empty list as fallback.
-            sorted_steps = [] 
+            # Use injected sorted_steps if available, otherwise fallback to empty list
+            sorted_steps = step.get('_sorted_steps', [])
             
             webhook_result, success = self.webhook_step_service.execute_webhook_step(
                 step=step,

@@ -23,6 +23,7 @@ RUN python3 -m playwright install-deps chromium || true
 COPY *.py ./
 COPY services/ ./services/
 COPY utils/ ./utils/
+COPY core/ ./core/
 
 # Set the CMD to your handler
 ENTRYPOINT [ "python3", "-m", "awslambdaric" ]

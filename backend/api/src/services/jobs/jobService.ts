@@ -1,16 +1,12 @@
 import { db } from "../../utils/db";
 import { env } from "../../utils/env";
-import { logger } from "../../utils/logger";
 import { ApiError } from "../../utils/errors";
-import { artifactsController } from "../../controllers/artifacts";
 import { HeadObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { generateExecutionStepsUrl } from "../../utils/executionStepsUtils";
-import { ArtifactUrlService } from "../artifactUrlService";
 
 const JOBS_TABLE = env.jobsTable;
 const ARTIFACTS_BUCKET = env.artifactsBucket;
 const ARTIFACTS_TABLE = env.artifactsTable;
-const SUBMISSIONS_TABLE = env.submissionsTable;
 
 const s3Client = new S3Client({ region: env.awsRegion });
 
