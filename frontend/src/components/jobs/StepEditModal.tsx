@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { FiX, FiSave, FiAlertCircle } from "react-icons/fi";
+import { useAIModels } from "@/hooks/api/useWorkflows";
 import { WorkflowStep, AIModel, ToolType, ToolChoice } from "@/types";
 
 interface StepEditModalProps {
@@ -13,10 +14,6 @@ interface StepEditModalProps {
   allSteps?: WorkflowStep[]; // All steps for dependency selection
   currentStepIndex?: number; // Array index of the current step being edited (for consistent dependency indexing)
 }
-
-const AI_MODELS: AIModel[] = [
-  "gpt-5.2",
-];
 
 const TOOL_TYPES: ToolType[] = [
   "web_search",
@@ -37,6 +34,7 @@ export function StepEditModal({
   allSteps = [],
   currentStepIndex,
 }: StepEditModalProps) {
+  const { models, loading: modelsLoading } = useAIModels();
   const [formData, setFormData] = useState<WorkflowStep>({
     step_name: "",
     instructions: "",
@@ -240,12 +238,17 @@ export function StepEditModal({
                   setFormData({ ...formData, model: e.target.value as AIModel })
                 }
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                disabled={modelsLoading}
               >
-                {AI_MODELS.map((model) => (
-                  <option key={model} value={model}>
-                    {model}
-                  </option>
-                ))}
+                {modelsLoading ? (
+                  <option>Loading models...</option>
+                ) : (
+                  models.map((model) => (
+                    <option key={model.id} value={model.id}>
+                      {model.name}
+                    </option>
+                  ))
+                )}
               </select>
             </div>
 

@@ -16,6 +16,16 @@ export type AIModel =
   | "computer-use-preview"
   | "o4-mini-deep-research";
 
+export interface AIModelConfig {
+  id: string;
+  name: string;
+  description: string;
+  bestFor?: string;
+  useWhen?: string;
+  cost?: string;
+  speed?: string;
+}
+
 export type ToolChoice = "auto" | "required" | "none";
 
 export type ReasoningEffort = "none" | "low" | "medium" | "high" | "xhigh";
