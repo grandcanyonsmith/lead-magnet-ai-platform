@@ -30,7 +30,7 @@ interface UseWorkflowsResult {
   workflows: Workflow[];
   loading: boolean;
   error: string | null;
-  refetch: () => void;
+  refetch: () => Promise<void>;
 }
 
 export function useWorkflows(
@@ -50,7 +50,9 @@ export function useWorkflows(
     workflows: data?.workflows ?? [],
     loading: isLoading,
     error: normalizeError(error),
-    refetch: () => refetch(),
+    refetch: async () => {
+      await refetch();
+    },
   };
 }
 
@@ -58,7 +60,7 @@ interface UseWorkflowResult {
   workflow: Workflow | null;
   loading: boolean;
   error: string | null;
-  refetch: () => void;
+  refetch: () => Promise<void>;
 }
 
 export function useWorkflow(id: string | null): UseWorkflowResult {
@@ -82,7 +84,9 @@ export function useWorkflow(id: string | null): UseWorkflowResult {
     workflow: data || null,
     loading: isLoading,
     error: normalizeError(error),
-    refetch: () => refetch(),
+    refetch: async () => {
+      await refetch();
+    },
   };
 }
 

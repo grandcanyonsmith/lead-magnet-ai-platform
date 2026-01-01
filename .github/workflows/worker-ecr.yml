@@ -49,9 +49,9 @@ jobs:
           AWS_SECRET_ACCESS_KEY: testing
           AWS_SECURITY_TOKEN: testing
           AWS_SESSION_TOKEN: testing
-        run: |
           # Set PYTHONPATH to include current directory so Python can find the core module
-          export PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}$(pwd)"
+          PYTHONPATH: ${{ github.workspace }}/backend/worker
+        run: |
           echo "PYTHONPATH=$PYTHONPATH"
           # Exclude integration-style tests that require full AWS table/bucket wiring.
           pytest -q \
