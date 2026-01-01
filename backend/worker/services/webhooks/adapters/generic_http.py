@@ -34,5 +34,6 @@ class GenericHttpAdapter(WebhookAdapter):
             logger.error(f"Generic webhook failed: {e}")
             return {
                 'success': False,
+                'response_status': getattr(e, 'response', None).status_code if hasattr(e, 'response') and e.response else 500,
                 'error': str(e)
             }
