@@ -169,6 +169,25 @@ class OpenAIClient:
             })
             return response
         except openai.BadRequestError as e:
+            # Check for incompatible tool errors (e.g., shell with computer_use_preview)
+            error_message = str(e)
+            error_body = getattr(e, "body", {}) or {}
+            error_info = error_body.get("error", {}) if isinstance(error_body, dict) else {}
+            
+            # Check if error is about incompatible tools
+            if "not supported with computer use" in error_message.lower() or \
+               ("tool" in error_message.lower() and "not supported" in error_message.lower()):
+                tool_name = None
+                if isinstance(error_info, dict):
+                    tool_name = error_info.get("param", "").replace("tools[", "").replace("]", "").split(".")[0]
+                logger.error(f"[OpenAI Client] Incompatible tool error: {error_message}", extra={
+                    "job_id": job_id,
+                    "tenant_id": tenant_id,
+                    "error_info": error_info,
+                })
+                # Re-raise with clearer message
+                raise ValueError(f"Incompatible tool detected: {error_message}. Please remove incompatible tools (like 'shell') when using computer_use_preview.")
+            
             # 1) Capability fallback (unsupported reasoning/service_tier)
             retry_result = self._handle_capability_error(e, params)
             if retry_result is not None:

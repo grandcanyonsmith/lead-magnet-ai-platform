@@ -38,6 +38,8 @@ class CUAgent:
         previous_response_id = None
         screenshot_urls = []
         acknowledged_safety_checks = []
+        recent_actions = []  # Track recent actions to detect loops
+        max_recent_actions = 5  # Keep last 5 actions for loop detection
         
         # Suppress Pydantic warnings
         warnings.filterwarnings('ignore', category=UserWarning, module='pydantic')
@@ -65,12 +67,13 @@ class CUAgent:
             await self.env.initialize(display_width, display_height)
             yield LogEvent(type='log', timestamp=time.time(), level='info', message='Environment ready.')
 
-            # Check if input_text contains a URL and navigate there
+            # Check if instructions/input_text contain a URL and navigate there
             import re
-            # Try to extract URL from input_text
+            url_search_text = f"{instructions or ''}\n{input_text or ''}".strip()
+            # Try to extract URL from task text
             # Pattern 1: Full URL (http:// or https://)
             url_pattern = r'https?://[^\s<>"\'\)]+'
-            url_match = re.search(url_pattern, input_text)
+            url_match = re.search(url_pattern, url_search_text)
             initial_url = None
             
             if url_match:
@@ -78,7 +81,7 @@ class CUAgent:
             else:
                 # Pattern 2: Domain-like patterns (e.g., "bing.com", "go to example.com")
                 domain_pattern = r'(?:go to |visit |navigate to |open )?([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+)'
-                domain_match = re.search(domain_pattern, input_text, re.IGNORECASE)
+                domain_match = re.search(domain_pattern, url_search_text, re.IGNORECASE)
                 if domain_match:
                     domain = domain_match.group(1)
                     # Don't match common non-URL words
@@ -87,14 +90,21 @@ class CUAgent:
             
             # Navigate to URL if found, otherwise use default
             target_url = initial_url if initial_url else "https://www.bing.com"
-            if not initial_url:
-                yield LogEvent(type='log', timestamp=time.time(), level='info', message=f'No URL found in input, using default: {target_url}')
+            initial_screenshot_b64_for_model: Optional[str] = None
+            initial_current_url_for_model: Optional[str] = None
+            if initial_url:
+                yield LogEvent(type='log', timestamp=time.time(), level='info', message=f'Detected URL in task: {target_url}')
+            else:
+                yield LogEvent(type='log', timestamp=time.time(), level='info', message=f'No URL found in instructions/input, using default: {target_url}')
             
             try:
+                yield LogEvent(type='log', timestamp=time.time(), level='info', message=f'🌐 Navigate to: {target_url}')
                 await self.env.execute_action({'type': 'navigate', 'url': target_url})
                 # Capture screenshot after navigation
                 screenshot_b64 = await self.env.capture_screenshot()
                 current_url = await self.env.get_current_url()
+                initial_screenshot_b64_for_model = screenshot_b64
+                initial_current_url_for_model = current_url
                 url = self.image_handler.upload_base64_image_to_s3(
                     screenshot_b64, 'image/jpeg', tenant_id=tenant_id, job_id=job_id
                 )
@@ -121,10 +131,30 @@ class CUAgent:
             if params:
                 initial_params.update(params)
 
-            # Skip initial screenshot - we'll capture after navigation instead
-            # This saves time and avoids blank screenshots
+            # Include initial screenshot in the FIRST request so the model doesn't waste an iteration asking for it.
+            if initial_screenshot_b64_for_model:
+                user_text = (input_text or "").strip() or "Start the task."
+                if initial_current_url_for_model:
+                    user_text = f"{user_text}\n\n(Current URL: {initial_current_url_for_model})"
+                initial_params["input"] = [
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "input_text", "text": user_text},
+                            {
+                                "type": "input_image",
+                                "image_url": f"data:image/jpeg;base64,{initial_screenshot_b64_for_model}",
+                            },
+                        ],
+                    }
+                ]
             
             yield LogEvent(type='log', timestamp=time.time(), level='info', message='Sending initial request to model...')
+            if instructions:
+                preview = (instructions or "").strip()
+                if len(preview) > 240:
+                    preview = preview[:240] + "..."
+                yield LogEvent(type='log', timestamp=time.time(), level='info', message=f'📋 Instructions: {preview}')
             if input_text:
                 yield LogEvent(type='log', timestamp=time.time(), level='info', 
                              message=f'📋 Task: {input_text}')
@@ -132,8 +162,18 @@ class CUAgent:
             # This is sync in existing code, but we are in async def. 
             # Ideally openai_client should be async, but if it's sync, we block.
             # Assuming it's the sync client from the existing service.
-            response = openai_client.make_api_call(initial_params)
-            previous_response_id = getattr(response, 'id', None)
+            try:
+                response = openai_client.make_api_call(initial_params)
+                previous_response_id = getattr(response, 'id', None)
+            except Exception as e:
+                error_msg = str(e)
+                yield LogEvent(type='log', timestamp=time.time(), level='error', 
+                             message=f'❌ API Error: {error_msg}')
+                yield LoopCompleteEvent(
+                    type='complete', timestamp=time.time(),
+                    final_text="", screenshots=screenshot_urls, usage={}, reason='error'
+                )
+                raise
             
             # Log initial reasoning/text if present
             if hasattr(response, 'output') and response.output:
@@ -304,6 +344,38 @@ class CUAgent:
                     )
                     yield LogEvent(type='log', timestamp=time.time(), level='info', 
                                  message=f'✅ Action executed successfully: {action_type}')
+                    
+                    # Track action for loop detection
+                    action_signature = f"{action_type}:{action.get('x', '')}:{action.get('y', '')}:{action.get('text', '')[:50]}"
+                    recent_actions.append(action_signature)
+                    if len(recent_actions) > max_recent_actions:
+                        recent_actions.pop(0)
+                    
+                    # Check for loops: if same action repeated 3+ times in recent history
+                    if len(recent_actions) >= 3:
+                        if recent_actions[-1] == recent_actions[-2] == recent_actions[-3]:
+                            yield LogEvent(type='log', timestamp=time.time(), level='warning', 
+                                         message=f'⚠️ Detected repetitive action loop. Stopping to prevent infinite loop.')
+                            yield LoopCompleteEvent(
+                                type='complete', timestamp=time.time(),
+                                final_text="", screenshots=screenshot_urls, 
+                                usage={}, reason='loop_detected'
+                            )
+                            return
+                    
+                    # Wait after action to let page update (longer for certain actions)
+                    wait_time = 1000  # Default 1 second
+                    if action_type in ['click', 'type', 'keypress']:
+                        wait_time = 1500  # 1.5 seconds for interactive actions
+                    elif action_type == 'navigate':
+                        wait_time = 2000  # 2 seconds after navigation
+                    elif action_type == 'scroll':
+                        wait_time = 800  # 0.8 seconds for scroll
+                    elif action_type == 'screenshot':
+                        wait_time = 0  # no-op action; don't delay
+                    
+                    await asyncio.sleep(wait_time / 1000.0)
+                    
                 except Exception as e:
                     logger.error(f"Action failed: {e}")
                     yield ActionExecutedEvent(
@@ -313,6 +385,7 @@ class CUAgent:
                     yield LogEvent(type='log', timestamp=time.time(), level='error', 
                                  message=f'❌ Action failed: {action_type} - {str(e)}')
                     # We continue to take screenshot even if action failed
+                    await asyncio.sleep(500 / 1000.0)  # Short wait even on error
                 
                 # Screenshot
                 try:
@@ -340,7 +413,7 @@ class CUAgent:
                         'call_id': call_id,
                         'output': {
                             'type': 'input_image',
-                            'image_url': f"data:image/png;base64,{screenshot_b64}"
+                            'image_url': f"data:image/jpeg;base64,{screenshot_b64}"
                         }
                     }]
                     if current_url:
@@ -367,8 +440,18 @@ class CUAgent:
                         next_params['input'] = next_input
                     
                     yield LogEvent(type='log', timestamp=time.time(), level='info', message='Sending feedback to model...')
-                    response = openai_client.make_api_call(next_params)
-                    previous_response_id = getattr(response, 'id', None)
+                    try:
+                        response = openai_client.make_api_call(next_params)
+                        previous_response_id = getattr(response, 'id', None)
+                    except Exception as e:
+                        error_msg = str(e)
+                        yield LogEvent(type='log', timestamp=time.time(), level='error', 
+                                     message=f'❌ API Error: {error_msg}')
+                        yield LoopCompleteEvent(
+                            type='complete', timestamp=time.time(),
+                            final_text="", screenshots=screenshot_urls, usage={}, reason='error'
+                        )
+                        raise
                     
                     # Log reasoning/text from response
                     if hasattr(response, 'output') and response.output:
