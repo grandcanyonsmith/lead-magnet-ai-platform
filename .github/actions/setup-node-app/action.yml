@@ -21,14 +21,30 @@ runs:
       shell: bash
       id: lockfile
       run: |
-        if [ -f "${{ inputs.working-directory }}/package-lock.json" ]; then
-          echo "path=${{ inputs.working-directory }}/package-lock.json" >> $GITHUB_OUTPUT
-          echo "dir=${{ inputs.working-directory }}" >> $GITHUB_OUTPUT
+        # Ensure we're in the repo root (GitHub Actions sets GITHUB_WORKSPACE)
+        cd "${GITHUB_WORKSPACE:-.}"
+        
+        WORK_DIR="${{ inputs.working-directory }}"
+        # Normalize working directory (handle '.' and relative paths)
+        if [ "$WORK_DIR" = "." ] || [ -z "$WORK_DIR" ]; then
+          WORK_DIR="."
+        fi
+        
+        # Check for lockfile in working directory first
+        if [ -f "${WORK_DIR}/package-lock.json" ]; then
+          echo "path=${WORK_DIR}/package-lock.json" >> $GITHUB_OUTPUT
+          echo "dir=${WORK_DIR}" >> $GITHUB_OUTPUT
+        # Check root lockfile (for workspace setups)
         elif [ -f "package-lock.json" ]; then
           echo "path=package-lock.json" >> $GITHUB_OUTPUT
           echo "dir=." >> $GITHUB_OUTPUT
         else
-          echo "Error: No package-lock.json found in ${{ inputs.working-directory }} or root"
+          echo "Error: No package-lock.json found in ${WORK_DIR} or root"
+          echo "Current directory: $(pwd)"
+          echo "Working directory: ${WORK_DIR}"
+          echo "GITHUB_WORKSPACE: ${GITHUB_WORKSPACE}"
+          ls -la "${WORK_DIR}/" 2>/dev/null || echo "Cannot list ${WORK_DIR}/"
+          ls -la package-lock.json 2>/dev/null || echo "Cannot find root package-lock.json"
           exit 1
         fi
 

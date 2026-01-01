@@ -79,25 +79,38 @@ export class CUAController {
             logger.error(`[CUA Local] Stderr: ${data}`);
         });
 
-        await new Promise<void>((resolve, _reject) => {
+        // Register event handlers inside Promise executor to ensure they're set up immediately
+        // Use a flag to prevent double resolution if both events fire
+        await new Promise<void>((resolve) => {
+            let resolved = false;
+            const resolveOnce = () => {
+                if (!resolved) {
+                    resolved = true;
+                    resolve();
+                }
+            };
+
             pythonProcess.on('close', (code: number) => {
                 logger.info(`[CUA Local] Process exited with code ${code}`);
-                res.end();
-                resolve();
-            });
-        pythonProcess.on('error', (err: any) => {
-            logger.error(`[CUA Local] Process error: ${err}`);
-            // If we haven't closed the stream yet, try to send error event
-            try {
                 if (!res.writableEnded) {
-                    res.write(JSON.stringify({ type: 'error', message: `Spawn error: ${err.message}` }) + "\n");
                     res.end();
                 }
-            } catch (e) {
-                logger.error(`[CUA Local] Failed to write error to stream: ${e}`);
-            }
-            resolve(); // Resolve promise to prevent server-local.js from catching and trying to send 500 response
-        });
+                resolveOnce();
+            });
+
+            pythonProcess.on('error', (err: any) => {
+                logger.error(`[CUA Local] Process error: ${err}`);
+                // If we haven't closed the stream yet, try to send error event
+                try {
+                    if (!res.writableEnded) {
+                        res.write(JSON.stringify({ type: 'error', message: `Spawn error: ${err.message}` }) + "\n");
+                        res.end();
+                    }
+                } catch (e) {
+                    logger.error(`[CUA Local] Failed to write error to stream: ${e}`);
+                }
+                resolveOnce(); // Resolve promise to prevent server-local.js from catching and trying to send 500 response
+            });
         });
         return;
     }
