@@ -14,7 +14,7 @@ export class HtmlPatchService {
    * Patch an HTML file in S3 with a set of operations.
    */
   async patchHtmlArtifact(
-    tenantId: string,
+    _tenantId: string,
     s3Key: string,
     patches: PatchOperation[]
   ): Promise<string> {

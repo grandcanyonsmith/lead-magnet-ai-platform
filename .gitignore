@@ -42,6 +42,10 @@ backend/worker/*/
 !backend/worker/services/**
 !backend/worker/utils/
 !backend/worker/utils/**
+!backend/worker/core/
+!backend/worker/core/**
+!backend/worker/model_types/
+!backend/worker/model_types/**
 
 # Re-ignore Python bytecode/caches under the re-included worker source dirs
 backend/worker/**/__pycache__/
