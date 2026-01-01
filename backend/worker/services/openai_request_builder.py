@@ -93,6 +93,20 @@ class OpenAIRequestBuilder:
         }
         
         if tools and len(tools) > 0:
+            # Filter out incompatible tools when computer_use_preview is present
+            # OpenAI doesn't support certain tools (like 'shell') alongside computer_use_preview
+            if has_computer_use:
+                # Tools incompatible with computer_use_preview
+                INCOMPATIBLE_WITH_CUA = {'shell', 'code_interpreter'}
+                filtered_tools = []
+                for tool in tools:
+                    tool_type = tool.get('type') if isinstance(tool, dict) else tool
+                    if tool_type not in INCOMPATIBLE_WITH_CUA:
+                        filtered_tools.append(tool)
+                    else:
+                        logger.warning(f"Filtering out incompatible tool '{tool_type}' when computer_use_preview is present")
+                tools = filtered_tools
+            
             # Clean tools before sending to OpenAI API
             cleaned_tools = ToolBuilder.clean_tools(tools)
             params["tools"] = cleaned_tools
