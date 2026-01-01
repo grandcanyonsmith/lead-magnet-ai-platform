@@ -175,7 +175,7 @@ export function useJobPreview(
       previewCache.set(job.job_id, result);
       setPreview(result);
     }
-  }, [job?.job_id, lazy]);
+  }, [job?.job_id, job?.output_url, lazy]);
 
   const triggerFetch = useCallback(() => {
     if (lazy && !shouldFetch && job?.job_id) {

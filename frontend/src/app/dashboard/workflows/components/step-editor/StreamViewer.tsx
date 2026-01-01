@@ -508,12 +508,12 @@ export default function StreamViewer({ endpoint, requestBody, onClose }: StreamV
                      <span className="text-sm">Ready to connect...</span>
                    </div>
                  )}
-                 {logs.length > 0 && searchQuery.trim() && filteredLogs.length === 0 && (
-                   <div className="flex flex-col items-center justify-center h-40 text-gray-600 gap-2">
-                     <FiSearch className="w-8 h-8 opacity-20" />
-                     <span className="text-sm">No logs match "{searchQuery}"</span>
-                   </div>
-                 )}
+                {logs.length > 0 && searchQuery.trim() && filteredLogs.length === 0 && (
+                  <div className="flex flex-col items-center justify-center h-40 text-gray-600 gap-2">
+                    <FiSearch className="w-8 h-8 opacity-20" />
+                    <span className="text-sm">No logs match &quot;{searchQuery}&quot;</span>
+                  </div>
+                )}
                </div>
              </div>
              
