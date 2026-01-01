@@ -33,6 +33,12 @@ from core import log_context
 logger = logging.getLogger(__name__)
 
 
+from services.steps.registry import StepRegistry
+from services.steps.handlers.ai_generation import AIStepHandler
+from services.steps.handlers.webhook import WebhookStepHandler
+from services.steps.handlers.browser_automation import BrowserStepHandler
+from services.steps.handlers.html_patch import HtmlStepHandler
+
 class StepProcessor:
     """Service for processing workflow steps."""
     
@@ -62,6 +68,27 @@ class StepProcessor:
         self.s3 = s3_service
         self.usage_service = usage_service
         self.image_artifact_service = image_artifact_service
+        
+        # Initialize Step Registry and Handlers
+        self.registry = StepRegistry()
+        
+        # Shared services dict for handlers
+        services = {
+            'ai_service': ai_service,
+            'artifact_service': artifact_service,
+            'db_service': db_service,
+            's3_service': s3_service,
+            'usage_service': usage_service,
+            'image_artifact_service': image_artifact_service
+        }
+        
+        # Register default handlers
+        self.registry.register('ai_generation', AIStepHandler(services))
+        self.registry.register('webhook', WebhookStepHandler(services))
+        self.registry.register('browser', BrowserStepHandler(services))
+        self.registry.register('html', HtmlStepHandler(services))
+
+        # Maintain legacy service references for backward compatibility methods if needed
         self.webhook_step_service = WebhookStepService(db_service=db_service, s3_service=s3_service)
         self.s3_context_service = S3ContextService(
             db_service=db_service,
