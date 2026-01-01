@@ -9,6 +9,10 @@ import {
 } from "@aws-sdk/lib-dynamodb";
 import { mockClient } from "aws-sdk-client-mock";
 
+// Unmock AWS SDK to allow aws-sdk-client-mock to work
+jest.unmock("@aws-sdk/client-dynamodb");
+jest.unmock("@aws-sdk/lib-dynamodb");
+
 // Set env vars before importing db
 process.env.WORKFLOWS_TABLE = "workflows";
 process.env.FORMS_TABLE = "forms";
