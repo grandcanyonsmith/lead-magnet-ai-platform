@@ -151,6 +151,7 @@ class StepProcessor:
         
         if step.get('webhook_url'):
             step_type = 'webhook'
+            step['_sorted_steps'] = sorted(steps, key=lambda s: s.get('step_order', 0))
             
         handler = self.registry.get_handler(step_type)
         if not handler:
