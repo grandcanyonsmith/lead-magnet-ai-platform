@@ -37,13 +37,13 @@ function getPath(obj: any, path: string): any {
     .filter(Boolean);
   let cur: any = obj;
   for (const part of parts) {
-      if (cur === null || cur === undefined) return undefined;
-      if (Array.isArray(cur)) {
-        const idx = Number(part);
-        if (!Number.isFinite(idx) || idx < 0 || idx >= cur.length) return undefined;
-        cur = cur[idx];
-        continue;
-      }
+    if (cur === null || cur === undefined) return undefined;
+    if (Array.isArray(cur)) {
+      const idx = Number(part);
+      if (!Number.isFinite(idx) || idx < 0 || idx >= cur.length) return undefined;
+      cur = cur[idx];
+      continue;
+    }
     if (typeof cur === "object") {
       cur = (cur as any)[part];
       continue;
