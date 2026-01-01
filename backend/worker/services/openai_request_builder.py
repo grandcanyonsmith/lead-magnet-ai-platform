@@ -97,18 +97,48 @@ class OpenAIRequestBuilder:
             # OpenAI doesn't support certain tools (like 'shell') alongside computer_use_preview
             if has_computer_use:
                 # Tools incompatible with computer_use_preview
-                INCOMPATIBLE_WITH_CUA = {'shell', 'code_interpreter'}
+                # Note: 'shell' is now supported alongside computer_use_preview
+                INCOMPATIBLE_WITH_CUA = {'code_interpreter'}
                 filtered_tools = []
                 for tool in tools:
                     tool_type = tool.get('type') if isinstance(tool, dict) else tool
                     if tool_type not in INCOMPATIBLE_WITH_CUA:
                         filtered_tools.append(tool)
                     else:
-                        logger.warning(f"Filtering out incompatible tool '{tool_type}' when computer_use_preview is present")
+                        logger.debug(f"Filtering out incompatible tool '{tool_type}' when computer_use_preview is present")
                 tools = filtered_tools
             
             # Clean tools before sending to OpenAI API
             cleaned_tools = ToolBuilder.clean_tools(tools)
+            
+            # #region agent log
+            try:
+                import json
+                import time
+                # Filter out shell tool if computer_use_preview is present to avoid API error
+                # Note: ToolBuilder.clean_tools already handles the conversion of 'shell' to a function tool if needed
+                # So we just log what's happening here without removing it again
+                
+                with open('/Users/canyonsmith/lead-magnent-ai/.cursor/debug.log', 'a') as f:
+                    f.write(json.dumps({
+                        "sessionId": "debug-session",
+                        "runId": "repro-3",
+                        "hypothesisId": "check-tools-after-builder",
+                        "location": "openai_request_builder.py:build_api_params",
+                        "timestamp": int(time.time() * 1000),
+                        "message": "Tools after ToolBuilder.clean_tools",
+                        "data": {
+                            "model": model,
+                            "has_computer_use": has_computer_use,
+                            "final_tools_count": len(cleaned_tools),
+                            "final_tool_types": [t.get('type') for t in cleaned_tools],
+                            "final_tool_names": [t.get('name') for t in cleaned_tools if t.get('type') == 'function']
+                        }
+                    }) + '\n')
+            except Exception:
+                pass
+            # #endregion
+
             params["tools"] = cleaned_tools
             if tool_choice != "none":
                 params["tool_choice"] = tool_choice

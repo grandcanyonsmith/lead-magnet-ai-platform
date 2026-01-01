@@ -191,7 +191,12 @@ class ShellExecutorService:
             run_resp = self._ecs.run_task(
                 cluster=cluster_arn,
                 taskDefinition=task_def_arn,
-                launchType="FARGATE",
+                capacityProviderStrategy=[
+                    {
+                        "capacityProvider": "FARGATE_SPOT",
+                        "weight": 1,
+                    }
+                ],
                 platformVersion="LATEST",
                 networkConfiguration={
                     "awsvpcConfiguration": {

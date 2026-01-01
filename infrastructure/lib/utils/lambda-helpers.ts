@@ -5,6 +5,7 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import * as sqs from 'aws-cdk-lib/aws-sqs';
 import { Construct } from 'constructs';
 import { TableMap } from '../types';
 import { createTableEnvironmentVars, getSecretArn } from './environment-helpers';
@@ -190,6 +191,8 @@ export interface CreateLambdaWithTablesOptions {
   logGroup?: logs.LogGroup;
   /** Function name */
   functionName?: string;
+  /** Dead Letter Queue for asynchronous failures */
+  deadLetterQueue?: sqs.IQueue;
 }
 
 /**
@@ -267,6 +270,7 @@ export function createLambdaWithTables(
       logRetention: options.logRetention,
       tracing: options.tracing,
       logGroup: options.logGroup,
+      deadLetterQueue: options.deadLetterQueue,
     });
   } else {
     // Zip deployment - use regular Function
@@ -291,6 +295,7 @@ export function createLambdaWithTables(
       logRetention: options.logRetention,
       tracing: options.tracing,
       logGroup: options.logGroup,
+      deadLetterQueue: options.deadLetterQueue,
     });
   }
 

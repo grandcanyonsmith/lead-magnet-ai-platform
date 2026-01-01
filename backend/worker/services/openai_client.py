@@ -160,6 +160,29 @@ class OpenAIClient:
 
         api_params = self._sanitize_api_params(params)
 
+        # #region agent log
+        try:
+            import json
+            import time
+            with open('/Users/canyonsmith/lead-magnent-ai/.cursor/debug.log', 'a') as f:
+                f.write(json.dumps({
+                    "sessionId": "debug-session",
+                    "runId": "repro-1",
+                    "hypothesisId": "check-api-call",
+                    "location": "openai_client.py:create_response",
+                    "timestamp": int(time.time() * 1000),
+                    "message": "Making OpenAI API call",
+                    "data": {
+                        "model": api_params.get("model"),
+                        "tools": [t.get('type') for t in api_params.get("tools", [])],
+                        "has_shell": any(t.get('type') == 'shell' for t in api_params.get("tools", [])),
+                        "has_computer": any(t.get('type') == 'computer_use_preview' for t in api_params.get("tools", []))
+                    }
+                }) + '\n')
+        except Exception:
+            pass
+        # #endregion
+
         try:
             response = self.client.responses.create(**api_params)
             logger.info("[OpenAI Client] ✅ RECEIVED RESPONSES API RESPONSE ✅", extra={
@@ -169,6 +192,27 @@ class OpenAIClient:
             })
             return response
         except openai.BadRequestError as e:
+            # #region agent log
+            try:
+                import json
+                import time
+                with open('/Users/canyonsmith/lead-magnent-ai/.cursor/debug.log', 'a') as f:
+                    f.write(json.dumps({
+                        "sessionId": "debug-session",
+                        "runId": "repro-4",
+                        "hypothesisId": "api-error",
+                        "location": "openai_client.py:create_response",
+                        "timestamp": int(time.time() * 1000),
+                        "message": "OpenAI API BadRequestError",
+                        "data": {
+                            "error": str(e),
+                            "body": getattr(e, "body", {})
+                        }
+                    }) + '\n')
+            except Exception:
+                pass
+            # #endregion
+
             # Check for incompatible tool errors (e.g., shell with computer_use_preview)
             error_message = str(e)
             error_body = getattr(e, "body", {}) or {}

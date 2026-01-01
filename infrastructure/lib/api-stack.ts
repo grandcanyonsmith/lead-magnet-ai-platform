@@ -8,6 +8,7 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import * as sqs from 'aws-cdk-lib/aws-sqs';
 import { Construct } from 'constructs';
 import { TableMap } from './types';
 import { createLambdaRole, grantDynamoDBPermissions, grantS3Permissions, grantSecretsAccess } from './utils/lambda-helpers';
@@ -137,6 +138,13 @@ export class ApiStack extends cdk.Stack {
     // Create environment variables from tables
     const tableEnvVars = createTableEnvironmentVars(props.tablesMap);
 
+    // Create Dead Letter Queue for async failures
+    const dlq = new sqs.Queue(this, 'ApiDlq', {
+      queueName: `${RESOURCE_PREFIXES.API_NAME}-dlq`,
+      retentionPeriod: cdk.Duration.days(14),
+      encryption: sqs.QueueEncryption.KMS_MANAGED,
+    });
+
     // Create API Lambda function
     // Note: Initially deploying with placeholder code, will update after building the app
     this.apiFunction = new lambda.Function(this, 'ApiFunction', {
@@ -188,6 +196,7 @@ export class ApiStack extends cdk.Stack {
       },
       tracing: lambda.Tracing.ACTIVE,
       logRetention: logs.RetentionDays.ONE_WEEK,
+      deadLetterQueue: dlq,
     });
 
     // Create HTTP API

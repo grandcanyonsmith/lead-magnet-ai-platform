@@ -2,15 +2,15 @@
 
 > **Last Updated**: 2025-01-27  
 > **Status**: Current  
-> **Related Docs**: [Documentation Index](./README.md), [Coding Standards](./CODING_STANDARDS.md)
+> **Related Docs**: [Documentation Index](../README.md), [Coding Standards](../reference/CODING_STANDARDS.md)
 
 Guidelines for contributing to the Lead Magnet AI Platform documentation.
 
 ## Code Contribution
 
-For code contributions, please strictly adhere to the [Coding Standards](./CODING_STANDARDS.md).
+For code contributions, please strictly adhere to the [Coding Standards](../reference/CODING_STANDARDS.md).
 
-**CRITICAL RULE**: **NEVER use strict timeouts for AI operations.** See [Coding Standards](./CODING_STANDARDS.md#async-operations--timeouts) for details.
+**CRITICAL RULE**: **NEVER use strict timeouts for AI operations.** See [Coding Standards](../reference/CODING_STANDARDS.md#async-operations--timeouts) for details.
 
 ## Documentation Standards
 
@@ -172,8 +172,8 @@ Before submitting documentation changes:
 
 ## Related Documentation
 
-- [Documentation Index](./README.md) - Main documentation navigation
-- [Architecture Overview](./ARCHITECTURE.md) - System architecture
+- [Documentation Index](../README.md) - Main documentation navigation
+- [Architecture Overview](../architecture/ARCHITECTURE.md) - System architecture
 - [Deployment Guide](./DEPLOYMENT.md) - Deployment documentation
 
 ---

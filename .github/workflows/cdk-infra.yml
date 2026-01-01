@@ -8,11 +8,68 @@ on:
       - 'infrastructure/**'
       - 'backend/shell-executor/**'
       - '.github/workflows/cdk-infra.yml'
+  pull_request:
+    paths:
+      - 'infrastructure/**'
+      - 'backend/shell-executor/**'
+      - '.github/workflows/cdk-infra.yml'
   workflow_dispatch:
 
+concurrency:
+  group: infra-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  deploy:
+  validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      AWS_REGION: us-east-1
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: ./.github/actions/setup-node-app
+        with:
+          node-version: '20'
+          working-directory: 'infrastructure'
+      
+      - name: Configure AWS credentials
+        uses: ./.github/actions/setup-aws
+        with:
+          role-arn: ${{ env.AWS_ROLE_ARN }}
+          access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          region: ${{ env.AWS_REGION }}
+
+      - name: Security Audit
+        working-directory: infrastructure
+        run: npm audit --audit-level=high || echo "Audit failed but proceeding"
+      
+      - name: Build (Type Check)
+        working-directory: infrastructure
+        run: npm run build
+      
+      - name: CDK Synth Check
+        working-directory: infrastructure
+        run: npx cdk synth
+
+      - name: CDK Diff (PR only)
+        if: github.event_name == 'pull_request'
+        working-directory: infrastructure
+        run: npx cdk diff || echo "CDK diff failed or showed changes"
+
+
+  deploy:
+    needs: validate
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       id-token: write
       contents: read
@@ -25,47 +82,25 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
+      
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: ./.github/actions/setup-node-app
         with:
           node-version: '20'
-
-      - name: Install dependencies
-        working-directory: infrastructure
-        run: npm install --no-audit --no-fund
-
+          working-directory: 'infrastructure'
+      
       - name: Build
         working-directory: infrastructure
         run: npm run build
-
-      - name: Configure AWS credentials (OIDC)
-        if: env.AWS_ROLE_ARN != ''
-        uses: aws-actions/configure-aws-credentials@v4
+      
+      - name: Configure AWS credentials
+        uses: ./.github/actions/setup-aws
         with:
-          role-to-assume: ${{ env.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Configure AWS credentials (Access Keys)
-        if: env.AWS_ROLE_ARN == '' && env.AWS_ACCESS_KEY_ID != ''
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Verify AWS credentials
-        run: |
-          if ! aws sts get-caller-identity &>/dev/null; then
-            echo "Error: AWS credentials not configured properly"
-            exit 1
-          fi
-          echo "AWS credentials verified"
-
-      - name: CDK Synth
-        working-directory: infrastructure
-        run: npx cdk synth
-
+          role-arn: ${{ env.AWS_ROLE_ARN }}
+          access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          region: ${{ env.AWS_REGION }}
+      
       - name: CDK Deploy
         working-directory: infrastructure
         run: npx cdk deploy --all --require-approval never

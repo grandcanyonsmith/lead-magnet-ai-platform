@@ -7,11 +7,61 @@ on:
     paths:
       - 'backend/worker/**'
       - '.github/workflows/worker-ecr.yml'
+  pull_request:
+    paths:
+      - 'backend/worker/**'
+      - '.github/workflows/worker-ecr.yml'
   workflow_dispatch:
 
+concurrency:
+  group: worker-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  build-and-push:
+  test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: backend/worker/requirements.txt
+      
+      - name: Install dependencies
+        working-directory: backend/worker
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest
+          pip check
+      
+      - name: Run worker tests
+        working-directory: backend/worker
+        env:
+          AWS_REGION: us-east-1
+          OPENAI_SECRET_NAME: leadmagnet/openai-api-key
+          # Set dummy credentials to prevent boto3 from looking for them and hanging/failing
+          AWS_ACCESS_KEY_ID: testing
+          AWS_SECRET_ACCESS_KEY: testing
+          AWS_SECURITY_TOKEN: testing
+          AWS_SESSION_TOKEN: testing
+        run: |
+          # Exclude integration-style tests that require full AWS table/bucket wiring.
+          pytest -q \
+            --ignore=test_webhook_artifacts.py \
+            --ignore=test_webhook_step.py \
+            --ignore=test_workflow_with_images.py \
+            --ignore=test_local.py
+
+  deploy:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       id-token: write
       contents: read
@@ -26,54 +76,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-          cache-dependency-path: backend/worker/requirements.txt
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
       
-      - name: Configure AWS credentials (OIDC)
-        if: env.AWS_ROLE_ARN != ''
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Configure AWS credentials
+        uses: ./.github/actions/setup-aws
         with:
-          role-to-assume: ${{ env.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
-      
-      - name: Configure AWS credentials (Access Keys)
-        if: env.AWS_ROLE_ARN == '' && env.AWS_ACCESS_KEY_ID != ''
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-      
-      - name: Verify AWS credentials
-        run: |
-          if ! aws sts get-caller-identity &>/dev/null; then
-            echo "Error: AWS credentials not configured properly"
-            exit 1
-          fi
-          echo "AWS credentials verified"
-
-      - name: Install worker dependencies
-        working-directory: backend/worker
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt pytest
-
-      - name: Run worker tests
-        working-directory: backend/worker
-        env:
-          AWS_REGION: ${{ env.AWS_REGION }}
-          OPENAI_SECRET_NAME: leadmagnet/openai-api-key
-        run: |
-          # Exclude integration-style tests that require full AWS table/bucket wiring.
-          pytest -q \
-            --ignore=test_webhook_artifacts.py \
-            --ignore=test_webhook_step.py \
-            --ignore=test_workflow_with_images.py \
-            --ignore=test_local.py
+          role-arn: ${{ env.AWS_ROLE_ARN }}
+          access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          region: ${{ env.AWS_REGION }}
       
       - name: Login to Amazon ECR
         id: login-ecr
@@ -91,15 +103,15 @@ jobs:
           ECR_REGISTRY: ${{ steps.ecr-repo.outputs.repository }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          # Build for Linux x86_64 (Lambda architecture) using docker build
-          # (not buildx) to create a single-platform manifest that Lambda supports
-          docker build --platform linux/amd64 \
+          # Using standard docker build command here because we need to tag with multiple tags
+          # and setup-buildx-action handles the driver but the command line usage is robust.
+          # We enable cache-from/to for layer caching using GHA cache.
+          docker buildx build --platform linux/amd64 \
             -t $ECR_REGISTRY:$IMAGE_TAG \
-            -t $ECR_REGISTRY:latest .
-          
-          # Push both tags
-          docker push $ECR_REGISTRY:$IMAGE_TAG
-          docker push $ECR_REGISTRY:latest
+            -t $ECR_REGISTRY:latest \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
+            --push .
 
       - name: Update job processor Lambda to new image
         env:
@@ -122,4 +134,6 @@ jobs:
             --function-name "$JOB_PROCESSOR_LAMBDA_ARN" \
             --image-uri "$ECR_REGISTRY:$IMAGE_TAG" \
             --region "$AWS_REGION"
-
+          
+          # Wait for update to be successful
+          aws lambda wait function-updated --function-name "$JOB_PROCESSOR_LAMBDA_ARN"
