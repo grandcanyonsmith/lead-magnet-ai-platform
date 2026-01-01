@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Type, Optional
+from typing import Dict, Type, Optional, List
 from services.steps.base import AbstractStepHandler
 
 logger = logging.getLogger(__name__)
