@@ -8,8 +8,9 @@ import { TokenProvider } from "./base.client";
 export class LocalStorageTokenProvider implements TokenProvider {
   getToken(): string | null {
     // First try custom storage keys
+    // Prioritize id_token as it contains custom attributes (role, customer_id) required by the backend
     let token =
-      localStorage.getItem("access_token") || localStorage.getItem("id_token");
+      localStorage.getItem("id_token") || localStorage.getItem("access_token");
     if (token) return token;
 
     // Then try Cognito SDK storage format
@@ -21,13 +22,13 @@ export class LocalStorageTokenProvider implements TokenProvider {
     );
     if (!lastAuthUser) return null;
 
-    // Get access token or id token from Cognito storage
+    // Get id token or access token from Cognito storage
     token =
       localStorage.getItem(
-        `CognitoIdentityServiceProvider.${clientId}.${lastAuthUser}.accessToken`,
+        `CognitoIdentityServiceProvider.${clientId}.${lastAuthUser}.idToken`,
       ) ||
       localStorage.getItem(
-        `CognitoIdentityServiceProvider.${clientId}.${lastAuthUser}.idToken`,
+        `CognitoIdentityServiceProvider.${clientId}.${lastAuthUser}.accessToken`,
       );
 
     return token;
