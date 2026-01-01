@@ -103,6 +103,10 @@ class ApiClientImpl extends BaseApiClient implements ApiClient {
     return this.workflows.deleteWorkflow(id);
   }
 
+  async getModels() {
+    return this.workflows.getModels();
+  }
+
   // Forms - delegate to forms client
   async getForms(params?: Record<string, unknown>) {
     return this.forms.getForms(params);
