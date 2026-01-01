@@ -17,14 +17,29 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: Determine lockfile path
+      shell: bash
+      id: lockfile
+      run: |
+        if [ -f "${{ inputs.working-directory }}/package-lock.json" ]; then
+          echo "path=${{ inputs.working-directory }}/package-lock.json" >> $GITHUB_OUTPUT
+          echo "dir=${{ inputs.working-directory }}" >> $GITHUB_OUTPUT
+        elif [ -f "package-lock.json" ]; then
+          echo "path=package-lock.json" >> $GITHUB_OUTPUT
+          echo "dir=." >> $GITHUB_OUTPUT
+        else
+          echo "Error: No package-lock.json found in ${{ inputs.working-directory }} or root"
+          exit 1
+        fi
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: ${{ inputs.node-version }}
         cache: 'npm'
-        cache-dependency-path: ${{ inputs.working-directory }}/package.json
+        cache-dependency-path: ${{ steps.lockfile.outputs.path }}
 
     - name: Install dependencies
       shell: bash
-      working-directory: ${{ inputs.working-directory }}
+      working-directory: ${{ steps.lockfile.outputs.dir }}
       run: ${{ inputs.install-command }}

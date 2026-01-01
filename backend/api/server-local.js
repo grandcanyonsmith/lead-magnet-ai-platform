@@ -156,6 +156,11 @@ function sendResponse(res, apiResponse) {
     : undefined);
   // #endregion
 
+  // If a streaming handler already wrote/ended the response, do not attempt to set headers/body again.
+  if (res.headersSent || res.writableEnded) {
+    return;
+  }
+
   // Set status code
   res.status(apiResponse.statusCode || 200);
 

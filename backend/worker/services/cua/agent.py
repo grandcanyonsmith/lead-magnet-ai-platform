@@ -277,6 +277,17 @@ class CUAgent:
                             elif isinstance(s, dict) and 'text' in s:
                                 yield LogEvent(type='log', timestamp=time.time(), level='info', 
                                              message=f'💭 {s.get("text", "")}')
+                    elif item_type == 'message':
+                        # Some models return assistant narration as a "message" item with content parts.
+                        # We surface any output_text/text parts as normal log lines for visibility.
+                        content = getattr(item, 'content', None)
+                        if isinstance(content, list):
+                            for c in content:
+                                c_type = _get_attr_or_key(c, 'type')
+                                if str(c_type) in ('output_text', 'text'):
+                                    txt = _get_attr_or_key(c, 'text') or ''
+                                    if txt:
+                                        yield LogEvent(type='log', timestamp=time.time(), level='info', message=f'📝 {txt}')
                     elif item_type == 'text' or item_type == 'output_text':
                         text_content = getattr(item, 'text', '') or getattr(item, 'content', '')
                         if text_content:
@@ -437,6 +448,16 @@ class CUAgent:
                                             reasoning_items.append(reasoning_text)
                                     elif isinstance(s, dict) and 'text' in s:
                                         reasoning_items.append(s.get('text', ''))
+                        elif item_type == 'message':
+                            # Capture assistant narration in "message" items (most common shape: content=[{type:"output_text", text:"..."}])
+                            content = getattr(item, 'content', None)
+                            if isinstance(content, list):
+                                for c in content:
+                                    c_type = _get_attr_or_key(c, 'type')
+                                    if str(c_type) in ('output_text', 'text'):
+                                        txt = _get_attr_or_key(c, 'text') or ''
+                                        if txt:
+                                            text_outputs.append(str(txt))
                         elif item_type == 'text' or item_type == 'output_text':
                             text_content = getattr(item, 'text', '') or getattr(item, 'content', '')
                             if text_content:
