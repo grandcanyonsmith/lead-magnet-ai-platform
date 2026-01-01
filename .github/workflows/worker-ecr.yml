@@ -110,6 +110,7 @@ jobs:
           # and setup-buildx-action handles the driver but the command line usage is robust.
           # We enable cache-from/to for layer caching using GHA cache.
           docker buildx build --platform linux/amd64 \
+            --provenance=false \
             -t $ECR_REGISTRY:$IMAGE_TAG \
             -t $ECR_REGISTRY:latest \
             --cache-from type=gha \
