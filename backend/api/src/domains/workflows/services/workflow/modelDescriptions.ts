@@ -6,6 +6,8 @@ export const MODEL_DESCRIPTIONS_SHORT: Record<string, string> = {
   'gpt-5.2': 'For creative content, rewriting, general tasks (highest quality, newer)',
 };
 
+export const AVAILABLE_MODELS = Object.keys(MODEL_DESCRIPTIONS_SHORT);
+
 export interface ModelDescription {
   bestFor: string;
   useWhen: string;

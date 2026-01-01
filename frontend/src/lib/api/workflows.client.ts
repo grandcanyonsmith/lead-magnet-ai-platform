@@ -16,11 +16,16 @@ import {
   FolderListResponse,
   FolderCreateRequest,
   FolderUpdateRequest,
+  AIModelConfig,
 } from "@/types";
 
 export class WorkflowsClient extends BaseApiClient {
   constructor(tokenProvider: TokenProvider) {
     super(tokenProvider);
+  }
+
+  async getModels(): Promise<{ models: AIModelConfig[] }> {
+    return this.get<{ models: AIModelConfig[] }>("/admin/workflows/models");
   }
 
   async getWorkflows(

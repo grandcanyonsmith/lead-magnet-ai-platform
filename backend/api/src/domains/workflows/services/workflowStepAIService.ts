@@ -26,9 +26,7 @@ export interface AIStepGenerationResponse {
   step: WorkflowStep;
 }
 
-const AVAILABLE_MODELS = [
-  'gpt-5.2',
-];
+import { AVAILABLE_MODELS } from './workflow/modelDescriptions';
 
 const AVAILABLE_TOOLS = [
   'web_search',
