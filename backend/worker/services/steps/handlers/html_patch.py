@@ -1,7 +1,7 @@
 import logging
 from typing import Dict, Any, List, Tuple
 from services.steps.base import AbstractStepHandler
-from services.html_generator import HtmlGenerator
+from services.html_generator import HTMLGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -10,7 +10,7 @@ class HtmlStepHandler(AbstractStepHandler):
     
     def __init__(self, services: Dict[str, Any]):
         super().__init__(services)
-        self.html_generator = HtmlGenerator(
+        self.html_generator = HTMLGenerator(
             ai_service=services['ai_service'],
             artifact_service=services['artifact_service']
         )
