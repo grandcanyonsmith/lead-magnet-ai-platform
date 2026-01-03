@@ -1,983 +1,1125 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="en" class="scroll-smooth">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>360 ICP Profile</title>
-  <meta name="description" content="Ideal Customer Profile - Premium Analysis">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title id="pageTitle">Dragonflight Academy - ICP Report</title>
+
+  <!-- Tailwind 3 (CDN) -->
+  <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+
+  <!-- Inter & Open Sans -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+
   <script>
     tailwind.config = {
-      darkMode: 'class',
       theme: {
         extend: {
-          colors: {
-            brand: { 50: '#E6F9FA', 100: '#B8EFF2', 200: '#8AE5EA', 300: '#5CD9E0', 400: '#2ECFD7', 500: '#18BFC7', 600: '#139BA3', 700: '#0E777E', 800: '#0A545A', 900: '#053035' },
-            accent: { 50: '#E8F4FC', 100: '#C5E3F7', 400: '#4DA8E8', 500: '#1F86D6', 600: '#1A6DB1' },
-            dark: { 900: '#0B0F1A', 800: '#111827', 700: '#1F2937', 600: '#374151' }
+          fontFamily: {
+            sans: ["Open Sans", "system-ui", "sans-serif"],
+            heading: ["Inter", "system-ui", "sans-serif"]
           },
-          fontFamily: { display: ['Space Grotesk', 'sans-serif'], sans: ['Inter', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] },
+          colors: {
+            brand: {
+              primary: "#18BFC7",
+              secondary: "#0B4B5E",
+              accent: "#1F86D6",
+              50: "#E6F7F9",
+              100: "#CCEFF3",
+              200: "#99DFE7",
+              300: "#66CFDB",
+              400: "#33BFCF",
+              500: "#18BFC7",
+              600: "#0B4B5E",
+              700: "#0A3F4F",
+              800: "#083340",
+              900: "#062731"
+            }
+          },
+          boxShadow: {
+            soft: "0 10px 30px rgba(11, 75, 94, 0.08)",
+            soft2: "0 18px 55px rgba(11, 75, 94, 0.12)"
+          }
         }
       }
-    }
+    };
   </script>
+
   <style>
-    :root { --brand: #18BFC7; --accent: #1F86D6; --glow: rgba(24,191,199,0.4); }
-    
-    *, *::before, *::after { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-    body { font-family: 'Inter', sans-serif; overflow-x: hidden; }
-    
-    @keyframes float { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-20px) rotate(3deg); } }
-    @keyframes pulse-ring { 0% { transform: scale(0.95); opacity: 1; } 100% { transform: scale(1.3); opacity: 0; } }
-    @keyframes gradient-x { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
-    @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
-    @keyframes fade-up { from { opacity: 0; transform: translateY(40px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
-    @keyframes slide-in-left { from { opacity: 0; transform: translateX(-30px); } to { opacity: 1; transform: translateX(0); } }
-    @keyframes scale-in { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
-    @keyframes confetti { 0% { transform: translateY(0) rotate(0deg); opacity: 1; } 100% { transform: translateY(-120vh) rotate(1080deg); opacity: 0; } }
-    @keyframes bounce-in { 0% { transform: scale(0); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
-    @keyframes glow-pulse { 0%, 100% { box-shadow: 0 0 30px var(--glow); } 50% { box-shadow: 0 0 60px var(--glow); } }
-    @keyframes orbit { from { transform: rotate(0deg) translateX(150px) rotate(0deg); } to { transform: rotate(360deg) translateX(150px) rotate(-360deg); } }
-    @keyframes particle { 0% { transform: translateY(100vh) scale(0); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { transform: translateY(-10vh) scale(1); opacity: 0; } }
-    @keyframes typing { from { width: 0; } to { width: 100%; } }
-    @keyframes blink { 50% { border-color: transparent; } }
-    
-    .animate-float { animation: float 6s ease-in-out infinite; }
-    .animate-glow { animation: glow-pulse 3s ease-in-out infinite; }
-    .animate-gradient { background-size: 200% 200%; animation: gradient-x 15s ease infinite; }
-    
-    .reveal { opacity: 0; transform: translateY(60px) scale(0.97); transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
-    .reveal.visible { opacity: 1; transform: translateY(0) scale(1); }
-    
-    .glass { background: rgba(255,255,255,0.7); backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%); }
-    .glass-dark { background: rgba(11,15,26,0.8); backdrop-filter: blur(24px) saturate(180%); }
-    
-    .gradient-text { background: linear-gradient(135deg, var(--brand), var(--accent), #8B5CF6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-    .gradient-border { position: relative; }
-    .gradient-border::before { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; background: linear-gradient(135deg, var(--brand), var(--accent)); -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
-    
-    .card { transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
-    .card:hover { transform: translateY(-12px) scale(1.02); box-shadow: 0 40px 80px -20px rgba(0,0,0,0.15); }
-    
-    .progress-bar { background: linear-gradient(90deg, var(--brand), var(--accent), #8B5CF6, var(--brand)); background-size: 300% 100%; animation: gradient-x 3s linear infinite; }
-    
-    ::-webkit-scrollbar { width: 10px; }
-    ::-webkit-scrollbar-track { background: #f1f5f9; }
-    ::-webkit-scrollbar-thumb { background: linear-gradient(var(--brand), var(--accent)); border-radius: 10px; border: 2px solid #f1f5f9; }
-    
-    .dark { background: #0B0F1A; color: #e2e8f0; }
-    .dark .glass { background: rgba(17,24,39,0.8); }
-    .dark .bg-white { background: #1a2234; }
-    .dark .bg-gray-50 { background: #111827; }
-    .dark .border-gray-100 { border-color: #374151; }
-    .dark .text-gray-900 { color: #f1f5f9; }
-    .dark .text-gray-600 { color: #9ca3af; }
-    .dark ::-webkit-scrollbar-track { background: #1f2937; }
-    .dark ::-webkit-scrollbar-thumb { border-color: #1f2937; }
-    
-    .particle { position: fixed; border-radius: 50%; pointer-events: none; animation: particle linear forwards; }
-    .confetti { position: fixed; z-index: 100; pointer-events: none; }
-    
-    .nav-item { position: relative; overflow: hidden; }
-    .nav-item::before { content: ''; position: absolute; left: 0; top: 0; height: 100%; width: 3px; background: linear-gradient(var(--brand), var(--accent)); transform: scaleY(0); transition: transform 0.3s; }
-    .nav-item.active::before { transform: scaleY(1); }
-    .nav-item.active { background: rgba(24,191,199,0.1); }
-    
-    .section-indicator { width: 12px; height: 12px; border-radius: 50%; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
-    .section-indicator.active { width: 12px; height: 32px; border-radius: 6px; background: linear-gradient(var(--brand), var(--accent)); box-shadow: 0 0 20px var(--glow); }
-    .section-indicator.read { background: var(--brand); opacity: 0.4; }
-    
-    @media print { .no-print { display: none !important; } .reveal { opacity: 1 !important; transform: none !important; } }
-    
-    .quote-copy { opacity: 0; transition: opacity 0.2s; }
-    .quote-row:hover .quote-copy { opacity: 1; }
-    
-    .btn-glow { position: relative; overflow: hidden; }
-    .btn-glow::after { content: ''; position: absolute; inset: -50%; background: conic-gradient(from 0deg, transparent, var(--brand), transparent 30%); animation: spin 4s linear infinite; }
-    .btn-glow::before { content: ''; position: absolute; inset: 2px; background: inherit; border-radius: inherit; z-index: 1; }
-    .btn-glow > * { position: relative; z-index: 2; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    
-    .typing-effect { display: inline-block; overflow: hidden; white-space: nowrap; border-right: 3px solid var(--brand); animation: typing 2s steps(30) forwards, blink 0.75s step-end infinite; }
+    :root{
+      --page-bg:#f5f5f6;
+      --ink:#0f172a;
+    }
+    html{ font-family: 'Open Sans', system-ui, sans-serif; background: var(--page-bg); color: var(--ink); }
+    body{ background: var(--page-bg); }
+    h1, h2, h3, h4, h5, h6 { font-family: 'Inter', system-ui, sans-serif; }
+
+    /* Readability defaults */
+    p{ line-height: 1.8; }
+    strong{ font-weight: 700; }
+    a{ text-underline-offset: 2px; }
+
+    /* Don't force backgrounds on images */
+    img{ background: transparent !important; }
+
+    /* Print styles */
+    @media print{
+      #topbar, #audioDock, #expiredOverlay, #tocMenu { display:none !important; }
+      body{ background:#fff !important; }
+      .print\:shadow-none{ box-shadow:none !important; }
+      .print\:border-none{ border:none !important; }
+    }
+
+    /* Pain score bars */
+    .pain-score-bar {
+      height: 8px;
+      background: linear-gradient(90deg, #18BFC7 0%, #1F86D6 100%);
+      border-radius: 4px;
+      transition: width 0.6s ease;
+    }
   </style>
 </head>
-<body class="bg-gray-50 text-gray-900 min-h-screen">
-  
-  <div id="particles" class="fixed inset-0 pointer-events-none z-0 overflow-hidden"></div>
 
-  <div id="loading" class="fixed inset-0 z-[200] bg-gradient-to-br from-dark-900 via-dark-800 to-dark-900 flex items-center justify-center">
-    <div class="text-center">
-      <div class="relative mb-8">
-        <div class="w-24 h-24 rounded-3xl bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center text-white font-black text-3xl font-display shadow-2xl animate-float mx-auto">
-          360
-        </div>
-        <div class="absolute inset-0 w-24 h-24 rounded-3xl bg-gradient-to-br from-brand-500 to-accent-500 mx-auto animate-ping opacity-20"></div>
-      </div>
-      <div class="w-48 h-1 bg-gray-800 rounded-full overflow-hidden mx-auto mb-4">
-        <div id="load-progress" class="h-full progress-bar rounded-full transition-all duration-300" style="width: 0%"></div>
-      </div>
-      <p class="text-gray-400 text-sm font-medium">Loading premium experience...</p>
-    </div>
-  </div>
+<body class="antialiased text-slate-900">
 
-  <div id="progress-bar" class="progress-bar fixed top-0 left-0 right-0 h-1.5 z-50 no-print origin-left" style="transform: scaleX(0);"></div>
-
-  <div id="section-dots" class="fixed right-8 top-1/2 -translate-y-1/2 z-40 hidden lg:flex flex-col gap-3 no-print"></div>
-
-  <aside id="sidebar" class="no-print hidden lg:flex flex-col fixed inset-y-0 left-0 w-80 glass border-r border-gray-100/50 z-40 shadow-2xl shadow-black/5">
-    <div class="p-6 border-b border-gray-100/50">
-      <div class="flex items-center gap-4">
-        <div class="relative">
-          <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center text-white font-black text-xl font-display shadow-xl animate-glow">360</div>
-        </div>
-        <div>
-          <h1 id="sidebar-title" class="text-lg font-bold text-gray-900 font-display">Loading...</h1>
-          <p class="text-xs text-gray-400 font-semibold tracking-widest uppercase">ICP Profile</p>
+  <!-- ───────────────────────── Sticky Topbar ───────────────────────── -->
+  <header id="topbar" class="sticky top-0 z-50 border-b border-slate-200 bg-white/85 backdrop-blur shadow-soft">
+    <div class="mx-auto max-w-[1120px] px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+      <!-- Brand -->
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="h-10 w-10 rounded-2xl bg-gradient-to-br from-brand-primary to-brand-accent shrink-0"></div>
+        <div class="min-w-0">
+          <div class="text-base font-extrabold tracking-tight truncate" data-text="meta__brand_name">Brand</div>
+          <div class="text-xs text-slate-600 truncate">ICP Report · <span data-text="meta__last_updated"></span></div>
         </div>
       </div>
-    </div>
-    
-    <div class="px-4 py-4">
-      <button onclick="openCmd()" class="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-500 bg-gray-100/80 hover:bg-gray-200/80 rounded-xl transition-all group border border-gray-200/50">
-        <svg class="w-4 h-4 group-hover:text-brand-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-        <span class="flex-1 text-left">Quick search...</span>
-        <kbd class="px-2 py-1 text-[10px] bg-white border border-gray-200 rounded-lg font-mono shadow-sm">⌘K</kbd>
-      </button>
-    </div>
-    
-    <nav id="sidebar-nav" class="flex-1 px-3 py-2 overflow-y-auto space-y-1"></nav>
-    
-    <div class="p-4 border-t border-gray-100/50 space-y-4">
-      <div class="bg-gradient-to-br from-gray-100 to-gray-50 rounded-2xl p-4 border border-gray-200/50">
-        <div class="flex justify-between items-center mb-3">
-          <span class="text-xs font-bold text-gray-600 uppercase tracking-wider">Progress</span>
-          <span id="progress-pct" class="text-lg font-black gradient-text">0%</span>
-        </div>
-        <div class="h-2.5 bg-gray-200 rounded-full overflow-hidden">
-          <div id="progress-fill" class="h-full progress-bar rounded-full" style="width: 0%"></div>
-        </div>
-        <p id="read-time" class="text-[10px] text-gray-400 mt-2 text-center font-medium">Est. 12 min read</p>
-      </div>
-      
-      <div class="grid grid-cols-3 gap-2">
-        <button onclick="toggleTheme()" class="group flex flex-col items-center gap-1 p-3 bg-white border border-gray-200 rounded-xl hover:border-brand-300 hover:shadow-lg hover:-translate-y-0.5 transition-all">
-          <span id="theme-icon" class="text-xl group-hover:scale-110 transition-transform">🌙</span>
-          <span class="text-[9px] font-semibold text-gray-400 uppercase">Theme</span>
-        </button>
-        <button onclick="window.print()" class="group flex flex-col items-center gap-1 p-3 bg-white border border-gray-200 rounded-xl hover:border-brand-300 hover:shadow-lg hover:-translate-y-0.5 transition-all">
-          <span class="text-xl group-hover:scale-110 transition-transform">🖨️</span>
-          <span class="text-[9px] font-semibold text-gray-400 uppercase">Print</span>
-        </button>
-        <button onclick="share()" class="group flex flex-col items-center gap-1 p-3 bg-white border border-gray-200 rounded-xl hover:border-brand-300 hover:shadow-lg hover:-translate-y-0.5 transition-all">
-          <span class="text-xl group-hover:scale-110 transition-transform">📤</span>
-          <span class="text-[9px] font-semibold text-gray-400 uppercase">Share</span>
+
+      <!-- Actions -->
+      <div class="flex items-center gap-2 shrink-0">
+        <button id="downloadPdfBtn" class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-extrabold text-slate-900 shadow-soft hover:bg-slate-50">
+          <span>Download PDF</span>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-600" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M3 14.5a1.5 1.5 0 001.5 1.5h11A1.5 1.5 0 0017 14.5V14a1 1 0 112 0v.5A3.5 3.5 0 0115.5 18h-11A3.5 3.5 0 011 14.5V14a1 1 0 112 0v.5z"></path>
+            <path d="M9 12.5V3a1 1 0 112 0v9.5l2.1-2.1a1 1 0 111.4 1.4l-3.8 3.8a1 1 0 01-1.4 0l-3.8-3.8a1 1 0 111.4-1.4L9 12.5z"></path>
+          </svg>
         </button>
       </div>
-      
-      <p id="updated-date" class="text-[10px] text-center text-gray-400 font-medium"></p>
-    </div>
-  </aside>
-
-  <header class="lg:hidden fixed top-0 left-0 right-0 z-40 glass border-b border-gray-100/50 px-4 py-3 no-print">
-    <div class="flex items-center justify-between">
-      <button onclick="toggleMobile()" class="p-2.5 rounded-xl hover:bg-gray-100 transition-colors">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-      </button>
-      <div class="flex items-center gap-2">
-        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center text-white font-bold text-xs shadow-lg">360</div>
-        <span id="mobile-title" class="font-bold text-sm font-display">ICP</span>
-      </div>
-      <button onclick="openCmd()" class="p-2.5 rounded-xl hover:bg-gray-100 transition-colors">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-      </button>
     </div>
   </header>
 
-  <div id="mobile-overlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 hidden transition-opacity" onclick="toggleMobile()"></div>
-  <aside id="mobile-sidebar" class="fixed inset-y-0 left-0 w-80 bg-white z-50 transform -translate-x-full transition-transform duration-300 shadow-2xl overflow-y-auto">
-    <div class="p-5 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10">
-      <div class="flex items-center gap-3">
-        <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center text-white font-bold shadow-lg">360</div>
-        <div>
-          <h1 id="mobile-sidebar-title" class="font-bold font-display">ICP</h1>
-          <p class="text-[10px] text-gray-400 uppercase tracking-wider">Profile</p>
-        </div>
-      </div>
-      <button onclick="toggleMobile()" class="p-2 hover:bg-gray-100 rounded-lg"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
-    </div>
-    <nav id="mobile-nav" class="p-3 space-y-1"></nav>
-  </aside>
+  <!-- ───────────────────────── Main Content ───────────────────────── -->
+  <main class="px-4 sm:px-6 py-10 sm:py-14 pb-20">
+    <div class="mx-auto max-w-[1120px] space-y-10">
 
-  <div id="cmd-overlay" class="fixed inset-0 bg-black/70 backdrop-blur-md z-50 hidden flex items-start justify-center pt-[15vh]" onclick="closeCmd()">
-    <div class="w-full max-w-2xl mx-4 bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-200 animate-scale-in" onclick="event.stopPropagation()" style="animation: scale-in 0.2s ease-out">
-      <div class="p-5 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
-        <div class="flex items-center gap-4">
-          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center">
-            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+      <!-- Hero -->
+      <section class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-secondary to-brand-accent text-white shadow-soft2 print:shadow-none">
+        <div class="absolute inset-0 opacity-25 bg-[radial-gradient(circle_at_30%_20%,white,transparent_55%)]"></div>
+        <div class="relative px-6 sm:px-10 py-10 sm:py-12">
+          <div class="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs font-extrabold tracking-wide">
+            ✨ Ideal Customer Profile · <span data-text="meta__last_updated"></span>
           </div>
-          <input type="text" id="cmd-input" class="flex-1 text-xl outline-none bg-transparent placeholder-gray-400 font-medium" placeholder="Search sections..." oninput="filterCmd(this.value)">
-          <kbd class="px-3 py-1.5 text-xs bg-gray-100 border border-gray-200 rounded-lg font-mono text-gray-500">ESC</kbd>
+          <h1 class="mt-4 text-3xl sm:text-4xl font-extrabold tracking-tight" data-text="s00_intro__core__title">
+            What is 360 ICP?
+          </h1>
+          <p class="mt-3 max-w-[70ch] text-white/90 text-base sm:text-lg" data-html="s00_intro__core__description">
+            Comprehensive customer profile and positioning guide.
+          </p>
         </div>
-      </div>
-      <div id="cmd-results" class="max-h-96 overflow-y-auto"></div>
-      <div class="p-4 border-t border-gray-100 bg-gray-50 flex justify-center gap-8 text-xs text-gray-400">
-        <span class="flex items-center gap-2"><kbd class="px-2 py-1 bg-white border rounded-lg text-[10px] shadow-sm">↑↓</kbd> Navigate</span>
-        <span class="flex items-center gap-2"><kbd class="px-2 py-1 bg-white border rounded-lg text-[10px] shadow-sm">↵</kbd> Open</span>
-        <span class="flex items-center gap-2"><kbd class="px-2 py-1 bg-white border rounded-lg text-[10px] shadow-sm">ESC</kbd> Close</span>
-      </div>
-    </div>
-  </div>
+      </section>
 
-  <main class="lg:ml-80 min-h-screen pt-20 lg:pt-0 relative z-10">
-    <div class="max-w-4xl mx-auto px-6 py-12 lg:py-20 lg:px-10">
-      <header id="hero" class="mb-24"></header>
-      <div id="stats" class="mb-24"></div>
-      <div id="sections" class="space-y-32"></div>
-      <footer id="footer" class="pt-24 pb-16 text-center border-t border-gray-200 mt-32"></footer>
+      <!-- Story Section -->
+      <section class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-soft">
+        <h2 class="text-2xl font-extrabold tracking-tight text-brand-secondary" data-text="s01_story__core__title">The Hero's Journey</h2>
+        <div class="mt-6 prose prose-slate max-w-none" data-html="s01_story__core__content"></div>
+      </section>
+
+      <!-- Offer Section -->
+      <section class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-soft">
+        <h2 class="text-2xl font-extrabold tracking-tight text-brand-secondary" data-text="s02_offer__core__product_name">Product Offer</h2>
+
+        <div class="mt-6 grid md:grid-cols-2 gap-6">
+          <div class="space-y-4">
+            <div>
+              <div class="text-sm font-bold text-slate-500 uppercase tracking-widest">Price</div>
+              <div class="mt-1 text-3xl font-extrabold text-brand-primary" data-text="s02_offer__core__price">$297</div>
+              <div class="mt-1 text-sm text-slate-600" data-text="s02_offer__core__investment_terms"></div>
+            </div>
+
+            <div>
+              <div class="text-sm font-bold text-slate-500 uppercase tracking-widest">Tagline</div>
+              <div class="mt-1 text-lg font-bold text-brand-secondary" data-text="s02_offer__core__unique_mechanism_tagline"></div>
+            </div>
+
+            <div>
+              <div class="text-sm font-bold text-slate-500 uppercase tracking-widest">Short Description</div>
+              <p class="mt-1 text-slate-700" data-text="s02_offer__core__short_description"></p>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <div>
+              <div class="text-sm font-bold text-slate-500 uppercase tracking-widest">Unique Mechanism</div>
+              <p class="mt-1 text-slate-700" data-text="s02_offer__core__unique_mechanism_description"></p>
+            </div>
+
+            <div>
+              <div class="text-sm font-bold text-slate-500 uppercase tracking-widest">Delivery Format</div>
+              <p class="mt-1 text-slate-700" data-text="s02_offer__core__delivery_format"></p>
+            </div>
+
+            <div>
+              <div class="text-sm font-bold text-slate-500 uppercase tracking-widest">Access</div>
+              <p class="mt-1 text-slate-700" data-text="s02_offer__core__delivery_access"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Features Grid -->
+        <div class="mt-8">
+          <h3 class="text-xl font-extrabold text-brand-secondary mb-4">Key Features</h3>
+          <div id="featuresGrid" class="grid md:grid-cols-2 gap-4"></div>
+        </div>
+
+        <!-- Advisory Notice -->
+        <div class="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <p class="text-sm text-slate-800" data-text="s02_offer__core__delivery_advisory"></p>
+        </div>
+      </section>
+
+      <!-- Pains Section -->
+      <section class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-soft">
+        <h2 class="text-2xl font-extrabold tracking-tight text-brand-secondary mb-6">Pain Points</h2>
+        <div id="painsGrid" class="space-y-6"></div>
+      </section>
+
+      <!-- Desires Section -->
+      <section class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-soft">
+        <h2 class="text-2xl font-extrabold tracking-tight text-brand-secondary mb-6">Desires &amp; Outcomes</h2>
+        <div id="desiresGrid" class="space-y-6"></div>
+      </section>
+
+      <!-- Authority Section -->
+      <section class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-soft">
+        <h2 class="text-2xl font-extrabold tracking-tight text-brand-secondary mb-6">Authority &amp; Credentials</h2>
+        <div class="space-y-4">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900 mb-3" data-text="s05_authority__core__title"></h3>
+          </div>
+          <div class="grid md:grid-cols-2 gap-4">
+            <div>
+              <div class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-2">Historical</div>
+              <ul id="authorityHistorical" class="space-y-2 text-slate-700"></ul>
+            </div>
+            <div>
+              <div class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-2">Credentials</div>
+              <ul id="authorityCredentials" class="space-y-2 text-slate-700"></ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Competitors Section -->
+      <section class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-soft">
+        <h2 class="text-2xl font-extrabold tracking-tight text-brand-secondary mb-6">Competitive Landscape</h2>
+
+        <div class="mb-8">
+          <h3 class="text-lg font-bold text-slate-900 mb-4">Direct Competitors</h3>
+          <div id="directCompetitors" class="grid md:grid-cols-2 gap-4"></div>
+        </div>
+
+        <div class="mb-8">
+          <h3 class="text-lg font-bold text-slate-900 mb-4">Indirect Competitors</h3>
+          <div id="indirectCompetitors" class="grid md:grid-cols-2 gap-4"></div>
+        </div>
+
+        <div>
+          <h3 class="text-lg font-bold text-slate-900 mb-4">Influencers</h3>
+          <div id="influencers" class="flex flex-wrap gap-3"></div>
+        </div>
+      </section>
+
+      <!-- Audience Section -->
+      <section class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-soft">
+        <h2 class="text-2xl font-extrabold tracking-tight text-brand-secondary mb-6">Target Audience</h2>
+
+        <div class="mb-6">
+          <h3 class="text-lg font-bold text-slate-900 mb-4">Demographics</h3>
+          <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div>
+              <div class="text-sm font-bold text-slate-500 uppercase tracking-widest">Age</div>
+              <div class="mt-1 text-slate-700" data-text="s07_audience__demographics__age"></div>
+            </div>
+            <div>
+              <div class="text-sm font-bold text-slate-500 uppercase tracking-widest">Gender</div>
+              <div class="mt-1 text-slate-700" data-text="s07_audience__demographics__gender"></div>
+            </div>
+            <div>
+              <div class="text-sm font-bold text-slate-500 uppercase tracking-widest">Income</div>
+              <div class="mt-1 text-slate-700" data-text="s07_audience__demographics__income"></div>
+            </div>
+            <div>
+              <div class="text-sm font-bold text-slate-500 uppercase tracking-widest">Education</div>
+              <div class="mt-1 text-slate-700" data-text="s07_audience__demographics__education"></div>
+            </div>
+            <div>
+              <div class="text-sm font-bold text-slate-500 uppercase tracking-widest">Occupation</div>
+              <div class="mt-1 text-slate-700" data-text="s07_audience__demographics__occupation"></div>
+            </div>
+            <div>
+              <div class="text-sm font-bold text-slate-500 uppercase tracking-widest">Location</div>
+              <div class="mt-1 text-slate-700" data-text="s07_audience__demographics__location"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mb-6">
+          <h3 class="text-lg font-bold text-slate-900 mb-4">Values</h3>
+          <ul id="audienceValues" class="space-y-2 text-slate-700"></ul>
+        </div>
+
+        <div>
+          <h3 class="text-lg font-bold text-slate-900 mb-4">Interests</h3>
+          <ul id="audienceInterests" class="space-y-2 text-slate-700"></ul>
+        </div>
+      </section>
+
+      <!-- Values Section -->
+      <section class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-soft">
+        <h2 class="text-2xl font-extrabold tracking-tight text-brand-secondary mb-6">Brand Values</h2>
+        <p class="text-lg text-slate-700 mb-6" data-text="s08_values__synthesis"></p>
+        <div id="valuesGrid" class="grid md:grid-cols-2 gap-4"></div>
+      </section>
+
+      <!-- Transformation Section -->
+      <section class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-soft">
+        <h2 class="text-2xl font-extrabold tracking-tight text-brand-secondary mb-6">Transformation</h2>
+        <div class="grid md:grid-cols-2 gap-6">
+          <div class="rounded-xl border border-slate-200 bg-slate-50 p-5">
+            <div class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-2">Before</div>
+            <p class="text-slate-800" data-text="s09_transformation__before"></p>
+          </div>
+          <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
+            <div class="text-sm font-bold text-emerald-700 uppercase tracking-widest mb-2">After</div>
+            <p class="text-slate-800" data-text="s09_transformation__after"></p>
+          </div>
+        </div>
+        <div class="mt-6">
+          <div class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-2">Emotional Shift</div>
+          <p class="text-slate-800" data-text="s09_transformation__emotional_shift"></p>
+        </div>
+        <div class="mt-4">
+          <div class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-2">Impact</div>
+          <p class="text-slate-800" data-text="s09_transformation__impact"></p>
+        </div>
+      </section>
+
+      <!-- Media Section -->
+      <section class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-soft">
+        <h2 class="text-2xl font-extrabold tracking-tight text-brand-secondary mb-6">Media Consumption</h2>
+
+        <div class="grid md:grid-cols-2 gap-6">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900 mb-3">Social Media</h3>
+            <div id="socialMedia" class="flex flex-wrap gap-2"></div>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-slate-900 mb-3">Podcasts</h3>
+            <ul id="podcasts" class="space-y-2"></ul>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-slate-900 mb-3">Blogs</h3>
+            <ul id="blogs" class="space-y-2"></ul>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-slate-900 mb-3">Books</h3>
+            <ul id="books" class="space-y-2"></ul>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-slate-900 mb-3">Forums</h3>
+            <ul id="forums" class="space-y-2"></ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Objections Section -->
+      <section class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-soft">
+        <h2 class="text-2xl font-extrabold tracking-tight text-brand-secondary mb-6">Common Objections</h2>
+        <div id="objectionsGrid" class="space-y-4"></div>
+      </section>
+
+      <!-- Advantage Section -->
+      <section class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-soft">
+        <h2 class="text-2xl font-extrabold tracking-tight text-brand-secondary mb-6">Competitive Advantage</h2>
+
+        <div class="mb-6">
+          <h3 class="text-lg font-bold text-slate-900 mb-4">Unique Value Propositions</h3>
+          <ul id="uvpList" class="space-y-2 text-slate-700"></ul>
+        </div>
+
+        <div class="mb-6">
+          <h3 class="text-lg font-bold text-slate-900 mb-4">Comparison</h3>
+          <p class="text-slate-700" data-text="s12_advantage__comparison"></p>
+        </div>
+
+        <div>
+          <h3 class="text-lg font-bold text-slate-900 mb-4">Innovation</h3>
+          <p class="text-slate-700" data-text="s12_advantage__innovation"></p>
+        </div>
+      </section>
+
+      <!-- Communication Style Section -->
+      <section class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-soft">
+        <h2 class="text-2xl font-extrabold tracking-tight text-brand-secondary mb-6">Communication Style</h2>
+        <div class="grid md:grid-cols-2 gap-6">
+          <div>
+            <div class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-2">Tone</div>
+            <p class="text-slate-700" data-text="s13_comms__tone"></p>
+          </div>
+          <div>
+            <div class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-2">Style</div>
+            <p class="text-slate-700" data-text="s13_comms__style"></p>
+          </div>
+          <div>
+            <div class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-2">Vibe</div>
+            <p class="text-slate-700" data-text="s13_comms__vibe"></p>
+          </div>
+          <div>
+            <div class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-2">Avoid</div>
+            <ul id="commsAvoid" class="space-y-1 text-slate-700"></ul>
+          </div>
+        </div>
+      </section>
+
     </div>
   </main>
 
-  <div class="fixed bottom-8 right-8 z-40 no-print">
-    <button id="scroll-btn" onclick="scrollToTop()" class="p-4 bg-white rounded-2xl shadow-2xl border border-gray-100 opacity-0 transition-all duration-500 hover:bg-gray-50 hover:-translate-y-1 group">
-      <svg class="w-5 h-5 text-gray-600 group-hover:text-brand-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
-    </button>
-  </div>
-
-  <div id="toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 px-6 py-4 bg-gray-900 text-white rounded-2xl shadow-2xl opacity-0 transition-all duration-500 transform translate-y-8 pointer-events-none flex items-center gap-3">
-    <span id="toast-icon" class="text-xl">✓</span>
-    <span id="toast-text" class="font-medium">Success!</span>
-  </div>
-
-  <div id="confetti" class="fixed inset-0 pointer-events-none z-[100]"></div>
-
-  <script>
-    let data = {};
-    let parsed = {};
-    let isDark = localStorage.getItem('dark') === 'true';
-    let cmdIndex = 0;
-    let cmdList = [];
-    let completed = false;
-    let sectionsRead = new Set();
-
-    const sections = [
-      { id: 'story', label: 'My Story', num: '01', icon: '📖', color: 'blue' },
-      { id: 'offer', label: 'The Offer', num: '02', icon: '🎯', color: 'emerald' },
-      { id: 'pains', label: 'Pains & Problems', num: '03', icon: '⚠️', color: 'red' },
-      { id: 'desires', label: 'Dreams & Desires', num: '04', icon: '✨', color: 'amber' },
-      { id: 'authority', label: 'Authority', num: '05', icon: '🏆', color: 'yellow' },
-      { id: 'competitors', label: 'Competitors', num: '06', icon: '👥', color: 'slate' },
-      { id: 'demographics', label: 'Demographics', num: '07', icon: '👤', color: 'indigo' },
-      { id: 'values', label: 'Values & Beliefs', num: '08', icon: '❤️', color: 'rose' },
-      { id: 'transformation', label: 'Transformation', num: '09', icon: '⚡', color: 'violet' },
-      { id: 'media', label: 'Media Habits', num: '10', icon: '📺', color: 'cyan' },
-      { id: 'objections', label: 'Objections', num: '11', icon: '💬', color: 'orange' },
-      { id: 'advantage', label: 'Advantage', num: '12', icon: '🏅', color: 'lime' },
-      { id: 'communication', label: 'Communication', num: '13', icon: '🗣️', color: 'teal' },
-      { id: 'brand-style', label: 'Brand Style', num: '', icon: '🎨', color: 'fuchsia' },
-    ];
-
-    if (isDark) document.documentElement.classList.add('dark');
-
-    function collectItems(prefix, itemPattern) {
-      const items = {};
-      const regex = new RegExp(`^${prefix}__${itemPattern}_(\\d+)__(.+)$`);
-      for (const key in data) {
-        const match = key.match(regex);
-        if (match) {
-          const [, num, field] = match;
-          if (!items[num]) items[num] = {};
-          items[num][field] = data[key];
-        }
-      }
-      return Object.keys(items).sort().map(k => items[k]);
-    }
-
-    function collectQuotes(prefix, num) {
-      const quotes = [];
-      for (let i = 1; i <= 10; i++) {
-        const key = `${prefix}__quote_${String(i).padStart(2, '0')}`;
-        if (data[key]) quotes.push(data[key]);
-      }
-      return quotes;
-    }
-
-    function collectList(prefix) {
-      const items = [];
-      for (let i = 1; i <= 20; i++) {
-        const key = `${prefix}_${String(i).padStart(2, '0')}`;
-        if (data[key]) items.push(data[key]);
-      }
-      return items;
-    }
-
-    function parseData() {
-      parsed.features = collectItems('s02_offer', 'feature');
-      parsed.pains = collectItems('s03_pains', 'pain').map(p => {
-        const quotes = [];
-        for (let i = 1; i <= 5; i++) {
-          if (p[`quote_${String(i).padStart(2, '0')}`]) quotes.push(p[`quote_${String(i).padStart(2, '0')}`]);
-        }
-        return { title: p.title, description: p.description, score: p.score, quotes };
-      });
-      parsed.desires = collectItems('s04_desires', 'desire').map(d => {
-        const quotes = [];
-        for (let i = 1; i <= 5; i++) {
-          if (d[`quote_${String(i).padStart(2, '0')}`]) quotes.push(d[`quote_${String(i).padStart(2, '0')}`]);
-        }
-        return { title: d.title, vision: d.vision_snapshot, milestones: d.tangible_milestones, emotional_win: d.emotional_win, quotes };
-      });
-      parsed.historical = collectList('s05_authority__historical');
-      parsed.credentials = collectList('s05_authority__credentials');
-      parsed.competitors = collectItems('s06_competitors', 'competitor');
-      parsed.competitorsIndirect = collectItems('s06_competitors_indirect', 'competitor');
-      parsed.influencers = collectItems('s06_competitors_influencers', 'influencer');
-      parsed.audienceValues = collectList('s07_audience__values');
-      parsed.audienceInterests = collectList('s07_audience__interests');
-      parsed.values = collectItems('s08_values', 'value');
-      parsed.social = collectItems('s10_media', 'social');
-      parsed.podcasts = collectItems('s10_media', 'podcasts');
-      parsed.blogs = collectItems('s10_media', 'blogs');
-      parsed.books = collectItems('s10_media', 'books');
-      parsed.forums = collectItems('s10_media', 'forums');
-      parsed.objections = collectItems('s11_objections', 'objection');
-      parsed.uvps = collectList('s12_advantage__uvp');
-      parsed.funFactors = collectList('s12_advantage__fun_factor');
-      parsed.commsAvoid = collectList('s13_comms__avoid');
-    }
-
-    function createParticles() {
-      const container = document.getElementById('particles');
-      const colors = ['rgba(24,191,199,0.15)', 'rgba(31,134,214,0.15)', 'rgba(139,92,246,0.1)'];
-      for (let i = 0; i < 20; i++) {
-        const p = document.createElement('div');
-        p.className = 'particle';
-        const size = 4 + Math.random() * 8;
-        p.style.cssText = `width:${size}px;height:${size}px;left:${Math.random()*100}%;background:${colors[Math.floor(Math.random()*colors.length)]};animation-duration:${15+Math.random()*20}s;animation-delay:${Math.random()*10}s;`;
-        container.appendChild(p);
-      }
-    }
-    createParticles();
-
-    async function load() {
-      const progress = document.getElementById('load-progress');
-      let pct = 0;
-      const interval = setInterval(() => { pct = Math.min(pct + Math.random() * 15, 90); progress.style.width = pct + '%'; }, 100);
-      
-      try {
-        const res = await fetch('data.json');
-        if (!res.ok) throw new Error();
-        data = await res.json();
-        parseData();
-        clearInterval(interval);
-        progress.style.width = '100%';
-        
-        setTimeout(() => {
-          document.getElementById('loading').style.opacity = '0';
-          document.getElementById('loading').style.pointerEvents = 'none';
-          setTimeout(() => { document.getElementById('loading').style.display = 'none'; render(); initObserver(); }, 500);
-        }, 400);
-      } catch(e) {
-        clearInterval(interval);
-        document.getElementById('loading').innerHTML = `<div class="text-center p-8"><div class="text-6xl mb-6">⚠️</div><h2 class="text-2xl font-bold text-white mb-3 font-display">Unable to load data</h2><p class="text-gray-400 mb-6">Ensure <code class="bg-gray-800 px-3 py-1 rounded-lg text-sm text-brand-400">data.json</code> exists</p><button onclick="location.reload()" class="px-6 py-3 bg-gradient-to-r from-brand-500 to-accent-500 text-white rounded-xl font-semibold hover:opacity-90 transition-opacity">Retry</button></div>`;
-      }
-    }
-
-    function render() {
-      renderNav();
-      renderDots();
-      renderHero();
-      renderStats();
-      renderSections();
-      renderFooter();
-      
-      const name = data.meta__brand_name;
-      document.getElementById('sidebar-title').textContent = name;
-      document.getElementById('mobile-sidebar-title').textContent = name;
-      document.getElementById('mobile-title').textContent = name.split(' ')[0];
-      document.getElementById('updated-date').textContent = 'Updated ' + data.meta__last_updated;
-      document.title = '360 ICP — ' + name;
-    }
-
-    function renderNav() {
-      const html = sections.map((s, i) => `
-        <button onclick="goTo('${s.id}')" class="nav-item flex items-center w-full px-4 py-3 text-sm font-medium rounded-xl text-gray-600 hover:bg-gray-100/80 transition-all group" data-section="${s.id}">
-          <span class="w-9 h-9 rounded-xl bg-gray-100 group-hover:bg-${s.color}-100 flex items-center justify-center mr-3 text-lg transition-all group-hover:scale-110">${s.icon}</span>
-          <span class="flex-1 text-left truncate">${s.label}</span>
-          ${s.num ? `<span class="text-[10px] font-mono text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-100 px-2 py-1 rounded-lg">${s.num}</span>` : ''}
-        </button>
-      `).join('');
-      document.getElementById('sidebar-nav').innerHTML = html;
-      document.getElementById('mobile-nav').innerHTML = html;
-    }
-
-    function renderDots() {
-      document.getElementById('section-dots').innerHTML = sections.map(s => `
-        <button onclick="goTo('${s.id}')" class="section-indicator bg-gray-300 hover:bg-brand-300 transition-all" data-section="${s.id}" title="${s.label}"></button>
-      `).join('');
-    }
-
-    function renderHero() {
-      document.getElementById('hero').innerHTML = `
-        <div class="relative reveal">
-          <div class="absolute -top-40 -right-40 w-[500px] h-[500px] bg-gradient-to-br from-brand-500/20 via-accent-500/10 to-purple-500/10 rounded-full blur-3xl pointer-events-none"></div>
-          <div class="absolute -bottom-20 -left-32 w-80 h-80 bg-gradient-to-tr from-accent-500/15 to-brand-500/5 rounded-full blur-2xl pointer-events-none"></div>
-          
-          <div class="relative">
-            <div class="flex flex-wrap items-center gap-3 mb-10">
-              <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-brand-500/10 to-accent-500/10 border border-brand-500/20 text-brand-600">
-                <span class="relative flex h-2.5 w-2.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-brand-500"></span></span>
-                <span class="font-semibold text-sm">${data.meta__brand_name}</span>
-              </span>
-              <span class="px-4 py-2 rounded-full text-gray-500 text-xs uppercase tracking-[0.2em] font-bold border border-gray-200 bg-white shadow-sm">Confidential</span>
-              <span class="px-4 py-2 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200 shadow-sm">v1.0</span>
-            </div>
-            
-            <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.1] mb-8 font-display">
-              <span class="text-gray-900">360° </span>
-              <span class="gradient-text">Ideal Customer</span>
-              <br><span class="text-gray-900">Profile</span>
-            </h1>
-            
-            <p class="text-xl lg:text-2xl text-gray-500 max-w-2xl leading-relaxed mb-12">
-              A deep-dive analysis of <span class="font-semibold text-gray-700">${data.s02_offer__core__product_name.split('(')[0].trim()}</span> — psychology, pain points, desires, and decision patterns.
-            </p>
-
-            <div class="flex flex-wrap gap-4">
-              <button onclick="goTo('pains')" class="group inline-flex items-center gap-3 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-red-50 to-orange-50 text-red-700 font-semibold border border-red-100 hover:shadow-lg hover:-translate-y-1 transition-all">
-                <span class="text-xl group-hover:scale-110 transition-transform">⚠️</span>
-                Pain Points
-                <span class="px-2 py-1 bg-red-100 rounded-lg text-xs font-bold">${parsed.pains.length}</span>
-              </button>
-              <button onclick="goTo('offer')" class="group inline-flex items-center gap-3 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-brand-500 to-accent-500 text-white font-semibold shadow-lg shadow-brand-500/30 hover:shadow-xl hover:shadow-brand-500/40 hover:-translate-y-1 transition-all">
-                <span class="text-xl group-hover:scale-110 transition-transform">🎯</span>
-                Explore Offer
-              </button>
-              <button onclick="openCmd()" class="group inline-flex items-center gap-3 px-6 py-3.5 rounded-2xl bg-white text-gray-700 font-semibold border border-gray-200 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all">
-                <span class="text-xl">🔍</span>
-                Search
-                <kbd class="hidden sm:inline px-2 py-1 text-[10px] bg-gray-100 rounded-lg font-mono">⌘K</kbd>
-              </button>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    function renderStats() {
-      const stats = [
-        { label: 'Pain Points', value: parsed.pains.length, icon: '⚠️', gradient: 'from-red-500 to-orange-500' },
-        { label: 'Desires', value: parsed.desires.length, icon: '✨', gradient: 'from-amber-500 to-yellow-500' },
-        { label: 'Competitors', value: parsed.competitors.length + parsed.competitorsIndirect.length, icon: '🎯', gradient: 'from-blue-500 to-cyan-500' },
-        { label: 'Core Values', value: parsed.values.length, icon: '❤️', gradient: 'from-rose-500 to-pink-500' },
-        { label: 'Objections', value: parsed.objections.length, icon: '💬', gradient: 'from-emerald-500 to-teal-500' },
-        { label: 'Read Time', value: '12m', icon: '⏱️', gradient: 'from-brand-500 to-accent-500' },
-      ];
-      
-      document.getElementById('stats').innerHTML = `
-        <div class="reveal grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          ${stats.map(s => `
-            <div class="card group bg-white p-5 rounded-2xl border border-gray-100 text-center shadow-sm hover:shadow-xl cursor-default">
-              <div class="text-3xl mb-2 group-hover:scale-125 transition-transform duration-500">${s.icon}</div>
-              <div class="text-2xl font-black bg-gradient-to-r ${s.gradient} bg-clip-text text-transparent">${s.value}</div>
-              <div class="text-[10px] text-gray-500 font-bold uppercase tracking-wider mt-1">${s.label}</div>
-            </div>
-          `).join('')}
-        </div>
-      `;
-    }
-
-    function renderSections() {
-      document.getElementById('sections').innerHTML = `
-        ${section('story', '01', data.s01_story__core__title, storyHTML())}
-        ${section('offer', '02', 'The Offer', offerHTML())}
-        ${section('pains', '03', 'Fears, Pains & Problems', painsHTML())}
-        ${section('desires', '04', 'Dreams & Desires', desiresHTML())}
-        ${section('authority', '05', 'Authority & Credibility', authorityHTML())}
-        ${section('competitors', '06', 'Competitors & Influencers', competitorsHTML())}
-        ${section('demographics', '07', 'Demographics', demographicsHTML())}
-        ${section('values', '08', 'Values & Beliefs', valuesHTML())}
-        ${section('transformation', '09', 'Transformation', transformationHTML())}
-        ${section('media', '10', 'Media Consumption', mediaHTML())}
-        ${section('objections', '11', 'Common Objections', objectionsHTML())}
-        ${section('advantage', '12', 'Competitive Advantage', advantageHTML())}
-        ${section('communication', '13', 'Communication Style', communicationHTML())}
-        ${section('brand-style', '', 'Brand Style Guide', brandHTML())}
-      `;
-    }
-
-    function section(id, num, title, content) {
-      return `<section id="${id}" class="section scroll-mt-28 reveal">
-        <div class="flex items-center gap-5 mb-10">
-          ${num ? `<div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-500/10 to-accent-500/10 flex items-center justify-center text-brand-600 font-mono font-bold border border-brand-500/20 shadow-lg shadow-brand-500/5">${num}</div>` : ''}
-          <h2 class="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900 font-display">${title}</h2>
-        </div>
-        <div class="${num ? 'lg:pl-[76px]' : ''}">${content}</div>
-      </section>`;
-    }
-
-    function storyHTML() {
-      const p = data.s01_story__core__content.split('\n\n');
-      return `<div class="space-y-6">${p.map((t, i) => `
-        <div class="card p-8 rounded-3xl border ${i === 0 ? 'bg-gradient-to-br from-brand-50 via-accent-50/50 to-white border-brand-200/50 shadow-lg shadow-brand-500/5' : 'bg-white border-gray-100'}">
-          <p class="${i === 0 ? 'text-xl font-medium text-gray-800 leading-relaxed' : 'text-gray-600 leading-relaxed'}">${t}</p>
-        </div>
-      `).join('')}</div>`;
-    }
-
-    function offerHTML() {
-      return `<div class="space-y-8">
-        <div class="card relative bg-white border border-gray-100 rounded-3xl p-8 sm:p-10 overflow-hidden shadow-xl">
-          <div class="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-brand-500/10 via-accent-500/5 to-transparent rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
-          <div class="relative">
-            <div class="flex flex-wrap items-start justify-between gap-6 mb-8">
-              <div>
-                <span class="inline-block text-xs font-bold py-1.5 px-4 bg-gradient-to-r from-brand-500/10 to-accent-500/10 text-brand-600 border border-brand-500/20 rounded-full mb-4">${data.s02_offer__core__unique_mechanism_tagline}</span>
-                <h3 class="text-2xl font-bold text-gray-900 font-display">${data.s02_offer__core__product_name}</h3>
-              </div>
-              <div class="text-right">
-                <div class="text-4xl font-black gradient-text">${data.s02_offer__core__price}</div>
-                <p class="text-sm text-gray-500 mt-1">${data.s02_offer__core__investment_terms.split(';')[1]?.trim() || ''}</p>
-              </div>
-            </div>
-            <p class="text-lg text-gray-600 leading-relaxed mb-8">${data.s02_offer__core__short_description}</p>
-            <div class="grid sm:grid-cols-3 gap-6 pt-8 border-t border-gray-100">
-              ${[['📦', 'Delivery', data.s02_offer__core__delivery_format.split(';')[0], 'blue'], ['🔓', 'Access', data.s02_offer__core__delivery_access, 'green'], ['👥', 'Community', data.s02_offer__core__delivery_community.split(';')[0], 'purple']].map(([icon, title, desc, color]) => `
-                <div class="flex gap-4"><div class="w-12 h-12 rounded-xl bg-${color}-50 flex items-center justify-center text-2xl shrink-0">${icon}</div><div><h4 class="font-bold text-gray-900">${title}</h4><p class="text-sm text-gray-500">${desc}</p></div></div>
-              `).join('')}
-            </div>
-          </div>
-        </div>
-        <div class="grid sm:grid-cols-2 gap-4">
-          ${parsed.features.map((f, i) => `
-            <div class="card group bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-              <div class="flex items-start gap-4">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-accent-500 text-white flex items-center justify-center font-bold shrink-0 shadow-lg shadow-brand-500/20 group-hover:scale-110 transition-transform">${i + 1}</div>
-                <div><h4 class="font-bold text-gray-900 mb-1">${f.title}</h4><p class="text-sm text-gray-500">${f.description}</p></div>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-        <div class="bg-gradient-to-br from-blue-50 via-cyan-50 to-teal-50 border border-blue-100 rounded-3xl p-8 shadow-lg">
-          <div class="flex items-start gap-5">
-            <div class="w-14 h-14 rounded-2xl bg-white shadow-lg flex items-center justify-center text-3xl shrink-0">🧬</div>
-            <div><h4 class="font-bold text-blue-900 text-lg mb-2 font-display">Unique Mechanism</h4><p class="text-blue-800/80 leading-relaxed">${data.s02_offer__core__unique_mechanism_description}</p></div>
-          </div>
-        </div>
-      </div>`;
-    }
-
-    function painsHTML() {
-      const sorted = [...parsed.pains].sort((a, b) => b.score - a.score);
-      const top = sorted[0];
-      return `<div class="space-y-6">
-        <div class="bg-gradient-to-r from-red-50 via-orange-50 to-amber-50 border border-red-100 rounded-2xl p-6 shadow-lg shadow-red-500/5">
-          <div class="flex items-start gap-5">
-            <div class="w-14 h-14 bg-white rounded-2xl shadow-lg flex items-center justify-center text-3xl">🔥</div>
-            <div>
-              <div class="flex items-center gap-3 mb-2">
-                <span class="text-xs font-bold text-red-600 uppercase tracking-widest">Top Pain Point</span>
-                <span class="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-lg">${top.score}/100</span>
-              </div>
-              <p class="text-red-900 font-bold text-lg">${top.title}</p>
-            </div>
-          </div>
-        </div>
-        <div class="space-y-5">
-          ${parsed.pains.map((p, i) => `
-            <div class="card relative bg-white rounded-2xl border border-gray-100 p-6 overflow-hidden shadow-sm">
-              <div class="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b ${p.score >= 90 ? 'from-red-500 to-orange-500' : p.score >= 80 ? 'from-orange-500 to-amber-500' : 'from-brand-500 to-accent-500'} rounded-l-2xl"></div>
-              <div class="pl-5">
-                <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
-                  <div class="flex items-center gap-3">
-                    <span class="text-xs font-mono font-bold text-gray-400 bg-gray-100 px-3 py-1.5 rounded-lg">#${String(i + 1).padStart(2, '0')}</span>
-                    <h3 class="font-bold text-gray-900 text-lg">${p.title}</h3>
-                  </div>
-                  <div class="flex items-center gap-3">
-                    <div class="w-32 h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <div class="h-full bg-gradient-to-r ${p.score >= 90 ? 'from-red-500 to-orange-500' : p.score >= 80 ? 'from-orange-500 to-amber-500' : 'from-brand-500 to-accent-500'} rounded-full" style="width:${p.score}%"></div>
-                    </div>
-                    <span class="text-sm font-bold ${p.score >= 90 ? 'text-red-600' : p.score >= 80 ? 'text-orange-600' : 'text-brand-600'}">${p.score}</span>
-                  </div>
-                </div>
-                <p class="text-gray-600 mb-5">${p.description}</p>
-                <div class="bg-gray-50 rounded-xl p-5 space-y-3">
-                  <div class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">💬 Voice of Customer</div>
-                  ${p.quotes.map(q => `
-                    <div class="quote-row flex gap-3 text-gray-500 cursor-pointer hover:bg-white p-3 -mx-1 rounded-lg transition-all group" onclick="copy(\`${q.replace(/`/g, '\\`')}\`)">
-                      <span class="text-brand-400/50 shrink-0 text-lg">"</span>
-                      <p class="flex-1 italic">${q}</p>
-                      <span class="quote-copy text-gray-300 shrink-0">📋</span>
-                    </div>
-                  `).join('')}
-                </div>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      </div>`;
-    }
-
-    function desiresHTML() {
-      return `<div class="space-y-12">${parsed.desires.map((d, i) => `
-        <div class="relative">
-          <div class="flex gap-6">
-            <div class="hidden lg:flex flex-col items-center">
-              <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-500/10 to-accent-500/10 border border-brand-500/20 flex items-center justify-center font-bold gradient-text text-xl">${i + 1}</div>
-              ${i < parsed.desires.length - 1 ? '<div class="w-0.5 flex-1 bg-gradient-to-b from-brand-500/30 to-transparent mt-3"></div>' : ''}
-            </div>
-            <div class="flex-1 space-y-5">
-              <h3 class="text-xl font-bold text-gray-900 flex items-center gap-4 font-display">
-                <span class="lg:hidden w-10 h-10 rounded-xl bg-brand-500/10 flex items-center justify-center text-brand-600 font-bold">${i + 1}</span>
-                ${d.title}
-              </h3>
-              <div class="grid md:grid-cols-3 gap-4">
-                ${[['🎯', 'Vision', d.vision, 'blue', 'cyan'], ['🚩', 'Milestones', d.milestones, 'green', 'emerald'], ['🏆', 'The Win', d.emotional_win, 'purple', 'pink']].map(([icon, label, text, c1, c2]) => `
-                  <div class="card bg-gradient-to-br from-${c1}-50 to-${c2}-50/50 border border-${c1}-100 rounded-2xl p-5">
-                    <div class="flex items-center gap-2 mb-3"><span class="text-xl">${icon}</span><span class="text-xs font-bold text-${c1}-600 uppercase tracking-wider">${label}</span></div>
-                    <p class="text-sm text-${c1}-900/80 leading-relaxed">${label === 'Vision' ? '"' + text + '"' : text}</p>
-                  </div>
-                `).join('')}
-              </div>
-              <div class="pl-5 border-l-2 border-brand-500/20 space-y-2">
-                ${d.quotes.map(q => `<p class="text-gray-500 italic">"${q}"</p>`).join('')}
-              </div>
-            </div>
-          </div>
-        </div>
-      `).join('')}</div>`;
-    }
-
-    function authorityHTML() {
-      return `<div class="space-y-8">
-        <div class="card bg-gradient-to-br from-brand-50 via-accent-50/50 to-white rounded-3xl p-8 border border-brand-200/50 shadow-lg">
-          <div class="flex items-start gap-5">
-            <div class="w-14 h-14 rounded-2xl bg-white shadow-lg flex items-center justify-center text-3xl">🏆</div>
-            <div><h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-2">Core Qualifications</h3><p class="text-xl font-semibold text-gray-900 leading-relaxed">${data.s05_authority__core__title}</p></div>
-          </div>
-        </div>
-        <div class="grid lg:grid-cols-2 gap-6">
-          <div class="card bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-            <h4 class="font-bold mb-5 flex items-center gap-3"><span class="text-2xl">📜</span><span class="font-display">Historical</span></h4>
-            <ul class="space-y-4">${parsed.historical.map(item => `<li class="flex gap-4 text-gray-600"><span class="w-2 h-2 rounded-full bg-amber-400 mt-2.5 shrink-0"></span><span>${item}</span></li>`).join('')}</ul>
-          </div>
-          <div class="card bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-            <h4 class="font-bold mb-5 flex items-center gap-3"><span class="text-2xl">✅</span><span class="font-display">Credentials</span></h4>
-            <ul class="space-y-4">${parsed.credentials.map(item => `<li class="flex gap-4 text-gray-600"><span class="w-6 h-6 rounded-lg bg-green-100 text-green-600 flex items-center justify-center text-xs shrink-0 mt-0.5">✓</span><span>${item}</span></li>`).join('')}</ul>
-          </div>
-        </div>
-      </div>`;
-    }
-
-    function competitorsHTML() {
-      return `<div class="space-y-8">
-        <div class="grid md:grid-cols-2 gap-5">
-          ${parsed.competitors.map(c => `
-            <div class="card bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
-              <div class="bg-gray-50 p-5 border-b border-gray-100">
-                <div class="flex justify-between items-start">
-                  <div><h4 class="font-bold text-gray-900 text-lg">${c.name}</h4><p class="text-sm font-semibold text-brand-600">${c.pricing}</p></div>
-                  ${c.website ? `<a href="${c.website}" target="_blank" class="w-9 h-9 rounded-xl bg-white border border-gray-200 flex items-center justify-center hover:border-brand-300 hover:shadow-md transition-all">🔗</a>` : ''}
-                </div>
-              </div>
-              <div class="p-5 space-y-4">
-                <p class="text-gray-600">${c.offering}</p>
-                <div class="bg-gradient-to-r from-brand-50 to-accent-50 text-brand-700 p-4 rounded-xl font-medium border border-brand-100">${c.usp}</div>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-        <div class="grid lg:grid-cols-2 gap-6">
-          <div class="bg-gray-50 rounded-2xl p-6 border border-gray-100">
-            <h3 class="font-bold mb-5 flex items-center gap-3 font-display">🛡️ Indirect Competitors</h3>
-            <div class="space-y-3">${parsed.competitorsIndirect.map(i => `<div class="bg-white rounded-xl p-4 border border-gray-100"><div class="flex justify-between items-start mb-2"><h4 class="font-semibold">${i.name}</h4>${i.website ? `<a href="${i.website}" target="_blank" class="text-xs text-gray-400 hover:text-brand-500">→</a>` : ''}</div><p class="text-sm text-gray-500">${i.overlap}</p></div>`).join('')}</div>
-          </div>
-          <div class="bg-gray-50 rounded-2xl p-6 border border-gray-100">
-            <h3 class="font-bold mb-5 flex items-center gap-3 font-display">📈 Key Influencers</h3>
-            <div class="space-y-2">${parsed.influencers.map(i => `<a href="${i.url}" target="_blank" class="flex items-center justify-between p-4 rounded-xl bg-white border border-gray-100 hover:border-brand-300 hover:shadow-md transition-all group"><span class="font-medium group-hover:text-brand-600 transition-colors">${i.name}</span><span class="text-gray-300 group-hover:text-brand-500 group-hover:translate-x-1 transition-all">→</span></a>`).join('')}</div>
-          </div>
-        </div>
-      </div>`;
-    }
-
-    function demographicsHTML() {
-      return `<div class="space-y-6">
-        <div class="grid md:grid-cols-2 gap-5">
-          <div class="card bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
-            <h4 class="font-bold mb-5 flex items-center gap-3 font-display">👤 Core Profile</h4>
-            <div class="space-y-4">${[['Age', data.s07_audience__demographics__age], ['Gender', data.s07_audience__demographics__gender], ['Income', data.s07_audience__demographics__income]].map(([l, v]) => `<div class="flex justify-between items-center text-sm pb-3 border-b border-gray-100 last:border-0 last:pb-0"><span class="text-gray-500">${l}</span><span class="font-semibold ${l === 'Income' ? 'px-3 py-1 bg-green-50 text-green-700 rounded-lg text-xs' : ''}">${v}</span></div>`).join('')}</div>
-          </div>
-          <div class="card bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
-            <h4 class="font-bold mb-5 flex items-center gap-3 font-display">💼 Professional</h4>
-            <div class="space-y-4"><div><span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Occupation</span><p class="text-gray-700 mt-2">${data.s07_audience__demographics__occupation}</p></div><div><span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Education</span><p class="text-gray-700 mt-2">${data.s07_audience__demographics__education}</p></div></div>
-          </div>
-        </div>
-        <div class="grid md:grid-cols-2 gap-5">
-          <div class="bg-gradient-to-br from-rose-50 to-pink-50 rounded-2xl p-6 border border-rose-100">
-            <h4 class="font-bold mb-4 text-rose-800 flex items-center gap-2 font-display">❤️ Core Values</h4>
-            <ul class="space-y-2">${parsed.audienceValues.map(i => `<li class="text-sm text-rose-900/80 bg-white/70 p-3 rounded-xl flex items-start gap-3"><span class="w-2 h-2 rounded-full bg-rose-400 mt-1.5 shrink-0"></span>${i}</li>`).join('')}</ul>
-          </div>
-          <div class="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-6 border border-blue-100">
-            <h4 class="font-bold mb-4 text-blue-800 flex items-center gap-2 font-display">✨ Interests</h4>
-            <ul class="space-y-2">${parsed.audienceInterests.map(i => `<li class="text-sm text-blue-900/80 bg-white/70 p-3 rounded-xl flex items-start gap-3"><span class="w-2 h-2 rounded-full bg-blue-400 mt-1.5 shrink-0"></span>${i}</li>`).join('')}</ul>
-          </div>
-        </div>
-      </div>`;
-    }
-
-    function valuesHTML() {
-      const icons = ['🛡️', '⚡', '⚓', '❤️', '😊', '✨', '🤝'];
-      return `<div class="space-y-10">
-        <div class="card bg-gradient-to-br from-white via-gray-50 to-white p-10 rounded-3xl border border-gray-100 text-center shadow-lg">
-          <div class="text-4xl mb-5">💭</div>
-          <p class="text-xl sm:text-2xl font-medium text-gray-800 italic leading-relaxed max-w-2xl mx-auto">"${data.s08_values__synthesis}"</p>
-        </div>
-        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          ${parsed.values.map((v, i) => `
-            <div class="card bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
-              <div class="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mb-4 text-2xl">${icons[i % icons.length]}</div>
-              <h4 class="font-bold text-gray-900 mb-3 font-display">${v.name}</h4>
-              <p class="text-gray-600 leading-relaxed">${v.explanation}</p>
-            </div>
-          `).join('')}
-        </div>
-      </div>`;
-    }
-
-    function transformationHTML() {
-      const t = { before: data.s09_transformation__before, after: data.s09_transformation__after, emotional_shift: data.s09_transformation__emotional_shift, impact: data.s09_transformation__impact };
-      return `<div class="space-y-6">
-        <div class="grid lg:grid-cols-2 gap-5 relative">
-          <div class="hidden lg:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
-            <div class="w-16 h-16 bg-white rounded-2xl shadow-2xl flex items-center justify-center text-3xl border border-gray-100 animate-pulse">→</div>
-          </div>
-          <div class="card bg-gradient-to-br from-red-50 via-orange-50 to-amber-50 border border-red-100 rounded-3xl p-8 shadow-lg">
-            <div class="flex items-center gap-4 mb-5">
-              <div class="w-12 h-12 bg-white rounded-xl shadow-lg flex items-center justify-center text-2xl">🌧️</div>
-              <span class="px-3 py-1.5 bg-red-100 text-red-700 text-xs font-bold rounded-lg uppercase tracking-wider">Before</span>
-            </div>
-            <h3 class="font-bold text-red-900 text-lg mb-3 font-display">The Struggle</h3>
-            <p class="text-red-900/80 italic leading-relaxed text-lg">"${t.before}"</p>
-          </div>
-          <div class="card bg-gradient-to-br from-teal-50 via-cyan-50 to-blue-50 border border-teal-100 rounded-3xl p-8 shadow-lg">
-            <div class="flex items-center gap-4 mb-5">
-              <div class="w-12 h-12 bg-white rounded-xl shadow-lg flex items-center justify-center text-2xl">☀️</div>
-              <span class="px-3 py-1.5 bg-teal-100 text-teal-700 text-xs font-bold rounded-lg uppercase tracking-wider">After</span>
-            </div>
-            <h3 class="font-bold text-teal-900 text-lg mb-3 font-display">The Breakthrough</h3>
-            <p class="text-teal-900/80 font-medium leading-relaxed text-lg">"${t.after}"</p>
-          </div>
-        </div>
-        <div class="grid md:grid-cols-2 gap-5">
-          <div class="card bg-white border border-gray-100 p-6 rounded-2xl shadow-sm">
-            <div class="flex items-start gap-4"><div class="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center text-2xl">❤️</div><div><h4 class="font-bold text-gray-900 mb-2 font-display">Emotional Shift</h4><p class="text-gray-600">${t.emotional_shift}</p></div></div>
-          </div>
-          <div class="card bg-white border border-gray-100 p-6 rounded-2xl shadow-sm">
-            <div class="flex items-start gap-4"><div class="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center text-2xl">⚡</div><div><h4 class="font-bold text-gray-900 mb-2 font-display">Real World Impact</h4><p class="text-gray-600">${t.impact}</p></div></div>
-          </div>
-        </div>
-      </div>`;
-    }
-
-    function mediaHTML() {
-      const cats = [
-        { title: 'Social', icon: '🌐', items: parsed.social.map(i => ({ name: i.name, url: i.url })) },
-        { title: 'Podcasts', icon: '🎧', items: parsed.podcasts.map(i => ({ name: i.name, url: i.url })) },
-        { title: 'Books', icon: '📚', items: parsed.books.map(i => ({ name: i.title, sub: i.author, url: i.url })) },
-        { title: 'Communities', icon: '💬', items: [...parsed.blogs, ...parsed.forums].map(i => ({ name: i.name, url: i.url })) },
-      ];
-      return `<div class="grid md:grid-cols-2 lg:grid-cols-4 gap-5">${cats.map(c => `
-        <div class="card bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-          <div class="p-5 border-b border-gray-100 bg-gray-50"><h4 class="font-bold flex items-center gap-3 font-display"><span class="text-xl">${c.icon}</span> ${c.title}</h4></div>
-          <div class="p-4"><ul class="space-y-2">${c.items.map(i => `<li><a href="${i.url}" target="_blank" class="flex items-start gap-3 group hover:bg-gray-50 p-3 -mx-1 rounded-xl transition-colors"><div class="flex-1 min-w-0"><span class="font-medium text-gray-900 group-hover:text-brand-600 transition-colors block truncate">${i.name}</span>${i.sub ? `<span class="text-xs text-gray-400">${i.sub}</span>` : ''}</div></a></li>`).join('')}</ul></div>
-        </div>
-      `).join('')}</div>`;
-    }
-
-    function objectionsHTML() {
-      return `<div class="space-y-4">${parsed.objections.map((o, i) => `
-        <div class="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
-          <button onclick="toggleAcc(this)" class="w-full px-6 py-5 text-left font-semibold flex items-center justify-between hover:bg-gray-50 transition-colors">
-            <span class="flex items-center gap-4"><span class="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-xs font-mono text-gray-500">${String(i + 1).padStart(2, '0')}</span><span class="text-gray-900">"${o.objection}"</span></span>
-            <span class="acc-icon text-gray-400 text-xl transition-transform">▾</span>
-          </button>
-          <div class="acc-content hidden px-6 pb-6">
-            <div class="ml-12 p-5 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-100">
-              <div class="flex gap-4"><div class="w-8 h-8 rounded-lg bg-green-100 text-green-600 flex items-center justify-center shrink-0">✓</div><div><span class="text-xs font-bold text-green-700 uppercase tracking-wider">Rebuttal</span><p class="text-green-900/80 mt-2">${o.rebuttal}</p></div></div>
-            </div>
-          </div>
-        </div>
-      `).join('')}</div>`;
-    }
-
-    function advantageHTML() {
-      return `<div class="space-y-8">
-        <div class="grid md:grid-cols-2 gap-4">
-          ${parsed.uvps.map((u, i) => `
-            <div class="card flex items-start gap-4 bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-              <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-accent-500 text-white flex items-center justify-center font-bold shrink-0 shadow-lg shadow-brand-500/20">${i + 1}</div>
-              <span class="text-gray-700 pt-1">${u}</span>
-            </div>
-          `).join('')}
-        </div>
-        <div class="grid lg:grid-cols-2 gap-5">
-          <div class="card bg-gradient-to-br from-blue-50 via-cyan-50 to-teal-50 border border-blue-100 rounded-3xl p-8 shadow-lg">
-            <div class="flex items-center gap-4 mb-4"><div class="w-12 h-12 rounded-xl bg-white shadow-lg flex items-center justify-center text-2xl">🎯</div><h4 class="font-bold text-blue-900 text-lg font-display">Market Comparison</h4></div>
-            <p class="text-blue-900/80 leading-relaxed">${data.s12_advantage__comparison}</p>
-          </div>
-          <div class="card bg-gradient-to-br from-purple-50 via-pink-50 to-rose-50 border border-purple-100 rounded-3xl p-8 shadow-lg">
-            <div class="flex items-center gap-4 mb-4"><div class="w-12 h-12 rounded-xl bg-white shadow-lg flex items-center justify-center text-2xl">⚡</div><h4 class="font-bold text-purple-900 text-lg font-display">Innovation Edge</h4></div>
-            <p class="text-purple-900/80 leading-relaxed">${data.s12_advantage__innovation}</p>
-          </div>
-        </div>
-        <div class="bg-gradient-to-r from-amber-50 via-orange-50 to-yellow-50 rounded-3xl p-8 border border-amber-100 shadow-lg">
-          <h3 class="font-bold mb-5 flex items-center gap-3 font-display text-lg">⭐ Delight Factors</h3>
-          <div class="flex flex-wrap gap-3">${parsed.funFactors.map(f => `<span class="bg-white text-amber-800 px-5 py-2.5 rounded-full border border-amber-200 shadow-sm font-semibold hover:shadow-md hover:-translate-y-0.5 transition-all cursor-default">✨ ${f}</span>`).join('')}</div>
-        </div>
-      </div>`;
-    }
-
-    function communicationHTML() {
-      return `<div class="space-y-8">
-        <div class="grid md:grid-cols-3 gap-5">
-          ${[{ t: 'Tone', i: '🔊', c: data.s13_comms__tone }, { t: 'Style', i: '✨', c: data.s13_comms__style }, { t: 'Vibe', i: '🤝', c: data.s13_comms__vibe }].map(x => `
-            <div class="card bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
-              <div class="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mb-4 text-2xl">${x.i}</div>
-              <h4 class="font-bold mb-3 font-display">${x.t}</h4>
-              <p class="text-gray-600 leading-relaxed">${x.c}</p>
-            </div>
-          `).join('')}
-        </div>
-        <div class="grid md:grid-cols-2 gap-5">
-          <div class="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-100 rounded-3xl p-8">
-            <h4 class="font-bold text-green-800 mb-5 flex items-center gap-3 font-display">👍 Emphasize</h4>
-            <ul class="space-y-3">${['Validation and safety', 'Clear, optional steps', 'Biological explanations', '"We" language'].map(i => `<li class="flex gap-3 text-green-900/80 bg-white/70 p-3 rounded-xl"><span class="w-6 h-6 rounded-lg bg-green-100 text-green-600 flex items-center justify-center text-xs">✓</span>${i}</li>`).join('')}</ul>
-          </div>
-          <div class="bg-gradient-to-br from-red-50 to-rose-50 border border-red-100 rounded-3xl p-8">
-            <h4 class="font-bold text-red-800 mb-5 flex items-center gap-3 font-display">🚫 Avoid</h4>
-            <div class="flex flex-wrap gap-3">${parsed.commsAvoid.map(i => `<span class="bg-white/70 text-red-700 px-4 py-2 rounded-full font-medium border border-red-200/50">${i}</span>`).join('')}</div>
-          </div>
-        </div>
-      </div>`;
-    }
-
-    function brandHTML() {
-      const colors = [
-        { key: 'primary', name: data.r01_brand_style__colors__primary__name, hex: data.r01_brand_style__colors__primary__hex, usage: data.r01_brand_style__colors__primary__usage },
-        { key: 'secondary', name: data.r01_brand_style__colors__secondary__name, hex: data.r01_brand_style__colors__secondary__hex, usage: data.r01_brand_style__colors__secondary__usage },
-        { key: 'accent', name: data.r01_brand_style__colors__accent__name, hex: data.r01_brand_style__colors__accent__hex, usage: data.r01_brand_style__colors__accent__usage },
-      ];
-      const visualElements = [];
-      for (let i = 1; i <= 10; i++) {
-        const key = `r01_brand_style__visual_style__element_${String(i).padStart(2, '0')}`;
-        if (data[key]) visualElements.push(data[key]);
-      }
-      const voiceAttrs = [];
-      for (let i = 1; i <= 10; i++) {
-        const key = `r01_brand_style__voice__attribute_${String(i).padStart(2, '0')}`;
-        if (data[key]) voiceAttrs.push(data[key]);
-      }
-      return `<div class="space-y-14">
-        <div>
-          <h3 class="font-bold mb-8 flex items-center gap-3 text-xl font-display">🎨 Color Palette</h3>
-          <div class="grid md:grid-cols-3 gap-8">
-            ${colors.map(c => `
-              <div class="group cursor-pointer" onclick="copy('${c.hex}')">
-                <div class="h-36 rounded-3xl shadow-xl transition-all group-hover:-translate-y-3 group-hover:shadow-2xl relative overflow-hidden" style="background:${c.hex}">
-                  <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30"><span class="px-4 py-2 bg-white rounded-xl text-sm font-mono font-bold shadow-lg">${c.hex}</span></div>
-                </div>
-                <div class="mt-4"><div class="flex items-center justify-between mb-1"><h4 class="font-bold font-display">${c.name}</h4><span class="text-xs font-bold px-2 py-1 bg-gray-100 rounded-lg uppercase">${c.key}</span></div><p class="text-sm text-gray-500">${c.usage}</p></div>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-        <div>
-          <h3 class="font-bold mb-8 flex items-center gap-3 text-xl font-display">🔤 Typography</h3>
-          <div class="grid md:grid-cols-2 gap-6">
-            ${[{ t: 'Headings', f: data.r01_brand_style__typography__headings__font, d: data.r01_brand_style__typography__headings__description, s: 'The Quick Brown Fox' }, { t: 'Body', f: data.r01_brand_style__typography__body__font, d: data.r01_brand_style__typography__body__description, s: 'The quick brown fox jumps over the lazy dog.' }].map(x => `
-              <div class="card bg-white rounded-3xl border border-gray-100 p-8 shadow-sm">
-                <div class="flex justify-between items-start mb-6"><div><span class="text-xs font-bold text-gray-400 uppercase tracking-wider">${x.t}</span><h4 class="text-2xl font-bold font-display">${x.f}</h4></div><div class="text-5xl font-bold text-gray-200">Aa</div></div>
-                <p class="${x.t === 'Headings' ? 'text-3xl font-bold font-display' : 'text-lg'} text-gray-800 mb-6">${x.s}</p>
-                <p class="text-sm text-gray-500 pt-6 border-t border-gray-100">${x.d}</p>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-        <div class="grid lg:grid-cols-2 gap-6">
-          <div class="card bg-white rounded-3xl border border-gray-100 p-8 shadow-sm">
-            <h3 class="font-bold mb-5 flex items-center gap-3 font-display">📐 Visual Style</h3>
-            <p class="text-gray-700 font-medium mb-5 italic">"${data.r01_brand_style__visual_style__approach}"</p>
-            <div class="space-y-3">${visualElements.map(e => `<div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl"><div class="w-2 h-2 rounded-full bg-brand-500"></div><span class="text-gray-700">${e}</span></div>`).join('')}</div>
-          </div>
-          <div class="card bg-white rounded-3xl border border-gray-100 p-8 shadow-sm">
-            <h3 class="font-bold mb-5 flex items-center gap-3 font-display">🎤 Brand Voice</h3>
-            <div class="flex flex-wrap gap-2 mb-5">${voiceAttrs.map(a => `<span class="px-4 py-2 bg-gradient-to-r from-brand-500 to-accent-500 text-white font-semibold rounded-full shadow-lg shadow-brand-500/20">${a}</span>`).join('')}</div>
-            <p class="text-gray-600 italic pl-4 border-l-2 border-brand-500/30">${data.r01_brand_style__voice__description}</p>
-          </div>
-        </div>
-      </div>`;
-    }
-
-    function renderFooter() {
-      document.getElementById('footer').innerHTML = `
-        <div class="flex justify-center gap-3 mb-6">
-          <span class="px-4 py-2 rounded-full bg-gradient-to-r from-brand-500/10 to-accent-500/10 text-brand-600 font-bold border border-brand-500/20">360° ICP</span>
-          <span class="px-4 py-2 rounded-full bg-gray-100 text-gray-600 font-medium">Confidential</span>
-        </div>
-        <p class="text-lg font-bold text-gray-600 font-display">${data.meta__brand_name}</p>
-        <p class="text-sm text-gray-400 mt-3">Last updated: ${data.meta__last_updated}</p>
-      `;
-    }
-
-    function goTo(id) { document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' }); toggleMobile(false); closeCmd(); }
-    function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
-    function toggleMobile(force) { const close = force === false || !document.getElementById('mobile-sidebar').classList.contains('-translate-x-full'); document.getElementById('mobile-overlay').classList.toggle('hidden', close); document.getElementById('mobile-sidebar').classList.toggle('-translate-x-full', close); }
-    function toggleTheme() { isDark = !isDark; localStorage.setItem('dark', isDark); document.documentElement.classList.toggle('dark', isDark); document.getElementById('theme-icon').textContent = isDark ? '☀️' : '🌙'; }
-    function toggleAcc(btn) { const c = btn.nextElementSibling, icon = btn.querySelector('.acc-icon'), open = !c.classList.contains('hidden'); c.classList.toggle('hidden', open); icon.style.transform = open ? '' : 'rotate(180deg)'; }
-    function copy(text) { navigator.clipboard.writeText(text); toast('Copied!', '✓'); }
-    function toast(msg, icon = '✓') { const t = document.getElementById('toast'); document.getElementById('toast-text').textContent = msg; document.getElementById('toast-icon').textContent = icon; t.classList.remove('opacity-0', 'translate-y-8', 'pointer-events-none'); t.classList.add('opacity-100', 'translate-y-0'); setTimeout(() => { t.classList.add('opacity-0', 'translate-y-8', 'pointer-events-none'); t.classList.remove('opacity-100', 'translate-y-0'); }, 2500); }
-    function share() { if (navigator.share) navigator.share({ title: document.title, url: location.href }); else { navigator.clipboard.writeText(location.href); toast('Link copied!', '🔗'); } }
-    function celebrate() { const colors = ['#18BFC7', '#1F86D6', '#8B5CF6', '#F59E0B', '#10B981', '#EC4899']; const container = document.getElementById('confetti'); for (let i = 0; i < 80; i++) { const c = document.createElement('div'); c.className = 'confetti'; c.style.cssText = `left:${Math.random()*100}%;top:100%;width:${8+Math.random()*8}px;height:${8+Math.random()*8}px;background:${colors[Math.floor(Math.random()*colors.length)]};border-radius:${Math.random() > 0.5 ? '50%' : '2px'};animation:confetti ${3+Math.random()*2}s ease-out forwards;animation-delay:${Math.random()*0.5}s;`; container.appendChild(c); setTimeout(() => c.remove(), 5000); } }
-    
-    function openCmd() { document.getElementById('cmd-overlay').classList.remove('hidden'); document.getElementById('cmd-input').focus(); filterCmd(''); }
-    function closeCmd() { document.getElementById('cmd-overlay').classList.add('hidden'); document.getElementById('cmd-input').value = ''; }
-    function filterCmd(q) { const query = q.toLowerCase(); cmdList = sections.filter(s => s.label.toLowerCase().includes(query)); cmdIndex = 0; renderCmd(); }
-    function renderCmd() { const r = document.getElementById('cmd-results'); if (!cmdList.length) { r.innerHTML = '<div class="p-8 text-center text-gray-400">No results found</div>'; return; } r.innerHTML = `<div class="p-3">${cmdList.map((s, i) => `<button onclick="goTo('${s.id}')" class="w-full flex items-center gap-4 px-5 py-4 rounded-xl text-left ${i === cmdIndex ? 'bg-gradient-to-r from-brand-500/10 to-accent-500/10 text-brand-600' : 'hover:bg-gray-50'} transition-colors"><span class="w-11 h-11 rounded-xl bg-gray-100 flex items-center justify-center text-xl">${s.icon}</span><div class="flex-1"><div class="font-semibold">${s.num ? s.num + '. ' : ''}${s.label}</div></div><span class="text-gray-300">↵</span></button>`).join('')}</div>`; }
-    
-    function initObserver() { const observer = new IntersectionObserver(entries => { entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }); }, { threshold: 0.1, rootMargin: '-80px' }); document.querySelectorAll('.reveal').forEach(el => observer.observe(el)); }
-    
-    window.addEventListener('scroll', () => {
-      const st = document.documentElement.scrollTop, sh = document.documentElement.scrollHeight - window.innerHeight, p = Math.min(st / sh, 1);
-      document.getElementById('progress-bar').style.transform = `scaleX(${p})`;
-      document.getElementById('progress-fill').style.width = `${p * 100}%`;
-      document.getElementById('progress-pct').textContent = `${Math.round(p * 100)}%`;
-      const btn = document.getElementById('scroll-btn'); btn.style.opacity = st > 500 ? '1' : '0'; btn.style.pointerEvents = st > 500 ? 'auto' : 'none';
-      if (p >= 0.98 && !completed) { completed = true; celebrate(); toast('Reading complete! 🎉', '🎊'); }
-      document.querySelectorAll('section[id]').forEach(section => {
-        const rect = section.getBoundingClientRect(), isActive = rect.top <= 200 && rect.bottom >= 200;
-        document.querySelectorAll(`[data-section="${section.id}"]`).forEach(el => {
-          if (el.classList.contains('nav-item')) { el.classList.toggle('active', isActive); el.classList.toggle('text-brand-600', isActive); }
-          else if (el.classList.contains('section-indicator')) { el.classList.toggle('active', isActive); }
-        });
-        if (isActive) sectionsRead.add(section.id);
-      });
-    });
-    
-    document.addEventListener('keydown', e => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); openCmd(); }
-      if (e.key === 'Escape') closeCmd();
-      const overlay = document.getElementById('cmd-overlay');
-      if (!overlay.classList.contains('hidden')) {
-        if (e.key === 'ArrowDown') { e.preventDefault(); cmdIndex = Math.min(cmdIndex + 1, cmdList.length - 1); renderCmd(); }
-        else if (e.key === 'ArrowUp') { e.preventDefault(); cmdIndex = Math.max(cmdIndex - 1, 0); renderCmd(); }
-        else if (e.key === 'Enter' && cmdList[cmdIndex]) { e.preventDefault(); goTo(cmdList[cmdIndex].id); }
-      }
-    });
-
-    load();
+  <!-- ───────────────────────── Data (embedded) ───────────────────────── -->
+  <!-- IMPORTANT: Your schema is FLAT keys like "meta__brand_name".
+       The loader below supports flat keys AND nested keys. -->
+  <script id="report-data" type="application/json">
+{
+  "meta__template_version": "1.0",
+  "meta__brand_name": "Dragonflight Academy",
+  "meta__last_updated": "2026-01-03",
+  "s00_intro__core__title": "Who Is This Dragon Training Course For?",
+  "s00_intro__core__description": "Ideal student profile and positioning guide for the How to Train Your Dragon curriculum.",
+  "s01_story__core__title": "From Chaos to Wingmate",
+  "s01_story__core__content": "For most new riders, the first time a dragon circles overhead is equal parts awe and terror. Villagers dive for cover, someone yells to grab the chains, and well\u2011meaning handlers shout conflicting commands until the dragon bolts or blasts a nervous flame into the sky.\n\nOur lead instructor started exactly there: chasing scorch marks, apologizing for collapsed carts, and wondering why every book insisted dragons could be loyal partners when the ones in front of them seemed unpredictable at best. Years of trial and error showed a painful pattern\u2014most training methods tried to overpower dragons instead of understanding how they naturally think, play, and learn.\n\nInstead of starting with domination, they shifted to a bond\u2011first approach: prepare a safe training ground, learn a dragon's body language and temperament, establish simple rituals of trust, then introduce clear cues in an order that matches the way young dragons explore the world. Small, consistent wins replaced dramatic showdowns. First came calm landings, then willing take\u2011offs, then confident arcs over the valley.\n\nHow to Train Your Dragon became an eight\u2011module curriculum that turns chaotic fire\u2011breathers into steady wingmates. The program gives riders cinematic lessons, illustrated field guides, printable training plans, and optional live support so they don't have to improvise alone. The goal is simple: fewer singed eyebrows, more legends built on real partnership.",
+  "s02_offer__core__product_name": "How to Train Your Dragon (8-Module Rider Course)",
+  "s02_offer__core__price": "$249",
+  "s02_offer__core__investment_terms": "$249 USD; optional installment plan; 14-day satisfaction guarantee.",
+  "s02_offer__core__short_description": "An 8-module, story-driven training program that teaches aspiring riders how to safely bond with, communicate with, and train a young dragon\u2014from first contact to confident flight.",
+  "s02_offer__core__unique_mechanism_tagline": "Bond-First Dragon Training",
+  "s02_offer__core__unique_mechanism_description": "A trust-centered training pathway that starts with safety and environment setup, then layers in temperament mapping, bonding rituals, and clear communication cues so dragons learn because they choose to, not because they are forced.",
+  "s02_offer__core__delivery_format": "Self-paced online course with video lessons, cinematic demonstrations, illustrated field guides, and printable training plans; optional live Q&A flights with instructors.",
+  "s02_offer__core__delivery_access": "Lifetime access to all modules and future updates; watch on desktop, tablet, or mobile.",
+  "s02_offer__core__delivery_community": "Optional private riders' hangar with moderated discussion, training logs, and seasonal challenges for students who want camaraderie without pressure.",
+  "s02_offer__core__delivery_advisory": "Fantasy training curriculum created for entertainment, storytelling, and roleplay; not real-world animal-handling advice or safety guidance.",
+  "s02_offer__feature_01__title": "Stable, Skyfield, and Safety Foundations",
+  "s02_offer__feature_01__description": "I set up a safe training ground, shared signals, and emergency plans so both my dragon and I know how to stay out of trouble from day one.",
+  "s02_offer__feature_02__title": "Dragon Temperament Map",
+  "s02_offer__feature_02__description": "I learn how different dragon types think, play, and protest so I can match my approach to a shy, curious, or stubborn dragon instead of guessing.",
+  "s02_offer__feature_03__title": "First Contact and Bonding Rituals",
+  "s02_offer__feature_03__description": "I follow step-by-step first-meeting scripts, feeding rituals, and trust games that turn my dragon from wary stranger into willing partner.",
+  "s02_offer__feature_04__title": "Ground Drills Before First Flight",
+  "s02_offer__feature_04__description": "I practice simple ground exercises that build response to basic cues so our first flight feels exciting, not like a runaway sky-cart.",
+  "s02_offer__feature_05__title": "Fire, Claws, and Power Management",
+  "s02_offer__feature_05__description": "I learn how to introduce fire practice, land near fragile things, and channel my dragon's strength so they can show off without burning down the village.",
+  "s02_offer__feature_06__title": "Communication Cues and Signals",
+  "s02_offer__feature_06__description": "I build a clear language of hand signs, whistle calls, and saddle signals so my dragon knows exactly what I'm asking even in heavy wind.",
+  "s02_offer__feature_07__title": "Troubleshooting Common Problems",
+  "s02_offer__feature_07__description": "I get checklists and decision trees for nipping, sulking, overexcited zoomies, and refusal to land so I know what to adjust instead of escalating.",
+  "s02_offer__feature_08__title": "Aerial Maneuvers and Stunts",
+  "s02_offer__feature_08__description": "I level up from straight-line flights to dives, tight turns, and formation flying\u2014with drills that protect my dragon's wings and confidence.",
+  "s02_offer__feature_09__title": "Rider Fitness and Mindset",
+  "s02_offer__feature_09__description": "I learn how to stay calm, focused, and physically ready so I do not transmit panic through the saddle when the sky gets wild.",
+  "s02_offer__feature_10__title": "Campaigns, Quests, and Ongoing Growth",
+  "s02_offer__feature_10__description": "I leave with quest templates and progression paths so our training turns into an unfolding story instead of fizzling after the first big victory.",
+  "s03_pains__pain_01__title": "My dragon ignores me or does the opposite of what I ask",
+  "s03_pains__pain_01__description": "I have a powerful dragon at my side, but when I give a cue they stare, snort, or take off in their own direction\u2014and I do not know how to turn chaos into cooperation.",
+  "s03_pains__pain_01__quote_01": "I feel like my dragon has never even heard the commands I keep repeating.",
+  "s03_pains__pain_01__quote_02": "Every flight feels like a negotiation with a flying thunderstorm.",
+  "s03_pains__pain_01__quote_03": "I need a clear system that makes sense to both me and my dragon.",
+  "s03_pains__pain_01__score": 90,
+  "s03_pains__pain_02__title": "I am afraid of hurting my dragon or being hurt",
+  "s03_pains__pain_02__description": "Between teeth, claws, wings, and fire, I worry that one wrong move could injure us, our friends, or half the training field. The fear keeps me from practicing consistently.",
+  "s03_pains__pain_02__quote_01": "I want adventure, but I do not want anyone carried to the healer because I guessed wrong.",
+  "s03_pains__pain_02__quote_02": "I tense up every time my dragon flares their wings near people or buildings.",
+  "s03_pains__pain_02__quote_03": "I need safety rules that let us train boldly without being reckless.",
+  "s03_pains__pain_02__score": 92,
+  "s03_pains__pain_03__title": "Legends and random tips contradict each other",
+  "s03_pains__pain_03__description": "Every village, book, and bard has an opinion about dragons. Some say never show fear; others say never raise your voice. I am drowning in mixed advice and still do not know what to do tomorrow.",
+  "s03_pains__pain_03__quote_01": "I have collected scrolls and stories, but they do not add up to a plan.",
+  "s03_pains__pain_03__quote_02": "My friends tell me to 'trust the bond' while also warning me about bite marks.",
+  "s03_pains__pain_03__quote_03": "I want one coherent path instead of a bag of disconnected tricks.",
+  "s03_pains__pain_03__score": 88,
+  "s03_pains__pain_04__title": "The idea of our first real flight terrifies me",
+  "s03_pains__pain_04__description": "Part of me dreams of slicing through clouds; another part pictures tumbling out of the sky because we skipped a step. The fear makes me delay, which only keeps both of us inexperienced.",
+  "s03_pains__pain_04__quote_01": "I keep saying we will fly 'after a few more ground sessions' that never seem to be enough.",
+  "s03_pains__pain_04__quote_02": "I worry that one panicked flinch in the air will undo months of bonding.",
+  "s03_pains__pain_04__quote_03": "I need a ladder of milestones that makes first flight feel earned, not reckless.",
+  "s03_pains__pain_04__score": 84,
+  "s03_pains__pain_05__title": "Training stalls whenever life gets busy",
+  "s03_pains__pain_05__description": "I start strong, then travel, work, or other quests pull me away. By the time I return to the stable, my dragon's habits have slipped and I feel like we are starting over again.",
+  "s03_pains__pain_05__quote_01": "Every break in practice feels like erasing a chapter of our story.",
+  "s03_pains__pain_05__quote_02": "I need a simple routine that fits into real life, not just training montages.",
+  "s03_pains__pain_05__quote_03": "I wish I had a way to keep progress from vanishing between sessions.",
+  "s03_pains__pain_05__score": 86,
+  "s03_pains__pain_06__title": "I do not know what is 'normal' dragon behavior",
+  "s03_pains__pain_06__description": "Sometimes my dragon is playful, sometimes moody, sometimes distant. I cannot tell the difference between a harmless sulk and a serious warning sign\u2014and that uncertainty makes every interaction feel high stakes.",
+  "s03_pains__pain_06__quote_01": "Is this a tantrum, a boundary, or a sign my dragon is unwell?",
+  "s03_pains__pain_06__quote_02": "I wish I could read tail, wing, and eye signals as clearly as words.",
+  "s03_pains__pain_06__quote_03": "I want a simple guide to what most dragons do when they are curious, stressed, or content.",
+  "s03_pains__pain_06__score": 80,
+  "s03_pains__pain_07__title": "My friends do not really get why I care this much",
+  "s03_pains__pain_07__description": "People around me think dragons are a fun spectacle, not a serious partnership. When I talk about training plans or saddle fit, they glaze over or crack jokes, which makes me feel overly intense or alone.",
+  "s03_pains__pain_07__quote_01": "I want people who understand why I would rather be at the aeries than at the tavern.",
+  "s03_pains__pain_07__quote_02": "I feel silly geeking out about flight formations when no one else seems to care.",
+  "s03_pains__pain_07__quote_03": "I need a place where talking dragon strategy is normal, not 'too much'.",
+  "s03_pains__pain_07__score": 78,
+  "s03_pains__pain_08__title": "Most resources stop at cute tricks",
+  "s03_pains__pain_08__description": "I can find plenty of tips for basic commands and crowd-pleasing stunts, but almost nothing on long-term progression, serious quests, or balancing a dragon partnership with the rest of my life.",
+  "s03_pains__pain_08__quote_01": "I want guidance that goes beyond 'how to get your dragon to roll over.'",
+  "s03_pains__pain_08__quote_02": "I am ready for campaigns and responsibilities, not just parlor tricks.",
+  "s03_pains__pain_08__quote_03": "I wish someone would teach the advanced path, not just the beginner gloss.",
+  "s03_pains__pain_08__score": 82,
+  "s03_pains__pain_09__title": "Gear, saddles, and signals all feel confusing",
+  "s03_pains__pain_09__description": "Between harness styles, signal systems, and flight leathers, I am overwhelmed by choices and worried I will invest in the wrong setup for my dragon's body and temperament.",
+  "s03_pains__pain_09__quote_01": "I keep staring at gear catalogs and closing them without deciding.",
+  "s03_pains__pain_09__quote_02": "I am not sure which pieces are essential and which are just shiny.",
+  "s03_pains__pain_09__quote_03": "I want clear recommendations that match specific dragon types and training stages.",
+  "s03_pains__pain_09__score": 76,
+  "s03_pains__pain_10__title": "I want a framework I can also use to help other riders",
+  "s03_pains__pain_10__description": "I mentor younger riders or run a small stable, but I am improvising. I want a clear framework I can teach that keeps dragons and humans safe while still leaving room for each pair's unique bond.",
+  "s03_pains__pain_10__quote_01": "I am the one everyone asks for help, and I want tools worthy of that trust.",
+  "s03_pains__pain_10__quote_02": "I need guidance on when to push, when to pause, and when to call in more experienced riders.",
+  "s03_pains__pain_10__quote_03": "I want a model that scales from my own dragon to an entire rookery.",
+  "s03_pains__pain_10__score": 79,
+  "s04_desires__desire_01__title": "To build an unshakable bond with my dragon",
+  "s04_desires__desire_01__vision_snapshot": "I move through the training grounds with quiet confidence because my dragon tracks my voice, posture, and signals like we are already mid-flight.",
+  "s04_desires__desire_01__tangible_milestones": "We complete the bonding rituals, master calm mounting and landing, and log 30, 60, and 90 days of consistent practice without major setbacks.",
+  "s04_desires__desire_01__emotional_win": "I feel grounded and proud knowing my dragon chooses to stay by my side, not because of chains but because of trust.",
+  "s04_desires__desire_01__quote_01": "I want to be the one rider my dragon looks for in a crowded skyfield.",
+  "s04_desires__desire_01__quote_02": "I care more about our bond than about flashy stunts.",
+  "s04_desires__desire_01__quote_03": "I crave the ease of moving as one creature in the air.",
+  "s04_desires__desire_02__title": "To understand dragon instincts in plain language",
+  "s04_desires__desire_02__vision_snapshot": "I can glance at wing angle, tail motion, and eye shape and instantly tell whether my dragon is playful, cautious, annoyed, or done for the day.",
+  "s04_desires__desire_02__tangible_milestones": "I complete the temperament map, identify my dragon's primary and secondary styles, and track their usual responses across different environments.",
+  "s04_desires__desire_02__emotional_win": "I feel calm because behavior that used to confuse me now fits a pattern I know how to respond to.",
+  "s04_desires__desire_02__quote_01": "I want to stop guessing what my dragon is feeling.",
+  "s04_desires__desire_02__quote_02": "I love having names for the signals I used to miss.",
+  "s04_desires__desire_02__quote_03": "I am ready to read my dragon as clearly as any map.",
+  "s04_desires__desire_03__title": "To fly confidently in real missions, not just practice laps",
+  "s04_desires__desire_03__vision_snapshot": "We complete supply runs, scouting flights, and celebration flyovers with reliability, even when conditions are less than perfect.",
+  "s04_desires__desire_03__tangible_milestones": "We check off first solo flight, first night flight, first long-distance route, and first mission with other riders without major incidents.",
+  "s04_desires__desire_03__emotional_win": "I feel capable and useful, not just like someone rehearsing tricks in an empty field.",
+  "s04_desires__desire_03__quote_01": "I want our training to matter in actual quests and campaigns.",
+  "s04_desires__desire_03__quote_02": "I am excited by the idea of being trusted with real responsibilities.",
+  "s04_desires__desire_03__quote_03": "I picture us as part of a squadron, not just a spectacle.",
+  "s04_desires__desire_04__title": "To make training fun for both of us",
+  "s04_desires__desire_04__vision_snapshot": "Our sessions feel like games and adventures my dragon looks forward to instead of chores I have to drag us through.",
+  "s04_desires__desire_04__tangible_milestones": "We rotate through structured drills, play-based challenges, and quest-style campaigns that keep motivation high without losing safety.",
+  "s04_desires__desire_04__emotional_win": "I feel delighted watching my dragon's enthusiasm grow as they master new skills.",
+  "s04_desires__desire_04__quote_01": "I want a training plan that feels like story time, not homework.",
+  "s04_desires__desire_04__quote_02": "I learn best when there is a bit of magic and play involved.",
+  "s04_desires__desire_04__quote_03": "I love the idea of unlocking new abilities together like a co-op game.",
+  "s04_desires__desire_05__title": "To turn my dragon passion into a lasting craft",
+  "s04_desires__desire_05__vision_snapshot": "I am known in my circles as the rider who brings structure, creativity, and care to every dragon partnership they touch.",
+  "s04_desires__desire_05__tangible_milestones": "I complete the full curriculum, document our training journey, and optionally mentor at least one new rider or integrate the system into my stories, campaigns, or community events.",
+  "s04_desires__desire_05__emotional_win": "I feel fulfilled because my love for dragons is not just a private obsession\u2014it becomes something that builds worlds and helps others.",
+  "s04_desires__desire_05__quote_01": "I want my dragon knowledge to count for something beyond my own stable.",
+  "s04_desires__desire_05__quote_02": "I am excited by the idea of being the 'dragon person' in my community.",
+  "s04_desires__desire_05__quote_03": "I would love to look back and see a legacy of riders and stories we helped shape.",
+  "s05_authority__core__title": "Veteran riders, stable masters, and worldbuilders with decades of combined dragon-handling experience",
+  "s05_authority__historical_01": "Lead instructor has spent over 15 years designing dragon-training systems for tabletop campaigns, live roleplay events, and fantasy fiction worlds.",
+  "s05_authority__historical_02": "Has guided hundreds of players and readers through building believable dragon-human partnerships that balance wonder with responsibility.",
+  "s05_authority__historical_03": "Served as head trainer for a long-running fantasy roleplay community, coordinating multi-year story arcs centered on dragon bonds.",
+  "s05_authority__historical_04": "Consulted on game mechanics and narrative design for independent studios building dragon-focused adventures.",
+  "s05_authority__historical_05": "Regularly teaches workshops on creature behavior, worldbuilding, and safe, collaborative storytelling.",
+  "s05_authority__credentials_01": "Creator of the Bond-First Dragon Training framework used by multiple online communities and campaigns.",
+  "s05_authority__credentials_02": "Host of an ongoing dragon-training actual-play series that demonstrates the curriculum in action.",
+  "s05_authority__credentials_03": "Recognized by fantasy communities for clear teaching style, safety-conscious guidelines, and imaginative yet grounded lore.",
+  "s06_competitors__competitor_01__name": "SkyRider Academy",
+  "s06_competitors__competitor_01__offering": "Video course library focused on aerial maneuvers and stunt flying with dragons",
+  "s06_competitors__competitor_01__usp": "High-adrenaline flight sequences and performance-focused drills",
+  "s06_competitors__competitor_01__pricing": "$150-$300 one-time courses",
+  "s06_competitors__competitor_01__website": "https://www.skyrider-academy.com/",
+  "s06_competitors__competitor_02__name": "Wyvern Whisperers",
+  "s06_competitors__competitor_02__offering": "Short workshops on reading dragon body language and calming anxious wyverns",
+  "s06_competitors__competitor_02__usp": "Niche focus on sensitive and rescue dragons",
+  "s06_competitors__competitor_02__pricing": "$40-$90 per workshop",
+  "s06_competitors__competitor_02__website": "https://www.wyvernwhisperers.com/",
+  "s06_competitors__competitor_03__name": "Dragon Taming 101 App",
+  "s06_competitors__competitor_03__offering": "Mobile app with bite-sized tips, daily prompts, and mini-games about dragon care",
+  "s06_competitors__competitor_03__usp": "Casual, gamified approach suitable for younger riders and families",
+  "s06_competitors__competitor_03__pricing": "$5-$15/month subscription",
+  "s06_competitors__competitor_03__website": "https://www.dragontaming101.app/",
+  "s06_competitors__competitor_04__name": "Academy of Legendary Beasts",
+  "s06_competitors__competitor_04__offering": "Broader creature-handling curriculum with a single module on dragons",
+  "s06_competitors__competitor_04__usp": "Covers multiple fantasy creatures for generalist handlers",
+  "s06_competitors__competitor_04__pricing": "$300-$500 for full bundle",
+  "s06_competitors__competitor_04__website": "https://www.legendarybeastsacademy.com/",
+  "s06_competitors_indirect__competitor_01__name": "General fantasy writing courses",
+  "s06_competitors_indirect__competitor_01__problem": "Teach worldbuilding and character arcs without specific tools for believable dragon-human partnerships",
+  "s06_competitors_indirect__competitor_01__overlap": "Overlap for writers who want better dragon stories but start with generic craft programs instead of creature-focused training",
+  "s06_competitors_indirect__competitor_01__website": "https://www.udemy.com/topic/creative-writing/",
+  "s06_competitors_indirect__competitor_02__name": "Tabletop roleplaying rulebooks",
+  "s06_competitors_indirect__competitor_02__problem": "Provide stats and spells but little guidance on long-term dragon bonding or training sequences",
+  "s06_competitors_indirect__competitor_02__overlap": "Game masters and players rely on core books for inspiration instead of structured dragon-training frameworks",
+  "s06_competitors_indirect__competitor_02__website": "https://dnd.wizards.com/",
+  "s06_competitors_indirect__competitor_03__name": "Creature-handling and horsemanship channels",
+  "s06_competitors_indirect__competitor_03__problem": "Offer real-world training inspiration but do not translate directly into dragon-scale power, flight, or fire",
+  "s06_competitors_indirect__competitor_03__overlap": "Riders borrow techniques from animal trainers when they cannot find dragon-specific resources",
+  "s06_competitors_indirect__competitor_03__website": "https://www.youtube.com/results?search_query=horsemanship+training",
+  "s06_competitors_influencers__influencer_01__name": "Fantasy worldbuilding channels on YouTube",
+  "s06_competitors_influencers__influencer_01__url": "https://www.youtube.com/results?search_query=fantasy+worldbuilding",
+  "s06_competitors_influencers__influencer_02__name": "Actual-play streams featuring dragon companions",
+  "s06_competitors_influencers__influencer_02__url": "https://www.youtube.com/results?search_query=actual+play+dragons",
+  "s06_competitors_influencers__influencer_03__name": "Fantasy authors known for dragon-human bonds",
+  "s06_competitors_influencers__influencer_03__url": "https://www.goodreads.com/list/show/6.Dragons_in_Fantasy",
+  "s06_competitors_influencers__influencer_04__name": "Game designers who specialize in creature companions",
+  "s06_competitors_influencers__influencer_04__url": "https://www.gdcvault.com/",
+  "s07_audience__demographics__age": "18-45 years old (core 20-35)",
+  "s07_audience__demographics__gender": "Mixed; inclusive of all genders, with a slight skew toward people who already identify strongly with fantasy heroes and caretakers",
+  "s07_audience__demographics__income": "$35,000-$120,000/year",
+  "s07_audience__demographics__education": "From self-taught creatives to graduate degrees; many are avid readers, gamers, or storytellers",
+  "s07_audience__demographics__occupation": "Students, creative professionals, educators, tech and knowledge workers, game masters, and hobbyist writers",
+  "s07_audience__demographics__family": "Single adventurers, partnered riders, and families who enjoy shared fantasy worlds",
+  "s07_audience__demographics__location": "Primarily North America and Europe, with dragon enthusiasts across English-speaking regions worldwide",
+  "s07_audience__values_01": "I believe powerful creatures deserve respect, not fear or exploitation.",
+  "s07_audience__values_02": "I value imagination and play, but I also care about structure and safety.",
+  "s07_audience__values_03": "I believe long-term bonds are built through small, consistent actions\u2014not dramatic gestures.",
+  "s07_audience__values_04": "I think good stories balance awe, responsibility, and ethical choices.",
+  "s07_audience__values_05": "I believe communities are stronger when everyone has clear roles and shared language.",
+  "s07_audience__interests_01": "I read fantasy novels and watch shows where dragons and creature companions feel like real characters.",
+  "s07_audience__interests_02": "I play tabletop or video games that let me bond with mounts, pets, or magical beasts.",
+  "s07_audience__interests_03": "I love building worlds, campaigns, or stories and want my dragon lore to feel coherent.",
+  "s07_audience__interests_04": "I look for online communities where it is normal to discuss flight patterns, training plans, and creature behavior.",
+  "s07_audience__interests_05": "I enjoy learning systems\u2014whether in games, crafts, or skills\u2014that turn raw potential into mastery.",
+  "s08_values__synthesis": "If you asked me what I stand for, I would say: 'I want adventures that honor powerful creatures, deepen trust, and build worlds I am proud to inhabit\u2014without cruelty, shortcuts, or throwaway stories.'",
+  "s08_values__value_01__name": "Imagination",
+  "s08_values__value_01__explanation": "I love worlds where dragons soar over cities and mountains, and I want my training and storytelling to feel worthy of that scale.",
+  "s08_values__value_02__name": "Responsibility",
+  "s08_values__value_02__explanation": "I know that power without care is dangerous, so I value frameworks that keep both dragons and riders safe.",
+  "s08_values__value_03__name": "Courage",
+  "s08_values__value_03__explanation": "I am willing to step into the arena, face big challenges, and learn from mistakes as long as I am not doing it alone.",
+  "s08_values__value_04__name": "Respect for Creatures",
+  "s08_values__value_04__explanation": "I want dragons to be treated as partners with their own instincts and boundaries, not as props.",
+  "s08_values__value_05__name": "Community",
+  "s08_values__value_05__explanation": "I believe the best stories and skills grow in groups that share knowledge, celebrate wins, and protect each other.",
+  "s08_values__value_06__name": "Mastery",
+  "s08_values__value_06__explanation": "I like seeing visible progress\u2014from wobbly takeoffs to smooth formations\u2014and I am willing to practice to get there.",
+  "s08_values__value_07__name": "Play",
+  "s08_values__value_07__explanation": "I take my craft seriously but still want room for games, jokes, and joy with my dragon.",
+  "s09_transformation__before": "Before finding this course, I had a dragon I adored but no reliable way to guide them. Training sessions felt chaotic, first-flight dreams stayed on the ground, and most advice I found was either too vague or focused only on flashy tricks.",
+  "s09_transformation__after": "Now I have a clear, bond-first system for setting up our environment, reading my dragon's signals, and progressing from ground work to confident flights and real missions.",
+  "s09_transformation__emotional_shift": "I have shifted from nervous, inconsistent dabbler to steady rider who trusts both my dragon and my own decisions.",
+  "s09_transformation__impact": "This transformation has given me back my sense of wonder and agency. Instead of worrying what might go wrong every time my dragon spreads their wings, I have step-by-step plans that turn raw power into shared adventures.",
+  "s10_media__social_01__name": "Discord fantasy servers",
+  "s10_media__social_01__url": "https://discord.com/",
+  "s10_media__social_02__name": "YouTube actual-play and lore channels",
+  "s10_media__social_02__url": "https://www.youtube.com/",
+  "s10_media__social_03__name": "Reddit fantasy communities",
+  "s10_media__social_03__url": "https://www.reddit.com/r/fantasy/",
+  "s10_media__social_04__name": "Instagram and TikTok cosplay and art accounts",
+  "s10_media__social_04__url": "https://www.instagram.com/",
+  "s10_media__podcasts_01__name": "Writing Excuses",
+  "s10_media__podcasts_01__url": "https://writingexcuses.com/",
+  "s10_media__podcasts_02__name": "Dragon Talk (D&D podcast)",
+  "s10_media__podcasts_02__url": "https://dnd.wizards.com/dragon-talk",
+  "s10_media__podcasts_03__name": "Critical Role and other actual-play shows",
+  "s10_media__podcasts_03__url": "https://critrole.com/",
+  "s10_media__blogs_01__name": "Tor.com fantasy blog",
+  "s10_media__blogs_01__url": "https://www.tor.com/",
+  "s10_media__blogs_02__name": "r/worldbuilding resources and essays",
+  "s10_media__blogs_02__url": "https://www.reddit.com/r/worldbuilding/",
+  "s10_media__blogs_03__name": "Fantasy cartography and mapmaking blogs",
+  "s10_media__blogs_03__url": "https://www.cartographersguild.com/",
+  "s10_media__books_01__title": "Eragon",
+  "s10_media__books_01__author": "Christopher Paolini",
+  "s10_media__books_01__url": "https://www.amazon.com/dp/0375826696",
+  "s10_media__books_02__title": "His Majesty's Dragon",
+  "s10_media__books_02__author": "Naomi Novik",
+  "s10_media__books_02__url": "https://www.amazon.com/dp/0345481283",
+  "s10_media__books_03__title": "Dragonriders of Pern",
+  "s10_media__books_03__author": "Anne McCaffrey",
+  "s10_media__books_03__url": "https://www.amazon.com/dp/0345481879",
+  "s10_media__forums_01__name": "Reddit: r/dragonriders (fan communities around dragon bonds)",
+  "s10_media__forums_01__url": "https://www.reddit.com/search/?q=dragonrider",
+  "s10_media__forums_02__name": "Tabletop RPG forums and Discords",
+  "s10_media__forums_02__url": "https://www.reddit.com/r/rpg/",
+  "s11_objections__objection_01__objection": "I do not have time to commit to an epic training saga",
+  "s11_objections__objection_01__rebuttal": "The course is broken into short, focused modules with clear checklists. You can complete meaningful steps in 20\u201330 minutes a week and still see steady progress with your dragon.",
+  "s11_objections__objection_02__objection": "I can find dragon tips for free online",
+  "s11_objections__objection_02__rebuttal": "Random tips and forum threads rarely add up to a complete progression. This curriculum gives you one coherent, bond-first framework\u2014from first contact to advanced missions\u2014so you are not stitching it together alone.",
+  "s11_objections__objection_03__objection": "The price feels high for a fantasy course",
+  "s11_objections__objection_03__rebuttal": "You are not just buying lore; you are getting a reusable system you can apply to multiple dragons, campaigns, and stories. Lifetime access and an installment plan help spread the investment over time.",
+  "s11_objections__objection_04__objection": "I am new to dragons and worry I will be left behind",
+  "s11_objections__objection_04__rebuttal": "The training path assumes no prior experience. Early modules focus on safety, temperament, and simple rituals, with optional challenges for more seasoned riders so everyone can move at the right pace.",
+  "s11_objections__objection_05__objection": "My world, game, or story has different rules for dragons",
+  "s11_objections__objection_05__rebuttal": "The framework is designed to be adaptable. You will learn core principles of bonding, communication, and progression that you can reskin for your setting, whether your dragons breathe fire, lightning, or song.",
+  "s11_objections__objection_06__objection": "My friends already think I am too obsessed with dragons",
+  "s11_objections__objection_06__rebuttal": "Inside the academy, your enthusiasm is normal. You can learn privately at your own pace and join community spaces only if and when you want camaraderie with people who share your passion.",
+  "s12_advantage__uvp_01": "Only structured curriculum that treats dragon training as a complete progression\u2014from first contact to squadron missions\u2014rather than a handful of tricks.",
+  "s12_advantage__uvp_02": "Bond-first methodology that prioritizes safety, trust, and communication before stunts and spectacle.",
+  "s12_advantage__uvp_03": "Designed to plug into stories, campaigns, and roleplay\u2014not just standalone lessons.",
+  "s12_advantage__uvp_04": "Clear guidance for both solo riders and mentors who support an entire rookery or player group.",
+  "s12_advantage__uvp_05": "Rich, reusable resources: printable field guides, quest templates, and example missions you can adapt again and again.",
+  "s12_advantage__comparison": "Unlike resources that toss you random dragon facts or a few cinematic stunts, this course walks you through a complete, bond-first training arc with safety guidelines, progression checklists, and story-friendly missions.",
+  "s12_advantage__innovation": "We combine temperament mapping, trust rituals, and mission-based progression into one coherent framework that works for writers, game masters, and in-world riders alike.",
+  "s13_comms__tone": "Adventurous, encouraging, and steady\u2014like a seasoned rider talking you through saddling up for the first time.",
+  "s13_comms__style": "Plain language, vivid examples, and step-by-step instructions; mixes in-world flavor with clear, practical guidance.",
+  "s13_comms__vibe": "Epic but grounded: celebrates wonder while keeping a firm grip on safety, consent, and mutual respect between rider and dragon.",
+  "s13_comms__avoid_01": "Grim, brutal depictions of dragons as mindless weapons.",
+  "s13_comms__avoid_02": "Overly technical rule jargon without story context.",
+  "s13_comms__avoid_03": "Shaming riders for being nervous, new, or deeply enthusiastic.",
+  "s13_comms__avoid_04": "Glorifying reckless stunts that ignore safety groundwork.",
+  "s13_comms__avoid_05": "Gatekeeping attitudes that say only certain types of fans or players count as 'real' riders."
+}
   </script>
+
+  <!-- ───────────────────────── Template loader (JSON → DOM) ───────────────────────── -->
+  <script>
+    window.__tplReady = (async () => {
+      let data = null;
+
+      // 1) Try embedded JSON first
+      try {
+        const embedded = document.getElementById("report-data");
+        if (embedded) {
+          data = JSON.parse((embedded.textContent || "").trim());
+        }
+      } catch (e) {
+        console.error("Failed to parse embedded report data", e);
+      }
+
+      // 2) Fallback to external JSON (default: data.json)
+      if (!data) {
+        const params = new URLSearchParams(location.search);
+        const dataUrl = params.get("data") || "data.json";
+        const res = await fetch(dataUrl, { cache: "no-store" });
+        if (!res.ok) throw new Error("Failed to load template data: " + res.status);
+        data = await res.json();
+      }
+
+      window.__tpl = data;
+
+      // ✅ FIX: supports your FLAT key schema like "meta__brand_name"
+      // Also supports nested traversal as a fallback.
+      const get = (obj, path) => {
+        if (!obj || !path) return undefined;
+        if (Object.prototype.hasOwnProperty.call(obj, path)) return obj[path];
+        return path.split("__").reduce((acc, key) => (acc == null ? undefined : acc[key]), obj);
+      };
+
+      // Set page title
+      const brand = get(data, "meta__brand_name");
+      if (brand) {
+        document.title = `${brand} - ICP Report`;
+        const titleEl = document.getElementById("pageTitle");
+        if (titleEl) titleEl.textContent = `${brand} - ICP Report`;
+      }
+
+      // Simple attribute bindings
+      document.querySelectorAll("[data-text]").forEach(el => {
+        const v = get(data, el.getAttribute("data-text"));
+        if (v !== undefined && v !== null) el.textContent = String(v);
+      });
+      document.querySelectorAll("[data-html]").forEach(el => {
+        const v = get(data, el.getAttribute("data-html"));
+        if (v !== undefined && v !== null) el.innerHTML = String(v).replace(/\n/g, "<br>");
+      });
+
+      // Build Features Grid
+      (function buildFeatures() {
+        const grid = document.getElementById("featuresGrid");
+        if (!grid) return;
+        grid.innerHTML = "";
+        for (let i = 1; i <= 10; i++) {
+          const title = get(data, `s02_offer__feature_${String(i).padStart(2, '0')}__title`);
+          const desc = get(data, `s02_offer__feature_${String(i).padStart(2, '0')}__description`);
+          if (!title) continue;
+          const card = document.createElement("div");
+          card.className = "rounded-xl border border-slate-200 bg-slate-50 p-4";
+          card.innerHTML = `
+            <div class="font-bold text-slate-900 mb-1">${title}</div>
+            <div class="text-sm text-slate-700">${desc || ""}</div>
+          `;
+          grid.appendChild(card);
+        }
+      })();
+
+      // Build Pains Grid
+      (function buildPains() {
+        const grid = document.getElementById("painsGrid");
+        if (!grid) return;
+        grid.innerHTML = "";
+        for (let i = 1; i <= 10; i++) {
+          const title = get(data, `s03_pains__pain_${String(i).padStart(2, '0')}__title`);
+          const desc = get(data, `s03_pains__pain_${String(i).padStart(2, '0')}__description`);
+          const score = get(data, `s03_pains__pain_${String(i).padStart(2, '0')}__score`);
+          if (!title) continue;
+
+          const card = document.createElement("div");
+          card.className = "rounded-xl border border-slate-200 bg-white p-5";
+
+          let quotesHtml = "";
+          for (let q = 1; q <= 3; q++) {
+            const quote = get(data, `s03_pains__pain_${String(i).padStart(2, '0')}__quote_${String(q).padStart(2, '0')}`);
+            if (quote) quotesHtml += `<div class="text-sm text-slate-600 italic mt-2">"${quote}"</div>`;
+          }
+
+          card.innerHTML = `
+            <div class="flex items-start justify-between gap-4 mb-3">
+              <h3 class="text-lg font-bold text-slate-900">${title}</h3>
+              ${score ? `<div class="text-2xl font-extrabold text-brand-primary shrink-0">${score}</div>` : ""}
+            </div>
+            <p class="text-slate-700 mb-3">${desc || ""}</p>
+            ${quotesHtml}
+            ${score ? `<div class="mt-3"><div class="pain-score-bar" style="width: ${score}%"></div></div>` : ""}
+          `;
+          grid.appendChild(card);
+        }
+      })();
+
+      // Build Desires Grid
+      (function buildDesires() {
+        const grid = document.getElementById("desiresGrid");
+        if (!grid) return;
+        grid.innerHTML = "";
+        for (let i = 1; i <= 5; i++) {
+          const title = get(data, `s04_desires__desire_${String(i).padStart(2, '0')}__title`);
+          const vision = get(data, `s04_desires__desire_${String(i).padStart(2, '0')}__vision_snapshot`);
+          const milestones = get(data, `s04_desires__desire_${String(i).padStart(2, '0')}__tangible_milestones`);
+          const win = get(data, `s04_desires__desire_${String(i).padStart(2, '0')}__emotional_win`);
+          if (!title) continue;
+
+          let quotesHtml = "";
+          for (let q = 1; q <= 3; q++) {
+            const quote = get(data, `s04_desires__desire_${String(i).padStart(2, '0')}__quote_${String(q).padStart(2, '0')}`);
+            if (quote) quotesHtml += `<div class="text-sm text-slate-600 italic mt-2">"${quote}"</div>`;
+          }
+
+          const card = document.createElement("div");
+          card.className = "rounded-xl border border-emerald-200 bg-emerald-50 p-5";
+          card.innerHTML = `
+            <h3 class="text-lg font-bold text-slate-900 mb-3">${title}</h3>
+            <div class="space-y-3">
+              ${vision ? `<div><div class="text-xs font-bold text-slate-500 uppercase tracking-widest">Vision</div><p class="text-slate-800 mt-1">${vision}</p></div>` : ""}
+              ${milestones ? `<div><div class="text-xs font-bold text-slate-500 uppercase tracking-widest">Milestones</div><p class="text-slate-800 mt-1">${milestones}</p></div>` : ""}
+              ${win ? `<div><div class="text-xs font-bold text-slate-500 uppercase tracking-widest">Emotional Win</div><p class="text-slate-800 mt-1">${win}</p></div>` : ""}
+              ${quotesHtml}
+            </div>
+          `;
+          grid.appendChild(card);
+        }
+      })();
+
+      // Build Authority Lists
+      (function buildAuthority() {
+        const historical = document.getElementById("authorityHistorical");
+        const credentials = document.getElementById("authorityCredentials");
+
+        if (historical) {
+          historical.innerHTML = "";
+          for (let i = 1; i <= 5; i++) {
+            const item = get(data, `s05_authority__historical_${String(i).padStart(2, '0')}`);
+            if (item) {
+              const li = document.createElement("li");
+              li.className = "flex items-start gap-2";
+              li.innerHTML = `<span class="text-brand-primary">•</span><span>${item}</span>`;
+              historical.appendChild(li);
+            }
+          }
+        }
+
+        if (credentials) {
+          credentials.innerHTML = "";
+          for (let i = 1; i <= 3; i++) {
+            const item = get(data, `s05_authority__credentials_${String(i).padStart(2, '0')}`);
+            if (item) {
+              const li = document.createElement("li");
+              li.className = "flex items-start gap-2";
+              li.innerHTML = `<span class="text-brand-primary">•</span><span>${item}</span>`;
+              credentials.appendChild(li);
+            }
+          }
+        }
+      })();
+
+      // Build Competitors
+      (function buildCompetitors() {
+        const direct = document.getElementById("directCompetitors");
+        const indirect = document.getElementById("indirectCompetitors");
+        const influencers = document.getElementById("influencers");
+
+        if (direct) {
+          direct.innerHTML = "";
+          for (let i = 1; i <= 4; i++) {
+            const name = get(data, `s06_competitors__competitor_${String(i).padStart(2, '0')}__name`);
+            if (!name) continue;
+            const offering = get(data, `s06_competitors__competitor_${String(i).padStart(2, '0')}__offering`);
+            const usp = get(data, `s06_competitors__competitor_${String(i).padStart(2, '0')}__usp`);
+            const pricing = get(data, `s06_competitors__competitor_${String(i).padStart(2, '0')}__pricing`);
+            const website = get(data, `s06_competitors__competitor_${String(i).padStart(2, '0')}__website`);
+
+            const card = document.createElement("div");
+            card.className = "rounded-xl border border-slate-200 bg-white p-4";
+            card.innerHTML = `
+              <div class="font-bold text-slate-900 mb-2">${name}</div>
+              <div class="text-sm text-slate-700 mb-2">${offering || ""}</div>
+              <div class="text-sm text-slate-600 mb-2"><strong>USP:</strong> ${usp || ""}</div>
+              <div class="text-sm text-slate-600 mb-2"><strong>Pricing:</strong> ${pricing || ""}</div>
+              ${website ? `<a href="${website}" target="_blank" rel="noreferrer" class="text-sm text-brand-accent hover:underline">Visit →</a>` : ""}
+            `;
+            direct.appendChild(card);
+          }
+        }
+
+        if (indirect) {
+          indirect.innerHTML = "";
+          for (let i = 1; i <= 3; i++) {
+            const name = get(data, `s06_competitors_indirect__competitor_${String(i).padStart(2, '0')}__name`);
+            if (!name) continue;
+            const problem = get(data, `s06_competitors_indirect__competitor_${String(i).padStart(2, '0')}__problem`);
+            const overlap = get(data, `s06_competitors_indirect__competitor_${String(i).padStart(2, '0')}__overlap`);
+            const website = get(data, `s06_competitors_indirect__competitor_${String(i).padStart(2, '0')}__website`);
+
+            const card = document.createElement("div");
+            card.className = "rounded-xl border border-amber-200 bg-amber-50 p-4";
+            card.innerHTML = `
+              <div class="font-bold text-slate-900 mb-2">${name}</div>
+              <div class="text-sm text-slate-700 mb-2"><strong>Problem:</strong> ${problem || ""}</div>
+              <div class="text-sm text-slate-700 mb-2"><strong>Overlap:</strong> ${overlap || ""}</div>
+              ${website ? `<a href="${website}" target="_blank" rel="noreferrer" class="text-sm text-brand-accent hover:underline">Visit →</a>` : ""}
+            `;
+            indirect.appendChild(card);
+          }
+        }
+
+        if (influencers) {
+          influencers.innerHTML = "";
+          for (let i = 1; i <= 4; i++) {
+            const name = get(data, `s06_competitors_influencers__influencer_${String(i).padStart(2, '0')}__name`);
+            if (!name) continue;
+            const url = get(data, `s06_competitors_influencers__influencer_${String(i).padStart(2, '0')}__url`);
+
+            const badge = document.createElement("a");
+            badge.href = url || "#";
+            badge.target = "_blank";
+            badge.rel = "noreferrer";
+            badge.className = "inline-flex items-center rounded-full bg-brand-50 text-brand-secondary px-4 py-2 text-sm font-semibold hover:bg-brand-100";
+            badge.textContent = name;
+            influencers.appendChild(badge);
+          }
+        }
+      })();
+
+      // Build Audience Values & Interests
+      (function buildAudience() {
+        const values = document.getElementById("audienceValues");
+        const interests = document.getElementById("audienceInterests");
+
+        if (values) {
+          values.innerHTML = "";
+          for (let i = 1; i <= 5; i++) {
+            const value = get(data, `s07_audience__values_${String(i).padStart(2, '0')}`);
+            if (value) {
+              const li = document.createElement("li");
+              li.className = "flex items-start gap-2";
+              li.innerHTML = `<span class="text-brand-primary">•</span><span>${value}</span>`;
+              values.appendChild(li);
+            }
+          }
+        }
+
+        if (interests) {
+          interests.innerHTML = "";
+          for (let i = 1; i <= 5; i++) {
+            const interest = get(data, `s07_audience__interests_${String(i).padStart(2, '0')}`);
+            if (interest) {
+              const li = document.createElement("li");
+              li.className = "flex items-start gap-2";
+              li.innerHTML = `<span class="text-brand-primary">•</span><span>${interest}</span>`;
+              interests.appendChild(li);
+            }
+          }
+        }
+      })();
+
+      // Build Values Grid
+      (function buildValues() {
+        const grid = document.getElementById("valuesGrid");
+        if (!grid) return;
+        grid.innerHTML = "";
+        for (let i = 1; i <= 7; i++) {
+          const name = get(data, `s08_values__value_${String(i).padStart(2, '0')}__name`);
+          const explanation = get(data, `s08_values__value_${String(i).padStart(2, '0')}__explanation`);
+          if (!name) continue;
+
+          const card = document.createElement("div");
+          card.className = "rounded-xl border border-slate-200 bg-white p-4";
+          card.innerHTML = `
+            <div class="font-bold text-brand-secondary mb-2">${name}</div>
+            <div class="text-sm text-slate-700">${explanation || ""}</div>
+          `;
+          grid.appendChild(card);
+        }
+      })();
+
+      // Build Media Lists
+      (function buildMedia() {
+        const social = document.getElementById("socialMedia");
+        const podcasts = document.getElementById("podcasts");
+        const blogs = document.getElementById("blogs");
+        const books = document.getElementById("books");
+        const forums = document.getElementById("forums");
+
+        if (social) {
+          social.innerHTML = "";
+          for (let i = 1; i <= 4; i++) {
+            const name = get(data, `s10_media__social_${String(i).padStart(2, '0')}__name`);
+            const url = get(data, `s10_media__social_${String(i).padStart(2, '0')}__url`);
+            if (name) {
+              const badge = document.createElement("a");
+              badge.href = url || "#";
+              badge.target = "_blank";
+              badge.rel = "noreferrer";
+              badge.className = "inline-flex items-center rounded-full bg-slate-100 text-slate-700 px-3 py-1 text-sm font-semibold hover:bg-slate-200";
+              badge.textContent = name;
+              social.appendChild(badge);
+            }
+          }
+        }
+
+        if (podcasts) {
+          podcasts.innerHTML = "";
+          for (let i = 1; i <= 3; i++) {
+            const name = get(data, `s10_media__podcasts_${String(i).padStart(2, '0')}__name`);
+            const url = get(data, `s10_media__podcasts_${String(i).padStart(2, '0')}__url`);
+            if (name) {
+              const li = document.createElement("li");
+              li.className = "flex items-start gap-2";
+              const link = url ? `<a href="${url}" target="_blank" rel="noreferrer" class="text-brand-accent hover:underline">${name}</a>` : name;
+              li.innerHTML = `<span class="text-brand-primary">•</span><span>${link}</span>`;
+              podcasts.appendChild(li);
+            }
+          }
+        }
+
+        if (blogs) {
+          blogs.innerHTML = "";
+          for (let i = 1; i <= 3; i++) {
+            const name = get(data, `s10_media__blogs_${String(i).padStart(2, '0')}__name`);
+            const url = get(data, `s10_media__blogs_${String(i).padStart(2, '0')}__url`);
+            if (name) {
+              const li = document.createElement("li");
+              li.className = "flex items-start gap-2";
+              const link = url ? `<a href="${url}" target="_blank" rel="noreferrer" class="text-brand-accent hover:underline">${name}</a>` : name;
+              li.innerHTML = `<span class="text-brand-primary">•</span><span>${link}</span>`;
+              blogs.appendChild(li);
+            }
+          }
+        }
+
+        if (books) {
+          books.innerHTML = "";
+          for (let i = 1; i <= 3; i++) {
+            const title = get(data, `s10_media__books_${String(i).padStart(2, '0')}__title`);
+            const author = get(data, `s10_media__books_${String(i).padStart(2, '0')}__author`);
+            const url = get(data, `s10_media__books_${String(i).padStart(2, '0')}__url`);
+            if (title) {
+              const li = document.createElement("li");
+              li.className = "flex items-start gap-2";
+              const link = url
+                ? `<a href="${url}" target="_blank" rel="noreferrer" class="text-brand-accent hover:underline">${title}</a> by ${author || ""}`
+                : `${title} by ${author || ""}`;
+              li.innerHTML = `<span class="text-brand-primary">•</span><span>${link}</span>`;
+              books.appendChild(li);
+            }
+          }
+        }
+
+        if (forums) {
+          forums.innerHTML = "";
+          for (let i = 1; i <= 2; i++) {
+            const name = get(data, `s10_media__forums_${String(i).padStart(2, '0')}__name`);
+            const url = get(data, `s10_media__forums_${String(i).padStart(2, '0')}__url`);
+            if (name) {
+              const li = document.createElement("li");
+              li.className = "flex items-start gap-2";
+              const link = url ? `<a href="${url}" target="_blank" rel="noreferrer" class="text-brand-accent hover:underline">${name}</a>` : name;
+              li.innerHTML = `<span class="text-brand-primary">•</span><span>${link}</span>`;
+              forums.appendChild(li);
+            }
+          }
+        }
+      })();
+
+      // Build Objections
+      (function buildObjections() {
+        const grid = document.getElementById("objectionsGrid");
+        if (!grid) return;
+        grid.innerHTML = "";
+        for (let i = 1; i <= 6; i++) {
+          const objection = get(data, `s11_objections__objection_${String(i).padStart(2, '0')}__objection`);
+          const rebuttal = get(data, `s11_objections__objection_${String(i).padStart(2, '0')}__rebuttal`);
+          if (!objection) continue;
+
+          const card = document.createElement("div");
+          card.className = "rounded-xl border border-slate-200 bg-white p-5";
+          card.innerHTML = `
+            <div class="font-bold text-slate-900 mb-2">"${objection}"</div>
+            <div class="text-slate-700">${rebuttal || ""}</div>
+          `;
+          grid.appendChild(card);
+        }
+      })();
+
+      // Build UVP List
+      (function buildUVP() {
+        const list = document.getElementById("uvpList");
+        if (!list) return;
+        list.innerHTML = "";
+        for (let i = 1; i <= 5; i++) {
+          const uvp = get(data, `s12_advantage__uvp_${String(i).padStart(2, '0')}`);
+          if (uvp) {
+            const li = document.createElement("li");
+            li.className = "flex items-start gap-2";
+            li.innerHTML = `<span class="text-brand-primary">•</span><span>${uvp}</span>`;
+            list.appendChild(li);
+          }
+        }
+      })();
+
+      // Build Comms Avoid List
+      (function buildCommsAvoid() {
+        const list = document.getElementById("commsAvoid");
+        if (!list) return;
+        list.innerHTML = "";
+        for (let i = 1; i <= 5; i++) {
+          const avoid = get(data, `s13_comms__avoid_${String(i).padStart(2, '0')}`);
+          if (avoid) {
+            const li = document.createElement("li");
+            li.className = "flex items-start gap-2";
+            li.innerHTML = `<span class="text-rose-500">✗</span><span>${avoid}</span>`;
+            list.appendChild(li);
+          }
+        }
+      })();
+
+      return data;
+    })().catch((e) => {
+      console.error(e);
+      return null;
+    });
+  </script>
+
+  <!-- ───────────────────────── Interaction scripts ───────────────────────── -->
+  <script>
+    document.getElementById('downloadPdfBtn')?.addEventListener('click', () => window.print());
+  </script>
+
 </body>
 </html>
