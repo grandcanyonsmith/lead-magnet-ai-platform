@@ -107,6 +107,8 @@ class ShellLoopService:
         reasoning_effort: Optional[str] = None,
         text_verbosity: Optional[str] = None,
         max_output_tokens: Optional[int] = None,
+        service_tier: Optional[str] = None,
+        output_format: Optional[Dict[str, Any]] = None,
         max_iterations: int = 25,
         max_duration_seconds: int = 300,
         job_id: Optional[str] = None,
@@ -234,6 +236,8 @@ class ShellLoopService:
                 reasoning_effort=reasoning_effort,
                 text_verbosity=text_verbosity,
                 max_output_tokens=max_output_tokens,
+                service_tier=service_tier,
+                output_format=output_format,
             )
 
             if previous_response_id:
@@ -413,6 +417,8 @@ class ShellLoopService:
                     reasoning_effort=reasoning_effort,
                     text_verbosity=text_verbosity,
                     max_output_tokens=max_output_tokens,
+                    service_tier=service_tier,
+                    output_format=output_format,
                 )
 
                 if previous_response_id:

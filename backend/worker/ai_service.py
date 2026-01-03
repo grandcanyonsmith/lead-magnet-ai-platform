@@ -48,6 +48,8 @@ class AIService:
         job_id: Optional[str] = None,
         previous_image_urls: Optional[List[str]] = None,
         reasoning_effort: Optional[str] = None,
+        service_tier: Optional[str] = None,
+        output_format: Optional[Dict[str, Any]] = None,
         step_index: Optional[int] = None,
         text_verbosity: Optional[str] = None,
         max_output_tokens: Optional[int] = None,
@@ -107,6 +109,8 @@ class AIService:
             'has_computer_use': has_computer_use,
             'has_image_generation': has_image_generation,
             'reasoning_effort': reasoning_effort,
+            'service_tier': service_tier,
+            'output_format_type': (output_format or {}).get('type') if isinstance(output_format, dict) else None,
             'instructions_length': len(instructions),
             'context_length': len(context),
             'previous_context_length': len(previous_context),
@@ -177,8 +181,10 @@ class AIService:
                     job_id=job_id,
                     tenant_id=tenant_id,
                     reasoning_effort=reasoning_effort,
+                    service_tier=service_tier,
                     text_verbosity=text_verbosity,
                     max_output_tokens=max_output_tokens,
+                    output_format=output_format,
                 )
                 
                 # Run CUA loop
@@ -282,6 +288,8 @@ class AIService:
                     reasoning_effort=reasoning_effort,
                     text_verbosity=text_verbosity,
                     max_output_tokens=max_output_tokens,
+                    service_tier=service_tier,
+                    output_format=output_format,
                 )
 
                 final_response = self.shell_loop_service.run_shell_loop(
@@ -295,6 +303,8 @@ class AIService:
                     reasoning_effort=reasoning_effort,
                     text_verbosity=text_verbosity,
                     max_output_tokens=max_output_tokens,
+                    service_tier=service_tier,
+                    output_format=output_format,
                     max_iterations=25,
                     # Keep this below the 15-minute Lambda timeout (job processor) with buffer.
                     # Shell commands themselves can be long-running; if you need > ~14 minutes,
@@ -351,6 +361,8 @@ class AIService:
                 reasoning_effort=reasoning_effort,
                 text_verbosity=text_verbosity,
                 max_output_tokens=max_output_tokens,
+                service_tier=service_tier,
+                output_format=output_format,
             )
             
             logger.debug(f"[AI Service] API params built successfully", extra={
