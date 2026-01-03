@@ -24,9 +24,12 @@ test.describe('Workflows', () => {
     
     await expect(page).toHaveURL('/dashboard/workflows/new')
     
-    // Check form is visible
-    const form = page.locator('form, [role="form"]')
-    await expect(form.first()).toBeVisible({ timeout: 5000 })
+    // New workflow flow starts with a choice screen (not a <form/>).
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(
+      /How would you like to start/i
+    )
+    await expect(page.getByRole('button', { name: /Generate with AI/i })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Start from Scratch/i })).toBeVisible()
   })
 
   test('should display workflows list', async ({ page }) => {
@@ -35,8 +38,21 @@ test.describe('Workflows', () => {
     // Wait for page to load
     await page.waitForLoadState('networkidle')
     
-    // Check for workflows table or list
-    const workflowsList = page.locator('table, [role="table"], [class*="workflow"]')
-    await expect(workflowsList.first()).toBeVisible({ timeout: 10000 })
+    // Page can show a table (when workflows exist) or an empty state.
+    const workflowsTable = page.locator('table')
+    const emptyState = page.getByRole('heading', {
+      name: /No lead magnets yet|No matching lead magnets/i,
+    })
+
+    await expect(async () => {
+      const tableVisible =
+        (await workflowsTable.count()) > 0 &&
+        (await workflowsTable.first().isVisible().catch(() => false))
+      const emptyVisible =
+        (await emptyState.count()) > 0 &&
+        (await emptyState.first().isVisible().catch(() => false))
+
+      expect(tableVisible || emptyVisible).toBeTruthy()
+    }).toPass({ timeout: 10000 })
   })
 })

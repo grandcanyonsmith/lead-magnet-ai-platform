@@ -223,6 +223,7 @@ export function Sidebar({
               <DropdownMenuTrigger as={Fragment}>
                 <Button
                   variant="ghost"
+                  aria-label="User menu"
                   className="w-full justify-start px-3 py-3 h-auto hover:bg-accent/50 border border-transparent hover:border-border/50 rounded-xl transition-all duration-200 group"
                 >
                 <Avatar

@@ -13,7 +13,8 @@ export class LoginPage {
     this.emailInput = page.locator('input[name="email"]')
     this.passwordInput = page.locator('input[name="password"]')
     this.submitButton = page.locator('button[type="submit"]')
-    this.errorMessage = page.locator('[role="alert"]')
+    // Next.js injects a route announcer with role="alert" that can collide with app alerts in strict mode.
+    this.errorMessage = page.locator('[role="alert"]:not(#__next-route-announcer__)')
     this.signUpLink = page.locator('a[href="/auth/signup"]')
   }
 

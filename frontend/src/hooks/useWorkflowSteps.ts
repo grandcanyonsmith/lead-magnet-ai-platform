@@ -90,11 +90,15 @@ export function useWorkflowSteps(initialSteps?: WorkflowStep[]) {
         aiSteps.map((step: any) => ({
           step_name: step.step_name || "Step",
           step_description: step.step_description || "",
-          model: step.model || "gpt-5",
+          model: step.model || "gpt-5.2",
+          reasoning_effort: step.reasoning_effort,
+          text_verbosity: step.text_verbosity,
+          max_output_tokens: step.max_output_tokens,
           instructions: step.instructions || "",
           step_order: step.step_order !== undefined ? step.step_order : 0,
           tools: step.tools || [],
           tool_choice: step.tool_choice || "auto",
+          depends_on: step.depends_on,
         })),
       );
     }

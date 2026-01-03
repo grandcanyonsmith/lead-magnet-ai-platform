@@ -58,7 +58,7 @@ export class FormFieldGenerationService {
     - Every field must have a purpose for the subsequent AI generation.
 
     ## Field Guidelines
-    1. **Essential**: Email (optional or required based on context, default to optional).
+    1. **Contact fields**: If you include Email / Name / Phone, they must be **optional** (set "required": false).
     2. **Personalization**: Ask specific questions (e.g., "What is your biggest challenge with X?", "Which industry are you in?").
     3. **Labeling**: Use clear, conversational labels (e.g., instead of "Industry", use "What industry describes you best?").
     4. **Quantity**: Aim for 3-5 high-impact fields.
@@ -179,6 +179,23 @@ The public_slug should be URL-friendly (lowercase, hyphens only). Return ONLY va
       ...field,
       field_id: field.field_id || `field_${index + 1}`,
     }));
+
+    // Ensure contact fields are never required (even if the model sets them required=true)
+    formData.fields = formData.fields.map((field: any) => {
+      const fieldType = String(field.field_type || "").toLowerCase();
+      const fieldId = String(field.field_id || "").toLowerCase();
+      const label = String(field.label || "").trim().toLowerCase();
+
+      const isEmailField = fieldType === "email" || fieldId === "email";
+      const isPhoneField = fieldType === "tel" || fieldId === "phone";
+      const isNameField = fieldId === "name" || label === "name" || label === "full name" || label === "your name";
+
+      if (isEmailField || isPhoneField || isNameField) {
+        return { ...field, required: false };
+      }
+
+      return field;
+    });
 
     return { formData, usageInfo };
   }

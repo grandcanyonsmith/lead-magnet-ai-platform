@@ -11,19 +11,16 @@ test.describe('Dashboard', () => {
     await dashboardPage.goto()
     
     await expect(dashboardPage.heading).toBeVisible()
-    await expect(dashboardPage.heading).toContainText('Dashboard')
+    await expect(dashboardPage.createLeadMagnetButton).toBeVisible()
   })
 
   test('should display stats cards', async ({ page }) => {
     const dashboardPage = new DashboardPage(page)
     await dashboardPage.goto()
     
-    // Wait for stats to load
-    await page.waitForSelector('[class*="bg-white"]', { timeout: 10000 })
-    
-    // Check that stats cards are visible
-    const statsCount = await dashboardPage.statsCards.count()
-    expect(statsCount).toBeGreaterThan(0)
+    await expect(page.getByText('Leads Collected')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Reports Generated')).toBeVisible()
+    await expect(page.getByText('Active Magnets')).toBeVisible()
   })
 
   test('should navigate to workflows page', async ({ page }) => {

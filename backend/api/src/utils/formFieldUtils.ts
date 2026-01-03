@@ -16,21 +16,21 @@ const REQUIRED_FIELDS: FormField[] = [
     field_type: "text",
     label: "Name",
     placeholder: "Your name",
-    required: true,
+    required: false,
   },
   {
     field_id: "email",
     field_type: "email",
     label: "Email",
     placeholder: "your@email.com",
-    required: true,
+    required: false,
   },
   {
     field_id: "phone",
     field_type: "tel",
     label: "Phone",
     placeholder: "Your phone number",
-    required: true,
+    required: false,
   },
 ];
 
