@@ -131,8 +131,15 @@ export default function StepTester({ step, index }: StepTesterProps) {
         (typeof t === 'string' && t === 'shell') || 
         (typeof t === 'object' && t.type === 'shell')
       );
+      const hasWebSearch = Array.isArray(tools) && tools.some((t: any) => 
+        (typeof t === 'string' && t === 'web_search') || 
+        (typeof t === 'object' && t.type === 'web_search')
+      );
+      
+      // Also enable for general AI generation (text output)
+      const isAiGeneration = !step.step_type || step.step_type === 'ai_generation';
 
-      if (hasComputerUse || hasShell) {
+      if (hasComputerUse || hasShell || hasWebSearch || isAiGeneration) {
         setShowStream(true);
         // We don't start polling here; StreamViewer will handle the request
         return;
@@ -307,12 +314,9 @@ export default function StepTester({ step, index }: StepTesterProps) {
              <div className="mt-6">
                <StreamViewer 
                  endpoint={(() => {
-                    const tools = step.tools || [];
-                    const hasComputerUse = Array.isArray(tools) && tools.some((t: any) => 
-                        (typeof t === 'string' && t === 'computer_use_preview') || 
-                        (typeof t === 'object' && t.type === 'computer_use_preview')
-                    );
-                    return hasComputerUse ? `${getApiUrl()}/admin/cua/execute` : `${getApiUrl()}/admin/shell/execute`;
+                    // Use CUA endpoint for everything as it supports the full agent loop streaming
+                    // It handles computer use, shell, and generic text/tool interactions
+                    return `${getApiUrl()}/admin/cua/execute`;
                  })()}
                  requestBody={(() => {
                     let inputData: any = {};

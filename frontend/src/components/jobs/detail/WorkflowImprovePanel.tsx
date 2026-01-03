@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { SparklesIcon } from "@heroicons/react/24/outline";
+import { SparklesIcon, ChevronDownIcon, ChevronUpIcon, ClipboardDocumentIcon } from "@heroicons/react/24/outline";
 import toast from "react-hot-toast";
 
 import { api } from "@/lib/api";
@@ -23,6 +23,7 @@ interface WorkflowImprovePanelProps {
 export function WorkflowImprovePanel({
   job,
   workflow,
+  mergedSteps,
 }: WorkflowImprovePanelProps) {
   const router = useRouter();
   const workflowId = workflow?.workflow_id || "";
@@ -30,6 +31,7 @@ export function WorkflowImprovePanel({
   const [notes, setNotes] = useState("");
   const [isBuildingPrompt, setIsBuildingPrompt] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
+  const [showStepSummary, setShowStepSummary] = useState(false);
 
   const { generateWorkflowEdit, clearProposal, isGenerating, error, proposal } =
     useWorkflowAI(workflowId);
@@ -100,6 +102,41 @@ export function WorkflowImprovePanel({
     toast("AI proposal dismissed", { icon: "✕" });
   };
 
+  const extractedSteps = useMemo(() => {
+    return mergedSteps.map((step) => {
+      const input = step.input || {};
+      const instructions = step.instructions || input.instructions || "N/A";
+      const description = input.description || "N/A";
+      const model = step.model || input.model || "N/A";
+      const tools = step.tools || input.tools || [];
+      const toolsStr =
+        Array.isArray(tools) && tools.length > 0
+          ? tools
+              .map((t) => (typeof t === "string" ? t : (t as any)?.type || String(t)))
+              .join(", ")
+          : "N/A";
+
+      return {
+        step_order: step.step_order,
+        step_name: step.step_name || "N/A",
+        instructions,
+        description,
+        model,
+        tools: toolsStr,
+      };
+    });
+  }, [mergedSteps]);
+
+  const handleCopyStepSummary = async () => {
+    try {
+      const jsonString = JSON.stringify(extractedSteps, null, 2);
+      await navigator.clipboard.writeText(jsonString);
+      toast.success("Step summary copied");
+    } catch {
+      toast.error("Unable to copy step summary");
+    }
+  };
+
   return (
     <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-card p-5 shadow-sm">
       <div className="flex items-start justify-between gap-4">
@@ -151,6 +188,94 @@ export function WorkflowImprovePanel({
         />
         {error ? <p className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p> : null}
       </div>
+
+      {extractedSteps.length > 0 && (
+        <div className="mt-4">
+          <button
+            type="button"
+            onClick={() => setShowStepSummary(!showStepSummary)}
+            className="flex w-full items-center justify-between rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          >
+            <span>Execution Steps Summary ({extractedSteps.length} steps)</span>
+            {showStepSummary ? (
+              <ChevronUpIcon className="h-5 w-5" />
+            ) : (
+              <ChevronDownIcon className="h-5 w-5" />
+            )}
+          </button>
+
+          {showStepSummary && (
+            <div className="mt-3 space-y-3">
+              <div className="flex items-center justify-end">
+                <button
+                  type="button"
+                  onClick={handleCopyStepSummary}
+                  className="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1.5 text-xs font-semibold hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                  <ClipboardDocumentIcon className="h-4 w-4" />
+                  Copy JSON
+                </button>
+              </div>
+
+              <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-800">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                        Order
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                        Step Name
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                        Instructions
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                        Description
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                        Model
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                        Tools
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-900">
+                    {extractedSteps.map((step, idx) => (
+                      <tr
+                        key={idx}
+                        className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                      >
+                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                          {step.step_order}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
+                          {step.step_name}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 max-w-md">
+                          <div className="truncate" title={step.instructions}>
+                            {step.instructions}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                          {step.description}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
+                          {step.model}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                          {step.tools}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {proposal ? (
         <div className="mt-5">

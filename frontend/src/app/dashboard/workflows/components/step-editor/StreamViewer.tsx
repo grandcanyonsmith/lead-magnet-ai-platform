@@ -36,6 +36,8 @@ interface LogEntry {
   type: string;
 }
 
+const OUTPUT_DELTA_PREFIX = "__OUTPUT_DELTA__";
+
 // -----------------------------------------------------------------------------
 // Log Line Component
 // -----------------------------------------------------------------------------
@@ -119,6 +121,7 @@ export default function StreamViewer({ endpoint, requestBody, onClose }: StreamV
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const matchRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const streamedOutputLogIndexRef = useRef<number | null>(null);
 
   // Connection Logic
   useEffect(() => {
@@ -194,6 +197,43 @@ export default function StreamViewer({ endpoint, requestBody, onClose }: StreamV
 
   const handleEvent = (event: any) => {
     if (event.type === 'log') {
+        const msg = typeof event.message === "string" ? event.message : "";
+
+        // Special-case: model output deltas are streamed as log events with a prefix.
+        // We append deltas into a single growing log line for a smooth "live output" experience.
+        if (msg.startsWith(OUTPUT_DELTA_PREFIX)) {
+          const delta = msg.slice(OUTPUT_DELTA_PREFIX.length);
+          if (!delta) return;
+
+          setLogs((prev) => {
+            const next = [...prev];
+            const ts =
+              typeof event.timestamp === "number"
+                ? event.timestamp
+                : Date.now() / 1000;
+            const level = typeof event.level === "string" ? event.level : "info";
+
+            const idx = streamedOutputLogIndexRef.current;
+            if (idx === null || !next[idx]) {
+              streamedOutputLogIndexRef.current = next.length;
+              next.push({
+                type: "log",
+                timestamp: ts,
+                level,
+                message: delta,
+              });
+              return next;
+            }
+
+            next[idx] = {
+              ...next[idx],
+              message: `${next[idx].message || ""}${delta}`,
+            };
+            return next;
+          });
+          return;
+        }
+
         setLogs(prev => [...prev, event]);
     } else if (event.type === 'screenshot') {
         // Store both URL and base64 for fallback
@@ -303,6 +343,7 @@ export default function StreamViewer({ endpoint, requestBody, onClose }: StreamV
 
   const clearLogs = () => {
     setLogs([]);
+    streamedOutputLogIndexRef.current = null;
     toast.success("Logs cleared");
   };
 

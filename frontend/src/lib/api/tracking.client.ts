@@ -77,9 +77,37 @@ export async function getJobStats(jobId: string): Promise<TrackingStats> {
   return api.get<TrackingStats>(`/admin/tracking/jobs/${jobId}/stats`);
 }
 
+export interface SessionRecording {
+  event_id: string;
+  session_id: string;
+  created_at: string;
+  recording_url: string;
+  recording_key: string;
+  page_url?: string;
+}
+
+export interface SessionRecordingsResponse {
+  recordings: SessionRecording[];
+  count: number;
+}
+
 /**
- * Get tracking events for a job.
+ * Get session recordings for a job.
  */
+export async function getJobRecordings(
+  jobId: string,
+  options?: { limit?: number },
+): Promise<SessionRecordingsResponse> {
+  const params = new URLSearchParams();
+  if (options?.limit) {
+    params.append("limit", options.limit.toString());
+  }
+
+  const queryString = params.toString();
+  const url = `/admin/tracking/jobs/${jobId}/recordings${queryString ? `?${queryString}` : ""}`;
+
+  return api.get<SessionRecordingsResponse>(url);
+}
 export async function getJobEvents(
   jobId: string,
   options?: {

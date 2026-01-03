@@ -536,19 +536,57 @@ class EditorOverlayGenerator:
       recorder.ondataavailable = (e) => {{
         if (e.data && e.data.size > 0) recordedChunks.push(e.data);
       }};
-      recorder.onstop = () => {{
+      recorder.onstop = async () => {{
         try {{
           stream.getTracks().forEach((t) => t.stop());
-        }} catch (_e) {{}}
-        const blob = new Blob(recordedChunks, {{ type: 'video/webm' }});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `leadmagnet_${{String(CFG.jobId).slice(-8)}}.webm`;
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(url), 5000);
-        recordBtn.disabled = false;
-        recordBtn.textContent = 'Record video';
+          const blob = new Blob(recordedChunks, {{ type: 'video/webm' }});
+          
+          recordBtn.textContent = 'Uploading…';
+          
+          // 1. Get Presigned URL
+          const sessionId = `sess_${{Math.random().toString(36).slice(2)}}${Date.now()}`;
+          const uploadData = await postJson('/v1/tracking/recording-url', {{
+            job_id: CFG.jobId,
+            session_id: sessionId,
+            content_type: 'video/webm',
+            timestamp: Date.now()
+          }});
+          
+          if (!uploadData || !uploadData.uploadUrl) {{
+             throw new Error('Failed to get upload URL');
+          }}
+          
+          // 2. Upload video
+          const uploadRes = await fetch(uploadData.uploadUrl, {{
+            method: 'PUT',
+            headers: {{ 'Content-Type': 'video/webm' }},
+            body: blob
+          }});
+          
+          if (!uploadRes.ok) {{
+             throw new Error('Upload to S3 failed: ' + uploadRes.status);
+          }}
+          
+          // 3. Record event
+          await postJson('/v1/tracking/event', {{
+             job_id: CFG.jobId,
+             session_id: sessionId,
+             event_type: 'recording_uploaded',
+             recording_url: uploadData.uploadUrl.split('?')[0], // Public URL (approx)
+             recording_key: uploadData.key,
+             page_url: window.location.href,
+             page_title: document.title
+          }});
+
+          alert('Recording uploaded successfully!');
+          
+        }} catch (err) {{
+          console.error(err);
+          alert('Recording upload failed: ' + err.message);
+        }} finally {{
+           recordBtn.disabled = false;
+           recordBtn.textContent = 'Record video';
+        }}
       }};
       recorder.start();
       recordBtn.textContent = 'Stop recording';

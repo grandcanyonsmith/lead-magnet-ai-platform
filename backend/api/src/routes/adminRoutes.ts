@@ -338,4 +338,16 @@ export function registerAdminRoutes(): void {
       );
     },
   );
+
+  router.register(
+    "GET",
+    "/admin/tracking/jobs/:jobId/recordings",
+    async (params, _body, query, tenantId) => {
+      return await trackingController.getJobRecordings(
+        tenantId!,
+        params.jobId,
+        query,
+      );
+    },
+  );
 }

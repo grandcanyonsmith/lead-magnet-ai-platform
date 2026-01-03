@@ -272,7 +272,13 @@ class BrowserService:
         x = action.get('x')
         y = action.get('y')
         selector = action.get('selector')
-        button = action.get('button', 'left')
+        button = str(action.get('button', 'left')).lower().strip()
+        # OpenAI computer_use_preview uses: left|right|wheel|back|forward
+        # Playwright expects: left|right|middle
+        if button == "wheel":
+            button = "middle"
+        if button not in ("left", "right", "middle"):
+            button = "left"
         click_count = action.get('click_count', 1)
         modifiers = action.get('modifiers', [])
         
@@ -337,6 +343,30 @@ class BrowserService:
 
     def _execute_drag_and_drop(self, action: Dict[str, Any]):
         """Execute a drag and drop action."""
+        # OpenAI computer_use_preview emits `drag` with a `path` array of points.
+        path = action.get("path")
+        if isinstance(path, list) and len(path) >= 2:
+            points = []
+            for p in path:
+                if isinstance(p, dict) and "x" in p and "y" in p:
+                    points.append((p.get("x"), p.get("y")))
+            points = [(x, y) for (x, y) in points if x is not None and y is not None]
+
+            if len(points) >= 2:
+                start_x, start_y = points[0]
+                final_x, final_y = points[-1]
+
+                self.page.mouse.move(start_x, start_y)
+                self._update_cursor_visuals(start_x, start_y)
+                self.page.mouse.down()
+                for (x, y) in points[1:]:
+                    self.page.mouse.move(x, y)
+                self.page.mouse.up()
+
+                logger.debug(f"Dragged along path from ({start_x}, {start_y}) to ({final_x}, {final_y})")
+                self._update_cursor_visuals(final_x, final_y)
+                return
+
         source_x = action.get('source_x')
         source_y = action.get('source_y')
         target_x = action.get('target_x')
@@ -402,10 +432,23 @@ class BrowserService:
         """Execute a scroll action."""
         x = action.get('x', 0)
         y = action.get('y', 0)
+        # OpenAI computer_use_preview uses scroll_x/scroll_y; legacy uses delta_x/delta_y.
+        scroll_x = action.get('scroll_x', None)
+        scroll_y = action.get('scroll_y', None)
         delta_x = action.get('delta_x', 0)
         delta_y = action.get('delta_y', 0)
         
-        if delta_x != 0 or delta_y != 0:
+        if scroll_x is not None or scroll_y is not None:
+            dx = int(scroll_x or 0)
+            dy = int(scroll_y or 0)
+            try:
+                if x is not None and y is not None:
+                    self.page.mouse.move(int(x), int(y))
+            except Exception:
+                pass
+            self.page.mouse.wheel(dx, dy)
+            logger.debug(f"Scrolled by wheel ({dx}, {dy}) at ({x}, {y})")
+        elif delta_x != 0 or delta_y != 0:
             # Scroll by delta
             self.page.mouse.wheel(delta_x, delta_y)
             logger.debug(f"Scrolled by delta ({delta_x}, {delta_y})")
@@ -420,10 +463,14 @@ class BrowserService:
     
     def _execute_keypress(self, action: Dict[str, Any]):
         """Execute a keypress action."""
+        keys = action.get('keys')
         key = action.get('key', '')
-        
+
+        # OpenAI computer_use_preview emits `keys: [...]`; legacy flows use `key: "Ctrl+C"`
+        if isinstance(keys, list) and len(keys) > 0:
+            key = "+".join(str(k) for k in keys)
         if not key:
-            raise ValueError("Keypress action requires 'key' parameter")
+            raise ValueError("Keypress action requires 'keys' or 'key' parameter")
         
         # Normalize key separator to '+'
         # Handle "Ctrl + C", "Alt, PrintScreen", "Shift Space" etc.

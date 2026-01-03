@@ -26,7 +26,8 @@ export interface TrackingEvent {
     | "page_view"
     | "session_start"
     | "session_end"
-    | "heartbeat";
+    | "heartbeat"
+    | "recording_uploaded";
   ip_address: string;
   user_agent?: string;
   referrer?: string;
@@ -42,6 +43,8 @@ export interface TrackingEvent {
   session_duration_seconds?: number;
   page_url?: string;
   page_title?: string;
+  recording_url?: string;
+  recording_key?: string;
   created_at: string;
   ttl?: number; // Unix timestamp for TTL (1 year from creation)
 }
