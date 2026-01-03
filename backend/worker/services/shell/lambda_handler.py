@@ -37,6 +37,43 @@ class StreamingShellHandler:
         openai_client = OpenAIClient()
 
         try:
+            # Build initial Responses API params. The incoming `params` from the frontend step tester
+            # is NOT a full OpenAI payload; it's typically user-provided JSON. We only extract
+            # known optional knobs from it (best-effort) and build the proper request.
+            extra: Dict[str, Any] = params if isinstance(params, dict) else {}
+            reasoning_effort = extra.get("reasoning_effort") if isinstance(extra.get("reasoning_effort"), str) else None
+            service_tier = extra.get("service_tier") if isinstance(extra.get("service_tier"), str) else None
+            text_verbosity = extra.get("text_verbosity") if isinstance(extra.get("text_verbosity"), str) else None
+
+            max_output_tokens = extra.get("max_output_tokens")
+            if max_output_tokens is not None and not isinstance(max_output_tokens, int):
+                try:
+                    max_output_tokens = int(max_output_tokens)
+                except Exception:
+                    max_output_tokens = None
+
+            initial_params = openai_client.build_api_params(
+                model=model,
+                instructions=instructions,
+                input_text=input_text,
+                tools=tools,
+                tool_choice=tool_choice,
+                has_computer_use=False,
+                reasoning_effort=reasoning_effort,
+                service_tier=service_tier,
+                text_verbosity=text_verbosity,
+                max_output_tokens=max_output_tokens,
+                job_id=job_id,
+                tenant_id=tenant_id,
+            )
+            # Match CUA streaming behavior (and reduce prompt-size failures).
+            initial_params["truncation"] = "auto"
+            # Include internal identifiers for logging (OpenAIClient will strip before sending).
+            if job_id:
+                initial_params["job_id"] = job_id
+            if tenant_id:
+                initial_params["tenant_id"] = tenant_id
+
             async for event_obj in self.shell_loop.run_shell_loop_stream(
                 openai_client=openai_client,
                 model=model,
@@ -44,7 +81,10 @@ class StreamingShellHandler:
                 input_text=input_text,
                 tools=tools,
                 tool_choice=tool_choice,
-                params=params,
+                params=initial_params,
+                reasoning_effort=reasoning_effort,
+                text_verbosity=text_verbosity,
+                max_output_tokens=max_output_tokens,
                 max_iterations=max_iterations,
                 max_duration_seconds=max_duration,
                 tenant_id=tenant_id,
