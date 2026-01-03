@@ -68,7 +68,8 @@ class JobErrorHandler:
                 'status': 'failed',
                 'error_message': descriptive_error,
                 'error_type': error_type,
-                'updated_at': datetime.utcnow().isoformat()
+                'updated_at': datetime.utcnow().isoformat(),
+                'live_step': None,
             })
         except Exception as update_error:
             logger.error(f"Failed to update job status: {update_error}")

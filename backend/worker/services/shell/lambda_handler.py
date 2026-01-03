@@ -10,6 +10,7 @@ from services.openai_client import OpenAIClient
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+
 class StreamingShellHandler:
     def __init__(self):
         self.shell_executor = ShellExecutorService()
@@ -21,7 +22,7 @@ class StreamingShellHandler:
         """
         # Explicitly reference json module to avoid UnboundLocalError
         _json = json
-        
+
         job_id = event.get('job_id')
         tenant_id = event.get('tenant_id')
         model = event.get('model', 'gpt-5.2')
@@ -95,4 +96,36 @@ class StreamingShellHandler:
         except Exception as e:
             logger.error(f"Streaming error: {e}", exc_info=True)
             yield _json.dumps({"type": "error", "message": str(e)}) + "\n"
+
+
+# Entry point for Lambda
+def handler(event, context):
+    """
+    Lambda entrypoint for the Shell streaming worker.
+
+    Note: Standard Python Lambda invocations are JSON-serialized, so we buffer the
+    NDJSON output into the `body` field and let the API proxy unwrap it.
+    """
+    import asyncio
+
+    handler_instance = StreamingShellHandler()
+    results = []
+
+    async def run():
+        async for chunk in handler_instance.process_stream(event, context):
+            results.append(chunk)
+
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+    loop.run_until_complete(run())
+
+    return {
+        "statusCode": 200,
+        "headers": {"Content-Type": "application/x-ndjson"},
+        "body": "".join(results),
+    }
 

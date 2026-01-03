@@ -11,7 +11,7 @@ import { Construct } from 'constructs';
 import { TableMap, TableKey } from './types';
 import { createLambdaWithTables, grantSecretsAccess, grantDynamoDBPermissions, grantS3Permissions } from './utils/lambda-helpers';
 import { createJobProcessorStateMachine } from './stepfunctions/job-processor-state-machine';
-import { SECRET_NAMES, LAMBDA_DEFAULTS, ENV_VAR_NAMES, DEFAULT_LOG_LEVEL, PLAYWRIGHT_BROWSERS_PATH, RESOURCE_PREFIXES, STEP_FUNCTIONS_DEFAULTS } from './config/constants';
+import { SECRET_NAMES, LAMBDA_DEFAULTS, ENV_VAR_NAMES, DEFAULT_LOG_LEVEL, PLAYWRIGHT_BROWSERS_PATH, RESOURCE_PREFIXES, STEP_FUNCTIONS_DEFAULTS, FUNCTION_NAMES } from './config/constants';
 
 export interface ComputeStackProps extends cdk.StackProps {
   tablesMap: TableMap;
@@ -32,6 +32,8 @@ export class ComputeStack extends cdk.Stack {
   public readonly stateMachine: sfn.StateMachine;
   public readonly stateMachineArn: string;
   public readonly jobProcessorLambda: lambda.IFunction;
+  public readonly cuaWorkerLambda: lambda.IFunction;
+  public readonly shellWorkerLambda: lambda.IFunction;
 
   constructor(scope: Construct, id: string, props: ComputeStackProps) {
     super(scope, id, props);
@@ -69,6 +71,18 @@ export class ComputeStack extends cdk.Stack {
             [ENV_VAR_NAMES.SHELL_EXECUTOR_SUBNET_IDS]: props.shellExecutor.subnetIds.join(','),
           } : {}),
         };
+
+        // Admin streaming worker lambdas (used by API admin endpoints)
+        const cuaLogGroup = new logs.LogGroup(this, 'CuaWorkerLogGroup', {
+          logGroupName: `/aws/lambda/${FUNCTION_NAMES.CUA_WORKER}`,
+          retention: logs.RetentionDays.ONE_WEEK,
+          removalPolicy: cdk.RemovalPolicy.DESTROY,
+        });
+        const shellLogGroup = new logs.LogGroup(this, 'ShellWorkerLogGroup', {
+          logGroupName: `/aws/lambda/${FUNCTION_NAMES.SHELL_WORKER}`,
+          retention: logs.RetentionDays.ONE_WEEK,
+          removalPolicy: cdk.RemovalPolicy.DESTROY,
+        });
         
         if (props.ecrRepository) {
           // Use container image (required for Playwright with proper GLIBC)
@@ -90,6 +104,47 @@ export class ComputeStack extends cdk.Stack {
               logGroup: logGroup,
               tracing: lambda.Tracing.ACTIVE,
               deadLetterQueue: dlq,
+            }
+          );
+
+          const cuaDockerCode: lambda.DockerImageCode = lambda.DockerImageCode.fromEcr(props.ecrRepository, {
+            tagOrDigest: 'latest',
+            cmd: ['services.cua.lambda_handler.handler'],
+          });
+          const shellDockerCode: lambda.DockerImageCode = lambda.DockerImageCode.fromEcr(props.ecrRepository, {
+            tagOrDigest: 'latest',
+            cmd: ['services.shell.lambda_handler.handler'],
+          });
+
+          this.cuaWorkerLambda = createLambdaWithTables(
+            this,
+            'CuaWorkerLambda',
+            props.tablesMap,
+            props.artifactsBucket,
+            {
+              functionName: FUNCTION_NAMES.CUA_WORKER,
+              code: cuaDockerCode,
+              timeout: cdk.Duration.minutes(LAMBDA_DEFAULTS.JOB_PROCESSOR.TIMEOUT_MINUTES),
+              memorySize: LAMBDA_DEFAULTS.JOB_PROCESSOR.MEMORY_SIZE,
+              environment: lambdaEnv,
+              logGroup: cuaLogGroup,
+              tracing: lambda.Tracing.ACTIVE,
+            }
+          );
+
+          this.shellWorkerLambda = createLambdaWithTables(
+            this,
+            'ShellWorkerLambda',
+            props.tablesMap,
+            props.artifactsBucket,
+            {
+              functionName: FUNCTION_NAMES.SHELL_WORKER,
+              code: shellDockerCode,
+              timeout: cdk.Duration.minutes(LAMBDA_DEFAULTS.JOB_PROCESSOR.TIMEOUT_MINUTES),
+              memorySize: LAMBDA_DEFAULTS.JOB_PROCESSOR.MEMORY_SIZE,
+              environment: lambdaEnv,
+              logGroup: shellLogGroup,
+              tracing: lambda.Tracing.ACTIVE,
             }
           );
         } else {
@@ -121,6 +176,43 @@ export class ComputeStack extends cdk.Stack {
               deadLetterQueue: dlq,
             }
           );
+
+          // Admin streaming worker lambdas (zip fallback; CUA may not work reliably without container + browsers)
+          this.cuaWorkerLambda = createLambdaWithTables(
+            this,
+            'CuaWorkerLambda',
+            props.tablesMap,
+            props.artifactsBucket,
+            {
+              functionName: FUNCTION_NAMES.CUA_WORKER,
+              runtime: lambda.Runtime.PYTHON_3_11,
+              handler: 'services.cua.lambda_handler.handler',
+              code: zipCode,
+              timeout: cdk.Duration.minutes(LAMBDA_DEFAULTS.JOB_PROCESSOR.TIMEOUT_MINUTES),
+              memorySize: LAMBDA_DEFAULTS.JOB_PROCESSOR.MEMORY_SIZE,
+              environment: lambdaEnv,
+              logGroup: cuaLogGroup,
+              tracing: lambda.Tracing.ACTIVE,
+            }
+          );
+
+          this.shellWorkerLambda = createLambdaWithTables(
+            this,
+            'ShellWorkerLambda',
+            props.tablesMap,
+            props.artifactsBucket,
+            {
+              functionName: FUNCTION_NAMES.SHELL_WORKER,
+              runtime: lambda.Runtime.PYTHON_3_11,
+              handler: 'services.shell.lambda_handler.handler',
+              code: zipCode,
+              timeout: cdk.Duration.minutes(LAMBDA_DEFAULTS.JOB_PROCESSOR.TIMEOUT_MINUTES),
+              memorySize: LAMBDA_DEFAULTS.JOB_PROCESSOR.MEMORY_SIZE,
+              environment: lambdaEnv,
+              logGroup: shellLogGroup,
+              tracing: lambda.Tracing.ACTIVE,
+            }
+          );
         }
 
     // Explicitly ensure usage_records table has PutItem permission (for usage tracking)
@@ -129,6 +221,16 @@ export class ComputeStack extends cdk.Stack {
     // Grant Secrets Manager permissions
     grantSecretsAccess(
       this.jobProcessorLambda,
+      this,
+      [SECRET_NAMES.OPENAI_API_KEY, SECRET_NAMES.TWILIO_CREDENTIALS]
+    );
+    grantSecretsAccess(
+      this.cuaWorkerLambda,
+      this,
+      [SECRET_NAMES.OPENAI_API_KEY, SECRET_NAMES.TWILIO_CREDENTIALS]
+    );
+    grantSecretsAccess(
+      this.shellWorkerLambda,
       this,
       [SECRET_NAMES.OPENAI_API_KEY, SECRET_NAMES.TWILIO_CREDENTIALS]
     );
@@ -162,6 +264,41 @@ export class ComputeStack extends cdk.Stack {
       const execRoleArn = props.shellExecutor.executionRoleArn;
       if (execRoleArn) {
         this.jobProcessorLambda.addToRolePolicy(
+          new iam.PolicyStatement({
+            effect: iam.Effect.ALLOW,
+            actions: ['iam:PassRole'],
+            resources: [execRoleArn],
+          })
+        );
+      }
+
+      // Shell worker also needs to run ECS tasks + poll the results bucket
+      const shellResultsBucketForShellWorker = s3.Bucket.fromBucketName(this, 'ShellExecutorResultsBucketForShellWorker', props.shellExecutor.resultsBucketName);
+      shellResultsBucketForShellWorker.grantReadWrite(this.shellWorkerLambda);
+
+      this.shellWorkerLambda.addToRolePolicy(
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: ['ecs:RunTask', 'ecs:DescribeTaskDefinition'],
+          resources: [
+            cdk.Stack.of(this).formatArn({
+              service: 'ecs',
+              resource: 'task-definition',
+              resourceName: `${props.shellExecutor.taskDefinitionFamily}:*`,
+            }),
+          ],
+        })
+      );
+      this.shellWorkerLambda.addToRolePolicy(
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: ['ecs:DescribeTasks', 'ecs:StopTask'],
+          resources: ['*'],
+        })
+      );
+
+      if (execRoleArn) {
+        this.shellWorkerLambda.addToRolePolicy(
           new iam.PolicyStatement({
             effect: iam.Effect.ALLOW,
             actions: ['iam:PassRole'],
@@ -237,6 +374,16 @@ export class ComputeStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'JobProcessorLambdaArn', {
       value: this.jobProcessorLambda.functionArn,
       exportName: 'JobProcessorLambdaArn',
+    });
+
+    new cdk.CfnOutput(this, 'CuaWorkerLambdaArn', {
+      value: this.cuaWorkerLambda.functionArn,
+      exportName: 'CuaWorkerLambdaArn',
+    });
+
+    new cdk.CfnOutput(this, 'ShellWorkerLambdaArn', {
+      value: this.shellWorkerLambda.functionArn,
+      exportName: 'ShellWorkerLambdaArn',
     });
   }
 }

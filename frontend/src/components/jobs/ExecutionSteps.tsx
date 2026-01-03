@@ -17,6 +17,7 @@ import { Artifact } from "@/types/artifact";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { SubmissionSummary } from "@/components/jobs/detail/SubmissionSummary";
 import type { FormSubmission, Form } from "@/types/form";
+import type { JobLiveStep } from "@/types/job";
 
 interface ExecutionStepsProps {
   steps: MergedStep[];
@@ -26,6 +27,7 @@ interface ExecutionStepsProps {
   onToggleStep: (stepOrder: number) => void;
   onCopy: (text: string) => void;
   jobStatus?: string;
+  liveStep?: JobLiveStep | null;
   submission?: FormSubmission | null;
   form?: Form | null;
   onResubmit?: () => void;
@@ -47,6 +49,7 @@ export function ExecutionSteps({
   onToggleStep,
   onCopy,
   jobStatus,
+  liveStep,
   submission,
   form,
   onResubmit,
@@ -148,6 +151,14 @@ export function ExecutionSteps({
               const isExpanded = expandedSteps.has(stepOrder);
               const stepStatus = getStepStatusForStep(step);
               const isLast = index === stepsForTimeline.length - 1;
+              const liveOutputForStep =
+                liveStep && liveStep.step_order === stepOrder
+                  ? liveStep.output_text
+                  : undefined;
+              const liveUpdatedAtForStep =
+                liveStep && liveStep.step_order === stepOrder
+                  ? liveStep.updated_at
+                  : undefined;
 
               return (
                 <div key={stepOrder} className="relative pb-8 last:pb-0">
@@ -202,6 +213,8 @@ export function ExecutionSteps({
                                   step={step}
                                   status={stepStatus}
                                   onCopy={onCopy}
+                                  liveOutput={liveOutputForStep}
+                                  liveUpdatedAt={liveUpdatedAtForStep}
                                   previousSteps={getPreviousSteps(
                                     step,
                                     sortedSteps,

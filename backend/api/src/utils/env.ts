@@ -54,6 +54,8 @@ export class EnvConfig {
 
   // Worker Configuration
   readonly workerScriptPath: string;
+  readonly cuaLambdaFunctionName: string;
+  readonly shellLambdaFunctionName: string;
 
   // Stripe Configuration
   readonly stripePriceId: string | undefined;
@@ -175,6 +177,16 @@ export class EnvConfig {
     this.workerScriptPath = this.getWithDefault(
       "WORKER_SCRIPT_PATH",
       "./backend/worker/worker.py",
+    );
+
+    // Admin streaming worker lambdas (can be overridden in deployed environment)
+    this.cuaLambdaFunctionName = this.getWithDefault(
+      "CUA_LAMBDA_FUNCTION_NAME",
+      "leadmagnet-cua-worker",
+    );
+    this.shellLambdaFunctionName = this.getWithDefault(
+      "SHELL_LAMBDA_FUNCTION_NAME",
+      "leadmagnet-shell-worker",
     );
 
     // Stripe Configuration
