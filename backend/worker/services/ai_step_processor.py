@@ -83,6 +83,21 @@ class AIStepProcessor:
         step_reasoning_effort = step.get('reasoning_effort')
         if step_reasoning_effort is None and isinstance(step_model, str) and step_model.startswith('gpt-5'):
             step_reasoning_effort = 'high'
+        # Extract service tier and structured output options (optional)
+        step_service_tier = step.get('service_tier')
+        if step_service_tier is not None and step_service_tier not in ['auto', 'default', 'flex', 'scale', 'priority']:
+            step_service_tier = None
+
+        step_output_format = step.get('output_format')
+        if not isinstance(step_output_format, dict):
+            step_output_format = None
+        else:
+            fmt_type = step_output_format.get('type')
+            if fmt_type not in ['text', 'json_object', 'json_schema']:
+                step_output_format = None
+            elif fmt_type == 'json_schema':
+                if not isinstance(step_output_format.get('name'), str) or not isinstance(step_output_format.get('schema'), dict):
+                    step_output_format = None
         # Extract text verbosity and max_output_tokens from step config
         step_text_verbosity = step.get('text_verbosity')
         step_max_output_tokens = step.get('max_output_tokens')
@@ -116,6 +131,8 @@ class AIStepProcessor:
                 job_id=job_id,
                 previous_image_urls=previous_image_urls,
                 reasoning_effort=step_reasoning_effort,
+                service_tier=step_service_tier,
+                output_format=step_output_format,
                 step_index=step_index,
                 text_verbosity=step_text_verbosity,
                 max_output_tokens=step_max_output_tokens,

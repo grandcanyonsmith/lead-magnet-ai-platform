@@ -88,26 +88,67 @@ class RecordingScriptGenerator:
             
             if (!response.ok) return null;
             const data = await response.json();
-            return data.uploadUrl;
+            if (!data || !data.uploadUrl) return null;
+            return data; // { uploadUrl, key }
         }} catch (e) {{
             console.error('Failed to get upload URL', e);
             return null;
         }}
+    }}
+
+    // Fire-and-forget: record that a recording part exists (metadata only).
+    // We avoid JSON Content-Type headers to reduce CORS preflight risk.
+    function recordUploadedPartMeta(uploadData) {{
+        try {{
+            const base = (RECORDING_CONFIG.apiUrl || window.location.origin || '').replace(/\\/+$/, '');
+            if (!base || base === 'null') return;
+            const endpoint = base + '/v1/tracking/event';
+
+            const payload = {{
+                job_id: RECORDING_CONFIG.jobId,
+                event_type: 'recording_uploaded',
+                session_id: sessionId,
+                recording_url: String(uploadData.uploadUrl || '').split('?')[0],
+                recording_key: uploadData.key,
+                page_url: window.location.href,
+                page_title: document.title || '',
+            }};
+            const body = JSON.stringify(payload);
+
+            if (navigator.sendBeacon) {{
+                try {{
+                    const ok = navigator.sendBeacon(endpoint, body);
+                    if (ok) return;
+                }} catch (_e) {{}}
+            }}
+
+            try {{
+                fetch(endpoint, {{
+                    method: 'POST',
+                    body,
+                    mode: 'no-cors',
+                    keepalive: true,
+                }}).catch(function() {{}});
+            }} catch (_e) {{}}
+        }} catch (_e) {{}}
     }}
     
     // Upload a batch of events
     async function uploadEvents(eventsBatch, partNumber) {{
         if (eventsBatch.length === 0) return;
         
-        const uploadUrl = await getUploadUrl(partNumber);
-        if (!uploadUrl) return;
+        const uploadData = await getUploadUrl(partNumber);
+        if (!uploadData || !uploadData.uploadUrl) return;
         
         try {{
-            await fetch(uploadUrl, {{
+            const res = await fetch(uploadData.uploadUrl, {{
                 method: 'PUT',
                 headers: {{ 'Content-Type': 'application/json' }},
                 body: JSON.stringify({{ events: eventsBatch }})
             }});
+            if (res && res.ok) {{
+                recordUploadedPartMeta(uploadData);
+            }}
         }} catch (e) {{
             console.error('Failed to upload recording events', e);
         }}
@@ -157,9 +198,11 @@ class RecordingScriptGenerator:
             // but we want to use the S3 bucket directly.
             
             // Let's try fetch with keepalive
-            getUploadUrl(Date.now() + '_final').then(url => {{
-                if (url) {{
-                    fetch(url, {{
+            getUploadUrl(Date.now() + '_final').then(uploadData => {{
+                if (uploadData && uploadData.uploadUrl) {{
+                    // Record metadata first (best-effort), then attempt to upload.
+                    recordUploadedPartMeta(uploadData);
+                    fetch(uploadData.uploadUrl, {{
                         method: 'PUT',
                         headers: {{ 'Content-Type': 'application/json' }},
                         body: JSON.stringify({{ events: batch }}),

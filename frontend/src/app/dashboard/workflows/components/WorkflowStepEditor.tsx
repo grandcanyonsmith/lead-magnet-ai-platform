@@ -122,6 +122,8 @@ export default function WorkflowStepEditor({
   workflowId,
 }: WorkflowStepEditorProps) {
   const [localStep, setLocalStep] = useState<WorkflowStep>(step);
+  const [outputSchemaJson, setOutputSchemaJson] = useState<string>("");
+  const [outputSchemaError, setOutputSchemaError] = useState<string | null>(null);
   const [computerUseConfig, setComputerUseConfig] = useState<ComputerUseConfigState>({
     display_width: 1024,
     display_height: 768,
@@ -259,6 +261,25 @@ export default function WorkflowStepEditor({
       }
     }
   }, [step, onChange, index]);
+
+  // Keep the JSON Schema editor text in sync when the underlying schema changes.
+  // We only update the actual schema in `localStep` when JSON parses successfully,
+  // so this won't overwrite user typing for invalid JSON.
+  useEffect(() => {
+    if (localStep.output_format?.type === "json_schema") {
+      const schemaObj = localStep.output_format.schema || {};
+      setOutputSchemaJson(JSON.stringify(schemaObj, null, 2));
+      setOutputSchemaError(null);
+    } else {
+      setOutputSchemaJson("");
+      setOutputSchemaError(null);
+    }
+  }, [
+    localStep.output_format?.type,
+    localStep.output_format?.type === "json_schema"
+      ? localStep.output_format.schema
+      : undefined,
+  ]);
 
   // Ensure image generation config is initialized when tool is selected
   // Using functional setState form to avoid needing imageGenerationConfig in dependencies
@@ -666,6 +687,34 @@ export default function WorkflowStepEditor({
                   Controls how deeply the AI reasons before responding. Higher values improve quality but increase latency.
                 </p>
               </div>
+
+              <div className="space-y-1">
+                <label
+                  className={FIELD_LABEL}
+                  htmlFor={`service-tier-${index}`}
+                >
+                  <span>Service Tier</span>
+                  <span className={FIELD_OPTIONAL}>(Optional)</span>
+                </label>
+                <select
+                  id={`service-tier-${index}`}
+                  value={localStep.service_tier || ""}
+                  onChange={(e) =>
+                    handleChange("service_tier", e.target.value || undefined)
+                  }
+                  className={SELECT_CONTROL}
+                  aria-label="Service tier"
+                >
+                  <option value="">Auto (Project Default)</option>
+                  <option value="default">Default</option>
+                  <option value="priority">Priority (Fastest)</option>
+                  <option value="flex">Flex</option>
+                  <option value="scale">Scale</option>
+                </select>
+                <p className={HELP_TEXT}>
+                  Controls cost/latency for this step. Use Priority for fastest responses.
+                </p>
+              </div>
             </div>
           </div>
 
@@ -679,6 +728,182 @@ export default function WorkflowStepEditor({
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
+              <div className="space-y-1 md:col-span-2">
+                <label
+                  className={FIELD_LABEL}
+                  htmlFor={`output-format-${index}`}
+                >
+                  <span>Output Type</span>
+                  <span className={FIELD_OPTIONAL}>(Optional)</span>
+                </label>
+                <select
+                  id={`output-format-${index}`}
+                  value={localStep.output_format?.type || "text"}
+                  onChange={(e) => {
+                    const t = e.target.value;
+                    if (t === "text") {
+                      handleChange("output_format", undefined);
+                      return;
+                    }
+                    if (t === "json_object") {
+                      handleChange("output_format", { type: "json_object" });
+                      return;
+                    }
+                    if (t === "json_schema") {
+                      const existing = localStep.output_format;
+                      const defaultSchema = {
+                        type: "object",
+                        properties: {},
+                        additionalProperties: true,
+                      };
+                      const next =
+                        existing && existing.type === "json_schema"
+                          ? existing
+                          : {
+                              type: "json_schema",
+                              name: `step_${index + 1}_output`,
+                              strict: true,
+                              schema: defaultSchema,
+                            };
+                      handleChange("output_format", next as any);
+                      return;
+                    }
+                  }}
+                  className={SELECT_CONTROL}
+                  aria-label="Output type"
+                >
+                  <option value="text">Text (Default)</option>
+                  <option value="json_schema">Structured JSON (JSON Schema)</option>
+                  <option value="json_object">JSON (Legacy JSON mode)</option>
+                </select>
+                <p className={HELP_TEXT}>
+                  Structured JSON enables OpenAI Structured Outputs (Responses API: <code className="font-mono">text.format</code>).
+                </p>
+              </div>
+
+              {localStep.output_format?.type === "json_schema" && (
+                <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6 rounded-xl border border-border/60 bg-background/40 p-4">
+                  <div className="space-y-1">
+                    <label
+                      className={FIELD_LABEL}
+                      htmlFor={`output-schema-name-${index}`}
+                    >
+                      <span>Schema Name</span>
+                      <span className={FIELD_REQUIRED}>*</span>
+                    </label>
+                    <input
+                      id={`output-schema-name-${index}`}
+                      type="text"
+                      value={localStep.output_format.name || ""}
+                      onChange={(e) =>
+                        handleChange("output_format", {
+                          ...localStep.output_format,
+                          name: e.target.value,
+                        } as any)
+                      }
+                      className={CONTROL_BASE}
+                      placeholder="e.g., step_output"
+                    />
+                    <p className={HELP_TEXT}>
+                      Used by OpenAI to label the structured output format (max 64 chars).
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label
+                      className={FIELD_LABEL}
+                      htmlFor={`output-schema-strict-${index}`}
+                    >
+                      <span>Strict</span>
+                      <span className={FIELD_OPTIONAL}>(Optional)</span>
+                    </label>
+                    <select
+                      id={`output-schema-strict-${index}`}
+                      value={String(localStep.output_format.strict !== false)}
+                      onChange={(e) =>
+                        handleChange("output_format", {
+                          ...localStep.output_format,
+                          strict: e.target.value === "true",
+                        } as any)
+                      }
+                      className={SELECT_CONTROL}
+                    >
+                      <option value="true">true (recommended)</option>
+                      <option value="false">false</option>
+                    </select>
+                    <p className={HELP_TEXT}>
+                      When true, the model must adhere to the schema (subset of JSON Schema supported).
+                    </p>
+                  </div>
+
+                  <div className="space-y-1 md:col-span-2">
+                    <label
+                      className={FIELD_LABEL}
+                      htmlFor={`output-schema-description-${index}`}
+                    >
+                      <span>Description</span>
+                      <span className={FIELD_OPTIONAL}>(Optional)</span>
+                    </label>
+                    <input
+                      id={`output-schema-description-${index}`}
+                      type="text"
+                      value={localStep.output_format.description || ""}
+                      onChange={(e) =>
+                        handleChange("output_format", {
+                          ...localStep.output_format,
+                          description: e.target.value || undefined,
+                        } as any)
+                      }
+                      className={CONTROL_BASE}
+                      placeholder="What the output represents"
+                    />
+                  </div>
+
+                  <div className="space-y-1 md:col-span-2">
+                    <label
+                      className={FIELD_LABEL}
+                      htmlFor={`output-schema-json-${index}`}
+                    >
+                      <span>JSON Schema</span>
+                      <span className={FIELD_REQUIRED}>*</span>
+                    </label>
+                    <textarea
+                      id={`output-schema-json-${index}`}
+                      className={`${CONTROL_BASE} min-h-[180px] font-mono text-xs`}
+                      value={outputSchemaJson}
+                      onChange={(e) => {
+                        const next = e.target.value;
+                        setOutputSchemaJson(next);
+                        try {
+                          const parsed = JSON.parse(next || "{}");
+                          if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+                            setOutputSchemaError("Schema must be a JSON object");
+                            return;
+                          }
+                          setOutputSchemaError(null);
+                          handleChange("output_format", {
+                            ...localStep.output_format,
+                            schema: parsed,
+                          } as any);
+                        } catch (err: any) {
+                          setOutputSchemaError("Invalid JSON (will apply once it parses)");
+                        }
+                      }}
+                      placeholder='{\n  "type": "object",\n  "properties": {\n    "example": { "type": "string" }\n  },\n  "required": ["example"]\n}'
+                      rows={8}
+                    />
+                    {outputSchemaError && (
+                      <p className="mt-2 text-xs text-destructive">
+                        {outputSchemaError}
+                      </p>
+                    )}
+                    <p className={HELP_TEXT}>
+                      Paste a valid JSON Schema object. Invalid JSON won&apos;t be applied until it parses.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-1">
                 <label
                   className={FIELD_LABEL}

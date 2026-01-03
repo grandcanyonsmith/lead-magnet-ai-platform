@@ -105,10 +105,29 @@ export function WorkflowImprovePanel({
   const extractedSteps = useMemo(() => {
     return mergedSteps.map((step) => {
       const input = step.input || {};
-      const instructions = step.instructions || input.instructions || "N/A";
-      const description = input.description || "N/A";
-      const model = step.model || input.model || "N/A";
-      const tools = step.tools || input.tools || [];
+      const inputInstructions = input["instructions"];
+      const instructions =
+        typeof step.instructions === "string" && step.instructions.trim()
+          ? step.instructions
+          : typeof inputInstructions === "string" && inputInstructions.trim()
+            ? inputInstructions
+            : "N/A";
+
+      const inputDescription = input["description"];
+      const description =
+        typeof inputDescription === "string" && inputDescription.trim()
+          ? inputDescription
+          : "N/A";
+
+      const inputModel = input["model"];
+      const model =
+        typeof step.model === "string" && step.model.trim()
+          ? step.model
+          : typeof inputModel === "string" && inputModel.trim()
+            ? inputModel
+            : "N/A";
+
+      const tools = step.tools || input["tools"] || [];
       const toolsStr =
         Array.isArray(tools) && tools.length > 0
           ? tools

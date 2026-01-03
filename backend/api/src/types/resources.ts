@@ -42,8 +42,19 @@ export interface WorkflowStep {
   step_type?: "ai_generation" | "webhook";
   model: string;
   reasoning_effort?: "none" | "low" | "medium" | "high" | "xhigh";
+  service_tier?: "auto" | "default" | "flex" | "scale" | "priority";
   text_verbosity?: "low" | "medium" | "high";
   max_output_tokens?: number;
+  output_format?:
+    | { type: "text" }
+    | { type: "json_object" }
+    | {
+        type: "json_schema";
+        name: string;
+        description?: string;
+        strict?: boolean;
+        schema: Record<string, any>;
+      };
   instructions: string;
   step_order: number;
   depends_on?: number[];
