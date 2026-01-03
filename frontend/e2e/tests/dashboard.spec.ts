@@ -2,10 +2,6 @@ import { test, expect } from '../fixtures/auth'
 import { DashboardPage } from '../pages/DashboardPage'
 
 test.describe('Dashboard', () => {
-  test.beforeEach(async ({ login }) => {
-    await login()
-  })
-
   test('should display dashboard page', async ({ page }) => {
     const dashboardPage = new DashboardPage(page)
     await dashboardPage.goto()

@@ -1,6 +1,8 @@
 import { test, expect } from '../fixtures/auth'
 import { LoginPage } from '../pages/LoginPage'
 
+test.use({ storageState: { cookies: [], origins: [] } });
+
 test.describe('Authentication', () => {
   test('should redirect to login when not authenticated', async ({ page }) => {
     await page.goto('/dashboard')

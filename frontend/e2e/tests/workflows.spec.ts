@@ -2,9 +2,6 @@ import { test, expect } from '../fixtures/auth'
 import { DashboardPage } from '../pages/DashboardPage'
 
 test.describe('Workflows', () => {
-  test.beforeEach(async ({ login }) => {
-    await login()
-  })
 
   test('should navigate to workflows page', async ({ page }) => {
     const dashboardPage = new DashboardPage(page)
@@ -14,7 +11,7 @@ test.describe('Workflows', () => {
     await expect(page).toHaveURL('/dashboard/workflows')
     
     // Check page loads
-    await page.waitForLoadState('networkidle')
+    await expect(page.locator('main')).toBeVisible()
   })
 
   test('should navigate to create workflow page', async ({ page }) => {
@@ -34,9 +31,6 @@ test.describe('Workflows', () => {
 
   test('should display workflows list', async ({ page }) => {
     await page.goto('/dashboard/workflows')
-    
-    // Wait for page to load
-    await page.waitForLoadState('networkidle')
     
     // Page can show a table (when workflows exist) or an empty state.
     const workflowsTable = page.locator('table')
