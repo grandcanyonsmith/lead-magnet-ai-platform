@@ -9,8 +9,21 @@ export const test = base.extend<AuthFixtures>({
   login: async ({ page }, use) => {
     await use(async (email = 'test@example.com', password = 'TestPass123!') => {
       await page.goto('/auth/login')
-      await page.fill('input[name="email"]', email)
-      await page.fill('input[name="password"]', password)
+
+      const emailInput = page.locator('input[name="email"]')
+      const passwordInput = page.locator('input[name="password"]')
+
+      // Next.js dev server can occasionally return a transient 404 during a full reload;
+      // retry once to keep e2e runs stable (especially on CI).
+      try {
+        await emailInput.waitFor({ timeout: 10000 })
+      } catch {
+        await page.goto('/auth/login')
+        await emailInput.waitFor({ timeout: 10000 })
+      }
+
+      await emailInput.fill(email)
+      await passwordInput.fill(password)
       await page.click('button[type="submit"]')
       // Wait for navigation after login
       await page.waitForURL(/\/dashboard|\/onboarding/, { timeout: 10000 })
@@ -22,7 +35,7 @@ export const test = base.extend<AuthFixtures>({
       // Click user menu
       await page.click('[aria-label*="user menu" i], [aria-label*="account" i]')
       // Click logout
-      await page.click('text=/sign out|logout/i')
+      await page.click('text=/sign\\s*out|log\\s*out|logout/i')
       await page.waitForURL(/\/auth\/login/, { timeout: 5000 })
     })
   },
