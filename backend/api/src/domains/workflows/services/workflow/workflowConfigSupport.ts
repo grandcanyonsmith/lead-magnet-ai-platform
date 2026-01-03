@@ -13,6 +13,9 @@ interface RawStep {
   step_name?: string;
   step_description?: string;
   model?: string;
+  reasoning_effort?: string;
+  text_verbosity?: string;
+  max_output_tokens?: number;
   instructions?: string;
   step_order?: number;
   depends_on?: number[];
@@ -102,6 +105,25 @@ function normalizeStep(step: RawStep, index: number): WorkflowStep {
   const model = isString(step.model) && step.model.trim().length > 0 ? step.model : 'gpt-5.2';
   const shouldAddDefaultWebSearch = index === 0 && model !== 'o4-mini-deep-research';
 
+  const reasoning_effort =
+    isString(step.reasoning_effort) &&
+    ['none', 'low', 'medium', 'high', 'xhigh'].includes(step.reasoning_effort)
+      ? (step.reasoning_effort as any)
+      : undefined;
+
+  const text_verbosity =
+    isString(step.text_verbosity) &&
+    ['low', 'medium', 'high'].includes(step.text_verbosity)
+      ? (step.text_verbosity as any)
+      : undefined;
+
+  const max_output_tokens =
+    typeof step.max_output_tokens === 'number' &&
+    Number.isFinite(step.max_output_tokens) &&
+    step.max_output_tokens >= 1
+      ? Math.floor(step.max_output_tokens)
+      : undefined;
+
   const tools: (string | ToolConfig)[] = isArray(step.tools)
     ? (step.tools as unknown[]).filter((t): t is string | ToolConfig => typeof t === 'string' || (typeof t === 'object' && t !== null && 'type' in t))
     : shouldAddDefaultWebSearch
@@ -119,6 +141,9 @@ function normalizeStep(step: RawStep, index: number): WorkflowStep {
     step_name: isString(step.step_name) && step.step_name.trim().length > 0 ? step.step_name : `Step ${index + 1}`,
     step_description: isString(step.step_description) ? step.step_description : '',
     model,
+    reasoning_effort,
+    text_verbosity,
+    max_output_tokens,
     instructions: isString(step.instructions) && step.instructions.trim().length > 0 ? step.instructions : 'Generate content based on form submission data.',
     step_order: typeof step.step_order === 'number' && step.step_order >= 0 ? step.step_order : index,
     depends_on: isArray(step.depends_on) ? step.depends_on.filter((d): d is number => typeof d === 'number' && d >= 0 && d < 1000) : [],

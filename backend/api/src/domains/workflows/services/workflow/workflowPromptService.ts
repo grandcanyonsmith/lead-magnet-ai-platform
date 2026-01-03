@@ -72,11 +72,13 @@ ${formatAllModelDescriptionsMarkdown()}
 2. **Enforce Structure**: Use Markdown headers, bullet points, and tables.
 3. **Contextualize**: Reference prior steps (e.g., "Using the research from Step 1...").
 4. **Persona**: Assign a role (e.g., "Act as a Senior Financial Analyst...").
+5. **Autonomy**: The workflow runs without any user interaction once started. Do **NOT** ask for confirmation, ask follow-up questions, or pause waiting for input. If something is missing, make reasonable assumptions and proceed.
 
 ### ❌ What to Avoid
 - Vague requests: "Write a blog post." (Better: "Write a 1500-word comprehensive guide on X, targeting Y audience...")
 - Ignoring inputs: Not using the collected form data.
 - Weak endings: Ending without a clear call to action or summary.
+- Asking for confirmation or user input mid-step (there is no human-in-the-loop).
 
 ### Examples
 
@@ -134,6 +136,9 @@ Return ONLY valid JSON matching this structure:
       "step_name": "...",
       "step_description": "...",
       "model": "...",
+      "reasoning_effort": "none" | "low" | "medium" | "high" | "xhigh",
+      "text_verbosity": "low" | "medium" | "high",
+      "max_output_tokens": 4000,
       "instructions": "...",
       "step_order": 0,
       "depends_on": [],
