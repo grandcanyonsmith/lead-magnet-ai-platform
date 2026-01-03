@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>360 ICP Profile</title>
+  <meta name="description" content="Ideal Customer Profile - Premium Analysis">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50: '#E6F9FA', 100: '#B8EFF2', 200: '#8AE5EA', 300: '#5CD9E0', 400: '#2ECFD7', 500: '#18BFC7', 600: '#139BA3', 700: '#0E777E', 800: '#0A545A', 900: '#053035' },
+            accent: { 50: '#E8F4FC', 100: '#C5E3F7', 400: '#4DA8E8', 500: '#1F86D6', 600: '#1A6DB1' },
+            dark: { 900: '#0B0F1A', 800: '#111827', 700: '#1F2937', 600: '#374151' }
+          },
+          fontFamily: { display: ['Space Grotesk', 'sans-serif'], sans: ['Inter', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] },
+        }
+      }
+    }
+  </script>
+  <style>
+    :root { --brand: #18BFC7; --accent: #1F86D6; --glow: rgba(24,191,199,0.4); }
+    
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Inter', sans-serif; overflow-x: hidden; }
+    
+    @keyframes float { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-20px) rotate(3deg); } }
+    @keyframes pulse-ring { 0% { transform: scale(0.95); opacity: 1; } 100% { transform: scale(1.3); opacity: 0; } }
+    @keyframes gradient-x { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+    @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+    @keyframes fade-up { from { opacity: 0; transform: translateY(40px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    @keyframes slide-in-left { from { opacity: 0; transform: translateX(-30px); } to { opacity: 1; transform: translateX(0); } }
+    @keyframes scale-in { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+    @keyframes confetti { 0% { transform: translateY(0) rotate(0deg); opacity: 1; } 100% { transform: translateY(-120vh) rotate(1080deg); opacity: 0; } }
+    @keyframes bounce-in { 0% { transform: scale(0); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+    @keyframes glow-pulse { 0%, 100% { box-shadow: 0 0 30px var(--glow); } 50% { box-shadow: 0 0 60px var(--glow); } }
+    @keyframes orbit { from { transform: rotate(0deg) translateX(150px) rotate(0deg); } to { transform: rotate(360deg) translateX(150px) rotate(-360deg); } }
+    @keyframes particle { 0% { transform: translateY(100vh) scale(0); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { transform: translateY(-10vh) scale(1); opacity: 0; } }
+    @keyframes typing { from { width: 0; } to { width: 100%; } }
+    @keyframes blink { 50% { border-color: transparent; } }
+    
+    .animate-float { animation: float 6s ease-in-out infinite; }
+    .animate-glow { animation: glow-pulse 3s ease-in-out infinite; }
+    .animate-gradient { background-size: 200% 200%; animation: gradient-x 15s ease infinite; }
+    
+    .reveal { opacity: 0; transform: translateY(60px) scale(0.97); transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
+    .reveal.visible { opacity: 1; transform: translateY(0) scale(1); }
+    
+    .glass { background: rgba(255,255,255,0.7); backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%); }
+    .glass-dark { background: rgba(11,15,26,0.8); backdrop-filter: blur(24px) saturate(180%); }
+    
+    .gradient-text { background: linear-gradient(135deg, var(--brand), var(--accent), #8B5CF6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .gradient-border { position: relative; }
+    .gradient-border::before { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; background: linear-gradient(135deg, var(--brand), var(--accent)); -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+    
+    .card { transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+    .card:hover { transform: translateY(-12px) scale(1.02); box-shadow: 0 40px 80px -20px rgba(0,0,0,0.15); }
+    
+    .progress-bar { background: linear-gradient(90deg, var(--brand), var(--accent), #8B5CF6, var(--brand)); background-size: 300% 100%; animation: gradient-x 3s linear infinite; }
+    
+    ::-webkit-scrollbar { width: 10px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: linear-gradient(var(--brand), var(--accent)); border-radius: 10px; border: 2px solid #f1f5f9; }
+    
+    .dark { background: #0B0F1A; color: #e2e8f0; }
+    .dark .glass { background: rgba(17,24,39,0.8); }
+    .dark .bg-white { background: #1a2234; }
+    .dark .bg-gray-50 { background: #111827; }
+    .dark .border-gray-100 { border-color: #374151; }
+    .dark .text-gray-900 { color: #f1f5f9; }
+    .dark .text-gray-600 { color: #9ca3af; }
+    .dark ::-webkit-scrollbar-track { background: #1f2937; }
+    .dark ::-webkit-scrollbar-thumb { border-color: #1f2937; }
+    
+    .particle { position: fixed; border-radius: 50%; pointer-events: none; animation: particle linear forwards; }
+    .confetti { position: fixed; z-index: 100; pointer-events: none; }
+    
+    .nav-item { position: relative; overflow: hidden; }
+    .nav-item::before { content: ''; position: absolute; left: 0; top: 0; height: 100%; width: 3px; background: linear-gradient(var(--brand), var(--accent)); transform: scaleY(0); transition: transform 0.3s; }
+    .nav-item.active::before { transform: scaleY(1); }
+    .nav-item.active { background: rgba(24,191,199,0.1); }
+    
+    .section-indicator { width: 12px; height: 12px; border-radius: 50%; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+    .section-indicator.active { width: 12px; height: 32px; border-radius: 6px; background: linear-gradient(var(--brand), var(--accent)); box-shadow: 0 0 20px var(--glow); }
+    .section-indicator.read { background: var(--brand); opacity: 0.4; }
+    
+    @media print { .no-print { display: none !important; } .reveal { opacity: 1 !important; transform: none !important; } }
+    
+    .quote-copy { opacity: 0; transition: opacity 0.2s; }
+    .quote-row:hover .quote-copy { opacity: 1; }
+    
+    .btn-glow { position: relative; overflow: hidden; }
+    .btn-glow::after { content: ''; position: absolute; inset: -50%; background: conic-gradient(from 0deg, transparent, var(--brand), transparent 30%); animation: spin 4s linear infinite; }
+    .btn-glow::before { content: ''; position: absolute; inset: 2px; background: inherit; border-radius: inherit; z-index: 1; }
+    .btn-glow > * { position: relative; z-index: 2; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    
+    .typing-effect { display: inline-block; overflow: hidden; white-space: nowrap; border-right: 3px solid var(--brand); animation: typing 2s steps(30) forwards, blink 0.75s step-end infinite; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen">
+  
+  <div id="particles" class="fixed inset-0 pointer-events-none z-0 overflow-hidden"></div>
+
+  <div id="loading" class="fixed inset-0 z-[200] bg-gradient-to-br from-dark-900 via-dark-800 to-dark-900 flex items-center justify-center">
+    <div class="text-center">
+      <div class="relative mb-8">
+        <div class="w-24 h-24 rounded-3xl bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center text-white font-black text-3xl font-display shadow-2xl animate-float mx-auto">
+          360
+        </div>
+        <div class="absolute inset-0 w-24 h-24 rounded-3xl bg-gradient-to-br from-brand-500 to-accent-500 mx-auto animate-ping opacity-20"></div>
+      </div>
+      <div class="w-48 h-1 bg-gray-800 rounded-full overflow-hidden mx-auto mb-4">
+        <div id="load-progress" class="h-full progress-bar rounded-full transition-all duration-300" style="width: 0%"></div>
+      </div>
+      <p class="text-gray-400 text-sm font-medium">Loading premium experience...</p>
+    </div>
+  </div>
+
+  <div id="progress-bar" class="progress-bar fixed top-0 left-0 right-0 h-1.5 z-50 no-print origin-left" style="transform: scaleX(0);"></div>
+
+  <div id="section-dots" class="fixed right-8 top-1/2 -translate-y-1/2 z-40 hidden lg:flex flex-col gap-3 no-print"></div>
+
+  <aside id="sidebar" class="no-print hidden lg:flex flex-col fixed inset-y-0 left-0 w-80 glass border-r border-gray-100/50 z-40 shadow-2xl shadow-black/5">
+    <div class="p-6 border-b border-gray-100/50">
+      <div class="flex items-center gap-4">
+        <div class="relative">
+          <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center text-white font-black text-xl font-display shadow-xl animate-glow">360</div>
+        </div>
+        <div>
+          <h1 id="sidebar-title" class="text-lg font-bold text-gray-900 font-display">Loading...</h1>
+          <p class="text-xs text-gray-400 font-semibold tracking-widest uppercase">ICP Profile</p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="px-4 py-4">
+      <button onclick="openCmd()" class="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-500 bg-gray-100/80 hover:bg-gray-200/80 rounded-xl transition-all group border border-gray-200/50">
+        <svg class="w-4 h-4 group-hover:text-brand-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <span class="flex-1 text-left">Quick search...</span>
+        <kbd class="px-2 py-1 text-[10px] bg-white border border-gray-200 rounded-lg font-mono shadow-sm">⌘K</kbd>
+      </button>
+    </div>
+    
+    <nav id="sidebar-nav" class="flex-1 px-3 py-2 overflow-y-auto space-y-1"></nav>
+    
+    <div class="p-4 border-t border-gray-100/50 space-y-4">
+      <div class="bg-gradient-to-br from-gray-100 to-gray-50 rounded-2xl p-4 border border-gray-200/50">
+        <div class="flex justify-between items-center mb-3">
+          <span class="text-xs font-bold text-gray-600 uppercase tracking-wider">Progress</span>
+          <span id="progress-pct" class="text-lg font-black gradient-text">0%</span>
+        </div>
+        <div class="h-2.5 bg-gray-200 rounded-full overflow-hidden">
+          <div id="progress-fill" class="h-full progress-bar rounded-full" style="width: 0%"></div>
+        </div>
+        <p id="read-time" class="text-[10px] text-gray-400 mt-2 text-center font-medium">Est. 12 min read</p>
+      </div>
+      
+      <div class="grid grid-cols-3 gap-2">
+        <button onclick="toggleTheme()" class="group flex flex-col items-center gap-1 p-3 bg-white border border-gray-200 rounded-xl hover:border-brand-300 hover:shadow-lg hover:-translate-y-0.5 transition-all">
+          <span id="theme-icon" class="text-xl group-hover:scale-110 transition-transform">🌙</span>
+          <span class="text-[9px] font-semibold text-gray-400 uppercase">Theme</span>
+        </button>
+        <button onclick="window.print()" class="group flex flex-col items-center gap-1 p-3 bg-white border border-gray-200 rounded-xl hover:border-brand-300 hover:shadow-lg hover:-translate-y-0.5 transition-all">
+          <span class="text-xl group-hover:scale-110 transition-transform">🖨️</span>
+          <span class="text-[9px] font-semibold text-gray-400 uppercase">Print</span>
+        </button>
+        <button onclick="share()" class="group flex flex-col items-center gap-1 p-3 bg-white border border-gray-200 rounded-xl hover:border-brand-300 hover:shadow-lg hover:-translate-y-0.5 transition-all">
+          <span class="text-xl group-hover:scale-110 transition-transform">📤</span>
+          <span class="text-[9px] font-semibold text-gray-400 uppercase">Share</span>
+        </button>
+      </div>
+      
+      <p id="updated-date" class="text-[10px] text-center text-gray-400 font-medium"></p>
+    </div>
+  </aside>
+
+  <header class="lg:hidden fixed top-0 left-0 right-0 z-40 glass border-b border-gray-100/50 px-4 py-3 no-print">
+    <div class="flex items-center justify-between">
+      <button onclick="toggleMobile()" class="p-2.5 rounded-xl hover:bg-gray-100 transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div class="flex items-center gap-2">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center text-white font-bold text-xs shadow-lg">360</div>
+        <span id="mobile-title" class="font-bold text-sm font-display">ICP</span>
+      </div>
+      <button onclick="openCmd()" class="p-2.5 rounded-xl hover:bg-gray-100 transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div id="mobile-overlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 hidden transition-opacity" onclick="toggleMobile()"></div>
+  <aside id="mobile-sidebar" class="fixed inset-y-0 left-0 w-80 bg-white z-50 transform -translate-x-full transition-transform duration-300 shadow-2xl overflow-y-auto">
+    <div class="p-5 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center text-white font-bold shadow-lg">360</div>
+        <div>
+          <h1 id="mobile-sidebar-title" class="font-bold font-display">ICP</h1>
+          <p class="text-[10px] text-gray-400 uppercase tracking-wider">Profile</p>
+        </div>
+      </div>
+      <button onclick="toggleMobile()" class="p-2 hover:bg-gray-100 rounded-lg"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+    </div>
+    <nav id="mobile-nav" class="p-3 space-y-1"></nav>
+  </aside>
+
+  <div id="cmd-overlay" class="fixed inset-0 bg-black/70 backdrop-blur-md z-50 hidden flex items-start justify-center pt-[15vh]" onclick="closeCmd()">
+    <div class="w-full max-w-2xl mx-4 bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-200 animate-scale-in" onclick="event.stopPropagation()" style="animation: scale-in 0.2s ease-out">
+      <div class="p-5 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
+        <div class="flex items-center gap-4">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          </div>
+          <input type="text" id="cmd-input" class="flex-1 text-xl outline-none bg-transparent placeholder-gray-400 font-medium" placeholder="Search sections..." oninput="filterCmd(this.value)">
+          <kbd class="px-3 py-1.5 text-xs bg-gray-100 border border-gray-200 rounded-lg font-mono text-gray-500">ESC</kbd>
+        </div>
+      </div>
+      <div id="cmd-results" class="max-h-96 overflow-y-auto"></div>
+      <div class="p-4 border-t border-gray-100 bg-gray-50 flex justify-center gap-8 text-xs text-gray-400">
+        <span class="flex items-center gap-2"><kbd class="px-2 py-1 bg-white border rounded-lg text-[10px] shadow-sm">↑↓</kbd> Navigate</span>
+        <span class="flex items-center gap-2"><kbd class="px-2 py-1 bg-white border rounded-lg text-[10px] shadow-sm">↵</kbd> Open</span>
+        <span class="flex items-center gap-2"><kbd class="px-2 py-1 bg-white border rounded-lg text-[10px] shadow-sm">ESC</kbd> Close</span>
+      </div>
+    </div>
+  </div>
+
+  <main class="lg:ml-80 min-h-screen pt-20 lg:pt-0 relative z-10">
+    <div class="max-w-4xl mx-auto px-6 py-12 lg:py-20 lg:px-10">
+      <header id="hero" class="mb-24"></header>
+      <div id="stats" class="mb-24"></div>
+      <div id="sections" class="space-y-32"></div>
+      <footer id="footer" class="pt-24 pb-16 text-center border-t border-gray-200 mt-32"></footer>
+    </div>
+  </main>
+
+  <div class="fixed bottom-8 right-8 z-40 no-print">
+    <button id="scroll-btn" onclick="scrollToTop()" class="p-4 bg-white rounded-2xl shadow-2xl border border-gray-100 opacity-0 transition-all duration-500 hover:bg-gray-50 hover:-translate-y-1 group">
+      <svg class="w-5 h-5 text-gray-600 group-hover:text-brand-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
+    </button>
+  </div>
+
+  <div id="toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 px-6 py-4 bg-gray-900 text-white rounded-2xl shadow-2xl opacity-0 transition-all duration-500 transform translate-y-8 pointer-events-none flex items-center gap-3">
+    <span id="toast-icon" class="text-xl">✓</span>
+    <span id="toast-text" class="font-medium">Success!</span>
+  </div>
+
+  <div id="confetti" class="fixed inset-0 pointer-events-none z-[100]"></div>
+
+  <script>
+    let data = {};
+    let parsed = {};
+    let isDark = localStorage.getItem('dark') === 'true';
+    let cmdIndex = 0;
+    let cmdList = [];
+    let completed = false;
+    let sectionsRead = new Set();
+
+    const sections = [
+      { id: 'story', label: 'My Story', num: '01', icon: '📖', color: 'blue' },
+      { id: 'offer', label: 'The Offer', num: '02', icon: '🎯', color: 'emerald' },
+      { id: 'pains', label: 'Pains & Problems', num: '03', icon: '⚠️', color: 'red' },
+      { id: 'desires', label: 'Dreams & Desires', num: '04', icon: '✨', color: 'amber' },
+      { id: 'authority', label: 'Authority', num: '05', icon: '🏆', color: 'yellow' },
+      { id: 'competitors', label: 'Competitors', num: '06', icon: '👥', color: 'slate' },
+      { id: 'demographics', label: 'Demographics', num: '07', icon: '👤', color: 'indigo' },
+      { id: 'values', label: 'Values & Beliefs', num: '08', icon: '❤️', color: 'rose' },
+      { id: 'transformation', label: 'Transformation', num: '09', icon: '⚡', color: 'violet' },
+      { id: 'media', label: 'Media Habits', num: '10', icon: '📺', color: 'cyan' },
+      { id: 'objections', label: 'Objections', num: '11', icon: '💬', color: 'orange' },
+      { id: 'advantage', label: 'Advantage', num: '12', icon: '🏅', color: 'lime' },
+      { id: 'communication', label: 'Communication', num: '13', icon: '🗣️', color: 'teal' },
+      { id: 'brand-style', label: 'Brand Style', num: '', icon: '🎨', color: 'fuchsia' },
+    ];
+
+    if (isDark) document.documentElement.classList.add('dark');
+
+    function collectItems(prefix, itemPattern) {
+      const items = {};
+      const regex = new RegExp(`^${prefix}__${itemPattern}_(\\d+)__(.+)$`);
+      for (const key in data) {
+        const match = key.match(regex);
+        if (match) {
+          const [, num, field] = match;
+          if (!items[num]) items[num] = {};
+          items[num][field] = data[key];
+        }
+      }
+      return Object.keys(items).sort().map(k => items[k]);
+    }
+
+    function collectQuotes(prefix, num) {
+      const quotes = [];
+      for (let i = 1; i <= 10; i++) {
+        const key = `${prefix}__quote_${String(i).padStart(2, '0')}`;
+        if (data[key]) quotes.push(data[key]);
+      }
+      return quotes;
+    }
+
+    function collectList(prefix) {
+      const items = [];
+      for (let i = 1; i <= 20; i++) {
+        const key = `${prefix}_${String(i).padStart(2, '0')}`;
+        if (data[key]) items.push(data[key]);
+      }
+      return items;
+    }
+
+    function parseData() {
+      parsed.features = collectItems('s02_offer', 'feature');
+      parsed.pains = collectItems('s03_pains', 'pain').map(p => {
+        const quotes = [];
+        for (let i = 1; i <= 5; i++) {
+          if (p[`quote_${String(i).padStart(2, '0')}`]) quotes.push(p[`quote_${String(i).padStart(2, '0')}`]);
+        }
+        return { title: p.title, description: p.description, score: p.score, quotes };
+      });
+      parsed.desires = collectItems('s04_desires', 'desire').map(d => {
+        const quotes = [];
+        for (let i = 1; i <= 5; i++) {
+          if (d[`quote_${String(i).padStart(2, '0')}`]) quotes.push(d[`quote_${String(i).padStart(2, '0')}`]);
+        }
+        return { title: d.title, vision: d.vision_snapshot, milestones: d.tangible_milestones, emotional_win: d.emotional_win, quotes };
+      });
+      parsed.historical = collectList('s05_authority__historical');
+      parsed.credentials = collectList('s05_authority__credentials');
+      parsed.competitors = collectItems('s06_competitors', 'competitor');
+      parsed.competitorsIndirect = collectItems('s06_competitors_indirect', 'competitor');
+      parsed.influencers = collectItems('s06_competitors_influencers', 'influencer');
+      parsed.audienceValues = collectList('s07_audience__values');
+      parsed.audienceInterests = collectList('s07_audience__interests');
+      parsed.values = collectItems('s08_values', 'value');
+      parsed.social = collectItems('s10_media', 'social');
+      parsed.podcasts = collectItems('s10_media', 'podcasts');
+      parsed.blogs = collectItems('s10_media', 'blogs');
+      parsed.books = collectItems('s10_media', 'books');
+      parsed.forums = collectItems('s10_media', 'forums');
+      parsed.objections = collectItems('s11_objections', 'objection');
+      parsed.uvps = collectList('s12_advantage__uvp');
+      parsed.funFactors = collectList('s12_advantage__fun_factor');
+      parsed.commsAvoid = collectList('s13_comms__avoid');
+    }
+
+    function createParticles() {
+      const container = document.getElementById('particles');
+      const colors = ['rgba(24,191,199,0.15)', 'rgba(31,134,214,0.15)', 'rgba(139,92,246,0.1)'];
+      for (let i = 0; i < 20; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        const size = 4 + Math.random() * 8;
+        p.style.cssText = `width:${size}px;height:${size}px;left:${Math.random()*100}%;background:${colors[Math.floor(Math.random()*colors.length)]};animation-duration:${15+Math.random()*20}s;animation-delay:${Math.random()*10}s;`;
+        container.appendChild(p);
+      }
+    }
+    createParticles();
+
+    async function load() {
+      const progress = document.getElementById('load-progress');
+      let pct = 0;
+      const interval = setInterval(() => { pct = Math.min(pct + Math.random() * 15, 90); progress.style.width = pct + '%'; }, 100);
+      
+      try {
+        const res = await fetch('data.json');
+        if (!res.ok) throw new Error();
+        data = await res.json();
+        parseData();
+        clearInterval(interval);
+        progress.style.width = '100%';
+        
+        setTimeout(() => {
+          document.getElementById('loading').style.opacity = '0';
+          document.getElementById('loading').style.pointerEvents = 'none';
+          setTimeout(() => { document.getElementById('loading').style.display = 'none'; render(); initObserver(); }, 500);
+        }, 400);
+      } catch(e) {
+        clearInterval(interval);
+        document.getElementById('loading').innerHTML = `<div class="text-center p-8"><div class="text-6xl mb-6">⚠️</div><h2 class="text-2xl font-bold text-white mb-3 font-display">Unable to load data</h2><p class="text-gray-400 mb-6">Ensure <code class="bg-gray-800 px-3 py-1 rounded-lg text-sm text-brand-400">data.json</code> exists</p><button onclick="location.reload()" class="px-6 py-3 bg-gradient-to-r from-brand-500 to-accent-500 text-white rounded-xl font-semibold hover:opacity-90 transition-opacity">Retry</button></div>`;
+      }
+    }
+
+    function render() {
+      renderNav();
+      renderDots();
+      renderHero();
+      renderStats();
+      renderSections();
+      renderFooter();
+      
+      const name = data.meta__brand_name;
+      document.getElementById('sidebar-title').textContent = name;
+      document.getElementById('mobile-sidebar-title').textContent = name;
+      document.getElementById('mobile-title').textContent = name.split(' ')[0];
+      document.getElementById('updated-date').textContent = 'Updated ' + data.meta__last_updated;
+      document.title = '360 ICP — ' + name;
+    }
+
+    function renderNav() {
+      const html = sections.map((s, i) => `
+        <button onclick="goTo('${s.id}')" class="nav-item flex items-center w-full px-4 py-3 text-sm font-medium rounded-xl text-gray-600 hover:bg-gray-100/80 transition-all group" data-section="${s.id}">
+          <span class="w-9 h-9 rounded-xl bg-gray-100 group-hover:bg-${s.color}-100 flex items-center justify-center mr-3 text-lg transition-all group-hover:scale-110">${s.icon}</span>
+          <span class="flex-1 text-left truncate">${s.label}</span>
+          ${s.num ? `<span class="text-[10px] font-mono text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-100 px-2 py-1 rounded-lg">${s.num}</span>` : ''}
+        </button>
+      `).join('');
+      document.getElementById('sidebar-nav').innerHTML = html;
+      document.getElementById('mobile-nav').innerHTML = html;
+    }
+
+    function renderDots() {
+      document.getElementById('section-dots').innerHTML = sections.map(s => `
+        <button onclick="goTo('${s.id}')" class="section-indicator bg-gray-300 hover:bg-brand-300 transition-all" data-section="${s.id}" title="${s.label}"></button>
+      `).join('');
+    }
+
+    function renderHero() {
+      document.getElementById('hero').innerHTML = `
+        <div class="relative reveal">
+          <div class="absolute -top-40 -right-40 w-[500px] h-[500px] bg-gradient-to-br from-brand-500/20 via-accent-500/10 to-purple-500/10 rounded-full blur-3xl pointer-events-none"></div>
+          <div class="absolute -bottom-20 -left-32 w-80 h-80 bg-gradient-to-tr from-accent-500/15 to-brand-500/5 rounded-full blur-2xl pointer-events-none"></div>
+          
+          <div class="relative">
+            <div class="flex flex-wrap items-center gap-3 mb-10">
+              <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-brand-500/10 to-accent-500/10 border border-brand-500/20 text-brand-600">
+                <span class="relative flex h-2.5 w-2.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-brand-500"></span></span>
+                <span class="font-semibold text-sm">${data.meta__brand_name}</span>
+              </span>
+              <span class="px-4 py-2 rounded-full text-gray-500 text-xs uppercase tracking-[0.2em] font-bold border border-gray-200 bg-white shadow-sm">Confidential</span>
+              <span class="px-4 py-2 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200 shadow-sm">v1.0</span>
+            </div>
+            
+            <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.1] mb-8 font-display">
+              <span class="text-gray-900">360° </span>
+              <span class="gradient-text">Ideal Customer</span>
+              <br><span class="text-gray-900">Profile</span>
+            </h1>
+            
+            <p class="text-xl lg:text-2xl text-gray-500 max-w-2xl leading-relaxed mb-12">
+              A deep-dive analysis of <span class="font-semibold text-gray-700">${data.s02_offer__core__product_name.split('(')[0].trim()}</span> — psychology, pain points, desires, and decision patterns.
+            </p>
+
+            <div class="flex flex-wrap gap-4">
+              <button onclick="goTo('pains')" class="group inline-flex items-center gap-3 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-red-50 to-orange-50 text-red-700 font-semibold border border-red-100 hover:shadow-lg hover:-translate-y-1 transition-all">
+                <span class="text-xl group-hover:scale-110 transition-transform">⚠️</span>
+                Pain Points
+                <span class="px-2 py-1 bg-red-100 rounded-lg text-xs font-bold">${parsed.pains.length}</span>
+              </button>
+              <button onclick="goTo('offer')" class="group inline-flex items-center gap-3 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-brand-500 to-accent-500 text-white font-semibold shadow-lg shadow-brand-500/30 hover:shadow-xl hover:shadow-brand-500/40 hover:-translate-y-1 transition-all">
+                <span class="text-xl group-hover:scale-110 transition-transform">🎯</span>
+                Explore Offer
+              </button>
+              <button onclick="openCmd()" class="group inline-flex items-center gap-3 px-6 py-3.5 rounded-2xl bg-white text-gray-700 font-semibold border border-gray-200 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all">
+                <span class="text-xl">🔍</span>
+                Search
+                <kbd class="hidden sm:inline px-2 py-1 text-[10px] bg-gray-100 rounded-lg font-mono">⌘K</kbd>
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderStats() {
+      const stats = [
+        { label: 'Pain Points', value: parsed.pains.length, icon: '⚠️', gradient: 'from-red-500 to-orange-500' },
+        { label: 'Desires', value: parsed.desires.length, icon: '✨', gradient: 'from-amber-500 to-yellow-500' },
+        { label: 'Competitors', value: parsed.competitors.length + parsed.competitorsIndirect.length, icon: '🎯', gradient: 'from-blue-500 to-cyan-500' },
+        { label: 'Core Values', value: parsed.values.length, icon: '❤️', gradient: 'from-rose-500 to-pink-500' },
+        { label: 'Objections', value: parsed.objections.length, icon: '💬', gradient: 'from-emerald-500 to-teal-500' },
+        { label: 'Read Time', value: '12m', icon: '⏱️', gradient: 'from-brand-500 to-accent-500' },
+      ];
+      
+      document.getElementById('stats').innerHTML = `
+        <div class="reveal grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+          ${stats.map(s => `
+            <div class="card group bg-white p-5 rounded-2xl border border-gray-100 text-center shadow-sm hover:shadow-xl cursor-default">
+              <div class="text-3xl mb-2 group-hover:scale-125 transition-transform duration-500">${s.icon}</div>
+              <div class="text-2xl font-black bg-gradient-to-r ${s.gradient} bg-clip-text text-transparent">${s.value}</div>
+              <div class="text-[10px] text-gray-500 font-bold uppercase tracking-wider mt-1">${s.label}</div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    function renderSections() {
+      document.getElementById('sections').innerHTML = `
+        ${section('story', '01', data.s01_story__core__title, storyHTML())}
+        ${section('offer', '02', 'The Offer', offerHTML())}
+        ${section('pains', '03', 'Fears, Pains & Problems', painsHTML())}
+        ${section('desires', '04', 'Dreams & Desires', desiresHTML())}
+        ${section('authority', '05', 'Authority & Credibility', authorityHTML())}
+        ${section('competitors', '06', 'Competitors & Influencers', competitorsHTML())}
+        ${section('demographics', '07', 'Demographics', demographicsHTML())}
+        ${section('values', '08', 'Values & Beliefs', valuesHTML())}
+        ${section('transformation', '09', 'Transformation', transformationHTML())}
+        ${section('media', '10', 'Media Consumption', mediaHTML())}
+        ${section('objections', '11', 'Common Objections', objectionsHTML())}
+        ${section('advantage', '12', 'Competitive Advantage', advantageHTML())}
+        ${section('communication', '13', 'Communication Style', communicationHTML())}
+        ${section('brand-style', '', 'Brand Style Guide', brandHTML())}
+      `;
+    }
+
+    function section(id, num, title, content) {
+      return `<section id="${id}" class="section scroll-mt-28 reveal">
+        <div class="flex items-center gap-5 mb-10">
+          ${num ? `<div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-500/10 to-accent-500/10 flex items-center justify-center text-brand-600 font-mono font-bold border border-brand-500/20 shadow-lg shadow-brand-500/5">${num}</div>` : ''}
+          <h2 class="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900 font-display">${title}</h2>
+        </div>
+        <div class="${num ? 'lg:pl-[76px]' : ''}">${content}</div>
+      </section>`;
+    }
+
+    function storyHTML() {
+      const p = data.s01_story__core__content.split('\n\n');
+      return `<div class="space-y-6">${p.map((t, i) => `
+        <div class="card p-8 rounded-3xl border ${i === 0 ? 'bg-gradient-to-br from-brand-50 via-accent-50/50 to-white border-brand-200/50 shadow-lg shadow-brand-500/5' : 'bg-white border-gray-100'}">
+          <p class="${i === 0 ? 'text-xl font-medium text-gray-800 leading-relaxed' : 'text-gray-600 leading-relaxed'}">${t}</p>
+        </div>
+      `).join('')}</div>`;
+    }
+
+    function offerHTML() {
+      return `<div class="space-y-8">
+        <div class="card relative bg-white border border-gray-100 rounded-3xl p-8 sm:p-10 overflow-hidden shadow-xl">
+          <div class="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-brand-500/10 via-accent-500/5 to-transparent rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
+          <div class="relative">
+            <div class="flex flex-wrap items-start justify-between gap-6 mb-8">
+              <div>
+                <span class="inline-block text-xs font-bold py-1.5 px-4 bg-gradient-to-r from-brand-500/10 to-accent-500/10 text-brand-600 border border-brand-500/20 rounded-full mb-4">${data.s02_offer__core__unique_mechanism_tagline}</span>
+                <h3 class="text-2xl font-bold text-gray-900 font-display">${data.s02_offer__core__product_name}</h3>
+              </div>
+              <div class="text-right">
+                <div class="text-4xl font-black gradient-text">${data.s02_offer__core__price}</div>
+                <p class="text-sm text-gray-500 mt-1">${data.s02_offer__core__investment_terms.split(';')[1]?.trim() || ''}</p>
+              </div>
+            </div>
+            <p class="text-lg text-gray-600 leading-relaxed mb-8">${data.s02_offer__core__short_description}</p>
+            <div class="grid sm:grid-cols-3 gap-6 pt-8 border-t border-gray-100">
+              ${[['📦', 'Delivery', data.s02_offer__core__delivery_format.split(';')[0], 'blue'], ['🔓', 'Access', data.s02_offer__core__delivery_access, 'green'], ['👥', 'Community', data.s02_offer__core__delivery_community.split(';')[0], 'purple']].map(([icon, title, desc, color]) => `
+                <div class="flex gap-4"><div class="w-12 h-12 rounded-xl bg-${color}-50 flex items-center justify-center text-2xl shrink-0">${icon}</div><div><h4 class="font-bold text-gray-900">${title}</h4><p class="text-sm text-gray-500">${desc}</p></div></div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+        <div class="grid sm:grid-cols-2 gap-4">
+          ${parsed.features.map((f, i) => `
+            <div class="card group bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+              <div class="flex items-start gap-4">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-accent-500 text-white flex items-center justify-center font-bold shrink-0 shadow-lg shadow-brand-500/20 group-hover:scale-110 transition-transform">${i + 1}</div>
+                <div><h4 class="font-bold text-gray-900 mb-1">${f.title}</h4><p class="text-sm text-gray-500">${f.description}</p></div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+        <div class="bg-gradient-to-br from-blue-50 via-cyan-50 to-teal-50 border border-blue-100 rounded-3xl p-8 shadow-lg">
+          <div class="flex items-start gap-5">
+            <div class="w-14 h-14 rounded-2xl bg-white shadow-lg flex items-center justify-center text-3xl shrink-0">🧬</div>
+            <div><h4 class="font-bold text-blue-900 text-lg mb-2 font-display">Unique Mechanism</h4><p class="text-blue-800/80 leading-relaxed">${data.s02_offer__core__unique_mechanism_description}</p></div>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    function painsHTML() {
+      const sorted = [...parsed.pains].sort((a, b) => b.score - a.score);
+      const top = sorted[0];
+      return `<div class="space-y-6">
+        <div class="bg-gradient-to-r from-red-50 via-orange-50 to-amber-50 border border-red-100 rounded-2xl p-6 shadow-lg shadow-red-500/5">
+          <div class="flex items-start gap-5">
+            <div class="w-14 h-14 bg-white rounded-2xl shadow-lg flex items-center justify-center text-3xl">🔥</div>
+            <div>
+              <div class="flex items-center gap-3 mb-2">
+                <span class="text-xs font-bold text-red-600 uppercase tracking-widest">Top Pain Point</span>
+                <span class="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-lg">${top.score}/100</span>
+              </div>
+              <p class="text-red-900 font-bold text-lg">${top.title}</p>
+            </div>
+          </div>
+        </div>
+        <div class="space-y-5">
+          ${parsed.pains.map((p, i) => `
+            <div class="card relative bg-white rounded-2xl border border-gray-100 p-6 overflow-hidden shadow-sm">
+              <div class="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b ${p.score >= 90 ? 'from-red-500 to-orange-500' : p.score >= 80 ? 'from-orange-500 to-amber-500' : 'from-brand-500 to-accent-500'} rounded-l-2xl"></div>
+              <div class="pl-5">
+                <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+                  <div class="flex items-center gap-3">
+                    <span class="text-xs font-mono font-bold text-gray-400 bg-gray-100 px-3 py-1.5 rounded-lg">#${String(i + 1).padStart(2, '0')}</span>
+                    <h3 class="font-bold text-gray-900 text-lg">${p.title}</h3>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <div class="w-32 h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div class="h-full bg-gradient-to-r ${p.score >= 90 ? 'from-red-500 to-orange-500' : p.score >= 80 ? 'from-orange-500 to-amber-500' : 'from-brand-500 to-accent-500'} rounded-full" style="width:${p.score}%"></div>
+                    </div>
+                    <span class="text-sm font-bold ${p.score >= 90 ? 'text-red-600' : p.score >= 80 ? 'text-orange-600' : 'text-brand-600'}">${p.score}</span>
+                  </div>
+                </div>
+                <p class="text-gray-600 mb-5">${p.description}</p>
+                <div class="bg-gray-50 rounded-xl p-5 space-y-3">
+                  <div class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">💬 Voice of Customer</div>
+                  ${p.quotes.map(q => `
+                    <div class="quote-row flex gap-3 text-gray-500 cursor-pointer hover:bg-white p-3 -mx-1 rounded-lg transition-all group" onclick="copy(\`${q.replace(/`/g, '\\`')}\`)">
+                      <span class="text-brand-400/50 shrink-0 text-lg">"</span>
+                      <p class="flex-1 italic">${q}</p>
+                      <span class="quote-copy text-gray-300 shrink-0">📋</span>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>`;
+    }
+
+    function desiresHTML() {
+      return `<div class="space-y-12">${parsed.desires.map((d, i) => `
+        <div class="relative">
+          <div class="flex gap-6">
+            <div class="hidden lg:flex flex-col items-center">
+              <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-500/10 to-accent-500/10 border border-brand-500/20 flex items-center justify-center font-bold gradient-text text-xl">${i + 1}</div>
+              ${i < parsed.desires.length - 1 ? '<div class="w-0.5 flex-1 bg-gradient-to-b from-brand-500/30 to-transparent mt-3"></div>' : ''}
+            </div>
+            <div class="flex-1 space-y-5">
+              <h3 class="text-xl font-bold text-gray-900 flex items-center gap-4 font-display">
+                <span class="lg:hidden w-10 h-10 rounded-xl bg-brand-500/10 flex items-center justify-center text-brand-600 font-bold">${i + 1}</span>
+                ${d.title}
+              </h3>
+              <div class="grid md:grid-cols-3 gap-4">
+                ${[['🎯', 'Vision', d.vision, 'blue', 'cyan'], ['🚩', 'Milestones', d.milestones, 'green', 'emerald'], ['🏆', 'The Win', d.emotional_win, 'purple', 'pink']].map(([icon, label, text, c1, c2]) => `
+                  <div class="card bg-gradient-to-br from-${c1}-50 to-${c2}-50/50 border border-${c1}-100 rounded-2xl p-5">
+                    <div class="flex items-center gap-2 mb-3"><span class="text-xl">${icon}</span><span class="text-xs font-bold text-${c1}-600 uppercase tracking-wider">${label}</span></div>
+                    <p class="text-sm text-${c1}-900/80 leading-relaxed">${label === 'Vision' ? '"' + text + '"' : text}</p>
+                  </div>
+                `).join('')}
+              </div>
+              <div class="pl-5 border-l-2 border-brand-500/20 space-y-2">
+                ${d.quotes.map(q => `<p class="text-gray-500 italic">"${q}"</p>`).join('')}
+              </div>
+            </div>
+          </div>
+        </div>
+      `).join('')}</div>`;
+    }
+
+    function authorityHTML() {
+      return `<div class="space-y-8">
+        <div class="card bg-gradient-to-br from-brand-50 via-accent-50/50 to-white rounded-3xl p-8 border border-brand-200/50 shadow-lg">
+          <div class="flex items-start gap-5">
+            <div class="w-14 h-14 rounded-2xl bg-white shadow-lg flex items-center justify-center text-3xl">🏆</div>
+            <div><h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-2">Core Qualifications</h3><p class="text-xl font-semibold text-gray-900 leading-relaxed">${data.s05_authority__core__title}</p></div>
+          </div>
+        </div>
+        <div class="grid lg:grid-cols-2 gap-6">
+          <div class="card bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+            <h4 class="font-bold mb-5 flex items-center gap-3"><span class="text-2xl">📜</span><span class="font-display">Historical</span></h4>
+            <ul class="space-y-4">${parsed.historical.map(item => `<li class="flex gap-4 text-gray-600"><span class="w-2 h-2 rounded-full bg-amber-400 mt-2.5 shrink-0"></span><span>${item}</span></li>`).join('')}</ul>
+          </div>
+          <div class="card bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+            <h4 class="font-bold mb-5 flex items-center gap-3"><span class="text-2xl">✅</span><span class="font-display">Credentials</span></h4>
+            <ul class="space-y-4">${parsed.credentials.map(item => `<li class="flex gap-4 text-gray-600"><span class="w-6 h-6 rounded-lg bg-green-100 text-green-600 flex items-center justify-center text-xs shrink-0 mt-0.5">✓</span><span>${item}</span></li>`).join('')}</ul>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    function competitorsHTML() {
+      return `<div class="space-y-8">
+        <div class="grid md:grid-cols-2 gap-5">
+          ${parsed.competitors.map(c => `
+            <div class="card bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+              <div class="bg-gray-50 p-5 border-b border-gray-100">
+                <div class="flex justify-between items-start">
+                  <div><h4 class="font-bold text-gray-900 text-lg">${c.name}</h4><p class="text-sm font-semibold text-brand-600">${c.pricing}</p></div>
+                  ${c.website ? `<a href="${c.website}" target="_blank" class="w-9 h-9 rounded-xl bg-white border border-gray-200 flex items-center justify-center hover:border-brand-300 hover:shadow-md transition-all">🔗</a>` : ''}
+                </div>
+              </div>
+              <div class="p-5 space-y-4">
+                <p class="text-gray-600">${c.offering}</p>
+                <div class="bg-gradient-to-r from-brand-50 to-accent-50 text-brand-700 p-4 rounded-xl font-medium border border-brand-100">${c.usp}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+        <div class="grid lg:grid-cols-2 gap-6">
+          <div class="bg-gray-50 rounded-2xl p-6 border border-gray-100">
+            <h3 class="font-bold mb-5 flex items-center gap-3 font-display">🛡️ Indirect Competitors</h3>
+            <div class="space-y-3">${parsed.competitorsIndirect.map(i => `<div class="bg-white rounded-xl p-4 border border-gray-100"><div class="flex justify-between items-start mb-2"><h4 class="font-semibold">${i.name}</h4>${i.website ? `<a href="${i.website}" target="_blank" class="text-xs text-gray-400 hover:text-brand-500">→</a>` : ''}</div><p class="text-sm text-gray-500">${i.overlap}</p></div>`).join('')}</div>
+          </div>
+          <div class="bg-gray-50 rounded-2xl p-6 border border-gray-100">
+            <h3 class="font-bold mb-5 flex items-center gap-3 font-display">📈 Key Influencers</h3>
+            <div class="space-y-2">${parsed.influencers.map(i => `<a href="${i.url}" target="_blank" class="flex items-center justify-between p-4 rounded-xl bg-white border border-gray-100 hover:border-brand-300 hover:shadow-md transition-all group"><span class="font-medium group-hover:text-brand-600 transition-colors">${i.name}</span><span class="text-gray-300 group-hover:text-brand-500 group-hover:translate-x-1 transition-all">→</span></a>`).join('')}</div>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    function demographicsHTML() {
+      return `<div class="space-y-6">
+        <div class="grid md:grid-cols-2 gap-5">
+          <div class="card bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+            <h4 class="font-bold mb-5 flex items-center gap-3 font-display">👤 Core Profile</h4>
+            <div class="space-y-4">${[['Age', data.s07_audience__demographics__age], ['Gender', data.s07_audience__demographics__gender], ['Income', data.s07_audience__demographics__income]].map(([l, v]) => `<div class="flex justify-between items-center text-sm pb-3 border-b border-gray-100 last:border-0 last:pb-0"><span class="text-gray-500">${l}</span><span class="font-semibold ${l === 'Income' ? 'px-3 py-1 bg-green-50 text-green-700 rounded-lg text-xs' : ''}">${v}</span></div>`).join('')}</div>
+          </div>
+          <div class="card bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+            <h4 class="font-bold mb-5 flex items-center gap-3 font-display">💼 Professional</h4>
+            <div class="space-y-4"><div><span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Occupation</span><p class="text-gray-700 mt-2">${data.s07_audience__demographics__occupation}</p></div><div><span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Education</span><p class="text-gray-700 mt-2">${data.s07_audience__demographics__education}</p></div></div>
+          </div>
+        </div>
+        <div class="grid md:grid-cols-2 gap-5">
+          <div class="bg-gradient-to-br from-rose-50 to-pink-50 rounded-2xl p-6 border border-rose-100">
+            <h4 class="font-bold mb-4 text-rose-800 flex items-center gap-2 font-display">❤️ Core Values</h4>
+            <ul class="space-y-2">${parsed.audienceValues.map(i => `<li class="text-sm text-rose-900/80 bg-white/70 p-3 rounded-xl flex items-start gap-3"><span class="w-2 h-2 rounded-full bg-rose-400 mt-1.5 shrink-0"></span>${i}</li>`).join('')}</ul>
+          </div>
+          <div class="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-6 border border-blue-100">
+            <h4 class="font-bold mb-4 text-blue-800 flex items-center gap-2 font-display">✨ Interests</h4>
+            <ul class="space-y-2">${parsed.audienceInterests.map(i => `<li class="text-sm text-blue-900/80 bg-white/70 p-3 rounded-xl flex items-start gap-3"><span class="w-2 h-2 rounded-full bg-blue-400 mt-1.5 shrink-0"></span>${i}</li>`).join('')}</ul>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    function valuesHTML() {
+      const icons = ['🛡️', '⚡', '⚓', '❤️', '😊', '✨', '🤝'];
+      return `<div class="space-y-10">
+        <div class="card bg-gradient-to-br from-white via-gray-50 to-white p-10 rounded-3xl border border-gray-100 text-center shadow-lg">
+          <div class="text-4xl mb-5">💭</div>
+          <p class="text-xl sm:text-2xl font-medium text-gray-800 italic leading-relaxed max-w-2xl mx-auto">"${data.s08_values__synthesis}"</p>
+        </div>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          ${parsed.values.map((v, i) => `
+            <div class="card bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+              <div class="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mb-4 text-2xl">${icons[i % icons.length]}</div>
+              <h4 class="font-bold text-gray-900 mb-3 font-display">${v.name}</h4>
+              <p class="text-gray-600 leading-relaxed">${v.explanation}</p>
+            </div>
+          `).join('')}
+        </div>
+      </div>`;
+    }
+
+    function transformationHTML() {
+      const t = { before: data.s09_transformation__before, after: data.s09_transformation__after, emotional_shift: data.s09_transformation__emotional_shift, impact: data.s09_transformation__impact };
+      return `<div class="space-y-6">
+        <div class="grid lg:grid-cols-2 gap-5 relative">
+          <div class="hidden lg:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
+            <div class="w-16 h-16 bg-white rounded-2xl shadow-2xl flex items-center justify-center text-3xl border border-gray-100 animate-pulse">→</div>
+          </div>
+          <div class="card bg-gradient-to-br from-red-50 via-orange-50 to-amber-50 border border-red-100 rounded-3xl p-8 shadow-lg">
+            <div class="flex items-center gap-4 mb-5">
+              <div class="w-12 h-12 bg-white rounded-xl shadow-lg flex items-center justify-center text-2xl">🌧️</div>
+              <span class="px-3 py-1.5 bg-red-100 text-red-700 text-xs font-bold rounded-lg uppercase tracking-wider">Before</span>
+            </div>
+            <h3 class="font-bold text-red-900 text-lg mb-3 font-display">The Struggle</h3>
+            <p class="text-red-900/80 italic leading-relaxed text-lg">"${t.before}"</p>
+          </div>
+          <div class="card bg-gradient-to-br from-teal-50 via-cyan-50 to-blue-50 border border-teal-100 rounded-3xl p-8 shadow-lg">
+            <div class="flex items-center gap-4 mb-5">
+              <div class="w-12 h-12 bg-white rounded-xl shadow-lg flex items-center justify-center text-2xl">☀️</div>
+              <span class="px-3 py-1.5 bg-teal-100 text-teal-700 text-xs font-bold rounded-lg uppercase tracking-wider">After</span>
+            </div>
+            <h3 class="font-bold text-teal-900 text-lg mb-3 font-display">The Breakthrough</h3>
+            <p class="text-teal-900/80 font-medium leading-relaxed text-lg">"${t.after}"</p>
+          </div>
+        </div>
+        <div class="grid md:grid-cols-2 gap-5">
+          <div class="card bg-white border border-gray-100 p-6 rounded-2xl shadow-sm">
+            <div class="flex items-start gap-4"><div class="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center text-2xl">❤️</div><div><h4 class="font-bold text-gray-900 mb-2 font-display">Emotional Shift</h4><p class="text-gray-600">${t.emotional_shift}</p></div></div>
+          </div>
+          <div class="card bg-white border border-gray-100 p-6 rounded-2xl shadow-sm">
+            <div class="flex items-start gap-4"><div class="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center text-2xl">⚡</div><div><h4 class="font-bold text-gray-900 mb-2 font-display">Real World Impact</h4><p class="text-gray-600">${t.impact}</p></div></div>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    function mediaHTML() {
+      const cats = [
+        { title: 'Social', icon: '🌐', items: parsed.social.map(i => ({ name: i.name, url: i.url })) },
+        { title: 'Podcasts', icon: '🎧', items: parsed.podcasts.map(i => ({ name: i.name, url: i.url })) },
+        { title: 'Books', icon: '📚', items: parsed.books.map(i => ({ name: i.title, sub: i.author, url: i.url })) },
+        { title: 'Communities', icon: '💬', items: [...parsed.blogs, ...parsed.forums].map(i => ({ name: i.name, url: i.url })) },
+      ];
+      return `<div class="grid md:grid-cols-2 lg:grid-cols-4 gap-5">${cats.map(c => `
+        <div class="card bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+          <div class="p-5 border-b border-gray-100 bg-gray-50"><h4 class="font-bold flex items-center gap-3 font-display"><span class="text-xl">${c.icon}</span> ${c.title}</h4></div>
+          <div class="p-4"><ul class="space-y-2">${c.items.map(i => `<li><a href="${i.url}" target="_blank" class="flex items-start gap-3 group hover:bg-gray-50 p-3 -mx-1 rounded-xl transition-colors"><div class="flex-1 min-w-0"><span class="font-medium text-gray-900 group-hover:text-brand-600 transition-colors block truncate">${i.name}</span>${i.sub ? `<span class="text-xs text-gray-400">${i.sub}</span>` : ''}</div></a></li>`).join('')}</ul></div>
+        </div>
+      `).join('')}</div>`;
+    }
+
+    function objectionsHTML() {
+      return `<div class="space-y-4">${parsed.objections.map((o, i) => `
+        <div class="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+          <button onclick="toggleAcc(this)" class="w-full px-6 py-5 text-left font-semibold flex items-center justify-between hover:bg-gray-50 transition-colors">
+            <span class="flex items-center gap-4"><span class="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-xs font-mono text-gray-500">${String(i + 1).padStart(2, '0')}</span><span class="text-gray-900">"${o.objection}"</span></span>
+            <span class="acc-icon text-gray-400 text-xl transition-transform">▾</span>
+          </button>
+          <div class="acc-content hidden px-6 pb-6">
+            <div class="ml-12 p-5 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-100">
+              <div class="flex gap-4"><div class="w-8 h-8 rounded-lg bg-green-100 text-green-600 flex items-center justify-center shrink-0">✓</div><div><span class="text-xs font-bold text-green-700 uppercase tracking-wider">Rebuttal</span><p class="text-green-900/80 mt-2">${o.rebuttal}</p></div></div>
+            </div>
+          </div>
+        </div>
+      `).join('')}</div>`;
+    }
+
+    function advantageHTML() {
+      return `<div class="space-y-8">
+        <div class="grid md:grid-cols-2 gap-4">
+          ${parsed.uvps.map((u, i) => `
+            <div class="card flex items-start gap-4 bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+              <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-accent-500 text-white flex items-center justify-center font-bold shrink-0 shadow-lg shadow-brand-500/20">${i + 1}</div>
+              <span class="text-gray-700 pt-1">${u}</span>
+            </div>
+          `).join('')}
+        </div>
+        <div class="grid lg:grid-cols-2 gap-5">
+          <div class="card bg-gradient-to-br from-blue-50 via-cyan-50 to-teal-50 border border-blue-100 rounded-3xl p-8 shadow-lg">
+            <div class="flex items-center gap-4 mb-4"><div class="w-12 h-12 rounded-xl bg-white shadow-lg flex items-center justify-center text-2xl">🎯</div><h4 class="font-bold text-blue-900 text-lg font-display">Market Comparison</h4></div>
+            <p class="text-blue-900/80 leading-relaxed">${data.s12_advantage__comparison}</p>
+          </div>
+          <div class="card bg-gradient-to-br from-purple-50 via-pink-50 to-rose-50 border border-purple-100 rounded-3xl p-8 shadow-lg">
+            <div class="flex items-center gap-4 mb-4"><div class="w-12 h-12 rounded-xl bg-white shadow-lg flex items-center justify-center text-2xl">⚡</div><h4 class="font-bold text-purple-900 text-lg font-display">Innovation Edge</h4></div>
+            <p class="text-purple-900/80 leading-relaxed">${data.s12_advantage__innovation}</p>
+          </div>
+        </div>
+        <div class="bg-gradient-to-r from-amber-50 via-orange-50 to-yellow-50 rounded-3xl p-8 border border-amber-100 shadow-lg">
+          <h3 class="font-bold mb-5 flex items-center gap-3 font-display text-lg">⭐ Delight Factors</h3>
+          <div class="flex flex-wrap gap-3">${parsed.funFactors.map(f => `<span class="bg-white text-amber-800 px-5 py-2.5 rounded-full border border-amber-200 shadow-sm font-semibold hover:shadow-md hover:-translate-y-0.5 transition-all cursor-default">✨ ${f}</span>`).join('')}</div>
+        </div>
+      </div>`;
+    }
+
+    function communicationHTML() {
+      return `<div class="space-y-8">
+        <div class="grid md:grid-cols-3 gap-5">
+          ${[{ t: 'Tone', i: '🔊', c: data.s13_comms__tone }, { t: 'Style', i: '✨', c: data.s13_comms__style }, { t: 'Vibe', i: '🤝', c: data.s13_comms__vibe }].map(x => `
+            <div class="card bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+              <div class="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mb-4 text-2xl">${x.i}</div>
+              <h4 class="font-bold mb-3 font-display">${x.t}</h4>
+              <p class="text-gray-600 leading-relaxed">${x.c}</p>
+            </div>
+          `).join('')}
+        </div>
+        <div class="grid md:grid-cols-2 gap-5">
+          <div class="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-100 rounded-3xl p-8">
+            <h4 class="font-bold text-green-800 mb-5 flex items-center gap-3 font-display">👍 Emphasize</h4>
+            <ul class="space-y-3">${['Validation and safety', 'Clear, optional steps', 'Biological explanations', '"We" language'].map(i => `<li class="flex gap-3 text-green-900/80 bg-white/70 p-3 rounded-xl"><span class="w-6 h-6 rounded-lg bg-green-100 text-green-600 flex items-center justify-center text-xs">✓</span>${i}</li>`).join('')}</ul>
+          </div>
+          <div class="bg-gradient-to-br from-red-50 to-rose-50 border border-red-100 rounded-3xl p-8">
+            <h4 class="font-bold text-red-800 mb-5 flex items-center gap-3 font-display">🚫 Avoid</h4>
+            <div class="flex flex-wrap gap-3">${parsed.commsAvoid.map(i => `<span class="bg-white/70 text-red-700 px-4 py-2 rounded-full font-medium border border-red-200/50">${i}</span>`).join('')}</div>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    function brandHTML() {
+      const colors = [
+        { key: 'primary', name: data.r01_brand_style__colors__primary__name, hex: data.r01_brand_style__colors__primary__hex, usage: data.r01_brand_style__colors__primary__usage },
+        { key: 'secondary', name: data.r01_brand_style__colors__secondary__name, hex: data.r01_brand_style__colors__secondary__hex, usage: data.r01_brand_style__colors__secondary__usage },
+        { key: 'accent', name: data.r01_brand_style__colors__accent__name, hex: data.r01_brand_style__colors__accent__hex, usage: data.r01_brand_style__colors__accent__usage },
+      ];
+      const visualElements = [];
+      for (let i = 1; i <= 10; i++) {
+        const key = `r01_brand_style__visual_style__element_${String(i).padStart(2, '0')}`;
+        if (data[key]) visualElements.push(data[key]);
+      }
+      const voiceAttrs = [];
+      for (let i = 1; i <= 10; i++) {
+        const key = `r01_brand_style__voice__attribute_${String(i).padStart(2, '0')}`;
+        if (data[key]) voiceAttrs.push(data[key]);
+      }
+      return `<div class="space-y-14">
+        <div>
+          <h3 class="font-bold mb-8 flex items-center gap-3 text-xl font-display">🎨 Color Palette</h3>
+          <div class="grid md:grid-cols-3 gap-8">
+            ${colors.map(c => `
+              <div class="group cursor-pointer" onclick="copy('${c.hex}')">
+                <div class="h-36 rounded-3xl shadow-xl transition-all group-hover:-translate-y-3 group-hover:shadow-2xl relative overflow-hidden" style="background:${c.hex}">
+                  <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30"><span class="px-4 py-2 bg-white rounded-xl text-sm font-mono font-bold shadow-lg">${c.hex}</span></div>
+                </div>
+                <div class="mt-4"><div class="flex items-center justify-between mb-1"><h4 class="font-bold font-display">${c.name}</h4><span class="text-xs font-bold px-2 py-1 bg-gray-100 rounded-lg uppercase">${c.key}</span></div><p class="text-sm text-gray-500">${c.usage}</p></div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        <div>
+          <h3 class="font-bold mb-8 flex items-center gap-3 text-xl font-display">🔤 Typography</h3>
+          <div class="grid md:grid-cols-2 gap-6">
+            ${[{ t: 'Headings', f: data.r01_brand_style__typography__headings__font, d: data.r01_brand_style__typography__headings__description, s: 'The Quick Brown Fox' }, { t: 'Body', f: data.r01_brand_style__typography__body__font, d: data.r01_brand_style__typography__body__description, s: 'The quick brown fox jumps over the lazy dog.' }].map(x => `
+              <div class="card bg-white rounded-3xl border border-gray-100 p-8 shadow-sm">
+                <div class="flex justify-between items-start mb-6"><div><span class="text-xs font-bold text-gray-400 uppercase tracking-wider">${x.t}</span><h4 class="text-2xl font-bold font-display">${x.f}</h4></div><div class="text-5xl font-bold text-gray-200">Aa</div></div>
+                <p class="${x.t === 'Headings' ? 'text-3xl font-bold font-display' : 'text-lg'} text-gray-800 mb-6">${x.s}</p>
+                <p class="text-sm text-gray-500 pt-6 border-t border-gray-100">${x.d}</p>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        <div class="grid lg:grid-cols-2 gap-6">
+          <div class="card bg-white rounded-3xl border border-gray-100 p-8 shadow-sm">
+            <h3 class="font-bold mb-5 flex items-center gap-3 font-display">📐 Visual Style</h3>
+            <p class="text-gray-700 font-medium mb-5 italic">"${data.r01_brand_style__visual_style__approach}"</p>
+            <div class="space-y-3">${visualElements.map(e => `<div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl"><div class="w-2 h-2 rounded-full bg-brand-500"></div><span class="text-gray-700">${e}</span></div>`).join('')}</div>
+          </div>
+          <div class="card bg-white rounded-3xl border border-gray-100 p-8 shadow-sm">
+            <h3 class="font-bold mb-5 flex items-center gap-3 font-display">🎤 Brand Voice</h3>
+            <div class="flex flex-wrap gap-2 mb-5">${voiceAttrs.map(a => `<span class="px-4 py-2 bg-gradient-to-r from-brand-500 to-accent-500 text-white font-semibold rounded-full shadow-lg shadow-brand-500/20">${a}</span>`).join('')}</div>
+            <p class="text-gray-600 italic pl-4 border-l-2 border-brand-500/30">${data.r01_brand_style__voice__description}</p>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    function renderFooter() {
+      document.getElementById('footer').innerHTML = `
+        <div class="flex justify-center gap-3 mb-6">
+          <span class="px-4 py-2 rounded-full bg-gradient-to-r from-brand-500/10 to-accent-500/10 text-brand-600 font-bold border border-brand-500/20">360° ICP</span>
+          <span class="px-4 py-2 rounded-full bg-gray-100 text-gray-600 font-medium">Confidential</span>
+        </div>
+        <p class="text-lg font-bold text-gray-600 font-display">${data.meta__brand_name}</p>
+        <p class="text-sm text-gray-400 mt-3">Last updated: ${data.meta__last_updated}</p>
+      `;
+    }
+
+    function goTo(id) { document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' }); toggleMobile(false); closeCmd(); }
+    function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    function toggleMobile(force) { const close = force === false || !document.getElementById('mobile-sidebar').classList.contains('-translate-x-full'); document.getElementById('mobile-overlay').classList.toggle('hidden', close); document.getElementById('mobile-sidebar').classList.toggle('-translate-x-full', close); }
+    function toggleTheme() { isDark = !isDark; localStorage.setItem('dark', isDark); document.documentElement.classList.toggle('dark', isDark); document.getElementById('theme-icon').textContent = isDark ? '☀️' : '🌙'; }
+    function toggleAcc(btn) { const c = btn.nextElementSibling, icon = btn.querySelector('.acc-icon'), open = !c.classList.contains('hidden'); c.classList.toggle('hidden', open); icon.style.transform = open ? '' : 'rotate(180deg)'; }
+    function copy(text) { navigator.clipboard.writeText(text); toast('Copied!', '✓'); }
+    function toast(msg, icon = '✓') { const t = document.getElementById('toast'); document.getElementById('toast-text').textContent = msg; document.getElementById('toast-icon').textContent = icon; t.classList.remove('opacity-0', 'translate-y-8', 'pointer-events-none'); t.classList.add('opacity-100', 'translate-y-0'); setTimeout(() => { t.classList.add('opacity-0', 'translate-y-8', 'pointer-events-none'); t.classList.remove('opacity-100', 'translate-y-0'); }, 2500); }
+    function share() { if (navigator.share) navigator.share({ title: document.title, url: location.href }); else { navigator.clipboard.writeText(location.href); toast('Link copied!', '🔗'); } }
+    function celebrate() { const colors = ['#18BFC7', '#1F86D6', '#8B5CF6', '#F59E0B', '#10B981', '#EC4899']; const container = document.getElementById('confetti'); for (let i = 0; i < 80; i++) { const c = document.createElement('div'); c.className = 'confetti'; c.style.cssText = `left:${Math.random()*100}%;top:100%;width:${8+Math.random()*8}px;height:${8+Math.random()*8}px;background:${colors[Math.floor(Math.random()*colors.length)]};border-radius:${Math.random() > 0.5 ? '50%' : '2px'};animation:confetti ${3+Math.random()*2}s ease-out forwards;animation-delay:${Math.random()*0.5}s;`; container.appendChild(c); setTimeout(() => c.remove(), 5000); } }
+    
+    function openCmd() { document.getElementById('cmd-overlay').classList.remove('hidden'); document.getElementById('cmd-input').focus(); filterCmd(''); }
+    function closeCmd() { document.getElementById('cmd-overlay').classList.add('hidden'); document.getElementById('cmd-input').value = ''; }
+    function filterCmd(q) { const query = q.toLowerCase(); cmdList = sections.filter(s => s.label.toLowerCase().includes(query)); cmdIndex = 0; renderCmd(); }
+    function renderCmd() { const r = document.getElementById('cmd-results'); if (!cmdList.length) { r.innerHTML = '<div class="p-8 text-center text-gray-400">No results found</div>'; return; } r.innerHTML = `<div class="p-3">${cmdList.map((s, i) => `<button onclick="goTo('${s.id}')" class="w-full flex items-center gap-4 px-5 py-4 rounded-xl text-left ${i === cmdIndex ? 'bg-gradient-to-r from-brand-500/10 to-accent-500/10 text-brand-600' : 'hover:bg-gray-50'} transition-colors"><span class="w-11 h-11 rounded-xl bg-gray-100 flex items-center justify-center text-xl">${s.icon}</span><div class="flex-1"><div class="font-semibold">${s.num ? s.num + '. ' : ''}${s.label}</div></div><span class="text-gray-300">↵</span></button>`).join('')}</div>`; }
+    
+    function initObserver() { const observer = new IntersectionObserver(entries => { entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }); }, { threshold: 0.1, rootMargin: '-80px' }); document.querySelectorAll('.reveal').forEach(el => observer.observe(el)); }
+    
+    window.addEventListener('scroll', () => {
+      const st = document.documentElement.scrollTop, sh = document.documentElement.scrollHeight - window.innerHeight, p = Math.min(st / sh, 1);
+      document.getElementById('progress-bar').style.transform = `scaleX(${p})`;
+      document.getElementById('progress-fill').style.width = `${p * 100}%`;
+      document.getElementById('progress-pct').textContent = `${Math.round(p * 100)}%`;
+      const btn = document.getElementById('scroll-btn'); btn.style.opacity = st > 500 ? '1' : '0'; btn.style.pointerEvents = st > 500 ? 'auto' : 'none';
+      if (p >= 0.98 && !completed) { completed = true; celebrate(); toast('Reading complete! 🎉', '🎊'); }
+      document.querySelectorAll('section[id]').forEach(section => {
+        const rect = section.getBoundingClientRect(), isActive = rect.top <= 200 && rect.bottom >= 200;
+        document.querySelectorAll(`[data-section="${section.id}"]`).forEach(el => {
+          if (el.classList.contains('nav-item')) { el.classList.toggle('active', isActive); el.classList.toggle('text-brand-600', isActive); }
+          else if (el.classList.contains('section-indicator')) { el.classList.toggle('active', isActive); }
+        });
+        if (isActive) sectionsRead.add(section.id);
+      });
+    });
+    
+    document.addEventListener('keydown', e => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); openCmd(); }
+      if (e.key === 'Escape') closeCmd();
+      const overlay = document.getElementById('cmd-overlay');
+      if (!overlay.classList.contains('hidden')) {
+        if (e.key === 'ArrowDown') { e.preventDefault(); cmdIndex = Math.min(cmdIndex + 1, cmdList.length - 1); renderCmd(); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); cmdIndex = Math.max(cmdIndex - 1, 0); renderCmd(); }
+        else if (e.key === 'Enter' && cmdList[cmdIndex]) { e.preventDefault(); goTo(cmdList[cmdIndex].id); }
+      }
+    });
+
+    load();
+  </script>
+</body>
+</html>

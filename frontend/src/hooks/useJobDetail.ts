@@ -476,15 +476,26 @@ export function useJobExecution({
       return;
     }
 
+    let lastStepsFetchAt = 0;
     const pollInterval = setInterval(async () => {
       try {
+        const now = Date.now();
         const data = await api.getJob(jobId);
         setJob((prevJob) =>
           prevJob
-            ? { ...prevJob, status: data.status, updated_at: data.updated_at }
+            ? {
+                ...prevJob,
+                status: data.status,
+                updated_at: data.updated_at,
+                live_step: data.live_step ?? null,
+              }
             : prevJob,
         );
-        await loadExecutionSteps(data);
+        // Execution steps come from S3 and are more expensive to fetch; keep them at ~3s cadence.
+        if (now - lastStepsFetchAt > 2500) {
+          lastStepsFetchAt = now;
+          await loadExecutionSteps(data);
+        }
 
         if (rerunningStep !== null && data.status !== "processing") {
           setRerunningStep(null);
@@ -495,7 +506,7 @@ export function useJobExecution({
           error: err,
         });
       }
-    }, 3000);
+    }, 1000);
 
     return () => {
       clearInterval(pollInterval);

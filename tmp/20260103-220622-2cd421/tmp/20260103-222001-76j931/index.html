@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title id="pageTitle">ICP Report Template</title>
+
+  <!-- Tailwind 3 (CDN) -->
+  <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+
+  <!-- Inter & Open Sans -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { 
+            sans: ["Open Sans", "system-ui", "sans-serif"],
+            heading: ["Inter", "system-ui", "sans-serif"]
+          },
+          colors: {
+            brand: {
+              primary: "#18BFC7",
+              secondary: "#0B4B5E",
+              accent: "#1F86D6",
+              50: "#E6F7F9",
+              100: "#CCEFF3",
+              200: "#99DFE7",
+              300: "#66CFDB",
+              400: "#33BFCF",
+              500: "#18BFC7",
+              600: "#0B4B5E",
+              700: "#0A3F4F",
+              800: "#083340",
+              900: "#062731"
+            }
+          },
+          boxShadow: {
+            soft: "0 10px 30px rgba(11, 75, 94, 0.08)",
+            soft2: "0 18px 55px rgba(11, 75, 94, 0.12)"
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    :root{
+      --page-bg:#f5f5f6;
+      --ink:#0f172a;
+    }
+    html{ font-family: 'Open Sans', system-ui, sans-serif; background: var(--page-bg); color: var(--ink); }
+    body{ background: var(--page-bg); }
+    h1, h2, h3, h4, h5, h6 { font-family: 'Inter', system-ui, sans-serif; }
+
+    /* Readability defaults */
+    p{ line-height: 1.8; }
+    strong{ font-weight: 700; }
+    a{ text-underline-offset: 2px; }
+
+    /* Don't force backgrounds on images */
+    img{ background: transparent !important; }
+
+    /* Print styles */
+    @media print{
+      #topbar, #audioDock, #expiredOverlay, #tocMenu { display:none !important; }
+      body{ background:#fff !important; }
+      .print\:shadow-none{ box-shadow:none !important; }
+      .print\:border-none{ border:none !important; }
+    }
+
+    /* Pain score bars */
+    .pain-score-bar {
+      height: 8px;
+      background: linear-gradient(90deg, #18BFC7 0%, #1F86D6 100%);
+      border-radius: 4px;
+      transition: width 0.6s ease;
+    }
+  </style>
+</head>
+
+<body class="antialiased text-slate-900">
+
+  <!-- ───────────────────────── Sticky Topbar ───────────────────────── -->
+  <header id="topbar" class="sticky top-0 z-50 border-b border-slate-200 bg-white/85 backdrop-blur shadow-soft">
+    <div class="mx-auto max-w-[1120px] px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+      <!-- Brand -->
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="h-10 w-10 rounded-2xl bg-gradient-to-br from-brand-primary to-brand-accent shrink-0"></div>
+        <div class="min-w-0">
+          <div class="text-base font-extrabold tracking-tight truncate" data-text="meta__brand_name">Brand</div>
+          <div class="text-xs text-slate-600 truncate">ICP Report · <span data-text="meta__last_updated"></span></div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex items-center gap-2 shrink-0">
+        <button id="downloadPdfBtn" class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-extrabold text-slate-900 shadow-soft hover:bg-slate-50">
+          <span>Download PDF</span>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-600" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M3 14.5a1.5 1.5 0 001.5 1.5h11A1.5 1.5 0 0017 14.5V14a1 1 0 112 0v.5A3.5 3.5 0 0115.5 18h-11A3.5 3.5 0 011 14.5V14a1 1 0 112 0v.5z"></path>
+            <path d="M9 12.5V3a1 1 0 112 0v9.5l2.1-2.1a1 1 0 111.4 1.4l-3.8 3.8a1 1 0 01-1.4 0l-3.8-3.8a1 1 0 111.4-1.4L9 12.5z"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ───────────────────────── Main Content ───────────────────────── -->
+  <main class="px-4 sm:px-6 py-10 sm:py-14 pb-20">
+    <div class="mx-auto max-w-[1120px] space-y-10">
+
+      <!-- Hero -->
+      <section class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-secondary to-brand-accent text-white shadow-soft2 print:shadow-none">
+        <div class="absolute inset-0 opacity-25 bg-[radial-gradient(circle_at_30%_20%,white,transparent_55%)]"></div>
+        <div class="relative px-6 sm:px-10 py-10 sm:py-12">
+          <div class="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs font-extrabold tracking-wide">
+            ✨ Ideal Customer Profile · <span data-text="meta__last_updated"></span>
+          </div>
+          <h1 class="mt-4 text-3xl sm:text-4xl font-extrabold tracking-tight" data-text="s00_intro__core__title">
+            What is 360 ICP?
+          </h1>
+          <p class="mt-3 max-w-[70ch] text-white/90 text-base sm:text-lg" data-html="s00_intro__core__description">
+            Comprehensive customer profile and positioning guide.
+          </p>
+        </div>
+      </section>
+
+      <!-- Story Section -->
+      <section class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-soft">
+        <h2 class="text-2xl font-extrabold tracking-tight text-brand-secondary" data-text="s01_story__core__title">The Hero's Journey</h2>
+        <div class="mt-6 prose prose-slate max-w-none" data-html="s01_story__core__content"></div>
+      </section>
+
+      <!-- Offer Section -->
+      <section class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-soft">
+        <h2 class="text-2xl font-extrabold tracking-tight text-brand-secondary" data-text="s02_offer__core__product_name">Product Offer</h2>
+        
+        <div class="mt-6 grid md:grid-cols-2 gap-6">
+          <div class="space-y-4">
+            <div>
+              <div class="text-sm font-bold text-slate-500 uppercase tracking-widest">Price</div>
+              <div class="mt-1 text-3xl font-extrabold text-brand-primary" data-text="s02_offer__core__price">$297</div>
+              <div class="mt-1 text-sm text-slate-600" data-text="s02_offer__core__investment_terms"></div>
+            </div>
+            
+            <div>
+              <div class="text-sm font-bold text-slate-500 uppercase tracking-widest">Tagline</div>
+              <div class="mt-1 text-lg font-bold text-brand-secondary" data-text="s02_offer__core__unique_mechanism_tagline"></div>
+            </div>
+            
+            <div>
+              <div class="text-sm font-bold text-slate-500 uppercase tracking-widest">Short Description</div>
+              <p class="mt-1 text-slate-700" data-text="s02_offer__core__short_description"></p>
+            </div>
+          </div>
+          
+          <div class="space-y-4">
+            <div>
+              <div class="text-sm font-bold text-slate-500 uppercase tracking-widest">Unique Mechanism</div>
+              <p class="mt-1 text-slate-700" data-text="s02_offer__core__unique_mechanism_description"></p>
+            </div>
+            
+            <div>
+              <div class="text-sm font-bold text-slate-500 uppercase tracking-widest">Delivery Format</div>
+              <p class="mt-1 text-slate-700" data-text="s02_offer__core__delivery_format"></p>
+            </div>
+            
+            <div>
+              <div class="text-sm font-bold text-slate-500 uppercase tracking-widest">Access</div>
+              <p class="mt-1 text-slate-700" data-text="s02_offer__core__delivery_access"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Features Grid -->
+        <div class="mt-8">
+          <h3 class="text-xl font-extrabold text-brand-secondary mb-4">Key Features</h3>
+          <div id="featuresGrid" class="grid md:grid-cols-2 gap-4"></div>
+        </div>
+
+        <!-- Advisory Notice -->
+        <div class="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <p class="text-sm text-slate-800" data-text="s02_offer__core__delivery_advisory"></p>
+        </div>
+      </section>
+
+      <!-- Pains Section -->
+      <section class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-soft">
+        <h2 class="text-2xl font-extrabold tracking-tight text-brand-secondary mb-6">Pain Points</h2>
+        <div id="painsGrid" class="space-y-6"></div>
+      </section>
+
+      <!-- Desires Section -->
+      <section class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-soft">
+        <h2 class="text-2xl font-extrabold tracking-tight text-brand-secondary mb-6">Desires & Outcomes</h2>
+        <div id="desiresGrid" class="space-y-6"></div>
+      </section>
+
+      <!-- Authority Section -->
+      <section class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-soft">
+        <h2 class="text-2xl font-extrabold tracking-tight text-brand-secondary mb-6">Authority & Credentials</h2>
+        <div class="space-y-4">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900 mb-3" data-text="s05_authority__core__title"></h3>
+          </div>
+          <div class="grid md:grid-cols-2 gap-4">
+            <div>
+              <div class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-2">Historical</div>
+              <ul id="authorityHistorical" class="space-y-2 text-slate-700"></ul>
+            </div>
+            <div>
+              <div class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-2">Credentials</div>
+              <ul id="authorityCredentials" class="space-y-2 text-slate-700"></ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Competitors Section -->
+      <section class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-soft">
+        <h2 class="text-2xl font-extrabold tracking-tight text-brand-secondary mb-6">Competitive Landscape</h2>
+        
+        <div class="mb-8">
+          <h3 class="text-lg font-bold text-slate-900 mb-4">Direct Competitors</h3>
+          <div id="directCompetitors" class="grid md:grid-cols-2 gap-4"></div>
+        </div>
+
+        <div class="mb-8">
+          <h3 class="text-lg font-bold text-slate-900 mb-4">Indirect Competitors</h3>
+          <div id="indirectCompetitors" class="grid md:grid-cols-2 gap-4"></div>
+        </div>
+
+        <div>
+          <h3 class="text-lg font-bold text-slate-900 mb-4">Influencers</h3>
+          <div id="influencers" class="flex flex-wrap gap-3"></div>
+        </div>
+      </section>
+
+      <!-- Audience Section -->
+      <section class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-soft">
+        <h2 class="text-2xl font-extrabold tracking-tight text-brand-secondary mb-6">Target Audience</h2>
+        
+        <div class="mb-6">
+          <h3 class="text-lg font-bold text-slate-900 mb-4">Demographics</h3>
+          <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div>
+              <div class="text-sm font-bold text-slate-500 uppercase tracking-widest">Age</div>
+              <div class="mt-1 text-slate-700" data-text="s07_audience__demographics__age"></div>
+            </div>
+            <div>
+              <div class="text-sm font-bold text-slate-500 uppercase tracking-widest">Gender</div>
+              <div class="mt-1 text-slate-700" data-text="s07_audience__demographics__gender"></div>
+            </div>
+            <div>
+              <div class="text-sm font-bold text-slate-500 uppercase tracking-widest">Income</div>
+              <div class="mt-1 text-slate-700" data-text="s07_audience__demographics__income"></div>
+            </div>
+            <div>
+              <div class="text-sm font-bold text-slate-500 uppercase tracking-widest">Education</div>
+              <div class="mt-1 text-slate-700" data-text="s07_audience__demographics__education"></div>
+            </div>
+            <div>
+              <div class="text-sm font-bold text-slate-500 uppercase tracking-widest">Occupation</div>
+              <div class="mt-1 text-slate-700" data-text="s07_audience__demographics__occupation"></div>
+            </div>
+            <div>
+              <div class="text-sm font-bold text-slate-500 uppercase tracking-widest">Location</div>
+              <div class="mt-1 text-slate-700" data-text="s07_audience__demographics__location"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mb-6">
+          <h3 class="text-lg font-bold text-slate-900 mb-4">Values</h3>
+          <ul id="audienceValues" class="space-y-2 text-slate-700"></ul>
+        </div>
+
+        <div>
+          <h3 class="text-lg font-bold text-slate-900 mb-4">Interests</h3>
+          <ul id="audienceInterests" class="space-y-2 text-slate-700"></ul>
+        </div>
+      </section>
+
+      <!-- Values Section -->
+      <section class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-soft">
+        <h2 class="text-2xl font-extrabold tracking-tight text-brand-secondary mb-6">Brand Values</h2>
+        <p class="text-lg text-slate-700 mb-6" data-text="s08_values__synthesis"></p>
+        <div id="valuesGrid" class="grid md:grid-cols-2 gap-4"></div>
+      </section>
+
+      <!-- Transformation Section -->
+      <section class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-soft">
+        <h2 class="text-2xl font-extrabold tracking-tight text-brand-secondary mb-6">Transformation</h2>
+        <div class="grid md:grid-cols-2 gap-6">
+          <div class="rounded-xl border border-slate-200 bg-slate-50 p-5">
+            <div class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-2">Before</div>
+            <p class="text-slate-800" data-text="s09_transformation__before"></p>
+          </div>
+          <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
+            <div class="text-sm font-bold text-emerald-700 uppercase tracking-widest mb-2">After</div>
+            <p class="text-slate-800" data-text="s09_transformation__after"></p>
+          </div>
+        </div>
+        <div class="mt-6">
+          <div class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-2">Emotional Shift</div>
+          <p class="text-slate-800" data-text="s09_transformation__emotional_shift"></p>
+        </div>
+        <div class="mt-4">
+          <div class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-2">Impact</div>
+          <p class="text-slate-800" data-text="s09_transformation__impact"></p>
+        </div>
+      </section>
+
+      <!-- Media Section -->
+      <section class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-soft">
+        <h2 class="text-2xl font-extrabold tracking-tight text-brand-secondary mb-6">Media Consumption</h2>
+        
+        <div class="grid md:grid-cols-2 gap-6">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900 mb-3">Social Media</h3>
+            <div id="socialMedia" class="flex flex-wrap gap-2"></div>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-slate-900 mb-3">Podcasts</h3>
+            <ul id="podcasts" class="space-y-2"></ul>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-slate-900 mb-3">Blogs</h3>
+            <ul id="blogs" class="space-y-2"></ul>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-slate-900 mb-3">Books</h3>
+            <ul id="books" class="space-y-2"></ul>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-slate-900 mb-3">Forums</h3>
+            <ul id="forums" class="space-y-2"></ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Objections Section -->
+      <section class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-soft">
+        <h2 class="text-2xl font-extrabold tracking-tight text-brand-secondary mb-6">Common Objections</h2>
+        <div id="objectionsGrid" class="space-y-4"></div>
+      </section>
+
+      <!-- Advantage Section -->
+      <section class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-soft">
+        <h2 class="text-2xl font-extrabold tracking-tight text-brand-secondary mb-6">Competitive Advantage</h2>
+        
+        <div class="mb-6">
+          <h3 class="text-lg font-bold text-slate-900 mb-4">Unique Value Propositions</h3>
+          <ul id="uvpList" class="space-y-2 text-slate-700"></ul>
+        </div>
+
+        <div class="mb-6">
+          <h3 class="text-lg font-bold text-slate-900 mb-4">Comparison</h3>
+          <p class="text-slate-700" data-text="s12_advantage__comparison"></p>
+        </div>
+
+        <div>
+          <h3 class="text-lg font-bold text-slate-900 mb-4">Innovation</h3>
+          <p class="text-slate-700" data-text="s12_advantage__innovation"></p>
+        </div>
+      </section>
+
+      <!-- Communication Style Section -->
+      <section class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-soft">
+        <h2 class="text-2xl font-extrabold tracking-tight text-brand-secondary mb-6">Communication Style</h2>
+        <div class="grid md:grid-cols-2 gap-6">
+          <div>
+            <div class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-2">Tone</div>
+            <p class="text-slate-700" data-text="s13_comms__tone"></p>
+          </div>
+          <div>
+            <div class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-2">Style</div>
+            <p class="text-slate-700" data-text="s13_comms__style"></p>
+          </div>
+          <div>
+            <div class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-2">Vibe</div>
+            <p class="text-slate-700" data-text="s13_comms__vibe"></p>
+          </div>
+          <div>
+            <div class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-2">Avoid</div>
+            <ul id="commsAvoid" class="space-y-1 text-slate-700"></ul>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ───────────────────────── Template loader (JSON → DOM) ───────────────────────── -->
+  <script>
+    window.__tplReady = (async () => {
+      const params = new URLSearchParams(location.search);
+      const dataUrl = params.get("data") || "report-values-v3.json";
+
+      const res = await fetch(dataUrl, { cache: "no-store" });
+      if (!res.ok) throw new Error("Failed to load template data: " + res.status);
+      const data = await res.json();
+      window.__tpl = data;
+
+      // Helper function to get nested values
+      const get = (obj, path) => {
+        if (!path) return undefined;
+        return path.split("__").reduce((acc, key) => {
+          if (acc == null) return undefined;
+          return acc[key];
+        }, obj);
+      };
+
+      // Set page title
+      if (data?.meta__brand_name) {
+        document.title = `${data.meta__brand_name} - ICP Report`;
+        document.getElementById("pageTitle").textContent = `${data.meta__brand_name} - ICP Report`;
+      }
+
+      // Simple attribute bindings
+      document.querySelectorAll("[data-text]").forEach(el => {
+        const v = get(data, el.getAttribute("data-text"));
+        if (v !== undefined && v !== null) el.textContent = String(v);
+      });
+      document.querySelectorAll("[data-html]").forEach(el => {
+        const v = get(data, el.getAttribute("data-html"));
+        if (v !== undefined && v !== null) el.innerHTML = String(v).replace(/\n/g, "<br>");
+      });
+
+      // Build Features Grid
+      (function buildFeatures() {
+        const grid = document.getElementById("featuresGrid");
+        if (!grid) return;
+        grid.innerHTML = "";
+        for (let i = 1; i <= 10; i++) {
+          const title = get(data, `s02_offer__feature_${String(i).padStart(2, '0')}__title`);
+          const desc = get(data, `s02_offer__feature_${String(i).padStart(2, '0')}__description`);
+          if (!title) continue;
+          const card = document.createElement("div");
+          card.className = "rounded-xl border border-slate-200 bg-slate-50 p-4";
+          card.innerHTML = `
+            <div class="font-bold text-slate-900 mb-1">${title}</div>
+            <div class="text-sm text-slate-700">${desc || ""}</div>
+          `;
+          grid.appendChild(card);
+        }
+      })();
+
+      // Build Pains Grid
+      (function buildPains() {
+        const grid = document.getElementById("painsGrid");
+        if (!grid) return;
+        grid.innerHTML = "";
+        for (let i = 1; i <= 10; i++) {
+          const title = get(data, `s03_pains__pain_${String(i).padStart(2, '0')}__title`);
+          const desc = get(data, `s03_pains__pain_${String(i).padStart(2, '0')}__description`);
+          const score = get(data, `s03_pains__pain_${String(i).padStart(2, '0')}__score`);
+          if (!title) continue;
+          
+          const card = document.createElement("div");
+          card.className = "rounded-xl border border-slate-200 bg-white p-5";
+          
+          let quotesHtml = "";
+          for (let q = 1; q <= 3; q++) {
+            const quote = get(data, `s03_pains__pain_${String(i).padStart(2, '0')}__quote_${String(q).padStart(2, '0')}`);
+            if (quote) {
+              quotesHtml += `<div class="text-sm text-slate-600 italic mt-2">"${quote}"</div>`;
+            }
+          }
+          
+          card.innerHTML = `
+            <div class="flex items-start justify-between gap-4 mb-3">
+              <h3 class="text-lg font-bold text-slate-900">${title}</h3>
+              ${score ? `<div class="text-2xl font-extrabold text-brand-primary shrink-0">${score}</div>` : ""}
+            </div>
+            <p class="text-slate-700 mb-3">${desc || ""}</p>
+            ${quotesHtml}
+            ${score ? `<div class="mt-3"><div class="pain-score-bar" style="width: ${score}%"></div></div>` : ""}
+          `;
+          grid.appendChild(card);
+        }
+      })();
+
+      // Build Desires Grid
+      (function buildDesires() {
+        const grid = document.getElementById("desiresGrid");
+        if (!grid) return;
+        grid.innerHTML = "";
+        for (let i = 1; i <= 5; i++) {
+          const title = get(data, `s04_desires__desire_${String(i).padStart(2, '0')}__title`);
+          const vision = get(data, `s04_desires__desire_${String(i).padStart(2, '0')}__vision_snapshot`);
+          const milestones = get(data, `s04_desires__desire_${String(i).padStart(2, '0')}__tangible_milestones`);
+          const win = get(data, `s04_desires__desire_${String(i).padStart(2, '0')}__emotional_win`);
+          if (!title) continue;
+          
+          let quotesHtml = "";
+          for (let q = 1; q <= 3; q++) {
+            const quote = get(data, `s04_desires__desire_${String(i).padStart(2, '0')}__quote_${String(q).padStart(2, '0')}`);
+            if (quote) {
+              quotesHtml += `<div class="text-sm text-slate-600 italic mt-2">"${quote}"</div>`;
+            }
+          }
+          
+          const card = document.createElement("div");
+          card.className = "rounded-xl border border-emerald-200 bg-emerald-50 p-5";
+          card.innerHTML = `
+            <h3 class="text-lg font-bold text-slate-900 mb-3">${title}</h3>
+            <div class="space-y-3">
+              ${vision ? `<div><div class="text-xs font-bold text-slate-500 uppercase tracking-widest">Vision</div><p class="text-slate-800 mt-1">${vision}</p></div>` : ""}
+              ${milestones ? `<div><div class="text-xs font-bold text-slate-500 uppercase tracking-widest">Milestones</div><p class="text-slate-800 mt-1">${milestones}</p></div>` : ""}
+              ${win ? `<div><div class="text-xs font-bold text-slate-500 uppercase tracking-widest">Emotional Win</div><p class="text-slate-800 mt-1">${win}</p></div>` : ""}
+              ${quotesHtml}
+            </div>
+          `;
+          grid.appendChild(card);
+        }
+      })();
+
+      // Build Authority Lists
+      (function buildAuthority() {
+        const historical = document.getElementById("authorityHistorical");
+        const credentials = document.getElementById("authorityCredentials");
+        
+        if (historical) {
+          for (let i = 1; i <= 5; i++) {
+            const item = get(data, `s05_authority__historical_${String(i).padStart(2, '0')}`);
+            if (item) {
+              const li = document.createElement("li");
+              li.className = "flex items-start gap-2";
+              li.innerHTML = `<span class="text-brand-primary">•</span><span>${item}</span>`;
+              historical.appendChild(li);
+            }
+          }
+        }
+        
+        if (credentials) {
+          for (let i = 1; i <= 3; i++) {
+            const item = get(data, `s05_authority__credentials_${String(i).padStart(2, '0')}`);
+            if (item) {
+              const li = document.createElement("li");
+              li.className = "flex items-start gap-2";
+              li.innerHTML = `<span class="text-brand-primary">•</span><span>${item}</span>`;
+              credentials.appendChild(li);
+            }
+          }
+        }
+      })();
+
+      // Build Competitors
+      (function buildCompetitors() {
+        const direct = document.getElementById("directCompetitors");
+        const indirect = document.getElementById("indirectCompetitors");
+        const influencers = document.getElementById("influencers");
+        
+        if (direct) {
+          for (let i = 1; i <= 4; i++) {
+            const name = get(data, `s06_competitors__competitor_${String(i).padStart(2, '0')}__name`);
+            if (!name) continue;
+            const offering = get(data, `s06_competitors__competitor_${String(i).padStart(2, '0')}__offering`);
+            const usp = get(data, `s06_competitors__competitor_${String(i).padStart(2, '0')}__usp`);
+            const pricing = get(data, `s06_competitors__competitor_${String(i).padStart(2, '0')}__pricing`);
+            const website = get(data, `s06_competitors__competitor_${String(i).padStart(2, '0')}__website`);
+            
+            const card = document.createElement("div");
+            card.className = "rounded-xl border border-slate-200 bg-white p-4";
+            card.innerHTML = `
+              <div class="font-bold text-slate-900 mb-2">${name}</div>
+              <div class="text-sm text-slate-700 mb-2">${offering || ""}</div>
+              <div class="text-sm text-slate-600 mb-2"><strong>USP:</strong> ${usp || ""}</div>
+              <div class="text-sm text-slate-600 mb-2"><strong>Pricing:</strong> ${pricing || ""}</div>
+              ${website ? `<a href="${website}" target="_blank" class="text-sm text-brand-accent hover:underline">Visit →</a>` : ""}
+            `;
+            direct.appendChild(card);
+          }
+        }
+        
+        if (indirect) {
+          for (let i = 1; i <= 3; i++) {
+            const name = get(data, `s06_competitors_indirect__competitor_${String(i).padStart(2, '0')}__name`);
+            if (!name) continue;
+            const problem = get(data, `s06_competitors_indirect__competitor_${String(i).padStart(2, '0')}__problem`);
+            const overlap = get(data, `s06_competitors_indirect__competitor_${String(i).padStart(2, '0')}__overlap`);
+            const website = get(data, `s06_competitors_indirect__competitor_${String(i).padStart(2, '0')}__website`);
+            
+            const card = document.createElement("div");
+            card.className = "rounded-xl border border-amber-200 bg-amber-50 p-4";
+            card.innerHTML = `
+              <div class="font-bold text-slate-900 mb-2">${name}</div>
+              <div class="text-sm text-slate-700 mb-2"><strong>Problem:</strong> ${problem || ""}</div>
+              <div class="text-sm text-slate-700 mb-2"><strong>Overlap:</strong> ${overlap || ""}</div>
+              ${website ? `<a href="${website}" target="_blank" class="text-sm text-brand-accent hover:underline">Visit →</a>` : ""}
+            `;
+            indirect.appendChild(card);
+          }
+        }
+        
+        if (influencers) {
+          for (let i = 1; i <= 4; i++) {
+            const name = get(data, `s06_competitors_influencers__influencer_${String(i).padStart(2, '0')}__name`);
+            if (!name) continue;
+            const url = get(data, `s06_competitors_influencers__influencer_${String(i).padStart(2, '0')}__url`);
+            
+            const badge = document.createElement("a");
+            badge.href = url || "#";
+            badge.target = "_blank";
+            badge.className = "inline-flex items-center rounded-full bg-brand-50 text-brand-secondary px-4 py-2 text-sm font-semibold hover:bg-brand-100";
+            badge.textContent = name;
+            influencers.appendChild(badge);
+          }
+        }
+      })();
+
+      // Build Audience Values & Interests
+      (function buildAudience() {
+        const values = document.getElementById("audienceValues");
+        const interests = document.getElementById("audienceInterests");
+        
+        if (values) {
+          for (let i = 1; i <= 5; i++) {
+            const value = get(data, `s07_audience__values_${String(i).padStart(2, '0')}`);
+            if (value) {
+              const li = document.createElement("li");
+              li.className = "flex items-start gap-2";
+              li.innerHTML = `<span class="text-brand-primary">•</span><span>${value}</span>`;
+              values.appendChild(li);
+            }
+          }
+        }
+        
+        if (interests) {
+          for (let i = 1; i <= 5; i++) {
+            const interest = get(data, `s07_audience__interests_${String(i).padStart(2, '0')}`);
+            if (interest) {
+              const li = document.createElement("li");
+              li.className = "flex items-start gap-2";
+              li.innerHTML = `<span class="text-brand-primary">•</span><span>${interest}</span>`;
+              interests.appendChild(li);
+            }
+          }
+        }
+      })();
+
+      // Build Values Grid
+      (function buildValues() {
+        const grid = document.getElementById("valuesGrid");
+        if (!grid) return;
+        grid.innerHTML = "";
+        for (let i = 1; i <= 7; i++) {
+          const name = get(data, `s08_values__value_${String(i).padStart(2, '0')}__name`);
+          const explanation = get(data, `s08_values__value_${String(i).padStart(2, '0')}__explanation`);
+          if (!name) continue;
+          
+          const card = document.createElement("div");
+          card.className = "rounded-xl border border-slate-200 bg-white p-4";
+          card.innerHTML = `
+            <div class="font-bold text-brand-secondary mb-2">${name}</div>
+            <div class="text-sm text-slate-700">${explanation || ""}</div>
+          `;
+          grid.appendChild(card);
+        }
+      })();
+
+      // Build Media Lists
+      (function buildMedia() {
+        const social = document.getElementById("socialMedia");
+        const podcasts = document.getElementById("podcasts");
+        const blogs = document.getElementById("blogs");
+        const books = document.getElementById("books");
+        const forums = document.getElementById("forums");
+        
+        if (social) {
+          for (let i = 1; i <= 4; i++) {
+            const name = get(data, `s10_media__social_${String(i).padStart(2, '0')}__name`);
+            const url = get(data, `s10_media__social_${String(i).padStart(2, '0')}__url`);
+            if (name) {
+              const badge = document.createElement("a");
+              badge.href = url || "#";
+              badge.target = "_blank";
+              badge.className = "inline-flex items-center rounded-full bg-slate-100 text-slate-700 px-3 py-1 text-sm font-semibold hover:bg-slate-200";
+              badge.textContent = name;
+              social.appendChild(badge);
+            }
+          }
+        }
+        
+        if (podcasts) {
+          for (let i = 1; i <= 3; i++) {
+            const name = get(data, `s10_media__podcasts_${String(i).padStart(2, '0')}__name`);
+            const url = get(data, `s10_media__podcasts_${String(i).padStart(2, '0')}__url`);
+            if (name) {
+              const li = document.createElement("li");
+              li.className = "flex items-start gap-2";
+              const link = url ? `<a href="${url}" target="_blank" class="text-brand-accent hover:underline">${name}</a>` : name;
+              li.innerHTML = `<span class="text-brand-primary">•</span><span>${link}</span>`;
+              podcasts.appendChild(li);
+            }
+          }
+        }
+        
+        if (blogs) {
+          for (let i = 1; i <= 3; i++) {
+            const name = get(data, `s10_media__blogs_${String(i).padStart(2, '0')}__name`);
+            const url = get(data, `s10_media__blogs_${String(i).padStart(2, '0')}__url`);
+            if (name) {
+              const li = document.createElement("li");
+              li.className = "flex items-start gap-2";
+              const link = url ? `<a href="${url}" target="_blank" class="text-brand-accent hover:underline">${name}</a>` : name;
+              li.innerHTML = `<span class="text-brand-primary">•</span><span>${link}</span>`;
+              blogs.appendChild(li);
+            }
+          }
+        }
+        
+        if (books) {
+          for (let i = 1; i <= 3; i++) {
+            const title = get(data, `s10_media__books_${String(i).padStart(2, '0')}__title`);
+            const author = get(data, `s10_media__books_${String(i).padStart(2, '0')}__author`);
+            const url = get(data, `s10_media__books_${String(i).padStart(2, '0')}__url`);
+            if (title) {
+              const li = document.createElement("li");
+              li.className = "flex items-start gap-2";
+              const link = url ? `<a href="${url}" target="_blank" class="text-brand-accent hover:underline">${title}</a> by ${author || ""}` : `${title} by ${author || ""}`;
+              li.innerHTML = `<span class="text-brand-primary">•</span><span>${link}</span>`;
+              books.appendChild(li);
+            }
+          }
+        }
+        
+        if (forums) {
+          for (let i = 1; i <= 2; i++) {
+            const name = get(data, `s10_media__forums_${String(i).padStart(2, '0')}__name`);
+            const url = get(data, `s10_media__forums_${String(i).padStart(2, '0')}__url`);
+            if (name) {
+              const li = document.createElement("li");
+              li.className = "flex items-start gap-2";
+              const link = url ? `<a href="${url}" target="_blank" class="text-brand-accent hover:underline">${name}</a>` : name;
+              li.innerHTML = `<span class="text-brand-primary">•</span><span>${link}</span>`;
+              forums.appendChild(li);
+            }
+          }
+        }
+      })();
+
+      // Build Objections
+      (function buildObjections() {
+        const grid = document.getElementById("objectionsGrid");
+        if (!grid) return;
+        grid.innerHTML = "";
+        for (let i = 1; i <= 6; i++) {
+          const objection = get(data, `s11_objections__objection_${String(i).padStart(2, '0')}__objection`);
+          const rebuttal = get(data, `s11_objections__objection_${String(i).padStart(2, '0')}__rebuttal`);
+          if (!objection) continue;
+          
+          const card = document.createElement("div");
+          card.className = "rounded-xl border border-slate-200 bg-white p-5";
+          card.innerHTML = `
+            <div class="font-bold text-slate-900 mb-2">"${objection}"</div>
+            <div class="text-slate-700">${rebuttal || ""}</div>
+          `;
+          grid.appendChild(card);
+        }
+      })();
+
+      // Build UVP List
+      (function buildUVP() {
+        const list = document.getElementById("uvpList");
+        if (!list) return;
+        list.innerHTML = "";
+        for (let i = 1; i <= 5; i++) {
+          const uvp = get(data, `s12_advantage__uvp_${String(i).padStart(2, '0')}`);
+          if (uvp) {
+            const li = document.createElement("li");
+            li.className = "flex items-start gap-2";
+            li.innerHTML = `<span class="text-brand-primary">•</span><span>${uvp}</span>`;
+            list.appendChild(li);
+          }
+        }
+      })();
+
+      // Build Comms Avoid List
+      (function buildCommsAvoid() {
+        const list = document.getElementById("commsAvoid");
+        if (!list) return;
+        list.innerHTML = "";
+        for (let i = 1; i <= 5; i++) {
+          const avoid = get(data, `s13_comms__avoid_${String(i).padStart(2, '0')}`);
+          if (avoid) {
+            const li = document.createElement("li");
+            li.className = "flex items-start gap-2";
+            li.innerHTML = `<span class="text-rose-500">✗</span><span>${avoid}</span>`;
+            list.appendChild(li);
+          }
+        }
+      })();
+
+      return data;
+    })().catch((e) => {
+      console.error(e);
+      return null;
+    });
+  </script>
+
+  <!-- ───────────────────────── Interaction scripts ───────────────────────── -->
+  <script>
+    // Download PDF
+    document.getElementById('downloadPdfBtn')?.addEventListener('click', () => window.print());
+  </script>
+
+</body>
+</html>

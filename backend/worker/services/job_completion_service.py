@@ -168,6 +168,7 @@ class JobCompletionService:
             'updated_at': datetime.utcnow().isoformat(),
             'output_url': public_url,
             'artifacts': artifacts_list,
+            'live_step': None,
             'execution_steps': execution_steps
         }, s3_service=self.s3)
         
@@ -536,7 +537,8 @@ class JobCompletionService:
             'artifacts': artifacts_list,
             'status': 'completed',
             'completed_at': datetime.utcnow().isoformat(),
-            'updated_at': datetime.utcnow().isoformat()
+            'updated_at': datetime.utcnow().isoformat(),
+            'live_step': None,
         }, s3_service=self.s3)
         
         logger.info(f"HTML generation completed successfully. Final artifact: {public_url[:80]}...")

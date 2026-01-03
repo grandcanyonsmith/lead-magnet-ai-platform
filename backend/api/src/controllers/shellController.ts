@@ -1,6 +1,6 @@
 import {
   LambdaClient,
-  InvokeWithResponseStreamCommand,
+  InvokeCommand,
 } from "@aws-sdk/client-lambda";
 import { spawn } from "child_process";
 import * as path from "path";
@@ -115,51 +115,59 @@ export class ShellController {
     // Remote execution (AWS Lambda)
     try {
       // Determine function name
-      const functionName = process.env.SHELL_LAMBDA_FUNCTION_NAME || "leadmagnet-shell-worker";
+      const functionNameRaw = env.shellLambdaFunctionName;
+      // `$LATEST` is the implicit default; stripping avoids config mistakes like
+      // `...:function:NAME:$LATEST` which can surface as "Function not found".
+      const functionName = functionNameRaw.replace(/:\\$LATEST$/, "");
 
-      const command = new InvokeWithResponseStreamCommand({
+      const command = new InvokeCommand({
         FunctionName: functionName,
         Payload: JSON.stringify(payload),
       });
 
       const response = await lambdaClient.send(command);
 
-      // Handle stream
-      if (response.EventStream) {
-        if (res) {
-          // If we have Express response, pipe to it
-          res.setHeader("Content-Type", "application/x-ndjson");
-          res.setHeader("Cache-Control", "no-cache");
-          res.setHeader("Connection", "keep-alive");
-          res.flushHeaders();
+      const rawPayload = response.Payload
+        ? Buffer.from(response.Payload).toString("utf-8")
+        : "";
 
-          for await (const event of response.EventStream) {
-            if (event.PayloadChunk) {
-              const payload = event.PayloadChunk.Payload;
-              if (payload) {
-                const chunk = Buffer.from(payload).toString("utf-8");
-                res.write(chunk);
-              }
-            }
-          }
-          res.end();
-          return; // Response handled
-        } else {
-            // If called internally without res, return full result (buffer)
-            let fullBody = "";
-            for await (const event of response.EventStream) {
-                 if (event.PayloadChunk) {
-                     const payload = event.PayloadChunk.Payload;
-                     if (payload) {
-                         fullBody += Buffer.from(payload).toString("utf-8");
-                     }
-                 }
-            }
-            return JSON.parse(fullBody.split("\n").filter(Boolean).map(l => JSON.parse(l)).pop() || "{}");
+      if (response.FunctionError) {
+        throw new Error(
+          rawPayload || `Lambda invocation error: ${response.FunctionError}`,
+        );
+      }
+
+      // Worker returns { statusCode, headers, body } where body is NDJSON.
+      let ndjsonBody = rawPayload;
+      try {
+        const parsed = rawPayload ? JSON.parse(rawPayload) : null;
+        if (parsed && typeof parsed === "object" && typeof parsed.body === "string") {
+          ndjsonBody = parsed.body;
         }
-      } else {
-          logger.warn("[ShellController] No EventStream returned");
-          return { error: "No stream returned" };
+      } catch {
+        // fall back to raw
+      }
+
+      if (res) {
+        res.setHeader("Content-Type", "application/x-ndjson");
+        res.setHeader("Cache-Control", "no-cache");
+        res.setHeader("Connection", "keep-alive");
+        res.flushHeaders();
+        res.write(ndjsonBody);
+        res.end();
+        return;
+      }
+
+      try {
+        return JSON.parse(
+          ndjsonBody
+            .split("\n")
+            .filter(Boolean)
+            .map((l) => JSON.parse(l))
+            .pop() || "{}",
+        );
+      } catch {
+        return { raw: ndjsonBody };
       }
 
     } catch (error: any) {

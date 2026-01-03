@@ -74,7 +74,8 @@ class JobProcessor:
         """
         self.db = db_service
         self.s3 = s3_service
-        self.ai_service = ai_service or AIService()
+        # Pass db/s3 so AIService can optionally persist live step output while streaming.
+        self.ai_service = ai_service or AIService(db_service=db_service, s3_service=s3_service)
         self.template_service = template_service or TemplateService()
         
         # Initialize core services

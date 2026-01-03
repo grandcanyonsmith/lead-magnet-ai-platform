@@ -5,6 +5,8 @@ Handles OpenAI API interactions for report generation and HTML rewriting.
 
 import logging
 import json
+import time
+from datetime import datetime
 from typing import Optional, Dict, Tuple, List, Any
 
 from core.logger import get_logger
@@ -25,9 +27,10 @@ logger = get_logger(__name__)
 class AIService:
     """Service for AI-powered content generation."""
     
-    def __init__(self):
+    def __init__(self, db_service: Optional[Any] = None, s3_service: Optional[S3Service] = None):
         """Initialize services."""
-        self.s3_service = S3Service()
+        self.db_service = db_service
+        self.s3_service = s3_service or S3Service()
         self.openai_client = OpenAIClient()
         self.image_handler = ImageHandler(self.s3_service)
         self.html_generator = HTMLGenerator(self.openai_client)
@@ -373,7 +376,7 @@ class AIService:
                 'tool_choice_value': params.get('tool_choice')
             })
             
-            # Make API call
+            # Make API call (stream when this is a workflow execution step so the UI can show live output)
             logger.info(f"[AI Service] Making OpenAI API call", extra={
                 'model': model,
                 'has_tools': 'tools' in params,
@@ -381,8 +384,92 @@ class AIService:
                 'has_tool_choice': 'tool_choice' in params,
                 'tool_choice': params.get('tool_choice')
             })
-            
-            response = self.openai_client.make_api_call(params)
+
+            step_order = (step_index + 1) if isinstance(step_index, int) else None
+            should_stream_live = (
+                self.db_service is not None
+                and isinstance(job_id, str)
+                and job_id.strip() != ""
+                and isinstance(step_order, int)
+                and step_order > 0
+                and not has_computer_use
+                and not has_shell
+            )
+
+            if should_stream_live:
+                # Persist a live preview of the current step output to DynamoDB for the frontend to poll.
+                # This is best-effort and intentionally throttled to avoid excessive writes.
+                max_chars = 100_000
+                output_so_far = ""
+                last_persist_ts = 0.0
+                last_persist_len = 0
+
+                def _truncate(text: str) -> Tuple[str, bool]:
+                    if len(text) <= max_chars:
+                        return text, False
+                    # Keep the most recent portion (more relevant while streaming)
+                    return text[-max_chars:], True
+
+                def _persist(status: str = "streaming", error: Optional[str] = None, force: bool = False) -> None:
+                    nonlocal last_persist_ts, last_persist_len
+                    if not self.db_service or not job_id or step_order is None:
+                        return
+                    now = time.time()
+                    if not force:
+                        # Throttle writes: at most ~2/sec or when we get a meaningful chunk.
+                        if (now - last_persist_ts) < 0.5 and (len(output_so_far) - last_persist_len) < 1024:
+                            return
+                    last_persist_ts = now
+                    last_persist_len = len(output_so_far)
+
+                    truncated_text, truncated = _truncate(output_so_far)
+                    live_step: Dict[str, Any] = {
+                        "step_order": step_order,
+                        "output_text": truncated_text,
+                        "updated_at": datetime.utcnow().isoformat(),
+                        "status": status,
+                    }
+                    if truncated:
+                        live_step["truncated"] = True
+                    if error:
+                        live_step["error"] = error
+                    try:
+                        self.db_service.update_job(job_id, {"live_step": live_step})
+                    except Exception as persist_err:
+                        logger.debug("[AI Service] Failed to persist live_step", extra={
+                            "job_id": job_id,
+                            "step_order": step_order,
+                            "error_type": type(persist_err).__name__,
+                            "error_message": str(persist_err),
+                        })
+
+                # Initialize live stream record
+                _persist(status="streaming", force=True)
+
+                try:
+                    api_params = (
+                        self.openai_client._sanitize_api_params(params)
+                        if hasattr(self.openai_client, "_sanitize_api_params")
+                        else dict(params)
+                    )
+                    # Stream output_text deltas and persist periodically
+                    with self.openai_client.client.responses.stream(**api_params) as stream:
+                        for ev in stream:
+                            ev_type = getattr(ev, "type", "") or ""
+                            if ev_type == "response.output_text.delta":
+                                delta = getattr(ev, "delta", "") or ""
+                                if not delta:
+                                    continue
+                                output_so_far += delta
+                                _persist(status="streaming", force=False)
+                        response = stream.get_final_response()
+                    # Persist final accumulated output before handing off (best-effort)
+                    _persist(status="final", force=True)
+                except Exception as stream_err:
+                    _persist(status="error", error=str(stream_err), force=True)
+                    raise
+            else:
+                response = self.openai_client.make_api_call(params)
             
             # Process response
             return self.openai_client.process_api_response(
