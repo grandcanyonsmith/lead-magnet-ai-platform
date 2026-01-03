@@ -98,4 +98,4 @@ jobs:
             --region ${{ env.AWS_REGION }}
           
           # Optional: Wait for update to be successful
-          aws lambda wait function-updated --function-name leadmagnet-api-handler
+          aws lambda wait function-updated --function-name leadmagnet-api-handler --region ${{ env.AWS_REGION }}
