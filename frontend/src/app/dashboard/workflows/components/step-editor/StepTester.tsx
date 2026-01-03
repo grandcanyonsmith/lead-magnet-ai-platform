@@ -337,7 +337,29 @@ export default function StepTester({ step, index }: StepTesterProps) {
                     }
                     
                     // Determine input_text from testInput or default
-                    let inputText = inputData.input_text || inputData.user_prompt || "Start the task.";
+                    const rawPrompt =
+                      (typeof inputData.input_text === "string" &&
+                      inputData.input_text.trim().length > 0
+                        ? inputData.input_text
+                        : undefined) ||
+                      (typeof inputData.user_prompt === "string" &&
+                      inputData.user_prompt.trim().length > 0
+                        ? inputData.user_prompt
+                        : undefined) ||
+                      "Start the task.";
+
+                    // Inject the full test input JSON into the model context so shell/CUA steps can
+                    // reference variables (e.g., {"coursetopic": "..."}), even when no explicit
+                    // user prompt is provided.
+                    const { input_text: _ignoredInputText, user_prompt: _ignoredUserPrompt, ...vars } =
+                      inputData || {};
+                    const varsJson =
+                      vars && Object.keys(vars).length > 0
+                        ? JSON.stringify(vars, null, 2)
+                        : "";
+                    const inputText = varsJson
+                      ? `Input variables (JSON):\n${varsJson}\n\nTask:\n${rawPrompt}`
+                      : rawPrompt;
                     
                     return {
                         job_id: `test-step-${Date.now()}`,

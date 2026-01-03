@@ -6,7 +6,7 @@
 
 import { Settings } from "@/types";
 import { FormField } from "./FormField";
-import { FiCopy, FiRefreshCw } from "react-icons/fi";
+import { FiCopy, FiRefreshCw, FiExternalLink } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import { useRegenerateWebhookToken } from "@/hooks/api/useSettings";
 import { WebhookTester } from "./WebhookTester";
@@ -18,6 +18,7 @@ import {
   GlobeAltIcon,
   PhoneIcon,
 } from "@heroicons/react/24/outline";
+import { useState, useEffect } from "react";
 
 interface DeliverySettingsProps {
   settings: Settings;
@@ -34,6 +35,13 @@ export function DeliverySettings({
 }: DeliverySettingsProps) {
   const { regenerateToken, loading: isRegenerating } =
     useRegenerateWebhookToken();
+  const [currentHost, setCurrentHost] = useState("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setCurrentHost(window.location.host);
+    }
+  }, []);
 
   const handleCopyWebhookUrl = async () => {
     if (settings.webhook_url) {
@@ -44,6 +52,28 @@ export function DeliverySettings({
         toast.error("Failed to copy to clipboard");
       }
     }
+  };
+
+  const handleCopyHost = async () => {
+    if (currentHost) {
+      try {
+        await navigator.clipboard.writeText(currentHost);
+        toast.success("Host copied to clipboard!");
+      } catch (error) {
+        toast.error("Failed to copy host");
+      }
+    }
+  };
+
+  const handleTestDomain = () => {
+    if (!settings.custom_domain) return;
+    const domain = settings.custom_domain.replace(/^https?:\/\//, "").replace(/\/$/, "");
+    // Try https first, but fall back to http if needed isn't really possible with window.open
+    // We'll just open the domain as entered or prefixed with https
+    const url = /^https?:\/\//.test(settings.custom_domain) 
+      ? settings.custom_domain 
+      : `https://${domain}`;
+    window.open(url, "_blank");
   };
 
   const handleRegenerateToken = async () => {
@@ -174,39 +204,86 @@ export function DeliverySettings({
         </CardHeader>
 
         <CardContent className="p-8 space-y-6">
-          <FormField
-            label="CRM Integration (Webhook)"
-            name="ghl_webhook_url"
-            type="url"
-            value={settings.ghl_webhook_url || ""}
-            onChange={(value) => onChange("ghl_webhook_url", value)}
-            error={errors?.ghl_webhook_url}
-            helpText="Your CRM/GoHighLevel webhook endpoint for SMS/Email delivery"
-            placeholder="https://api.crm.com/webhook/..."
-          />
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6">
             <FormField
-              label="Custom Domain"
-              name="custom_domain"
-              type="text"
-              value={settings.custom_domain || ""}
-              onChange={(value) => onChange("custom_domain", value)}
-              error={errors?.custom_domain}
-              placeholder="forms.yourdomain.com"
-              helpText="CNAME your domain to this app to use custom links."
+              label="CRM Integration (Webhook)"
+              name="ghl_webhook_url"
+              type="url"
+              value={settings.ghl_webhook_url || ""}
+              onChange={(value) => onChange("ghl_webhook_url", value)}
+              error={errors?.ghl_webhook_url}
+              helpText="Your CRM/GoHighLevel webhook endpoint for SMS/Email delivery"
+              placeholder="https://api.crm.com/webhook/..."
             />
 
-            <FormField
-              label="Lead Phone Field"
-              name="lead_phone_field"
-              type="text"
-              value={settings.lead_phone_field || ""}
-              onChange={(value) => onChange("lead_phone_field", value)}
-              error={errors?.lead_phone_field}
-              helpText='Field name in your form (e.g., "phone")'
-              placeholder="phone"
-            />
+            <div className="border-t border-gray-100 dark:border-gray-800 pt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-4">
+                  <FormField
+                    label="Custom Domain"
+                    name="custom_domain"
+                    type="text"
+                    value={settings.custom_domain || ""}
+                    onChange={(value) => onChange("custom_domain", value)}
+                    error={errors?.custom_domain}
+                    placeholder="forms.yourdomain.com"
+                  />
+                  
+                  <div className="rounded-lg bg-gray-50 dark:bg-gray-800/50 p-4 border border-gray-100 dark:border-gray-700">
+                    <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">Setup Instructions</h4>
+                    <ol className="list-decimal list-inside text-sm text-gray-600 dark:text-gray-400 space-y-2.5">
+                      <li>Log in to your DNS provider</li>
+                      <li>Create a <strong>CNAME</strong> record</li>
+                      <li>Set <strong>Name</strong> to your subdomain (e.g., <em>forms</em>)</li>
+                      <li>
+                        <div>Set <strong>Value</strong> to:</div>
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <code className="bg-white dark:bg-gray-900 px-2 py-1 rounded border border-gray-200 dark:border-gray-700 text-xs font-mono select-all break-all">
+                            {currentHost || "loading..."}
+                          </code>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={handleCopyHost} 
+                            className="h-7 w-7 p-0 shrink-0"
+                            title="Copy host"
+                          >
+                            <FiCopy className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </li>
+                    </ol>
+                    
+                    {settings.custom_domain && (
+                      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={handleTestDomain}
+                          className="w-full text-xs"
+                        >
+                          <FiExternalLink className="mr-2 h-3.5 w-3.5" />
+                          Test Configuration
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <FormField
+                    label="Lead Phone Field"
+                    name="lead_phone_field"
+                    type="text"
+                    value={settings.lead_phone_field || ""}
+                    onChange={(value) => onChange("lead_phone_field", value)}
+                    error={errors?.lead_phone_field}
+                    helpText='Field name in your form (e.g., "phone")'
+                    placeholder="phone"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

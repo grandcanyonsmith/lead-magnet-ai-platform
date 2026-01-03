@@ -58,6 +58,12 @@ backend/worker/**/*.py[cod]
 *.swo
 *~
 .DS_Store
+.cursor/debug.log
+*.orig
+*.rej
+
+# Vercel
+.vercel/
 
 # Secrets
 *.pem
@@ -100,6 +106,9 @@ backend/api/index.js
 frontend/out/
 frontend/.next/
 frontend/.next-dev/
+frontend/playwright-report/
+frontend/test-results/
+*.tsbuildinfo
 
 # Temporary job outputs
 job_outputs/
