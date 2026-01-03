@@ -12,6 +12,8 @@ ARG AWS_CLI_VERSION=2.27.54
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
     ca-certificates bash curl unzip \
+    # Python (some workflows use `python` helpers)
+    python3 python3-pip \
     # Playwright / Chromium dependencies
     libglib2.0-0 libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
     libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 \
@@ -26,6 +28,9 @@ RUN apt-get update \
   && curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-${AWS_ARCH}-${AWS_CLI_VERSION}.zip" -o "/tmp/awscliv2.zip" \
   && unzip -q /tmp/awscliv2.zip -d /tmp \
   && /tmp/aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update \
+  # Provide `python`/`pip` shims (Debian ships python3/pip3 but not always python/pip)
+  && ln -sf /usr/bin/python3 /usr/local/bin/python \
+  && ln -sf /usr/bin/pip3 /usr/local/bin/pip \
   && rm -rf /tmp/aws /tmp/awscliv2.zip \
   && rm -rf /var/lib/apt/lists/*
 
