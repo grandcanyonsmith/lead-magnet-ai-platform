@@ -39,16 +39,25 @@ class TrackingController {
     // Ensure this bucket is accessible by the lambda role
     const bucket = "cc360-pages"; 
     const timestamp = body.timestamp || Date.now();
-    const part = body.part_number || "full";
+    const contentType = body.content_type || "application/json";
     
-    // Key structure: leadmagnet/recordings/{tenantId}/{jobId}/{sessionId}/{timestamp}_{part}.json
-    const key = `leadmagnet/recordings/${tenantId}/${body.job_id}/${body.session_id}/${timestamp}_${part}.json`;
+    // Determine extension based on content type
+    let ext = "json";
+    if (contentType.includes("video/webm")) ext = "webm";
+    else if (contentType.includes("video/mp4")) ext = "mp4";
+    else if (contentType.includes("image/png")) ext = "png";
+    else if (contentType.includes("image/jpeg")) ext = "jpg";
+    
+    const part = body.part_number ? `_${body.part_number}` : "";
+    
+    // Key structure: leadmagnet/recordings/{tenantId}/{jobId}/{sessionId}/{timestamp}{part}.{ext}
+    const key = `leadmagnet/recordings/${tenantId}/${body.job_id}/${body.session_id}/${timestamp}${part}.${ext}`;
 
     // Generate presigned URL (valid for 15 minutes)
     const uploadUrl = await s3Service.getPresignedPutUrl(
       bucket,
       key,
-      "application/json",
+      contentType,
       900,
     );
 
@@ -113,6 +122,8 @@ class TrackingController {
       session_duration_seconds: body.session_duration_seconds,
       page_url: body.page_url,
       page_title: body.page_title,
+      recording_url: body.recording_url,
+      recording_key: body.recording_key,
     });
 
     return {
@@ -193,6 +204,67 @@ class TrackingController {
     return {
       statusCode: 200,
       body: result,
+    };
+  }
+
+  /**
+   * Get session recordings for a job (requires auth).
+   */
+  async getJobRecordings(
+    tenantId: string,
+    jobId: string,
+    queryParams: Record<string, any>,
+  ): Promise<RouteResponse> {
+    logger.info("[Tracking Controller] Getting job recordings", {
+      tenantId,
+      jobId,
+    });
+
+    // Verify job belongs to tenant
+    const job = await db.get(JOBS_TABLE, { job_id: jobId });
+    if (!job) {
+      throw new ApiError("Job not found", 404);
+    }
+
+    if (job.tenant_id !== tenantId) {
+      throw new ApiError(
+        "You do not have permission to access this job",
+        403,
+      );
+    }
+
+    const limit = queryParams.limit ? parseInt(queryParams.limit) : 50;
+
+    // Fetch raw events
+    const { events } = await trackingService.getJobEvents(
+      jobId,
+      tenantId,
+      1000, // Fetch more to filter down
+    );
+
+    // Filter for recording uploads
+    const recordings = events
+      .filter((e) => e.event_type === "recording_uploaded")
+      .map((e) => ({
+        event_id: e.event_id,
+        session_id: e.session_id,
+        created_at: e.created_at,
+        recording_url: e.recording_url,
+        recording_key: e.recording_key,
+        page_url: e.page_url,
+      }))
+      .sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      )
+      .slice(0, limit);
+
+    return {
+      statusCode: 200,
+      body: {
+        recordings,
+        count: recordings.length,
+      },
     };
   }
 }

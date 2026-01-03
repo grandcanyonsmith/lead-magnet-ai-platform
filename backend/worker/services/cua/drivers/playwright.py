@@ -70,12 +70,19 @@ class PlaywrightEnvironment(Environment):
         try:
             supported = {
                 "click",
+                "double_click",
+                "drag",
+                "drag_and_drop",
+                "move",
+                "hover",
+                "mouse_move",
                 "type",
                 "scroll",
                 "keypress",
                 "wait",
                 "screenshot",
                 "navigate",
+                "cursor_position",
             }
             if action_type not in supported:
                 with open("/Users/canyonsmith/lead-magnent-ai/.cursor/debug.log", "a") as f:
@@ -126,24 +133,46 @@ class PlaywrightEnvironment(Environment):
                 button = "left"
             await self.page.mouse.dblclick(x, y, button=button)
 
-        elif action_type == "drag_and_drop":
-            # Support coordinate-based drag and drop (e.g. from Anthropic computer use model)
-            # which usually sends: drag (start coords) -> drop (end coords) via move+down+move+up,
-            # BUT if it sends an explicit drag_and_drop action with source/target coords:
-            source_x = action.get("source_x") or action.get("x")
-            source_y = action.get("source_y") or action.get("y")
-            target_x = action.get("target_x")
-            target_y = action.get("target_y")
+        elif action_type in ("drag", "drag_and_drop"):
+            # OpenAI computer_use_preview emits `drag` with a `path` array:
+            #   { type: "drag", path: [{x,y}, {x,y}, ...] }
+            # We also support a legacy coordinate-based `drag_and_drop` shape.
+            path = action.get("path")
+            points = []
 
-            if source_x is None or source_y is None or target_x is None or target_y is None:
-                # If explicit coords missing, check for selectors? 
-                # For now assume model uses coordinates for computer use.
-                raise ValueError("Drag and drop action requires source_x, source_y, target_x, target_y")
-            
-            await self.page.mouse.move(source_x, source_y)
-            await self.page.mouse.down()
-            await self.page.mouse.move(target_x, target_y, steps=10) # smooth drag
-            await self.page.mouse.up()
+            if isinstance(path, (list, tuple)) and len(path) >= 2:
+                for p in path:
+                    if hasattr(p, "model_dump"):
+                        try:
+                            p = p.model_dump()
+                        except Exception:
+                            pass
+                    if isinstance(p, dict) and "x" in p and "y" in p:
+                        points.append((p.get("x"), p.get("y")))
+                # Filter out invalid points
+                points = [(x, y) for (x, y) in points if x is not None and y is not None]
+
+            if len(points) >= 2:
+                start_x, start_y = points[0]
+                await self.page.mouse.move(start_x, start_y)
+                await self.page.mouse.down()
+                for (x, y) in points[1:]:
+                    await self.page.mouse.move(x, y, steps=5)
+                await self.page.mouse.up()
+            else:
+                # Coordinate-based fallback
+                source_x = action.get("source_x") or action.get("start_x") or action.get("x")
+                source_y = action.get("source_y") or action.get("start_y") or action.get("y")
+                target_x = action.get("target_x") or action.get("end_x") or action.get("to_x") or action.get("x2")
+                target_y = action.get("target_y") or action.get("end_y") or action.get("to_y") or action.get("y2")
+
+                if source_x is None or source_y is None or target_x is None or target_y is None:
+                    raise ValueError("Drag action requires 'path' (>= 2 points) or source/target coordinates")
+
+                await self.page.mouse.move(source_x, source_y)
+                await self.page.mouse.down()
+                await self.page.mouse.move(target_x, target_y, steps=10)  # smooth drag
+                await self.page.mouse.up()
 
         elif action_type in ("move", "hover", "mouse_move"):
             # "move" is emitted by the model in some flows (e.g. to hover/reposition cursor)
