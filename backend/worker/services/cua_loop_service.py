@@ -242,31 +242,26 @@ class CUALoopService:
                         'type': 'computer_call_output',
                         'call_id': call_id,
                         'output': {
-                            'type': 'input_image',
+                            'type': 'computer_screenshot',
                             'image_url': f"data:image/png;base64,{screenshot_b64}"
                         }
                     }]
                     
-                    # Add execution error if present
+                    # Provide additional context via a standard message input item (no custom fields on tool outputs)
+                    notes = []
                     if execution_error:
-                        next_input[0]['error'] = execution_error
-                        next_input[0]['is_error'] = True
-                    
-                    # Add current_url if available
+                        notes.append(f"Computer action failed: {execution_error}")
                     if current_url:
-                        next_input[0]['current_url'] = current_url
-                    
-                    # Provide the S3 URL of the screenshot to the model
+                        notes.append(f"Current URL: {current_url}")
                     if screenshot_url:
-                         # Append it as a hidden field or explicit message in the output
-                        next_input[0]['output']['screenshot_s3_url'] = screenshot_url
-                        
-                        # Also add a clear system note about the screenshot location
-                        # This helps the model answer "return the object url" queries immediately
-                        # without needing to run extra tools.
-                        next_input[0]['output']['system_note'] = (
-                            f"Screenshot captured and uploaded to: {screenshot_url}. "
-                            "You can return this URL as the object URL."
+                        notes.append(f"Screenshot uploaded to: {screenshot_url}")
+                    if notes:
+                        next_input.append(
+                            {
+                                "type": "message",
+                                "role": "system",
+                                "content": [{"type": "input_text", "text": "\n".join(notes)}],
+                            }
                         )
                     
                     # Add acknowledged safety checks if any

@@ -1,0 +1,214 @@
+[
+  {
+    "step_order": 1,
+    "step_name": "Initial Market Research",
+    "instructions": "Conduct market research to understand industry trends and customer behavior.",
+    "description": "N/A",
+    "model": "gpt-5",
+    "tools": [
+      "web_search"
+    ]
+  },
+  {
+    "step_order": 2,
+    "step_name": "Profile Data Structuring",
+    "instructions": "Organize form inputs into a structured profile for personalization.",
+    "description": "N/A",
+    "model": "gpt-5",
+    "tools": [
+      "web_search"
+    ]
+  },
+  {
+    "step_order": 3,
+    "step_name": "Fears, Pains & Problems",
+    "instructions": "Identify and rank customer fears and pains.",
+    "description": "N/A",
+    "model": "o4-mini-deep-research",
+    "tools": [
+      "web_search"
+    ]
+  },
+  {
+    "step_order": 4,
+    "step_name": "Dreams & Desires",
+    "instructions": "Document customer dreams and desires.",
+    "description": "N/A",
+    "model": "gpt-5",
+    "tools": [
+      "web_search"
+    ]
+  },
+  {
+    "step_order": 5,
+    "step_name": "Values & Beliefs",
+    "instructions": "Identify customer values and beliefs.",
+    "description": "N/A",
+    "model": "gpt-5",
+    "tools": [
+      "web_search"
+    ]
+  },
+  {
+    "step_order": 6,
+    "step_name": "Authority & Credibility",
+    "instructions": "Build authority and credibility in the industry.",
+    "description": "N/A",
+    "model": "gpt-4o",
+    "tools": [
+      "web_search"
+    ]
+  },
+  {
+    "step_order": 7,
+    "step_name": "Competitors & Influencers",
+    "instructions": "Identify competitors and influencers.",
+    "description": "N/A",
+    "model": "gpt-4o",
+    "tools": [
+      "web_search"
+    ]
+  },
+  {
+    "step_order": 8,
+    "step_name": "Demographics & Psychographics",
+    "instructions": "Profile customer demographics and psychographics.",
+    "description": "N/A",
+    "model": "gpt-5",
+    "tools": [
+      "web_search"
+    ]
+  },
+  {
+    "step_order": 9,
+    "step_name": "Client Transformation",
+    "instructions": "Outline client transformation.",
+    "description": "N/A",
+    "model": "gpt-4o-mini",
+    "tools": [
+      "web_search"
+    ]
+  },
+  {
+    "step_order": 10,
+    "step_name": "Media Consumption & Influences Analysis",
+    "instructions": "Research audience media consumption.",
+    "description": "N/A",
+    "model": "o4-mini-deep-research",
+    "tools": [
+      "web_search"
+    ]
+  },
+  {
+    "step_order": 11,
+    "step_name": "Common Objections & Rebuttals",
+    "instructions": "Identify objections and prepare rebuttals.",
+    "description": "N/A",
+    "model": "gpt-5",
+    "tools": [
+      "web_search"
+    ]
+  },
+  {
+    "step_order": 12,
+    "step_name": "Competitive Advantage",
+    "instructions": "Identify unique selling propositions.",
+    "description": "N/A",
+    "model": "gpt-5",
+    "tools": [
+      "web_search"
+    ]
+  },
+  {
+    "step_order": 13,
+    "step_name": "Communication Style",
+    "instructions": "Determine optimal communication style.",
+    "description": "N/A",
+    "model": "gpt-4o-mini",
+    "tools": [
+      "web_search"
+    ]
+  },
+  {
+    "step_order": 14,
+    "step_name": "Brand Style Guide Extraction",
+    "instructions": "Extract brand style guide. Extract the brand's style guide, excluding SVGs, including font, logo, image URLs, colors, and website style. List out:\nColor Palette Variables\n\nPrimary Color\n\nSecondary Color\n\nAccent Color\n\nTypography Variables\n\nHeading Font\n\nBody Font\n\nVoice & Tone Variables\n\nDo\n\nClear\n\nProfessional\n\nFriendly\n\nTrustworthy\n\nDon\u2019t\n\nJargon\n\nCorporate speak\n\nOverly casual slang\n\nLogo Guideline Variables\n\nPrimary Logo\n\nImage URL\n\nUsage\n\nMinimum width\n\nClear space\n\nFormats\n\nLogo Variations\n\nInverse\n\nImage URL\n\nUsage\n\nIcon Only\n\nImage URL\n\nIf you can't find them, then list what would be best and only give one set of options...",
+    "description": "N/A",
+    "model": "gpt-5",
+    "tools": [
+      "web_search"
+    ]
+  },
+  {
+    "step_order": 15,
+    "step_name": "Buyer Persona Naming",
+    "instructions": "Generate names for buyer personas. create three each and map the three concerns and quotes from previously to each of the user personas along with the dreams and desires.",
+    "description": "N/A",
+    "model": "gpt-4o",
+    "tools": "N/A"
+  },
+  {
+    "step_order": 16,
+    "step_name": "Buyer Persona Image Generation",
+    "instructions": "Generate images for buyer personas. Place their names on the bottom and make three distinct images. make them look like polaroid photos with their names written at the bottom of the polaroid for each.",
+    "description": "N/A",
+    "model": "gpt-4o",
+    "tools": [
+      "image_generation"
+    ]
+  },
+  {
+    "step_order": 17,
+    "step_name": "Logo Recreation",
+    "instructions": "Recreate the company logo ensuring it meets specific dimensions and has a transparent background. only generate one logo. and make it the correct dimensions",
+    "description": "N/A",
+    "model": "gpt-5",
+    "tools": [
+      "image_generation"
+    ]
+  },
+  {
+    "step_order": 18,
+    "step_name": "Dark Mode Logo Recreation",
+    "instructions": "Create a dark mode version of the existing logo. Ensure it looks exactly like the previous logo, changing only the colors for contrast and visibility on dark backgrounds. Maintain transparency.",
+    "description": "N/A",
+    "model": "gpt-5",
+    "tools": [
+      "image_generation"
+    ]
+  },
+  {
+    "step_order": 19,
+    "step_name": "Logo Icon Generation",
+    "instructions": "Recreate the logo icon with a transparent background, ensuring accuracy and detail.",
+    "description": "N/A",
+    "model": "gpt-5",
+    "tools": [
+      "image_generation"
+    ]
+  },
+  {
+    "step_order": 20,
+    "step_name": "Data Submission & Automation",
+    "instructions": "Rewrite this key value pair but with all of the information included in the previous steps:\n\n{\n  \"brand\": {\n    \"name\": \"Integrity-First MBB Prep by Thabang Oliphant\",\n    \"documentTitle\": \"Integrity-First MBB Prep by Thabang Oliphant \u2013 360 ICP\",\n    \"updated\": \"2025-12-18\",\n    \"templateVersion\": \"1.0\"\n  },\n\n  \"section_1_foundational_story\": {\n    \"title\": \"From Imposter Syndrome to Offer-Ready\",\n    \"purpose\": \"The foundational narrative that shapes the journey\",\n    \"story\": \"Thabang Oliphant always wanted to break into MBB but battled the same doubt many candidates feel\u2014'am I really in the 1\u20132%?' He overprepared, discovering that resources were fragmented and rarely blended case, PEI, and the new digital screens. As an ex-McKinsey consultant, interviewer, and internally recognized Top Coach, he built the system he wished he\u2019d had: one integrity-first, interviewer-grade path that demystifies every step. The program combines firm-specific modules (McKinsey Solve, BCG Casey, Bain digital assessments), a PEI Story Bank Builder, and a single readiness rubric with go/no-go gates. With small-group hot-seat cohorts and premium 1:1 options, candidates replace overwhelm with a 6\u20138 week plan, practice exactly what interviewers say 'yes' to, and walk into interviews offer-ready\u2014without violating any firm rules.\"\n  },\n\n  \"section_2_offer\": {\n    \"productName\": \"Integrity-First MBB Interview Prep: Case, PEI & Digital Screens\",\n    \"priceFrom\": \"$199\",\n    \"shortDescription\": \"An interviewer-grade, integrity-first MBB prep system with firm-specific modules (McKinsey, BCG, Bain), a Digital Screens Lab, PEI Story Bank Builder, and a single readiness rubric to reach offer-ready in 6\u20138 weeks.\",\n\n    \"mainFeatures\": [\n      {\n        \"name\": \"Offer-Ready Readiness Rubric\",\n        \"benefit\": \"I know exactly what 'yes' looks like with a single scorecard and go/no-go gates before real rounds.\"\n      },\n      {\n        \"name\": \"Digital Screens Lab (Casey, Solve, Bain)\",\n        \"benefit\": \"I run timed, compliant drills for BCG Casey (including video close), McKinsey Solve-relevant skills, and Bain\u2019s digital screens.\"\n      },\n      {\n        \"name\": \"PEI Story Bank Builder\",\n        \"benefit\": \"I build 6\u20138 polished PEI stories mapped to leadership, impact, and drive using an interviewer-grade rubric.\"\n      },\n      {\n        \"name\": \"Interviewer-Grade Mock Debriefs\",\n        \"benefit\": \"I receive written action plans after every mock aligned to evaluator criteria so I don\u2019t entrench bad habits.\"\n      },\n      {\n        \"name\": \"Integrity-First Policy & Compliance Guides\",\n        \"benefit\": \"I follow a clear policy aligned to firm rules: no AI tools, no screen overlays, no leaked content\u2014ever.\"\n      },\n      {\n        \"name\": \"High-Yield Math & Exhibit Drills\",\n        \"benefit\": \"I sharpen high-yield mental math, sanity checks, and exhibit synthesis to reduce errors and increase insight density.\"\n      },\n      {\n        \"name\": \"Hot-Seat Cohorts (Level-Matched)\",\n        \"benefit\": \"I practice in small, level-matched cohorts (6\u20138) with hot-seat reps and live feedback each session.\"\n      },\n      {\n        \"name\": \"AI-Aware Problem Solving (No AI in assessments)\",\n        \"benefit\": \"I learn modern analytics reasoning and prompt-quality thinking\u2014without using AI during assessments.\"\n      },\n      {\n        \"name\": \"Templates & Checklists Library\",\n        \"benefit\": \"I use case structures, PEI storyboards, mock rubrics, logistics checklists, and scheduling templates.\"\n      },\n      {\n        \"name\": \"Optional Community & Q&A\",\n        \"benefit\": \"I join moderated Q&A, an optional Slack, and I can keep my camera off with confidentiality by default.\"\n      }\n    ],\n\n    \"uniqueMechanism\": {\n      \"tagline\": \"One calibrated path. One rubric. Offer-ready in 6\u20138 weeks.\",\n      \"description\": \"An interviewer-grade, integrity-first system combining a readiness rubric, digital screens lab, and PEI Story Bank so candidates know exactly when they\u2019re offer-ready.\"\n    },\n\n    \"deliveryAndSupport\": {\n      \"format\": \"Self-paced modules, timed drills, case/exhibit/math practice, BCG Casey simulations, PEI Story Bank Builder, readiness rubric; optional live bootcamps and 1:1 coaching\",\n      \"access\": \"6-month course access (covers recruiting window) with quarterly updates; templates downloadable for lifetime use\",\n      \"community\": \"Optional moderated Slack with anonymity and camera-off options; confidentiality by default; recordings only on consent\",\n      \"advisory\": \"Educational interview preparation; not affiliated with or endorsed by McKinsey, BCG, or Bain; respect firm integrity rules\",\n      \"investment\": {\n        \"asyncCourse\": \"$199\u2013$399\",\n        \"bootcamp\": \"$499\u2013$799\",\n        \"oneOnOne\": \"$1,500\u2013$2,500\",\n        \"notes\": \"Diagnostic credit available; integrity-first policy\"\n      }\n    }\n  },\n\n  \"section_3_fears_pains\": {\n    \"pains\": [\n      {\n        \"title\": \"Imposter syndrome\u2014fear I\u2019m not MBB material\",\n        \"painScore\": 93,\n        \"description\": \"I doubt I belong in the 1\u20132% until I see proof that I\u2019m ready.\",\n        \"quotes\": [\n          \"I\u2019m not sure I belong in the 1\u20132% MBB hires.\",\n          \"I second-guess every answer and worry I\u2019ll freeze.\",\n          \"I need someone to show me exactly what 'yes' looks like.\"\n        ]\n      },\n      {\n        \"title\": \"Evolving formats (Casey/Solve) feel like unknown traps\",\n        \"painScore\": 88,\n        \"description\": \"Digital screens feel unpredictable without compliant practice.\",\n        \"quotes\": [\n          \"BCG\u2019s Casey and McKinsey\u2019s Solve feel mysterious.\",\n          \"I don\u2019t want surprises from new digital screens.\",\n          \"I need timed, compliant drills.\"\n        ]\n      },\n      {\n        \"title\": \"Fragmented prep\u2014no single end-to-end plan\",\n        \"painScore\": 87,\n        \"description\": \"Prep is scattered across resources with no cohesive system.\",\n        \"quotes\": [\n          \"I\u2019m piecing together YouTube, casebooks, and forums.\",\n          \"I keep wondering what I\u2019m missing.\",\n          \"I want one system.\"\n        ]\n      },\n      {\n        \"title\": \"Time crunch\u2014lots of cases, no confidence\",\n        \"painScore\": 85,\n        \"description\": \"Volume without clarity wastes time.\",\n        \"quotes\": [\n          \"I don\u2019t have time for 50 random cases.\",\n          \"I need 80/20 focus.\",\n          \"Tell me when to stop practicing.\"\n        ]\n      }\n    ]\n  },\n\n  \"section_4_dreams_desires\": {\n    \"dreams\": [\n      {\n        \"title\": \"Earn an MBB offer with confidence\",\n        \"visionSnapshot\": \"I convert finals into offers and choose my office.\",\n        \"emotionalWin\": \"I feel recognized and secure.\",\n        \"tangibleMilestones\": \"Convert at least one final round to an offer.\"\n      },\n      {\n        \"title\": \"Be interviewer-calibrated in 6\u20138 weeks\",\n        \"visionSnapshot\": \"Offer-ready with targeted reps.\",\n        \"emotionalWin\": \"I feel calm and in control.\",\n        \"tangibleMilestones\": \"Complete 6\u20138 week plan with weekly live reps.\"\n      },\n      {\n        \"title\": \"Master PEI with spiky stories\",\n        \"visionSnapshot\": \"6\u20138 stories scoring Strong Hire.\",\n        \"emotionalWin\": \"I feel authentic and proud.\",\n        \"tangibleMilestones\": \"Build 6\u20138 PEI storyboards.\"\n      }\n    ]\n  },\n\n  \"section_5_authority\": {\n    \"headline\": \"Ex-McKinsey interviewer & Top Coach; 1,000+ coaching sessions; 90% success rate\",\n    \"historicalResults\": [\n      \"Ex-McKinsey consultant and interviewer\",\n      \"150+ interviews at McKinsey\",\n      \"1,000+ coaching sessions overall\"\n    ],\n    \"recentResults\": [\n      \"Digital Screens Lab launched (2025)\",\n      \"Offer-Ready rubric with five-mock gates (2025)\",\n      \"Integrity-First Policy published (2025)\"\n    ],\n    \"createdResults\": [\n      \"Candidates reached Strong Hire streaks\",\n      \"ADP and international candidates translated backgrounds successfully\",\n      \"Experienced hires passed final rounds\"\n    ]\n  },\n\n  \"section_6_competitors\": {\n    \"directCompetitors\": [\n      { \"name\": \"CaseCoach\", \"pricing\": \"$139 + coaching\" },\n      { \"name\": \"RocketBlocks\", \"pricing\": \"$35/month\" },\n      { \"name\": \"MyConsultingCoach\", \"pricing\": \"$375 lifetime\" },\n      { \"name\": \"Management Consulted\", \"pricing\": \"$2,250 bundles\" }\n    ],\n    \"indirectCompetitors\": [\n      \"PrepLounge\",\n      \"Crafting Cases\",\n      \"YouTube / Free Prep\"\n    ],\n    \"influencers\": [\n      \"Victor Cheng\",\n      \"Management Consulted\",\n      \"Crafting Cases\",\n      \"Firmsconsulting\"\n    ]\n  },\n\n  \"section_7_demographics_psychographics\": {\n    \"demographics\": {\n      \"age\": \"24\u201334 (secondary 35\u201345)\",\n      \"location\": \"Global\",\n      \"income\": \"$50k\u2013$150k\",\n      \"education\": \"MBA, PhD, MD, JD, Masters\",\n      \"occupation\": \"MBA, ADP/ADC, experienced hires\"\n    },\n    \"psychographics\": {\n      \"values\": [\n        \"Preparation beats pedigree\",\n        \"Calibration beats volume\",\n        \"Integrity matters\"\n      ],\n      \"personality\": [\n        \"Analytical\",\n        \"Coach-able\",\n        \"Resilient\"\n      ]\n    }\n  },\n\n  \"section_8_core_values\": {\n    \"values\": [\n      \"Integrity\",\n      \"Evidence\",\n      \"Efficiency\",\n      \"Coachability\",\n      \"Professionalism\",\n      \"Belonging\",\n      \"Service\"\n    ]\n  },\n\n  \"section_9_transformation\": {\n    \"beforeState\": \"Scattered, anxious, unsure what interviewers want.\",\n    \"afterState\": \"Calibrated, confident, offer-ready.\",\n    \"emotionalShift\": \"From imposter to competitor.\"\n  },\n\n  \"section_10_media_consumption\": {\n    \"platforms\": [\"LinkedIn\", \"YouTube\", \"Reddit\", \"X\"],\n    \"blogs\": [\"CaseCoach\", \"RocketBlocks\", \"Management Consulted\"],\n    \"books\": [\n      \"Case Interview Secrets\",\n      \"Case in Point\",\n      \"The Pyramid Principle\"\n    ],\n    \"podcasts\": [\n      \"Strategy Simplified\",\n      \"Strategy Skills\",\n      \"The Case Interview Podcast\"\n    ]\n  },\n\n  \"section_11_objections\": {\n    \"commonObjections\": [\n      {\n        \"objection\": \"I don\u2019t have time\",\n        \"rebuttal\": \"We compress to the 20% that drives 80% of outcomes.\"\n      },\n      {\n        \"objection\": \"I\u2019ve tried similar things\",\n        \"rebuttal\": \"This is interviewer-grade calibration, not content.\"\n      },\n      {\n        \"objection\": \"Is it compliant?\",\n        \"rebuttal\": \"Integrity-First Policy aligned to firm rules.\"\n      }\n    ]\n  },\n\n  \"section_12_competitive_advantage\": {\n    \"uniqueValueProposition\": [\n      \"Integrity-first system\",\n      \"Visible offer-ready score\",\n      \"Firm-specific digital prep\",\n      \"PEI Story Bank with rubrics\",\n      \"Five-mock streak gates\"\n    ],\n    \"funElements\": [\n      \"Streak trackers\",\n      \"Readiness badges\",\n      \"Cohort challenges\"\n    ]\n  },\n\n  \"section_13_communication_style\": {\n    \"tone\": \"Direct, calm, interviewer-grade, encouraging\",\n    \"languageStyle\": \"Top-down, concise, evaluator-grade\",\n    \"avoid\": [\n      \"Hype\",\n      \"Vague secrets\",\n      \"Overpromising\",\n      \"Jargon\"\n    ]\n  },\n\n  \"brand_style_guide\": {\n    \"colors\": {\n      \"primary\": \"#0B2A3C\",\n      \"secondary\": \"#2F3A46\",\n      \"accent\": \"#0EA5E9\"\n    },\n    \"typography\": {\n      \"headings\": \"Manrope\",\n      \"body\": \"Inter\"\n    },\n    \"logos\": {\n      \"primary\": \"https://leadmagnet-artifacts-471112574622.s3.us-east-1.amazonaws.com/cust_84c8e438/jobs/job_01KCRBGX8WND3NSRY91ZHYBEHK/thabang_oliphant_logo.png\",\n      \"inverse\": \"https://leadmagnet-artifacts-471112574622.s3.us-east-1.amazonaws.com/cust_84c8e438/jobs/job_01KCRBGX8WND3NSRY91ZHYBEHK/dark_mode_logo_design_2.png\",\n      \"icon\": \"https://leadmagnet-artifacts-471112574622.s3.us-east-1.amazonaws.com/cust_84c8e438/jobs/job_01KCRBGX8WND3NSRY91ZHYBEHK/logo_icon_blue_gradient_2.png\"\n    }\n  }\n}",
+    "description": "N/A",
+    "model": "gpt-5",
+    "tools": "N/A"
+  },
+  {
+    "step_order": 21,
+    "step_name": "Data Submission & Automation",
+    "instructions": "N/A",
+    "description": "N/A",
+    "model": "N/A",
+    "tools": "N/A"
+  },
+  {
+    "step_order": 22,
+    "step_name": "HTML Generation",
+    "instructions": "You are an expert HTML/CSS designer.\nYou must generate the FINAL lead magnet deliverable as a complete, standalone HTML5 document.\nYou will be given TEMPLATE_HTML as a style reference and CONTENT to present.\n\nHard requirements:\n- Output ONLY the final HTML (no markdown fences, no commentary).\n- Output MUST be a complete HTML document (<html>...</html>) and should include a <head> with styles.\n- Use the TEMPLATE_HTML's design language (layout, typography, colors, spacing, components).\n- Do NOT output a landing page or lead capture form unless the provided content explicitly requires it.\n- Preserve the meaning and details from CONTENT; rewrite for readability.\n- Keep it responsive and mobile-friendly.\n",
+    "description": "N/A",
+    "model": "gpt-5",
+    "tools": "N/A"
+  }
+]

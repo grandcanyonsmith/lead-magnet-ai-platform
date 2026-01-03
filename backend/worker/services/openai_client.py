@@ -32,9 +32,23 @@ class OpenAIClient:
         """
         Remove internal-only keys that should never be sent to OpenAI.
         """
+        def _strip_key_recursive(obj: Any, key_to_strip: str) -> Any:
+            if isinstance(obj, dict):
+                return {
+                    k: _strip_key_recursive(v, key_to_strip)
+                    for k, v in obj.items()
+                    if k != key_to_strip
+                }
+            if isinstance(obj, list):
+                return [_strip_key_recursive(v, key_to_strip) for v in obj]
+            return obj
+
         api_params = dict(params)
         api_params.pop("job_id", None)
         api_params.pop("tenant_id", None)
+        # The Responses API rejects unknown fields on input items; we sometimes annotate
+        # internal events with `is_error`, so strip it defensively before sending.
+        api_params = _strip_key_recursive(api_params, "is_error")
         return api_params
 
     def generate_images(
