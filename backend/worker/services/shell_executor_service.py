@@ -270,6 +270,27 @@ class ShellExecutorService:
 
         session_dir.mkdir(parents=True, exist_ok=True)
 
+        # Local dev convenience:
+        # - macOS often has `python3` but not `python`
+        # - some workflow steps use `python ...`
+        # Create a tiny shim so `python` resolves to `python3` in local mode.
+        shim_dir: Optional[Path] = None
+        try:
+            shim_dir = session_dir / ".lm-bin"
+            shim_dir.mkdir(parents=True, exist_ok=True)
+
+            if shutil.which("python") is None and shutil.which("python3") is not None:
+                python_shim = shim_dir / "python"
+                python_shim.write_text('#!/bin/bash\nexec python3 "$@"\n', encoding="utf-8")
+                python_shim.chmod(0o755)
+
+            if shutil.which("pip") is None and shutil.which("pip3") is not None:
+                pip_shim = shim_dir / "pip"
+                pip_shim.write_text('#!/bin/bash\nexec pip3 "$@"\n', encoding="utf-8")
+                pip_shim.chmod(0o755)
+        except Exception:
+            shim_dir = None
+
         per_cmd_timeout_s: Optional[float] = None
         if timeout_ms and int(timeout_ms) > 0:
             per_cmd_timeout_s = float(int(timeout_ms)) / 1000.0
@@ -286,16 +307,24 @@ class ShellExecutorService:
         output_items: List[Dict[str, Any]] = []
         for cmd in commands:
             cmd_str = str(cmd)
+            cmd_to_run = cmd_str
+            if shim_dir is not None:
+                # Use bash -l, so PATH may be reset by /etc/profile; export after login init.
+                cmd_to_run = f'export PATH="{str(shim_dir)}:$PATH"\n{cmd_str}'
             try:
                 completed = subprocess.run(
-                    ["bash", "-lc", cmd_str],
+                    ["bash", "-lc", cmd_to_run],
                     cwd=str(session_dir),
                     capture_output=True,
-                    text=True,
+                    text=False,
                     timeout=per_cmd_timeout_s,
                 )
-                stdout = completed.stdout or ""
-                stderr = completed.stderr or ""
+                stdout_bytes = completed.stdout or b""
+                stderr_bytes = completed.stderr or b""
+
+                # Decode safely
+                stdout = stdout_bytes.decode("utf-8", errors="replace")
+                stderr = stderr_bytes.decode("utf-8", errors="replace")
 
                 if max_len is not None:
                     stdout = stdout[:max_len]
@@ -307,18 +336,13 @@ class ShellExecutorService:
                     "outcome": {"type": "exit", "exit_code": int(completed.returncode)},
                 })
             except subprocess.TimeoutExpired as te:
-                stdout = te.stdout or ""
-                stderr = te.stderr or ""
-                if not isinstance(stdout, str):
-                    try:
-                        stdout = stdout.decode("utf-8", errors="replace")
-                    except Exception:
-                        stdout = ""
-                if not isinstance(stderr, str):
-                    try:
-                        stderr = stderr.decode("utf-8", errors="replace")
-                    except Exception:
-                        stderr = ""
+                stdout_bytes = te.stdout or b""
+                stderr_bytes = te.stderr or b""
+                
+                # Decode safely
+                stdout = stdout_bytes.decode("utf-8", errors="replace")
+                stderr = stderr_bytes.decode("utf-8", errors="replace")
+                
                 if max_len is not None:
                     stdout = stdout[:max_len]
                     stderr = stderr[:max_len]
