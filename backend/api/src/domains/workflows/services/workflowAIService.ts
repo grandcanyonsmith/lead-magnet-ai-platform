@@ -57,6 +57,7 @@ ${AVAILABLE_MODELS.join(', ')}
 - **web_search**: Essential for research, verification, and gathering live data.
 - **code_interpreter**: For data analysis, complex math, or file processing.
 - **image_generation**: For creating custom visuals.
+- **computer_use_preview**: (Rare) Only for browser automation.
 - **shell**: For advanced system operations (use sparingly).
 
 ## Modification Guidelines
@@ -76,6 +77,15 @@ ${AVAILABLE_MODELS.join(', ')}
    - If adding a step at index 0, shift all other indices in \`depends_on\` arrays.
    - Ensure the flow is logical: Research -> Analysis -> Creation -> Formatting.
 
+4. **Autonomy (No Human-in-the-Loop)**:
+   - The workflow runs end-to-end without pausing for user interaction.
+   - Do **NOT** ask for confirmation, ask follow-up questions, or say things like "Let me know if you'd like me to continue".
+   - If information is missing, make reasonable assumptions and proceed.
+
+5. **Per-Step Output Controls**:
+   - Choose \`reasoning_effort\` per step ("low" for simple transforms, "high/xhigh" for deep strategy/research/synthesis).
+   - Choose \`text_verbosity\` per step ("low" for concise outputs, "high" for detailed reports).
+
 ## Response Format
 Return a JSON object:
 {
@@ -86,6 +96,9 @@ Return a JSON object:
       "step_name": string,
       "step_description": string,
       "model": string,
+      "reasoning_effort": "none" | "low" | "medium" | "high" | "xhigh",
+      "text_verbosity": "low" | "medium" | "high",
+      "max_output_tokens": number (optional),
       "instructions": string,
       "tools": string[],
       "tool_choice": "auto" | "required" | "none",
@@ -295,6 +308,36 @@ Please generate the updated workflow configuration with all necessary changes.`;
         if (!['auto', 'required', 'none'].includes(step.tool_choice || '')) {
           step.tool_choice = 'auto';
         }
+
+      // Validate reasoning_effort (optional)
+      if (
+        step.reasoning_effort &&
+        !['none', 'low', 'medium', 'high', 'xhigh'].includes(step.reasoning_effort)
+      ) {
+        step.reasoning_effort = 'high';
+      }
+
+      // Validate text_verbosity (optional)
+      if (
+        step.text_verbosity &&
+        !['low', 'medium', 'high'].includes(step.text_verbosity)
+      ) {
+        delete step.text_verbosity;
+      }
+
+      // Validate max_output_tokens (optional)
+      if (step.max_output_tokens !== undefined) {
+        if (
+          typeof step.max_output_tokens !== 'number' ||
+          !Number.isFinite(step.max_output_tokens) ||
+          step.max_output_tokens < 1
+        ) {
+          delete step.max_output_tokens;
+        } else {
+          // Keep integer semantics
+          step.max_output_tokens = Math.floor(step.max_output_tokens);
+        }
+      }
 
         // Validate and clean up depends_on
         if (step.depends_on) {
