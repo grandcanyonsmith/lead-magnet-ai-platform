@@ -71,6 +71,29 @@ export async function openJobDocumentInNewTab(
   }
 
   const { fallbackUrl, revokeAfterMs = 5000, successToast } = options;
+  // IMPORTANT: Open the tab synchronously (before any `await`) to avoid popup blockers.
+  const newWindow = window.open("", "_blank", "noopener,noreferrer");
+
+  if (
+    !newWindow ||
+    newWindow.closed ||
+    typeof newWindow.closed === "undefined"
+  ) {
+    toast.error(
+      "Popup blocked. Please allow popups for this site and try again.",
+    );
+    return "popup_blocked";
+  }
+
+  // Best-effort: give the user something to look at while we fetch/build the blob URL.
+  try {
+    newWindow.document.title = "Opening document…";
+    newWindow.document.body.innerHTML =
+      "<p style=\"font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 24px;\">Preparing your document…</p>";
+  } catch {
+    // Ignore — access may be restricted depending on browser/security settings.
+  }
+
   let blobUrl: string | null = null;
 
   try {
@@ -80,19 +103,8 @@ export async function openJobDocumentInNewTab(
       throw new Error("Failed to create blob URL");
     }
 
-    const newWindow = window.open(blobUrl, "_blank", "noopener,noreferrer");
-
-    if (
-      !newWindow ||
-      newWindow.closed ||
-      typeof newWindow.closed === "undefined"
-    ) {
-      toast.error(
-        "Popup blocked. Please allow popups for this site and try again.",
-      );
-      URL.revokeObjectURL(blobUrl);
-      return "popup_blocked";
-    }
+    // Navigate the already-opened tab to the blob URL.
+    newWindow.location.href = blobUrl;
 
     window.setTimeout(() => {
       if (blobUrl) {
@@ -107,7 +119,8 @@ export async function openJobDocumentInNewTab(
     return "opened";
   } catch (error: unknown) {
     if (fallbackUrl) {
-      window.open(fallbackUrl, "_blank", "noopener,noreferrer");
+      // Use the already-opened tab; avoids a second popup attempt.
+      newWindow.location.href = fallbackUrl;
       toast.error(
         "Could not open via secure viewer — opened direct link instead.",
       );
@@ -120,6 +133,11 @@ export async function openJobDocumentInNewTab(
     toast.error(getUserFacingErrorMessage(error));
     if (blobUrl) {
       URL.revokeObjectURL(blobUrl);
+    }
+    try {
+      newWindow.close();
+    } catch {
+      // ignore
     }
     return "error";
   }

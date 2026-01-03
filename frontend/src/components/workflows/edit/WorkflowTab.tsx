@@ -1,5 +1,7 @@
-"use client";
-
+import { useState } from "react";
+import { useWorkflowAI } from "@/hooks/useWorkflowAI";
+import { WorkflowStep, WorkflowFormData } from "@/types/workflow";
+import { toast } from "react-hot-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
@@ -7,7 +9,11 @@ import { Textarea } from "@/components/ui/Textarea";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Separator } from "@/components/ui/Separator";
-import { Sparkles, Zap, ChevronDown, ChevronUp } from "lucide-react";
+import { Sparkles, Zap, ChevronDown, ChevronUp, LayoutTemplate } from "lucide-react";
+import WorkflowFlowchart from "@/app/dashboard/workflows/components/WorkflowFlowchart";
+import FlowchartSidePanel from "@/app/dashboard/workflows/components/FlowchartSidePanel";
+import WorkflowTriggerSidePanel from "@/app/dashboard/workflows/components/WorkflowTriggerSidePanel";
+import { WorkflowDiffPreview } from "./WorkflowDiffPreview";
 
 interface WorkflowTabProps {
   workflowId: string;
