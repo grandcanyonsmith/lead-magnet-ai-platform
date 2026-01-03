@@ -116,6 +116,35 @@ class PlaywrightEnvironment(Environment):
                 button = "left"
             await self.page.mouse.click(x, y, button=button)
 
+        elif action_type == "double_click":
+            x = action.get("x")
+            y = action.get("y")
+            button = str(action.get("button", "left")).lower()
+            if x is None or y is None:
+                raise ValueError("Double click action requires x and y")
+            if button not in ("left", "right", "middle"):
+                button = "left"
+            await self.page.mouse.dblclick(x, y, button=button)
+
+        elif action_type == "drag_and_drop":
+            # Support coordinate-based drag and drop (e.g. from Anthropic computer use model)
+            # which usually sends: drag (start coords) -> drop (end coords) via move+down+move+up,
+            # BUT if it sends an explicit drag_and_drop action with source/target coords:
+            source_x = action.get("source_x") or action.get("x")
+            source_y = action.get("source_y") or action.get("y")
+            target_x = action.get("target_x")
+            target_y = action.get("target_y")
+
+            if source_x is None or source_y is None or target_x is None or target_y is None:
+                # If explicit coords missing, check for selectors? 
+                # For now assume model uses coordinates for computer use.
+                raise ValueError("Drag and drop action requires source_x, source_y, target_x, target_y")
+            
+            await self.page.mouse.move(source_x, source_y)
+            await self.page.mouse.down()
+            await self.page.mouse.move(target_x, target_y, steps=10) # smooth drag
+            await self.page.mouse.up()
+
         elif action_type in ("move", "hover", "mouse_move"):
             # "move" is emitted by the model in some flows (e.g. to hover/reposition cursor)
             x = action.get("x")
@@ -157,15 +186,29 @@ class PlaywrightEnvironment(Environment):
                         "CMD": "Meta",
                         "COMMAND": "Meta",
                         "META": "Meta",
+                        "WIN": "Meta",
+                        "WINDOWS": "Meta",
+                        "SUPER": "Meta",
                         "ALT": "Alt",
                         "OPTION": "Alt",
                         "SHIFT": "Shift",
                         "ENTER": "Enter",
+                        "RETURN": "Enter",
                         "ESC": "Escape",
                         "ESCAPE": "Escape",
                         "BACKSPACE": "Backspace",
+                        "DELETE": "Delete",
+                        "DEL": "Delete",
                         "SPACE": "Space",
                         "TAB": "Tab",
+                        "UP": "ArrowUp",
+                        "DOWN": "ArrowDown",
+                        "LEFT": "ArrowLeft",
+                        "RIGHT": "ArrowRight",
+                        "PAGEUP": "PageUp",
+                        "PAGEDOWN": "PageDown",
+                        "HOME": "Home",
+                        "END": "End",
                     }
                     mapped.append(mapping.get(s.upper(), s))
                 combo = "+".join(mapped)
@@ -186,15 +229,31 @@ class PlaywrightEnvironment(Environment):
             # No-op; screenshot captured each turn by agent
             return
 
+        elif action_type == "cursor_position":
+            # Return cursor position - not a standard action but useful
+            # Playwright doesn't easily expose cursor pos, so we track it or ignore
+            pass
+
         elif action_type == "navigate":
             url = action.get("url")
             if not url:
                 raise ValueError("Navigate action requires 'url'")
-            # Use commit instead of domcontentloaded for faster navigation
-            await self.page.goto(url, wait_until="commit", timeout=15000)
-            # Reduced wait - just wait for DOM, not network idle
+            
+            # Ensure URL has protocol
+            if not url.startswith("http://") and not url.startswith("https://"):
+                url = "https://" + url
+
             try:
-                await self.page.wait_for_load_state("domcontentloaded", timeout=2000)
+                # Use domcontentloaded for more reliable loading state than commit
+                # Increase timeout to 30s to be safe
+                await self.page.goto(url, wait_until="domcontentloaded", timeout=30000)
+            except Exception as e:
+                # Raise a clean error that the agent can report to the model
+                raise ValueError(f"Navigation failed: {str(e)}")
+
+            # Wait a bit for any client-side hydration
+            try:
+                await self.page.wait_for_timeout(2000)
             except Exception:
                 pass
 
