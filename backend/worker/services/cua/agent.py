@@ -3,7 +3,17 @@ import time
 import json
 import warnings
 import asyncio
+import io
+import base64
 from typing import List, Dict, Any, Optional, AsyncGenerator
+
+# Try to import PIL for image manipulation
+try:
+    from PIL import Image, ImageDraw, ImageColor
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
+
 from services.cua.types import (
     LogEvent, ActionCallEvent, ScreenshotEvent, 
     LoopCompleteEvent, SafetyCheckEvent, ActionExecutedEvent, CUAEvent
@@ -42,6 +52,64 @@ class CUAgent:
         self.image_handler = image_handler
         self.shell_executor = ShellExecutorService()
 
+    def _add_overlay_to_screenshot(self, screenshot_b64: str, action: Dict[str, Any]) -> str:
+        """
+        Adds visual overlay to screenshot based on action (e.g. click marker).
+        Returns base64 string of modified image.
+        """
+        if not HAS_PIL or not screenshot_b64:
+            return screenshot_b64
+
+        try:
+            # Decode
+            img_data = base64.b64decode(screenshot_b64)
+            img = Image.open(io.BytesIO(img_data)).convert("RGBA")
+            draw = ImageDraw.Draw(img, "RGBA")
+            
+            action_type = action.get("type")
+            x = action.get("x")
+            y = action.get("y")
+            
+            # Helper to draw a crosshair or circle
+            def draw_marker(cx, cy, color="red", size=20):
+                # Circle
+                draw.ellipse((cx - 10, cy - 10, cx + 10, cy + 10), outline=color, width=3)
+                # Crosshair
+                draw.line((cx - 15, cy, cx + 15, cy), fill=color, width=2)
+                draw.line((cx, cy - 15, cx, cy + 15), fill=color, width=2)
+
+            if action_type in ("click", "double_click") and x is not None and y is not None:
+                draw_marker(x, y, color="#ff0000") # Red for click
+                
+            elif action_type in ("move", "hover") and x is not None and y is not None:
+                draw_marker(x, y, color="#0000ff") # Blue for move
+                
+            elif action_type == "drag_and_drop":
+                 sx = action.get("source_x") or action.get("x")
+                 sy = action.get("source_y") or action.get("y")
+                 tx = action.get("target_x")
+                 ty = action.get("target_y")
+                 if sx and sy and tx and ty:
+                     draw_marker(sx, sy, color="#00ff00") # Green start
+                     draw_marker(tx, ty, color="#00ff00") # Green end
+                     draw.line((sx, sy, tx, ty), fill="#00ff00", width=2) # Line connecting
+            
+            elif action_type == "type":
+                # Maybe draw a text box indicator at top?
+                draw.rectangle((0, 0, img.width, 30), fill=(0, 0, 0, 128))
+                text = f"Type: {str(action.get('text', ''))[:50]}"
+                draw.text((10, 5), text, fill="white")
+
+            # Convert back to base64
+            buffered = io.BytesIO()
+            img = img.convert("RGB") # Convert back to RGB for JPEG
+            img.save(buffered, format="JPEG", quality=80)
+            return base64.b64encode(buffered.getvalue()).decode("utf-8")
+            
+        except Exception as e:
+            logger.warning(f"Failed to add overlay: {e}")
+            return screenshot_b64
+
     async def run_loop(
         self,
         openai_client: Any,
@@ -63,7 +131,7 @@ class CUAgent:
         screenshot_urls = []
         acknowledged_safety_checks = []
         recent_actions = []  # Track recent actions to detect loops
-        max_recent_actions = 5  # Keep last 5 actions for loop detection
+        max_recent_actions = 15  # Keep last 15 actions for loop detection (enough for threshold 10)
         
         # Suppress Pydantic warnings
         warnings.filterwarnings('ignore', category=UserWarning, module='pydantic')
@@ -167,7 +235,8 @@ class CUAgent:
                 initial_url = url_match.group(0).rstrip('.,;!?)')
             else:
                 # Pattern 2: Domain-like patterns (e.g., "bing.com", "go to example.com")
-                domain_pattern = r'(?:go to |visit |navigate to |open )?([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+)'
+                # Require at least 2 chars for TLD to avoid partial matches
+                domain_pattern = r'(?:go to |visit |navigate to |open )?([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*(?:\.[a-zA-Z]{2,}))'
                 domain_match = re.search(domain_pattern, url_search_text, re.IGNORECASE)
                 if domain_match:
                     domain = domain_match.group(1)
@@ -179,6 +248,8 @@ class CUAgent:
             target_url = initial_url if initial_url else "https://www.bing.com"
             initial_screenshot_b64_for_model: Optional[str] = None
             initial_current_url_for_model: Optional[str] = None
+            initial_nav_error: Optional[str] = None
+
             if initial_url:
                 yield LogEvent(type='log', timestamp=time.time(), level='info', message=f'Detected URL in task: {target_url}')
             else:
@@ -187,7 +258,13 @@ class CUAgent:
             try:
                 yield LogEvent(type='log', timestamp=time.time(), level='info', message=f'🌐 Navigate to: {target_url}')
                 await self.env.execute_action({'type': 'navigate', 'url': target_url})
-                # Capture screenshot after navigation
+            except Exception as e:
+                logger.warning(f"Failed to navigate to {target_url}: {e}")
+                initial_nav_error = str(e)
+                yield LogEvent(type='log', timestamp=time.time(), level='warning', message=f'Navigation failed: {e}')
+
+            # Always capture screenshot (even if nav failed, we want to see the error page or blank page)
+            try:
                 screenshot_b64 = await self.env.capture_screenshot()
                 current_url = await self.env.get_current_url()
                 initial_screenshot_b64_for_model = screenshot_b64
@@ -202,8 +279,7 @@ class CUAgent:
                 if url:
                     screenshot_urls.append(url)
             except Exception as e:
-                logger.warning(f"Failed to navigate to {target_url}: {e}")
-                yield LogEvent(type='log', timestamp=time.time(), level='warning', message=f'Navigation failed: {e}')
+                 logger.error(f"Initial screenshot failed: {e}")
 
             # 2. Initial Request
             initial_params = openai_client.build_api_params(
@@ -223,6 +299,10 @@ class CUAgent:
                 user_text = (input_text or "").strip() or "Start the task."
                 if initial_current_url_for_model:
                     user_text = f"{user_text}\n\n(Current URL: {initial_current_url_for_model})"
+                
+                if initial_nav_error:
+                    user_text = f"{user_text}\n\nWARNING: Initial navigation to {target_url} failed with error: {initial_nav_error}. Please check the URL or try a different one."
+
                 initial_params["input"] = [
                     {
                         "role": "user",
@@ -590,6 +670,21 @@ class CUAgent:
                         y = action.get('y', '?')
                         button = action.get('button', 'left')
                         action_details.append(f"🖱️ Click at ({x}, {y}) with {button} button")
+                    elif action_type == 'double_click':
+                        x = action.get('x', '?')
+                        y = action.get('y', '?')
+                        button = action.get('button', 'left')
+                        action_details.append(f"🖱️🖱️ Double Click at ({x}, {y}) with {button} button")
+                    elif action_type == 'drag_and_drop':
+                        sx = action.get("source_x") or action.get("x")
+                        sy = action.get("source_y") or action.get("y")
+                        tx = action.get("target_x")
+                        ty = action.get("target_y")
+                        action_details.append(f"✊ Drag from ({sx}, {sy}) to ({tx}, {ty})")
+                    elif action_type == 'hover':
+                        x = action.get('x', '?')
+                        y = action.get('y', '?')
+                        action_details.append(f"👆 Hover at ({x}, {y})")
                     elif action_type == 'type':
                         text = action.get('text', '')
                         action_details.append(f"⌨️ Type: {text[:100]}{'...' if len(text) > 100 else ''}")
@@ -624,6 +719,11 @@ class CUAgent:
                     )
 
                     # Execute Computer Action
+                    action_error = None
+                    # Pre-calculate overlay details if possible? 
+                    # Actually we do it after execution, but if we want to show WHERE we clicked, 
+                    # we need the action details. We already have them in 'action'.
+                    
                     try:
                         await self.env.execute_action(action)
                         yield ActionExecutedEvent(
@@ -647,6 +747,16 @@ class CUAgent:
                             action_signature = (
                                 f"click:{action.get('x', '')}:{action.get('y', '')}:{action.get('button', '')}"
                             )
+                        elif action_type == "double_click":
+                            action_signature = (
+                                f"dblclick:{action.get('x', '')}:{action.get('y', '')}:{action.get('button', '')}"
+                            )
+                        elif action_type == "drag_and_drop":
+                            action_signature = (
+                                f"drag:{action.get('source_x', '')}:{action.get('source_y', '')}:{action.get('target_x', '')}:{action.get('target_y', '')}"
+                            )
+                        elif action_type == "hover":
+                            action_signature = f"hover:{action.get('x', '')}:{action.get('y', '')}"
                         elif action_type == "scroll":
                             sx = action.get("scroll_x", action.get("delta_x", 0))
                             sy = action.get("scroll_y", action.get("delta_y", 0))
@@ -665,9 +775,24 @@ class CUAgent:
                         if len(recent_actions) > max_recent_actions:
                             recent_actions.pop(0)
                         
-                        # Check for loops: if same action repeated 3+ times in recent history
-                        if len(recent_actions) >= 3:
-                            if recent_actions[-1] == recent_actions[-2] == recent_actions[-3]:
+                        # Check for loops: if same action repeated in recent history
+                        # We use different thresholds for different actions
+                        # - Navigation/Clicks/Type: Strict (3 repeats) as these usually indicate stuck logic
+                        # - Keypress/Scroll/Wait: Loose (10 repeats) as these are often valid (e.g. scrolling down a long page)
+                        loop_threshold = 3
+                        if action_type in ['keypress', 'scroll', 'wait']:
+                            loop_threshold = 10
+                        
+                        if len(recent_actions) >= loop_threshold:
+                            # Check if the last N actions are identical
+                            is_loop = True
+                            last_action = recent_actions[-1]
+                            for i in range(2, loop_threshold + 1):
+                                if recent_actions[-i] != last_action:
+                                    is_loop = False
+                                    break
+                            
+                            if is_loop:
                                 # #region agent log
                                 try:
                                     with open('/Users/canyonsmith/lead-magnent-ai/.cursor/debug.log', 'a') as f:
@@ -682,13 +807,14 @@ class CUAgent:
                                                 "action_type": action_type,
                                                 "action_signature": action_signature,
                                                 "recent_actions": recent_actions[-5:],
+                                                "threshold": loop_threshold
                                             },
                                         }) + '\n')
                                 except Exception:
                                     pass
                                 # #endregion
                                 yield LogEvent(type='log', timestamp=time.time(), level='warning', 
-                                            message=f'⚠️ Detected repetitive action loop. Stopping to prevent infinite loop.')
+                                            message=f'⚠️ Detected repetitive action loop ({loop_threshold}x {action_type}). Stopping to prevent infinite loop.')
                                 yield LoopCompleteEvent(
                                     type='complete', timestamp=time.time(),
                                     final_text="", screenshots=screenshot_urls, 
@@ -710,6 +836,7 @@ class CUAgent:
                         await asyncio.sleep(wait_time / 1000.0)
                         
                     except Exception as e:
+                        action_error = str(e)
                         logger.error(f"Action failed: {e}")
                         yield ActionExecutedEvent(
                             type='action_executed', timestamp=time.time(),
@@ -721,13 +848,17 @@ class CUAgent:
                         await asyncio.sleep(500 / 1000.0)  # Short wait even on error
                     
                     # Capture Screenshot after computer action
+
                     try:
                         screenshot_b64 = await self.env.capture_screenshot()
                         current_url = await self.env.get_current_url()
                         
                         # Upload (using jpeg for faster uploads)
+                        # Create overlay for user visibility (S3), but keep clean for model
+                        screenshot_for_s3 = self._add_overlay_to_screenshot(screenshot_b64, action)
+                        
                         url = self.image_handler.upload_base64_image_to_s3(
-                            screenshot_b64, 'image/jpeg', tenant_id=tenant_id, job_id=job_id
+                            screenshot_for_s3, 'image/jpeg', tenant_id=tenant_id, job_id=job_id
                         )
 
                         # #region agent-nav-debug
@@ -772,6 +903,18 @@ class CUAgent:
                                 'image_url': f"data:image/jpeg;base64,{screenshot_b64}"
                             }
                         }
+                        
+                        if action_error:
+                            computer_output_item['is_error'] = True
+                            # Pass error details to the model using a content list
+                            computer_output_item['output'] = {
+                                "type": "content", 
+                                "content": [
+                                    {"type": "text", "text": f"Action failed: {action_error}"},
+                                    {"type": "input_image", "image_url": f"data:image/jpeg;base64,{screenshot_b64}"}
+                                ]
+                            }
+
                         if current_url:
                             computer_output_item['current_url'] = current_url
                         

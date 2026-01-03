@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Settings, FileText, LayoutTemplate, ChevronLeft, Save, AlertCircle } from "lucide-react";
+import { Settings, FileText, LayoutTemplate, ChevronLeft, Save, AlertCircle, ArrowLeft } from "lucide-react";
 import { api } from "@/lib/api";
 import { AIModel, Tool } from "@/types";
 import { useWorkflowEdit } from "@/hooks/useWorkflowEdit";
@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Separator } from "@/components/ui/Separator";
 import { Card } from "@/components/ui/Card";
+import { LoadingState } from "@/components/ui/LoadingState";
 import { useRouter } from "next/navigation";
 
 export default function EditWorkflowPage() {
@@ -276,39 +277,38 @@ export default function EditWorkflowPage() {
 
   if (loading) {
     return (
-      <div className="flex h-[50vh] items-center justify-center">
-        <div className="flex flex-col items-center gap-2">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="text-muted-foreground">Loading workflow...</p>
-        </div>
-      </div>
+      <LoadingState 
+        fullPage 
+        message="Loading workflow configuration..." 
+        variant="spinner" 
+      />
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 container max-w-7xl mx-auto pb-20">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sticky top-0 z-30 bg-background/95 backdrop-blur py-4 border-b">
+        <div className="flex items-center gap-3">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => router.back()}
-            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+            className="h-9 w-9 text-muted-foreground hover:text-foreground -ml-2"
           >
-            <ChevronLeft className="h-5 w-5" />
+            <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
                 Edit Lead Magnet
               </h1>
               {workflowEdit.workflowStatus === "draft" && (
-                <Badge variant="warning" className="uppercase tracking-wider">Draft</Badge>
+                <Badge variant="warning" className="uppercase tracking-wider text-[10px]">Draft</Badge>
               )}
             </div>
-            <p className="text-sm text-muted-foreground">
-              Customize your workflow, form, and design.
+            <p className="hidden sm:block text-sm text-muted-foreground">
+              Configure your workflow logic, intake form, and output design.
             </p>
           </div>
         </div>
@@ -327,8 +327,6 @@ export default function EditWorkflowPage() {
         </div>
       </div>
 
-      <Separator />
-
       {error && (
         <div className="rounded-lg border border-destructive/20 dark:border-destructive/40 bg-destructive/10 dark:bg-destructive/20 p-4 text-destructive dark:text-destructive">
           <div className="flex items-center gap-2 font-medium">
@@ -345,7 +343,7 @@ export default function EditWorkflowPage() {
         onValueChange={(value) => setActiveTab(value as any)}
         className="w-full"
       >
-        <div className="mb-6">
+        <div className="mb-8">
           <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
             <TabsTrigger value="workflow">
               <Settings className="mr-2 h-4 w-4" />
@@ -364,7 +362,7 @@ export default function EditWorkflowPage() {
           </TabsList>
         </div>
 
-        <TabsContent value="workflow" className="mt-0">
+        <TabsContent value="workflow" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
           <WorkflowTab
             workflowId={workflowId || ""}
             formData={formData}
@@ -396,7 +394,7 @@ export default function EditWorkflowPage() {
           />
         </TabsContent>
 
-        <TabsContent value="form" className="mt-0">
+        <TabsContent value="form" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
           {formId ? (
             <FormTab
               formFormData={formFormData}
@@ -425,7 +423,7 @@ export default function EditWorkflowPage() {
           )}
         </TabsContent>
 
-        <TabsContent value="template" className="mt-0">
+        <TabsContent value="template" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
           <TemplateTab
             templateData={templateData}
             templateLoading={templateLoading}
