@@ -122,7 +122,9 @@ class CUALoopService:
                     "4. UPLOADS: If the task involves uploading a screenshot, the system automatically uploads it. Use the provided URL.\n"
                 )
 
-            initial_params = openai_client.build_api_params(
+            # Prefer the pre-built params (includes service_tier/text.format/etc) and only
+            # override what the CUA loop needs (instructions/input/truncation).
+            initial_params = dict(params) if isinstance(params, dict) and params else openai_client.build_api_params(
                 model=model,
                 instructions=enhanced_instructions,
                 input_text=input_text,
@@ -130,8 +132,17 @@ class CUALoopService:
                 tool_choice=tool_choice,
                 has_computer_use=True
             )
-            # Add truncation parameter for computer use
-            initial_params['truncation'] = 'auto'
+            initial_params["model"] = model
+            initial_params["instructions"] = enhanced_instructions
+            initial_params["input"] = input_text
+            if "tools" not in initial_params:
+                initial_params["tools"] = tools
+            if tool_choice and tool_choice != "none":
+                initial_params["tool_choice"] = tool_choice
+            else:
+                initial_params.pop("tool_choice", None)
+            # Truncation parameter required for computer use
+            initial_params["truncation"] = "auto"
             
             # Make initial API call
             logger.info(f"[CUALoopService] Making initial CUA request")
@@ -273,26 +284,18 @@ class CUALoopService:
                     logger.error(f"[CUALoopService] Screenshot capture failed, cannot continue CUA loop")
                     break
                 
-                # Build next request params using build_api_params to ensure proper tool cleaning
-                next_params = openai_client.build_api_params(
-                    model=model,
-                    instructions=enhanced_instructions,  # Keep same instructions
-                    input_text='',  # Will be replaced with next_input
-                    tools=tools,
-                    tool_choice=tool_choice,
-                    has_computer_use=True
-                )
-                # Add truncation parameter for computer use
-                next_params['truncation'] = 'auto'
+                # Build next request params by reusing the initial params (preserves service_tier/text.format)
+                # and swapping in the tool output + previous_response_id.
+                next_params = dict(initial_params)
+                next_params["instructions"] = enhanced_instructions
+                next_params["input"] = next_input
+                next_params["truncation"] = "auto"
                 
                 # Use previous_response_id if available (recommended)
                 if previous_response_id:
-                    next_params['previous_response_id'] = previous_response_id
-                    next_params['input'] = next_input
+                    next_params["previous_response_id"] = previous_response_id
                 else:
-                    # Fallback: include all previous output items
-                    # This is more complex, so prefer previous_response_id
-                    next_params['input'] = next_input
+                    next_params.pop("previous_response_id", None)
                 
                 # Make next API call
                 logger.info(f"[CUALoopService] Sending screenshot back to model (iteration {iteration})")
