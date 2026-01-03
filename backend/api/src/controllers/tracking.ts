@@ -270,6 +270,8 @@ class TrackingController {
       if (sessionIdFilter && e.session_id !== sessionIdFilter) continue;
       if (!e.session_id || !e.created_at || !e.recording_url || !e.recording_key)
         continue;
+      // Only include rrweb JSON recordings here (exclude any video uploads, etc.)
+      if (!String(e.recording_key).toLowerCase().endsWith(".json")) continue;
 
       const part: RecordingPart = {
         event_id: e.event_id,
