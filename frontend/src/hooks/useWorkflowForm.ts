@@ -106,6 +106,33 @@ export function useWorkflowForm() {
     [],
   );
 
+  const addFormField = useCallback(() => {
+    setFormFieldsData((prev) => ({
+      ...prev,
+      form_fields_schema: {
+        fields: [
+          ...prev.form_fields_schema.fields,
+          {
+            field_id: `field_${Date.now()}`,
+            label: "New Question",
+            field_type: "text",
+            required: true,
+            placeholder: "",
+          },
+        ],
+      },
+    }));
+  }, []);
+
+  const removeFormField = useCallback((index: number) => {
+    setFormFieldsData((prev) => ({
+      ...prev,
+      form_fields_schema: {
+        fields: prev.form_fields_schema.fields.filter((_, i) => i !== index),
+      },
+    }));
+  }, []);
+
   const populateFromAIGeneration = useCallback(
     (result: {
       workflow?: {
@@ -171,6 +198,8 @@ export function useWorkflowForm() {
     updateTemplateData,
     updateFormFieldsData,
     updateFormField,
+    addFormField,
+    removeFormField,
     populateFromAIGeneration,
     reset,
   };
