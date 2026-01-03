@@ -32,6 +32,19 @@ export type ReasoningEffort = "none" | "low" | "medium" | "high" | "xhigh";
 
 export type TextVerbosity = "low" | "medium" | "high";
 
+export type ServiceTier = "auto" | "default" | "flex" | "scale" | "priority";
+
+export type OutputFormat =
+  | { type: "text" }
+  | { type: "json_object" }
+  | {
+      type: "json_schema";
+      name: string;
+      description?: string;
+      strict?: boolean;
+      schema: Record<string, any>;
+    };
+
 export type ToolType =
   | "web_search"
   | "image_generation"
@@ -70,8 +83,14 @@ export interface WorkflowStep {
   step_type?: "ai_generation" | "webhook";
   model: AIModel;
   reasoning_effort?: ReasoningEffort;
+  service_tier?: ServiceTier;
   text_verbosity?: TextVerbosity;
   max_output_tokens?: number;
+  /**
+   * Controls the model's output shape. When set to json_schema, this enables
+   * OpenAI Structured Outputs (Responses API: text.format).
+   */
+  output_format?: OutputFormat;
   instructions: string;
   step_order?: number;
   tools?: Tool[];

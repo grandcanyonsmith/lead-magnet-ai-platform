@@ -265,6 +265,47 @@ export function validateWorkflowStep(
     );
   }
 
+  // Optional: service_tier (Responses API)
+  if (
+    (s as any).service_tier !== undefined &&
+    !["auto", "default", "flex", "scale", "priority"].includes(
+      String((s as any).service_tier),
+    )
+  ) {
+    errors.push(
+      `Step ${stepIndex}: service_tier must be 'auto', 'default', 'flex', 'scale', or 'priority'`,
+    );
+  }
+
+  // Optional: output_format (Structured Outputs)
+  const outputFormat = (s as any).output_format;
+  if (outputFormat !== undefined) {
+    if (!outputFormat || typeof outputFormat !== "object") {
+      errors.push(`Step ${stepIndex}: output_format must be an object`);
+    } else {
+      const t = String((outputFormat as any).type || "");
+      if (!["text", "json_object", "json_schema"].includes(t)) {
+        errors.push(
+          `Step ${stepIndex}: output_format.type must be 'text', 'json_object', or 'json_schema'`,
+        );
+      }
+      if (t === "json_schema") {
+        const name = (outputFormat as any).name;
+        const schema = (outputFormat as any).schema;
+        if (!name || typeof name !== "string") {
+          errors.push(
+            `Step ${stepIndex}: output_format.name is required for json_schema`,
+          );
+        }
+        if (!schema || typeof schema !== "object") {
+          errors.push(
+            `Step ${stepIndex}: output_format.schema is required for json_schema and must be an object`,
+          );
+        }
+      }
+    }
+  }
+
   return {
     valid: errors.length === 0,
     errors,
