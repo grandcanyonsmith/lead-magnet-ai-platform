@@ -21,6 +21,7 @@ import { formatRelativeTime, formatDuration } from "@/utils/date";
 import { JobHeader } from "@/components/jobs/JobHeader";
 import { ExecutionSteps } from "@/components/jobs/ExecutionSteps";
 import { TechnicalDetails } from "@/components/jobs/TechnicalDetails";
+import { SessionRecordings } from "@/components/jobs/SessionRecordings";
 import { ResubmitModal } from "@/components/jobs/ResubmitModal";
 import { RerunStepDialog } from "@/components/jobs/RerunStepDialog";
 import { ArtifactGallery } from "@/components/jobs/detail/ArtifactGallery";
@@ -575,8 +576,9 @@ function JobTabs({
             />
           </TabPanel>
           <TabPanel>
-            <div id="job-tab-panel-tracking">
+            <div id="job-tab-panel-tracking" className="space-y-8">
               <JobTrackingStats jobId={job.job_id} />
+              <SessionRecordings jobId={job.job_id} />
             </div>
           </TabPanel>
           <TabPanel>
