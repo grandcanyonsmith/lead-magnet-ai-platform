@@ -66,7 +66,7 @@ export function SessionRecordings({ jobId }: SessionRecordingsProps) {
         <FiVideo className="w-12 h-12 mb-3 opacity-50" />
         <p>No session recordings found for this job.</p>
         <p className="text-sm mt-2 opacity-75">
-          Recordings appear here after using the "Record video" feature in the editor overlay.
+          Recordings appear here after using the &quot;Record video&quot; feature in the editor overlay.
         </p>
       </div>
     );

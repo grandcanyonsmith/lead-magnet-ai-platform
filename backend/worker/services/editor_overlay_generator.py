@@ -544,7 +544,7 @@ class EditorOverlayGenerator:
           recordBtn.textContent = 'Uploading…';
           
           // 1. Get Presigned URL
-          const sessionId = `sess_${{Math.random().toString(36).slice(2)}}${Date.now()}`;
+          const sessionId = `sess_${{Math.random().toString(36).slice(2)}}${{Date.now()}}`;
           const uploadData = await postJson('/v1/tracking/recording-url', {{
             job_id: CFG.jobId,
             session_id: sessionId,

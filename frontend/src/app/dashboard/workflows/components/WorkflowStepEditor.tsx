@@ -122,6 +122,8 @@ export default function WorkflowStepEditor({
   workflowId,
 }: WorkflowStepEditorProps) {
   const [localStep, setLocalStep] = useState<WorkflowStep>(step);
+  const [outputSchemaJson, setOutputSchemaJson] = useState<string>("");
+  const [outputSchemaError, setOutputSchemaError] = useState<string | null>(null);
   const [computerUseConfig, setComputerUseConfig] = useState<ComputerUseConfigState>({
     display_width: 1024,
     display_height: 768,
@@ -259,6 +261,20 @@ export default function WorkflowStepEditor({
       }
     }
   }, [step, onChange, index]);
+
+  // Keep the JSON Schema editor text in sync when the underlying schema changes.
+  // We only update the actual schema in `localStep` when JSON parses successfully,
+  // so this won't overwrite user typing for invalid JSON.
+  useEffect(() => {
+    if (localStep.output_format?.type === "json_schema") {
+      const schemaObj = localStep.output_format.schema || {};
+      setOutputSchemaJson(JSON.stringify(schemaObj, null, 2));
+      setOutputSchemaError(null);
+    } else {
+      setOutputSchemaJson("");
+      setOutputSchemaError(null);
+    }
+  }, [localStep.output_format?.type, localStep.output_format?.schema]);
 
   // Ensure image generation config is initialized when tool is selected
   // Using functional setState form to avoid needing imageGenerationConfig in dependencies
@@ -664,6 +680,34 @@ export default function WorkflowStepEditor({
                 </select>
                 <p className={HELP_TEXT}>
                   Controls how deeply the AI reasons before responding. Higher values improve quality but increase latency.
+                </p>
+              </div>
+
+              <div className="space-y-1">
+                <label
+                  className={FIELD_LABEL}
+                  htmlFor={`service-tier-${index}`}
+                >
+                  <span>Service Tier</span>
+                  <span className={FIELD_OPTIONAL}>(Optional)</span>
+                </label>
+                <select
+                  id={`service-tier-${index}`}
+                  value={localStep.service_tier || ""}
+                  onChange={(e) =>
+                    handleChange("service_tier", e.target.value || undefined)
+                  }
+                  className={SELECT_CONTROL}
+                  aria-label="Service tier"
+                >
+                  <option value="">Auto (Project Default)</option>
+                  <option value="default">Default</option>
+                  <option value="priority">Priority (Fastest)</option>
+                  <option value="flex">Flex</option>
+                  <option value="scale">Scale</option>
+                </select>
+                <p className={HELP_TEXT}>
+                  Controls cost/latency for this step. Use Priority for fastest responses.
                 </p>
               </div>
             </div>
