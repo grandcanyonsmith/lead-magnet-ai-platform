@@ -176,6 +176,9 @@ class ShellLoopService:
                 commands = action_dict.get("commands") or []
                 timeout_ms = action_dict.get("timeout_ms")
                 max_output_length = action_dict.get("max_output_length")
+                # Enforce a default limit if not provided to prevent context window exhaustion
+                if max_output_length is None:
+                    max_output_length = 4096
 
                 if not isinstance(commands, list) or len(commands) == 0:
                     # Defensive: return an error outcome for an invalid call.
@@ -340,6 +343,10 @@ class ShellLoopService:
                     commands = action_dict.get("commands") or []
                     timeout_ms = action_dict.get("timeout_ms")
                     max_output_length = action_dict.get("max_output_length")
+                    # Enforce a default limit if not provided to prevent context window exhaustion
+                    if max_output_length is None:
+                        max_output_length = 4096
+
 
                     if not isinstance(commands, list):
                         commands = [str(commands)] if commands else []
@@ -348,7 +355,11 @@ class ShellLoopService:
                          tool_outputs.append({
                             "type": "shell_call_output",
                             "call_id": call_id,
-                            "output": [{"outcome": {"type": "error", "message": "No commands"}}]
+                            "output": [{
+                                "stdout": "",
+                                "stderr": "",
+                                "outcome": {"type": "error", "message": "No commands"}
+                            }]
                         })
                          continue
 
