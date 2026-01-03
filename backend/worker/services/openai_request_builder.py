@@ -53,7 +53,8 @@ class OpenAIRequestBuilder:
         reasoning_effort: Optional[str] = None,
         service_tier: Optional[str] = None,
         text_verbosity: Optional[str] = None,
-        max_output_tokens: Optional[int] = None
+        max_output_tokens: Optional[int] = None,
+        output_format: Optional[Dict[str, Any]] = None,
     ) -> Dict:
         """
         Build parameters for OpenAI Responses API call.
@@ -71,6 +72,7 @@ class OpenAIRequestBuilder:
             service_tier: Service tier / speed preference (e.g., 'default' for fast)
             text_verbosity: Output verbosity ('low'|'medium'|'high')
             max_output_tokens: Maximum number of output tokens
+            output_format: Optional structured output format (Responses API: text.format)
             
         Returns:
             API parameters dictionary for Responses API
@@ -183,8 +185,31 @@ class OpenAIRequestBuilder:
             params["service_tier"] = service_tier
 
         # Output verbosity control
+        text_cfg: Dict[str, Any] = {}
         if text_verbosity:
-            params["text"] = {"verbosity": text_verbosity}
+            text_cfg["verbosity"] = text_verbosity
+
+        # Structured output / response format (Responses API)
+        # See https://platform.openai.com/docs/guides/structured-outputs
+        if isinstance(output_format, dict):
+            fmt_type = output_format.get("type")
+            if fmt_type in ("text", "json_object"):
+                text_cfg["format"] = {"type": fmt_type}
+            elif fmt_type == "json_schema":
+                name = output_format.get("name")
+                schema = output_format.get("schema")
+                description = output_format.get("description")
+                strict = output_format.get("strict")
+                if isinstance(name, str) and name and isinstance(schema, dict) and schema:
+                    fmt: Dict[str, Any] = {"type": "json_schema", "name": name, "schema": schema}
+                    if isinstance(description, str) and description:
+                        fmt["description"] = description
+                    if isinstance(strict, bool):
+                        fmt["strict"] = strict
+                    text_cfg["format"] = fmt
+
+        if text_cfg:
+            params["text"] = text_cfg
 
         # Maximum output tokens
         if max_output_tokens is not None:

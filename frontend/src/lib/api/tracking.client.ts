@@ -77,17 +77,24 @@ export async function getJobStats(jobId: string): Promise<TrackingStats> {
   return api.get<TrackingStats>(`/admin/tracking/jobs/${jobId}/stats`);
 }
 
-export interface SessionRecording {
+export interface RecordingPart {
   event_id: string;
-  session_id: string;
   created_at: string;
   recording_url: string;
   recording_key: string;
   page_url?: string;
 }
 
+export interface RecordingSession {
+  session_id: string;
+  first_created_at: string;
+  last_created_at: string;
+  parts: RecordingPart[];
+  page_url?: string;
+}
+
 export interface SessionRecordingsResponse {
-  recordings: SessionRecording[];
+  sessions: RecordingSession[];
   count: number;
 }
 

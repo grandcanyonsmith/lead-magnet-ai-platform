@@ -233,37 +233,87 @@ class TrackingController {
       );
     }
 
-    const limit = queryParams.limit ? parseInt(queryParams.limit) : 50;
+    const sessionIdFilter =
+      typeof queryParams.session_id === "string" && queryParams.session_id
+        ? String(queryParams.session_id)
+        : undefined;
 
-    // Fetch raw events
+    // Fetch raw events (descending by created_at). We fetch a large batch and
+    // group server-side. If you have very high volume, add pagination later.
+    const fetchLimit = queryParams.limit ? parseInt(queryParams.limit) : 5000;
     const { events } = await trackingService.getJobEvents(
       jobId,
       tenantId,
-      1000, // Fetch more to filter down
+      fetchLimit,
     );
 
-    // Filter for recording uploads
-    const recordings = events
-      .filter((e) => e.event_type === "recording_uploaded")
-      .map((e) => ({
+    type RecordingPart = {
+      event_id: string;
+      created_at: string;
+      recording_url: string;
+      recording_key: string;
+      page_url?: string;
+    };
+
+    type RecordingSession = {
+      session_id: string;
+      first_created_at: string;
+      last_created_at: string;
+      parts: RecordingPart[];
+      page_url?: string;
+    };
+
+    const sessionsMap = new Map<string, RecordingSession>();
+
+    for (const e of events) {
+      if (e.event_type !== "recording_uploaded") continue;
+      if (sessionIdFilter && e.session_id !== sessionIdFilter) continue;
+      if (!e.session_id || !e.created_at || !e.recording_url || !e.recording_key)
+        continue;
+
+      const part: RecordingPart = {
         event_id: e.event_id,
-        session_id: e.session_id,
         created_at: e.created_at,
         recording_url: e.recording_url,
         recording_key: e.recording_key,
         page_url: e.page_url,
-      }))
+      };
+
+      const existing = sessionsMap.get(e.session_id);
+      if (!existing) {
+        sessionsMap.set(e.session_id, {
+          session_id: e.session_id,
+          first_created_at: e.created_at,
+          last_created_at: e.created_at,
+          parts: [part],
+          page_url: e.page_url,
+        });
+      } else {
+        existing.parts.push(part);
+      }
+    }
+
+    const sessions = Array.from(sessionsMap.values())
+      .map((s) => {
+        // Sort parts oldest -> newest to simplify client fetch/playback ordering
+        s.parts.sort(
+          (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+        );
+        s.first_created_at = s.parts[0]?.created_at || s.first_created_at;
+        s.last_created_at =
+          s.parts[s.parts.length - 1]?.created_at || s.last_created_at;
+        return s;
+      })
       .sort(
         (a, b) =>
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-      )
-      .slice(0, limit);
+          new Date(b.last_created_at).getTime() - new Date(a.last_created_at).getTime(),
+      );
 
     return {
       statusCode: 200,
       body: {
-        recordings,
-        count: recordings.length,
+        sessions,
+        count: sessions.length,
       },
     };
   }
