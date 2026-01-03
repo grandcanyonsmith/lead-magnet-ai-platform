@@ -11,17 +11,27 @@ export class DashboardPage {
 
   constructor(page: Page) {
     this.page = page
-    this.heading = page.locator('h1:has-text("Dashboard")')
-    this.createLeadMagnetButton = page.locator('a[href="/dashboard/workflows/new"]')
-    this.statsCards = page.locator('[class*="bg-white"]').filter({ hasText: /Lead Magnets|Completed|Failed|Pending|Success Rate|Processing Time/ })
+    // The dashboard title is a dynamic greeting ("Good morning, ..."), so wait on stable UI instead.
+    this.heading = page.getByRole('heading', { level: 1 })
+    this.createLeadMagnetButton = page.locator(
+      'a[href="/dashboard/workflows/new"]:has-text("Create Lead Magnet")'
+    )
+    this.statsCards = page.locator(
+      'text=/Leads Collected|Reports Generated|Active Magnets/'
+    )
     this.sidebar = page.locator('aside')
-    this.workflowsLink = page.locator('a[href="/dashboard/workflows"]')
-    this.jobsLink = page.locator('a[href="/dashboard/jobs"]')
+    // Sidebar links are the most stable/unique targets (dashboard page also has quick-action links).
+    this.workflowsLink = page.locator(
+      'aside a[href="/dashboard/workflows"]:has-text("Lead Magnets")'
+    )
+    this.jobsLink = page.locator(
+      'aside a[href="/dashboard/jobs"]:has-text("Leads & Results")'
+    )
   }
 
   async goto() {
     await this.page.goto('/dashboard')
-    await this.heading.waitFor({ timeout: 10000 })
+    await this.createLeadMagnetButton.waitFor({ timeout: 10000 })
   }
 
   async navigateToWorkflows() {

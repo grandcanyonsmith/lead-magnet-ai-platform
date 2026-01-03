@@ -121,14 +121,18 @@ export default function StepTester({ step, index }: StepTesterProps) {
       setTestResult(null);
       setShowStream(false);
 
-      // Check if this is a CUA step (computer use)
+      // Check if this is a CUA step (computer use) or Shell step
       const tools = step.tools || [];
       const hasComputerUse = Array.isArray(tools) && tools.some((t: any) => 
         (typeof t === 'string' && t === 'computer_use_preview') || 
         (typeof t === 'object' && t.type === 'computer_use_preview')
       );
+      const hasShell = Array.isArray(tools) && tools.some((t: any) => 
+        (typeof t === 'string' && t === 'shell') || 
+        (typeof t === 'object' && t.type === 'shell')
+      );
 
-      if (hasComputerUse) {
+      if (hasComputerUse || hasShell) {
         setShowStream(true);
         // We don't start polling here; StreamViewer will handle the request
         return;
@@ -302,7 +306,14 @@ export default function StepTester({ step, index }: StepTesterProps) {
           {showStream && (
              <div className="mt-6">
                <StreamViewer 
-                 endpoint={`${getApiUrl()}/admin/cua/execute`}
+                 endpoint={(() => {
+                    const tools = step.tools || [];
+                    const hasComputerUse = Array.isArray(tools) && tools.some((t: any) => 
+                        (typeof t === 'string' && t === 'computer_use_preview') || 
+                        (typeof t === 'object' && t.type === 'computer_use_preview')
+                    );
+                    return hasComputerUse ? `${getApiUrl()}/admin/cua/execute` : `${getApiUrl()}/admin/shell/execute`;
+                 })()}
                  requestBody={(() => {
                     let inputData: any = {};
                     try { inputData = JSON.parse(testInput); } catch {}
@@ -320,13 +331,16 @@ export default function StepTester({ step, index }: StepTesterProps) {
                     if (hasComputerUse && model !== "computer-use-preview") {
                         console.warn(`[StepTester] Overriding model from ${model} to computer-use-preview (required for computer_use_preview tool)`);
                         model = "computer-use-preview";
+                    } else if (!hasComputerUse && !step.model) {
+                        // Default to gpt-5.2 for shell if no model specified
+                        model = "gpt-5.2";
                     }
                     
                     // Determine input_text from testInput or default
                     let inputText = inputData.input_text || inputData.user_prompt || "Start the task.";
                     
                     return {
-                        job_id: `test-cua-${Date.now()}`,
+                        job_id: `test-step-${Date.now()}`,
                         model,
                         instructions,
                         input_text: inputText,

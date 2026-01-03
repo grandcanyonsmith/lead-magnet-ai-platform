@@ -14,9 +14,9 @@ const USER_SETTINGS_TABLE = env.userSettingsTable;
 const sfnClient = STEP_FUNCTIONS_ARN ? new SFNClient({ region: env.awsRegion }) : null;
 
 export interface FormSubmissionData extends Record<string, any> {
-  name: string;
-  email: string;
-  phone: string;
+  name?: string;
+  email?: string;
+  phone?: string;
 }
 
 export interface SubmissionResult {
@@ -46,18 +46,11 @@ export class FormSubmissionService {
     thankYouMessage?: string,
     redirectUrl?: string
   ): Promise<SubmissionResult> {
-    // Ensure name/email are present (phone is normalized below)
-    if (!submissionData.name || !submissionData.email) {
-      throw new ApiError('Form submission must include name and email fields', 400);
-    }
-
-    // Normalize phone number (supports custom phone field names)
+    // Normalize phone number if provided (supports custom phone field names)
     const { phoneNumber, fieldUsed } = await this.normalizePhoneNumber(submissionData, form.tenant_id);
-    if (!phoneNumber) {
-      throw new ApiError('Form submission must include a phone number', 400);
+    if (phoneNumber) {
+      submissionData.phone = phoneNumber;
     }
-
-    submissionData.phone = phoneNumber;
 
     // Create submission record
     const submissionId = `sub_${ulid()}`;
@@ -69,9 +62,9 @@ export class FormSubmissionService {
       submission_data: submissionData,
       submitter_ip: sourceIp,
       submitter_email: submissionData.email || null,
-      submitter_phone: phoneNumber,
+      submitter_phone: phoneNumber || null,
       submitter_name: submissionData.name || null,
-      phone_field_used: fieldUsed,
+      phone_field_used: phoneNumber ? fieldUsed : undefined,
       created_at: new Date().toISOString(),
       ttl: Math.floor(Date.now() / 1000) + 90 * 24 * 60 * 60, // 90 days
     };

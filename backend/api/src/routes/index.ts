@@ -12,6 +12,7 @@ import { registerImpersonationRoutes } from "@domains/impersonation";
 import { registerAuthRoutes } from "./authRoutes";
 import { registerFolderRoutes } from "./folderRoutes";
 import { registerCUARoutes } from "./cuaRoutes";
+import { registerShellRoutes } from "./shellRoutes";
 
 // Re-export RouteResponse for use in other modules
 export type { RouteResponse };
@@ -28,6 +29,7 @@ registerImpersonationRoutes();
 registerAuthRoutes();
 registerFolderRoutes();
 registerCUARoutes();
+registerShellRoutes();
 
 /**
  * Main router function.

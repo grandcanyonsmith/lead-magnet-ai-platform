@@ -81,11 +81,14 @@ Available Tools:
    - Write instructions that are **specific** and **actionable**.
    - Assign a **role** (e.g., "Act as a Senior Analyst").
    - Explicitly mention what input data to use.
+   - **CRITICAL AUTONOMY RULE**: The workflow runs with **no user interaction between steps**. Do **NOT** ask questions, request confirmation, or wait for user input. Make reasonable assumptions and proceed.
 
 6. **Response Format**:
    - Return a JSON object matching the schema below.
    - \`step_name\` should be professional and concise.
    - \`step_description\` should clearly state the *value* of the step.
+   - \`reasoning_effort\` should be chosen per-step based on complexity ("low" for simple transforms, "high/xhigh" for deep analysis).
+   - \`text_verbosity\` should be chosen per-step ("low" for terse outputs, "high" for detailed reports).
    - \`depends_on\`: Array of step indices this step depends on.
      - **CRITICAL**: If this step uses output from previous steps, list their indices here.
      - If this is the first step, use \`[]\`.
@@ -103,6 +106,8 @@ Available Tools:
     "step_description": "string",
     "model": "string",
     "reasoning_effort": "none" | "low" | "medium" | "high" | "xhigh",
+    "text_verbosity": "low" | "medium" | "high",
+    "max_output_tokens": number,
     "instructions": "string",
     "tools": [
       "string" OR 
@@ -244,6 +249,24 @@ Please generate the workflow step configuration.`;
       // Validate reasoning_effort
       if (!['none', 'low', 'medium', 'high', 'xhigh'].includes(parsedResponse.step.reasoning_effort || '')) {
         parsedResponse.step.reasoning_effort = 'high';
+      }
+
+      // Validate text_verbosity (optional)
+      if (
+        parsedResponse.step.text_verbosity &&
+        !['low', 'medium', 'high'].includes(parsedResponse.step.text_verbosity)
+      ) {
+        delete (parsedResponse.step as any).text_verbosity;
+      }
+
+      // Validate max_output_tokens (optional)
+      if (
+        (parsedResponse.step as any).max_output_tokens !== undefined &&
+        (typeof (parsedResponse.step as any).max_output_tokens !== 'number' ||
+          !Number.isFinite((parsedResponse.step as any).max_output_tokens) ||
+          (parsedResponse.step as any).max_output_tokens < 1)
+      ) {
+        delete (parsedResponse.step as any).max_output_tokens;
       }
 
       // Set action

@@ -12,6 +12,15 @@ logger = logging.getLogger(__name__)
 
 class OpenAIRequestBuilder:
     """Builder for OpenAI API request parameters."""
+
+    # Global guardrail: workflows run autonomously with no user interaction between steps.
+    # This prevents the model from asking for confirmation or follow-up questions mid-run.
+    _NO_CONFIRMATION_PREFIX = (
+        "IMPORTANT: This workflow runs end-to-end with NO user interaction between steps. "
+        "Do NOT ask the user for confirmation or additional input. "
+        "Do NOT pause waiting for responses. "
+        "If information is missing or ambiguous, make reasonable assumptions and proceed.\n\n"
+    )
     
     @staticmethod
     def build_input_text(context: str, previous_context: str = "") -> str:
@@ -66,6 +75,17 @@ class OpenAIRequestBuilder:
         Returns:
             API parameters dictionary for Responses API
         """
+        # Enforce autonomous execution: never ask for user confirmation mid-workflow.
+        instructions_text = instructions or ""
+        instructions_lower = instructions_text.lower()
+        if (
+            "ask for confirmation" not in instructions_lower
+            and "no user interaction" not in instructions_lower
+            and "no user input" not in instructions_lower
+            and "no human-in-the-loop" not in instructions_lower
+        ):
+            instructions_text = OpenAIRequestBuilder._NO_CONFIRMATION_PREFIX + instructions_text
+
         # Check if image_generation tool is present
         has_image_generation = False
         if tools:
@@ -88,7 +108,7 @@ class OpenAIRequestBuilder:
         
         params = {
             "model": model,
-            "instructions": instructions,
+            "instructions": instructions_text,
             "input": api_input
         }
         
