@@ -1,6 +1,6 @@
 import {
   LambdaClient,
-  InvokeWithResponseStreamCommand,
+  InvokeCommand,
 } from "@aws-sdk/client-lambda";
 import { spawn } from "child_process";
 import * as path from "path";
@@ -124,58 +124,62 @@ export class CUAController {
 
     // Remote execution (AWS Lambda)
     try {
-      // Determine function name
-      // TODO: Add CUA_LAMBDA_FUNCTION_NAME to env config
-      const functionName = process.env.CUA_LAMBDA_FUNCTION_NAME || "leadmagnet-cua-worker";
+      // Determine function name (can be overridden via env var)
+      const functionNameRaw = env.cuaLambdaFunctionName;
+      // `$LATEST` is the implicit default; stripping avoids "Function not found" when users
+      // mistakenly configure `...:function:NAME:$LATEST` as the function identifier.
+      const functionName = functionNameRaw.replace(/:\\$LATEST$/, "");
 
-      const command = new InvokeWithResponseStreamCommand({
+      const command = new InvokeCommand({
         FunctionName: functionName,
         Payload: JSON.stringify(payload),
       });
 
       const response = await lambdaClient.send(command);
 
-      // Handle stream
-      if (response.EventStream) {
-        if (res) {
-          // If we have Express response, pipe to it
-          res.setHeader("Content-Type", "application/x-ndjson");
-          res.setHeader("Cache-Control", "no-cache");
-          res.setHeader("Connection", "keep-alive");
-          res.flushHeaders();
+      const rawPayload = response.Payload
+        ? Buffer.from(response.Payload).toString("utf-8")
+        : "";
 
-          for await (const event of response.EventStream) {
-            if (event.PayloadChunk) {
-              const payload = event.PayloadChunk.Payload;
-              if (payload) {
-                const chunk = Buffer.from(payload).toString("utf-8");
-                res.write(chunk);
-              }
-            }
-            if (event.InvokeComplete) {
-                // End of stream
-            }
-          }
-          res.end();
-          return; // Response handled
-        } else {
-            // If called internally without res, return full result (buffer)
-            // This defeats the purpose of streaming but handles the call.
-            let fullBody = "";
-            for await (const event of response.EventStream) {
-                 if (event.PayloadChunk) {
-                     const payload = event.PayloadChunk.Payload;
-                     if (payload) {
-                         fullBody += Buffer.from(payload).toString("utf-8");
-                     }
-                 }
-            }
-            return JSON.parse(fullBody.split("\n").filter(Boolean).map(l => JSON.parse(l)).pop() || "{}"); // Crude approximation
+      if (response.FunctionError) {
+        throw new Error(
+          rawPayload || `Lambda invocation error: ${response.FunctionError}`,
+        );
+      }
+
+      // The worker returns an API Gateway-like response: { statusCode, headers, body }
+      // where `body` is NDJSON. Parse and forward just the body to clients.
+      let ndjsonBody = rawPayload;
+      try {
+        const parsed = rawPayload ? JSON.parse(rawPayload) : null;
+        if (parsed && typeof parsed === "object" && typeof parsed.body === "string") {
+          ndjsonBody = parsed.body;
         }
-      } else {
-          // Fallback if no stream
-          logger.warn("[CUAController] No EventStream returned");
-          return { error: "No stream returned" };
+      } catch {
+        // If payload isn't JSON, fall back to raw
+      }
+
+      if (res) {
+        res.setHeader("Content-Type", "application/x-ndjson");
+        res.setHeader("Cache-Control", "no-cache");
+        res.setHeader("Connection", "keep-alive");
+        res.flushHeaders();
+        res.write(ndjsonBody);
+        res.end();
+        return;
+      }
+
+      // If called internally without res, return the last NDJSON object (best-effort).
+      try {
+        return JSON.parse(
+          ndjsonBody
+            .split("\n")
+            .filter(Boolean)
+            .map((l) => JSON.parse(l))
+            .pop() || "{}",
+        );
+      } catch {
+        return { raw: ndjsonBody };
       }
 
     } catch (error: any) {

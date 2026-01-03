@@ -62,11 +62,19 @@ Local tests passed:
 
 ### Function Details
 
-- **Function Name**: `leadmagnet-compute-JobProcessorLambda4949D7F4-kqmEYYCZ4wa9`
-- **Region**: `us-east-1`
-- **Memory**: 3008MB
-- **Timeout**: 900 seconds
-- **Code Size**: ~64MB
+There are two ways CUA runs in this system:
+
+1. **Workflow processing (automatic)**: runs inside the **job processor** Lambda during normal workflow execution.
+2. **Admin step tester (streaming)**: the API `/admin/cua/execute` endpoint invokes a dedicated Lambda function.
+
+**Deployed Lambda functions (default names):**
+
+- **Job Processor**: (stack-created; see CloudFormation output `JobProcessorLambdaArn`)
+- **CUA Streaming Worker**: `leadmagnet-cua-worker`
+- **Shell Streaming Worker**: `leadmagnet-shell-worker`
+
+**Region**: `us-east-1`
+**Memory/Timeout**: Set via CDK defaults (see `infrastructure/lib/config/constants.ts`)
 
 ### Usage
 

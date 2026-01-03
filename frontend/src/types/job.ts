@@ -57,6 +57,15 @@ export interface MergedStep extends ExecutionStep {
   _status: StepStatus;
 }
 
+export interface JobLiveStep {
+  step_order: number;
+  output_text: string;
+  updated_at?: string;
+  status?: string;
+  truncated?: boolean;
+  error?: string;
+}
+
 export interface Job extends BaseEntity {
   job_id: string;
   tenant_id: string;
@@ -73,6 +82,11 @@ export interface Job extends BaseEntity {
   execution_steps_s3_key?: string;
   execution_steps_s3_url?: string;
   execution_steps?: ExecutionStep[];
+  /**
+   * Best-effort live output preview for the currently running step.
+   * Populated by the worker while streaming output and cleared when the step completes.
+   */
+  live_step?: JobLiveStep | null;
 }
 
 export interface JobListResponse {

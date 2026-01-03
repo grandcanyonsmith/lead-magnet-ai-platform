@@ -546,6 +546,7 @@ function JobTabs({
                 onToggleStep={toggleStep}
                 onCopy={onCopy}
                 jobStatus={job.status}
+                liveStep={job.live_step}
                 submission={submission}
                 form={form}
                 onResubmit={onResubmit}

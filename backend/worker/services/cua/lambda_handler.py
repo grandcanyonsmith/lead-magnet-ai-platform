@@ -16,6 +16,8 @@ import dataclasses
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+# NOTE: This file is used by the dedicated CUA streaming worker Lambda.
+
 class StreamingHandler:
     def __init__(self):
         self.s3_service = S3Service()

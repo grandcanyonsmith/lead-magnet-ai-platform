@@ -169,6 +169,9 @@ export class ApiStack extends cdk.Stack {
         [ENV_VAR_NAMES.CLOUDFRONT_DOMAIN]: props.cloudfrontDomain || '',
         [ENV_VAR_NAMES.CLOUDFRONT_DISTRIBUTION_ID]: props.cloudfrontDistributionId || '',
         [ENV_VAR_NAMES.LAMBDA_FUNCTION_NAME]: FUNCTION_NAMES.API_HANDLER,
+        // Admin streaming worker lambdas (can be overridden at deploy time)
+        [ENV_VAR_NAMES.CUA_LAMBDA_FUNCTION_NAME]: process.env.CUA_LAMBDA_FUNCTION_NAME || FUNCTION_NAMES.CUA_WORKER,
+        [ENV_VAR_NAMES.SHELL_LAMBDA_FUNCTION_NAME]: process.env.SHELL_LAMBDA_FUNCTION_NAME || FUNCTION_NAMES.SHELL_WORKER,
         // Shell tool configuration (defaults can be overridden at deploy time)
         [ENV_VAR_NAMES.SHELL_TOOL_ENABLED]: process.env.SHELL_TOOL_ENABLED || 'false',
         [ENV_VAR_NAMES.SHELL_TOOL_IP_LIMIT_PER_HOUR]: process.env.SHELL_TOOL_IP_LIMIT_PER_HOUR || '10',

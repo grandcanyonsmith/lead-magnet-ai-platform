@@ -26,6 +26,8 @@ interface StepInputOutputProps {
   step: MergedStep;
   status: StepStatus;
   onCopy: (text: string) => void;
+  liveOutput?: string;
+  liveUpdatedAt?: string;
   previousSteps: ExecutionStep[];
   formSubmission: Record<string, unknown> | null | undefined;
   form?: Form | null;
@@ -278,6 +280,8 @@ export function StepInputOutput({
   step,
   status,
   onCopy,
+  liveOutput,
+  liveUpdatedAt,
   previousSteps,
   formSubmission,
   form,
@@ -348,6 +352,12 @@ export function StepInputOutput({
   const isPending = status === "pending";
   const isCompleted = status === "completed";
   const isInProgress = status === "in_progress";
+  const hasLiveOutput = typeof liveOutput === "string" && liveOutput.length > 0;
+  const shouldShowLiveOutput =
+    isInProgress &&
+    !hasImageGeneration(step, imageArtifacts) &&
+    (step.output === null || step.output === undefined || step.output === "") &&
+    (hasLiveOutput || Boolean(liveUpdatedAt));
 
   // Show section if step is completed, in progress, or pending with instructions
   const shouldShow =
@@ -632,6 +642,11 @@ export function StepInputOutput({
                   <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => {
+                        // If the step is currently streaming, copy the live output instead of `null`.
+                        if (shouldShowLiveOutput && typeof liveOutput === "string") {
+                          onCopy(liveOutput);
+                          return;
+                        }
                         const formatted = formatStepOutput(step);
                         const text =
                           formatted.type === "json"
@@ -659,20 +674,47 @@ export function StepInputOutput({
                 ) : (
                   /* For non-image generation steps, show the normal output content */
                   <>
-                    {(() => {
-                      const stepImageUrls =
-                        step.image_urls &&
-                        Array.isArray(step.image_urls) &&
-                        step.image_urls.length > 0
-                          ? step.image_urls
-                          : [];
-                      return (
-                        <StepContent
-                          formatted={formatStepOutput(step)}
-                          imageUrls={stepImageUrls}
-                        />
-                      );
-                    })()}
+                    {shouldShowLiveOutput && (
+                      <div className="mb-3 md:mb-2 rounded-lg border border-blue-200 dark:border-blue-800/40 bg-blue-50/60 dark:bg-blue-900/10 p-3 md:p-2.5">
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <div className="flex items-center gap-2">
+                            <FiLoader className="w-4 h-4 animate-spin text-blue-600 dark:text-blue-300" />
+                            <span className="text-xs font-semibold text-blue-800 dark:text-blue-200">
+                              Live output (streaming)
+                            </span>
+                          </div>
+                          {liveUpdatedAt && (
+                            <span className="text-[11px] text-blue-700/70 dark:text-blue-200/60">
+                              Updated{" "}
+                              {new Date(liveUpdatedAt).toLocaleTimeString([], {
+                                hour12: false,
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                second: "2-digit",
+                              })}
+                            </span>
+                          )}
+                        </div>
+                        <pre className="text-sm md:text-xs text-gray-800 dark:text-gray-200 whitespace-pre-wrap font-mono max-h-48 overflow-y-auto scrollbar-hide-until-hover leading-relaxed">
+                          {hasLiveOutput ? liveOutput : "Waiting for model output..."}
+                        </pre>
+                      </div>
+                    )}
+                    {!shouldShowLiveOutput &&
+                      (() => {
+                        const stepImageUrls =
+                          step.image_urls &&
+                          Array.isArray(step.image_urls) &&
+                          step.image_urls.length > 0
+                            ? step.image_urls
+                            : [];
+                        return (
+                          <StepContent
+                            formatted={formatStepOutput(step)}
+                            imageUrls={stepImageUrls}
+                          />
+                        );
+                      })()}
                     {renderImageSection()}
                   </>
                 )}
