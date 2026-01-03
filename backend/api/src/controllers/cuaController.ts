@@ -52,13 +52,20 @@ export class CUAController {
             throw new Error("Local execution requires response object for streaming");
         }
         
-        // Resolve script path relative to CWD (backend/api) to point to backend/worker/run_cua_local.py
-        // If CWD is backend/api, we need to go up to backend, then into worker
-        const scriptPath = path.resolve(process.cwd(), '../worker/run_cua_local.py');
+        // Resolve script path relative to CWD.
+        // If CWD is backend/api (dev), go up to backend, then into worker.
+        // If CWD is root (docker/prod), go into backend/worker.
+        const isApiDir = process.cwd().endsWith('api');
+        const workerScriptRelPath = isApiDir ? '../worker/run_cua_local.py' : 'backend/worker/run_cua_local.py';
+        const scriptPath = path.resolve(process.cwd(), workerScriptRelPath);
 
         const pythonProcess = spawn('python3', [scriptPath], {
-            cwd: process.cwd(), // Assumes running from root
-            env: { ...process.env, PYTHONPATH: 'backend/worker' }
+            cwd: process.cwd(), 
+            env: { 
+                ...process.env, 
+                // Adjust PYTHONPATH based on CWD
+                PYTHONPATH: isApiDir ? '../worker' : 'backend/worker' 
+            }
         });
 
         res.setHeader("Content-Type", "application/x-ndjson");
