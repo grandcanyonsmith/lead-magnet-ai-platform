@@ -36,9 +36,13 @@ interface LogEntry {
   type: string;
 }
 
+const OUTPUT_DELTA_PREFIX = "__OUTPUT_DELTA__";
+
 // -----------------------------------------------------------------------------
 // Log Line Component
 // -----------------------------------------------------------------------------
+
+import { formatLogMessage } from "./LogFormatter";
 
 function LogLine({ log, searchQuery, isMatch, isCurrentMatch, index, onRef }: { 
   log: LogEntry; 
@@ -48,12 +52,10 @@ function LogLine({ log, searchQuery, isMatch, isCurrentMatch, index, onRef }: {
   index: number;
   onRef: (el: HTMLDivElement | null) => void;
 }) {
-  // Parse message for formatting with search highlighting
-  const formattedMessage = useMemo(() => {
-    let msg = log.message;
-    
+  // If searching, use the highlighter logic
+  const content = useMemo(() => {
     if (searchQuery && isMatch) {
-      const parts = msg.split(new RegExp(`(${searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
+      const parts = log.message.split(new RegExp(`(${searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
       return (
         <span className={log.level === 'error' ? 'text-red-300' : log.level === 'warn' ? 'text-yellow-300' : 'text-gray-200'}>
           {parts.map((part, i) => 
@@ -69,10 +71,11 @@ function LogLine({ log, searchQuery, isMatch, isCurrentMatch, index, onRef }: {
       );
     }
     
+    // Otherwise use the rich formatter
     return (
-      <span className={log.level === 'error' ? 'text-red-300' : log.level === 'warn' ? 'text-yellow-300' : 'text-gray-200'}>
-        {msg}
-      </span>
+      <div className={log.level === 'error' ? 'text-red-300' : log.level === 'warn' ? 'text-yellow-300' : 'text-gray-200'}>
+        {formatLogMessage(log.message)}
+      </div>
     );
   }, [log.message, log.level, searchQuery, isMatch, isCurrentMatch]);
 
@@ -90,8 +93,8 @@ function LogLine({ log, searchQuery, isMatch, isCurrentMatch, index, onRef }: {
       <span className="text-[11px] text-gray-500 font-mono mt-[3px] select-none shrink-0 w-[56px]">
         {new Date(log.timestamp * 1000).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute:'2-digit', second:'2-digit' })}
       </span>
-      <span className="font-mono text-[13px] leading-relaxed break-all whitespace-pre-wrap">
-        {formattedMessage}
+      <span className="font-mono text-[13px] leading-relaxed break-all whitespace-pre-wrap w-full">
+        {content}
       </span>
     </div>
   );
@@ -118,6 +121,7 @@ export default function StreamViewer({ endpoint, requestBody, onClose }: StreamV
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const matchRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const streamedOutputLogIndexRef = useRef<number | null>(null);
 
   // Connection Logic
   useEffect(() => {
@@ -193,6 +197,43 @@ export default function StreamViewer({ endpoint, requestBody, onClose }: StreamV
 
   const handleEvent = (event: any) => {
     if (event.type === 'log') {
+        const msg = typeof event.message === "string" ? event.message : "";
+
+        // Special-case: model output deltas are streamed as log events with a prefix.
+        // We append deltas into a single growing log line for a smooth "live output" experience.
+        if (msg.startsWith(OUTPUT_DELTA_PREFIX)) {
+          const delta = msg.slice(OUTPUT_DELTA_PREFIX.length);
+          if (!delta) return;
+
+          setLogs((prev) => {
+            const next = [...prev];
+            const ts =
+              typeof event.timestamp === "number"
+                ? event.timestamp
+                : Date.now() / 1000;
+            const level = typeof event.level === "string" ? event.level : "info";
+
+            const idx = streamedOutputLogIndexRef.current;
+            if (idx === null || !next[idx]) {
+              streamedOutputLogIndexRef.current = next.length;
+              next.push({
+                type: "log",
+                timestamp: ts,
+                level,
+                message: delta,
+              });
+              return next;
+            }
+
+            next[idx] = {
+              ...next[idx],
+              message: `${next[idx].message || ""}${delta}`,
+            };
+            return next;
+          });
+          return;
+        }
+
         setLogs(prev => [...prev, event]);
     } else if (event.type === 'screenshot') {
         // Store both URL and base64 for fallback
@@ -302,6 +343,7 @@ export default function StreamViewer({ endpoint, requestBody, onClose }: StreamV
 
   const clearLogs = () => {
     setLogs([]);
+    streamedOutputLogIndexRef.current = null;
     toast.success("Logs cleared");
   };
 

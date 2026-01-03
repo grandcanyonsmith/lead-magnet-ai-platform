@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useMemo, ReactNode } from "react";
+import React, { useState, useRef, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Tab, TabGroup, TabList, TabPanel, TabPanels } from "@headlessui/react";
@@ -379,14 +379,8 @@ export default function JobDetailClient() {
           setSelectedIndex={setSelectedIndex}
           mergedSteps={mergedSteps}
           artifactGalleryItems={artifactGalleryItems}
-          executionHeader={
-            <WorkflowImprovePanel
-              job={job}
-              workflow={workflow}
-              mergedSteps={mergedSteps}
-              artifacts={jobArtifacts}
-            />
-          }
+          workflow={workflow}
+          artifacts={jobArtifacts}
           expandedSteps={expandedSteps}
           toggleStep={toggleStep}
           showExecutionSteps={showExecutionSteps}
@@ -469,7 +463,8 @@ interface JobTabsProps {
   setSelectedIndex: (index: number) => void;
   mergedSteps: MergedStep[];
   artifactGalleryItems: ArtifactGalleryItem[];
-  executionHeader?: ReactNode;
+  workflow: Workflow | null;
+  artifacts: Artifact[];
   expandedSteps: Set<number>;
   toggleStep: (stepOrder: number) => void;
   showExecutionSteps: boolean;
@@ -494,7 +489,8 @@ function JobTabs({
   setSelectedIndex,
   mergedSteps,
   artifactGalleryItems,
-  executionHeader,
+  workflow,
+  artifacts,
   expandedSteps,
   toggleStep,
   showExecutionSteps,
@@ -514,6 +510,7 @@ function JobTabs({
 }: JobTabsProps) {
   const tabs = [
     { name: "Report Generation", id: "execution" },
+    { name: "Review & Improve", id: "improve" },
     { name: "Lead Activity", id: "tracking" },
     { name: "Debug Data", id: "raw" },
   ];
@@ -540,7 +537,6 @@ function JobTabs({
         <TabPanels className="mt-6">
           <TabPanel>
             <div className="space-y-8">
-              {executionHeader ? <div>{executionHeader}</div> : null}
               <ExecutionSteps
                 steps={mergedSteps}
                 expandedSteps={expandedSteps}
@@ -569,6 +565,14 @@ function JobTabs({
                 />
               </div>
             </div>
+          </TabPanel>
+          <TabPanel>
+            <WorkflowImprovePanel
+              job={job}
+              workflow={workflow}
+              mergedSteps={mergedSteps}
+              artifacts={artifacts}
+            />
           </TabPanel>
           <TabPanel>
             <div id="job-tab-panel-tracking">

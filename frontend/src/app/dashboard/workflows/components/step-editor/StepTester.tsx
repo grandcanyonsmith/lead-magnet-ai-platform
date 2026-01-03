@@ -131,8 +131,15 @@ export default function StepTester({ step, index }: StepTesterProps) {
         (typeof t === 'string' && t === 'shell') || 
         (typeof t === 'object' && t.type === 'shell')
       );
+      const hasWebSearch = Array.isArray(tools) && tools.some((t: any) => 
+        (typeof t === 'string' && t === 'web_search') || 
+        (typeof t === 'object' && t.type === 'web_search')
+      );
+      
+      // Also enable for general AI generation (text output)
+      const isAiGeneration = !step.step_type || step.step_type === 'ai_generation';
 
-      if (hasComputerUse || hasShell) {
+      if (hasComputerUse || hasShell || hasWebSearch || isAiGeneration) {
         setShowStream(true);
         // We don't start polling here; StreamViewer will handle the request
         return;
@@ -307,12 +314,9 @@ export default function StepTester({ step, index }: StepTesterProps) {
              <div className="mt-6">
                <StreamViewer 
                  endpoint={(() => {
-                    const tools = step.tools || [];
-                    const hasComputerUse = Array.isArray(tools) && tools.some((t: any) => 
-                        (typeof t === 'string' && t === 'computer_use_preview') || 
-                        (typeof t === 'object' && t.type === 'computer_use_preview')
-                    );
-                    return hasComputerUse ? `${getApiUrl()}/admin/cua/execute` : `${getApiUrl()}/admin/shell/execute`;
+                    // Use CUA endpoint for everything as it supports the full agent loop streaming
+                    // It handles computer use, shell, and generic text/tool interactions
+                    return `${getApiUrl()}/admin/cua/execute`;
                  })()}
                  requestBody={(() => {
                     let inputData: any = {};
@@ -337,7 +341,29 @@ export default function StepTester({ step, index }: StepTesterProps) {
                     }
                     
                     // Determine input_text from testInput or default
-                    let inputText = inputData.input_text || inputData.user_prompt || "Start the task.";
+                    const rawPrompt =
+                      (typeof inputData.input_text === "string" &&
+                      inputData.input_text.trim().length > 0
+                        ? inputData.input_text
+                        : undefined) ||
+                      (typeof inputData.user_prompt === "string" &&
+                      inputData.user_prompt.trim().length > 0
+                        ? inputData.user_prompt
+                        : undefined) ||
+                      "Start the task.";
+
+                    // Inject the full test input JSON into the model context so shell/CUA steps can
+                    // reference variables (e.g., {"coursetopic": "..."}), even when no explicit
+                    // user prompt is provided.
+                    const { input_text: _ignoredInputText, user_prompt: _ignoredUserPrompt, ...vars } =
+                      inputData || {};
+                    const varsJson =
+                      vars && Object.keys(vars).length > 0
+                        ? JSON.stringify(vars, null, 2)
+                        : "";
+                    const inputText = varsJson
+                      ? `Input variables (JSON):\n${varsJson}\n\nTask:\n${rawPrompt}`
+                      : rawPrompt;
                     
                     return {
                         job_id: `test-step-${Date.now()}`,
