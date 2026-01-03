@@ -10,6 +10,7 @@ export const MODEL_DESCRIPTIONS_SHORT: Record<string, string> = {
   'gpt-4.1': 'High capability previous generation model',
   'gpt-4-turbo': 'Fast and capable model for complex tasks',
   'gpt-3.5-turbo': 'Fastest, lowest cost model for simple tasks',
+  'computer-use-preview': 'Beta model for computer use / browser automation',
   'o4-mini-deep-research': 'Specialized model for deep research tasks',
 };
 
@@ -64,6 +65,12 @@ export const MODEL_DESCRIPTIONS_DETAILED: Record<string, ModelDescription> = {
     useWhen: 'Cost and speed are the primary concerns',
     cost: 'Low',
     speed: 'Very Fast',
+  },
+  'computer-use-preview': {
+    bestFor: 'Browser automation, interacting with websites, complex UI tasks',
+    useWhen: 'You need to perform actions on websites or use computer interfaces',
+    cost: 'High',
+    speed: 'Slow (Multi-step)',
   },
   'o4-mini-deep-research': {
     bestFor: 'Deep research, gathering comprehensive information',

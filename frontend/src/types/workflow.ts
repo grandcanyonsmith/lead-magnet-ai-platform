@@ -111,6 +111,21 @@ export interface WorkflowDeliveryConfig {
   delivery_sms_ai_instructions: string;
 }
 
+export interface WorkflowFormData {
+  workflow_name: string;
+  workflow_description: string;
+  template_id: string;
+  template_version: number;
+  trigger?: WorkflowTrigger;
+  delivery_method?: DeliveryMethod;
+  delivery_webhook_url?: string;
+  delivery_webhook_headers?: Record<string, string>;
+  delivery_sms_enabled?: boolean;
+  delivery_sms_message?: string;
+  delivery_sms_ai_generated?: boolean;
+  delivery_sms_ai_instructions?: string;
+}
+
 // Folder for organizing workflows
 export interface Folder {
   folder_id: string;

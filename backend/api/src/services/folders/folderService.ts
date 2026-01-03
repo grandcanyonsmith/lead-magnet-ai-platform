@@ -1,6 +1,5 @@
 import { ulid } from "ulid";
 import { db } from "../../utils/db";
-import { logger } from "../../utils/logger";
 import {
   InternalServerError,
   NotFoundError,

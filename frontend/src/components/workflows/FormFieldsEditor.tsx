@@ -1,25 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { FiEye } from "react-icons/fi";
+import { FiEye, FiPlus, FiTrash2 } from "react-icons/fi";
 import { FormFieldsData } from "@/hooks/useWorkflowForm";
 
 interface FormFieldsEditorProps {
   formFieldsData: FormFieldsData;
   onChange: (field: keyof FormFieldsData, value: any) => void;
   onFieldChange: (fieldIndex: number, field: string, value: any) => void;
+  onAddField?: () => void;
+  onRemoveField?: (index: number) => void;
 }
 
 export function FormFieldsEditor({
   formFieldsData,
   onChange,
   onFieldChange,
+  onAddField,
+  onRemoveField,
 }: FormFieldsEditorProps) {
   const [showFormPreview, setShowFormPreview] = useState(false);
-
-  if (formFieldsData.form_fields_schema.fields.length === 0) {
-    return null;
-  }
 
   return (
     <div className="space-y-6 pt-6 border-t">
@@ -160,13 +160,23 @@ export function FormFieldsEditor({
           Questions ({formFieldsData.form_fields_schema.fields.length})
         </label>
         <div className="space-y-4">
-          {formFieldsData.form_fields_schema.fields.map(
-            (field: any, index: number) => (
-              <div
-                key={field.field_id || index}
-                className="border border-gray-200 rounded-lg p-4"
-              >
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+            {formFieldsData.form_fields_schema.fields.map(
+              (field: any, index: number) => (
+                <div
+                  key={field.field_id || index}
+                  className="border border-gray-200 rounded-lg p-4 relative group"
+                >
+                  {onRemoveField && (
+                    <button
+                      type="button"
+                      onClick={() => onRemoveField(index)}
+                      className="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition-colors p-1"
+                      title="Remove field"
+                    >
+                      <FiTrash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3 pr-8">
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">
                       Question Label
@@ -259,6 +269,17 @@ export function FormFieldsEditor({
             ),
           )}
         </div>
+        
+        {onAddField && (
+          <button
+            type="button"
+            onClick={onAddField}
+            className="mt-4 flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary-600 bg-primary-50 hover:bg-primary-100 rounded-lg transition-colors w-full justify-center border border-primary-200 border-dashed"
+          >
+            <FiPlus className="w-4 h-4" />
+            Add Question
+          </button>
+        )}
       </div>
     </div>
   );
