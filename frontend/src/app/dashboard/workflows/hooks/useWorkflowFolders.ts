@@ -3,7 +3,7 @@ import { toast } from "react-hot-toast";
 import { api } from "@/lib/api";
 import { Folder } from "@/types";
 
-export function useWorkflowFolders(refetchWorkflows: () => Promise<any> | void) {
+export function useWorkflowFolders(refetchWorkflows: () => Promise<void> | void) {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [folderActionLoading, setFolderActionLoading] = useState(false);
