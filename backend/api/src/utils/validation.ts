@@ -12,8 +12,23 @@ export const workflowStepSchema = z
       .describe("Deprecated: All steps are now generic steps"),
     model: z.string().min(1).optional().default("gpt-5.2"),
     reasoning_effort: z.enum(["none", "low", "medium", "high", "xhigh"]).optional().default("high"),
+    service_tier: z.enum(["auto", "default", "flex", "scale", "priority"]).optional(),
     text_verbosity: z.enum(["low", "medium", "high"]).optional(),
     max_output_tokens: z.number().int().min(1).optional(),
+    output_format: z
+      .union([
+        z.object({ type: z.literal("text") }),
+        z.object({ type: z.literal("json_object") }),
+        z.object({
+          type: z.literal("json_schema"),
+          name: z.string().min(1).max(64),
+          description: z.string().optional(),
+          strict: z.boolean().optional(),
+          // JSON Schema object (OpenAI expects an object at the root)
+          schema: z.record(z.any()),
+        }),
+      ])
+      .optional(),
     instructions: z.string().optional().default(""), 
     step_order: z.number().int().min(0).optional(),
     depends_on: z.array(z.number().int().min(0)).optional(), // Array of step indices this step depends on

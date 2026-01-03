@@ -14,8 +14,10 @@ interface RawStep {
   step_description?: string;
   model?: string;
   reasoning_effort?: string;
+  service_tier?: string;
   text_verbosity?: string;
   max_output_tokens?: number;
+  output_format?: unknown;
   instructions?: string;
   step_order?: number;
   depends_on?: number[];
@@ -111,6 +113,12 @@ function normalizeStep(step: RawStep, index: number): WorkflowStep {
       ? (step.reasoning_effort as any)
       : undefined;
 
+  const service_tier =
+    isString(step.service_tier) &&
+    ['auto', 'default', 'flex', 'scale', 'priority'].includes(step.service_tier)
+      ? (step.service_tier as any)
+      : undefined;
+
   const text_verbosity =
     isString(step.text_verbosity) &&
     ['low', 'medium', 'high'].includes(step.text_verbosity)
@@ -137,13 +145,40 @@ function normalizeStep(step: RawStep, index: number): WorkflowStep {
         ? 'auto'
         : 'none';
 
+  // Structured Outputs / output format (Responses API text.format)
+  let output_format: any = undefined;
+  if (step.output_format && typeof step.output_format === 'object' && step.output_format !== null) {
+    const t = (step.output_format as any).type;
+    if (t === 'text') {
+      output_format = { type: 'text' };
+    } else if (t === 'json_object') {
+      output_format = { type: 'json_object' };
+    } else if (t === 'json_schema') {
+      const name = (step.output_format as any).name;
+      const schema = (step.output_format as any).schema;
+      const description = (step.output_format as any).description;
+      const strict = (step.output_format as any).strict;
+      if (isString(name) && name.trim().length > 0 && typeof schema === 'object' && schema !== null) {
+        output_format = {
+          type: 'json_schema',
+          name,
+          schema,
+          ...(isString(description) ? { description } : {}),
+          ...(typeof strict === 'boolean' ? { strict } : {}),
+        };
+      }
+    }
+  }
+
   return {
     step_name: isString(step.step_name) && step.step_name.trim().length > 0 ? step.step_name : `Step ${index + 1}`,
     step_description: isString(step.step_description) ? step.step_description : '',
     model,
     reasoning_effort,
+    service_tier,
     text_verbosity,
     max_output_tokens,
+    output_format,
     instructions: isString(step.instructions) && step.instructions.trim().length > 0 ? step.instructions : 'Generate content based on form submission data.',
     step_order: typeof step.step_order === 'number' && step.step_order >= 0 ? step.step_order : index,
     depends_on: isArray(step.depends_on) ? step.depends_on.filter((d): d is number => typeof d === 'number' && d >= 0 && d < 1000) : [],
