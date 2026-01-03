@@ -140,4 +140,4 @@ jobs:
             --region "$AWS_REGION"
           
           # Wait for update to be successful
-          aws lambda wait function-updated --function-name "$JOB_PROCESSOR_LAMBDA_ARN"
+          aws lambda wait function-updated --function-name "$JOB_PROCESSOR_LAMBDA_ARN" --region "$AWS_REGION"
