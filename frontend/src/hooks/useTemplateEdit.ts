@@ -28,7 +28,7 @@ export function useTemplateEdit(
     template_name: "",
     template_description: "",
     html_content: "",
-    is_published: false,
+    is_published: true,
   });
 
   // History state

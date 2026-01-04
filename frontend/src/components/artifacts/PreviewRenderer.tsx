@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import Image from "next/image";
 import {
   FiFile,
@@ -12,6 +12,7 @@ import {
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { api } from "@/lib/api";
+import { JsonViewer } from "@/components/ui/JsonViewer";
 
 interface PreviewRendererProps {
   contentType?: string;
@@ -140,6 +141,9 @@ export function PreviewRenderer({
   const [markdownError, setMarkdownError] = useState(false);
   const [htmlContent, setHtmlContent] = useState<string | null>(null);
   const [htmlError, setHtmlError] = useState(false);
+  const [jsonContent, setJsonContent] = useState<any>(null);
+  const [jsonRaw, setJsonRaw] = useState<string | null>(null);
+  const [jsonError, setJsonError] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Determine effective content type with fallback to file extension
@@ -172,6 +176,9 @@ export function PreviewRenderer({
       setMarkdownContent(null);
       setHtmlError(false);
       setHtmlContent(null);
+      setJsonError(false);
+      setJsonContent(null);
+      setJsonRaw(null);
     }
   }, [objectUrl]);
 
@@ -305,6 +312,77 @@ export function PreviewRenderer({
     htmlError,
   ]);
 
+  // Fetch JSON content when in view
+  useEffect(() => {
+    if (
+      isInView &&
+      effectiveContentType === "application/json" &&
+      !jsonContent &&
+      !jsonError
+    ) {
+      const fetchJson = async () => {
+        try {
+          let text: string;
+          if (artifactId) {
+            text = await api.artifacts.getArtifactContent(artifactId);
+          } else if (objectUrl) {
+            const res = await fetch(objectUrl);
+            if (!res.ok) {
+              throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+            }
+            text = await res.text();
+          } else {
+            throw new Error("No artifact ID or URL provided");
+          }
+
+          try {
+            const parsed = JSON.parse(text);
+            setJsonContent(parsed);
+            setJsonRaw(text);
+            setJsonError(false);
+          } catch (e) {
+            // Failed to parse JSON
+            console.error("Failed to parse JSON artifact:", e);
+            setJsonRaw(text);
+            setJsonError(true);
+          }
+        } catch (err: any) {
+          if (process.env.NODE_ENV === "development") {
+            console.error("Failed to fetch JSON:", err);
+          }
+          if (
+            err?.message?.includes("404") ||
+            err?.message?.includes("not found")
+          ) {
+            setJsonContent({ error: "Artifact file not available" });
+            setJsonRaw(
+              JSON.stringify(
+                {
+                  error: "Artifact file not available",
+                  message:
+                    "The artifact file was not found in storage. It may have been deleted or not yet generated.",
+                },
+                null,
+                2,
+              ),
+            );
+            setJsonError(false);
+          } else {
+            setJsonError(true);
+          }
+        }
+      };
+      fetchJson();
+    }
+  }, [
+    isInView,
+    effectiveContentType,
+    objectUrl,
+    artifactId,
+    jsonContent,
+    jsonError,
+  ]);
+
   if (!objectUrl && !artifactId) {
     return (
       <div
@@ -314,6 +392,36 @@ export function PreviewRenderer({
       </div>
     );
   }
+
+  // Attempt to parse markdown content as JSON if it looks like one
+  const parsedMarkdownJson = useMemo(() => {
+    if (!markdownContent || effectiveContentType !== "text/markdown")
+      return null;
+    try {
+      const trimmed = markdownContent.trim();
+      // Check if it looks like JSON before parsing
+      if (
+        (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+        (trimmed.startsWith("[") && trimmed.endsWith("]"))
+      ) {
+        return JSON.parse(trimmed);
+      }
+      // Also handle code blocks
+      const match = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
+      if (match && match[1]) {
+        const inner = match[1].trim();
+        if (
+          (inner.startsWith("{") && inner.endsWith("}")) ||
+          (inner.startsWith("[") && inner.endsWith("]"))
+        ) {
+          return JSON.parse(inner);
+        }
+      }
+    } catch (e) {
+      return null;
+    }
+    return null;
+  }, [markdownContent, effectiveContentType]);
 
   const renderPreview = () => {
     if (effectiveContentType.startsWith("image/")) {
@@ -541,7 +649,153 @@ export function PreviewRenderer({
       );
     }
 
+    if (effectiveContentType === "application/json") {
+      if (isInView) {
+        if (jsonError && !jsonRaw) {
+          return (
+            <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
+              <div className="text-center">
+                <FiCode className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Failed to load JSON
+                </p>
+              </div>
+            </div>
+          );
+        }
+
+        if (jsonContent || jsonRaw) {
+          return (
+            <div className="relative w-full h-full bg-white dark:bg-gray-950 flex flex-col">
+              <div className="flex-1 min-h-0 overflow-y-auto p-4">
+                <JsonViewer
+                  value={jsonContent}
+                  raw={jsonRaw || ""}
+                  defaultMode="tree"
+                  defaultExpandedDepth={2}
+                />
+              </div>
+            </div>
+          );
+        }
+
+        return (
+          <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
+            <div className="text-center">
+              <FiCode className="w-12 h-12 text-blue-400 dark:text-blue-300 mx-auto mb-2 animate-pulse" />
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Loading JSON...
+              </p>
+            </div>
+          </div>
+        );
+      }
+      return (
+        <div className="flex items-center justify-center h-full bg-gray-100 dark:bg-gray-800">
+          <FiCode className="w-12 h-12 text-blue-400 dark:text-blue-300" />
+        </div>
+      );
+    }
+
     if (effectiveContentType === "text/markdown") {
+      // If we successfully parsed the markdown as JSON, render using JsonViewer
+      if (parsedMarkdownJson) {
+        const rawJson =
+          typeof markdownContent === "string" ? markdownContent : "";
+        // Extract raw JSON from code block if needed for the "Raw" view in JsonViewer
+        let cleanRaw = rawJson.trim();
+        const match = cleanRaw.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
+        if (match && match[1]) {
+          cleanRaw = match[1].trim();
+        }
+
+        if (isFullScreen) {
+          return (
+            <div className="relative w-full h-full bg-white dark:bg-gray-950 flex flex-col">
+              {/* Header with view mode switcher */}
+              {onViewModeChange && (
+                <div className="flex items-center justify-between px-4 py-3 bg-gray-100 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => onViewModeChange("desktop")}
+                      className={`p-2 rounded-lg transition-colors ${
+                        viewMode === "desktop"
+                          ? "bg-gray-700 text-white dark:bg-gray-200 dark:text-gray-900"
+                          : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700"
+                      }`}
+                      aria-label="Desktop view"
+                      title="Desktop view"
+                    >
+                      <FiMonitor className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => onViewModeChange("tablet")}
+                      className={`p-2 rounded-lg transition-colors ${
+                        viewMode === "tablet"
+                          ? "bg-gray-700 text-white dark:bg-gray-200 dark:text-gray-900"
+                          : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700"
+                      }`}
+                      aria-label="Tablet view"
+                      title="Tablet view"
+                    >
+                      <FiTablet className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => onViewModeChange("mobile")}
+                      className={`p-2 rounded-lg transition-colors ${
+                        viewMode === "mobile"
+                          ? "bg-gray-700 text-white dark:bg-gray-200 dark:text-gray-900"
+                          : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700"
+                      }`}
+                      aria-label="Mobile view"
+                      title="Mobile view"
+                    >
+                      <FiSmartphone className="w-5 h-5" />
+                    </button>
+                  </div>
+                  {fileName && (
+                    <div className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate max-w-md">
+                      {fileName}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="flex-1 min-h-0 overflow-y-auto">
+                <div
+                  className={`transition-all duration-300 h-full p-4 ${
+                    viewMode === "tablet"
+                      ? "w-[768px] max-w-[768px] mx-auto border-x border-gray-200 dark:border-gray-800"
+                      : viewMode === "mobile"
+                        ? "w-[375px] max-w-[375px] mx-auto border-x border-gray-200 dark:border-gray-800"
+                        : "w-full"
+                  }`}
+                >
+                  <JsonViewer
+                    value={parsedMarkdownJson}
+                    raw={cleanRaw}
+                    defaultMode="tree"
+                    defaultExpandedDepth={2}
+                  />
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        // Regular (non-fullscreen) view
+        return (
+          <div className="relative w-full h-full bg-white dark:bg-gray-950 overflow-auto p-4">
+            <JsonViewer
+              value={parsedMarkdownJson}
+              raw={cleanRaw}
+              defaultMode="tree"
+              defaultExpandedDepth={2}
+            />
+          </div>
+        );
+      }
+
       if (isFullScreen) {
         // Full-screen markdown rendering with scrolling + view mode support (desktop/tablet/mobile)
         return (

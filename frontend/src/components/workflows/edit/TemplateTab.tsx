@@ -489,25 +489,9 @@ export function TemplateTab({
             </div>
           )}
 
-          {/* Publish Settings */}
-          <div className="bg-white dark:bg-card rounded-lg shadow p-6 border border-gray-200 dark:border-border">
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={templateData.is_published}
-                onChange={(e) =>
-                  onTemplateChange("is_published", e.target.checked)
-                }
-                className="mr-2 h-4 w-4 text-primary-600 dark:text-primary focus:ring-primary-500 border-gray-300 dark:border-border rounded"
-              />
-              <span className="text-sm font-medium text-gray-700 dark:text-foreground">
-                Publish Template
-              </span>
-            </label>
-            <p className="mt-1 text-sm text-gray-500 dark:text-muted-foreground ml-6">
-              Published templates can be used in workflows immediately
-            </p>
-          </div>
+          {/* Publish Settings - Removed as part of simplification */
+          /* Defaulted to true in backend/hook logic */
+          }
 
           {/* Action Buttons removed - now in global header */}
         </>
