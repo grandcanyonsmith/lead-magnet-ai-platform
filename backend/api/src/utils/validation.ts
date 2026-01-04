@@ -137,30 +137,8 @@ const baseWorkflowSchema = z.object({
       type: z.enum(["form", "webhook"]),
     })
     .optional(),
-  // Legacy fields (kept for backward compatibility in database, but not used for new workflows)
-  ai_model: z.string().optional(),
-  ai_instructions: z.string().optional(),
-  rewrite_model: z.string().optional(),
-  research_enabled: z.boolean().optional(),
-  html_enabled: z.boolean().optional(),
   template_id: z.string().optional(),
   template_version: z.number().default(0),
-  // Delivery configuration
-  delivery_method: z.enum(["webhook", "sms", "none"]).default("none"),
-  delivery_webhook_url: z.preprocess(
-    (val) =>
-      val === "" || val === null || val === undefined ? undefined : val,
-    z
-      .string()
-      .url()
-      .transform((val) => new URL(val).href)
-      .optional(),
-  ),
-  delivery_webhook_headers: z.record(z.string()).optional(),
-  delivery_sms_enabled: z.boolean().default(false),
-  delivery_sms_message: z.string().optional(), // Manual SMS message
-  delivery_sms_ai_generated: z.boolean().default(false), // If true, AI will generate SMS
-  delivery_sms_ai_instructions: z.string().optional(), // Instructions for AI SMS generation
 });
 
 // Helper function to validate dependencies

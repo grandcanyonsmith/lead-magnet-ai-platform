@@ -303,9 +303,6 @@ export default function EditWorkflowPage() {
               <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
                 Edit Lead Magnet
               </h1>
-              {workflowEdit.workflowStatus === "draft" && (
-                <Badge variant="warning" className="uppercase tracking-wider text-[10px]">Draft</Badge>
-              )}
             </div>
             <p className="hidden sm:block text-sm text-muted-foreground">
               Configure your workflow logic, intake form, and output design.

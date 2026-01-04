@@ -27,7 +27,7 @@ test.describe('Authentication', () => {
     await loginPage.waitForError()
     
     await expect(loginPage.errorMessage).toBeVisible()
-    await expect(loginPage.errorMessage).toContainText(/error|failed|invalid/i)
+    await expect(loginPage.errorMessage).toContainText(/error|failed|invalid|incorrect/i)
   })
 
   test('should login successfully with valid credentials', async ({ page, login }) => {

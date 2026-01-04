@@ -7,7 +7,6 @@ import WorkflowStepEditor from "../components/WorkflowStepEditor";
 import { WorkflowBasicFields } from "@/components/workflows/WorkflowBasicFields";
 import { TemplateEditor } from "@/components/workflows/TemplateEditor";
 import { FormFieldsEditor } from "@/components/workflows/FormFieldsEditor";
-import { DeliveryConfig } from "@/components/workflows/DeliveryConfig";
 import { useAIGeneration } from "@/hooks/useAIGeneration";
 import { useWorkflowForm } from "@/hooks/useWorkflowForm";
 import { useWorkflowSteps } from "@/hooks/useWorkflowSteps";
@@ -454,12 +453,6 @@ export default function NewWorkflowPage() {
           onFieldChange={workflowForm.updateFormField}
           onAddField={workflowForm.addFormField}
           onRemoveField={workflowForm.removeFormField}
-        />
-
-        {/* Delivery Configuration */}
-        <DeliveryConfig
-          formData={workflowForm.formData}
-          onChange={workflowForm.updateFormData}
         />
 
         <div className="flex justify-end space-x-4 pt-4 border-t border-gray-200 dark:border-border">

@@ -17,22 +17,6 @@ export interface Workflow {
   created_at: string;
   updated_at: string;
   deleted_at?: string;
-  // Legacy fields (deprecated - kept for backward compatibility with existing database records)
-  // All new workflows must use the steps format. These fields are ignored.
-  ai_model?: string;
-  ai_instructions?: string;
-  rewrite_model?: string;
-  research_enabled?: boolean;
-  html_enabled?: boolean;
-  template_id?: string;
-  template_version?: number;
-  delivery_method?: "webhook" | "sms" | "none";
-  delivery_webhook_url?: string;
-  delivery_webhook_headers?: Record<string, string>;
-  delivery_sms_enabled?: boolean;
-  delivery_sms_message?: string;
-  delivery_sms_ai_generated?: boolean;
-  delivery_sms_ai_instructions?: string;
 }
 
 export interface WorkflowStep {
