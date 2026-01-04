@@ -1,7 +1,25 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { FiTrash2, FiChevronUp, FiChevronDown, FiGlobe } from "react-icons/fi";
+import {
+  FiTrash2,
+  FiChevronUp,
+  FiChevronDown,
+  FiGlobe,
+  FiSettings,
+  FiCpu,
+  FiBox,
+  FiMessageSquare,
+  FiFileText,
+  FiImage,
+  FiMonitor,
+  FiTerminal,
+  FiCode,
+  FiZap,
+  FiAlignLeft,
+  FiLayout,
+  FiLink,
+} from "react-icons/fi";
 import { useWorkflowStepAI } from "@/hooks/useWorkflowStepAI";
 import { useAIModels } from "@/hooks/api/useWorkflows";
 import {
@@ -36,31 +54,37 @@ const AVAILABLE_TOOLS = [
     value: "web_search",
     label: "Search the Web",
     description: "Look up real-time information",
+    icon: FiGlobe,
   },
   {
     value: "image_generation",
     label: "Create Images",
-    description: "Generate images from text descriptions",
+    description: "Generate images from text",
+    icon: FiImage,
   },
   {
     value: "computer_use_preview",
-    label: "Computer Use (Beta)",
-    description: "Interact with computer interfaces",
+    label: "Computer Use",
+    description: "Interact with interfaces (Beta)",
+    icon: FiMonitor,
   },
   {
     value: "file_search",
     label: "Search Files",
-    description: "Search uploaded files for context",
+    description: "Search uploaded files",
+    icon: FiFileText,
   },
   {
     value: "code_interpreter",
     label: "Run Code",
-    description: "Execute Python code for calculations",
+    description: "Execute Python code",
+    icon: FiCode,
   },
   {
     value: "shell",
-    label: "Run Shell Commands",
-    description: "Advanced: Run system commands",
+    label: "Shell Commands",
+    description: "Run system commands",
+    icon: FiTerminal,
   },
 ];
 
@@ -78,19 +102,71 @@ const TOOL_CHOICE_OPTIONS = [
   { value: "none", label: "None", description: "Disable tools entirely" },
 ];
 
-const SECTION_SHELL =
-  "rounded-xl border border-border/60 bg-muted/40 p-5 shadow-sm";
-const SECTION_HEADER = "mb-4 border-b border-border/60 pb-3";
-const SECTION_TITLE = "text-sm font-semibold text-foreground";
-const SECTION_SUBTITLE = "mt-1 text-xs text-muted-foreground";
+const SERVICE_TIER_OPTIONS = [
+  {
+    value: "",
+    label: "Auto",
+    description: "Project Default",
+    icon: FiZap,
+  },
+  {
+    value: "priority",
+    label: "Priority",
+    description: "Fastest Response",
+    icon: FiZap,
+  },
+  {
+    value: "default",
+    label: "Default",
+    description: "Standard Speed",
+    icon: FiCpu,
+  },
+  {
+    value: "flex",
+    label: "Flex",
+    description: "Lower Cost",
+    icon: FiBox,
+  },
+  {
+    value: "scale",
+    label: "Scale",
+    description: "High Volume",
+    icon: FiBox,
+  },
+];
+
+const OUTPUT_TYPE_OPTIONS = [
+  {
+    value: "text",
+    label: "Text",
+    description: "Standard text response",
+    icon: FiAlignLeft,
+  },
+  {
+    value: "json_schema",
+    label: "Structured JSON",
+    description: "Strict schema validation",
+    icon: FiLayout,
+  },
+  {
+    value: "json_object",
+    label: "JSON Object",
+    description: "Raw JSON output",
+    icon: FiCode,
+  },
+];
+
+const SECTION_HEADER = "flex items-center gap-2 mb-4 pb-2 border-b border-border/40";
+const SECTION_TITLE = "text-sm font-semibold text-foreground flex items-center gap-2";
+const SECTION_SUBTITLE = "text-xs text-muted-foreground ml-auto";
 
 const FIELD_LABEL =
-  "flex items-center gap-1.5 text-sm font-medium text-foreground/90";
+  "flex items-center gap-1.5 text-sm font-medium text-foreground/90 mb-1.5";
 const FIELD_OPTIONAL = "text-xs font-normal text-muted-foreground";
 const FIELD_REQUIRED = "text-destructive";
 
 const CONTROL_BASE =
-  "w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring/40 disabled:cursor-not-allowed disabled:opacity-50";
+  "w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground shadow-sm transition-all hover:border-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary/40 disabled:cursor-not-allowed disabled:opacity-50";
 const SELECT_CONTROL = `${CONTROL_BASE} pr-9`;
 const HELP_TEXT = "mt-2 text-xs leading-relaxed text-muted-foreground";
 
@@ -141,6 +217,7 @@ export default function WorkflowStepEditor({
     });
   
   const [isWebhookCollapsed, setIsWebhookCollapsed] = useState(true);
+  const [showAdvancedAI, setShowAdvancedAI] = useState(false);
 
   // Track if we've already converted string tools to objects to prevent infinite loops
   const hasConvertedToolsRef = useRef<boolean>(false);
@@ -558,18 +635,19 @@ export default function WorkflowStepEditor({
           }}
         />
 
-        <div className="space-y-6">
-          <div className={SECTION_SHELL}>
+        <div className="space-y-8">
+          <div>
             <div className={SECTION_HEADER}>
               <h4 className={SECTION_TITLE}>
+                <FiSettings className="w-4 h-4 text-primary" />
                 Step Information
               </h4>
               <p className={SECTION_SUBTITLE}>
                 Basic details about this workflow step
               </p>
             </div>
-            <div className="grid grid-cols-1 gap-5 md:grid-cols-5 md:gap-6">
-              <div className="space-y-1 md:col-span-2">
+            <div className="space-y-4">
+              <div className="space-y-1.5">
                 <label
                   className={FIELD_LABEL}
                   htmlFor={`step-name-${index}`}
@@ -582,7 +660,7 @@ export default function WorkflowStepEditor({
                   type="text"
                   value={localStep.step_name}
                   onChange={(e) => handleChange("step_name", e.target.value)}
-                  className={CONTROL_BASE}
+                  className="w-full text-xl font-semibold bg-transparent border-none px-0 py-2 placeholder:text-muted-foreground/50 focus:ring-0 focus:outline-none"
                   placeholder="e.g., Deep Research"
                   required
                   aria-label="Instruction name"
@@ -590,7 +668,7 @@ export default function WorkflowStepEditor({
                 />
               </div>
 
-              <div className="space-y-1 md:col-span-3">
+              <div className="space-y-1.5">
                 <label
                   className={FIELD_LABEL}
                   htmlFor={`step-description-${index}`}
@@ -604,26 +682,40 @@ export default function WorkflowStepEditor({
                   onChange={(e) =>
                     handleChange("step_description", e.target.value)
                   }
-                  className={`${CONTROL_BASE} min-h-[96px] resize-y leading-relaxed`}
+                  className={`${CONTROL_BASE} min-h-[80px] resize-y leading-relaxed bg-muted/30 border-transparent hover:bg-background hover:border-input focus:bg-background focus:border-ring`}
                   placeholder="Brief description of what this step does"
-                  rows={3}
+                  rows={2}
                   aria-label="Instruction description"
                 />
               </div>
             </div>
           </div>
 
-          <div className={SECTION_SHELL}>
+          <div className="space-y-4">
             <div className={SECTION_HEADER}>
               <h4 className={SECTION_TITLE}>
+                <FiCpu className="w-4 h-4 text-primary" />
                 AI Configuration
               </h4>
-              <p className={SECTION_SUBTITLE}>
-                Configure the AI model and reasoning parameters
-              </p>
+              <div className="ml-auto flex items-center gap-2">
+                 <button
+                  type="button"
+                  onClick={() => setShowAdvancedAI(!showAdvancedAI)}
+                  className="text-xs font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-1"
+                >
+                  {showAdvancedAI ? "Hide Advanced" : "Show Advanced"}
+                  {showAdvancedAI ? (
+                    <FiChevronUp className="w-3 h-3" />
+                  ) : (
+                    <FiChevronDown className="w-3 h-3" />
+                  )}
+                </button>
+              </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
-              <div className="space-y-1">
+            
+            <div className="space-y-6">
+              {/* Basic AI Settings */}
+              <div className="space-y-1.5">
                 <label
                   className={FIELD_LABEL}
                   htmlFor={`ai-model-${index}`}
@@ -659,68 +751,81 @@ export default function WorkflowStepEditor({
                 </select>
               </div>
 
-              <div className="space-y-1">
-                <label
-                  className={FIELD_LABEL}
-                  htmlFor={`reasoning-effort-${index}`}
-                >
-                  <span>Reasoning Depth</span>
-                  <span className={FIELD_OPTIONAL}>(Optional)</span>
-                </label>
-                <select
-                  id={`reasoning-effort-${index}`}
-                  value={localStep.reasoning_effort || ""}
-                  onChange={(e) =>
-                    handleChange("reasoning_effort", e.target.value || undefined)
-                  }
-                  className={SELECT_CONTROL}
-                  aria-label="Reasoning effort"
-                >
-                  <option value="">Standard (Auto)</option>
-                  <option value="none">None - Fastest</option>
-                  <option value="low">Low - Quick</option>
-                  <option value="medium">Medium - Balanced</option>
-                  <option value="high">High - Thorough</option>
-                  <option value="xhigh">Extra High - Maximum</option>
-                </select>
-                <p className={HELP_TEXT}>
-                  Controls how deeply the AI reasons before responding. Higher values improve quality but increase latency.
-                </p>
-              </div>
+              {/* Advanced AI Settings */}
+              {showAdvancedAI && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="space-y-1.5">
+                    <label
+                      className={FIELD_LABEL}
+                      htmlFor={`reasoning-effort-${index}`}
+                    >
+                      <span>Reasoning Depth</span>
+                      <span className={FIELD_OPTIONAL}>(Optional)</span>
+                    </label>
+                    <select
+                      id={`reasoning-effort-${index}`}
+                      value={localStep.reasoning_effort || ""}
+                      onChange={(e) =>
+                        handleChange("reasoning_effort", e.target.value || undefined)
+                      }
+                      className={SELECT_CONTROL}
+                      aria-label="Reasoning effort"
+                    >
+                      <option value="">Standard (Auto)</option>
+                      <option value="none">None - Fastest</option>
+                      <option value="low">Low - Quick</option>
+                      <option value="medium">Medium - Balanced</option>
+                      <option value="high">High - Thorough</option>
+                      <option value="xhigh">Extra High - Maximum</option>
+                    </select>
+                  </div>
 
-              <div className="space-y-1">
-                <label
-                  className={FIELD_LABEL}
-                  htmlFor={`service-tier-${index}`}
-                >
-                  <span>Service Tier</span>
-                  <span className={FIELD_OPTIONAL}>(Optional)</span>
-                </label>
-                <select
-                  id={`service-tier-${index}`}
-                  value={localStep.service_tier || ""}
-                  onChange={(e) =>
-                    handleChange("service_tier", e.target.value || undefined)
-                  }
-                  className={SELECT_CONTROL}
-                  aria-label="Service tier"
-                >
-                  <option value="">Auto (Project Default)</option>
-                  <option value="default">Default</option>
-                  <option value="priority">Priority (Fastest)</option>
-                  <option value="flex">Flex</option>
-                  <option value="scale">Scale</option>
-                </select>
-                <p className={HELP_TEXT}>
-                  Controls cost/latency for this step. Use Priority for fastest responses.
-                </p>
-              </div>
+                  <div className="md:col-span-2 space-y-1.5">
+                    <label
+                      className={FIELD_LABEL}
+                      htmlFor={`service-tier-${index}`}
+                    >
+                      <span>Service Tier</span>
+                      <span className={FIELD_OPTIONAL}>(Optional)</span>
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                      {SERVICE_TIER_OPTIONS.map((option) => {
+                        const isSelected = (localStep.service_tier || "") === option.value;
+                        const Icon = option.icon;
+                        return (
+                          <div
+                            key={option.value}
+                            onClick={() => handleChange("service_tier", option.value || undefined)}
+                            className={`flex flex-col items-center justify-center gap-1.5 p-3 rounded-lg border cursor-pointer transition-all text-center h-full ${
+                              isSelected 
+                                ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/10" 
+                                : "border-border/40 hover:border-border hover:bg-muted/20 bg-background"
+                            }`}
+                          >
+                            <div className={`p-1.5 rounded-md ${isSelected ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+                              <Icon className="w-4 h-4" />
+                            </div>
+                            <div className="min-w-0 w-full">
+                              <div className={`text-sm font-medium leading-none mb-1 ${isSelected ? "text-primary" : "text-foreground"}`}>{option.label}</div>
+                              <div className="text-[10px] text-muted-foreground truncate w-full">{option.description}</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <p className={HELP_TEXT}>
+                      Controls cost/latency for this step. Use Priority for fastest responses.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
-          <div className={SECTION_SHELL}>
+          <div>
             <div className={SECTION_HEADER}>
               <h4 className={SECTION_TITLE}>
+                <FiMessageSquare className="w-4 h-4 text-primary" />
                 Output Settings
               </h4>
               <p className={SECTION_SUBTITLE}>
@@ -728,7 +833,7 @@ export default function WorkflowStepEditor({
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
-              <div className="space-y-1 md:col-span-2">
+              <div className="space-y-1.5 md:col-span-2">
                 <label
                   className={FIELD_LABEL}
                   htmlFor={`output-format-${index}`}
@@ -736,49 +841,75 @@ export default function WorkflowStepEditor({
                   <span>Output Type</span>
                   <span className={FIELD_OPTIONAL}>(Optional)</span>
                 </label>
-                <select
-                  id={`output-format-${index}`}
-                  value={localStep.output_format?.type || "text"}
-                  onChange={(e) => {
-                    const t = e.target.value;
-                    if (t === "text") {
-                      handleChange("output_format", undefined);
-                      return;
-                    }
-                    if (t === "json_object") {
-                      handleChange("output_format", { type: "json_object" });
-                      return;
-                    }
-                    if (t === "json_schema") {
-                      const existing = localStep.output_format;
-                      const defaultSchema = {
-                        type: "object",
-                        properties: {},
-                        additionalProperties: true,
-                      };
-                      const next =
-                        existing && existing.type === "json_schema"
-                          ? existing
-                          : {
-                              type: "json_schema",
-                              name: `step_${index + 1}_output`,
-                              strict: true,
-                              schema: defaultSchema,
+                <div className="grid grid-cols-3 gap-3">
+                  {OUTPUT_TYPE_OPTIONS.map((option) => {
+                    const isSelected =
+                      (localStep.output_format?.type || "text") === option.value;
+                    const Icon = option.icon;
+                    return (
+                      <div
+                        key={option.value}
+                        onClick={() => {
+                          const t = option.value;
+                          if (t === "text") {
+                            handleChange("output_format", undefined);
+                            return;
+                          }
+                          if (t === "json_object") {
+                            handleChange("output_format", { type: "json_object" });
+                            return;
+                          }
+                          if (t === "json_schema") {
+                            const existing = localStep.output_format;
+                            const defaultSchema = {
+                              type: "object",
+                              properties: {},
+                              additionalProperties: true,
                             };
-                      handleChange("output_format", next as any);
-                      return;
-                    }
-                  }}
-                  className={SELECT_CONTROL}
-                  aria-label="Output type"
-                >
-                  <option value="text">Text (Default)</option>
-                  <option value="json_schema">Structured JSON (JSON Schema)</option>
-                  <option value="json_object">JSON (Legacy JSON mode)</option>
-                </select>
-                <p className={HELP_TEXT}>
-                  Structured JSON enables OpenAI Structured Outputs (Responses API: <code className="font-mono">text.format</code>).
-                </p>
+                            const next =
+                              existing && existing.type === "json_schema"
+                                ? existing
+                                : {
+                                    type: "json_schema",
+                                    name: `step_${index + 1}_output`,
+                                    strict: true,
+                                    schema: defaultSchema,
+                                  };
+                            handleChange("output_format", next as any);
+                            return;
+                          }
+                        }}
+                        className={`flex flex-col items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${
+                          isSelected
+                            ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/10"
+                            : "border-border/40 hover:border-primary/20 hover:bg-muted/30 bg-background"
+                        }`}
+                      >
+                        <div
+                          className={`p-2 rounded-lg transition-colors ${
+                            isSelected
+                              ? "bg-primary/10 text-primary"
+                              : "bg-muted/50 text-muted-foreground"
+                          }`}
+                        >
+                          <Icon className="w-5 h-5" />
+                        </div>
+                        <div className="text-center">
+                          <div
+                            className={`text-sm font-semibold mb-0.5 ${
+                              isSelected ? "text-primary" : "text-foreground"
+                            }`}
+                          >
+                            {option.label}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground">
+                            {option.description}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
               {localStep.output_format?.type === "json_schema" && (
@@ -867,33 +998,40 @@ export default function WorkflowStepEditor({
                       <span>JSON Schema</span>
                       <span className={FIELD_REQUIRED}>*</span>
                     </label>
-                    <textarea
-                      id={`output-schema-json-${index}`}
-                      className={`${CONTROL_BASE} min-h-[180px] font-mono text-xs`}
-                      value={outputSchemaJson}
-                      onChange={(e) => {
-                        const next = e.target.value;
-                        setOutputSchemaJson(next);
-                        try {
-                          const parsed = JSON.parse(next || "{}");
-                          if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-                            setOutputSchemaError("Schema must be a JSON object");
-                            return;
+                    <div className="relative rounded-lg overflow-hidden border border-input shadow-sm">
+                      <div className="absolute top-0 right-0 p-2 pointer-events-none">
+                        <span className="text-[10px] font-mono text-muted-foreground bg-background/80 backdrop-blur px-1.5 py-0.5 rounded border border-border/50">JSON</span>
+                      </div>
+                      <textarea
+                        id={`output-schema-json-${index}`}
+                        className="w-full min-h-[240px] bg-slate-950 text-slate-50 p-4 font-mono text-xs leading-relaxed resize-y focus:outline-none"
+                        value={outputSchemaJson}
+                        onChange={(e) => {
+                          const next = e.target.value;
+                          setOutputSchemaJson(next);
+                          try {
+                            const parsed = JSON.parse(next || "{}");
+                            if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+                              setOutputSchemaError("Schema must be a JSON object");
+                              return;
+                            }
+                            setOutputSchemaError(null);
+                            handleChange("output_format", {
+                              ...localStep.output_format,
+                              schema: parsed,
+                            } as any);
+                          } catch (err: any) {
+                            setOutputSchemaError("Invalid JSON (will apply once it parses)");
                           }
-                          setOutputSchemaError(null);
-                          handleChange("output_format", {
-                            ...localStep.output_format,
-                            schema: parsed,
-                          } as any);
-                        } catch (err: any) {
-                          setOutputSchemaError("Invalid JSON (will apply once it parses)");
-                        }
-                      }}
-                      placeholder='{\n  "type": "object",\n  "properties": {\n    "example": { "type": "string" }\n  },\n  "required": ["example"]\n}'
-                      rows={8}
-                    />
+                        }}
+                        placeholder='{\n  "type": "object",\n  "properties": {\n    "example": { "type": "string" }\n  },\n  "required": ["example"]\n}'
+                        rows={10}
+                        spellCheck={false}
+                      />
+                    </div>
                     {outputSchemaError && (
-                      <p className="mt-2 text-xs text-destructive">
+                      <p className="mt-2 text-xs text-destructive font-medium flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
                         {outputSchemaError}
                       </p>
                     )}
@@ -962,35 +1100,37 @@ export default function WorkflowStepEditor({
             </div>
           </div>
 
-          <div className={SECTION_SHELL}>
+          <div>
             <div className={SECTION_HEADER}>
               <label
-                className="flex items-center gap-1.5 text-sm font-semibold text-foreground"
+                className="flex items-center gap-2 text-sm font-semibold text-foreground cursor-pointer"
                 htmlFor={`instructions-${index}`}
               >
+                <FiFileText className="w-4 h-4 text-primary" />
                 <span>Instructions</span>
                 <span className={FIELD_REQUIRED}>*</span>
               </label>
               <p className={SECTION_SUBTITLE}>
-                Detailed instructions that will be passed to the AI model along with context from previous steps
+                Detailed instructions for the AI model
               </p>
             </div>
             <textarea
               id={`instructions-${index}`}
               value={localStep.instructions}
               onChange={(e) => handleChange("instructions", e.target.value)}
-              className="w-full min-h-[160px] resize-y rounded-lg border border-input bg-background px-4 py-3 font-mono text-sm leading-relaxed text-foreground shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring/40"
+              className="w-full min-h-[320px] resize-y rounded-lg border border-input bg-background px-5 py-4 font-mono text-[13px] leading-7 text-foreground shadow-sm transition-all hover:border-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary/40"
               placeholder="Enter detailed instructions for what this step should do..."
-              rows={7}
+              rows={12}
               required
               aria-label="Step instructions"
               aria-required="true"
             />
           </div>
 
-          <div className={SECTION_SHELL}>
+          <div>
             <div className={SECTION_HEADER}>
               <h4 className={SECTION_TITLE}>
+                <FiBox className="w-4 h-4 text-primary" />
                 Capabilities
               </h4>
               <p className={SECTION_SUBTITLE}>
@@ -998,29 +1138,35 @@ export default function WorkflowStepEditor({
               </p>
             </div>
 
-            <div className="grid gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {AVAILABLE_TOOLS.map((tool) => {
                 const selected = isToolSelected(tool.value);
+                const Icon = tool.icon;
                 return (
                   <label
                     key={tool.value}
-                    className={`flex items-start gap-3 rounded-xl border p-3 cursor-pointer transition-colors ${
+                    className={`relative flex items-start gap-4 rounded-xl border p-4 cursor-pointer transition-all duration-200 ${
                       selected
-                        ? "border-primary/30 bg-primary/5"
-                        : "border-border/60 bg-background/60 hover:bg-muted/40"
+                        ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/10"
+                        : "border-border/40 bg-background hover:border-primary/30 hover:bg-muted/30 hover:shadow-sm"
                     }`}
                   >
-                    <input
-                      type="checkbox"
-                      checked={selected}
-                      onChange={() => handleToolToggle(tool.value)}
-                      className="mt-1 h-4 w-4 rounded border-input text-primary focus:ring-2 focus:ring-ring/30"
-                    />
-                    <div className="min-w-0">
-                      <span className="text-sm font-semibold text-foreground">
-                        {tool.label}
-                      </span>
-                      <p className="mt-1 text-xs text-muted-foreground">
+                    <div className={`shrink-0 p-2.5 rounded-lg transition-colors ${selected ? "bg-primary/10 text-primary" : "bg-muted/50 text-muted-foreground group-hover:bg-background/80"}`}>
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className={`text-sm font-semibold transition-colors ${selected ? "text-primary" : "text-foreground"}`}>
+                          {tool.label}
+                        </span>
+                        <input
+                          type="checkbox"
+                          checked={selected}
+                          onChange={() => handleToolToggle(tool.value)}
+                          className="h-4 w-4 rounded border-input text-primary focus:ring-2 focus:ring-primary/20"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
                         {tool.description}
                       </p>
                     </div>
@@ -1030,7 +1176,7 @@ export default function WorkflowStepEditor({
             </div>
 
             {isToolSelected("computer_use_preview") && (
-              <div className="mt-4">
+              <div className="mt-6 pl-1">
                 <ComputerUseConfig
                   config={computerUseConfig}
                   onChange={handleComputerUseConfigChange}
@@ -1040,7 +1186,7 @@ export default function WorkflowStepEditor({
             )}
 
             {isToolSelected("image_generation") && (
-              <div className="mt-4">
+              <div className="mt-6 pl-1">
                 <ImageGenerationConfig
                   config={imageGenerationConfig}
                   onChange={(field, value) =>
@@ -1051,16 +1197,17 @@ export default function WorkflowStepEditor({
             )}
           </div>
 
-          <div className={SECTION_SHELL}>
+          <div>
             <div className={SECTION_HEADER}>
               <h4 className={SECTION_TITLE}>
+                <FiSettings className="w-4 h-4 text-primary" />
                 Tool Usage
               </h4>
               <p className={SECTION_SUBTITLE}>
                 Control how the AI model uses the selected tools
               </p>
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <label
                 className={FIELD_LABEL}
                 htmlFor={`tool-choice-${index}`}
@@ -1105,15 +1252,18 @@ export default function WorkflowStepEditor({
             />
           </CollapsibleSection>
 
-          <div className={`${SECTION_SHELL} p-4 md:p-5`}>
-            <label className="block text-sm font-medium text-foreground/90 mb-1">
-              Dependencies (optional)
-            </label>
-            <p className="text-xs text-muted-foreground mb-3">
-              Select which steps must complete before this step runs. Leave empty
-              to auto-detect from step order.
-            </p>
-            <div className="space-y-2 max-h-44 overflow-y-auto rounded-xl border border-border/60 bg-background/60 p-3">
+          <div className="pt-6 border-t border-border/40">
+            <div className={SECTION_HEADER}>
+              <h4 className={SECTION_TITLE}>
+                <FiLink className="w-4 h-4 text-primary" />
+                Dependencies
+              </h4>
+              <p className={SECTION_SUBTITLE}>
+                (Optional)
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {allSteps.length > 0 ? (
                 allSteps.map((otherStep, otherIndex) => {
                   if (otherIndex === index) return null; // Can't depend on itself
@@ -1123,8 +1273,24 @@ export default function WorkflowStepEditor({
                   return (
                     <label
                       key={otherIndex}
-                      className="flex items-start gap-2 cursor-pointer"
+                      className={`relative flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                        isSelected
+                          ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/10"
+                          : "border-border/40 hover:border-primary/20 hover:bg-muted/30 bg-background"
+                      }`}
                     >
+                      <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium border ${
+                        isSelected 
+                          ? "bg-primary text-primary-foreground border-primary" 
+                          : "bg-muted text-muted-foreground border-border"
+                      }`}>
+                        {otherIndex + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className={`text-sm font-medium truncate ${isSelected ? "text-primary" : "text-foreground"}`}>
+                          {otherStep.step_name}
+                        </div>
+                      </div>
                       <input
                         type="checkbox"
                         checked={isSelected}
@@ -1137,28 +1303,20 @@ export default function WorkflowStepEditor({
                               );
                           handleChange("depends_on", newDeps);
                         }}
-                        className="mt-0.5 h-4 w-4 rounded border-input text-primary focus:ring-2 focus:ring-ring/30"
+                        className="hidden" // Hide default checkbox
                       />
-                      <span className="text-sm text-foreground">
-                        Step {otherIndex + 1}: {otherStep.step_name}
-                      </span>
+                      {isSelected && (
+                        <div className="absolute top-0 right-0 -mt-1 -mr-1 w-3 h-3 bg-primary rounded-full ring-2 ring-background" />
+                      )}
                     </label>
                   );
                 })
               ) : (
-                <p className="text-sm text-muted-foreground">
-                  No other steps available
-                </p>
+                <div className="col-span-full text-center py-8 text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border/60">
+                  <p className="text-sm">No other steps available to depend on</p>
+                </div>
               )}
             </div>
-            {localStep.depends_on && localStep.depends_on.length > 0 && (
-              <p className="mt-2 text-xs text-muted-foreground">
-                Depends on:{" "}
-                {localStep.depends_on
-                  .map((dep: number) => `Step ${dep + 1}`)
-                  .join(", ")}
-              </p>
-            )}
           </div>
           
           <StepTester step={localStep} index={index} />

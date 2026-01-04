@@ -46,13 +46,13 @@ class ToolBuilder:
                         "quality": "auto",
                         "background": "auto"
                     }
-                elif tool == 'shell' and has_computer_use:
-                    # Convert shell to function tool if computer_use is present
-                    # to bypass OpenAI's incompatibility check
-                    logger.info("Converting shell tool to function definition to avoid incompatibility with computer_use_preview")
+                elif tool == 'shell':
+                    # Always convert shell to function tool
+                    # This is required because OpenAI doesn't natively support 'shell' tool type
+                    # And even if it did, we want to enforce our custom execution logic via function call
+                    logger.info("Converting shell tool to function definition")
                     tool = {
                         "type": "function",
-                        "name": "execute_shell_command", # Renamed to avoid ambiguity with UI shell
                         "function": {
                             "name": "execute_shell_command",
                             "description": "EXECUTE a shell command on the backend server (e.g. ls, git, curl). Use this function to run commands directly. DO NOT try to find a terminal in the browser UI.",
@@ -76,11 +76,10 @@ class ToolBuilder:
                 cleaned_tool = tool.copy()
                 
                 # Also handle if it came in as a dict with type="shell"
-                if cleaned_tool.get("type") == "shell" and has_computer_use:
-                    logger.info("Converting shell tool dict to function definition to avoid incompatibility with computer_use_preview")
+                if cleaned_tool.get("type") == "shell":
+                    logger.info("Converting shell tool dict to function definition")
                     cleaned_tool = {
                         "type": "function",
-                        "name": "execute_shell_command", # Renamed to avoid ambiguity with UI shell
                         "function": {
                             "name": "execute_shell_command",
                             "description": "EXECUTE a shell command on the backend server (e.g. ls, git, curl). Use this function to run commands directly. DO NOT try to find a terminal in the browser UI.",
@@ -187,4 +186,3 @@ class ToolBuilder:
                 cleaned_tools.append(tool)
         
         return cleaned_tools
-

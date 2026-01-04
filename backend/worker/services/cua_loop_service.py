@@ -138,7 +138,17 @@ class CUALoopService:
             if "tools" not in initial_params:
                 initial_params["tools"] = tools
             if tool_choice and tool_choice != "none":
-                initial_params["tool_choice"] = tool_choice
+                # Only set tool_choice if tools are present and non-empty
+                if "tools" in initial_params and initial_params["tools"]:
+                    initial_params["tool_choice"] = tool_choice
+                else:
+                    # If tools are missing but tool_choice is requested, we must not set it to avoid API error
+                    # "Tool choice 'required' must be specified with 'tools' parameter."
+                    logger.warning(
+                        "[CUALoopService] Not setting tool_choice because tools list is missing or empty in params",
+                        extra={"requested_tool_choice": tool_choice}
+                    )
+                    initial_params.pop("tool_choice", None)
             else:
                 initial_params.pop("tool_choice", None)
             # Truncation parameter required for computer use
