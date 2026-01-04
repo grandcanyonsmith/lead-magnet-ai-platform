@@ -20,34 +20,24 @@ export class WorkflowCrudService {
     }
 
     try {
-      const status = queryParams.status;
+      // Status filtering removed as per requirements to simplify workflow states
+      // const status = queryParams.status;
       const limit = queryParams.limit ? parseInt(queryParams.limit) : 50;
 
-      logger.info('[Workflows List] Starting query', { tenantId, status, limit });
+      logger.info('[Workflows List] Starting query', { tenantId, limit });
 
       let workflows: any[] = [];
       try {
-        if (status) {
-          const result = await db.query(
-            WORKFLOWS_TABLE,
-            'gsi_tenant_status',
-            'tenant_id = :tenant_id AND #status = :status',
-            { ':tenant_id': tenantId, ':status': status },
-            { '#status': 'status' },
-            limit
-          );
-          workflows = result.items;
-        } else {
-          const result = await db.query(
-            WORKFLOWS_TABLE,
-            'gsi_tenant_status',
-            'tenant_id = :tenant_id',
-            { ':tenant_id': tenantId },
-            undefined,
-            limit
-          );
-          workflows = result.items;
-        }
+        // Always query all workflows for tenant
+        const result = await db.query(
+          WORKFLOWS_TABLE,
+          'gsi_tenant_status',
+          'tenant_id = :tenant_id',
+          { ':tenant_id': tenantId },
+          undefined,
+          limit
+        );
+        workflows = result.items;
       } catch (dbError: any) {
         logger.error('[Workflows List] Database query error', {
           error: dbError.message,
@@ -202,7 +192,7 @@ export class WorkflowCrudService {
       workflow_id: workflowId,
       tenant_id: tenantId,
       ...workflowData,
-      status: 'draft',
+      status: 'active',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };

@@ -8,13 +8,6 @@ export interface WorkflowFormData {
   workflow_description: string;
   template_id: string;
   template_version: number;
-  delivery_method: "webhook" | "sms" | "none";
-  delivery_webhook_url: string;
-  delivery_webhook_headers: Record<string, string>;
-  delivery_sms_enabled: boolean;
-  delivery_sms_message: string;
-  delivery_sms_ai_generated: boolean;
-  delivery_sms_ai_instructions: string;
 }
 
 export interface TemplateData {
@@ -37,13 +30,6 @@ const defaultFormData: WorkflowFormData = {
   workflow_description: "",
   template_id: "",
   template_version: 0,
-  delivery_method: "none",
-  delivery_webhook_url: "",
-  delivery_webhook_headers: {},
-  delivery_sms_enabled: false,
-  delivery_sms_message: "",
-  delivery_sms_ai_generated: false,
-  delivery_sms_ai_instructions: "",
 };
 
 const defaultTemplateData: TemplateData = {

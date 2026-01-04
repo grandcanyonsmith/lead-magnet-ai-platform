@@ -112,22 +112,10 @@ export interface WorkflowStep {
   };
 }
 
-export type DeliveryMethod = "webhook" | "sms" | "none";
-
 export type WorkflowTriggerType = "form" | "webhook";
 
 export interface WorkflowTrigger {
   type: WorkflowTriggerType;
-}
-
-export interface WorkflowDeliveryConfig {
-  delivery_method: DeliveryMethod;
-  delivery_webhook_url: string;
-  delivery_webhook_headers: Record<string, string>;
-  delivery_sms_enabled: boolean;
-  delivery_sms_message: string;
-  delivery_sms_ai_generated: boolean;
-  delivery_sms_ai_instructions: string;
 }
 
 export interface WorkflowFormData {
@@ -136,13 +124,6 @@ export interface WorkflowFormData {
   template_id: string;
   template_version: number;
   trigger?: WorkflowTrigger;
-  delivery_method?: DeliveryMethod;
-  delivery_webhook_url?: string;
-  delivery_webhook_headers?: Record<string, string>;
-  delivery_sms_enabled?: boolean;
-  delivery_sms_message?: string;
-  delivery_sms_ai_generated?: boolean;
-  delivery_sms_ai_instructions?: string;
 }
 
 // Folder for organizing workflows
@@ -187,13 +168,6 @@ export interface Workflow extends BaseEntity {
     public_slug: string;
     status: string;
   };
-  // Legacy fields (deprecated - kept for backward compatibility with existing database records)
-  // All new workflows must use the steps format. These fields are ignored.
-  ai_model?: AIModel;
-  ai_instructions?: string;
-  rewrite_model?: AIModel;
-  research_enabled?: boolean;
-  html_enabled?: boolean;
 }
 
 export interface WorkflowCreateRequest {
@@ -203,19 +177,7 @@ export interface WorkflowCreateRequest {
   template_version?: number;
   steps?: WorkflowStep[];
   trigger?: WorkflowTrigger;
-  // Legacy fields (deprecated - kept for backward compatibility, but ignored)
-  ai_model?: AIModel;
-  ai_instructions?: string;
-  rewrite_model?: AIModel;
-  research_enabled?: boolean;
-  html_enabled?: boolean;
-  delivery_method?: DeliveryMethod;
-  delivery_webhook_url?: string;
-  delivery_webhook_headers?: Record<string, string>;
-  delivery_sms_enabled?: boolean;
-  delivery_sms_message?: string;
-  delivery_sms_ai_generated?: boolean;
-  delivery_sms_ai_instructions?: string;
+  folder_id?: string | null;
 }
 
 export interface WorkflowUpdateRequest extends Partial<WorkflowCreateRequest> {}

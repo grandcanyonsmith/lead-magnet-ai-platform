@@ -98,32 +98,6 @@ export function useWorkflowSubmission() {
           // Legacy fields removed - all workflows must use steps format
           template_id: templateId || undefined,
           template_version: formData.template_version,
-          // Delivery configuration
-          delivery_method: formData.delivery_method,
-          delivery_webhook_url:
-            formData.delivery_method === "webhook" &&
-            formData.delivery_webhook_url
-              ? formData.delivery_webhook_url
-              : undefined,
-          delivery_webhook_headers:
-            formData.delivery_method === "webhook" &&
-            Object.keys(formData.delivery_webhook_headers).length > 0
-              ? formData.delivery_webhook_headers
-              : undefined,
-          delivery_sms_enabled: formData.delivery_method === "sms",
-          delivery_sms_message:
-            formData.delivery_method === "sms" && formData.delivery_sms_message
-              ? formData.delivery_sms_message
-              : undefined,
-          delivery_sms_ai_generated:
-            formData.delivery_method === "sms" &&
-            formData.delivery_sms_ai_generated,
-          delivery_sms_ai_instructions:
-            formData.delivery_method === "sms" &&
-            formData.delivery_sms_ai_generated &&
-            formData.delivery_sms_ai_instructions
-              ? formData.delivery_sms_ai_instructions
-              : undefined,
         });
 
         // Update or create the form if form fields are provided
