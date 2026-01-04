@@ -137,11 +137,18 @@ export function grantSecretsAccess(
 
     // Create a safe ID for the secret construct
     const safeId = `Secret${secretName.replace(/[^a-zA-Z0-9]/g, '')}`;
-    const secret = secretsmanager.Secret.fromSecretNameV2(
-      scope,
-      safeId,
-      secretName
-    );
+    
+    // Check if secret construct already exists in this scope to avoid duplicate construct ID errors
+    let secret = scope.node.tryFindChild(safeId) as secretsmanager.ISecret;
+    
+    if (!secret) {
+      secret = secretsmanager.Secret.fromSecretNameV2(
+        scope,
+        safeId,
+        secretName
+      );
+    }
+    
     secret.grantRead(grantable);
   });
 }
