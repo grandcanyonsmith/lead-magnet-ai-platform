@@ -161,9 +161,23 @@ class OpenAIRequestBuilder:
                 pass
             # #endregion
 
-            params["tools"] = cleaned_tools
-            if tool_choice != "none":
-                params["tool_choice"] = tool_choice
+            # Only add tools if we actually have any after cleaning/filtering
+            if cleaned_tools:
+                params["tools"] = cleaned_tools
+                if tool_choice != "none":
+                    params["tool_choice"] = tool_choice
+            elif tool_choice == "required":
+                # If we filtered out all tools but tool_choice was required, we must drop tool_choice
+                # to avoid API error 400: "Tool choice 'required' must be specified with 'tools' parameter."
+                logger.warning(
+                    "[OpenAI Request Builder] All tools were filtered out but tool_choice was 'required'. "
+                    "Dropping tool_choice to prevent API error.",
+                    extra={
+                        "model": model,
+                        "original_tools_count": len(tools),
+                        "has_computer_use": has_computer_use
+                    }
+                )
 
         # Reasoning + speed controls (Responses API) 
         # Map deprecated reasoning_level to reasoning_effort if provided

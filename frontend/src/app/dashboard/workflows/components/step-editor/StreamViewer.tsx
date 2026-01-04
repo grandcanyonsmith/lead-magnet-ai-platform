@@ -57,7 +57,7 @@ function LogLine({ log, searchQuery, isMatch, isCurrentMatch, index, onRef }: {
     if (searchQuery && isMatch) {
       const parts = log.message.split(new RegExp(`(${searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
       return (
-        <span className={log.level === 'error' ? 'text-red-300' : log.level === 'warn' ? 'text-yellow-300' : 'text-gray-200'}>
+        <span className={log.level === 'error' ? 'text-red-300' : log.level === 'warn' ? 'text-yellow-300' : 'text-gray-300'}>
           {parts.map((part, i) => 
             part.toLowerCase() === searchQuery.toLowerCase() ? (
               <mark key={i} className={`bg-yellow-400 text-gray-900 px-0.5 rounded ${isCurrentMatch ? 'ring-2 ring-yellow-300 ring-offset-1 ring-offset-[#0d1117]' : ''}`}>
@@ -73,7 +73,7 @@ function LogLine({ log, searchQuery, isMatch, isCurrentMatch, index, onRef }: {
     
     // Otherwise use the rich formatter
     return (
-      <div className={log.level === 'error' ? 'text-red-300' : log.level === 'warn' ? 'text-yellow-300' : 'text-gray-200'}>
+      <div className={log.level === 'error' ? 'text-red-300' : log.level === 'warn' ? 'text-yellow-300' : 'text-gray-300'}>
         {formatLogMessage(log.message)}
       </div>
     );
@@ -83,19 +83,24 @@ function LogLine({ log, searchQuery, isMatch, isCurrentMatch, index, onRef }: {
     <div 
       ref={onRef}
       className={`
-        flex items-start gap-3 py-1 px-2 hover:bg-white/5 rounded transition-colors
-        ${log.level === 'error' ? 'bg-red-900/20 border-l-2 border-red-500' : ''}
-        ${log.level === 'warn' ? 'bg-yellow-900/10 border-l-2 border-yellow-500' : 'border-l-2 border-transparent'}
-        ${isCurrentMatch ? 'bg-blue-900/30 border-l-2 border-blue-400' : ''}
-        ${isMatch && !isCurrentMatch ? 'bg-yellow-900/10' : ''}
+        flex items-start gap-3 py-0.5 px-4 hover:bg-white/5 transition-colors font-mono text-[13px] leading-6 group
+        ${log.level === 'error' ? 'bg-red-500/10' : ''}
+        ${log.level === 'warn' ? 'bg-yellow-500/10' : ''}
+        ${isCurrentMatch ? 'bg-blue-500/20' : ''}
+        ${isMatch && !isCurrentMatch ? 'bg-yellow-500/10' : ''}
       `}
     >
-      <span className="text-[11px] text-gray-500 font-mono mt-[3px] select-none shrink-0 w-[56px]">
-        {new Date(log.timestamp * 1000).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute:'2-digit', second:'2-digit' })}
-      </span>
-      <span className="font-mono text-[13px] leading-relaxed break-all whitespace-pre-wrap w-full">
-        {content}
-      </span>
+      <div className="flex select-none text-gray-600 text-right w-[24px] shrink-0 opacity-50 group-hover:opacity-100 transition-opacity">
+        {index + 1}
+      </div>
+      <div className="flex gap-3 w-full">
+        <span className="text-gray-500 select-none shrink-0 w-[60px] opacity-70">
+          {new Date(log.timestamp * 1000).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute:'2-digit', second:'2-digit' })}
+        </span>
+        <div className="break-all whitespace-pre-wrap w-full border-l border-gray-800 pl-3 min-h-[1.5em]">
+          {content}
+        </div>
+      </div>
     </div>
   );
 }
