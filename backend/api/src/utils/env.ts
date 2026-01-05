@@ -77,6 +77,13 @@ export class EnvConfig {
 
   readonly shellExecutorFunctionName: string | undefined;
 
+  // Shell Executor (ECS Fargate) Configuration
+  readonly shellExecutorResultsBucket: string | undefined;
+  readonly shellExecutorClusterArn: string | undefined;
+  readonly shellExecutorTaskDefinitionArn: string | undefined;
+  readonly shellExecutorSecurityGroupId: string | undefined;
+  readonly shellExecutorSubnetIds: string[] | undefined;
+
   // Scrapy Bara API Configuration
   readonly scrapyBaraEnabled: boolean;
   readonly scrapyBaraApiUrl: string | undefined;
@@ -287,6 +294,16 @@ export class EnvConfig {
       : 0;
 
     this.shellExecutorFunctionName = (this.getOptional("SHELL_EXECUTOR_FUNCTION_NAME") || "").trim() || undefined;
+
+    // Shell Executor (ECS Fargate) Configuration
+    this.shellExecutorResultsBucket = (this.getOptional("SHELL_EXECUTOR_RESULTS_BUCKET") || "").trim() || undefined;
+    this.shellExecutorClusterArn = (this.getOptional("SHELL_EXECUTOR_CLUSTER_ARN") || "").trim() || undefined;
+    this.shellExecutorTaskDefinitionArn = (this.getOptional("SHELL_EXECUTOR_TASK_DEFINITION_ARN") || "").trim() || undefined;
+    this.shellExecutorSecurityGroupId = (this.getOptional("SHELL_EXECUTOR_SECURITY_GROUP_ID") || "").trim() || undefined;
+    const subnetIdsRaw = (this.getOptional("SHELL_EXECUTOR_SUBNET_IDS") || "").trim();
+    this.shellExecutorSubnetIds = subnetIdsRaw
+      ? subnetIdsRaw.split(",").map((id) => id.trim()).filter(Boolean)
+      : undefined;
 
     // Scrapy Bara API Configuration
     this.scrapyBaraEnabled =
