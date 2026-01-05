@@ -4,6 +4,7 @@
 
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@/hooks/useQuery";
 import { useMutation } from "@/hooks/useMutation";
 import { api } from "@/lib/api";
@@ -161,5 +162,55 @@ export function useDisconnectCloudflare(): UseDisconnectCloudflareResult {
     },
     loading: isPending,
     error: normalizeError(error),
+  };
+}
+
+/**
+ * Hook for validating Cloudflare API token format (client-side only)
+ */
+export function useValidateCloudflareToken() {
+  const [isValidating, setIsValidating] = useState(false);
+  const [validationResult, setValidationResult] = useState<{
+    isValid: boolean;
+    message?: string;
+  } | null>(null);
+
+  const validateTokenFormat = (token: string): boolean => {
+    // Cloudflare API tokens are typically 40+ characters, alphanumeric with dashes/underscores
+    if (!token || token.length < 20) {
+      return false;
+    }
+    // Basic format check - alphanumeric, dashes, underscores
+    return /^[A-Za-z0-9_-]+$/.test(token);
+  };
+
+  const validate = async (token: string): Promise<boolean> => {
+    if (!token.trim()) {
+      setValidationResult(null);
+      return false;
+    }
+
+    // First check format
+    if (!validateTokenFormat(token)) {
+      setValidationResult({
+        isValid: false,
+        message: "Invalid token format. Token should be at least 20 characters.",
+      });
+      return false;
+    }
+
+    // Format looks good
+    setValidationResult({
+      isValid: true,
+      message: "Token format looks valid",
+    });
+
+    return true;
+  };
+
+  return {
+    validate,
+    isValidating,
+    validationResult,
   };
 }

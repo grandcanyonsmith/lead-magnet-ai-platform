@@ -14,6 +14,7 @@ import { registerFolderRoutes } from "./folderRoutes";
 import { registerCUARoutes } from "./cuaRoutes";
 import { registerShellRoutes } from "./shellRoutes";
 import { registerCloudflareRoutes } from "./cloudflareRoutes";
+import { registerHealthRoutes } from "./healthRoutes";
 
 // Re-export RouteResponse for use in other modules
 export type { RouteResponse };
@@ -32,6 +33,7 @@ registerFolderRoutes();
 registerCUARoutes();
 registerShellRoutes();
 registerCloudflareRoutes();
+registerHealthRoutes();
 
 /**
  * Main router function.

@@ -5,6 +5,19 @@
  * Wraps the Lambda handler in an Express server for local development
  */
 
+// Load environment variables from .env file (if it exists)
+// This allows overriding defaults without modifying this file
+try {
+  const path = require('path');
+  const dotenv = require('dotenv');
+  const envPath = path.join(__dirname, '../../.env');
+  dotenv.config({ path: envPath });
+  console.log(`[Local Dev] Loaded environment from ${envPath}`);
+} catch (error) {
+  // dotenv is optional - continue with defaults if not available
+  console.log('[Local Dev] Using default environment variables');
+}
+
 // Set environment variables FIRST, before importing any modules
 // This ensures they're available when modules are loaded
 process.env.WORKFLOWS_TABLE = process.env.WORKFLOWS_TABLE || 'leadmagnet-workflows';

@@ -149,6 +149,66 @@ export class ServiceUnavailableError extends ApiError {
 }
 
 /**
+ * Cloudflare-specific errors
+ */
+export class CloudflareError extends ApiError {
+  constructor(
+    message: string,
+    public cloudflareCode?: string,
+    statusCode: number = 400,
+    details?: Record<string, any>,
+  ) {
+    super(message, statusCode, "CLOUDFLARE_ERROR", details);
+    this.name = "CloudflareError";
+  }
+}
+
+export class CloudflareRateLimitError extends ApiError {
+  constructor(
+    public retryAfter?: string,
+    details?: Record<string, any>,
+  ) {
+    super(
+      retryAfter
+        ? `Cloudflare rate limit exceeded. Retry after ${retryAfter} seconds`
+        : "Cloudflare rate limit exceeded. Please try again later",
+      429,
+      "CLOUDFLARE_RATE_LIMIT",
+      details,
+    );
+    this.name = "CloudflareRateLimitError";
+  }
+}
+
+export class CloudflareZoneNotFoundError extends NotFoundError {
+  constructor(domain: string, details?: Record<string, any>) {
+    super(
+      `Domain "${domain}" not found in your Cloudflare account. Please ensure the domain is added to Cloudflare first.`,
+      {
+        domain,
+        ...details,
+      },
+    );
+    this.name = "CloudflareZoneNotFoundError";
+    this.code = "CLOUDFLARE_ZONE_NOT_FOUND";
+  }
+}
+
+export class CloudflareRecordExistsError extends ConflictError {
+  constructor(recordName: string, details?: Record<string, any>) {
+    super(
+      `DNS record "${recordName}" already exists. You can update it manually in Cloudflare or delete it first.`,
+      {
+        recordName,
+        ...details,
+      },
+    );
+    this.name = "CloudflareRecordExistsError";
+    this.code = "CLOUDFLARE_RECORD_EXISTS";
+  }
+}
+
+/**
  * Error tracking hook - can be extended to send errors to monitoring services
  */
 let errorTrackingHook:
