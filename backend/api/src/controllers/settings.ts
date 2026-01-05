@@ -16,6 +16,54 @@ const USER_SETTINGS_TABLE = env.userSettingsTable;
 const API_URL = env.apiUrl || env.apiGatewayUrl;
 
 class SettingsController {
+  private normalizeOrigin(value: unknown): string {
+    const raw = (value == null ? "" : String(value)).trim();
+    return raw.replace(/\/+$/g, "");
+  }
+
+  private async assertCustomDomainAvailable(
+    tenantId: string,
+    desiredOrigin: string,
+    currentOrigin?: string,
+  ): Promise<void> {
+    const desired = this.normalizeOrigin(desiredOrigin);
+    const current = this.normalizeOrigin(currentOrigin);
+    if (!desired || desired === current) return;
+
+    try {
+      // No GSI exists on custom_domain yet, so we scan (acceptable for low volume).
+      // If/when this scales, add a GSI on custom_domain or a separate mapping table.
+      const items = await db.scan(USER_SETTINGS_TABLE);
+      const conflict = items.find((item: any) => {
+        const itemDomain = this.normalizeOrigin(item?.custom_domain);
+        return itemDomain && itemDomain === desired && item?.tenant_id !== tenantId;
+      });
+
+      if (conflict) {
+        throw new ValidationError(
+          "This custom domain is already connected to another account.",
+          { custom_domain: desired },
+        );
+      }
+    } catch (error) {
+      // If the error is a ValidationError, rethrow as-is.
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+      logger.error(
+        "[SettingsController] Failed to verify custom domain uniqueness",
+        {
+          error: error instanceof Error ? error.message : String(error),
+          tenantId,
+          desiredOrigin,
+        },
+      );
+      throw new InternalServerError(
+        "Unable to verify custom domain availability. Please try again.",
+      );
+    }
+  }
+
   async get(
     _params: Record<string, string>,
     _body: any,
@@ -291,6 +339,15 @@ class SettingsController {
             dbError instanceof Error ? dbError.message : String(dbError),
           tenantId,
         });
+      }
+
+      // Enforce uniqueness of custom_domain across tenants (per-account domain mapping).
+      if (data?.custom_domain) {
+        await this.assertCustomDomainAvailable(
+          tenantId,
+          data.custom_domain,
+          existing?.custom_domain,
+        );
       }
 
       // Create or update settings

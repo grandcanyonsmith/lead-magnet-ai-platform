@@ -31,9 +31,11 @@ export function registerPublicRoutes(): void {
   router.register(
     "GET",
     "/v1/forms/:slug",
-    async (params) => {
+    async (params, _body, _query, _tenantId, context) => {
       logger.info("[Public Routes] GET /v1/forms/:slug", { slug: params.slug });
-      return await formsController.getPublicForm(params.slug);
+      const headers = context?.event?.headers || {};
+      const origin = headers["origin"] || headers["Origin"];
+      return await formsController.getPublicForm(params.slug, origin);
     },
     false,
   );
@@ -46,10 +48,13 @@ export function registerPublicRoutes(): void {
       logger.info("[Public Routes] POST /v1/forms/:slug/submit", {
         slug: params.slug,
       });
+      const headers = context?.event?.headers || {};
+      const origin = headers["origin"] || headers["Origin"];
       return await formsController.submitForm(
         params.slug,
         body,
         context?.sourceIp || "",
+        origin,
       );
     },
     false,

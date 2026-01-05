@@ -122,6 +122,9 @@ export class ApiStack extends cdk.Stack {
       role: lambdaRole,
       environment: {
         ...tableEnvVars,
+        // CORS origins for Lambda-side CORS header injection (API Gateway also has CORS configured).
+        // In production, prefer explicitly setting CORS_ORIGINS, but default to '*' to match HttpApi CORS.
+        CORS_ORIGINS: process.env.CORS_ORIGINS || '*',
         [ENV_VAR_NAMES.STEP_FUNCTIONS_ARN]: props.stateMachineArn,
         [ENV_VAR_NAMES.ARTIFACTS_BUCKET]: props.artifactsBucket.bucketName,
         [ENV_VAR_NAMES.CLOUDFRONT_DOMAIN]: props.cloudfrontDomain || '',

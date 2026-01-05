@@ -11,6 +11,21 @@ import { env } from '@utils/env';
 const FORMS_TABLE = env.formsTable;
 const USER_SETTINGS_TABLE = env.userSettingsTable;
 
+function normalizeOriginHeader(value: string | undefined): string | undefined {
+  const raw = (value || "").trim();
+  if (!raw) return undefined;
+  try {
+    return new URL(raw).origin;
+  } catch {
+    // If caller provided hostname only, assume https.
+    try {
+      return new URL(`https://${raw}`).origin;
+    } catch {
+      return undefined;
+    }
+  }
+}
+
 class FormManagementService {
   async listForms(tenantId: string, limit = 50): Promise<{ forms: any[]; count: number }> {
     const formsResult = await db.query(
@@ -44,22 +59,69 @@ class FormManagementService {
     return form;
   }
 
-  async getPublicForm(slug: string): Promise<Record<string, any>> {
+  private isPlatformOrigin(origin: string): boolean {
+    const normalized = normalizeOriginHeader(origin);
+    if (!normalized) return false;
+    try {
+      const url = new URL(normalized);
+      const host = url.hostname.toLowerCase();
+
+      // Default platform hosts
+      if (host.endsWith(".cloudfront.net")) return true;
+      if (host === "localhost" || host === "127.0.0.1") return true;
+
+      // Optional explicit allow-list for platform origins (comma-separated origins)
+      const configured = (process.env.PLATFORM_ORIGINS || "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .map((s) => normalizeOriginHeader(s))
+        .filter(Boolean) as string[];
+
+      return configured.includes(normalized);
+    } catch {
+      return false;
+    }
+  }
+
+  async getPublicForm(
+    slug: string,
+    requestOrigin?: string,
+  ): Promise<Record<string, any>> {
     logger.info('getPublicForm called with slug', { slug, type: typeof slug });
 
     try {
       const form = await this.getActiveFormBySlug(slug);
 
-      // Prefer form-specific logo, otherwise fall back to tenant settings
-      let logoUrl: string | undefined = form.logo_url;
-      if (!logoUrl) {
+      const normalizedOrigin = normalizeOriginHeader(requestOrigin);
+      const isCustomOrigin = Boolean(
+        normalizedOrigin && !this.isPlatformOrigin(normalizedOrigin),
+      );
+
+      // Fetch tenant settings once if we need either: fallback branding OR custom-domain enforcement.
+      let settings: any | undefined;
+      if (USER_SETTINGS_TABLE && (!form.logo_url || isCustomOrigin)) {
         try {
-          const settings = await db.get(USER_SETTINGS_TABLE, { tenant_id: form.tenant_id });
-          logoUrl = settings?.logo_url;
+          settings = await db.get(USER_SETTINGS_TABLE, {
+            tenant_id: form.tenant_id,
+          });
         } catch (error) {
-          logger.warn('Failed to fetch user settings for logo', { error });
+          logger.warn("Failed to fetch user settings", { error });
         }
       }
+
+      // Enforce per-tenant custom domain mapping:
+      // - Requests coming from platform origins (CloudFront default, localhost, etc.) are always allowed.
+      // - Requests coming from any other origin must match the tenant's `settings.custom_domain`.
+      if (isCustomOrigin) {
+        const tenantCustom = normalizeOriginHeader(settings?.custom_domain);
+        if (!tenantCustom || tenantCustom !== normalizedOrigin) {
+          throw new ApiError("This form doesn't exist or has been removed", 404);
+        }
+      }
+
+      // Prefer form-specific logo, otherwise fall back to tenant settings
+      const logoUrl: string | undefined = form.logo_url || settings?.logo_url;
 
       const fieldsWithRequired = ensureRequiredFields(form.form_fields_schema.fields);
 
@@ -81,12 +143,48 @@ class FormManagementService {
     }
   }
 
-  async submitPublicForm(slug: string, body: any, sourceIp: string): Promise<{
+  async submitPublicForm(
+    slug: string,
+    body: any,
+    sourceIp: string,
+    requestOrigin?: string,
+  ): Promise<{
     message: string;
     job_id: string;
     redirect_url?: string;
   }> {
     const form = await this.getActiveFormBySlug(slug);
+
+    const normalizedOrigin = normalizeOriginHeader(requestOrigin);
+    const isCustomOrigin = Boolean(
+      normalizedOrigin && !this.isPlatformOrigin(normalizedOrigin),
+    );
+
+    if (isCustomOrigin && USER_SETTINGS_TABLE) {
+      try {
+        const settings = await db.get(USER_SETTINGS_TABLE, {
+          tenant_id: form.tenant_id,
+        });
+        const tenantCustom = normalizeOriginHeader(settings?.custom_domain);
+        if (!tenantCustom || tenantCustom !== normalizedOrigin) {
+          throw new ApiError("This form doesn't exist or has been removed", 404);
+        }
+      } catch (error) {
+        if (error instanceof ApiError) throw error;
+        logger.warn("Failed to enforce custom domain for form submission", {
+          error: error instanceof Error ? error.message : String(error),
+          tenantId: form.tenant_id,
+          slug,
+          origin: requestOrigin,
+        });
+        // Fail closed to prevent cross-tenant domain leakage when custom origin is used.
+        throw new ApiError("This form doesn't exist or has been removed", 404);
+      }
+    } else if (isCustomOrigin && !USER_SETTINGS_TABLE) {
+      // Shouldn't happen in deployed environments (USER_SETTINGS_TABLE is required),
+      // but fail closed if it does.
+      throw new ApiError("This form doesn't exist or has been removed", 404);
+    }
 
     // Public endpoint hardening: per-form, per-IP rate limiting (DynamoDB + TTL).
     // Fail-open if limiter storage is misconfigured/unavailable, but fail-closed when the limit is exceeded.
