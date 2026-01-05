@@ -52,6 +52,8 @@ export function CloudflareIntegration({
     if (!settings.custom_domain) return null;
     
     const domain = settings.custom_domain
+      .toLowerCase() // Normalize to lowercase
+      .trim()        // Remove whitespace
       .replace(/^https?:\/\//, "")
       .replace(/\/$/, "");
 
@@ -81,7 +83,12 @@ export function CloudflareIntegration({
   const dnsRecordsPreview = useMemo(() => {
     if (!rootDomain || !cloudfrontDomain) return [];
 
-    const customDomain = settings.custom_domain?.replace(/^https?:\/\//, "").replace(/\/$/, "") || "";
+    const customDomain = settings.custom_domain
+      ?.toLowerCase()
+      .trim()
+      .replace(/^https?:\/\//, "")
+      .replace(/\/$/, "") || "";
+      
     const formsSubdomain = customDomain.startsWith("forms.") ? "forms" : undefined;
     const assetsSubdomain = "assets";
 
@@ -103,34 +110,7 @@ export function CloudflareIntegration({
     return records;
   }, [rootDomain, cloudfrontDomain, settings.custom_domain]);
 
-  const handleConnect = async () => {
-    if (!apiToken.trim()) {
-      toast.error("Please enter your Cloudflare API token");
-      return;
-    }
-
-    const success = await connect(apiToken);
-    if (success) {
-      setApiToken("");
-      setShowTokenInput(false);
-      await refetch();
-    }
-  };
-
-  const handleDisconnect = async () => {
-    if (
-      !confirm(
-        "Are you sure you want to disconnect Cloudflare? This will not delete DNS records, but you won't be able to create new ones automatically."
-      )
-    ) {
-      return;
-    }
-
-    const success = await disconnect();
-    if (success) {
-      await refetch();
-    }
-  };
+  // ... (rest of component) ...
 
   const handleCreateDNSRecords = async () => {
     if (!cloudfrontDomain) {
@@ -147,7 +127,12 @@ export function CloudflareIntegration({
 
     try {
       // Extract subdomains from custom_domain if it's a full URL
-      const customDomain = settings.custom_domain?.replace(/^https?:\/\//, "").replace(/\/$/, "") || "";
+      const customDomain = settings.custom_domain
+        ?.toLowerCase()
+        .trim()
+        .replace(/^https?:\/\//, "")
+        .replace(/\/$/, "") || "";
+        
       const formsSubdomain = customDomain.startsWith("forms.") ? "forms" : undefined;
       const assetsSubdomain = "assets"; // Always create assets subdomain
 
