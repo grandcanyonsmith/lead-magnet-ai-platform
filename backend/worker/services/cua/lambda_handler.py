@@ -4,7 +4,7 @@ import os
 import time
 from typing import Dict, Any, Generator
 
-from services.cua.agent import CUAgent
+from services.tools.execution import CUAgent
 from services.cua.drivers.playwright import PlaywrightEnvironment
 from services.cua.screenshot_service import S3ScreenshotService
 from s3_service import S3Service

@@ -1,6 +1,7 @@
 import base64
 import json
 import logging
+import os
 import time
 from typing import Any, Dict, Optional
 
@@ -9,6 +10,45 @@ from playwright.async_api import Browser, BrowserContext, Page, async_playwright
 from services.cua.environment import Environment
 
 logger = logging.getLogger(__name__)
+
+def _env_flag_is_true(value: Optional[str]) -> bool:
+    return str(value or "").strip().lower() in ("1", "true", "yes", "y", "on")
+
+def _env_flag_is_false(value: Optional[str]) -> bool:
+    return str(value or "").strip().lower() in ("0", "false", "no", "n", "off")
+
+def _running_in_lambda() -> bool:
+    # Common env vars in AWS Lambda runtime
+    return bool(
+        os.environ.get("AWS_LAMBDA_FUNCTION_NAME")
+        or os.environ.get("AWS_EXECUTION_ENV")
+        or os.environ.get("LAMBDA_TASK_ROOT")
+    )
+
+def _should_use_single_process() -> bool:
+    """
+    --single-process can improve reliability in some constrained Linux runtimes (e.g. Lambda),
+    but it is known to cause Chromium to crash immediately on some local/dev platforms.
+    Default to Lambda-only; allow override via env var.
+    """
+    override = os.environ.get("CUA_PLAYWRIGHT_SINGLE_PROCESS")
+    if _env_flag_is_true(override):
+        return True
+    if _env_flag_is_false(override):
+        return False
+    return _running_in_lambda()
+
+def _should_disable_sandbox() -> bool:
+    """
+    Chromium sandbox flags are required in some container/root environments.
+    Default to Lambda-only; allow override via env var.
+    """
+    override = os.environ.get("CUA_PLAYWRIGHT_NO_SANDBOX")
+    if _env_flag_is_true(override):
+        return True
+    if _env_flag_is_false(override):
+        return False
+    return _running_in_lambda()
 
 
 class PlaywrightEnvironment(Environment):
@@ -28,17 +68,19 @@ class PlaywrightEnvironment(Environment):
 
         try:
             self.playwright = await async_playwright().start()
+            launch_args = [
+                "--disable-gpu",
+                "--disable-dev-shm-usage",
+                "--disable-accelerated-2d-canvas",
+                "--disable-web-security",
+            ]
+            if _should_disable_sandbox():
+                launch_args += ["--no-sandbox", "--disable-setuid-sandbox"]
+            if _should_use_single_process():
+                launch_args += ["--single-process"]
             self.browser = await self.playwright.chromium.launch(
                 headless=True,
-                args=[
-                    "--disable-gpu",
-                    "--no-sandbox",
-                    "--disable-setuid-sandbox",
-                    "--disable-dev-shm-usage",
-                    "--disable-accelerated-2d-canvas",
-                    "--disable-web-security",
-                    "--single-process",
-                ],
+                args=launch_args,
             )
 
             context_options: Dict[str, Any] = {
@@ -299,12 +341,37 @@ class PlaywrightEnvironment(Environment):
         if not self.page:
             raise RuntimeError("Browser not initialized. Call initialize() first.")
         # Optimize screenshot: use jpeg format with quality 80 for faster encoding/smaller size
-        screenshot_bytes = await self.page.screenshot(
-            type='jpeg',
-            quality=80,
-            full_page=False  # Only capture viewport, not full page
-        )
-        return base64.b64encode(screenshot_bytes).decode("utf-8")
+        try:
+            screenshot_bytes = await self.page.screenshot(
+                type='jpeg',
+                quality=80,
+                full_page=False  # Only capture viewport, not full page
+            )
+            return base64.b64encode(screenshot_bytes).decode("utf-8")
+        except Exception as e:
+            # Common Playwright failure when Chromium crashes/exits: TargetClosedError
+            msg = str(e)
+            if "Target page, context or browser has been closed" in msg:
+                logger.warning(
+                    f"[PlaywrightEnvironment] Screenshot failed (target closed). Attempting one restart. Error: {msg}"
+                )
+                # Best-effort restart once so the loop can continue in local dev.
+                try:
+                    await self.cleanup()
+                    await self.initialize(self.display_width, self.display_height)
+                    screenshot_bytes = await self.page.screenshot(
+                        type='jpeg',
+                        quality=80,
+                        full_page=False
+                    )
+                    return base64.b64encode(screenshot_bytes).decode("utf-8")
+                except Exception as restart_error:
+                    logger.error(
+                        f"[PlaywrightEnvironment] Restart after screenshot failure also failed: {restart_error}",
+                        exc_info=True,
+                    )
+                    raise
+            raise
 
     async def get_current_url(self) -> Optional[str]:
         if not self.page:
@@ -312,21 +379,32 @@ class PlaywrightEnvironment(Environment):
         return self.page.url
 
     async def cleanup(self) -> None:
-        try:
-            if self.page:
-                await self.page.close()
-                self.page = None
-            if self.context:
-                await self.context.close()
-                self.context = None
-            if self.browser:
-                await self.browser.close()
-                self.browser = None
-            if self.playwright:
+        async def _close_safely(label: str, close_fn):
+            try:
+                await close_fn()
+            except Exception as e:
+                msg = str(e)
+                # Target already closed is expected if Chromium crashed.
+                if "Target page, context or browser has been closed" in msg:
+                    logger.debug(f"[PlaywrightEnvironment] Cleanup: {label} already closed")
+                    return
+                logger.error(f"[PlaywrightEnvironment] Cleanup error closing {label}: {e}", exc_info=True)
+
+        if self.page:
+            await _close_safely("page", self.page.close)
+            self.page = None
+        if self.context:
+            await _close_safely("context", self.context.close)
+            self.context = None
+        if self.browser:
+            await _close_safely("browser", self.browser.close)
+            self.browser = None
+        if self.playwright:
+            try:
                 await self.playwright.stop()
-                self.playwright = None
-        except Exception as e:
-            logger.error(f"[PlaywrightEnvironment] Cleanup error: {e}", exc_info=True)
+            except Exception as e:
+                logger.debug(f"[PlaywrightEnvironment] Cleanup: playwright already stopped ({e})")
+            self.playwright = None
 
     async def is_healthy(self) -> bool:
         return self.browser is not None and self.page is not None

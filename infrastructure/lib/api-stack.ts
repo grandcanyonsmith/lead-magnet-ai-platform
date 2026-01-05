@@ -23,13 +23,9 @@ export interface ApiStackProps extends cdk.StackProps {
   artifactsBucket: s3.Bucket;
   cloudfrontDomain?: string;
   cloudfrontDistributionId?: string;
-  shellExecutor: {
-    clusterArn: string;
-    taskDefinitionFamily: string;
-    executionRoleArn?: string;
-    securityGroupId: string;
-    subnetIds: string[];
-    resultsBucketName: string;
+  shellExecutor?: {
+    functionArn: string;
+    functionName: string;
   };
 }
 
@@ -50,53 +46,15 @@ export class ApiStack extends cdk.Stack {
 
     // Grant S3 permissions
     grantS3Permissions(lambdaRole, props.artifactsBucket);
-    // Shell executor results bucket (presigned PUT + polling GET)
-    const shellResultsBucket = s3.Bucket.fromBucketName(this, 'ShellExecutorResultsBucket', props.shellExecutor.resultsBucketName);
-    shellResultsBucket.grantReadWrite(lambdaRole);
 
-    // Allow API Lambda to run ECS tasks (shell executor) and pass the execution role.
-    const taskDefArnWildcard = cdk.Stack.of(this).formatArn({
-      service: 'ecs',
-      resource: 'task-definition',
-      resourceName: `${props.shellExecutor.taskDefinitionFamily}:*`,
-    });
-    lambdaRole.addToPolicy(
-      new iam.PolicyStatement({
-        effect: iam.Effect.ALLOW,
-        actions: ['ecs:RunTask', 'ecs:DescribeTaskDefinition'],
-        resources: [taskDefArnWildcard],
-      })
-    );
-    // DescribeTasks and StopTask don't support resource-level permissions reliably; scope to *.
-    lambdaRole.addToPolicy(
-      new iam.PolicyStatement({
-        effect: iam.Effect.ALLOW,
-        actions: ['ecs:DescribeTasks', 'ecs:StopTask'],
-        resources: ['*'],
-      })
-    );
-    // Pass the task execution role to ECS so it can pull the image and write logs.
-    const execRoleArn = props.shellExecutor.executionRoleArn;
-    if (execRoleArn) {
-      lambdaRole.addToPolicy(
-        new iam.PolicyStatement({
-          effect: iam.Effect.ALLOW,
-          actions: ['iam:PassRole'],
-          resources: [execRoleArn],
-        })
-      );
+    // Shell executor permissions: allow API Lambda to invoke the executor Lambda directly
+    if (props.shellExecutor) {
+      const shellFunction = lambda.Function.fromFunctionAttributes(this, 'ShellExecutorFunc', {
+        functionArn: props.shellExecutor.functionArn,
+        sameEnvironment: true,
+      });
+      shellFunction.grantInvoke(lambdaRole);
     }
-
-    // Shell tool: allow the API Lambda to sign presigned PUT URLs for controlled uploads to an allowlisted bucket.
-    // This enables the public `/v1/tools/shell` endpoint to support upload workflows safely without giving the
-    // executor a task role. Scope tightly to a dedicated prefix.
-    lambdaRole.addToPolicy(
-      new iam.PolicyStatement({
-        effect: iam.Effect.ALLOW,
-        actions: ['s3:PutObject'],
-        resources: ['arn:aws:s3:::cc360-pages/leadmagnet/*'],
-      })
-    );
 
     // Grant Step Functions permissions
     lambdaRole.addToPolicy(
@@ -177,12 +135,9 @@ export class ApiStack extends cdk.Stack {
         [ENV_VAR_NAMES.SHELL_TOOL_IP_LIMIT_PER_HOUR]: process.env.SHELL_TOOL_IP_LIMIT_PER_HOUR || '10',
         [ENV_VAR_NAMES.SHELL_TOOL_MAX_IN_FLIGHT]: process.env.SHELL_TOOL_MAX_IN_FLIGHT || '5',
         [ENV_VAR_NAMES.SHELL_TOOL_QUEUE_WAIT_MS]: process.env.SHELL_TOOL_QUEUE_WAIT_MS || '0',
-        [ENV_VAR_NAMES.SHELL_EXECUTOR_RESULTS_BUCKET]: props.shellExecutor.resultsBucketName,
-        [ENV_VAR_NAMES.SHELL_EXECUTOR_CLUSTER_ARN]: props.shellExecutor.clusterArn,
-        // ECS RunTask accepts either full ARN or family[:revision]. We intentionally use the stable family.
-        [ENV_VAR_NAMES.SHELL_EXECUTOR_TASK_DEFINITION_ARN]: props.shellExecutor.taskDefinitionFamily,
-        [ENV_VAR_NAMES.SHELL_EXECUTOR_SECURITY_GROUP_ID]: props.shellExecutor.securityGroupId,
-        [ENV_VAR_NAMES.SHELL_EXECUTOR_SUBNET_IDS]: props.shellExecutor.subnetIds.join(','),
+        ...(props.shellExecutor ? {
+          [ENV_VAR_NAMES.SHELL_EXECUTOR_FUNCTION_NAME]: props.shellExecutor.functionName,
+        } : {}),
         // AWS_REGION is automatically set by Lambda runtime, don't set it manually
         [ENV_VAR_NAMES.LOG_LEVEL]: DEFAULT_LOG_LEVEL,
         // Stripe configuration (values should be set via CDK context or environment variables)
@@ -256,17 +211,6 @@ export class ApiStack extends cdk.Stack {
     // Provide the API base URL to the Lambda itself so it can persist it onto Jobs for downstream
     // worker-side tracking injection (avoids cyclic cross-stack dependency with ComputeStack).
     this.apiFunction.addEnvironment(ENV_VAR_NAMES.API_GATEWAY_URL, this.api.url!);
-
-    // NOTE: We intentionally do NOT associate an AWS WAFv2 WebACL with the API Gateway HTTP API here.
-    // In practice, WAFv2 WebACLAssociation can fail for HTTP API $default stages due to ARN validation
-    // (e.g., arn:aws:apigateway:region::/apis/<apiId>/stages/$default) depending on AWS/WAF support.
-    //
-    // Protections in place instead:
-    // - DynamoDB-backed per-IP/per-form rate limiting on POST /v1/forms/:slug/submit
-    // - CloudFront WAF (attached in StorageStack) for the frontend distribution
-    //
-    // If you later move to an API Gateway type/stage that supports WAF association cleanly,
-    // you can re-introduce a regional WebACL and attach it to that stage ARN.
 
     // Create JWT Authorizer
     const jwtAuthorizer = new authorizers.HttpJwtAuthorizer(
@@ -350,4 +294,3 @@ export class ApiStack extends cdk.Stack {
     });
   }
 }
-

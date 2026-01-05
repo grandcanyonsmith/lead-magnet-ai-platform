@@ -1,11 +1,8 @@
 """
 Shell Executor Service (Worker-side orchestrator)
 
-Runs model-requested shell commands inside the ECS Fargate shell executor task,
-then polls S3 for the uploaded result JSON.
-
-This mirrors the Node orchestrator logic implemented in backend/api, but is used
-from the Python worker so workflow steps can use the `shell` tool.
+Runs model-requested shell commands via the Shell Executor Lambda function.
+Replaces the legacy ECS Fargate implementation with synchronous Lambda invocations.
 """
 
 import json
@@ -28,26 +25,13 @@ logger = logging.getLogger(__name__)
 CONTRACT_VERSION = "2025-12-29"
 
 
-def _parse_subnet_ids(raw: Optional[str]) -> List[str]:
-    """Parse comma-separated subnet IDs."""
-    if not raw:
-        return []
-    return [s.strip() for s in raw.split(",") if s and s.strip()]
-
-
-def _is_no_such_key(err: Exception) -> bool:
-    """Check if the error is a NoSuchKey/NotFound error from S3."""
-    if not isinstance(err, ClientError):
-        return False
-    code = (err.response or {}).get("Error", {}).get("Code") or ""
-    return code in ("NoSuchKey", "NotFound", "404")
-
-
 class ShellExecutorService:
-    """Executes commands via ECS Fargate shell executor task."""
+    """Executes commands via Shell Executor Lambda."""
 
     def __init__(
         self,
+        lambda_client: Optional[Any] = None,
+        # Legacy params (unused but kept for DI compatibility if needed)
         ecs_client: Optional[Any] = None,
         s3_client: Optional[Any] = None
     ):
@@ -55,11 +39,11 @@ class ShellExecutorService:
         Initialize the shell executor service.
         
         Args:
-            ecs_client: Optional boto3 ECS client (for testing/DI)
-            s3_client: Optional boto3 S3 client (for testing/DI)
+            lambda_client: Optional boto3 Lambda client
         """
-        self._ecs = ecs_client or boto3.client("ecs", region_name=settings.AWS_REGION)
-        self._s3 = s3_client or boto3.client("s3", region_name=settings.AWS_REGION)
+        self._lambda = lambda_client or boto3.client("lambda", region_name=settings.AWS_REGION)
+        # We now look for SHELL_EXECUTOR_FUNCTION_NAME instead of cluster ARNs
+        self._function_name = os.environ.get("SHELL_EXECUTOR_FUNCTION_NAME")
 
     def run_shell_job(
         self,
@@ -68,20 +52,17 @@ class ShellExecutorService:
         max_output_length: Optional[int] = None,
         workspace_id: Optional[str] = None,
         reset_workspace: Optional[bool] = None,
-        max_wait_seconds: int = 600,
+        max_wait_seconds: int = 600, # Unused in sync lambda mode
     ) -> Dict[str, Any]:
         """
-        Run a one-shot executor job and return the parsed result JSON.
-
-        Uses configuration from core.config.settings.
+        Run a shell job synchronously.
         """
 
         if not commands or not isinstance(commands, list):
             raise ValueError("commands must be a non-empty list of strings")
 
         # ------------------------------------------------------------------
-        # Local dev mode: execute commands on the local machine (no ECS/EFS).
-        # This is ONLY enabled when IS_LOCAL=true to avoid accidental use in prod.
+        # Local dev mode: execute commands on the local machine.
         # ------------------------------------------------------------------
         if (os.environ.get("IS_LOCAL") or "").strip().lower() == "true":
             return self._run_shell_job_local(
@@ -92,155 +73,92 @@ class ShellExecutorService:
                 reset_workspace=reset_workspace,
             )
 
-        # Load configuration
-        bucket = settings.SHELL_EXECUTOR_RESULTS_BUCKET or os.environ.get("SHELL_EXECUTOR_RESULTS_BUCKET")
-        cluster_arn = settings.SHELL_EXECUTOR_CLUSTER_ARN or os.environ.get("SHELL_EXECUTOR_CLUSTER_ARN")
-        task_def_arn = settings.SHELL_EXECUTOR_TASK_DEFINITION_ARN or os.environ.get("SHELL_EXECUTOR_TASK_DEFINITION_ARN")
-        security_group_id = settings.SHELL_EXECUTOR_SECURITY_GROUP_ID or os.environ.get("SHELL_EXECUTOR_SECURITY_GROUP_ID")
-        subnet_ids_raw = settings.SHELL_EXECUTOR_SUBNET_IDS or os.environ.get("SHELL_EXECUTOR_SUBNET_IDS")
-        subnet_ids = _parse_subnet_ids(subnet_ids_raw)
-
-        # Validate configuration
-        if not bucket:
-            raise RuntimeError("SHELL_EXECUTOR_RESULTS_BUCKET is not set")
-        if not cluster_arn:
-            raise RuntimeError("SHELL_EXECUTOR_CLUSTER_ARN is not set")
-        if not task_def_arn:
-            raise RuntimeError("SHELL_EXECUTOR_TASK_DEFINITION_ARN is not set")
-        if not security_group_id:
-            raise RuntimeError("SHELL_EXECUTOR_SECURITY_GROUP_ID is not set")
-        if not subnet_ids:
-            raise RuntimeError("SHELL_EXECUTOR_SUBNET_IDS is not set")
+        if not self._function_name:
+            # Fallback check for settings if env var not directly set (though usually settings loads env vars)
+            # Or raise error.
+            raise RuntimeError("SHELL_EXECUTOR_FUNCTION_NAME is not set")
 
         job_id = uuid.uuid4().hex
-        result_key = f"shell-results/{job_id}.json"
-        job_request_key = f"shell-jobs/{job_id}.json"
-
-        # Generate presigned PUT URL for result
-        # Expiration must be longer than max task duration (20 min per command) + buffer
-        # Set to 30 minutes (1800 seconds) to ensure URL doesn't expire before task completes
-        put_url = self._s3.generate_presigned_url(
-            ClientMethod="put_object",
-            Params={"Bucket": bucket, "Key": result_key, "ContentType": "application/json"},
-            ExpiresIn=1800,  # 30 minutes
-        )
-
-        # Build job request
-        job_request: Dict[str, Any] = {
-            "version": CONTRACT_VERSION,
-            "job_id": job_id,
-            "commands": [str(c) for c in commands],
-            "result_put_url": put_url,
-            "result_content_type": "application/json",
-        }
-        if workspace_id and isinstance(workspace_id, str) and workspace_id.strip():
-            job_request["workspace_id"] = str(workspace_id).strip()
-            if reset_workspace is not None:
-                job_request["reset_workspace"] = bool(reset_workspace)
-        if timeout_ms and int(timeout_ms) > 0:
-            job_request["timeout_ms"] = int(timeout_ms)
-        if max_output_length and int(max_output_length) > 0:
-            job_request["max_output_length"] = int(max_output_length)
-
-        # Upload job request to S3 and generate presigned GET URL
-        # This avoids the 8192 character limit for container overrides
-        job_request_json = json.dumps(job_request)
-        job_request_size = len(job_request_json.encode("utf-8"))
         
-        logger.info("[ShellExecutorService] Uploading job request to S3", extra={
+        payload = {
+            "commands": commands,
+            "workspace_id": workspace_id,
+            "timeout_ms": timeout_ms,
+            "max_output_length": max_output_length,
+            "env": {
+                "JOB_ID": job_id
+            }
+        }
+        
+        logger.info("[ShellExecutorService] Invoking Lambda executor", extra={
             "job_id": job_id,
-            "job_request_size_bytes": job_request_size,
+            "function_name": self._function_name,
             "commands_count": len(commands),
+            "workspace_id": workspace_id
         })
-
-        # Upload job request JSON to S3
-        self._s3.put_object(
-            Bucket=bucket,
-            Key=job_request_key,
-            Body=job_request_json.encode("utf-8"),
-            ContentType="application/json",
-        )
-
-        # Generate presigned GET URL for job request (valid for 15 minutes)
-        job_request_get_url = self._s3.generate_presigned_url(
-            ClientMethod="get_object",
-            Params={"Bucket": bucket, "Key": job_request_key},
-            ExpiresIn=900,  # 15 minutes
-        )
-
-        # Check if the GET URL would exceed container override limits
-        # ECS container overrides have a limit of 8192 characters total
-        # A presigned URL is typically 500-800 characters, well under the limit
-        get_url_size = len(job_request_get_url)
-        if get_url_size > 8000:
-            # Clean up uploaded job request
-            self._cleanup_s3_objects(bucket, [job_request_key])
-            raise RuntimeError(
-                f"Job request GET URL too large ({get_url_size} chars). "
-                f"Consider splitting commands into multiple jobs."
-            )
-
-        logger.info("[ShellExecutorService] Starting ECS task", extra={
-            "job_id": job_id,
-            "commands_count": len(commands),
-            "cluster_arn": cluster_arn,
-            "job_request_get_url_size": get_url_size,
-        })
-
+        
+        start_time = time.time()
+        
         try:
-            run_resp = self._ecs.run_task(
-                cluster=cluster_arn,
-                taskDefinition=task_def_arn,
-                capacityProviderStrategy=[
-                    {
-                        "capacityProvider": "FARGATE_SPOT",
-                        "weight": 1,
-                    }
-                ],
-                platformVersion="LATEST",
-                networkConfiguration={
-                    "awsvpcConfiguration": {
-                        "assignPublicIp": "DISABLED",
-                        "subnets": subnet_ids,
-                        "securityGroups": [security_group_id],
-                    }
-                },
-                overrides={
-                    "containerOverrides": [
-                        {
-                            "name": "runner",
-                            "environment": [
-                                {"name": "SHELL_EXECUTOR_JOB_GET_URL", "value": job_request_get_url},
-                            ],
-                        }
-                    ]
-                },
-                startedBy="leadmagnet-worker",
+            resp = self._lambda.invoke(
+                FunctionName=self._function_name,
+                InvocationType='RequestResponse',
+                Payload=json.dumps(payload)
             )
         except Exception as e:
-            # Clean up if run_task fails
-            self._cleanup_s3_objects(bucket, [job_request_key])
-            raise RuntimeError(f"Failed to run ECS task: {e}") from e
+            logger.error(f"[ShellExecutorService] Failed to invoke lambda: {e}", exc_info=True)
+            raise
 
-        failures = run_resp.get("failures") or []
-        if failures:
-            self._cleanup_s3_objects(bucket, [job_request_key])
-            raise RuntimeError(f"ECS RunTask failures: {failures}")
+        if 'Payload' not in resp:
+            raise RuntimeError("Empty response from Shell Executor Lambda")
+            
+        try:
+            response_payload = resp['Payload'].read()
+            response_data = json.loads(response_payload)
+        except Exception as e:
+             logger.error(f"[ShellExecutorService] Failed to parse lambda response: {e}")
+             raise RuntimeError(f"Invalid response from shell executor: {e}")
 
-        task_arn = None
-        tasks = run_resp.get("tasks") or []
-        if tasks and isinstance(tasks, list):
-            task_arn = (tasks[0] or {}).get("taskArn")
+        # Check for function error (handled exception in Lambda runtime)
+        if 'FunctionError' in resp:
+            error_msg = response_data.get('errorMessage', 'Unknown Lambda error')
+            logger.error(f"[ShellExecutorService] Lambda execution failed: {error_msg}")
+            raise RuntimeError(f"Shell Executor Lambda failed: {error_msg}")
 
-        return self._poll_for_result(
-            bucket=bucket,
-            result_key=result_key,
-            job_request_key=job_request_key,
-            cluster_arn=cluster_arn,
-            task_arn=task_arn,
-            job_id=job_id,
-            max_wait_seconds=max_wait_seconds
-        )
+        # Check for handler returned error (statusCode != 200)
+        if response_data.get('statusCode') != 200:
+             error_msg = response_data.get('error') or response_data.get('body') or 'Unknown error'
+             logger.error(f"[ShellExecutorService] Execution failed: {error_msg}")
+             raise RuntimeError(f"Shell Executor failed: {error_msg}")
+             
+        # Map to legacy contract format
+        output_items = []
+        for res in response_data.get('results', []):
+            outcome = {}
+            if res.get('status') == 'timeout':
+                outcome = {'type': 'timeout'}
+            else:
+                # Local runner sets exit_code, make sure we match type
+                outcome = {'type': 'exit', 'exit_code': int(res.get('exit_code', 0))}
+            
+            output_items.append({
+                "stdout": res.get("stdout", ""),
+                "stderr": res.get("stderr", ""),
+                "outcome": outcome
+            })
+            
+        duration_ms = int((time.time() - start_time) * 1000)
+            
+        return {
+            "version": CONTRACT_VERSION,
+            "job_id": job_id,
+            "commands": commands,
+            "output": output_items,
+            "meta": {
+                "runner": "shell-executor-lambda",
+                "duration_ms": duration_ms
+            }
+        }
 
     def _run_shell_job_local(
         self,
@@ -252,15 +170,13 @@ class ShellExecutorService:
         reset_workspace: Optional[bool],
     ) -> Dict[str, Any]:
         """
-        Local fallback for running shell commands without ECS.
-
-        Returns a result compatible with OpenAI `shell_call_output.output[]`.
+        Local fallback for running shell commands without ECS/Lambda.
         """
         started_at = time.time()
         job_id = uuid.uuid4().hex
 
         root = Path(os.environ.get("SHELL_EXECUTOR_LOCAL_ROOT") or "/tmp/leadmagnet-shell-executor")
-        session_dir = root / "sessions" / (workspace_id.strip() if isinstance(workspace_id, str) and workspace_id.strip() else job_id)
+        session_dir = root / "sessions" / (str(workspace_id).strip() if workspace_id and str(workspace_id).strip() else job_id)
 
         if reset_workspace:
             try:
@@ -270,10 +186,7 @@ class ShellExecutorService:
 
         session_dir.mkdir(parents=True, exist_ok=True)
 
-        # Local dev convenience:
-        # - macOS often has `python3` but not `python`
-        # - some workflow steps use `python ...`
-        # Create a tiny shim so `python` resolves to `python3` in local mode.
+        # Local dev convenience shim setup
         shim_dir: Optional[Path] = None
         try:
             shim_dir = session_dir / ".lm-bin"
@@ -309,20 +222,18 @@ class ShellExecutorService:
             cmd_str = str(cmd)
             cmd_to_run = cmd_str
             if shim_dir is not None:
-                # Use bash -l, so PATH may be reset by /etc/profile; export after login init.
                 cmd_to_run = f'export PATH="{str(shim_dir)}:$PATH"\n{cmd_str}'
             try:
                 completed = subprocess.run(
                     ["bash", "-lc", cmd_to_run],
                     cwd=str(session_dir),
                     capture_output=True,
-                    text=False,
+                    text=False, # Capture bytes to handle decoding safely
                     timeout=per_cmd_timeout_s,
                 )
                 stdout_bytes = completed.stdout or b""
                 stderr_bytes = completed.stderr or b""
 
-                # Decode safely
                 stdout = stdout_bytes.decode("utf-8", errors="replace")
                 stderr = stderr_bytes.decode("utf-8", errors="replace")
 
@@ -339,7 +250,6 @@ class ShellExecutorService:
                 stdout_bytes = te.stdout or b""
                 stderr_bytes = te.stderr or b""
                 
-                # Decode safely
                 stdout = stdout_bytes.decode("utf-8", errors="replace")
                 stderr = stderr_bytes.decode("utf-8", errors="replace")
                 
@@ -366,96 +276,3 @@ class ShellExecutorService:
                 "runner": "local-subprocess",
             },
         }
-
-    def _cleanup_s3_objects(self, bucket: str, keys: List[str]) -> None:
-        """Best-effort cleanup of S3 objects."""
-        for key in keys:
-            try:
-                self._s3.delete_object(Bucket=bucket, Key=key)
-            except Exception:
-                pass
-
-    def _poll_for_result(
-        self,
-        bucket: str,
-        result_key: str,
-        job_request_key: str,
-        cluster_arn: str,
-        task_arn: Optional[str],
-        job_id: str,
-        max_wait_seconds: int
-    ) -> Dict[str, Any]:
-        """Poll S3 for the result file."""
-        start = time.time()
-        last_task_check = 0.0
-        task_check_interval_s = 5.0
-
-        while (time.time() - start) < max_wait_seconds:
-            try:
-                obj = self._s3.get_object(Bucket=bucket, Key=result_key)
-                body = obj["Body"].read().decode("utf-8")
-                parsed = json.loads(body)
-
-                # Cleanup
-                self._cleanup_s3_objects(bucket, [result_key, job_request_key])
-
-                logger.info("[ShellExecutorService] Result received", extra={
-                    "job_id": job_id,
-                    "task_arn": task_arn,
-                })
-                return parsed
-
-            except ClientError as e:
-                if not _is_no_such_key(e):
-                    raise
-
-                # Check if task failed/stopped
-                now = time.time()
-                if task_arn and (now - last_task_check) >= task_check_interval_s:
-                    last_task_check = now
-                    if self._check_task_stopped(cluster_arn, task_arn, job_id):
-                        # Task stopped but no result -> it failed
-                        raise RuntimeError(
-                            f"Shell executor task stopped without result (job_id={job_id})"
-                        )
-                
-                time.sleep(0.5)
-                continue
-
-        # Timeout
-        self._cleanup_s3_objects(bucket, [job_request_key])
-        raise TimeoutError(f"Timed out waiting for shell executor result (job_id={job_id}, task_arn={task_arn})")
-
-    def _check_task_stopped(self, cluster_arn: str, task_arn: str, job_id: str) -> bool:
-        """
-        Check if the ECS task has stopped.
-        Returns True if stopped, False if running/unknown.
-        Raises RuntimeError if task stopped with error.
-        """
-        try:
-            desc = self._ecs.describe_tasks(cluster=cluster_arn, tasks=[task_arn])
-            task = (desc.get("tasks") or [{}])[0] or {}
-            
-            if task.get("lastStatus") == "STOPPED":
-                containers = task.get("containers") or []
-                runner = next((c for c in containers if c.get("name") == "runner"), None) or (containers[0] if containers else {})
-                exit_code = runner.get("exitCode")
-                reason = runner.get("reason") or task.get("stoppedReason") or "unknown"
-                
-                # If we get here, it means the task stopped but we didn't find the result in S3 yet.
-                # This is likely a failure.
-                raise RuntimeError(
-                    f"Shell executor task stopped before uploading result "
-                    f"(job_id={job_id}, task_arn={task_arn}, exit_code={exit_code}): {reason}"
-                )
-                
-            return False
-        except RuntimeError:
-            raise
-        except Exception as check_err:
-            logger.warning("[ShellExecutorService] Failed to check ECS task status", extra={
-                "job_id": job_id,
-                "task_arn": task_arn,
-                "error": str(check_err),
-            })
-            return False

@@ -1,12 +1,42 @@
 """Browser automation service using Playwright."""
 import logging
 import base64
+import os
 import time
 from typing import Optional, Dict, Any
 from playwright.sync_api import sync_playwright, Browser, Page, BrowserContext  # type: ignore
 from utils.decimal_utils import convert_decimals_to_float
 
 logger = logging.getLogger(__name__)
+
+def _env_flag_is_true(value: Optional[str]) -> bool:
+    return str(value or "").strip().lower() in ("1", "true", "yes", "y", "on")
+
+def _env_flag_is_false(value: Optional[str]) -> bool:
+    return str(value or "").strip().lower() in ("0", "false", "no", "n", "off")
+
+def _running_in_lambda() -> bool:
+    return bool(
+        os.environ.get("AWS_LAMBDA_FUNCTION_NAME")
+        or os.environ.get("AWS_EXECUTION_ENV")
+        or os.environ.get("LAMBDA_TASK_ROOT")
+    )
+
+def _should_use_single_process() -> bool:
+    override = os.environ.get("CUA_PLAYWRIGHT_SINGLE_PROCESS")
+    if _env_flag_is_true(override):
+        return True
+    if _env_flag_is_false(override):
+        return False
+    return _running_in_lambda()
+
+def _should_disable_sandbox() -> bool:
+    override = os.environ.get("CUA_PLAYWRIGHT_NO_SANDBOX")
+    if _env_flag_is_true(override):
+        return True
+    if _env_flag_is_false(override):
+        return False
+    return _running_in_lambda()
 
 
 class BrowserService:
@@ -40,17 +70,19 @@ class BrowserService:
         
         try:
             self.playwright = sync_playwright().start()
+            launch_args = [
+                '--disable-gpu',
+                '--disable-dev-shm-usage',
+                '--disable-accelerated-2d-canvas',
+                '--disable-web-security',
+            ]
+            if _should_disable_sandbox():
+                launch_args += ['--no-sandbox', '--disable-setuid-sandbox']
+            if _should_use_single_process():
+                launch_args += ['--single-process']  # Useful in Lambda; can crash locally
             self.browser = self.playwright.chromium.launch(
                 headless=True,
-                args=[
-                    '--disable-gpu',
-                    '--no-sandbox',
-                    '--disable-setuid-sandbox',
-                    '--disable-dev-shm-usage',
-                    '--disable-accelerated-2d-canvas',
-                    '--disable-web-security',
-                    '--single-process'  # Important for Lambda environment
-                ]
+                args=launch_args
             )
             
             context_options = {

@@ -383,16 +383,6 @@ export function PreviewRenderer({
     jsonError,
   ]);
 
-  if (!objectUrl && !artifactId) {
-    return (
-      <div
-        className={`flex items-center justify-center bg-gray-100 dark:bg-gray-800 ${className}`}
-      >
-        <FiFile className="w-12 h-12 text-gray-400 dark:text-gray-500" />
-      </div>
-    );
-  }
-
   // Attempt to parse markdown content as JSON if it looks like one
   const parsedMarkdownJson = useMemo(() => {
     if (!markdownContent || effectiveContentType !== "text/markdown")
@@ -422,6 +412,16 @@ export function PreviewRenderer({
     }
     return null;
   }, [markdownContent, effectiveContentType]);
+
+  if (!objectUrl && !artifactId) {
+    return (
+      <div
+        className={`flex items-center justify-center bg-gray-100 dark:bg-gray-800 ${className}`}
+      >
+        <FiFile className="w-12 h-12 text-gray-400 dark:text-gray-500" />
+      </div>
+    );
+  }
 
   const renderPreview = () => {
     if (effectiveContentType.startsWith("image/")) {

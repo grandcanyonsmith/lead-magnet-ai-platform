@@ -1,13 +1,9 @@
 import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
-import * as ecs from 'aws-cdk-lib/aws-ecs';
-import * as ecrAssets from 'aws-cdk-lib/aws-ecr-assets';
 import * as efs from 'aws-cdk-lib/aws-efs';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
-import * as s3 from 'aws-cdk-lib/aws-s3';
-import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import { Construct } from 'constructs';
-import { RESOURCE_PREFIXES, SHELL_EXECUTOR_TASK_FAMILY } from './config/constants';
 
 export interface ShellExecutorStackProps extends cdk.StackProps {
   // No cross-stack dependencies required for the executor itself.
@@ -16,21 +12,20 @@ export interface ShellExecutorStackProps extends cdk.StackProps {
 /**
  * ShellExecutorStack
  *
- * Provisions an isolated ECS Fargate environment + S3 result bucket for running
- * model-requested shell commands as one-shot tasks.
+ * Provisions an isolated Lambda environment + EFS for running
+ * model-requested shell commands as synchronous invocations.
+ * Replaces the legacy ECS Fargate implementation.
  */
 export class ShellExecutorStack extends cdk.Stack {
   public readonly vpc: ec2.Vpc;
-  public readonly cluster: ecs.Cluster;
-  public readonly securityGroup: ec2.SecurityGroup;
-  public readonly taskDefinition: ecs.FargateTaskDefinition;
-  public readonly resultsBucket: s3.Bucket;
-  public readonly subnetIds: string[];
+  public readonly fileSystem: efs.FileSystem;
+  public readonly executorFunction: lambda.Function;
 
   constructor(scope: Construct, id: string, props?: ShellExecutorStackProps) {
     super(scope, id, props);
 
     // Isolated VPC with private subnets + NAT for outbound internet access.
+    // Required for pip install, curl, etc.
     this.vpc = new ec2.Vpc(this, 'ShellExecutorVpc', {
       maxAzs: 2,
       natGateways: 1,
@@ -51,229 +46,93 @@ export class ShellExecutorStack extends cdk.Stack {
       },
     });
 
-    this.subnetIds = this.vpc.privateSubnets.map((s) => s.subnetId);
-
-    this.cluster = new ecs.Cluster(this, 'ShellExecutorCluster', {
+    // Security group for Lambda
+    const lambdaSecurityGroup = new ec2.SecurityGroup(this, 'ShellExecutorLambdaSg', {
       vpc: this.vpc,
-      containerInsights: true,
-      clusterName: SHELL_EXECUTOR_TASK_FAMILY,
+      allowAllOutbound: true,
+      description: 'SG for shell executor lambda',
     });
 
-    // Private, short-lived results bucket (executor uploads via presigned PUT).
-    this.resultsBucket = new s3.Bucket(this, 'ShellExecutorResultsBucket', {
-      bucketName: `${RESOURCE_PREFIXES.BUCKET}-shell-results-${this.account}`,
-      encryption: s3.BucketEncryption.S3_MANAGED,
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-      enforceSSL: true,
-      lifecycleRules: [
-        {
-          id: 'expire-shell-results-fast',
-          enabled: true,
-          expiration: cdk.Duration.days(1),
-          abortIncompleteMultipartUploadAfter: cdk.Duration.days(1),
-        },
-        {
-          id: 'expire-shell-jobs-fast',
-          enabled: true,
-          prefix: 'shell-jobs/',
-          expiration: cdk.Duration.days(1),
-          abortIncompleteMultipartUploadAfter: cdk.Duration.days(1),
-        },
-      ],
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-      autoDeleteObjects: true,
-    });
-
-    // Security group: no inbound; outbound limited (HTTPS + DNS).
-    this.securityGroup = new ec2.SecurityGroup(this, 'ShellExecutorSg', {
-      vpc: this.vpc,
-      allowAllOutbound: false,
-      description: 'Egress-restricted SG for shell executor tasks',
-    });
-
-    // HTTPS egress only (S3 presigned PUT, ECR, Logs, etc.)
-    this.securityGroup.addEgressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(443), 'Allow HTTPS outbound');
-    this.securityGroup.addEgressRule(ec2.Peer.anyIpv6(), ec2.Port.tcp(443), 'Allow HTTPS outbound (IPv6)');
-
-    // DNS to VPC resolver (required for hostname resolution when egress is restricted).
-    // Note: AWS resolver is available at the VPC base+2 IP; allowing to the VPC CIDR is the simplest.
-    this.securityGroup.addEgressRule(ec2.Peer.ipv4(this.vpc.vpcCidrBlock), ec2.Port.udp(53), 'Allow DNS UDP within VPC');
-    this.securityGroup.addEgressRule(ec2.Peer.ipv4(this.vpc.vpcCidrBlock), ec2.Port.tcp(53), 'Allow DNS TCP within VPC');
-
-    // Persistent workspace (EFS) for cookbook-style multi-turn shell sessions.
-    //
-    // NOTE: This preserves files between shell_call rounds, but does not preserve running processes.
-    // Keep access tightly scoped: only allow NFS between the executor SG and the EFS SG.
+    // EFS Security Group
     const efsSecurityGroup = new ec2.SecurityGroup(this, 'ShellExecutorEfsSg', {
       vpc: this.vpc,
-      // EFS doesn't initiate outbound connections; leaving default outbound is fine.
-      description: 'Security group for shell executor EFS filesystem (NFS only)',
+      description: 'Security group for shell executor EFS filesystem',
     });
-    // Allow the executor tasks to mount the EFS filesystem via NFS.
+
+    // Allow Lambda to access EFS via NFS (TCP 2049)
     efsSecurityGroup.addIngressRule(
-      this.securityGroup,
+      lambdaSecurityGroup,
       ec2.Port.tcp(2049),
-      'Allow NFS from shell executor tasks',
-    );
-    // Executor SG is egress-restricted; explicitly allow NFS to the EFS SG.
-    this.securityGroup.addEgressRule(
-      ec2.Peer.securityGroupId(efsSecurityGroup.securityGroupId),
-      ec2.Port.tcp(2049),
-      'Allow NFS to EFS',
+      'Allow NFS from shell executor lambda',
     );
 
-    const fileSystem = new efs.FileSystem(this, 'ShellExecutorEfs', {
+    this.fileSystem = new efs.FileSystem(this, 'ShellExecutorEfs', {
       vpc: this.vpc,
       encrypted: true,
       securityGroup: efsSecurityGroup,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    // Access point ensures a stable root directory and correct ownership for the non-root container user.
-    // The container runs as uid/gid 10001 (see backend/shell-executor/Dockerfile).
+    // Access point ensures a stable root directory and correct ownership
     const accessPoint = new efs.AccessPoint(this, 'ShellExecutorEfsAccessPoint', {
-      fileSystem,
+      fileSystem: this.fileSystem,
       path: '/shell-executor',
-      posixUser: { uid: '10001', gid: '10001' },
+      posixUser: { uid: '1000', gid: '1000' },
       createAcl: {
-        ownerUid: '10001',
-        ownerGid: '10001',
+        ownerUid: '1000',
+        ownerGid: '1000',
         permissions: '750',
       },
     });
 
     const logGroup = new logs.LogGroup(this, 'ShellExecutorLogGroup', {
-      logGroupName: `/aws/ecs/${SHELL_EXECUTOR_TASK_FAMILY}`,
+      logGroupName: `/aws/lambda/leadmagnet-shell-executor`,
       retention: logs.RetentionDays.ONE_WEEK,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    this.taskDefinition = new ecs.FargateTaskDefinition(this, 'ShellExecutorTaskDef', {
-      cpu: 512,
-      memoryLimitMiB: 1024,
-      family: SHELL_EXECUTOR_TASK_FAMILY,
-      // NOTE: CDK will create a task role by default. We will remove TaskRoleArn
-      // from the synthesized CFN so tasks run without an attached IAM role.
-    });
-
-    // Escape hatch: remove taskRoleArn to avoid injecting AWS credentials into the task.
-    const cfnTaskDef = this.taskDefinition.node.defaultChild as ecs.CfnTaskDefinition;
-    cfnTaskDef.addPropertyDeletionOverride('TaskRoleArn');
-
-    // Persistent writable volume for /workspace (EFS-backed).
-    // We intentionally avoid task role credentials; EFS is accessed via VPC network controls.
-    this.taskDefinition.addVolume({
-      name: 'workspace',
-      efsVolumeConfiguration: {
-        fileSystemId: fileSystem.fileSystemId,
-        transitEncryption: 'ENABLED',
-        authorizationConfig: {
-          accessPointId: accessPoint.accessPointId,
-          iam: 'DISABLED',
-        },
-      },
-    });
-
-    const container = this.taskDefinition.addContainer('runner', {
-      // IMPORTANT: Force-build an x86_64 (linux/amd64) image. Without this, Docker
-      // may build an ARM64 image on Apple Silicon, which will fail on x86_64
-      // Fargate with: "exec /usr/local/bin/node: exec format error".
-      image: ecs.ContainerImage.fromAsset('../backend/shell-executor', {
-        platform: ecrAssets.Platform.LINUX_AMD64,
+    // The Executor Lambda
+    // Mounts EFS to /mnt/shell-executor
+    this.executorFunction = new lambda.Function(this, 'ShellExecutorFunction', {
+      functionName: 'leadmagnet-shell-executor',
+      runtime: lambda.Runtime.PYTHON_3_11,
+      handler: 'services.shell.executor_handler.handler',
+      code: lambda.Code.fromAsset('../backend/worker', {
+        exclude: [
+          '**/.venv', 
+          '**/venv', 
+          '**/__pycache__', 
+          '**/*.pyc', 
+          '**/node_modules',
+          '**/tests',
+          'Dockerfile',
+          '.dockerignore',
+          'README.md',
+          'shell-executor' // Exclude the old runner code if it exists there
+        ]
       }),
-      logging: ecs.LogDriver.awsLogs({
-        streamPrefix: 'shell-executor',
-        logGroup,
-      }),
-      // Allow writing to /tmp and other standard paths. We still mount /workspace,
-      // drop ALL Linux capabilities, remove taskRoleArn, and restrict egress.
-      readonlyRootFilesystem: false,
+      memorySize: 1024,
+      timeout: cdk.Duration.minutes(60), // Increased to 60 minutes
+      vpc: this.vpc,
+      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
+      securityGroups: [lambdaSecurityGroup],
+      filesystem: lambda.FileSystem.fromEfsAccessPoint(accessPoint, '/mnt/shell-executor'),
       environment: {
-        // Defaults; job request can override via timeout_ms.
-        SHELL_EXECUTOR_TIMEOUT_MS: String(1_200_000), // 20 minutes
-        SHELL_EXECUTOR_MAX_STDOUT_BYTES: String(10 * 1024 * 1024), // 10MB
-        SHELL_EXECUTOR_MAX_STDERR_BYTES: String(10 * 1024 * 1024), // 10MB
+        EFS_MOUNT_POINT: '/mnt/shell-executor',
+        HOME: '/mnt/shell-executor', // Useful for some tools
       },
+      logGroup,
     });
 
-    container.addMountPoints({
-      containerPath: '/workspace',
-      sourceVolume: 'workspace',
-      readOnly: false,
+    // Outputs
+    new cdk.CfnOutput(this, 'ShellExecutorFunctionArn', {
+      value: this.executorFunction.functionArn,
+      exportName: 'ShellExecutorFunctionArn',
     });
 
-    // Defense-in-depth: drop all Linux capabilities.
-    // CDK doesn't currently expose `capabilities.drop`, so use an L1 override.
-    // We only have a single container, so index 0 is stable.
-    cfnTaskDef.addPropertyOverride('ContainerDefinitions.0.LinuxParameters.Capabilities.Drop', ['ALL']);
-
-    new cdk.CfnOutput(this, 'ShellExecutorClusterArn', {
-      value: this.cluster.clusterArn,
-      exportName: 'ShellExecutorClusterArn',
-    });
-
-    // Export a stable identifier (family), NOT the revisioned TaskDefinition ARN.
-    new cdk.CfnOutput(this, 'ShellExecutorTaskDefinitionFamily', {
-      value: SHELL_EXECUTOR_TASK_FAMILY,
-      exportName: 'ShellExecutorTaskDefinitionFamily',
-    });
-
-    new cdk.CfnOutput(this, 'ShellExecutorSecurityGroupId', {
-      value: this.securityGroup.securityGroupId,
-      exportName: 'ShellExecutorSecurityGroupId',
-    });
-
-    new cdk.CfnOutput(this, 'ShellExecutorSubnetIds', {
-      value: this.subnetIds.join(','),
-      exportName: 'ShellExecutorSubnetIds',
-    });
-
-    new cdk.CfnOutput(this, 'ShellExecutorResultsBucketName', {
-      value: this.resultsBucket.bucketName,
-      exportName: 'ShellExecutorResultsBucketName',
-    });
-
-    // Aggressive-ish alarms (best-effort; adjust thresholds to your traffic).
-    const runningTasksMetric = new cloudwatch.Metric({
-      namespace: 'AWS/ECS',
-      metricName: 'RunningTaskCount',
-      dimensionsMap: {
-        ClusterName: this.cluster.clusterName,
-      },
-      statistic: 'Maximum',
-      period: cdk.Duration.minutes(5),
-    });
-
-    new cloudwatch.Alarm(this, 'ShellExecutorRunningTasksHigh', {
-      alarmName: 'leadmagnet-shell-executor-running-tasks-high',
-      alarmDescription: 'Shell executor running task count is unusually high (possible abuse/cost spike)',
-      metric: runningTasksMetric,
-      threshold: 25,
-      evaluationPeriods: 1,
-      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
-    });
-
-    const pendingTasksMetric = new cloudwatch.Metric({
-      namespace: 'AWS/ECS',
-      metricName: 'PendingTaskCount',
-      dimensionsMap: {
-        ClusterName: this.cluster.clusterName,
-      },
-      statistic: 'Maximum',
-      period: cdk.Duration.minutes(5),
-    });
-
-    new cloudwatch.Alarm(this, 'ShellExecutorPendingTasksHigh', {
-      alarmName: 'leadmagnet-shell-executor-pending-tasks-high',
-      alarmDescription: 'Shell executor pending tasks are backing up (capacity/concurrency issue)',
-      metric: pendingTasksMetric,
-      threshold: 10,
-      evaluationPeriods: 1,
-      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+    new cdk.CfnOutput(this, 'ShellExecutorFunctionName', {
+      value: this.executorFunction.functionName,
+      exportName: 'ShellExecutorFunctionName',
     });
   }
 }
-
-

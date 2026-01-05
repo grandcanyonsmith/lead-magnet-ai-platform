@@ -6,6 +6,7 @@ from services.ai_step_processor import AIStepProcessor
 from services.execution_step_manager import ExecutionStepManager
 from services.s3_context_service import S3ContextService
 from services.context_builder import ContextBuilder
+from services.tools import get_image_generation_defaults
 from core import log_context
 
 logger = logging.getLogger(__name__)
@@ -43,13 +44,7 @@ class AIStepHandler(AbstractStepHandler):
         for tool in step_tools_raw:
             if isinstance(tool, str):
                 if tool == 'image_generation':
-                    step_tools.append({
-                        "type": "image_generation",
-                        "model": "gpt-image-1.5",
-                        "size": "auto",
-                        "quality": "auto",
-                        "background": "auto"
-                    })
+                    step_tools.append(get_image_generation_defaults())
                 else:
                     step_tools.append({"type": tool})
             else:
