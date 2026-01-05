@@ -3,6 +3,7 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as efs from 'aws-cdk-lib/aws-efs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import * as s3 from 'aws-cdk-lib/aws-s3';
 import { Construct } from 'constructs';
 
 export interface ShellExecutorStackProps extends cdk.StackProps {
@@ -140,12 +141,12 @@ export class ShellExecutorStack extends cdk.Stack {
     // If deployment fails with "Cannot delete export... as it is in use", you need to:
     // 1. Manually remove the import references from leadmagnet-api and leadmagnet-compute stacks in CloudFormation
     // 2. Or temporarily add back the export below, deploy, then remove imports, then remove export again
-    // 
-    // To add back temporarily (if needed for migration):
-    // const artifactsBucket = s3.Bucket.fromBucketName(this, 'ArtifactsBucket', 'leadmagnet-artifacts-*');
-    // new cdk.CfnOutput(this, 'ShellExecutorResultsBucket', {
-    //   value: artifactsBucket.bucketName,
-    //   exportName: cdk.Fn.join(':', [this.stackName, 'ExportsOutputRefShellExecutorResultsBucket1A1277A82A874BA3']),
-    // });
+    
+    // Temporary fix for circular dependency during migration
+    const artifactsBucket = s3.Bucket.fromBucketName(this, 'ArtifactsBucket', 'leadmagnet-artifacts-471112574622');
+    new cdk.CfnOutput(this, 'ShellExecutorResultsBucket', {
+      value: artifactsBucket.bucketName,
+      exportName: 'leadmagnet-shell-executor:ExportsOutputRefShellExecutorResultsBucket1A1277A82A874BA3',
+    });
   }
 }

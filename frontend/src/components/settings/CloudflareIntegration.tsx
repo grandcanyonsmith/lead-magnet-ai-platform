@@ -112,6 +112,26 @@ export function CloudflareIntegration({
 
   // ... (rest of component) ...
 
+  const handleConnect = async () => {
+    try {
+      if (!apiToken.trim()) return;
+      await connect(apiToken);
+      // Optional: Clear token or provide feedback if hook doesn't
+      setApiToken("");
+      setShowTokenInput(false);
+    } catch (error) {
+      console.error("Failed to connect:", error);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    try {
+      await disconnect();
+    } catch (error) {
+      console.error("Failed to disconnect:", error);
+    }
+  };
+
   const handleCreateDNSRecords = async () => {
     if (!cloudfrontDomain) {
       toast.error("CloudFront domain not available. Please deploy infrastructure first.");
