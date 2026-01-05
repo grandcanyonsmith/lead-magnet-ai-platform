@@ -44,14 +44,28 @@ export function CloudflareIntegration({
   const isLoading = statusLoading || connectLoading || disconnectLoading || createLoading;
 
   // Extract root domain from custom_domain (moved before useMemo)
-  const rootDomain = settings.custom_domain
-    ? settings.custom_domain
-        .replace(/^https?:\/\//, "")
-        .replace(/\/$/, "")
-        .split(".")
-        .slice(-2)
-        .join(".")
-    : null;
+  // Heuristic for preview only:
+  // 1. If starts with "forms.", assume the rest is the root domain.
+  // 2. Otherwise, if > 2 parts, strip first part (likely subdomain).
+  // 3. Else, use as is.
+  const rootDomain = useMemo(() => {
+    if (!settings.custom_domain) return null;
+    
+    const domain = settings.custom_domain
+      .replace(/^https?:\/\//, "")
+      .replace(/\/$/, "");
+
+    if (domain.startsWith("forms.")) {
+      return domain.substring(6);
+    }
+    
+    const parts = domain.split(".");
+    if (parts.length > 2) {
+      return parts.slice(1).join(".");
+    }
+    
+    return parts.length === 2 ? domain : parts.slice(-2).join(".");
+  }, [settings.custom_domain]);
 
   // Token validation with debounce
   const debouncedToken = useDebounce(apiToken, 500);

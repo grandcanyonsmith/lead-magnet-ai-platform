@@ -48,7 +48,10 @@ const CLOUDFLARE_ERROR_MESSAGES: Record<number, string> = {
   1003: "Invalid API token. Please check your token permissions.",
   1004: "Invalid API token format.",
   1005: "Invalid API token. Token may have been revoked.",
+  6003: "Invalid request headers.",
+  7000: "No route for that URI.",
   7003: "Domain not found in Cloudflare. Please ensure the domain is added to your Cloudflare account first.",
+  81053: "DNS record already exists.",
   81057: "DNS record already exists with this name and type.",
   81058: "Invalid DNS record content.",
   81059: "Invalid DNS record name.",
@@ -109,95 +112,102 @@ export class CloudflareService {
 
   /**
    * Get zone ID for a domain
+   * Iteratively checks for the zone by stripping subdomains until a match is found.
    */
-  async getZoneId(domain: string): Promise<string | null> {
-    const rootDomain = this.extractRootDomain(domain);
+  async getZoneId(domain: string): Promise<{ id: string; name: string } | null> {
+    let currentDomain = domain.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+    const originalDomain = currentDomain;
     const startTime = Date.now();
+    let lastError: Error | null = null;
 
-    try {
-      const response = await withRetry(
-        async () => {
-          return await fetch(
-            `${this.baseUrl}/zones?name=${encodeURIComponent(rootDomain)}`,
-            {
-              method: "GET",
-              headers: {
-                Authorization: `Bearer ${this.apiToken}`,
-                "Content-Type": "application/json",
+    // Keep checking as long as we have at least a domain and TLD (e.g. "example.com")
+    while (currentDomain.includes(".") && currentDomain.split(".").length >= 2) {
+      try {
+        const response = await withRetry(
+          async () => {
+            return await fetch(
+              `${this.baseUrl}/zones?name=${encodeURIComponent(currentDomain)}`,
+              {
+                method: "GET",
+                headers: {
+                  Authorization: `Bearer ${this.apiToken}`,
+                  "Content-Type": "application/json",
+                },
               },
-            },
-          );
-        },
-        {
-          maxRetries: 3,
-          retryableErrors: [429, 500, 502, 503, 504],
-        },
-      );
+            );
+          },
+          {
+            maxRetries: 3,
+            retryableErrors: [429, 500, 502, 503, 504],
+          },
+        );
 
-      // Handle rate limiting
-      if (response.status === 429) {
-        const retryAfter = response.headers.get("Retry-After");
-        throw new CloudflareRateLimitError(retryAfter || undefined);
-      }
-
-      const rawData = await response.json();
-      if (!isCloudflareResponse<CloudflareZone[]>(rawData)) {
-        logger.error("[CloudflareService] Invalid API response format", {
-          domain: rootDomain,
-          status: response.status,
-        });
-        throw new CloudflareError("Invalid response from Cloudflare API", undefined, 500);
-      }
-
-      const data = rawData;
-
-      if (!data.success) {
-        // Check for specific error codes
-        const errorCode = data.errors?.[0]?.code;
-        if (errorCode === 7003) {
-          throw new CloudflareZoneNotFoundError(rootDomain);
+        // Handle rate limiting
+        if (response.status === 429) {
+          const retryAfter = response.headers.get("Retry-After");
+          throw new CloudflareRateLimitError(retryAfter || undefined);
         }
 
-        const errorMessage =
-          data.errors?.map((e) => CLOUDFLARE_ERROR_MESSAGES[e.code] || e.message).join(", ") ||
-          "Unknown error";
-        throw new CloudflareError(errorMessage, String(errorCode), 400, {
-          errors: data.errors,
+        const rawData = await response.json();
+        if (!isCloudflareResponse<CloudflareZone[]>(rawData)) {
+          logger.error("[CloudflareService] Invalid API response format", {
+            domain: currentDomain,
+            status: response.status,
+          });
+          // Don't throw here, just try next parent domain or fail later
+          lastError = new CloudflareError("Invalid response from Cloudflare API", undefined, 500);
+        } else {
+          const data = rawData;
+
+          if (data.success && data.result && data.result.length > 0) {
+            logger.info("[CloudflareService] Zone found", {
+              searchDomain: currentDomain,
+              originalDomain,
+              zoneId: data.result[0].id,
+              zoneName: data.result[0].name,
+              duration: Date.now() - startTime,
+            });
+            return {
+              id: data.result[0].id,
+              name: data.result[0].name,
+            };
+          }
+          
+          // If success but no result, it means zone not found for this domain part.
+          // Continue loop.
+        }
+
+      } catch (error) {
+        if (error instanceof CloudflareRateLimitError) {
+          throw error;
+        }
+        // Store error and continue to next parent domain
+        lastError = error instanceof Error ? error : new Error(String(error));
+        logger.warn("[CloudflareService] Error checking zone for domain part", {
+          domainPart: currentDomain,
+          error: lastError.message
         });
       }
 
-      if (!data.result || data.result.length === 0) {
-        logger.warn("[CloudflareService] Zone not found", {
-          domain: rootDomain,
-          duration: Date.now() - startTime,
-        });
-        return null;
+      // Strip first part to try parent domain
+      const parts = currentDomain.split(".");
+      if (parts.length <= 2) {
+        // We just checked "example.com" or "co.uk" and failed. Stop.
+        break;
       }
-
-      logger.info("[CloudflareService] Zone found", {
-        domain: rootDomain,
-        zoneId: data.result[0].id,
-        duration: Date.now() - startTime,
-      });
-
-      return data.result[0].id;
-    } catch (error) {
-      if (
-        error instanceof CloudflareError ||
-        error instanceof CloudflareRateLimitError ||
-        error instanceof CloudflareZoneNotFoundError
-      ) {
-        throw error;
-      }
-      logger.error("[CloudflareService] Failed to get zone ID", {
-        error: error instanceof Error ? error.message : String(error),
-        domain: rootDomain,
-        duration: Date.now() - startTime,
-      });
-      throw new CloudflareError("Failed to find domain in Cloudflare", undefined, 500, {
-        originalError: error instanceof Error ? error.message : String(error),
-      });
+      currentDomain = parts.slice(1).join(".");
     }
+
+    logger.warn("[CloudflareService] Zone not found after iterative search", {
+      domain: originalDomain,
+      duration: Date.now() - startTime,
+      lastError: lastError?.message,
+    });
+    
+    // If we exit loop without returning, we didn't find it.
+    // If we had a specific error that wasn't "not found", we might want to log it.
+    
+    return null;
   }
 
   /**
@@ -359,18 +369,5 @@ export class CloudflareService {
       });
       return false;
     }
-  }
-
-  /**
-   * Extract root domain from subdomain
-   * e.g., "forms.example.com" -> "example.com"
-   */
-  private extractRootDomain(domain: string): string {
-    const parts = domain.split(".");
-    if (parts.length <= 2) {
-      return domain;
-    }
-    // Return last two parts (domain + TLD)
-    return parts.slice(-2).join(".");
   }
 }

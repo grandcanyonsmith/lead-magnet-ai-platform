@@ -129,14 +129,16 @@ class CloudflareController {
         );
       }
 
-      // Extract root domain (e.g., "forms.example.com" -> "example.com")
-      const rootDomain = this.extractRootDomain(customDomain.replace(/^https?:\/\//, "").replace(/\/$/, ""));
+      // Clean domain
+      const cleanDomain = customDomain.replace(/^https?:\/\//, "").replace(/\/$/, "");
 
-      // Get zone ID
-      const zoneId = await cloudflare.getZoneId(rootDomain);
-      if (!zoneId) {
-        throw new CloudflareZoneNotFoundError(rootDomain);
+      // Get zone ID and name
+      const zoneInfo = await cloudflare.getZoneId(cleanDomain);
+      if (!zoneInfo) {
+        throw new CloudflareZoneNotFoundError(cleanDomain);
       }
+      
+      const { id: zoneId, name: rootDomain } = zoneInfo;
 
       const recordsCreated: Array<{ name: string; type: string; content: string }> = [];
       const errors: Array<{ name: string; error: string }> = [];
@@ -337,17 +339,6 @@ class CloudflareController {
         connected: false,
       },
     };
-  }
-
-  /**
-   * Extract root domain from subdomain
-   */
-  private extractRootDomain(domain: string): string {
-    const parts = domain.split(".");
-    if (parts.length <= 2) {
-      return domain;
-    }
-    return parts.slice(-2).join(".");
   }
 }
 
