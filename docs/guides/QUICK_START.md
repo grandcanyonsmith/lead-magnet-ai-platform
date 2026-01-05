@@ -415,7 +415,7 @@ Run through this checklist to verify everything:
 1. **Customize branding** - Update colors in settings
 2. **Design templates** - Create beautiful HTML templates
 3. **Set up monitoring** - Configure CloudWatch alarms
-4. **Add custom domain** - Use Route 53 (optional)
+4. **Add custom domain (optional)** - See [Custom Domains](./CUSTOM_DOMAINS.md)
 
 ### This Month
 1. **Production workflows** - Build multiple workflows
