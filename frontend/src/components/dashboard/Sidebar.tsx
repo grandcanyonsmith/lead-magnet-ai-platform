@@ -69,6 +69,12 @@ export function Sidebar({
       icon: Users,
       activePrefixes: ["/dashboard/jobs"],
     },
+    {
+      href: "/dashboard/playground",
+      label: "Playground",
+      icon: Monitor,
+      activePrefixes: ["/dashboard/playground"],
+    },
   ];
 
   return (

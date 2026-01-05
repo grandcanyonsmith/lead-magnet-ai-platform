@@ -157,6 +157,14 @@ export class WorkflowsClient extends BaseApiClient {
     return this.post("/admin/workflows/test-step", request);
   }
 
+  async testWorkflow(request: { steps: any[]; input?: any }): Promise<{
+    job_id: string;
+    status: string;
+    message: string;
+  }> {
+    return this.post("/admin/workflows/test-workflow", request);
+  }
+
   // Folder methods
   async getFolders(): Promise<FolderListResponse> {
     return this.get<FolderListResponse>("/admin/folders");
