@@ -135,6 +135,20 @@ export interface ApiClient {
   getSettings(): Promise<Settings>;
   updateSettings(data: SettingsUpdateRequest): Promise<Settings>;
 
+  // Cloudflare
+  connectCloudflare(apiToken: string): Promise<{ message: string; connected: boolean }>;
+  getCloudflareStatus(): Promise<{ connected: boolean; connected_at: string | null }>;
+  createCloudflareDNSRecords(data: {
+    forms_subdomain?: string;
+    assets_subdomain?: string;
+    cloudfront_domain: string;
+  }): Promise<{
+    message: string;
+    records_created: Array<{ name: string; type: string; content: string }>;
+    errors?: Array<{ name: string; error: string }>;
+  }>;
+  disconnectCloudflare(): Promise<{ message: string; connected: boolean }>;
+
   // Analytics
   getAnalytics(params?: Record<string, unknown>): Promise<AnalyticsResponse>;
 
