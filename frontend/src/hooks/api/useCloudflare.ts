@@ -26,7 +26,7 @@ interface UseCloudflareStatusResult {
 export function useCloudflareStatus(): UseCloudflareStatusResult {
   const { data, isLoading, error, refetch } = useQuery<CloudflareStatus>(
     ["cloudflare", "status"],
-    () => api.settings.getCloudflareStatus(),
+    () => api.getCloudflareStatus(),
     {
       enabled: true,
       refetchInterval: false,
@@ -53,7 +53,7 @@ export function useConnectCloudflare(): UseConnectCloudflareResult {
     Error,
     string
   >(
-    (apiToken: string) => api.settings.connectCloudflare(apiToken),
+    (apiToken: string) => api.connectCloudflare(apiToken),
     {
       showSuccessToast: "Cloudflare account connected successfully",
       showErrorToast: true,
@@ -101,7 +101,7 @@ export function useCreateDNSRecords(): UseCreateDNSRecordsResult {
       cloudfront_domain: string;
     }
   >(
-    (data) => api.settings.createCloudflareDNSRecords(data),
+    (data) => api.createCloudflareDNSRecords(data),
     {
       showSuccessToast: (data) => {
         const count = data.records_created.length;
@@ -144,7 +144,7 @@ export function useDisconnectCloudflare(): UseDisconnectCloudflareResult {
     Error,
     void
   >(
-    () => api.settings.disconnectCloudflare(),
+    () => api.disconnectCloudflare(),
     {
       showSuccessToast: "Cloudflare account disconnected",
       showErrorToast: true,

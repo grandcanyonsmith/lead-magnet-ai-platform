@@ -335,6 +335,25 @@ class ApiClientImpl extends BaseApiClient implements ApiClient {
     return this.settings.updateSettings(data);
   }
 
+  // Cloudflare - delegate to settings client
+  async connectCloudflare(apiToken: string) {
+    return this.settings.connectCloudflare(apiToken);
+  }
+
+  async getCloudflareStatus() {
+    return this.settings.getCloudflareStatus();
+  }
+
+  async createCloudflareDNSRecords(
+    data: Parameters<SettingsClient["createCloudflareDNSRecords"]>[0],
+  ) {
+    return this.settings.createCloudflareDNSRecords(data);
+  }
+
+  async disconnectCloudflare() {
+    return this.settings.disconnectCloudflare();
+  }
+
   // Analytics - delegate to analytics client
   async getAnalytics(params?: Record<string, unknown>) {
     return this.analytics.getAnalytics(params);

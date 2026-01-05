@@ -2,7 +2,6 @@ import { logger } from "../utils/logger";
 import {
   CloudflareError,
   CloudflareRateLimitError,
-  CloudflareZoneNotFoundError,
   CloudflareRecordExistsError,
 } from "../utils/errors";
 import { withRetry } from "../utils/retry";
