@@ -13,11 +13,13 @@ export class DashboardPage {
     this.page = page
     // The dashboard title is a dynamic greeting ("Good morning, ..."), so wait on stable UI instead.
     this.heading = page.getByRole('heading', { level: 1 })
-    // Use a locator that matches both href and text content
-    // Next.js Link components render as anchor tags, so we can match by href and filter by text
-    this.createLeadMagnetButton = page.locator('a[href="/dashboard/workflows/new"]').filter({ 
-      hasText: /create lead magnet/i 
-    }).first()
+    // Use a locator that matches the href and filters by text content
+    // Next.js Link components render as anchor tags
+    // Try getByRole first (more semantic), fallback to href + text filter
+    this.createLeadMagnetButton = page
+      .locator('a[href="/dashboard/workflows/new"]')
+      .filter({ hasText: /create lead magnet/i })
+      .first()
     this.statsCards = page.locator(
       'text=/Leads Collected|Reports Generated|Active Magnets/'
     )
@@ -32,8 +34,18 @@ export class DashboardPage {
   }
 
   async goto() {
-    await this.page.goto('/dashboard')
-    await this.createLeadMagnetButton.waitFor({ timeout: 10000 })
+    await this.page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
+    // Wait for the page to be fully loaded - wait for the heading to appear first
+    // This ensures the skeleton loader is gone and content is rendered
+    await this.heading.waitFor({ timeout: 15000, state: 'visible' })
+    // Wait for network to be idle to ensure all API calls are complete
+    try {
+      await this.page.waitForLoadState('networkidle', { timeout: 5000 })
+    } catch {
+      // Ignore timeout - page might not have network activity
+    }
+    // Then wait for the create button to be visible
+    await this.createLeadMagnetButton.waitFor({ timeout: 10000, state: 'visible' })
   }
 
   async navigateToWorkflows() {
