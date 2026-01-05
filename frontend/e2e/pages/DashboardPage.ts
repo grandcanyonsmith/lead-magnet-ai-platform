@@ -13,9 +13,11 @@ export class DashboardPage {
     this.page = page
     // The dashboard title is a dynamic greeting ("Good morning, ..."), so wait on stable UI instead.
     this.heading = page.getByRole('heading', { level: 1 })
-    this.createLeadMagnetButton = page.locator(
-      'a[href="/dashboard/workflows/new"]:has-text("Create Lead Magnet")'
-    )
+    // Use a locator that matches both href and text content
+    // Next.js Link components render as anchor tags, so we can match by href and filter by text
+    this.createLeadMagnetButton = page.locator('a[href="/dashboard/workflows/new"]').filter({ 
+      hasText: /create lead magnet/i 
+    }).first()
     this.statsCards = page.locator(
       'text=/Leads Collected|Reports Generated|Active Magnets/'
     )

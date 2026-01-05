@@ -10,6 +10,7 @@ import { FiCopy, FiRefreshCw, FiExternalLink } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import { useRegenerateWebhookToken } from "@/hooks/api/useSettings";
 import { WebhookTester } from "./WebhookTester";
+import { CloudflareIntegration } from "./CloudflareIntegration";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -36,12 +37,19 @@ export function DeliverySettings({
   const { regenerateToken, loading: isRegenerating } =
     useRegenerateWebhookToken();
   const [currentHost, setCurrentHost] = useState("");
+  const [cloudfrontDomain, setCloudfrontDomain] = useState<string | undefined>(
+    (settings as any).cloudfront_domain
+  );
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       setCurrentHost(window.location.host);
     }
-  }, []);
+    // Get CloudFront domain from settings if available
+    if ((settings as any).cloudfront_domain) {
+      setCloudfrontDomain((settings as any).cloudfront_domain);
+    }
+  }, [settings]);
 
   const handleCopyWebhookUrl = async () => {
     if (settings.webhook_url) {
@@ -216,7 +224,7 @@ export function DeliverySettings({
               placeholder="https://api.crm.com/webhook/..."
             />
 
-            <div className="border-t border-gray-100 dark:border-gray-800 pt-6">
+            <div className="border-t border-gray-100 dark:border-gray-800 pt-6 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-4">
                   <FormField
@@ -283,6 +291,16 @@ export function DeliverySettings({
                   />
                 </div>
               </div>
+
+              {/* Cloudflare Integration */}
+              {settings.custom_domain && (
+                <div className="pt-4">
+                  <CloudflareIntegration
+                    settings={settings}
+                    cloudfrontDomain={cloudfrontDomain}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </CardContent>

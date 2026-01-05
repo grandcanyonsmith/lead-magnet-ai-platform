@@ -134,5 +134,18 @@ export class ShellExecutorStack extends cdk.Stack {
       value: this.executorFunction.functionName,
       exportName: 'ShellExecutorFunctionName',
     });
+
+    // NOTE: ShellExecutorResultsBucket export was removed as the shell executor
+    // was migrated from ECS Fargate (which used S3) to Lambda (which doesn't need S3).
+    // If deployment fails with "Cannot delete export... as it is in use", you need to:
+    // 1. Manually remove the import references from leadmagnet-api and leadmagnet-compute stacks in CloudFormation
+    // 2. Or temporarily add back the export below, deploy, then remove imports, then remove export again
+    // 
+    // To add back temporarily (if needed for migration):
+    // const artifactsBucket = s3.Bucket.fromBucketName(this, 'ArtifactsBucket', 'leadmagnet-artifacts-*');
+    // new cdk.CfnOutput(this, 'ShellExecutorResultsBucket', {
+    //   value: artifactsBucket.bucketName,
+    //   exportName: cdk.Fn.join(':', [this.stackName, 'ExportsOutputRefShellExecutorResultsBucket1A1277A82A874BA3']),
+    // });
   }
 }
