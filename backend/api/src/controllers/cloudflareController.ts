@@ -4,7 +4,13 @@ import { CloudflareService } from "../services/cloudflareService";
 import { db } from "../utils/db";
 import { getCustomerId } from "../utils/rbac";
 import { logger } from "../utils/logger";
-import { ApiError, ValidationError } from "../utils/errors";
+import {
+  ApiError,
+  ValidationError,
+  CloudflareZoneNotFoundError,
+  CloudflareRecordExistsError,
+  CloudflareRateLimitError,
+} from "../utils/errors";
 import { env } from "../utils/env";
 import { validate } from "../utils/validation";
 import { z } from "zod";
@@ -129,10 +135,7 @@ class CloudflareController {
       // Get zone ID
       const zoneId = await cloudflare.getZoneId(rootDomain);
       if (!zoneId) {
-        throw new ApiError(
-          `Domain ${rootDomain} not found in your Cloudflare account. Please ensure the domain is added to Cloudflare.`,
-          404
-        );
+        throw new CloudflareZoneNotFoundError(rootDomain);
       }
 
       const recordsCreated: Array<{ name: string; type: string; content: string }> = [];
@@ -149,7 +152,7 @@ class CloudflareController {
           if (exists) {
             errors.push({
               name: formsName,
-              error: "Record already exists",
+              error: "Record already exists. You can update it manually in Cloudflare or delete it first.",
             });
           } else {
             await cloudflare.createDNSRecord(zoneId, {
@@ -165,10 +168,26 @@ class CloudflareController {
             });
           }
         } catch (error: any) {
-          errors.push({
-            name: formsName,
-            error: error.message || "Failed to create record",
-          });
+          if (error instanceof CloudflareRecordExistsError) {
+            errors.push({
+              name: formsName,
+              error: error.message,
+            });
+          } else if (error instanceof CloudflareRateLimitError) {
+            errors.push({
+              name: formsName,
+              error: error.message,
+            });
+          } else {
+            const errorMessage =
+              error instanceof CloudflareZoneNotFoundError
+                ? error.message
+                : error.message || "Failed to create record";
+            errors.push({
+              name: formsName,
+              error: errorMessage,
+            });
+          }
         }
       }
 
@@ -183,7 +202,7 @@ class CloudflareController {
           if (exists) {
             errors.push({
               name: assetsName,
-              error: "Record already exists",
+              error: "Record already exists. You can update it manually in Cloudflare or delete it first.",
             });
           } else {
             await cloudflare.createDNSRecord(zoneId, {
@@ -199,10 +218,26 @@ class CloudflareController {
             });
           }
         } catch (error: any) {
-          errors.push({
-            name: assetsName,
-            error: error.message || "Failed to create record",
-          });
+          if (error instanceof CloudflareRecordExistsError) {
+            errors.push({
+              name: assetsName,
+              error: error.message,
+            });
+          } else if (error instanceof CloudflareRateLimitError) {
+            errors.push({
+              name: assetsName,
+              error: error.message,
+            });
+          } else {
+            const errorMessage =
+              error instanceof CloudflareZoneNotFoundError
+                ? error.message
+                : error.message || "Failed to create record";
+            errors.push({
+              name: assetsName,
+              error: errorMessage,
+            });
+          }
         }
       }
 
@@ -221,10 +256,18 @@ class CloudflareController {
         },
       };
     } catch (error) {
-      if (error instanceof ApiError || error instanceof ValidationError) {
+      if (
+        error instanceof ApiError ||
+        error instanceof ValidationError ||
+        error instanceof CloudflareZoneNotFoundError ||
+        error instanceof CloudflareRateLimitError
+      ) {
         throw error;
       }
-      logger.error("[CloudflareController] Error creating DNS records", { error });
+      logger.error("[CloudflareController] Error creating DNS records", {
+        error: error instanceof Error ? error.message : String(error),
+        tenantId,
+      });
       throw new ApiError("Failed to create DNS records", 500);
     }
   }

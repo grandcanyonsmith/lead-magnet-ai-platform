@@ -1,5 +1,5 @@
 import { logger } from '@utils/logger';
-import { retryWithBackoff } from '@utils/retry';
+import { retryWithBackoff } from '@utils/errorHandling';
 import { withTimeout } from '@utils/timeout';
 import { validateUrl } from '@utils/validators';
 import { BrandSettings } from '@utils/types';

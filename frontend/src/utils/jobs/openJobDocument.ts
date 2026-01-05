@@ -21,6 +21,14 @@ export interface OpenJobDocumentOptions {
    * Provide a string to show a success toast, or set to false/undefined to skip.
    */
   successToast?: string | false;
+  /**
+   * Show a loading toast while fetching the document. Defaults to true.
+   */
+  showLoadingToast?: boolean;
+  /**
+   * Timeout in milliseconds for fetching the document. Defaults to 30000 (30 seconds).
+   */
+  timeoutMs?: number;
 }
 
 function getUserFacingErrorMessage(error: unknown): string {
@@ -57,6 +65,11 @@ function getUserFacingErrorMessage(error: unknown): string {
   return "Failed to open document. Please try again.";
 }
 
+/**
+ * Opens a job document in a new tab with improved popup blocker handling.
+ * Uses a hybrid approach: tries to open a window immediately, then navigates it.
+ * Falls back to anchor click if window.open is blocked.
+ */
 export async function openJobDocumentInNewTab(
   jobId: string,
   options: OpenJobDocumentOptions = {},
@@ -70,42 +83,122 @@ export async function openJobDocumentInNewTab(
     return "error";
   }
 
-  const { fallbackUrl, revokeAfterMs = 5000, successToast } = options;
-  // IMPORTANT: Open the tab synchronously (before any `await`) to avoid popup blockers.
-  const newWindow = window.open("", "_blank", "noopener,noreferrer");
+  const {
+    fallbackUrl,
+    revokeAfterMs = 5000,
+    successToast,
+    showLoadingToast = true,
+    timeoutMs = 30000,
+  } = options;
 
-  if (
-    !newWindow ||
-    newWindow.closed ||
-    typeof newWindow.closed === "undefined"
-  ) {
-    toast.error(
-      "Popup blocked. Please allow popups for this site and try again.",
-    );
-    return "popup_blocked";
-  }
+  // Show loading feedback immediately
+  const loadingToastId = showLoadingToast
+    ? toast.loading("Opening document...")
+    : null;
 
-  // Best-effort: give the user something to look at while we fetch/build the blob URL.
-  try {
-    newWindow.document.title = "Opening document…";
-    newWindow.document.body.innerHTML =
-      "<p style=\"font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 24px;\">Preparing your document…</p>";
-  } catch {
-    // Ignore — access may be restricted depending on browser/security settings.
+  // Try to open a window immediately (synchronously, before any await)
+  // This helps avoid popup blockers when called from user interactions
+  const loadingWindow = window.open("about:blank", "_blank", "noopener,noreferrer");
+  const windowWasBlocked = !loadingWindow || loadingWindow.closed || typeof loadingWindow.closed === "undefined";
+
+  // Set up loading content in the window if we successfully opened it
+  if (!windowWasBlocked) {
+    try {
+      loadingWindow.document.title = "Opening document…";
+      loadingWindow.document.body.innerHTML = `
+        <div style="
+          font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          height: 100vh;
+          margin: 0;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+        ">
+          <div style="
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+          ">
+            <div style="
+              width: 48px;
+              height: 48px;
+              border: 4px solid rgba(255, 255, 255, 0.3);
+              border-top-color: white;
+              border-radius: 50%;
+              animation: spin 1s linear infinite;
+              margin: 0 auto 1rem;
+            "></div>
+            <h1 style="margin: 0 0 0.5rem; font-size: 1.5rem; font-weight: 600;">
+              Preparing your document…
+            </h1>
+            <p style="margin: 0; opacity: 0.9; font-size: 0.95rem;">
+              Please wait while we load the content
+            </p>
+          </div>
+        </div>
+        <style>
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        </style>
+      `;
+    } catch {
+      // Ignore - cross-origin restrictions may prevent this
+    }
   }
 
   let blobUrl: string | null = null;
 
   try {
-    blobUrl = await api.getJobDocumentBlobUrl(jobId);
+    // Fetch the blob URL with timeout
+    const fetchPromise = api.getJobDocumentBlobUrl(jobId);
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Request timeout")), timeoutMs)
+    );
+
+    blobUrl = await Promise.race([fetchPromise, timeoutPromise]);
 
     if (!blobUrl) {
       throw new Error("Failed to create blob URL");
     }
 
-    // Navigate the already-opened tab to the blob URL.
-    newWindow.location.href = blobUrl;
+    // Navigate the window if we opened one, otherwise use anchor click
+    if (!windowWasBlocked && loadingWindow) {
+      try {
+        loadingWindow.location.href = blobUrl;
+      } catch {
+        // If navigation fails, fall back to anchor click
+        const link = document.createElement("a");
+        link.href = blobUrl;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } else {
+      // Window was blocked, use anchor click method
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
 
+    // Clean up loading toast
+    if (loadingToastId) {
+      toast.dismiss(loadingToastId);
+    }
+
+    // Schedule blob URL revocation
     window.setTimeout(() => {
       if (blobUrl) {
         URL.revokeObjectURL(blobUrl);
@@ -118,9 +211,30 @@ export async function openJobDocumentInNewTab(
 
     return "opened";
   } catch (error: unknown) {
+    // Clean up loading toast
+    if (loadingToastId) {
+      toast.dismiss(loadingToastId);
+    }
+
+    // Close the loading window if we opened one
+    if (!windowWasBlocked && loadingWindow) {
+      try {
+        loadingWindow.close();
+      } catch {
+        // Ignore
+      }
+    }
+
     if (fallbackUrl) {
-      // Use the already-opened tab; avoids a second popup attempt.
-      newWindow.location.href = fallbackUrl;
+      // Use anchor element approach for fallback URL
+      const link = document.createElement("a");
+      link.href = fallbackUrl;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
       toast.error(
         "Could not open via secure viewer — opened direct link instead.",
       );
@@ -133,11 +247,6 @@ export async function openJobDocumentInNewTab(
     toast.error(getUserFacingErrorMessage(error));
     if (blobUrl) {
       URL.revokeObjectURL(blobUrl);
-    }
-    try {
-      newWindow.close();
-    } catch {
-      // ignore
     }
     return "error";
   }

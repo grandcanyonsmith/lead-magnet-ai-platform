@@ -5,7 +5,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
@@ -14,9 +14,12 @@ import {
   useConnectCloudflare,
   useCreateDNSRecords,
   useDisconnectCloudflare,
+  useValidateCloudflareToken,
 } from "@/hooks/api/useCloudflare";
+import { DNSRecordPreview } from "./DNSRecordPreview";
+import { useDebounce } from "@/hooks/useDebounce";
 import { Settings } from "@/types";
-import { FiCheck, FiX, FiLoader, FiExternalLink, FiShield } from "react-icons/fi";
+import { FiCheck, FiX, FiLoader, FiExternalLink, FiShield, FiAlertCircle } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 
 interface CloudflareIntegrationProps {
@@ -40,7 +43,7 @@ export function CloudflareIntegration({
   const isConnected = status?.connected === true;
   const isLoading = statusLoading || connectLoading || disconnectLoading || createLoading;
 
-  // Extract root domain from custom_domain
+  // Extract root domain from custom_domain (moved before useMemo)
   const rootDomain = settings.custom_domain
     ? settings.custom_domain
         .replace(/^https?:\/\//, "")
@@ -49,6 +52,42 @@ export function CloudflareIntegration({
         .slice(-2)
         .join(".")
     : null;
+
+  // Token validation with debounce
+  const debouncedToken = useDebounce(apiToken, 500);
+  const { validate, validationResult } = useValidateCloudflareToken();
+
+  useEffect(() => {
+    if (debouncedToken && showTokenInput) {
+      validate(debouncedToken);
+    }
+  }, [debouncedToken, showTokenInput, validate]);
+
+  // Generate DNS record preview
+  const dnsRecordsPreview = useMemo(() => {
+    if (!rootDomain || !cloudfrontDomain) return [];
+
+    const customDomain = settings.custom_domain?.replace(/^https?:\/\//, "").replace(/\/$/, "") || "";
+    const formsSubdomain = customDomain.startsWith("forms.") ? "forms" : undefined;
+    const assetsSubdomain = "assets";
+
+    const records = [];
+    if (formsSubdomain) {
+      records.push({
+        name: `${formsSubdomain}.${rootDomain}`,
+        type: "CNAME",
+        target: cloudfrontDomain,
+      });
+    }
+    if (assetsSubdomain) {
+      records.push({
+        name: `${assetsSubdomain}.${rootDomain}`,
+        type: "CNAME",
+        target: cloudfrontDomain,
+      });
+    }
+    return records;
+  }, [rootDomain, cloudfrontDomain, settings.custom_domain]);
 
   const handleConnect = async () => {
     if (!apiToken.trim()) {
@@ -175,13 +214,37 @@ export function CloudflareIntegration({
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Cloudflare API Token
                     </label>
-                    <Input
-                      type="password"
-                      value={apiToken}
-                      onChange={(e) => setApiToken(e.target.value)}
-                      placeholder="Enter your Cloudflare API token"
-                      className="font-mono text-sm"
-                    />
+                    <div className="relative">
+                      <Input
+                        type="password"
+                        value={apiToken}
+                        onChange={(e) => setApiToken(e.target.value)}
+                        placeholder="Enter your Cloudflare API token"
+                        className={`font-mono text-sm ${
+                          validationResult && !validationResult.isValid
+                            ? "border-red-300 dark:border-red-700"
+                            : validationResult?.isValid
+                              ? "border-green-300 dark:border-green-700"
+                              : ""
+                        }`}
+                      />
+                      {validationResult && (
+                        <div
+                          className={`mt-1 flex items-center gap-1 text-xs ${
+                            validationResult.isValid
+                              ? "text-green-600 dark:text-green-400"
+                              : "text-red-600 dark:text-red-400"
+                          }`}
+                        >
+                          {validationResult.isValid ? (
+                            <FiCheck className="w-3 h-3" />
+                          ) : (
+                            <FiAlertCircle className="w-3 h-3" />
+                          )}
+                          <span>{validationResult.message}</span>
+                        </div>
+                      )}
+                    </div>
                     <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                       Need a token?{" "}
                       <button
@@ -256,22 +319,12 @@ export function CloudflareIntegration({
                     Create DNS Records
                   </p>
                   <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
-                    This will automatically create CNAME records in Cloudflare for:
+                    This will automatically create CNAME records in Cloudflare:
                   </p>
-                  <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1 mb-4 ml-4 list-disc">
-                    <li>
-                      <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">
-                        forms.{rootDomain}
-                      </code>{" "}
-                      → {cloudfrontDomain}
-                    </li>
-                    <li>
-                      <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">
-                        assets.{rootDomain}
-                      </code>{" "}
-                      → {cloudfrontDomain}
-                    </li>
-                  </ul>
+                  <DNSRecordPreview
+                    records={dnsRecordsPreview}
+                    cloudfrontDomain={cloudfrontDomain}
+                  />
                 </div>
 
                 <Button
