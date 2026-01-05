@@ -80,7 +80,7 @@ export function ViewSwitcher() {
   return (
     <Menu as="div" className="relative">
       <MenuButton
-        className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200 border border-gray-200 hover:border-gray-300 touch-target min-h-[44px] sm:min-h-0 w-full justify-between focus:outline-none focus:ring-2 focus:ring-primary-500"
+        className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all duration-200 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 touch-target min-h-[44px] sm:min-h-0 w-full justify-between focus:outline-none focus:ring-2 focus:ring-primary-500"
         aria-label="Switch view mode"
         onClick={() => {
           // Ensure customers are loaded when menu opens
@@ -90,19 +90,19 @@ export function ViewSwitcher() {
         <div className="flex items-center gap-2">
           {viewMode === "agency" ? (
             <>
-              <BriefcaseIcon className="w-4 h-4 flex-shrink-0" />
+              <BriefcaseIcon className="w-4 h-4 flex-shrink-0 text-gray-700 dark:text-gray-200" />
               <span className="hidden md:inline">Agency View</span>
             </>
           ) : (
             <>
-              <UsersIcon className="w-4 h-4 flex-shrink-0" />
+              <UsersIcon className="w-4 h-4 flex-shrink-0 text-gray-700 dark:text-gray-200" />
               <span className="hidden md:inline">
                 {currentCustomer ? currentCustomer.name : "Subaccount View"}
               </span>
             </>
           )}
         </div>
-        <ChevronDownIcon className="w-4 h-4 flex-shrink-0" />
+        <ChevronDownIcon className="w-4 h-4 flex-shrink-0 text-gray-700 dark:text-gray-200" />
       </MenuButton>
 
       <Transition
@@ -113,9 +113,9 @@ export function ViewSwitcher() {
         leaveFrom="transform scale-100 opacity-100"
         leaveTo="transform scale-95 opacity-0"
       >
-        <MenuItems className="absolute right-0 mt-2 w-72 origin-top-right bg-white border border-gray-200 rounded-xl shadow-2xl z-50 max-h-[calc(100vh-8rem)] flex flex-col focus:outline-none">
-          <div className="p-3 sm:p-4 border-b border-gray-200 flex-shrink-0">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900">
+        <MenuItems className="absolute right-0 mt-2 w-72 origin-top-right bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl z-50 max-h-[calc(100vh-8rem)] flex flex-col focus:outline-none">
+          <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100">
               Switch View
             </h3>
           </div>
@@ -126,17 +126,17 @@ export function ViewSwitcher() {
                   onClick={handleSwitchToAgency}
                   className={`w-full text-left px-3 py-2.5 sm:py-2 rounded-md text-sm transition-colors touch-target ${
                     viewMode === "agency"
-                      ? "bg-primary-100 text-primary-700 font-medium"
+                      ? "bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-medium"
                       : focus
-                        ? "bg-gray-50 text-gray-900"
-                        : "text-gray-700"
+                        ? "bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100"
+                        : "text-gray-700 dark:text-gray-300"
                   }`}
                 >
                   <div className="flex items-center gap-2">
-                    <BriefcaseIcon className="w-4 h-4 flex-shrink-0" />
+                    <BriefcaseIcon className="w-4 h-4 flex-shrink-0 text-gray-700 dark:text-gray-300" />
                     <div className="min-w-0">
                       <div className="font-medium truncate">Agency View</div>
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
                         Manage all users and accounts
                       </div>
                     </div>
@@ -145,16 +145,16 @@ export function ViewSwitcher() {
               )}
             </MenuItem>
 
-            <div className="mt-2 pt-2 border-t border-gray-200">
-              <div className="px-3 py-1.5 sm:py-1 text-xs font-semibold text-gray-500 uppercase">
+            <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+              <div className="px-3 py-1.5 sm:py-1 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">
                 Subaccounts
               </div>
               {isLoading ? (
-                <div className="px-3 py-2 text-sm text-gray-500">
+                <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
                   Loading...
                 </div>
               ) : customers.length === 0 ? (
-                <div className="px-3 py-2 text-sm text-gray-500">
+                <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
                   No customers found
                 </div>
               ) : (
@@ -170,10 +170,10 @@ export function ViewSwitcher() {
                             (selectedCustomerId === customer.customer_id ||
                               customerId === customer.customer_id) &&
                             viewMode === "subaccount"
-                              ? "bg-primary-100 text-primary-700 font-medium"
+                              ? "bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-medium"
                               : focus
-                                ? "bg-gray-50 text-gray-900"
-                                : "text-gray-700"
+                                ? "bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100"
+                                : "text-gray-700 dark:text-gray-300"
                           }`}
                         >
                           <div className="flex items-center justify-between min-w-0">
@@ -181,7 +181,7 @@ export function ViewSwitcher() {
                               <div className="font-medium truncate">
                                 {customer.name || customer.customer_id}
                               </div>
-                              <div className="text-xs text-gray-500">
+                              <div className="text-xs text-gray-500 dark:text-gray-400">
                                 {customer.user_count}{" "}
                                 {customer.user_count === 1 ? "user" : "users"}
                               </div>

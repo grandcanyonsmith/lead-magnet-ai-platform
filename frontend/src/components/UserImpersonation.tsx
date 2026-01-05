@@ -95,7 +95,7 @@ export function UserImpersonation() {
     <div className="w-full">
       <button
         type="button"
-        className="px-2 sm:px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg touch-target min-h-[44px] sm:min-h-0 flex items-center justify-between w-full border border-gray-200 hover:border-gray-300 transition-all focus:outline-none focus:ring-2 focus:ring-primary-500"
+        className="px-2 sm:px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg touch-target min-h-[44px] sm:min-h-0 flex items-center justify-between w-full border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-all focus:outline-none focus:ring-2 focus:ring-primary-500"
         aria-label="View as user"
         aria-expanded={isOpen}
         onClick={(e) => {
@@ -105,19 +105,19 @@ export function UserImpersonation() {
         }}
       >
         <div className="flex items-center gap-2">
-          <UserIcon className="w-4 h-4" />
+          <UserIcon className="w-4 h-4 text-gray-700 dark:text-gray-200" />
           <span className="hidden sm:inline">View as user</span>
         </div>
         {isOpen ? (
-          <ChevronUpIcon className="w-4 h-4 flex-shrink-0" />
+          <ChevronUpIcon className="w-4 h-4 flex-shrink-0 text-gray-700 dark:text-gray-200" />
         ) : (
-          <ChevronDownIcon className="w-4 h-4 flex-shrink-0" />
+          <ChevronDownIcon className="w-4 h-4 flex-shrink-0 text-gray-700 dark:text-gray-200" />
         )}
       </button>
 
       {isOpen && (
-        <div className="mt-2 border border-gray-200 rounded-xl shadow-sm bg-gray-50/50 overflow-hidden">
-          <div className="p-3 border-b border-gray-200 flex-shrink-0">
+        <div className="mt-2 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm bg-gray-50/50 dark:bg-gray-800/50 overflow-hidden">
+          <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
             <input
               id="impersonation-search"
               type="text"
@@ -125,18 +125,18 @@ export function UserImpersonation() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onClick={(e) => e.stopPropagation()}
-              className="w-full px-3 py-2.5 sm:py-2 border border-gray-300 rounded-md text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2.5 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-md text-base sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
               autoFocus
             />
           </div>
 
           <div className="max-h-64 overflow-y-auto">
             {isLoading ? (
-              <div className="p-4 text-center text-gray-500 text-sm">
+              <div className="p-4 text-center text-gray-500 dark:text-gray-400 text-sm">
                 Searching...
               </div>
             ) : users.length === 0 ? (
-              <div className="p-4 text-center text-gray-500 text-sm">
+              <div className="p-4 text-center text-gray-500 dark:text-gray-400 text-sm">
                 {searchTerm.length < 2
                   ? "Type at least 2 characters"
                   : "No users found"}
@@ -152,16 +152,16 @@ export function UserImpersonation() {
                         handleImpersonate(user.user_id);
                       }}
                       disabled={isImpersonating}
-                      className="w-full text-left px-4 py-3 sm:py-2 hover:bg-white hover:shadow-sm text-sm disabled:opacity-50 disabled:cursor-not-allowed touch-target transition-all"
+                      className="w-full text-left px-4 py-3 sm:py-2 hover:bg-white dark:hover:bg-gray-700 hover:shadow-sm text-sm text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed touch-target transition-all"
                     >
                       <div className="font-medium truncate">
                         {user.name || user.email}
                       </div>
-                      <div className="text-gray-500 text-xs truncate mt-0.5">
+                      <div className="text-gray-500 dark:text-gray-400 text-xs truncate mt-0.5">
                         {user.email}
                       </div>
                       {user.role && (
-                        <div className="text-gray-400 text-xs mt-0.5">
+                        <div className="text-gray-400 dark:text-gray-500 text-xs mt-0.5">
                           Role: {user.role}
                         </div>
                       )}

@@ -19,17 +19,27 @@ class FormsController {
     };
   }
 
-  async getPublicForm(slug: string): Promise<RouteResponse> {
+  async getPublicForm(slug: string, requestOrigin?: string): Promise<RouteResponse> {
     return {
       statusCode: 200,
-      body: await formManagementService.getPublicForm(slug),
+      body: await formManagementService.getPublicForm(slug, requestOrigin),
     };
   }
 
-  async submitForm(slug: string, body: any, sourceIp: string): Promise<RouteResponse> {
+  async submitForm(
+    slug: string,
+    body: any,
+    sourceIp: string,
+    requestOrigin?: string,
+  ): Promise<RouteResponse> {
     return {
       statusCode: 202,
-      body: await formManagementService.submitPublicForm(slug, body, sourceIp),
+      body: await formManagementService.submitPublicForm(
+        slug,
+        body,
+        sourceIp,
+        requestOrigin,
+      ),
     };
   }
 

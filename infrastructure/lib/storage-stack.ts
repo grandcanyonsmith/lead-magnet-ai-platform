@@ -1,12 +1,38 @@
 import * as path from 'path';
 import * as cdk from 'aws-cdk-lib';
+import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as route53 from 'aws-cdk-lib/aws-route53';
+import * as targets from 'aws-cdk-lib/aws-route53-targets';
 import * as wafv2 from 'aws-cdk-lib/aws-wafv2';
 import { Construct } from 'constructs';
 import { RESOURCE_PREFIXES, S3_CONFIG, CLOUDFRONT_CONFIG } from './config/constants';
+
+function parseCustomDomainNames(raw: string | undefined): string[] {
+  if (!raw) return [];
+  return raw
+    .split(',')
+    .map((d) => d.trim())
+    .filter(Boolean)
+    .map((d) => d.replace(/^https?:\/\//i, ''))
+    .map((d) => d.replace(/\/+$/g, ''))
+    .filter(Boolean);
+}
+
+function toOrigin(domainOrOrigin: string): string | undefined {
+  const raw = (domainOrOrigin || '').trim();
+  if (!raw) return undefined;
+  try {
+    // If caller provided a hostname, assume https.
+    const url = new URL(raw.includes('://') ? raw : `https://${raw}`);
+    return url.origin;
+  } catch {
+    return undefined;
+  }
+}
 
 /**
  * Creates bucket policy statements for public read access to image files
@@ -52,6 +78,24 @@ export class StorageStack extends cdk.Stack {
 
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
+
+    // Optional custom domain support (single or multiple domain names).
+    // For "per-account" custom domains, you typically add the customer's domain here
+    // and then set that tenant's `settings.custom_domain` in-app to the same origin.
+    //
+    // Example:
+    //   CLOUDFRONT_CUSTOM_DOMAIN_NAMES="forms.mycoursecreator360.com"
+    //   CLOUDFRONT_CUSTOM_CERTIFICATE_ARN="arn:aws:acm:us-east-1:123:certificate/..."
+    const customDomainNames = parseCustomDomainNames(
+      process.env.CLOUDFRONT_CUSTOM_DOMAIN_NAMES,
+    );
+    const customDomainCertificateArn = (
+      process.env.CLOUDFRONT_CUSTOM_CERTIFICATE_ARN || ''
+    ).trim();
+
+    // Optional Route53 automation (only if the domain is hosted in Route53)
+    const hostedZoneId = (process.env.ROUTE53_HOSTED_ZONE_ID || '').trim();
+    const hostedZoneName = (process.env.ROUTE53_HOSTED_ZONE_NAME || '').trim();
 
     // S3 Bucket for logs
     const logsBucket = new s3.Bucket(this, 'LogsBucket', {
@@ -213,9 +257,49 @@ export class StorageStack extends cdk.Stack {
       }),
     });
 
+    let certificate: acm.ICertificate | undefined;
+    if (customDomainNames.length > 0) {
+      if (customDomainCertificateArn) {
+        certificate = acm.Certificate.fromCertificateArn(
+          this,
+          'CustomDomainCertificate',
+          customDomainCertificateArn,
+        );
+      } else if (hostedZoneId && hostedZoneName) {
+        // Create & DNS-validate a certificate automatically (Route53 only).
+        const hostedZone = route53.HostedZone.fromHostedZoneAttributes(
+          this,
+          'HostedZone',
+          {
+            hostedZoneId,
+            zoneName: hostedZoneName,
+          },
+        );
+
+        certificate = new acm.DnsValidatedCertificate(this, 'CustomDomainCert', {
+          domainName: customDomainNames[0],
+          subjectAlternativeNames: customDomainNames.slice(1),
+          hostedZone,
+          // CloudFront requires ACM certificates in us-east-1.
+          region: 'us-east-1',
+        });
+      } else {
+        throw new Error(
+          'CLOUDFRONT_CUSTOM_DOMAIN_NAMES is set but no certificate is configured. ' +
+            'Provide CLOUDFRONT_CUSTOM_CERTIFICATE_ARN (recommended) or ROUTE53_HOSTED_ZONE_ID + ROUTE53_HOSTED_ZONE_NAME to auto-create a DNS-validated certificate.',
+        );
+      }
+    }
+
     this.distribution = new cloudfront.Distribution(this, 'Distribution', {
       defaultRootObject: 'index.html',
       webAclId: cloudfrontWebAclArn,
+      ...(customDomainNames.length > 0 && certificate
+        ? {
+            domainNames: customDomainNames,
+            certificate,
+          }
+        : {}),
       defaultBehavior: {
         origin: new origins.S3Origin(this.artifactsBucket, {
           originAccessIdentity,
@@ -255,6 +339,55 @@ export class StorageStack extends cdk.Stack {
       logFilePrefix: 'cloudfront-logs/',
     });
 
+    // Optional: create Route53 alias records for custom domains.
+    // This only works when the domain is hosted in Route53 in the same AWS account.
+    if (customDomainNames.length > 0 && hostedZoneId && hostedZoneName) {
+      const hostedZone = route53.HostedZone.fromHostedZoneAttributes(
+        this,
+        'HostedZoneForAliasRecords',
+        {
+          hostedZoneId,
+          zoneName: hostedZoneName,
+        },
+      );
+
+      customDomainNames.forEach((domainName, idx) => {
+        // Only create records when the domain is within the hosted zone.
+        if (
+          domainName !== hostedZoneName &&
+          !domainName.endsWith(`.${hostedZoneName}`)
+        ) {
+          new cdk.CfnOutput(this, `CustomDomainNeedsDns_${idx}`, {
+            value: domainName,
+            description:
+              `Custom domain '${domainName}' is not within Route53 hosted zone '${hostedZoneName}'. Create DNS records manually at your DNS provider.`,
+          });
+          return;
+        }
+
+        const recordName =
+          domainName === hostedZoneName
+            ? ''
+            : domainName.slice(0, -(hostedZoneName.length + 1));
+
+        new route53.ARecord(this, `CustomDomainARecord_${idx}`, {
+          zone: hostedZone,
+          recordName,
+          target: route53.RecordTarget.fromAlias(
+            new targets.CloudFrontTarget(this.distribution),
+          ),
+        });
+
+        new route53.AaaaRecord(this, `CustomDomainAAAARecord_${idx}`, {
+          zone: hostedZone,
+          recordName,
+          target: route53.RecordTarget.fromAlias(
+            new targets.CloudFrontTarget(this.distribution),
+          ),
+        });
+      });
+    }
+
     // CloudFormation outputs
     new cdk.CfnOutput(this, 'ArtifactsBucketName', {
       value: this.artifactsBucket.bucketName,
@@ -267,6 +400,21 @@ export class StorageStack extends cdk.Stack {
       exportName: 'DistributionDomainName',
       description: 'CloudFront distribution domain name',
     });
+
+    if (customDomainNames.length > 0) {
+      new cdk.CfnOutput(this, 'CustomDomainNames', {
+        value: customDomainNames.join(','),
+        description: 'Custom domain name(s) attached to CloudFront (alternate domain names)',
+      });
+      const primary = customDomainNames[0];
+      const primaryOrigin = toOrigin(primary);
+      if (primaryOrigin) {
+        new cdk.CfnOutput(this, 'CustomDomainPrimaryOrigin', {
+          value: primaryOrigin,
+          description: 'Primary custom domain origin (use this in tenant settings.custom_domain)',
+        });
+      }
+    }
 
     new cdk.CfnOutput(this, 'DistributionId', {
       value: this.distribution.distributionId,
