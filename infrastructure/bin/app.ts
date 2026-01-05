@@ -89,19 +89,12 @@ function createStacks(app: cdk.App, env: cdk.Environment): void {
     description: 'ECR repository for Lambda container images',
   });
 
-  // Stack 4.5: Shell Executor (ECS Fargate + isolated VPC + result bucket)
+  // Stack 4.5: Shell Executor (Lambda + isolated VPC + EFS)
   const shellExecutorStack = new ShellExecutorStack(app, 'LeadMagnetShellExecutorStack', {
     env,
     stackName: STACK_NAMES.SHELL_EXECUTOR,
-    description: 'ECS Fargate shell executor + result bucket',
+    description: 'Lambda-based shell executor + EFS',
   });
-
-  // Fargate tasks require an execution role (ECR pulls + CloudWatch logs).
-  // CDK types this as optional, so assert it exists to satisfy strict TS and fail fast if not.
-  const shellExecutorExecutionRoleArn = shellExecutorStack.taskDefinition.executionRole?.roleArn;
-  if (!shellExecutorExecutionRoleArn) {
-    throw new Error('Shell executor task definition executionRole is undefined');
-  }
 
   // Stack 5: Compute (Step Functions + Lambda) - Application layer
   // Depends on: DatabaseStack, StorageStack, WorkerStack
@@ -114,12 +107,8 @@ function createStacks(app: cdk.App, env: cdk.Environment): void {
     cloudfrontDomain: storageStack.distribution.distributionDomainName,
     ecrRepository: workerStack.ecrRepository,
     shellExecutor: {
-      clusterArn: shellExecutorStack.cluster.clusterArn,
-      taskDefinitionFamily: SHELL_EXECUTOR_TASK_FAMILY,
-      executionRoleArn: shellExecutorExecutionRoleArn,
-      securityGroupId: shellExecutorStack.securityGroup.securityGroupId,
-      subnetIds: shellExecutorStack.subnetIds,
-      resultsBucketName: shellExecutorStack.resultsBucket.bucketName,
+      functionArn: shellExecutorStack.executorFunction.functionArn,
+      functionName: shellExecutorStack.executorFunction.functionName,
     },
   });
 
@@ -137,12 +126,8 @@ function createStacks(app: cdk.App, env: cdk.Environment): void {
     cloudfrontDomain: storageStack.distribution.distributionDomainName,
     cloudfrontDistributionId: storageStack.distribution.distributionId,
     shellExecutor: {
-      clusterArn: shellExecutorStack.cluster.clusterArn,
-      taskDefinitionFamily: SHELL_EXECUTOR_TASK_FAMILY,
-      executionRoleArn: shellExecutorExecutionRoleArn,
-      securityGroupId: shellExecutorStack.securityGroup.securityGroupId,
-      subnetIds: shellExecutorStack.subnetIds,
-      resultsBucketName: shellExecutorStack.resultsBucket.bucketName,
+      functionArn: shellExecutorStack.executorFunction.functionArn,
+      functionName: shellExecutorStack.executorFunction.functionName,
     },
   });
 
@@ -156,7 +141,7 @@ function createStacks(app: cdk.App, env: cdk.Environment): void {
     apiFunction: apiStack.apiFunction,
     jobProcessorFunction: computeStack.jobProcessorLambda,
     stateMachine: computeStack.stateMachine,
-    shellExecutorCluster: shellExecutorStack.cluster,
+    shellExecutorFunction: shellExecutorStack.executorFunction,
   });
 }
 
@@ -195,4 +180,3 @@ function main(): void {
 
 // Execute main function
 main();
-

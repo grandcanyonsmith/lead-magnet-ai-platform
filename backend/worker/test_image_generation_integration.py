@@ -11,7 +11,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from services.openai_client import OpenAIClient
-from services.tool_builder import ToolBuilder
+from services.tools import ToolBuilder
 
 def test_tool_building_with_image_generation():
     """Test that image_generation tools are properly built for OpenAI API."""

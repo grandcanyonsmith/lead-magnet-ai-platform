@@ -19,6 +19,8 @@ import {
   FiAlignLeft,
   FiLayout,
   FiLink,
+  FiMaximize2,
+  FiX,
 } from "react-icons/fi";
 import { useWorkflowStepAI } from "@/hooks/useWorkflowStepAI";
 import { useAIModels } from "@/hooks/api/useWorkflows";
@@ -218,6 +220,7 @@ export default function WorkflowStepEditor({
   
   const [isWebhookCollapsed, setIsWebhookCollapsed] = useState(true);
   const [showAdvancedAI, setShowAdvancedAI] = useState(false);
+  const [isInstructionsExpanded, setIsInstructionsExpanded] = useState(false);
 
   // Track if we've already converted string tools to objects to prevent infinite loops
   const hasConvertedToolsRef = useRef<boolean>(false);
@@ -1110,9 +1113,20 @@ export default function WorkflowStepEditor({
                 <span>Instructions</span>
                 <span className={FIELD_REQUIRED}>*</span>
               </label>
-              <p className={SECTION_SUBTITLE}>
-                Detailed instructions for the AI model
-              </p>
+              <div className="ml-auto flex items-center gap-3">
+                <p className="text-xs text-muted-foreground hidden sm:block">
+                  Detailed instructions for the AI model
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setIsInstructionsExpanded(true)}
+                  className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+                  title="Expand instructions"
+                  aria-label="Expand instructions"
+                >
+                  <FiMaximize2 className="w-4 h-4" />
+                </button>
+              </div>
             </div>
             <textarea
               id={`instructions-${index}`}
@@ -1126,6 +1140,53 @@ export default function WorkflowStepEditor({
               aria-required="true"
             />
           </div>
+
+          {/* Expanded Instructions Modal */}
+          {isInstructionsExpanded && (
+            <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+              <div className="w-full max-w-5xl h-[90vh] flex flex-col bg-card border border-border rounded-xl shadow-2xl animate-in zoom-in-95 duration-200 ring-1 ring-border/50">
+                <div className="flex items-center justify-between p-4 border-b border-border bg-muted/20 rounded-t-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <FiFileText className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-foreground">Instructions Editor</h3>
+                      <p className="text-xs text-muted-foreground">Step {index + 1}: {localStep.step_name}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setIsInstructionsExpanded(false)}
+                    className="p-2 hover:bg-muted hover:text-foreground text-muted-foreground rounded-lg transition-colors"
+                    title="Close editor"
+                  >
+                    <FiX className="w-6 h-6" />
+                  </button>
+                </div>
+                <div className="flex-1 p-0 overflow-hidden relative group">
+                  <textarea
+                    value={localStep.instructions}
+                    onChange={(e) => handleChange("instructions", e.target.value)}
+                    className="w-full h-full resize-none bg-card p-6 font-mono text-sm leading-relaxed focus:outline-none text-foreground"
+                    placeholder="Enter detailed instructions..."
+                    autoFocus
+                    spellCheck={false}
+                  />
+                </div>
+                <div className="p-4 bg-muted/20 border-t border-border flex justify-between items-center rounded-b-xl">
+                  <span className="text-xs text-muted-foreground">
+                    {localStep.instructions?.length || 0} characters
+                  </span>
+                  <button
+                    onClick={() => setIsInstructionsExpanded(false)}
+                    className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 font-medium text-sm shadow-sm transition-all hover:shadow-md active:scale-95"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div>
             <div className={SECTION_HEADER}>

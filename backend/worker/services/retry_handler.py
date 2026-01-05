@@ -6,7 +6,7 @@ Handles retry logic for OpenAI API calls with specific error recovery strategies
 import logging
 from typing import Optional, Tuple, List, Dict, Any
 
-from services.tool_validator import ToolValidator
+from services.tools import ToolValidator
 
 logger = logging.getLogger(__name__)
 

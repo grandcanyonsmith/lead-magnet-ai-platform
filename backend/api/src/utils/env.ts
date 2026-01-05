@@ -69,17 +69,13 @@ export class EnvConfig {
   readonly errorWebhookHeaders: Record<string, string>;
   readonly errorWebhookTimeoutMs: number;
 
-  // Shell tool (ECS executor) configuration
+  // Shell tool (Lambda executor) configuration
   readonly shellToolEnabled: boolean;
   readonly shellToolIpLimitPerHour: number;
   readonly shellToolMaxInFlight: number;
   readonly shellToolQueueWaitMs: number;
 
-  readonly shellExecutorResultsBucket: string | undefined;
-  readonly shellExecutorClusterArn: string | undefined;
-  readonly shellExecutorTaskDefinitionArn: string | undefined;
-  readonly shellExecutorSubnetIds: string[];
-  readonly shellExecutorSecurityGroupId: string | undefined;
+  readonly shellExecutorFunctionName: string | undefined;
 
   // Scrapy Bara API Configuration
   readonly scrapyBaraEnabled: boolean;
@@ -290,25 +286,7 @@ export class EnvConfig {
       ? Math.max(0, parsedWaitMs)
       : 0;
 
-    this.shellExecutorResultsBucket =
-      (this.getOptional("SHELL_EXECUTOR_RESULTS_BUCKET") || "").trim() ||
-      undefined;
-    this.shellExecutorClusterArn =
-      (this.getOptional("SHELL_EXECUTOR_CLUSTER_ARN") || "").trim() ||
-      undefined;
-    this.shellExecutorTaskDefinitionArn =
-      (this.getOptional("SHELL_EXECUTOR_TASK_DEFINITION_ARN") || "").trim() ||
-      undefined;
-    this.shellExecutorSecurityGroupId =
-      (this.getOptional("SHELL_EXECUTOR_SECURITY_GROUP_ID") || "").trim() ||
-      undefined;
-    const subnetIdsRaw = (
-      this.getOptional("SHELL_EXECUTOR_SUBNET_IDS") || ""
-    ).trim();
-    this.shellExecutorSubnetIds = subnetIdsRaw
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
+    this.shellExecutorFunctionName = (this.getOptional("SHELL_EXECUTOR_FUNCTION_NAME") || "").trim() || undefined;
 
     // Scrapy Bara API Configuration
     this.scrapyBaraEnabled =
@@ -370,30 +348,10 @@ export class EnvConfig {
     }
 
     if (this.shellToolEnabled) {
-      if (!this.shellExecutorResultsBucket)
+      if (!this.shellExecutorFunctionName)
         warnings.push(
-          "SHELL_EXECUTOR_RESULTS_BUCKET is not set (shell tool enabled)",
+          "SHELL_EXECUTOR_FUNCTION_NAME is not set (shell tool enabled)",
         );
-      if (!this.shellExecutorClusterArn)
-        warnings.push(
-          "SHELL_EXECUTOR_CLUSTER_ARN is not set (shell tool enabled)",
-        );
-      if (!this.shellExecutorTaskDefinitionArn)
-        warnings.push(
-          "SHELL_EXECUTOR_TASK_DEFINITION_ARN is not set (shell tool enabled)",
-        );
-      if (!this.shellExecutorSecurityGroupId)
-        warnings.push(
-          "SHELL_EXECUTOR_SECURITY_GROUP_ID is not set (shell tool enabled)",
-        );
-      if (
-        !this.shellExecutorSubnetIds ||
-        this.shellExecutorSubnetIds.length === 0
-      ) {
-        warnings.push(
-          "SHELL_EXECUTOR_SUBNET_IDS is not set (shell tool enabled)",
-        );
-      }
     }
 
     // Log warnings but don't fail

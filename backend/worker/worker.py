@@ -6,12 +6,10 @@ Processes jobs by generating AI reports and rendering HTML templates.
 
 import os
 import sys
-import logging
 import signal
 import time
-from typing import Dict, Any
 
-# Add the current directory to sys.path to ensure modules are found
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from core.config import settings

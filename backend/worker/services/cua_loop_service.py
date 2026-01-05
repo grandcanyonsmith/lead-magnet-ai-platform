@@ -60,7 +60,7 @@ class CUALoopService:
         Returns:
             Tuple of (final_report_text, screenshot_urls, usage_info)
         """
-        from services.tool_validator import ToolValidator
+        from services.tools import ToolValidator
         
         logger.info(f"[CUALoopService] Starting CUA loop", extra={
             'model': model,

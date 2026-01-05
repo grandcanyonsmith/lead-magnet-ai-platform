@@ -21,7 +21,7 @@ from utils.image_utils import (
     get_image_cache,
     get_url_hash
 )
-from services.tool_builder import ToolBuilder
+from services.tools import ToolBuilder
 from io import BytesIO
 
 def test_url_cleaning():

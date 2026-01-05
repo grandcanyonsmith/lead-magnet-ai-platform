@@ -3,7 +3,6 @@ import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as apigateway from 'aws-cdk-lib/aws-apigatewayv2';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
-import * as ecs from 'aws-cdk-lib/aws-ecs';
 import { Construct } from 'constructs';
 
 export interface DashboardStackProps extends cdk.StackProps {
@@ -11,7 +10,7 @@ export interface DashboardStackProps extends cdk.StackProps {
   apiFunction: lambda.IFunction;
   jobProcessorFunction: lambda.IFunction;
   stateMachine: sfn.StateMachine;
-  shellExecutorCluster: ecs.Cluster;
+  shellExecutorFunction: lambda.IFunction;
 }
 
 export class DashboardStack extends cdk.Stack {
@@ -66,22 +65,10 @@ export class DashboardStack extends cdk.Stack {
     const sfnExecutionsThrottled = props.stateMachine.metricThrottled({ period: cdk.Duration.minutes(1) });
     const sfnExecutionsSucceeded = props.stateMachine.metricSucceeded({ period: cdk.Duration.minutes(1) });
 
-    // --- Shell Executor Metrics ---
-    const shellRunningTasks = new cloudwatch.Metric({
-      namespace: 'AWS/ECS',
-      metricName: 'RunningTaskCount',
-      dimensionsMap: { ClusterName: props.shellExecutorCluster.clusterName },
-      statistic: 'Maximum',
-      period: cdk.Duration.minutes(1),
-    });
-
-    const shellPendingTasks = new cloudwatch.Metric({
-      namespace: 'AWS/ECS',
-      metricName: 'PendingTaskCount',
-      dimensionsMap: { ClusterName: props.shellExecutorCluster.clusterName },
-      statistic: 'Maximum',
-      period: cdk.Duration.minutes(1),
-    });
+    // --- Shell Executor Metrics (Lambda) ---
+    const shellErrors = props.shellExecutorFunction.metricErrors({ period: cdk.Duration.minutes(1) });
+    const shellDuration = props.shellExecutorFunction.metricDuration({ period: cdk.Duration.minutes(1) });
+    const shellInvocations = props.shellExecutorFunction.metricInvocations({ period: cdk.Duration.minutes(1) });
 
     // --- DynamoDB Metrics (Global) ---
     // We can't easily iterate all tables here without passing them all, 
@@ -132,12 +119,11 @@ export class DashboardStack extends cdk.Stack {
         width: 12,
       }),
       new cloudwatch.GraphWidget({
-        title: 'Shell Executor Tasks',
-        left: [shellRunningTasks],
-        right: [shellPendingTasks],
+        title: 'Shell Executor Activity (Lambda)',
+        left: [shellInvocations],
+        right: [shellErrors, shellDuration],
         width: 12,
       })
     );
   }
 }
-

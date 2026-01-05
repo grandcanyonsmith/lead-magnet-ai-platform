@@ -1,6 +1,6 @@
 # Architecture Overview
 
-> **Last Updated**: 2025-12-17  
+> **Last Updated**: 2026-01-05  
 > **Status**: Current  
 > **Related Docs**: [Flow Diagram](./FLOW_DIAGRAM.md), [Deployment Guide](../guides/DEPLOYMENT.md), [Resources](../reference/RESOURCES.md), [Quick Start](../guides/QUICK_START.md)
 
@@ -19,6 +19,7 @@ This platform enables businesses to create automated workflows that transform fo
 - **HTML Template Rendering**: Reports are injected into HTML templates and further enhanced by AI rewriting
 - **Automated Delivery**: Final HTML deliverables are stored in S3 with public URLs and optionally sent via webhook
 - **Admin Dashboard**: Modern web UI for managing workflows, forms, templates, viewing runs and analytics
+- **Shell Tool Executor**: Secure, isolated environment for AI to run shell commands (Python, curl, git, etc.)
 
 ### Use Cases
 - Market Research Reports
@@ -42,11 +43,13 @@ This platform enables businesses to create automated workflows that transform fo
 - Python 3.11 Lambda container job processor (ECR-based)
 - API Gateway HTTP API
 - AWS Step Functions for orchestration
+- **Shell Executor**: Dedicated Python Lambda with EFS for sandboxed command execution
 
 **Data & Storage:**
 - DynamoDB (multiple tables: core + billing/ops)
 - S3 + CloudFront for artifact storage
 - Secrets Manager for API keys
+- EFS (Elastic File System) for persistent shell workspaces
 
 **AI:**
 - OpenAI API (GPT-5, GPT-4.1, GPT-4o, GPT-4 Turbo, GPT-3.5 Turbo)
@@ -54,7 +57,7 @@ This platform enables businesses to create automated workflows that transform fo
 - Cost tracking
 - Multi-step workflow support with context accumulation
 - Image generation support (DALL-E integration)
-- Tool support (web_search, file_search, computer_use_preview)
+- Tool support (web_search, file_search, computer_use_preview, shell_executor)
 
 ### Infrastructure
 - AWS CDK for Infrastructure as Code
@@ -87,12 +90,9 @@ lead-magnent-ai/
 │       ├── worker.py        # Main entry point
 │       ├── processor.py     # Job processor (handles multi-step workflows)
 │       ├── ai_service.py    # OpenAI integration (refactored with helper methods)
-│       ├── db_service.py    # DynamoDB operations
-│       ├── s3_service.py    # S3 upload/download
-│       ├── template_service.py  # Template rendering
-│       ├── artifact_service.py  # Artifact storage service
-│       ├── delivery_service.py   # Webhook/SMS delivery service
-│       ├── legacy_processor.py  # Legacy workflow processor
+│       ├── services/
+│       │   └── shell/       # Shell execution services
+│       │       └── executor_handler.py # Synchronous Lambda executor
 │       ├── Dockerfile
 │       └── requirements.txt
 │
@@ -103,7 +103,8 @@ lead-magnent-ai/
 │   │   ├── storage-stack.ts     # S3 + CloudFront
 │   │   ├── compute-stack.ts     # Step Functions + Lambda (job processor)
 │   │   ├── api-stack.ts         # API Gateway + Lambda
-│   │   └── worker-stack.ts      # ECR repository (Lambda container images)
+│   │   ├── worker-stack.ts      # ECR repository (Lambda container images)
+│   │   └── shell-executor-stack.ts # Lambda + EFS for shell execution
 │   ├── bin/app.ts           # CDK app entry point
 │   └── package.json
 │
@@ -195,6 +196,32 @@ The `ai_service.py` module handles all OpenAI API interactions. It has been refa
 
 See [AI_SERVICE_REFACTORING.md](../archive/AI_SERVICE_REFACTORING.md) for detailed refactoring documentation.
 
+## 🐚 Shell Executor Architecture
+
+The platform includes a dedicated "Shell Executor" service that allows AI agents to execute shell commands securely. This was migrated from a legacy ECS Fargate implementation to a synchronous Lambda-based architecture for lower latency and complexity.
+
+### Key Components
+
+1.  **Lambda Executor (`leadmagnet-shell-executor`)**:
+    *   A Python 3.11 Lambda function running in a private VPC subnet.
+    *   **Timeout**: 15 minutes (max allowed by Lambda). Note: synchronous invocations cannot exceed this limit.
+    *   **Persistence**: Mounts an Elastic File System (EFS) volume to `/mnt/shell-executor`.
+    *   **Isolation**: Runs in a sandboxed environment with no public ingress. Outbound internet access is provided via NAT Gateway (for `pip install`, `git clone`, etc.).
+
+2.  **Workspace Persistence**:
+    *   Each session gets a unique directory: `/mnt/shell-executor/sessions/{workspace_id}`.
+    *   Files persist between command executions, allowing multi-step workflows (e.g., clone repo -> edit file -> run tests).
+
+3.  **Execution Flow**:
+    *   The Job Processor (or API) invokes the Shell Executor Lambda synchronously with a JSON payload containing commands.
+    *   The Lambda executes the commands using `subprocess.run`.
+    *   Results (stdout, stderr, exit code) are returned directly in the JSON response.
+
+### Constraints & Limits
+*   **Execution Time**: Max 15 minutes per batch of commands. Long-running processes should be broken down or run asynchronously (though the current implementation is synchronous).
+*   **Memory**: Configured to 1024MB (adjustable).
+*   **Output Size**: Default limit of ~100KB per command output to prevent payload bloat.
+
 ## 📊 Database Schema
 
 ### DynamoDB Tables
@@ -253,6 +280,7 @@ See [Authentication Documentation](./AUTHENTICATION.md) for complete details.
 - DynamoDB metrics (read/write capacity)
 - WAF metrics (blocked requests, rate limiting)
 - Step Functions execution metrics
+- Shell Executor metrics (Lambda duration, errors)
 
 ### Logs
 ```bash
@@ -261,6 +289,9 @@ aws logs tail /aws/lambda/leadmagnet-api-handler --follow
 
 # Worker logs
 aws logs tail /aws/lambda/leadmagnet-job-processor --follow
+
+# Shell Executor logs
+aws logs tail /aws/lambda/leadmagnet-shell-executor --follow
 
 # Step Functions logs
 aws logs tail /aws/stepfunctions/leadmagnet-job-processor --follow
@@ -276,8 +307,10 @@ aws logs tail /aws/stepfunctions/leadmagnet-job-processor --follow
 - WAFv2: $1-10
 - Step Functions: $1-5
 - OpenAI API: $10-100 (varies by usage)
+- **EFS**: ~$0.30/GB-month (minimal cost for small workspaces)
+- **NAT Gateway**: ~$30/month (per AZ) - *Cost optimization tip: Use VPC Endpoints for S3/DynamoDB to reduce NAT traffic.*
 
-**Total:** ~$50-200/month depending on volume
+**Total:** ~$80-230/month depending on volume and NAT usage
 
 ## 🎓 Usage Guide
 
@@ -352,4 +385,3 @@ MIT License - See LICENSE file for details
 ---
 
 **Built with ❤️ using AWS, OpenAI, and modern web technologies**
-
