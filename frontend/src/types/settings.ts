@@ -28,6 +28,10 @@ export interface Settings extends BaseEntity {
   ghl_webhook_url?: string;
   custom_domain?: string;
   lead_phone_field?: string;
+  cloudfront_domain?: string;
+  cloudflare_api_token?: string;
+  cloudflare_connected?: boolean;
+  cloudflare_connected_at?: string;
   // Brand information fields
   brand_description?: string;
   brand_voice?: string;

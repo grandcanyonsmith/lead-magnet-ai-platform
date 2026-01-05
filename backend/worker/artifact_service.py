@@ -287,11 +287,12 @@ class ArtifactService:
                     key=s3_key,
                     image_data=image_data,
                     content_type=content_type,
-                    public=True  # Images are always public (direct S3 access)
+                    public=True  # Images are always public (prefer CloudFront when configured)
                 )
                 
-                # public_url is now a direct S3 URL (permanent, non-expiring, publicly accessible)
-                # Format: https://{bucket}.s3.{region}.amazonaws.com/{key}
+                # public_url is:
+                # - CloudFront/custom CDN URL when CLOUDFRONT_DOMAIN is configured (recommended)
+                # - otherwise, a direct S3 public URL (permanent, non-expiring)
                 
                 logger.info(f"[ArtifactService] Image downloaded and uploaded to S3", extra={
                     's3_key': s3_key,

@@ -217,11 +217,15 @@ class SettingsController {
         ? `${API_URL}/v1/webhooks/${settings.webhook_token}`
         : null;
 
+      // Include CloudFront domain if available (for DNS setup)
+      const cloudfrontDomain = env.cloudfrontDomain || '';
+
       return {
         statusCode: 200,
         body: {
           ...settings,
           webhook_url: webhookUrl,
+          cloudfront_domain: cloudfrontDomain || undefined,
         },
       };
     } catch (error) {
@@ -342,7 +346,7 @@ class SettingsController {
       }
 
       // Enforce uniqueness of custom_domain across tenants (per-account domain mapping).
-      if (data?.custom_domain) {
+      if (data?.custom_domain && typeof data.custom_domain === 'string') {
         await this.assertCustomDomainAvailable(
           tenantId,
           data.custom_domain,

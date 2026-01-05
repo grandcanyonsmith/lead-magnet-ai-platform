@@ -47,4 +47,42 @@ export class SettingsClient extends BaseApiClient {
       "/admin/settings/webhook",
     );
   }
+
+  // Cloudflare integration methods
+  async connectCloudflare(apiToken: string): Promise<{ message: string; connected: boolean }> {
+    return this.post<{ message: string; connected: boolean }>(
+      "/admin/settings/cloudflare/connect",
+      { api_token: apiToken }
+    );
+  }
+
+  async getCloudflareStatus(): Promise<{ connected: boolean; connected_at: string | null }> {
+    return this.get<{ connected: boolean; connected_at: string | null }>(
+      "/admin/settings/cloudflare/status"
+    );
+  }
+
+  async createCloudflareDNSRecords(data: {
+    forms_subdomain?: string;
+    assets_subdomain?: string;
+    cloudfront_domain: string;
+  }): Promise<{
+    message: string;
+    records_created: Array<{ name: string; type: string; content: string }>;
+    errors?: Array<{ name: string; error: string }>;
+  }> {
+    return this.post<
+      {
+        message: string;
+        records_created: Array<{ name: string; type: string; content: string }>;
+        errors?: Array<{ name: string; error: string }>;
+      }
+    >("/admin/settings/cloudflare/dns/create", data);
+  }
+
+  async disconnectCloudflare(): Promise<{ message: string; connected: boolean }> {
+    return this.post<{ message: string; connected: boolean }>(
+      "/admin/settings/cloudflare/disconnect"
+    );
+  }
 }
