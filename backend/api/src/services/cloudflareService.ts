@@ -263,7 +263,7 @@ export class CloudflareService {
       if (!data.success) {
         // Check for specific error codes
         const errorCode = data.errors?.[0]?.code;
-        if (errorCode === 81057) {
+        if (errorCode === 81057 || errorCode === 81053) {
           throw new CloudflareRecordExistsError(record.name);
         }
 
