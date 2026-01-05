@@ -104,83 +104,7 @@ export class WorkflowAIController {
 
       // 4. Trigger worker for single step
       if (env.isDevelopment()) {
-        // Spawn local worker process for Python execution
-        const { spawn } = await import('child_process');
-        const path = await import('path');
-        
-        // Determine worker path - assume running from backend/api
-        // Try multiple paths to be safe
-        let workerScript = path.resolve(process.cwd(), '../worker/worker.py');
-        const fs = await import('fs');
-        if (!fs.existsSync(workerScript)) {
-           // Try relative to this file? No, too hard with TS build.
-           // Try project root assumption
-           workerScript = path.resolve(process.cwd(), 'backend/worker/worker.py');
-        }
-        
-        if (!fs.existsSync(workerScript)) {
-            logger.error('[Test Step] Could not find worker script', { searchPath: workerScript });
-            // Fallback or throw?
-        }
-
-        const envVars = {
-          ...process.env,
-          JOB_ID: jobId,
-          STEP_INDEX: '0',
-          PYTHONUNBUFFERED: '1'
-        };
-
-        logger.info('[Test Step] Spawning local worker', { script: workerScript, jobId });
-        
-        // Mark job as processing for better UX while the local worker runs.
-        try {
-          await db.update(JOBS_TABLE, { job_id: jobId }, { status: 'processing', updated_at: new Date().toISOString() });
-        } catch (e: any) {
-          logger.warn('[Test Step] Failed to mark job as processing', { jobId, error: e?.message || String(e) });
-        }
-
-        const worker = spawn('python3', [workerScript], { env: envVars });
-
-        let stderrTail = '';
-        
-        worker.stdout.on('data', (data) => {
-          logger.info(`[Worker Output] ${data}`);
-        });
-        
-        worker.stderr.on('data', (data) => {
-          try {
-            stderrTail = (stderrTail + data.toString()).slice(-2000);
-          } catch {
-            // ignore
-          }
-          logger.error(`[Worker Error] ${data}`);
-        });
-        
-        worker.on('close', (code) => {
-          logger.info('[Test Step] Worker finished', { code });
-
-          // Update job status based on local worker completion so the UI (and jobs list)
-          // doesn't show test jobs stuck in "pending"/"processing".
-          void (async () => {
-            const now = new Date().toISOString();
-            try {
-              if (code === 0) {
-                await db.update(JOBS_TABLE, { job_id: jobId }, { status: 'completed', updated_at: now, completed_at: now });
-              } else {
-                await db.update(JOBS_TABLE, { job_id: jobId }, {
-                  status: 'failed',
-                  updated_at: now,
-                  completed_at: now,
-                  error_message: stderrTail ? stderrTail.slice(-1000) : 'Local worker exited non-zero',
-                  error_type: 'LocalWorkerError',
-                });
-              }
-            } catch (e: any) {
-              logger.error('[Test Step] Failed to update test job status after worker finished', { jobId, code, error: e?.message || String(e) });
-            }
-          })();
-        });
-
+        await this.triggerLocalWorker(jobId, '0');
       } else {
         await JobProcessingUtils.triggerAsyncProcessing(
             jobId,
@@ -209,6 +133,189 @@ export class WorkflowAIController {
       });
       throw new ApiError(`Failed to start step test: ${error.message}`, 500);
     }
+  }
+
+  /**
+   * Test a full temporary workflow.
+   */
+  async testWorkflow(tenantId: string, body: any): Promise<RouteResponse> {
+    const { db } = await import('@utils/db');
+    const { env } = await import('@utils/env');
+    const { JobProcessingUtils } = await import('@domains/workflows/services/workflow/workflowJobProcessingService');
+    
+    const WORKFLOWS_TABLE = env.workflowsTable;
+    const SUBMISSIONS_TABLE = env.submissionsTable;
+    const JOBS_TABLE = env.jobsTable;
+
+    const { steps, input } = body;
+
+    if (!steps || !Array.isArray(steps) || steps.length === 0) {
+      throw new ApiError('Steps array is required', 400);
+    }
+
+    const testId = ulid();
+    const workflowId = `test-workflow-${testId}`;
+    const submissionId = `test-submission-${testId}`;
+    const jobId = `test-job-${testId}`;
+
+    logger.info('[Test Workflow] Starting workflow test', {
+      tenantId,
+      jobId,
+      stepCount: steps.length
+    });
+
+    try {
+      // 1. Create temporary workflow
+      const workflow = {
+        workflow_id: workflowId,
+        tenant_id: tenantId,
+        workflow_name: 'Test Workflow Playground',
+        workflow_description: 'Temporary playground workflow',
+        steps: steps,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        is_test: true // Marker for cleanup
+      };
+      await db.put(WORKFLOWS_TABLE, workflow);
+
+      // 2. Create temporary submission
+      const submission = {
+        submission_id: submissionId,
+        tenant_id: tenantId,
+        form_id: 'test-form', // Dummy
+        submission_data: input || {}, // User provided input
+        created_at: new Date().toISOString()
+      };
+      await db.put(SUBMISSIONS_TABLE, submission);
+
+      // 3. Create job
+      const job = {
+        job_id: jobId,
+        tenant_id: tenantId,
+        workflow_id: workflowId,
+        submission_id: submissionId,
+        status: 'pending',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        is_test: true
+      };
+      await db.put(JOBS_TABLE, job);
+
+      // 4. Trigger worker for full workflow
+      if (env.isDevelopment()) {
+        await this.triggerLocalWorker(jobId);
+      } else {
+        await JobProcessingUtils.triggerAsyncProcessing(
+            jobId,
+            tenantId,
+            {
+              job_id: jobId,
+              step_index: 0,
+              step_type: 'workflow_step'
+            }
+        );
+      }
+
+      return {
+        statusCode: 202,
+        body: {
+          job_id: jobId,
+          status: 'pending',
+          message: 'Workflow test started'
+        }
+      };
+
+    } catch (error: any) {
+      logger.error('[Test Workflow] Failed to start test', {
+        error: error.message,
+        stack: error.stack
+      });
+      throw new ApiError(`Failed to start workflow test: ${error.message}`, 500);
+    }
+  }
+
+  /**
+   * Helper to trigger local worker process
+   */
+  private async triggerLocalWorker(jobId: string, stepIndex?: string) {
+    const { spawn } = await import('child_process');
+    const path = await import('path');
+    const { env } = await import('@utils/env');
+    const { db } = await import('@utils/db');
+    const JOBS_TABLE = env.jobsTable;
+    
+    // Determine worker path - assume running from backend/api
+    // Try multiple paths to be safe
+    let workerScript = path.resolve(process.cwd(), '../worker/worker.py');
+    const fs = await import('fs');
+    if (!fs.existsSync(workerScript)) {
+       // Try relative to this file? No, too hard with TS build.
+       // Try project root assumption
+       workerScript = path.resolve(process.cwd(), 'backend/worker/worker.py');
+    }
+    
+    if (!fs.existsSync(workerScript)) {
+        logger.error('[Local Worker] Could not find worker script', { searchPath: workerScript });
+        return;
+    }
+
+    const envVars = {
+      ...process.env,
+      JOB_ID: jobId,
+      ...(stepIndex ? { STEP_INDEX: stepIndex } : {}),
+      PYTHONUNBUFFERED: '1'
+    };
+
+    logger.info('[Local Worker] Spawning local worker', { script: workerScript, jobId, stepIndex });
+    
+    // Mark job as processing for better UX while the local worker runs.
+    try {
+      await db.update(JOBS_TABLE, { job_id: jobId }, { status: 'processing', updated_at: new Date().toISOString() });
+    } catch (e: any) {
+      logger.warn('[Local Worker] Failed to mark job as processing', { jobId, error: e?.message || String(e) });
+    }
+
+    const worker = spawn('python3', [workerScript], { env: envVars });
+
+    let stderrTail = '';
+    
+    worker.stdout.on('data', (data) => {
+      logger.info(`[Worker Output] ${data}`);
+    });
+    
+    worker.stderr.on('data', (data) => {
+      try {
+        stderrTail = (stderrTail + data.toString()).slice(-2000);
+      } catch {
+        // ignore
+      }
+      logger.error(`[Worker Error] ${data}`);
+    });
+    
+    worker.on('close', (code) => {
+      logger.info('[Local Worker] Worker finished', { code });
+
+      // Update job status based on local worker completion so the UI (and jobs list)
+      // doesn't show test jobs stuck in "pending"/"processing".
+      void (async () => {
+        const now = new Date().toISOString();
+        try {
+          if (code === 0) {
+            await db.update(JOBS_TABLE, { job_id: jobId }, { status: 'completed', updated_at: now, completed_at: now });
+          } else {
+            await db.update(JOBS_TABLE, { job_id: jobId }, {
+              status: 'failed',
+              updated_at: now,
+              completed_at: now,
+              error_message: stderrTail ? stderrTail.slice(-1000) : 'Local worker exited non-zero',
+              error_type: 'LocalWorkerError',
+            });
+          }
+        } catch (e: any) {
+          logger.error('[Local Worker] Failed to update test job status after worker finished', { jobId, code, error: e?.message || String(e) });
+        }
+      })();
+    });
   }
 
   /**

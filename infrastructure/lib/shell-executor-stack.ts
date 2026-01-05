@@ -113,7 +113,7 @@ export class ShellExecutorStack extends cdk.Stack {
         ]
       }),
       memorySize: 1024,
-      timeout: cdk.Duration.minutes(60), // Increased to 60 minutes
+      timeout: cdk.Duration.minutes(15), // Max allowed by Lambda
       vpc: this.vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
       securityGroups: [lambdaSecurityGroup],
@@ -141,12 +141,53 @@ export class ShellExecutorStack extends cdk.Stack {
     // If deployment fails with "Cannot delete export... as it is in use", you need to:
     // 1. Manually remove the import references from leadmagnet-api and leadmagnet-compute stacks in CloudFormation
     // 2. Or temporarily add back the export below, deploy, then remove imports, then remove export again
-    
-    // Temporary fix for circular dependency during migration
-    const artifactsBucket = s3.Bucket.fromBucketName(this, 'ArtifactsBucket', 'leadmagnet-artifacts-471112574622');
+
+    // --------------------------------------------------------------------------------
+    // TEMPORARY EXPORTS FOR MIGRATION (REMOVE AFTER DEPENDENT STACKS UPDATE)
+    // --------------------------------------------------------------------------------
+
+    // 1. ShellExecutorResultsBucket (Must match original bucket name to avoid update failure)
+    const resultsBucketName = 'leadmagnet-artifacts-shell-results-471112574622';
+    const artifactsBucket = s3.Bucket.fromBucketName(this, 'ArtifactsBucket', resultsBucketName);
     new cdk.CfnOutput(this, 'ShellExecutorResultsBucket', {
       value: artifactsBucket.bucketName,
       exportName: 'leadmagnet-shell-executor:ExportsOutputRefShellExecutorResultsBucket1A1277A82A874BA3',
+    });
+
+    // 2. TaskDefExecutionRole
+    new cdk.CfnOutput(this, 'TempTaskDefExecutionRoleExport', {
+      value: this.executorFunction.role!.roleArn, 
+      exportName: 'leadmagnet-shell-executor:ExportsOutputFnGetAttShellExecutorTaskDefExecutionRole2061D40FArnEF3C7B62',
+    });
+
+    // 3. Subnet (privateSubnet2)
+    new cdk.CfnOutput(this, 'TempSubnetExport', {
+      value: this.vpc.privateSubnets[1]?.subnetId || this.vpc.privateSubnets[0].subnetId, 
+      exportName: 'leadmagnet-shell-executor:ExportsOutputRefShellExecutorVpcprivateSubnet2Subnet9C03EAE70B440DB7',
+    });
+
+    // 4. Subnet 1 (privateSubnet1)
+    new cdk.CfnOutput(this, 'TempSubnet1Export', {
+      value: this.vpc.privateSubnets[0].subnetId, 
+      exportName: 'leadmagnet-shell-executor:ExportsOutputRefShellExecutorVpcprivateSubnet1Subnet3CF6940C36DE374C',
+    });
+
+    // 5. Cluster (ARN)
+    new cdk.CfnOutput(this, 'TempClusterExport', {
+      value: `arn:aws:ecs:${this.region}:${this.account}:cluster/dummy-cluster-for-migration`, 
+      exportName: 'leadmagnet-shell-executor:ExportsOutputFnGetAttShellExecutorClusterDAF8CA4DArnE9D855C2',
+    });
+
+    // 6. Cluster (Ref/Name)
+    new cdk.CfnOutput(this, 'TempClusterRefExport', {
+      value: 'dummy-cluster-for-migration', 
+      exportName: 'leadmagnet-shell-executor:ExportsOutputRefShellExecutorClusterDAF8CA4D8DB2C0E8',
+    });
+
+    // 7. Security Group
+    new cdk.CfnOutput(this, 'TempSgExport', {
+      value: lambdaSecurityGroup.securityGroupId, 
+      exportName: 'leadmagnet-shell-executor:ExportsOutputFnGetAttShellExecutorSgC8E8070CGroupIdDB92116B',
     });
   }
 }

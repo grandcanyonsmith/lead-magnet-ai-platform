@@ -13,7 +13,7 @@ type JsonViewMode = "tree" | "raw";
 
 interface JsonViewerProps {
   value: unknown;
-  raw: string;
+  raw?: string;
   defaultMode?: JsonViewMode;
   className?: string;
   defaultExpandedDepth?: number;
@@ -549,7 +549,7 @@ function JsonTree({
 
 export function JsonViewer({
   value,
-  raw,
+  raw: providedRaw,
   defaultMode = "tree",
   className = "",
   defaultExpandedDepth = 2,
@@ -559,6 +559,7 @@ export function JsonViewer({
   const [wrapLongLines, setWrapLongLines] = useState(true);
   const [forceHighlight, setForceHighlight] = useState(false);
 
+  const raw = providedRaw ?? JSON.stringify(value, null, 2);
   const isLarge = raw.length > MAX_SYNTAX_HIGHLIGHT_CHARS;
   const shouldHighlight = !isLarge || forceHighlight;
 
