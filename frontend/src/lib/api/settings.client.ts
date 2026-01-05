@@ -10,6 +10,8 @@ export class SettingsClient extends BaseApiClient {
     super(tokenProvider);
   }
 
+  // ... rest of the file ...
+
   async getSettings(): Promise<Settings> {
     return this.get<Settings>("/admin/settings");
   }
