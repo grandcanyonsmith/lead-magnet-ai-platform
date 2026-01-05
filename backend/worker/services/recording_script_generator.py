@@ -89,7 +89,7 @@ class RecordingScriptGenerator:
             if (!response.ok) return null;
             const data = await response.json();
             if (!data || !data.uploadUrl) return null;
-            return data; // {{ uploadUrl, key }}
+            return data; // expected fields: uploadUrl, key
         }} catch (e) {{
             console.error('Failed to get upload URL', e);
             return null;

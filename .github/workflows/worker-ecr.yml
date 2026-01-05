@@ -54,11 +54,14 @@ jobs:
         run: |
           echo "PYTHONPATH=$PYTHONPATH"
           # Exclude integration-style tests that require full AWS table/bucket wiring.
+          # Also exclude tests that require external dependencies not in requirements.txt
           pytest -q \
             --ignore=test_webhook_artifacts.py \
             --ignore=test_webhook_step.py \
             --ignore=test_workflow_with_images.py \
-            --ignore=test_local.py
+            --ignore=test_local.py \
+            --ignore=test_cua_agent.py \
+            --ignore=test_scrapybara_act.py
 
   deploy:
     needs: test
