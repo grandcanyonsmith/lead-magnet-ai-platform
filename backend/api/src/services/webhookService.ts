@@ -4,7 +4,7 @@
  */
 
 import { logger } from "../utils/logger";
-import { retryWithBackoff } from "../utils/retry";
+import { retryWithBackoff } from "../utils/errorHandling";
 
 const WEBHOOK_TIMEOUT_MS = 30000; // 30 seconds timeout for webhook requests
 const MAX_RETRY_ATTEMPTS = 3;

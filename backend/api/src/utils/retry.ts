@@ -1,101 +1,95 @@
 /**
- * Retry utilities for handling transient failures.
- * Re-exports retry functionality from errorHandling for convenience.
+ * Retry utility with exponential backoff
  */
 
-import {
-  retryWithBackoff as retryWithBackoffImpl,
-  type RetryConfig,
-} from "./errorHandling";
+import { logger } from "./logger";
 
-export { retryWithBackoffImpl as retryWithBackoff, type RetryConfig };
+export interface RetryOptions {
+  maxRetries?: number;
+  initialDelayMs?: number;
+  maxDelayMs?: number;
+  backoffMultiplier?: number;
+  retryableErrors?: Array<number>; // HTTP status codes to retry
+}
+
+const DEFAULT_OPTIONS: Required<RetryOptions> = {
+  maxRetries: 3,
+  initialDelayMs: 1000,
+  maxDelayMs: 10000,
+  backoffMultiplier: 2,
+  retryableErrors: [429, 500, 502, 503, 504],
+};
 
 /**
- * Retries an operation with a simple fixed delay between attempts.
- *
- * @param fn - Async function to retry
- * @param options - Retry options
- * @returns Result of the function
- * @throws Last error if all retries fail
- *
- * @example
- * ```typescript
- * const result = await retryWithFixedDelay(
- *   () => fetchData(),
- *   { maxAttempts: 3, delayMs: 1000 }
- * );
- * ```
+ * Sleep for specified milliseconds
  */
-export async function retryWithFixedDelay<T>(
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Check if an error is retryable based on status code
+ */
+function isRetryableError(error: unknown, retryableErrors: number[]): boolean {
+  if (error && typeof error === "object" && "statusCode" in error) {
+    const statusCode = (error as { statusCode: number }).statusCode;
+    return retryableErrors.includes(statusCode);
+  }
+  return false;
+}
+
+/**
+ * Retry a function with exponential backoff
+ */
+export async function withRetry<T>(
   fn: () => Promise<T>,
-  options: {
-    maxAttempts?: number;
-    delayMs?: number;
-    retryableErrors?: (error: unknown) => boolean;
-    onRetry?: (attempt: number, error: unknown) => void;
-  } = {},
+  options: RetryOptions = {},
 ): Promise<T> {
-  const maxAttempts = options.maxAttempts ?? 3;
-  const delayMs = options.delayMs ?? 1000;
-  const retryableErrors = options.retryableErrors ?? (() => true);
+  const opts = { ...DEFAULT_OPTIONS, ...options };
   let lastError: unknown;
 
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+  for (let attempt = 0; attempt <= opts.maxRetries; attempt++) {
     try {
       return await fn();
     } catch (error) {
       lastError = error;
 
-      if (!retryableErrors(error)) {
+      // Don't retry on last attempt
+      if (attempt === opts.maxRetries) {
+        break;
+      }
+
+      // Check if error is retryable
+      if (!isRetryableError(error, opts.retryableErrors)) {
+        logger.debug("[Retry] Error not retryable", {
+          error: error instanceof Error ? error.message : String(error),
+          attempt: attempt + 1,
+        });
         throw error;
       }
 
-      if (attempt === maxAttempts - 1) {
-        throw error;
-      }
+      // Calculate delay with exponential backoff
+      const delay = Math.min(
+        opts.initialDelayMs * Math.pow(opts.backoffMultiplier, attempt),
+        opts.maxDelayMs,
+      );
 
-      if (options.onRetry) {
-        options.onRetry(attempt + 1, error);
-      }
+      logger.debug("[Retry] Retrying after delay", {
+        attempt: attempt + 1,
+        maxRetries: opts.maxRetries,
+        delayMs: delay,
+        error: error instanceof Error ? error.message : String(error),
+      });
 
-      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      await sleep(delay);
     }
   }
 
-  throw lastError instanceof Error ? lastError : new Error(String(lastError));
-}
-
-/**
- * Retries an operation only if a condition is met.
- *
- * @param fn - Async function to retry
- * @param condition - Function that determines if error should be retried
- * @param options - Retry options
- * @returns Result of the function
- * @throws Last error if all retries fail or condition is not met
- *
- * @example
- * ```typescript
- * const result = await retryOnCondition(
- *   () => apiCall(),
- *   (error) => error.statusCode === 429, // Only retry on rate limit
- *   { maxAttempts: 5 }
- * );
- * ```
- */
-export async function retryOnCondition<T>(
-  fn: () => Promise<T>,
-  condition: (error: unknown) => boolean,
-  options: {
-    maxAttempts?: number;
-    initialDelayMs?: number;
-    maxDelayMs?: number;
-    backoffMultiplier?: number;
-    onRetry?: (attempt: number, error: unknown) => void;
-  } = {},
-): Promise<T> {
-  return retryWithBackoffImpl(fn, {
-    ...options,
-    retryableErrors: condition,
+  // If we get here, all retries failed
+  logger.error("[Retry] Max retries exceeded", {
+    maxRetries: opts.maxRetries,
+    error: lastError instanceof Error ? lastError.message : String(lastError),
   });
+
+  throw lastError;
 }
