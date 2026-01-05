@@ -30,7 +30,7 @@ def test_imports():
         from services.api_key_manager import APIKeyManager
         from services.openai_error_classifier import OpenAIErrorClassifier
         from services.retry_handler import RetryHandler
-        from services.tool_validator import ToolValidator
+        from services.tools import ToolValidator
         from services.image_handler import ImageHandler
         from services.html_generator import HTMLGenerator
         from services.context_builder import ContextBuilder
@@ -157,7 +157,7 @@ def test_tool_validator():
     logger.info("Testing tool validator...")
     
     try:
-        from services.tool_validator import ToolValidator
+        from services.tools import ToolValidator
         
         # Test validation
         tools, choice = ToolValidator.validate_and_filter_tools(

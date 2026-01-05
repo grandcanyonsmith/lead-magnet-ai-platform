@@ -13,7 +13,7 @@ from pathlib import Path
 worker_dir = Path(__file__).parent
 sys.path.insert(0, str(worker_dir))
 
-from services.shell_loop_service import ShellLoopService  # noqa: E402
+from services.tools.execution import ShellLoopService  # noqa: E402
 
 
 class DummyResponse:

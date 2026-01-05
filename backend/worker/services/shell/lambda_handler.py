@@ -3,7 +3,7 @@ import logging
 from typing import Dict, Any, AsyncGenerator
 
 from services.shell_executor_service import ShellExecutorService
-from services.shell_loop_service import ShellLoopService
+from services.tools.execution import ShellLoopService
 from services.openai_client import OpenAIClient
 
 # Setup logging

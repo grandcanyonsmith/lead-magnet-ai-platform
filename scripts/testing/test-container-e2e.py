@@ -20,7 +20,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 try:
-    from services.tool_validator import ToolValidator
+    from services.tools import ToolValidator
 except ImportError as e:
     print(f"❌ Failed to import ToolValidator: {e}")
     sys.exit(1)

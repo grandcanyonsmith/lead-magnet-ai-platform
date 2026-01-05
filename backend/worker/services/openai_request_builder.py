@@ -4,7 +4,7 @@ Handles construction of API parameters for OpenAI Responses API calls.
 """
 import logging
 from typing import Dict, List, Optional, Any
-from services.tool_builder import ToolBuilder
+from services.tools import ToolBuilder
 from utils import image_utils
 
 logger = logging.getLogger(__name__)

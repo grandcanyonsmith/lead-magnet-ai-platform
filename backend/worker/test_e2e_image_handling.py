@@ -15,7 +15,7 @@ from utils.image_utils import (
     get_image_cache,
     get_url_hash
 )
-from services.tool_builder import ToolBuilder
+from services.tools import ToolBuilder
 from services.openai_client import OpenAIClient
 
 def test_e2e_workflow_step():

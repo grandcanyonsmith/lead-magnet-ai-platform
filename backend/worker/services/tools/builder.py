@@ -1,9 +1,17 @@
 """Tool building and cleaning utilities for OpenAI API."""
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from utils.decimal_utils import convert_decimals_to_int
-from services.tool_validator import ToolValidator
+from .validator import ToolValidator
+from .definitions import (
+    get_shell_tool_definition, 
+    get_image_generation_defaults,
+    get_web_search_tool_definition,
+    get_file_search_tool_definition,
+    get_code_interpreter_tool_definition,
+    get_computer_use_tool_definition
+)
 
 logger = logging.getLogger(__name__)
 
@@ -28,47 +36,26 @@ class ToolBuilder:
         """
         cleaned_tools = []
         
-        # Check if computer_use_preview is present in the list
-        has_computer_use = any(
-            (t == 'computer_use_preview') or (isinstance(t, dict) and t.get('type') == 'computer_use_preview')
-            for t in tools
-        )
-
         for idx, tool in enumerate(tools):
             # Convert string tools to dict format first
             if isinstance(tool, str):
                 if tool == 'image_generation':
                     # Convert image_generation string to object with defaults
-                    tool = {
-                        "type": "image_generation",
-                        "model": "gpt-image-1.5",
-                        "size": "auto",
-                        "quality": "auto",
-                        "background": "auto"
-                    }
+                    tool = get_image_generation_defaults()
                 elif tool == 'shell':
                     # Always convert shell to function tool
                     # This is required because OpenAI doesn't natively support 'shell' tool type
                     # And even if it did, we want to enforce our custom execution logic via function call
                     logger.info("Converting shell tool to function definition")
-                    tool = {
-                        "type": "function",
-                        "function": {
-                            "name": "execute_shell_command",
-                            "description": "EXECUTE a shell command on the backend server (e.g. ls, git, curl). Use this function to run commands directly. DO NOT try to find a terminal in the browser UI.",
-                            "parameters": {
-                                "type": "object",
-                                "properties": {
-                                    "commands": {
-                                        "type": "array",
-                                        "items": { "type": "string" },
-                                        "description": "List of shell commands to execute."
-                                    }
-                                },
-                                "required": ["commands"]
-                            }
-                        }
-                    }
+                    tool = get_shell_tool_definition()
+                elif tool == 'web_search':
+                    tool = get_web_search_tool_definition()
+                elif tool == 'file_search':
+                    tool = get_file_search_tool_definition()
+                elif tool == 'code_interpreter':
+                    tool = get_code_interpreter_tool_definition()
+                elif tool == 'computer_use_preview':
+                    tool = get_computer_use_tool_definition()
                 else:
                     tool = {"type": tool}
             
@@ -78,24 +65,7 @@ class ToolBuilder:
                 # Also handle if it came in as a dict with type="shell"
                 if cleaned_tool.get("type") == "shell":
                     logger.info("Converting shell tool dict to function definition")
-                    cleaned_tool = {
-                        "type": "function",
-                        "function": {
-                            "name": "execute_shell_command",
-                            "description": "EXECUTE a shell command on the backend server (e.g. ls, git, curl). Use this function to run commands directly. DO NOT try to find a terminal in the browser UI.",
-                            "parameters": {
-                                "type": "object",
-                                "properties": {
-                                    "commands": {
-                                        "type": "array",
-                                        "items": { "type": "string" },
-                                        "description": "List of shell commands to execute."
-                                    }
-                                },
-                                "required": ["commands"]
-                            }
-                        }
-                    }
+                    cleaned_tool = get_shell_tool_definition()
 
                 # OpenAI rejects `container` on `computer_use_preview` (unknown_parameter).
                 if cleaned_tool.get("type") == "computer_use_preview" and "container" in cleaned_tool:
@@ -177,7 +147,7 @@ class ToolBuilder:
                         logger.warning(f"Invalid input_fidelity '{cleaned_tool.get('input_fidelity')}' for image_generation tool, removing")
                         del cleaned_tool["input_fidelity"]
                     
-                    logger.debug(f"[Tool Builder] Preserved image_generation tool config", extra={
+                    logger.debug("[Tool Builder] Preserved image_generation tool config", extra={
                         'tool_config': cleaned_tool
                     })
                 

@@ -19,12 +19,8 @@ export interface ComputeStackProps extends cdk.StackProps {
   cloudfrontDomain?: string;  // Optional CloudFront distribution domain
   ecrRepository?: ecr.IRepository;  // Optional ECR repository for container image
   shellExecutor?: {
-    clusterArn: string;
-    taskDefinitionFamily: string;
-    executionRoleArn?: string;
-    securityGroupId: string;
-    subnetIds: string[];
-    resultsBucketName: string;
+    functionArn: string;
+    functionName: string;
   };
 }
 
@@ -63,12 +59,7 @@ export class ComputeStack extends cdk.Stack {
           // Set browsers path to match Dockerfile installation location
           [ENV_VAR_NAMES.PLAYWRIGHT_BROWSERS_PATH]: PLAYWRIGHT_BROWSERS_PATH,
           ...(props.shellExecutor ? {
-            [ENV_VAR_NAMES.SHELL_EXECUTOR_RESULTS_BUCKET]: props.shellExecutor.resultsBucketName,
-            [ENV_VAR_NAMES.SHELL_EXECUTOR_CLUSTER_ARN]: props.shellExecutor.clusterArn,
-            // ECS RunTask accepts either full ARN or family[:revision]. We intentionally use the stable family.
-            [ENV_VAR_NAMES.SHELL_EXECUTOR_TASK_DEFINITION_ARN]: props.shellExecutor.taskDefinitionFamily,
-            [ENV_VAR_NAMES.SHELL_EXECUTOR_SECURITY_GROUP_ID]: props.shellExecutor.securityGroupId,
-            [ENV_VAR_NAMES.SHELL_EXECUTOR_SUBNET_IDS]: props.shellExecutor.subnetIds.join(','),
+            [ENV_VAR_NAMES.SHELL_EXECUTOR_FUNCTION_NAME]: props.shellExecutor.functionName,
           } : {}),
         };
 
@@ -235,77 +226,17 @@ export class ComputeStack extends cdk.Stack {
       [SECRET_NAMES.OPENAI_API_KEY, SECRET_NAMES.TWILIO_CREDENTIALS]
     );
 
-    // Shell executor permissions (if configured): allow job processor to run ECS tasks and poll the results bucket.
+    // Shell executor permissions (if configured): allow job processor to invoke the executor Lambda.
     if (props.shellExecutor) {
-      const shellResultsBucket = s3.Bucket.fromBucketName(this, 'ShellExecutorResultsBucket', props.shellExecutor.resultsBucketName);
-      shellResultsBucket.grantReadWrite(this.jobProcessorLambda);
+      // Import the shell executor function by ARN
+      const shellExecutorFunction = lambda.Function.fromFunctionAttributes(this, 'ShellExecutorFunction', {
+        functionArn: props.shellExecutor.functionArn,
+        sameEnvironment: true, // Optimistic assumption to simplify permissions if in same account/region
+      });
 
-      this.jobProcessorLambda.addToRolePolicy(
-        new iam.PolicyStatement({
-          effect: iam.Effect.ALLOW,
-          actions: ['ecs:RunTask', 'ecs:DescribeTaskDefinition'],
-          resources: [
-            cdk.Stack.of(this).formatArn({
-              service: 'ecs',
-              resource: 'task-definition',
-              resourceName: `${props.shellExecutor.taskDefinitionFamily}:*`,
-            }),
-          ],
-        })
-      );
-      this.jobProcessorLambda.addToRolePolicy(
-        new iam.PolicyStatement({
-          effect: iam.Effect.ALLOW,
-          actions: ['ecs:DescribeTasks', 'ecs:StopTask'],
-          resources: ['*'],
-        })
-      );
-
-      const execRoleArn = props.shellExecutor.executionRoleArn;
-      if (execRoleArn) {
-        this.jobProcessorLambda.addToRolePolicy(
-          new iam.PolicyStatement({
-            effect: iam.Effect.ALLOW,
-            actions: ['iam:PassRole'],
-            resources: [execRoleArn],
-          })
-        );
-      }
-
-      // Shell worker also needs to run ECS tasks + poll the results bucket
-      const shellResultsBucketForShellWorker = s3.Bucket.fromBucketName(this, 'ShellExecutorResultsBucketForShellWorker', props.shellExecutor.resultsBucketName);
-      shellResultsBucketForShellWorker.grantReadWrite(this.shellWorkerLambda);
-
-      this.shellWorkerLambda.addToRolePolicy(
-        new iam.PolicyStatement({
-          effect: iam.Effect.ALLOW,
-          actions: ['ecs:RunTask', 'ecs:DescribeTaskDefinition'],
-          resources: [
-            cdk.Stack.of(this).formatArn({
-              service: 'ecs',
-              resource: 'task-definition',
-              resourceName: `${props.shellExecutor.taskDefinitionFamily}:*`,
-            }),
-          ],
-        })
-      );
-      this.shellWorkerLambda.addToRolePolicy(
-        new iam.PolicyStatement({
-          effect: iam.Effect.ALLOW,
-          actions: ['ecs:DescribeTasks', 'ecs:StopTask'],
-          resources: ['*'],
-        })
-      );
-
-      if (execRoleArn) {
-        this.shellWorkerLambda.addToRolePolicy(
-          new iam.PolicyStatement({
-            effect: iam.Effect.ALLOW,
-            actions: ['iam:PassRole'],
-            resources: [execRoleArn],
-          })
-        );
-      }
+      // Grant invoke permissions
+      shellExecutorFunction.grantInvoke(this.jobProcessorLambda);
+      shellExecutorFunction.grantInvoke(this.shellWorkerLambda);
     }
 
     // Shell tool: allow the worker to sign presigned PUT URLs for controlled uploads to an allowlisted bucket.
