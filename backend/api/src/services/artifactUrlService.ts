@@ -52,6 +52,21 @@ export class ArtifactUrlService {
   }
 
   /**
+   * Check if a URL is a CloudFront (or custom CDN) URL matching our configured domain.
+   */
+  static isCloudFrontUrl(url: string | null | undefined): boolean {
+    if (!url) return false;
+    if (!CLOUDFRONT_DOMAIN) return false;
+    if (this.isPresignedUrl(url)) return false;
+    try {
+      const u = new URL(url);
+      return u.hostname === CLOUDFRONT_DOMAIN;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
    * Check if an artifact is an image based on file extension or content type
    */
   static isImage(artifact: any): boolean {
@@ -126,10 +141,22 @@ export class ArtifactUrlService {
   static needsUrlRefresh(artifact: any): boolean {
     if (!artifact.s3_key) return false;
 
-    // For images, check if URL is a direct S3 URL (permanent, public)
+    // For images, prefer the configured CDN domain when available (permanent, non-expiring).
     if (this.isImage(artifact)) {
+      const hasValidCloudFrontUrl =
+        artifact.public_url && this.isCloudFrontUrl(artifact.public_url);
       const hasValidDirectS3Url =
         artifact.public_url && this.isDirectS3Url(artifact.public_url);
+
+      // If CLOUDFRONT_DOMAIN is configured, we want images to be served from that domain.
+      if (CLOUDFRONT_DOMAIN) {
+        return (
+          !artifact.public_url ||
+          !hasValidCloudFrontUrl ||
+          this.isPresignedUrl(artifact.public_url)
+        );
+      }
+
       return (
         !artifact.public_url ||
         !hasValidDirectS3Url ||
@@ -166,8 +193,14 @@ export class ArtifactUrlService {
     s3Key: string,
     artifact?: any,
   ): Promise<{ url: string; expiresAt: string | null }> {
-    // For images, always use direct S3 public URL (permanent, non-expiring, publicly accessible)
+    // For images, prefer CloudFront (custom assets domain) when configured.
     if (artifact && this.isImage(artifact)) {
+      if (CLOUDFRONT_DOMAIN) {
+        return {
+          url: this.getCloudFrontUrl(s3Key),
+          expiresAt: null,
+        };
+      }
       return {
         url: this.getDirectS3Url(s3Key),
         expiresAt: null,

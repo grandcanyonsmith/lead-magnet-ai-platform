@@ -80,6 +80,17 @@ function createStacks(app: cdk.App, env: cdk.Environment): void {
     description: 'S3 buckets and CloudFront for artifact storage',
   });
 
+  // If you attach custom domains to CloudFront (e.g. assets.mycoursecreator360.com),
+  // you typically want all generated artifact URLs to use that hostname instead
+  // of the default `d123.cloudfront.net` distribution domain.
+  //
+  // If CLOUDFRONT_DOMAIN is set during `cdk deploy`, it will be passed to both:
+  // - API Lambda (artifact URL generation)
+  // - Worker Lambdas (public_url generation for output HTML/images)
+  const cloudfrontDomainForUrls = (process.env.CLOUDFRONT_DOMAIN || '').trim()
+    ? (process.env.CLOUDFRONT_DOMAIN || '').trim()
+    : storageStack.distribution.distributionDomainName;
+
   // Stack 4: Worker (ECR Repository) - Foundation layer
   // Creates ECR repository for Lambda container images
   // Container images are required for Playwright (GLIBC compatibility)
@@ -104,7 +115,7 @@ function createStacks(app: cdk.App, env: cdk.Environment): void {
     description: 'Step Functions state machine and Lambda function for job processing',
     tablesMap: databaseStack.tablesMap,
     artifactsBucket: storageStack.artifactsBucket,
-    cloudfrontDomain: storageStack.distribution.distributionDomainName,
+    cloudfrontDomain: cloudfrontDomainForUrls,
     ecrRepository: workerStack.ecrRepository,
     shellExecutor: {
       functionArn: shellExecutorStack.executorFunction.functionArn,
@@ -123,7 +134,7 @@ function createStacks(app: cdk.App, env: cdk.Environment): void {
     tablesMap: databaseStack.tablesMap,
     stateMachineArn: computeStack.stateMachineArn,
     artifactsBucket: storageStack.artifactsBucket,
-    cloudfrontDomain: storageStack.distribution.distributionDomainName,
+    cloudfrontDomain: cloudfrontDomainForUrls,
     cloudfrontDistributionId: storageStack.distribution.distributionId,
     shellExecutor: {
       functionArn: shellExecutorStack.executorFunction.functionArn,

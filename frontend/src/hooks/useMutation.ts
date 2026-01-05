@@ -20,7 +20,7 @@ export interface UseMutationOptions<
 > {
   onSuccess?: (data: TData, variables: TVariables) => void | Promise<void>;
   onError?: (error: TError, variables: TVariables) => void | Promise<void>;
-  showSuccessToast?: boolean | string;
+  showSuccessToast?: boolean | string | ((data: TData) => string);
   showErrorToast?: boolean | string;
   invalidateQueries?: (readonly unknown[])[];
 }
@@ -52,7 +52,9 @@ export function useMutation<TData = unknown, TError = Error, TVariables = void>(
         const message =
           typeof showSuccessToast === "string"
             ? showSuccessToast
-            : "Operation completed successfully";
+            : typeof showSuccessToast === "function"
+              ? showSuccessToast(data)
+              : "Operation completed successfully";
         toast.success(message);
       }
 

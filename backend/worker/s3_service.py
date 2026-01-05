@@ -184,11 +184,16 @@ class S3Service:
             
             # Generate URLs
             s3_url = f"s3://{self.bucket_name}/{key}"
-            
-            # Use direct S3 public URL (images are now publicly accessible)
-            # Format: https://{bucket}.s3.{region}.amazonaws.com/{key}
-            region = os.environ.get('AWS_REGION', 'us-east-1')
-            public_url = f"https://{self.bucket_name}.s3.{region}.amazonaws.com/{key}"
+
+            # Prefer CloudFront (or custom CDN hostname) when configured so customer-facing
+            # URLs live on your branded assets domain (e.g. assets.mycoursecreator360.com).
+            if public and self.cloudfront_domain:
+                public_url = f"https://{self.cloudfront_domain}/{key}"
+            else:
+                # Fallback: direct S3 public URL
+                # Format: https://{bucket}.s3.{region}.amazonaws.com/{key}
+                region = os.environ.get('AWS_REGION', 'us-east-1')
+                public_url = f"https://{self.bucket_name}.s3.{region}.amazonaws.com/{key}"
             
             logger.info(f"[S3] Uploaded image to S3 with public access", extra={
                 'key': key,
