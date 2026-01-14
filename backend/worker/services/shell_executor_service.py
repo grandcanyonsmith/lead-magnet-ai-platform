@@ -73,12 +73,38 @@ class ShellExecutorService:
                 reset_workspace=reset_workspace,
             )
 
-        if not self._function_name:
-            # Fallback check for settings if env var not directly set (though usually settings loads env vars)
-            # Or raise error.
-            raise RuntimeError("SHELL_EXECUTOR_FUNCTION_NAME is not set")
-
         job_id = uuid.uuid4().hex
+
+        if not self._function_name:
+            error_msg = "SHELL_EXECUTOR_FUNCTION_NAME is not set"
+            logger.error("[ShellExecutorService] Shell executor not configured", extra={
+                "job_id": job_id,
+                "commands_count": len(commands),
+            })
+            output_items = [
+                {
+                    "stdout": "",
+                    "stderr": error_msg,
+                    "outcome": {"type": "error", "message": error_msg},
+                }
+                for _ in commands
+            ]
+            result: Dict[str, Any] = {
+                "version": CONTRACT_VERSION,
+                "job_id": job_id,
+                "commands": commands,
+                "output": output_items,
+                "meta": {
+                    "runner": "shell-executor-unconfigured",
+                    "duration_ms": 0,
+                },
+            }
+            if max_output_length is not None:
+                try:
+                    result["max_output_length"] = int(max_output_length)
+                except Exception:
+                    pass
+            return result
         
         payload = {
             "commands": commands,
