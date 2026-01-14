@@ -32,8 +32,19 @@ class AIStepHandler(AbstractStepHandler):
         """Prepare and normalize tools for a step."""
         step_model = step.get('model', 'gpt-5.2')
         
-        # Do NOT auto-add web_search for o4-mini-deep-research model
-        default_tools = [] if step_model == 'o4-mini-deep-research' else ['web_search']
+        # Check if this is a deep research model
+        is_deep_research_model = (
+            isinstance(step_model, str) and 
+            ('deep-research' in step_model.lower() or step_model == 'o4-mini-deep-research')
+        )
+        
+        # Deep research models require at least one of: web_search_preview, mcp, or file_search
+        # Regular models get web_search by default
+        if is_deep_research_model:
+            default_tools = []  # Don't auto-add web_search for deep research models
+        else:
+            default_tools = ['web_search']
+        
         step_tools_raw = step.get('tools', default_tools)
         
         # Convert string tools to objects
@@ -46,6 +57,24 @@ class AIStepHandler(AbstractStepHandler):
                     step_tools.append({"type": tool})
             else:
                 step_tools.append(tool)
+        
+        # For deep research models, ensure at least one required tool is present
+        if is_deep_research_model:
+            required_tool_types = {'web_search_preview', 'mcp', 'file_search'}
+            has_required_tool = any(
+                (isinstance(t, dict) and t.get('type') in required_tool_types) or
+                (isinstance(t, str) and t in required_tool_types)
+                for t in step_tools
+            )
+            
+            if not has_required_tool:
+                # Add file_search as default for deep research models if no required tool is present
+                logger.info(
+                    f"[AIStepHandler] Deep research model '{step_model}' requires at least one of "
+                    "web_search_preview, mcp, or file_search. Adding file_search as default.",
+                    extra={'step_model': step_model, 'step_tools': step_tools_raw}
+                )
+                step_tools.append({"type": "file_search"})
         
         step_tool_choice = step.get('tool_choice', 'auto')
         

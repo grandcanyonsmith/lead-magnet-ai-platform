@@ -97,9 +97,18 @@ class OpenAIRequestBuilder:
                     has_image_generation = True
                     break
         
+        # Check if model supports image inputs
+        # computer-use-preview models don't support image inputs
+        model_supports_images = not (
+            isinstance(model, str) and 
+            ('computer-use' in model.lower() or model.startswith('computer-use'))
+        )
+        
         # Build input: if image_generation tool is present and we have previous image URLs,
-        # use list format with text and images; otherwise use string format (backward compatible)
-        if has_image_generation and previous_image_urls and len(previous_image_urls) > 0:
+        # AND the model supports images, use list format with text and images; 
+        # otherwise use string format (backward compatible)
+        if (has_image_generation and previous_image_urls and len(previous_image_urls) > 0 
+            and model_supports_images):
             api_input = OpenAIRequestBuilder._build_multimodal_input(
                 input_text, previous_image_urls, job_id, tenant_id
             )
@@ -107,7 +116,14 @@ class OpenAIRequestBuilder:
             # Use string format (backward compatible)
             api_input = input_text
             if has_image_generation and previous_image_urls:
-                logger.debug("[OpenAI Request Builder] Image generation tool present but no previous image URLs to include")
+                if not model_supports_images:
+                    logger.debug(
+                        "[OpenAI Request Builder] Model does not support image inputs, "
+                        "excluding images from input",
+                        extra={'model': model}
+                    )
+                else:
+                    logger.debug("[OpenAI Request Builder] Image generation tool present but no previous image URLs to include")
         
         params = {
             "model": model,
