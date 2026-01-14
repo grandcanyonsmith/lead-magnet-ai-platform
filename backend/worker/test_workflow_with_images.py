@@ -38,8 +38,8 @@ if not os.environ.get('ARTIFACTS_BUCKET'):
         # Fallback to default pattern
         os.environ['ARTIFACTS_BUCKET'] = 'leadmagnet-artifacts-471112523456'
 if not os.environ.get('CLOUDFRONT_DOMAIN'):
-    # Try to get from CloudFormation or use empty (will use presigned URLs)
-    os.environ['CLOUDFRONT_DOMAIN'] = ''
+    # Try to get from CloudFormation or use default
+    os.environ['CLOUDFRONT_DOMAIN'] = 'assets.mycoursecreator360.com'
 
 # Add the worker directory to Python path
 worker_dir = Path(__file__).parent

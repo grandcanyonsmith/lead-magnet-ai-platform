@@ -145,7 +145,7 @@ export class EnvConfig {
     // S3 Configuration
     this.artifactsBucket = this.getOptional("ARTIFACTS_BUCKET");
     this.cloudfrontDomain = (
-      this.getOptional("CLOUDFRONT_DOMAIN") || ""
+      this.getOptional("CLOUDFRONT_DOMAIN") || "assets.mycoursecreator360.com"
     ).trim();
     this.cloudfrontDistributionId = (
       this.getOptional("CLOUDFRONT_DISTRIBUTION_ID") || ""
