@@ -39,12 +39,21 @@ export const test = base.extend<AuthFixtures>({
         // Ignore timeout, proceed
       }
 
-      // Click user menu - wait for it to be visible and enabled
-      const userMenuSelector = '[aria-label*="user menu" i], [aria-label*="account" i]';
-      const userMenu = page.locator(userMenuSelector).first();
-      await userMenu.waitFor({ state: 'visible', timeout: 15000 });
-      // Ensure menu is ready before clicking
-      await userMenu.waitFor({ state: 'attached', timeout: 5000 }).catch(() => {});
+      // Wait for user menu directly - it should be visible once the page loads
+      // The user menu button has aria-label="User menu" in the Sidebar component
+      // Try to wait for sidebar first, but if it fails, wait for user menu directly
+      const sidebar = page.locator('aside');
+      const userMenu = page.locator('[aria-label="User menu"]').first();
+      
+      try {
+        // First try waiting for sidebar (more reliable)
+        await sidebar.waitFor({ state: 'visible', timeout: 10000 });
+        await userMenu.waitFor({ state: 'visible', timeout: 5000 });
+      } catch (e) {
+        // If sidebar wait fails, wait for user menu directly (might be in mobile view)
+        await userMenu.waitFor({ state: 'visible', timeout: 15000 });
+      }
+      
       await userMenu.click();
       
       // Wait for dropdown menu to appear before clicking logout
