@@ -55,6 +55,36 @@ class OpenAIClient:
         # Convert all Decimal values to float to prevent JSON serialization errors
         # This handles Decimal values that might be present in input, instructions, tools, etc.
         api_params = convert_decimals_to_float(api_params)
+
+        # OpenAI requires certain fields to be integers. DynamoDB often stores numbers as Decimal,
+        # and our Decimal -> float conversion can turn whole numbers into floats (e.g., 2048.0),
+        # which the OpenAI API will reject for integer-typed params like `max_output_tokens`.
+        if api_params.get("max_output_tokens") is not None:
+            raw_max_output_tokens = api_params.get("max_output_tokens")
+            try:
+                if isinstance(raw_max_output_tokens, bool):
+                    raise ValueError("max_output_tokens must be an int, not bool")
+
+                if isinstance(raw_max_output_tokens, float):
+                    if not raw_max_output_tokens.is_integer():
+                        logger.warning(
+                            "[OpenAI Client] max_output_tokens was a non-integer float; truncating",
+                            extra={"max_output_tokens": raw_max_output_tokens},
+                        )
+                    max_output_tokens = int(raw_max_output_tokens)
+                else:
+                    max_output_tokens = int(raw_max_output_tokens)
+
+                if max_output_tokens > 0:
+                    api_params["max_output_tokens"] = max_output_tokens
+                else:
+                    api_params.pop("max_output_tokens", None)
+            except Exception as e:
+                logger.warning(
+                    "[OpenAI Client] Invalid max_output_tokens; omitting to avoid API error",
+                    extra={"max_output_tokens": str(raw_max_output_tokens), "error": str(e)},
+                )
+                api_params.pop("max_output_tokens", None)
         
         return api_params
 

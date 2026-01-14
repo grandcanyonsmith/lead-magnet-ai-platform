@@ -486,32 +486,80 @@ class ReportGenerator:
 
         _persist(status="streaming", force=True)
 
-        try:
-            api_params = (
-                self.openai_client._sanitize_api_params(params)
-                if hasattr(self.openai_client, "_sanitize_api_params")
-                else dict(params)
-            )
-            
-            with self.openai_client.client.responses.stream(**api_params) as stream:
-                for ev in stream:
-                    ev_type = getattr(ev, "type", "") or ""
-                    if ev_type == "response.output_text.delta":
-                        delta = getattr(ev, "delta", "") or ""
-                        if not delta:
-                            continue
-                        output_so_far += delta
-                        _persist(status="streaming", force=False)
-                response = stream.get_final_response()
-            
-            _persist(status="final", force=True)
-            logger.info("[ReportGenerator] Stream complete", extra={
-                "job_id": job_id,
-                "step_order": step_order,
-                "output_chars": len(output_so_far),
-            })
-            return response
-            
-        except Exception as stream_err:
-            _persist(status="error", error=str(stream_err), force=True)
-            raise
+        def _is_incomplete_openai_stream_error(err: Exception) -> bool:
+            try:
+                msg = str(err) or ""
+            except Exception:
+                msg = ""
+            lower = msg.lower()
+            if "response.completed" in lower and ("didn't receive" in lower or "did not receive" in lower):
+                return True
+            if type(err).__name__ in ("APIConnectionError", "APITimeoutError", "ReadTimeout", "ConnectTimeout"):
+                return True
+            return False
+
+        api_params = (
+            self.openai_client._sanitize_api_params(params)
+            if hasattr(self.openai_client, "_sanitize_api_params")
+            else dict(params)
+        )
+
+        max_stream_attempts = 2
+        for attempt in range(1, max_stream_attempts + 1):
+            if attempt > 1:
+                # Restart accumulation on retry to avoid duplicated output in the live preview.
+                output_so_far = ""
+                _persist(status="retrying", error="Retrying OpenAI stream…", force=True)
+
+            try:
+                with self.openai_client.client.responses.stream(**api_params) as stream:
+                    for ev in stream:
+                        ev_type = getattr(ev, "type", "") or ""
+                        if ev_type == "response.output_text.delta":
+                            delta = getattr(ev, "delta", "") or ""
+                            if not delta:
+                                continue
+                            output_so_far += delta
+                            _persist(status="streaming", force=False)
+                    response = stream.get_final_response()
+
+                _persist(status="final", force=True)
+                logger.info("[ReportGenerator] Stream complete", extra={
+                    "job_id": job_id,
+                    "step_order": step_order,
+                    "output_chars": len(output_so_far),
+                })
+                return response
+
+            except Exception as stream_err:
+                if _is_incomplete_openai_stream_error(stream_err) and attempt < max_stream_attempts:
+                    logger.warning("[ReportGenerator] Stream ended early; retrying", extra={
+                        "job_id": job_id,
+                        "step_order": step_order,
+                        "attempt": attempt,
+                        "max_attempts": max_stream_attempts,
+                        "error_type": type(stream_err).__name__,
+                        "error_message": str(stream_err),
+                    })
+                    _persist(status="retrying", error=str(stream_err), force=True)
+                    time.sleep(0.75 * attempt)
+                    continue
+
+                if _is_incomplete_openai_stream_error(stream_err):
+                    # Last attempt: fall back to a non-streaming call to avoid failing the whole step.
+                    logger.warning("[ReportGenerator] Stream ended early; falling back to non-streaming call", extra={
+                        "job_id": job_id,
+                        "step_order": step_order,
+                        "attempt": attempt,
+                        "max_attempts": max_stream_attempts,
+                        "error_type": type(stream_err).__name__,
+                        "error_message": str(stream_err),
+                    })
+                    response = self.openai_client.client.responses.create(**api_params)
+                    # Best-effort: persist the full output_text so the UI still shows the final result.
+                    output_so_far = getattr(response, "output_text", "") or output_so_far
+                    _persist(status="final", force=True)
+                    return response
+
+                _persist(status="error", error=str(stream_err), force=True)
+                raise
