@@ -1,5 +1,6 @@
 """Tool validation and filtering for OpenAI API calls."""
 import logging
+import os
 from typing import List, Dict, Tuple, Optional
 
 logger = logging.getLogger(__name__)
@@ -69,6 +70,18 @@ class ToolValidator:
             tool["container"] = {"type": "auto"}
         
         return tool
+
+    @staticmethod
+    def _shell_tool_available() -> bool:
+        """
+        Determine if the shell tool can be used in this environment.
+        """
+        enabled_flag = (os.environ.get("SHELL_TOOL_ENABLED") or "").strip().lower()
+        if enabled_flag and enabled_flag not in ("true", "1", "yes"):
+            return False
+        if (os.environ.get("IS_LOCAL") or "").strip().lower() == "true":
+            return True
+        return bool((os.environ.get("SHELL_EXECUTOR_FUNCTION_NAME") or "").strip())
     
     @staticmethod
     def validate_and_filter_tools(
@@ -108,6 +121,7 @@ class ToolValidator:
             return [], "none"
         
         validated_tools = []
+        shell_tool_available = ToolValidator._shell_tool_available()
         
         for idx, tool in enumerate(tools):
             if isinstance(tool, str):
@@ -118,8 +132,16 @@ class ToolValidator:
                 logger.warning(f"Skipping invalid tool at index {idx}: {tool}")
                 continue
             
+            tool_type = tool_dict.get("type")
+            if tool_type == "shell" and not shell_tool_available:
+                logger.warning(
+                    "[ToolValidator] Shell tool requested but executor not configured; skipping tool",
+                    extra={"model": model, "tool_choice": tool_choice},
+                )
+                continue
+
             # Track if container was added during validation
-            tool_type_before = tool_dict.get("type")
+            tool_type_before = tool_type
             had_container_before = "container" in tool_dict
             
             tool_dict = ToolValidator.ensure_container_parameter(tool_dict)
