@@ -101,6 +101,54 @@ jobs:
           secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
           region: ${{ env.AWS_REGION }}
       
+      - name: Load legacy shell executor exports
+        working-directory: infrastructure
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import subprocess
+          
+          exports = json.loads(
+              subprocess.check_output(
+                  ["aws", "cloudformation", "list-exports", "--output", "json"]
+              )
+          ).get("Exports", [])
+          
+          exports_map = {exp.get("Name"): exp.get("Value") for exp in exports}
+          
+          mapping = {
+              "SHELL_EXECUTOR_LEGACY_RESULTS_BUCKET": "leadmagnet-shell-executor:ExportsOutputRefShellExecutorResultsBucket1A1277A82A874BA3",
+              "SHELL_EXECUTOR_LEGACY_TASK_EXECUTION_ROLE_ARN": "leadmagnet-shell-executor:ExportsOutputFnGetAttShellExecutorTaskDefExecutionRole2061D40FArnEF3C7B62",
+              "SHELL_EXECUTOR_LEGACY_SECURITY_GROUP_ID": "leadmagnet-shell-executor:ExportsOutputFnGetAttShellExecutorSgC8E8070CGroupIdDB92116B",
+              "SHELL_EXECUTOR_LEGACY_CLUSTER_ARN": "leadmagnet-shell-executor:ExportsOutputFnGetAttShellExecutorClusterDAF8CA4DArnE9D855C2",
+              "SHELL_EXECUTOR_LEGACY_CLUSTER_NAME": "leadmagnet-shell-executor:ExportsOutputRefShellExecutorClusterDAF8CA4D8DB2C0E8",
+          }
+          
+          subnet1 = exports_map.get("leadmagnet-shell-executor:ExportsOutputRefShellExecutorVpcprivateSubnet1Subnet3CF6940C36DE374C", "")
+          subnet2 = exports_map.get("leadmagnet-shell-executor:ExportsOutputRefShellExecutorVpcprivateSubnet2Subnet9C03EAE70B440DB7", "")
+          
+          env_lines = []
+          for env_key, export_name in mapping.items():
+              value = exports_map.get(export_name, "")
+              if value:
+                  env_lines.append(f"{env_key}={value}")
+          
+          subnets = ",".join([v for v in [subnet1, subnet2] if v])
+          if subnets:
+              env_lines.append(f"SHELL_EXECUTOR_LEGACY_SUBNET_IDS={subnets}")
+          
+          env_file = os.environ.get("GITHUB_ENV")
+          if env_file and env_lines:
+              with open(env_file, "a", encoding="utf-8") as f:
+                  for line in env_lines:
+                      f.write(line + "\n")
+          
+          print("Loaded legacy shell executor exports:")
+          for line in env_lines:
+              print(f"  {line.split('=')[0]}")
+          PY
+
       - name: CDK Deploy
         working-directory: infrastructure
         run: npx cdk deploy --all --require-approval never

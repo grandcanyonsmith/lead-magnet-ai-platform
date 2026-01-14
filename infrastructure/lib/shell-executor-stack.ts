@@ -147,46 +147,75 @@ export class ShellExecutorStack extends cdk.Stack {
     // --------------------------------------------------------------------------------
 
     // 1. ShellExecutorResultsBucket (Must match original bucket name to avoid update failure)
-    const resultsBucketName = 'leadmagnet-artifacts-shell-results-471112574622';
+    const resultsBucketName =
+      (process.env.SHELL_EXECUTOR_LEGACY_RESULTS_BUCKET || "").trim() ||
+      (process.env.SHELL_EXECUTOR_RESULTS_BUCKET || "").trim() ||
+      `leadmagnet-artifacts-shell-results-${this.account}`;
     const artifactsBucket = s3.Bucket.fromBucketName(this, 'ArtifactsBucket', resultsBucketName);
     new cdk.CfnOutput(this, 'ShellExecutorResultsBucket', {
       value: artifactsBucket.bucketName,
       exportName: 'leadmagnet-shell-executor:ExportsOutputRefShellExecutorResultsBucket1A1277A82A874BA3',
     });
 
-    // 2. TaskDefExecutionRole
+    // 2. TaskDefExecutionRole (must match legacy ECS execution role ARN if still imported)
+    const legacyExecutionRoleArn =
+      (process.env.SHELL_EXECUTOR_LEGACY_TASK_EXECUTION_ROLE_ARN || "").trim() ||
+      (process.env.SHELL_EXECUTOR_TASK_EXECUTION_ROLE_ARN || "").trim() ||
+      this.executorFunction.role!.roleArn;
     new cdk.CfnOutput(this, 'TempTaskDefExecutionRoleExport', {
-      value: this.executorFunction.role!.roleArn, 
+      value: legacyExecutionRoleArn, 
       exportName: 'leadmagnet-shell-executor:ExportsOutputFnGetAttShellExecutorTaskDefExecutionRole2061D40FArnEF3C7B62',
     });
 
+    const legacySubnetIdsRaw =
+      (process.env.SHELL_EXECUTOR_LEGACY_SUBNET_IDS || "").trim() ||
+      (process.env.SHELL_EXECUTOR_SUBNET_IDS || "").trim();
+    const legacySubnetIds = legacySubnetIdsRaw
+      ? legacySubnetIdsRaw.split(',').map((id) => id.trim()).filter(Boolean)
+      : [];
+    const legacySubnet1 = legacySubnetIds[0] || this.vpc.privateSubnets[0].subnetId;
+    const legacySubnet2 =
+      legacySubnetIds[1] || this.vpc.privateSubnets[1]?.subnetId || legacySubnet1;
+
     // 3. Subnet (privateSubnet2)
     new cdk.CfnOutput(this, 'TempSubnetExport', {
-      value: this.vpc.privateSubnets[1]?.subnetId || this.vpc.privateSubnets[0].subnetId, 
+      value: legacySubnet2, 
       exportName: 'leadmagnet-shell-executor:ExportsOutputRefShellExecutorVpcprivateSubnet2Subnet9C03EAE70B440DB7',
     });
 
     // 4. Subnet 1 (privateSubnet1)
     new cdk.CfnOutput(this, 'TempSubnet1Export', {
-      value: this.vpc.privateSubnets[0].subnetId, 
+      value: legacySubnet1, 
       exportName: 'leadmagnet-shell-executor:ExportsOutputRefShellExecutorVpcprivateSubnet1Subnet3CF6940C36DE374C',
     });
 
+    const legacyClusterName =
+      (process.env.SHELL_EXECUTOR_LEGACY_CLUSTER_NAME || "").trim() ||
+      'leadmagnet-shell-executor';
+    const legacyClusterArn =
+      (process.env.SHELL_EXECUTOR_LEGACY_CLUSTER_ARN || "").trim() ||
+      `arn:aws:ecs:${this.region}:${this.account}:cluster/${legacyClusterName}`;
+
     // 5. Cluster (ARN)
     new cdk.CfnOutput(this, 'TempClusterExport', {
-      value: `arn:aws:ecs:${this.region}:${this.account}:cluster/dummy-cluster-for-migration`, 
+      value: legacyClusterArn, 
       exportName: 'leadmagnet-shell-executor:ExportsOutputFnGetAttShellExecutorClusterDAF8CA4DArnE9D855C2',
     });
 
     // 6. Cluster (Ref/Name)
     new cdk.CfnOutput(this, 'TempClusterRefExport', {
-      value: 'dummy-cluster-for-migration', 
+      value: legacyClusterName, 
       exportName: 'leadmagnet-shell-executor:ExportsOutputRefShellExecutorClusterDAF8CA4D8DB2C0E8',
     });
 
+    const legacySecurityGroupId =
+      (process.env.SHELL_EXECUTOR_LEGACY_SECURITY_GROUP_ID || "").trim() ||
+      (process.env.SHELL_EXECUTOR_SECURITY_GROUP_ID || "").trim() ||
+      lambdaSecurityGroup.securityGroupId;
+
     // 7. Security Group
     new cdk.CfnOutput(this, 'TempSgExport', {
-      value: lambdaSecurityGroup.securityGroupId, 
+      value: legacySecurityGroupId, 
       exportName: 'leadmagnet-shell-executor:ExportsOutputFnGetAttShellExecutorSgC8E8070CGroupIdDB92116B',
     });
   }
