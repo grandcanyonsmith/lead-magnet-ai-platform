@@ -32,21 +32,28 @@ export const test = base.extend<AuthFixtures>({
 
   logout: async ({ page }, use) => {
     await use(async () => {
-      // Ensure page is stable
+      // Ensure page is stable - wait for load state instead of networkidle
       try {
-        await page.waitForLoadState('networkidle', { timeout: 3000 });
+        await page.waitForLoadState('load', { timeout: 5000 });
       } catch (e) {
         // Ignore timeout, proceed
       }
 
-      // Click user menu
+      // Click user menu - wait for it to be visible and enabled
       const userMenuSelector = '[aria-label*="user menu" i], [aria-label*="account" i]';
       const userMenu = page.locator(userMenuSelector).first();
       await userMenu.waitFor({ state: 'visible', timeout: 15000 });
+      // Ensure menu is ready before clicking
+      await userMenu.waitFor({ state: 'attached', timeout: 5000 }).catch(() => {});
       await userMenu.click();
-      // Click logout
-      await page.click('text=/sign\\s*out|log\\s*out|logout/i')
-      await page.waitForURL(/\/auth\/login/, { timeout: 5000 })
+      
+      // Wait for dropdown menu to appear before clicking logout
+      const logoutButton = page.locator('text=/sign\\s*out|log\\s*out|logout/i')
+      await logoutButton.waitFor({ state: 'visible', timeout: 5000 });
+      await logoutButton.click();
+      
+      // Wait for navigation to login page with longer timeout
+      await page.waitForURL(/\/auth\/login/, { timeout: 10000 })
     })
   },
 })

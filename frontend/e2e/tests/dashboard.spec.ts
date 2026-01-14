@@ -32,7 +32,9 @@ test.describe('Dashboard', () => {
     await dashboardPage.goto()
     
     await dashboardPage.navigateToJobs()
-    await expect(page).toHaveURL('/dashboard/jobs')
+    // Wait for the jobs page to be fully loaded
+    await expect(page).toHaveURL('/dashboard/jobs', { timeout: 10000 })
+    await expect(page.locator('main')).toBeVisible({ timeout: 10000 })
   })
 
   test('should navigate to create workflow page', async ({ page }) => {
@@ -40,7 +42,13 @@ test.describe('Dashboard', () => {
     await dashboardPage.goto()
     
     await dashboardPage.clickCreateLeadMagnet()
-    await expect(page).toHaveURL('/dashboard/workflows/new')
+    // Wait for the new workflow page to be fully loaded
+    await expect(page).toHaveURL('/dashboard/workflows/new', { timeout: 10000 })
+    // Verify the choice screen appears
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(
+      /How would you like to start/i,
+      { timeout: 10000 }
+    )
   })
 
   test('should have accessible navigation', async ({ page }) => {

@@ -25,10 +25,6 @@ export interface OpenJobDocumentOptions {
    * Show a loading toast while fetching the document. Defaults to true.
    */
   showLoadingToast?: boolean;
-  /**
-   * Timeout in milliseconds for fetching the document. Defaults to 30000 (30 seconds).
-   */
-  timeoutMs?: number;
 }
 
 function getUserFacingErrorMessage(error: unknown): string {
@@ -88,7 +84,6 @@ export async function openJobDocumentInNewTab(
     revokeAfterMs = 5000,
     successToast,
     showLoadingToast = true,
-    timeoutMs = 30000,
   } = options;
 
   // Show loading feedback immediately
@@ -156,13 +151,8 @@ export async function openJobDocumentInNewTab(
   let blobUrl: string | null = null;
 
   try {
-    // Fetch the blob URL with timeout
-    const fetchPromise = api.getJobDocumentBlobUrl(jobId);
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("Request timeout")), timeoutMs)
-    );
-
-    blobUrl = await Promise.race([fetchPromise, timeoutPromise]);
+    // Fetch the blob URL
+    blobUrl = await api.getJobDocumentBlobUrl(jobId);
 
     if (!blobUrl) {
       throw new Error("Failed to create blob URL");

@@ -1,15 +1,13 @@
 import json
 import logging
-import os
 import time
-from typing import Dict, Any, Generator
+from typing import Dict, Any
 
 from services.tools.execution import CUAgent
 from services.cua.drivers.playwright import PlaywrightEnvironment
 from services.cua.screenshot_service import S3ScreenshotService
 from s3_service import S3Service
 from services.openai_client import OpenAIClient
-from services.cua.types import CUAEvent
 import dataclasses
 
 # Setup logging
@@ -36,6 +34,7 @@ class StreamingHandler:
         job_id = event.get('job_id')
         tenant_id = event.get('tenant_id')
         model = event.get('model', 'computer-use-preview')
+        requested_model = model
         instructions = event.get('instructions', '')
         input_text = event.get('input_text', '')
         tools = event.get('tools', [])
@@ -50,9 +49,70 @@ class StreamingHandler:
             (isinstance(t, dict) and t.get('type') == 'computer_use_preview')
             for t in tools
         )
+
+        # #region agent log
+        try:
+            tool_types = []
+            image_tool_model = None
+            for t in tools or []:
+                if isinstance(t, dict):
+                    tt = t.get("type")
+                    tool_types.append(tt)
+                    if tt == "image_generation" and isinstance(t.get("model"), str):
+                        image_tool_model = t.get("model")
+                else:
+                    tool_types.append(t)
+            has_image_generation = any(tt == "image_generation" for tt in tool_types)
+            with open("/Users/canyonsmith/lead-magnent-ai/.cursor/debug.log", "a") as f:
+                f.write(json.dumps({
+                    "sessionId": "debug-session",
+                    "runId": job_id or "cua-unknown",
+                    "hypothesisId": "H1",
+                    "location": "cua/lambda_handler.py:process_stream",
+                    "message": "CUA request received",
+                    "data": {
+                        "job_id": job_id,
+                        "requested_model": requested_model,
+                        "tool_choice": tool_choice,
+                        "tools_count": len(tools) if isinstance(tools, list) else None,
+                        "tool_types": tool_types,
+                        "has_computer_use": has_computer_use,
+                        "has_image_generation": has_image_generation,
+                        "image_tool_model": image_tool_model,
+                        "instructions_len": len(instructions or ""),
+                        "input_text_len": len(input_text or ""),
+                    },
+                    "timestamp": int(time.time() * 1000),
+                }) + "\n")
+        except Exception:
+            pass
+        # #endregion
+
         if has_computer_use and model != 'computer-use-preview':
             logger.warning(f"[CUA] Overriding model from {model} to computer-use-preview (required for computer_use_preview tool)")
             model = 'computer-use-preview'
+
+        # #region agent log
+        try:
+            with open("/Users/canyonsmith/lead-magnent-ai/.cursor/debug.log", "a") as f:
+                f.write(json.dumps({
+                    "sessionId": "debug-session",
+                    "runId": job_id or "cua-unknown",
+                    "hypothesisId": "H2",
+                    "location": "cua/lambda_handler.py:process_stream",
+                    "message": "CUA model selection",
+                    "data": {
+                        "job_id": job_id,
+                        "requested_model": requested_model,
+                        "final_model": model,
+                        "model_overridden": bool(has_computer_use and requested_model != model),
+                        "has_computer_use": has_computer_use,
+                    },
+                    "timestamp": int(time.time() * 1000),
+                }) + "\n")
+        except Exception:
+            pass
+        # #endregion
 
         # Initialize deps
         env = PlaywrightEnvironment()

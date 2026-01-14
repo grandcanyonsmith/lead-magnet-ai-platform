@@ -6,7 +6,6 @@
 import { logger } from "../utils/logger";
 import { retryWithBackoff } from "../utils/errorHandling";
 
-const WEBHOOK_TIMEOUT_MS = 30000; // 30 seconds timeout for webhook requests
 const MAX_RETRY_ATTEMPTS = 3;
 
 export interface WorkflowGenerationWebhookPayload {
@@ -49,7 +48,7 @@ export async function sendWorkflowGenerationWebhook(
 
   return retryWithBackoff(
     async () => {
-      const fetchPromise = fetch(webhookUrl, {
+      const response = await fetch(webhookUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -57,19 +56,6 @@ export async function sendWorkflowGenerationWebhook(
         },
         body: JSON.stringify(payload),
       });
-
-      // Add timeout using Promise.race
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => {
-          reject(
-            new Error(
-              `Webhook request timed out after ${WEBHOOK_TIMEOUT_MS}ms`,
-            ),
-          );
-        }, WEBHOOK_TIMEOUT_MS);
-      });
-
-      const response = await Promise.race([fetchPromise, timeoutPromise]);
 
       if (!response.ok) {
         const errorText = await response

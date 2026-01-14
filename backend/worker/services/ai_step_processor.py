@@ -75,9 +75,6 @@ class AIStepProcessor:
         """
         step_name = step.get('step_name', f'Step {step_index + 1}')
         step_model = step.get('model', 'gpt-5.2')
-        # Force ALL steps onto gpt-5.2 for highest quality/consistency (platform-wide standard).
-        if step_model != 'gpt-5.2':
-            step_model = 'gpt-5.2'
         step_instructions = step.get('instructions', '')
         # Extract reasoning effort from step config, default to 'high' for GPT-5 family
         step_reasoning_effort = step.get('reasoning_effort')
