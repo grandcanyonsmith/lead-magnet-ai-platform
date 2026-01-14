@@ -130,14 +130,45 @@ class ImageGenerator:
             except Exception:
                 plan_obj = {}
 
-        images_plan = plan_obj.get("images") if isinstance(plan_obj, dict) else None
-        if not isinstance(images_plan, list) or len(images_plan) == 0:
-            images_plan = [
+        raw_images_plan = plan_obj.get("images") if isinstance(plan_obj, dict) else None
+        normalized_plan: List[Dict[str, str]] = []
+        if isinstance(raw_images_plan, list):
+            for item in raw_images_plan:
+                if not isinstance(item, dict):
+                    continue
+                prompt = item.get("prompt")
+                if not isinstance(prompt, str) or not prompt.strip():
+                    continue
+                label = item.get("label")
+                if not isinstance(label, str) or not label.strip():
+                    label = f"image_{len(normalized_plan) + 1}"
+                normalized_plan.append(
+                    {
+                        "label": label.strip(),
+                        "prompt": prompt.strip(),
+                    }
+                )
+
+        if not normalized_plan:
+            fallback_prompt = f"{step_instructions}\n\n{full_context}".strip()
+            if not fallback_prompt:
+                fallback_prompt = "Generate an image that matches the requested subject."
+            logger.warning(
+                "[ImageGenerator] Planner returned no valid prompts; using fallback prompt",
+                extra={
+                    "job_id": job_id,
+                    "tenant_id": tenant_id,
+                    "step_name": step_name,
+                },
+            )
+            normalized_plan = [
                 {
                     "label": step_name or "image",
-                    "prompt": f"{step_instructions}\n\n{full_context}",
+                    "prompt": fallback_prompt,
                 }
             ]
+
+        images_plan = normalized_plan
 
         # Extract image-generation config
         img_size = image_tool.get("size", "auto")
@@ -150,8 +181,6 @@ class ImageGenerator:
         images_output: List[Dict[str, Any]] = []
 
         for idx, item in enumerate(images_plan):
-            if not isinstance(item, dict):
-                continue
             prompt = item.get("prompt")
             if not isinstance(prompt, str) or not prompt.strip():
                 continue
