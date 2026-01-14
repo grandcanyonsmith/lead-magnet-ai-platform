@@ -136,8 +136,19 @@ export default function StepTester({ step, index }: StepTesterProps) {
         (typeof t === 'object' && t.type === 'web_search')
       );
       
+      const isWebhookStep = Boolean(
+        (step.webhook_url && step.webhook_url.trim()) ||
+          step.step_type === "webhook",
+      );
+      const isHandoffStep = Boolean(
+        step.handoff_workflow_id && step.handoff_workflow_id.trim(),
+      );
+
       // Also enable for general AI generation (text output)
-      const isAiGeneration = !step.step_type || step.step_type === 'ai_generation';
+      const isAiGeneration =
+        (!step.step_type || step.step_type === "ai_generation") &&
+        !isWebhookStep &&
+        !isHandoffStep;
 
       if (hasComputerUse || hasShell || hasWebSearch || isAiGeneration) {
         setShowStream(true);

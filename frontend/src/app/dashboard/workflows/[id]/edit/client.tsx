@@ -139,26 +139,50 @@ export default function EditWorkflowPage() {
 
     for (let i = 0; i < steps.length; i++) {
       const step = steps[i];
+      const isWebhookStep = Boolean(
+        (step.webhook_url && step.webhook_url.trim()) ||
+          step.step_type === "webhook",
+      );
+      const isHandoffStep = Boolean(
+        step.handoff_workflow_id && step.handoff_workflow_id.trim(),
+      );
+      const isAiStep = !isWebhookStep && !isHandoffStep;
+
+      if (isWebhookStep && isHandoffStep) {
+        setError(
+          `Step ${i + 1} cannot be both a webhook step and a lead magnet handoff step. Please choose one.`,
+        );
+        return;
+      }
+
       if (!step.step_name.trim()) {
         setError(`Step ${i + 1} name is required`);
         return;
       }
       // Only validate instructions for AI generation steps
-      if (
-        step.step_type !== "webhook" &&
-        (!step.instructions || !step.instructions.trim())
-      ) {
+      if (isAiStep && (!step.instructions || !step.instructions.trim())) {
         setError(
           `Step ${i + 1} instructions are required for AI generation steps`,
         );
         return;
       }
       // Validate HTTP URL for HTTP request steps
-      if (
-        step.step_type === "webhook" &&
-        (!step.webhook_url || !step.webhook_url.trim())
-      ) {
+      if (isWebhookStep && (!step.webhook_url || !step.webhook_url.trim())) {
         setError(`Step ${i + 1} HTTP URL is required for HTTP request steps`);
+        return;
+      }
+
+      if (isHandoffStep && (!step.handoff_workflow_id || !step.handoff_workflow_id.trim())) {
+        setError(
+          `Step ${i + 1} target lead magnet is required for handoff steps`,
+        );
+        return;
+      }
+
+      if (isHandoffStep && workflowId && step.handoff_workflow_id === workflowId) {
+        setError(
+          `Step ${i + 1} cannot hand off to itself. Choose a different lead magnet.`,
+        );
         return;
       }
     }

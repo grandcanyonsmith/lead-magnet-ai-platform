@@ -52,6 +52,14 @@ export interface WorkflowStep {
     exclude_step_indices?: number[]; // Steps to exclude (all included by default)
     include_job_info: boolean;
   };
+
+  // Lead magnet handoff step fields
+  handoff_workflow_id?: string;
+  handoff_payload_mode?: "previous_step_output" | "full_context" | "submission_only";
+  handoff_input_field?: string;
+  handoff_bypass_required_inputs?: boolean;
+  handoff_include_submission_data?: boolean;
+  handoff_include_context?: boolean;
 }
 
 export interface ToolConfig {

@@ -3,20 +3,44 @@ Content Detector Utility
 Detects content type (HTML vs Markdown) from content and step name.
 """
 
+import json
+import re
+
 
 def detect_content_type(content: str, step_name: str = '') -> str:
     """
-    Detect content type (HTML or Markdown) from content and step name.
+    Detect content type (JSON, HTML, or Markdown) from content and step name.
     
     Args:
         content: Content string to analyze
         step_name: Optional step name that may hint at content type
         
     Returns:
-        File extension string: '.html' or '.md'
+        File extension string: '.json', '.html', or '.md'
     """
-    content_stripped = content.strip()
+    if content is None:
+        return '.md'
+
+    content_stripped = str(content).strip()
     step_name_lower = step_name.lower()
+
+    # If the entire output is wrapped in a markdown code fence, unwrap it.
+    # This is common when models output JSON/HTML inside ```json / ```html blocks.
+    if content_stripped.startswith("```"):
+        # Remove opening fence line (``` or ```lang)
+        content_stripped = re.sub(r"^```[a-zA-Z0-9_-]*\s*\n?", "", content_stripped)
+        # Remove closing fence at end
+        content_stripped = re.sub(r"\n?\s*```$", "", content_stripped).strip()
+
+    # Check if content looks like JSON (object or array) and is parseable.
+    # We only classify as JSON when parsing succeeds to avoid misclassifying markdown that contains snippets.
+    if content_stripped and content_stripped[0] in ["{", "["]:
+        try:
+            parsed = json.loads(content_stripped)
+            if isinstance(parsed, (dict, list)):
+                return ".json"
+        except Exception:
+            pass
     
     # Check if content looks like HTML
     is_html = (

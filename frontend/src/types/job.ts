@@ -13,7 +13,8 @@ export type StepType =
   | "form_submission"
   | "html_generation"
   | "final_output"
-  | "webhook";
+  | "webhook"
+  | "workflow_handoff";
 
 export interface ExecutionStepUsageInfo {
   prompt_tokens?: number;

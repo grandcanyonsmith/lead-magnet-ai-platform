@@ -35,6 +35,7 @@ import { CollapsibleSection } from "@/components/workflows/edit/CollapsibleSecti
 
 import AIAssist from "./step-editor/AIAssist";
 import WebhookConfig from "./step-editor/WebhookConfig";
+import HandoffConfig from "./step-editor/HandoffConfig";
 import ComputerUseConfig from "./step-editor/ComputerUseConfig";
 import ImageGenerationConfig from "./step-editor/ImageGenerationConfig";
 import StepTester from "./step-editor/StepTester";
@@ -219,6 +220,7 @@ export default function WorkflowStepEditor({
     });
   
   const [isWebhookCollapsed, setIsWebhookCollapsed] = useState(true);
+  const [isHandoffCollapsed, setIsHandoffCollapsed] = useState(true);
   const [showAdvancedAI, setShowAdvancedAI] = useState(false);
   const [isInstructionsExpanded, setIsInstructionsExpanded] = useState(false);
 
@@ -1308,6 +1310,18 @@ export default function WorkflowStepEditor({
               step={localStep}
               index={index}
               allSteps={allSteps}
+              workflowId={workflowId}
+              onChange={handleChange}
+            />
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            title="Send to another Lead Magnet"
+            isCollapsed={isHandoffCollapsed}
+            onToggle={() => setIsHandoffCollapsed(!isHandoffCollapsed)}
+          >
+            <HandoffConfig
+              step={localStep}
               workflowId={workflowId}
               onChange={handleChange}
             />
