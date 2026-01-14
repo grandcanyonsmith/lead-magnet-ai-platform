@@ -10,6 +10,8 @@ import { env } from "../utils/env";
 import { stripMarkdownCodeFences } from "../utils/openaiHelpers";
 
 const ARTIFACTS_BUCKET = env.artifactsBucket;
+const CLOUDFRONT_DOMAIN = env.cloudfrontDomain;
+const AWS_REGION = env.awsRegion;
 const s3Client = new S3Client({ region: env.awsRegion });
 
 if (!ARTIFACTS_BUCKET) {
@@ -23,6 +25,82 @@ if (!ARTIFACTS_BUCKET) {
  * Handles fetching, saving, and editing execution steps.
  */
 export class ExecutionStepsService {
+  private normalizeImageUrl(url: string): string {
+    if (!url || !CLOUDFRONT_DOMAIN) return url;
+    try {
+      const parsed = new URL(url);
+      if (parsed.hostname === CLOUDFRONT_DOMAIN) {
+        return url;
+      }
+
+      const path = parsed.pathname.replace(/^\/+/, "");
+      if (!path) return url;
+
+      const looksLikeArtifact =
+        path.startsWith("cust_") && path.includes("/jobs/");
+      const isDirectS3 =
+        ARTIFACTS_BUCKET &&
+        parsed.hostname ===
+          `${ARTIFACTS_BUCKET}.s3.${AWS_REGION}.amazonaws.com`;
+      const isCloudFront = parsed.hostname.endsWith(".cloudfront.net");
+
+      if (isDirectS3 || (isCloudFront && looksLikeArtifact)) {
+        return `https://${CLOUDFRONT_DOMAIN}/${path}`;
+      }
+    } catch {
+      return url;
+    }
+    return url;
+  }
+
+  private normalizeExecutionStepsImageUrls(executionSteps: any[]): any[] {
+    if (!Array.isArray(executionSteps)) return executionSteps;
+
+    return executionSteps.map((step) => {
+      if (!step || typeof step !== "object") {
+        return step;
+      }
+
+      let updatedStep = step;
+
+      if (Array.isArray(step.image_urls)) {
+        const normalizedUrls = step.image_urls.map((url: any) =>
+          this.normalizeImageUrl(String(url)),
+        );
+        const changed = normalizedUrls.some(
+          (url: string, idx: number) => url !== step.image_urls[idx],
+        );
+        if (changed) {
+          updatedStep = { ...updatedStep, image_urls: normalizedUrls };
+        }
+      }
+
+      if (
+        updatedStep.response_details &&
+        Array.isArray(updatedStep.response_details.image_urls)
+      ) {
+        const normalizedResponseUrls =
+          updatedStep.response_details.image_urls.map((url: any) =>
+            this.normalizeImageUrl(String(url)),
+          );
+        const changed = normalizedResponseUrls.some(
+          (url: string, idx: number) =>
+            url !== updatedStep.response_details.image_urls[idx],
+        );
+        if (changed) {
+          updatedStep = {
+            ...updatedStep,
+            response_details: {
+              ...updatedStep.response_details,
+              image_urls: normalizedResponseUrls,
+            },
+          };
+        }
+      }
+
+      return updatedStep;
+    });
+  }
   /**
    * Fetch execution steps from S3.
    */
@@ -94,7 +172,7 @@ export class ExecutionStepsService {
         );
       }
 
-      return parsedData;
+      return this.normalizeExecutionStepsImageUrls(parsedData);
     } catch (error: any) {
       if (error instanceof ApiError) {
         throw error;
