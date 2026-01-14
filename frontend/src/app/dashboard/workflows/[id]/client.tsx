@@ -326,17 +326,66 @@ export default function WorkflowDetailPage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <a
-                      href={
-                        workflow.form.public_slug
+                      href={(() => {
+                        const href = workflow.form.public_slug
                           ? buildPublicFormUrl(
                               workflow.form.public_slug,
                               settings?.custom_domain,
                             )
-                          : "#"
-                      }
+                          : "#";
+                        // #region agent log
+                        fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client.tsx:329',message:'href attribute computed',data:{href,hasPublicSlug:!!workflow.form?.public_slug,publicSlug:workflow.form?.public_slug},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+                        // #endregion
+                        return href;
+                      })()}
+                      onClick={(e) => {
+                        try {
+                          if (!workflow.form.public_slug) {
+                            // #region agent log
+                            fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client.tsx:346',message:'No public_slug - preventing navigation',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix-v2',hypothesisId:'C'})}).catch(()=>{});
+                            // #endregion
+                            e.preventDefault();
+                            toast.error("Public form URL not available. Please configure the form first.");
+                            return;
+                          }
+                          const url = buildPublicFormUrl(
+                            workflow.form.public_slug,
+                            settings?.custom_domain,
+                          );
+                          if (!url || url === "#") {
+                            // #region agent log
+                            fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client.tsx:361',message:'Invalid URL - preventing navigation',data:{url},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix-v2',hypothesisId:'D'})}).catch(()=>{});
+                            // #endregion
+                            e.preventDefault();
+                            toast.error("Unable to generate public form URL.");
+                            return;
+                          }
+                          // Valid URL - call window.open() synchronously BEFORE any async operations
+                          // This ensures popup blockers don't block it
+                          e.preventDefault();
+                          const openedWindow = window.open(url, '_blank', 'noopener,noreferrer');
+                          // #region agent log
+                          fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client.tsx:373',message:'window.open called',data:{url,openedWindow:!!openedWindow,wasBlocked:!openedWindow},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix-v2',hypothesisId:'A'})}).catch(()=>{});
+                          // #endregion
+                          if (!openedWindow) {
+                            toast.error("Popup blocked. Please allow popups for this site and try again.");
+                          }
+                        } catch (error) {
+                          // #region agent log
+                          fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client.tsx:380',message:'Error in onClick handler',data:{error:error instanceof Error?error.message:String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix-v2',hypothesisId:'E'})}).catch(()=>{});
+                          // #endregion
+                          e.preventDefault();
+                          toast.error("An error occurred while opening the form.");
+                        }
+                      }}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2 px-4 py-2.5 bg-primary-600 dark:bg-primary text-white dark:text-primary-foreground font-bold rounded-xl hover:bg-primary-700 dark:hover:bg-primary/90 transition-all shadow-md active:scale-[0.98]"
+                      className={clsx(
+                        "flex items-center justify-center gap-2 px-4 py-2.5 font-bold rounded-xl transition-all shadow-md active:scale-[0.98]",
+                        workflow.form.public_slug
+                          ? "bg-primary-600 dark:bg-primary text-white dark:text-primary-foreground hover:bg-primary-700 dark:hover:bg-primary/90 cursor-pointer"
+                          : "bg-gray-400 dark:bg-gray-600 text-white cursor-not-allowed opacity-60"
+                      )}
                     >
                       <ArrowTopRightOnSquareIcon className="w-5 h-5" />
                       View Public Form

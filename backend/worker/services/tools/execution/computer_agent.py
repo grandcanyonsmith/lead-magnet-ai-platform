@@ -161,6 +161,44 @@ class CUAgent:
             (t == "shell") or (isinstance(t, dict) and t.get("type") == "shell")
             for t in (tools or [])
         )
+
+        # #region agent log
+        try:
+            tool_types = []
+            image_tool_models = []
+            for t in (tools or []):
+                if isinstance(t, dict):
+                    tt = t.get("type")
+                    tool_types.append(tt)
+                    if tt == "image_generation" and isinstance(t.get("model"), str):
+                        image_tool_models.append(t.get("model"))
+                else:
+                    tool_types.append(t)
+            has_image_generation_tool = any(tt == "image_generation" for tt in tool_types)
+            with open("/Users/canyonsmith/lead-magnent-ai/.cursor/debug.log", "a") as f:
+                f.write(json.dumps({
+                    "sessionId": "debug-session",
+                    "runId": job_id or "cua-unknown",
+                    "hypothesisId": "H3",
+                    "location": "computer_agent.py:run_loop",
+                    "message": "CUAgent starting (tool summary)",
+                    "data": {
+                        "job_id": job_id,
+                        "model": model,
+                        "tool_choice": tool_choice,
+                        "tools_count": len(tools) if isinstance(tools, list) else None,
+                        "tool_types": tool_types,
+                        "has_computer_use_tool": has_computer_use_tool,
+                        "has_shell_tool": has_shell_tool,
+                        "has_image_generation_tool": has_image_generation_tool,
+                        "image_tool_models": image_tool_models,
+                    },
+                    "timestamp": int(time.time() * 1000),
+                }) + "\n")
+        except Exception:
+            pass
+        # #endregion
+
         if has_computer_use_tool and has_shell_tool:
             hint = (
                 "TOOL ORDER: If a subtask can be solved via command-line/network inspection "

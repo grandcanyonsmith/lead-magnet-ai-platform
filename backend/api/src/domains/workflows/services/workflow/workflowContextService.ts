@@ -1,11 +1,9 @@
 import { logger } from '@utils/logger';
 import { retryWithBackoff } from '@utils/errorHandling';
-import { withTimeout } from '@utils/timeout';
 import { validateUrl } from '@utils/validators';
 import { BrandSettings } from '@utils/types';
 
 const MAX_CONTENT_LENGTH = 50000; // Limit to ~50k characters to avoid token limits
-const FETCH_TIMEOUT = 10000; // 10 seconds timeout
 const MAX_RETRY_ATTEMPTS = 3;
 
 export async function fetchICPContent(url: string): Promise<string | null> {
@@ -28,14 +26,12 @@ export async function fetchICPContent(url: string): Promise<string | null> {
     async () => {
       logger.info('[ICP Fetcher] Fetching ICP document', { url });
 
-      const fetchPromise = fetch(url, {
+      const response = await fetch(url, {
         headers: {
           'User-Agent': 'LeadMagnet-AI/1.0',
           Accept: 'text/html,text/plain,application/json,application/pdf',
         },
       });
-
-      const response = await withTimeout(fetchPromise, FETCH_TIMEOUT, `ICP fetch timed out after ${FETCH_TIMEOUT}ms`);
 
       if (!response.ok) {
         logger.warn('[ICP Fetcher] Failed to fetch ICP document', {
