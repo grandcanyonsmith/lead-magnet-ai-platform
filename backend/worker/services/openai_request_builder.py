@@ -130,6 +130,35 @@ class OpenAIRequestBuilder:
             "instructions": instructions_text,
             "input": api_input
         }
+
+        # Normalize tools to a list (downstream expects iterable)
+        tools = tools or []
+
+        # Deep research model requirement:
+        # Deep research models require at least one of 'web_search_preview', 'mcp', or 'file_search' tools.
+        # If none are present, add 'file_search' defensively so the API call is accepted.
+        if isinstance(model, str) and "deep-research" in model.lower():
+            required_tool_types = {"web_search_preview", "mcp", "file_search"}
+            has_required_tool = False
+            for t in tools:
+                if isinstance(t, str):
+                    t_type = t
+                elif isinstance(t, dict):
+                    t_type = t.get("type")
+                else:
+                    continue
+                if t_type in required_tool_types:
+                    has_required_tool = True
+                    break
+
+            if not has_required_tool:
+                logger.info(
+                    "[OpenAI Request Builder] Deep research model requires at least one of "
+                    "web_search_preview, mcp, or file_search. Adding file_search as default.",
+                    extra={"model": model},
+                )
+                tools = list(tools)
+                tools.append({"type": "file_search"})
         
         if tools and len(tools) > 0:
             # Filter out incompatible tools when computer_use_preview is present
@@ -198,23 +227,23 @@ class OpenAIRequestBuilder:
             pass
         # #endregion
 
-            # Only add tools if we actually have any after cleaning/filtering
-            if cleaned_tools:
-                params["tools"] = cleaned_tools
-                if tool_choice != "none":
-                    params["tool_choice"] = tool_choice
-            elif tool_choice == "required":
-                # If we filtered out all tools but tool_choice was required, we must drop tool_choice
-                # to avoid API error 400: "Tool choice 'required' must be specified with 'tools' parameter."
-                logger.warning(
-                    "[OpenAI Request Builder] All tools were filtered out but tool_choice was 'required'. "
-                    "Dropping tool_choice to prevent API error.",
-                    extra={
-                        "model": model,
-                        "original_tools_count": len(tools),
-                        "has_computer_use": has_computer_use
-                    }
-                )
+        # Only add tools if we actually have any after cleaning/filtering
+        if cleaned_tools:
+            params["tools"] = cleaned_tools
+            if tool_choice != "none":
+                params["tool_choice"] = tool_choice
+        elif tool_choice == "required":
+            # If we filtered out all tools but tool_choice was required, we must not set tool_choice
+            # to avoid API error 400: "Tool choice 'required' must be specified with 'tools' parameter."
+            logger.warning(
+                "[OpenAI Request Builder] All tools were filtered out but tool_choice was 'required'. "
+                "Not setting tool_choice to prevent API error.",
+                extra={
+                    "model": model,
+                    "original_tools_count": len(tools) if isinstance(tools, list) else None,
+                    "has_computer_use": has_computer_use,
+                },
+            )
 
         # Reasoning + speed controls (Responses API) 
         # Map deprecated reasoning_level to reasoning_effort if provided
