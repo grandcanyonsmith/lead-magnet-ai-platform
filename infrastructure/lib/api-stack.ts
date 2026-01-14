@@ -134,7 +134,8 @@ export class ApiStack extends cdk.Stack {
         [ENV_VAR_NAMES.CUA_LAMBDA_FUNCTION_NAME]: process.env.CUA_LAMBDA_FUNCTION_NAME || FUNCTION_NAMES.CUA_WORKER,
         [ENV_VAR_NAMES.SHELL_LAMBDA_FUNCTION_NAME]: process.env.SHELL_LAMBDA_FUNCTION_NAME || FUNCTION_NAMES.SHELL_WORKER,
         // Shell tool configuration (defaults can be overridden at deploy time)
-        [ENV_VAR_NAMES.SHELL_TOOL_ENABLED]: process.env.SHELL_TOOL_ENABLED || 'false',
+        // Enable shell tool by default if shellExecutor is provided, otherwise respect env var or default to false
+        [ENV_VAR_NAMES.SHELL_TOOL_ENABLED]: process.env.SHELL_TOOL_ENABLED || (props.shellExecutor ? 'true' : 'false'),
         [ENV_VAR_NAMES.SHELL_TOOL_IP_LIMIT_PER_HOUR]: process.env.SHELL_TOOL_IP_LIMIT_PER_HOUR || '10',
         [ENV_VAR_NAMES.SHELL_TOOL_MAX_IN_FLIGHT]: process.env.SHELL_TOOL_MAX_IN_FLIGHT || '5',
         [ENV_VAR_NAMES.SHELL_TOOL_QUEUE_WAIT_MS]: process.env.SHELL_TOOL_QUEUE_WAIT_MS || '0',
