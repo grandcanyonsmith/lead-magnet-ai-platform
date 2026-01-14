@@ -21,51 +21,101 @@ echo "AWS Account ID: $AWS_ACCOUNT_ID"
 echo "AWS Region: $AWS_REGION"
 echo ""
 
-# Deploy infrastructure
-print_subsection "Step 1: Deploying CDK infrastructure"
+# Deploy infrastructure (foundation stacks first)
+print_subsection "Step 1: Deploying CDK infrastructure (foundation stacks)"
 cd infrastructure
 npm install
 npx cdk bootstrap aws://$AWS_ACCOUNT_ID/$AWS_REGION || true
-npx cdk deploy --all --require-approval never
+
+# IMPORTANT:
+# - The Compute stack deploys Lambda container functions using an ECR image tag (`latest`).
+# - On a fresh account/region, the image won't exist yet.
+# - Deploy foundation stacks first to create the ECR repo (and other deps),
+#   then push the worker image, then deploy the application stacks.
+npx cdk deploy \
+  leadmagnet-database \
+  leadmagnet-auth \
+  leadmagnet-storage \
+  leadmagnet-worker \
+  leadmagnet-shell-executor \
+  --require-approval never
 cd ..
-print_success "Infrastructure deployed"
+print_success "Foundation infrastructure deployed"
 echo ""
 
-# Get stack outputs
-print_subsection "Step 2: Getting stack outputs"
-API_URL=$(get_stack_output "leadmagnet-api" "ApiUrl" "$AWS_REGION")
+# Get stack outputs (foundation)
+print_subsection "Step 2: Getting foundation stack outputs"
 USER_POOL_ID=$(get_stack_output "leadmagnet-auth" "UserPoolId" "$AWS_REGION")
 CLIENT_ID=$(get_stack_output "leadmagnet-auth" "UserPoolClientId" "$AWS_REGION")
 ECR_REPO=$(get_stack_output "leadmagnet-worker" "EcrRepositoryUri" "$AWS_REGION")
-JOB_PROCESSOR_LAMBDA_ARN=$(get_stack_output "leadmagnet-compute" "JobProcessorLambdaArn" "$AWS_REGION")
 ARTIFACTS_BUCKET=$(get_stack_output "leadmagnet-storage" "ArtifactsBucketName" "$AWS_REGION")
 DISTRIBUTION_ID=$(get_stack_output "leadmagnet-storage" "DistributionId" "$AWS_REGION")
 
-echo "API URL: $API_URL"
+if [ -z "$ECR_REPO" ] || [ "$ECR_REPO" = "None" ]; then
+    print_error "ECR repository URI not found (leadmagnet-worker:EcrRepositoryUri). Foundation deploy may have failed."
+    exit 1
+fi
+
 echo "User Pool ID: $USER_POOL_ID"
 echo "Client ID: $CLIENT_ID"
+echo "ECR Repo: $ECR_REPO"
 echo ""
 
 # Build and deploy worker
 print_subsection "Step 3: Building and deploying worker Docker image"
 cd backend/worker
-aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPO
+
+# docker login expects the registry host, not the full repository URI
+ECR_REGISTRY=$(echo "$ECR_REPO" | awk -F'/' '{print $1}')
+aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin "$ECR_REGISTRY"
+
 docker build --platform linux/amd64 --provenance=false -t $ECR_REPO:latest .
 docker push $ECR_REPO:latest
-
-# IMPORTANT: Lambda container images do NOT auto-refresh when a tag is updated in ECR.
-# Update the Job Processor Lambda to use the latest pushed image.
-aws lambda update-function-code \
-  --function-name "$JOB_PROCESSOR_LAMBDA_ARN" \
-  --image-uri "$ECR_REPO:latest" \
-  --region "$AWS_REGION"
 
 cd ../..
 print_success "Worker deployed"
 echo ""
 
+# Deploy application stacks now that the worker image exists
+print_subsection "Step 4: Deploying CDK application stacks (compute + API + dashboard)"
+cd infrastructure
+npx cdk deploy \
+  leadmagnet-compute \
+  leadmagnet-api \
+  leadmagnet-dashboard \
+  --require-approval never
+cd ..
+print_success "Application stacks deployed"
+echo ""
+
+# Get stack outputs (application stacks)
+print_subsection "Step 5: Getting application stack outputs"
+API_URL=$(get_stack_output "leadmagnet-api" "ApiUrl" "$AWS_REGION")
+JOB_PROCESSOR_LAMBDA_ARN=$(get_stack_output "leadmagnet-compute" "JobProcessorLambdaArn" "$AWS_REGION")
+CUA_WORKER_LAMBDA_ARN=$(get_stack_output "leadmagnet-compute" "CuaWorkerLambdaArn" "$AWS_REGION")
+SHELL_WORKER_LAMBDA_ARN=$(get_stack_output "leadmagnet-compute" "ShellWorkerLambdaArn" "$AWS_REGION")
+
+echo "API URL: $API_URL"
+echo ""
+
+# IMPORTANT: Lambda container images do NOT auto-refresh when a tag is updated in ECR.
+# Update all worker Lambdas to use the latest pushed image.
+print_subsection "Step 6: Updating worker Lambdas to use latest container image"
+for FN in "$JOB_PROCESSOR_LAMBDA_ARN" "$CUA_WORKER_LAMBDA_ARN" "$SHELL_WORKER_LAMBDA_ARN"; do
+  if [ -n "$FN" ] && [ "$FN" != "None" ]; then
+    aws lambda update-function-code \
+      --function-name "$FN" \
+      --image-uri "$ECR_REPO:latest" \
+      --region "$AWS_REGION"
+  else
+    print_warning "Skipping Lambda update (missing ARN)."
+  fi
+done
+print_success "Worker Lambdas updated"
+echo ""
+
 # Build and deploy API
-print_subsection "Step 4: Building and deploying API Lambda"
+print_subsection "Step 7: Building and deploying API Lambda"
 cd backend/api
 npm install
 npm run package:lambda
@@ -81,7 +131,7 @@ print_success "API deployed"
 echo ""
 
 # Build and deploy frontend
-print_subsection "Step 5: Building and deploying frontend"
+print_subsection "Step 8: Building and deploying frontend"
 cd frontend
 npm install
 NODE_ENV=production \
