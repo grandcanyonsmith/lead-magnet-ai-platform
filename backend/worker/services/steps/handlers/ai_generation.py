@@ -31,9 +31,6 @@ class AIStepHandler(AbstractStepHandler):
     def _prepare_step_tools(self, step: Dict[str, Any]) -> Tuple[str, List[Dict[str, Any]], str]:
         """Prepare and normalize tools for a step."""
         step_model = step.get('model', 'gpt-5.2')
-        # Force GPT family steps onto gpt-5.2 for highest quality/consistency.
-        if isinstance(step_model, str) and step_model.startswith('gpt-') and step_model != 'gpt-5.2':
-            step_model = 'gpt-5.2'
         
         # Do NOT auto-add web_search for o4-mini-deep-research model
         default_tools = [] if step_model == 'o4-mini-deep-research' else ['web_search']

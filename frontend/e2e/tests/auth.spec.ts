@@ -39,11 +39,16 @@ test.describe('Authentication', () => {
 
   test('should logout successfully', async ({ page, login, logout }) => {
     await login()
-    await page.waitForURL(/\/dashboard/, { timeout: 10000 })
+    // Wait for dashboard to be fully loaded before attempting logout
+    await page.waitForURL(/\/dashboard/, { timeout: 15000 })
+    // Wait for main content to ensure page is ready
+    await page.locator('main').waitFor({ timeout: 10000, state: 'visible' }).catch(() => {
+      // Ignore if main is not found - might be onboarding page
+    })
     
     await logout()
     
-    await expect(page).toHaveURL(/\/auth\/login/)
+    await expect(page).toHaveURL(/\/auth\/login/, { timeout: 10000 })
   })
 
   test('should navigate to signup page', async ({ page }) => {

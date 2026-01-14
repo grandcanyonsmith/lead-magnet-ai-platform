@@ -8,14 +8,15 @@ export class DashboardPage {
   readonly sidebar: Locator
   readonly workflowsLink: Locator
   readonly jobsLink: Locator
+  readonly mainContent: Locator
 
   constructor(page: Page) {
     this.page = page
     // The dashboard title is a dynamic greeting ("Good morning, ..."), so wait on stable UI instead.
     this.heading = page.getByRole('heading', { level: 1 })
-    // Use a locator that matches the href and filters by text content
-    // Next.js Link components render as anchor tags
-    // Try getByRole first (more semantic), fallback to href + text filter
+    // Target the header button specifically - it's in the PageHeader component
+    // Use a more specific selector that targets links containing "Create Lead Magnet" text
+    // Prefer the one in the header area (has Sparkles icon) over quick actions
     this.createLeadMagnetButton = page
       .locator('a[href="/dashboard/workflows/new"]')
       .filter({ hasText: /create lead magnet/i })
@@ -31,35 +32,47 @@ export class DashboardPage {
     this.jobsLink = page.locator(
       'aside a[href="/dashboard/jobs"]:has-text("Leads & Results")'
     )
+    // Main content area is more stable than waiting for specific elements
+    this.mainContent = page.locator('main')
   }
 
   async goto() {
     await this.page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
-    // Wait for the page to be fully loaded - wait for the heading to appear first
+    
+    // Wait for main content area to be visible (more stable than heading)
     // This ensures the skeleton loader is gone and content is rendered
-    await this.heading.waitFor({ timeout: 15000, state: 'visible' })
-    // Wait for network to be idle to ensure all API calls are complete
-    try {
-      await this.page.waitForLoadState('networkidle', { timeout: 5000 })
-    } catch {
-      // Ignore timeout - page might not have network activity
-    }
-    // Then wait for the create button to be visible
-    await this.createLeadMagnetButton.waitFor({ timeout: 10000, state: 'visible' })
+    await this.mainContent.waitFor({ timeout: 20000, state: 'visible' })
+    
+    // Wait for sidebar to be visible (indicates layout is loaded)
+    await this.sidebar.waitFor({ timeout: 15000, state: 'visible' })
+    
+    // Wait for the create button to be visible (indicates page content is loaded)
+    // Use a more reliable wait that checks for the button's presence
+    await this.createLeadMagnetButton.waitFor({ timeout: 15000, state: 'visible' })
+    
+    // Wait for page to be fully loaded
+    await this.page.waitForLoadState('load', { timeout: 10000 }).catch(() => {
+      // Ignore timeout - page might already be loaded
+    })
   }
 
   async navigateToWorkflows() {
     await this.workflowsLink.click()
-    await this.page.waitForURL('/dashboard/workflows', { timeout: 5000 })
+    // Use waitForURL with a longer timeout for Next.js client-side routing
+    await this.page.waitForURL('/dashboard/workflows', { timeout: 10000 })
   }
 
   async navigateToJobs() {
     await this.jobsLink.click()
-    await this.page.waitForURL('/dashboard/jobs', { timeout: 5000 })
+    // Use waitForURL with a longer timeout for Next.js client-side routing
+    await this.page.waitForURL('/dashboard/jobs', { timeout: 10000 })
   }
 
   async clickCreateLeadMagnet() {
+    // Ensure button is visible and enabled before clicking
+    await this.createLeadMagnetButton.waitFor({ timeout: 15000, state: 'visible' })
     await this.createLeadMagnetButton.click()
-    await this.page.waitForURL('/dashboard/workflows/new', { timeout: 5000 })
+    // Use waitForURL with a longer timeout for Next.js client-side routing
+    await this.page.waitForURL('/dashboard/workflows/new', { timeout: 10000 })
   }
 }

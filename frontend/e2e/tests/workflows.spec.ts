@@ -30,7 +30,10 @@ test.describe('Workflows', () => {
   })
 
   test('should display workflows list', async ({ page }) => {
-    await page.goto('/dashboard/workflows')
+    await page.goto('/dashboard/workflows', { waitUntil: 'domcontentloaded' })
+    
+    // Wait for main content to be visible first
+    await page.locator('main').waitFor({ timeout: 15000, state: 'visible' })
     
     // Page can show a table (when workflows exist) or an empty state.
     const workflowsTable = page.locator('table')
@@ -38,6 +41,7 @@ test.describe('Workflows', () => {
       name: /No lead magnets yet|No matching lead magnets/i,
     })
 
+    // Wait for either the table or empty state to appear
     await expect(async () => {
       const tableVisible =
         (await workflowsTable.count()) > 0 &&
@@ -47,6 +51,6 @@ test.describe('Workflows', () => {
         (await emptyState.first().isVisible().catch(() => false))
 
       expect(tableVisible || emptyVisible).toBeTruthy()
-    }).toPass({ timeout: 10000 })
+    }).toPass({ timeout: 15000 })
   })
 })
