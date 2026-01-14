@@ -6,6 +6,7 @@ import logging
 from typing import Dict, List, Optional, Any
 from services.tools import ToolBuilder
 from utils import image_utils
+from utils.decimal_utils import convert_decimals_to_float
 
 logger = logging.getLogger(__name__)
 
@@ -138,14 +139,15 @@ class OpenAIRequestBuilder:
             import json
             try:
                 # Create a safe copy of params for logging (without api key which isn't here anyway)
-                debug_payload = {
+                # Convert Decimals to ensure JSON serialization works
+                debug_payload = convert_decimals_to_float({
                     "model": params.get("model"),
                     "tool_choice": params.get("tool_choice"),
                     "tools": cleaned_tools,
                     # Truncate input/instructions for readability
                     "input_preview": str(params.get("input"))[:200] + "..." if params.get("input") else None,
                     "instructions_preview": str(params.get("instructions"))[:200] + "..." if params.get("instructions") else None,
-                }
+                })
                 logger.info(f"[OpenAI Request Builder] Final API Payload: {json.dumps(debug_payload)}")
             except Exception:
                 pass
@@ -158,22 +160,24 @@ class OpenAIRequestBuilder:
             # Note: ToolBuilder.clean_tools already handles the conversion of 'shell' to a function tool if needed
             # So we just log what's happening here without removing it again
             
+            # Convert Decimals to ensure JSON serialization works
+            log_data = convert_decimals_to_float({
+                "sessionId": "debug-session",
+                "runId": "repro-3",
+                "hypothesisId": "check-tools-after-builder",
+                "location": "openai_request_builder.py:build_api_params",
+                "timestamp": int(time.time() * 1000),
+                "message": "Tools after ToolBuilder.clean_tools",
+                "data": {
+                    "model": model,
+                    "has_computer_use": has_computer_use,
+                    "final_tools_count": len(cleaned_tools),
+                    "final_tool_types": [t.get('type') for t in cleaned_tools],
+                    "final_tool_names": [t.get('name') for t in cleaned_tools if t.get('type') == 'function']
+                }
+            })
             with open('/Users/canyonsmith/lead-magnent-ai/.cursor/debug.log', 'a') as f:
-                f.write(json.dumps({
-                    "sessionId": "debug-session",
-                    "runId": "repro-3",
-                    "hypothesisId": "check-tools-after-builder",
-                    "location": "openai_request_builder.py:build_api_params",
-                    "timestamp": int(time.time() * 1000),
-                    "message": "Tools after ToolBuilder.clean_tools",
-                    "data": {
-                        "model": model,
-                        "has_computer_use": has_computer_use,
-                        "final_tools_count": len(cleaned_tools),
-                        "final_tool_types": [t.get('type') for t in cleaned_tools],
-                        "final_tool_names": [t.get('name') for t in cleaned_tools if t.get('type') == 'function']
-                    }
-                }) + '\n')
+                f.write(json.dumps(log_data) + '\n')
         except Exception:
             pass
         # #endregion

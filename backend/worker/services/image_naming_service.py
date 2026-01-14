@@ -78,32 +78,30 @@ Generate only the filename, nothing else."""
             if context_text:
                 prompt += f"\n\nAdditional context:\n{context_text}"
             
-            # Use vision model to analyze the image
-            response = self.client.chat.completions.create(
+            # Use vision model to analyze the image with Responses API
+            response = self.client.responses.create(
                 model="gpt-4o",  # Use vision-capable model
-                messages=[
+                instructions="You are a helpful assistant that generates descriptive filenames for images.",
+                input=[
                     {
                         "role": "user",
                         "content": [
                             {
-                                "type": "text",
+                                "type": "input_text",
                                 "text": prompt
                             },
                             {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:image/png;base64,{image_b64}"
-                                }
+                                "type": "input_image",
+                                "image_url": f"data:image/png;base64,{image_b64}"
                             }
                         ]
                     }
                 ],
-                max_tokens=50,  # Filenames should be short
-                temperature=0.7
+                max_output_tokens=50,  # Filenames should be short
             )
             
-            # Extract filename from response
-            filename = response.choices[0].message.content.strip()
+            # Extract filename from response (Responses API uses output_text)
+            filename = response.output_text.strip()
             
             # Sanitize filename
             filename = self._sanitize_filename(filename)
@@ -116,7 +114,7 @@ Generate only the filename, nothing else."""
             filename = f"{filename}.png"
             
             logger.info(f"[ImageNamingService] Generated filename: {filename}", extra={
-                'original_suggestion': response.choices[0].message.content.strip(),
+                'original_suggestion': response.output_text.strip(),
                 'sanitized_filename': filename,
                 'has_context': context_text is not None,
                 'step_name': step_name
