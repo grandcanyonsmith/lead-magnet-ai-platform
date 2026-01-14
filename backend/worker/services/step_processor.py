@@ -22,6 +22,7 @@ from services.steps.handlers.ai_generation import AIStepHandler
 from services.steps.handlers.webhook import WebhookStepHandler
 from services.steps.handlers.browser_automation import BrowserStepHandler
 from services.steps.handlers.html_patch import HtmlStepHandler
+from services.steps.handlers.handoff import HandoffStepHandler
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +60,7 @@ class StepProcessor:
         # Register default handlers
         self.registry.register('ai_generation', AIStepHandler(services))
         self.registry.register('webhook', WebhookStepHandler(services))
+        self.registry.register('workflow_handoff', HandoffStepHandler(services))
         self.registry.register('browser', BrowserStepHandler(services))
         self.registry.register('html', HtmlStepHandler(services))
 
@@ -81,10 +83,18 @@ class StepProcessor:
         step_name = step.get('step_name', f'Step {step_index + 1}')
         step_type = step.get('step_type', 'ai_generation')
         
-        # Normalize step type for webhook
-        if step.get('webhook_url'):
+        has_webhook = bool(step.get('webhook_url'))
+        has_handoff = bool(step.get('handoff_workflow_id'))
+
+        if has_webhook and has_handoff:
+            raise ValueError("Step cannot have both webhook_url and handoff_workflow_id")
+
+        # Normalize step type for webhook/handoff based on config fields (step_type is deprecated)
+        if has_webhook:
             step_type = 'webhook'
             step['_sorted_steps'] = sorted_steps
+        elif has_handoff:
+            step_type = 'workflow_handoff'
             
         handler = self.registry.get_handler(step_type)
         if not handler:
@@ -149,9 +159,17 @@ class StepProcessor:
         step_name = step.get('step_name', f'Step {step_index + 1}')
         step_type = step.get('step_type', 'ai_generation')
         
-        if step.get('webhook_url'):
+        has_webhook = bool(step.get('webhook_url'))
+        has_handoff = bool(step.get('handoff_workflow_id'))
+
+        if has_webhook and has_handoff:
+            raise ValueError("Step cannot have both webhook_url and handoff_workflow_id")
+
+        if has_webhook:
             step_type = 'webhook'
             step['_sorted_steps'] = sorted(steps, key=lambda s: s.get('step_order', 0))
+        elif has_handoff:
+            step_type = 'workflow_handoff'
             
         handler = self.registry.get_handler(step_type)
         if not handler:
@@ -226,7 +244,7 @@ class StepProcessor:
         completed_step_indices = [
             normalize_step_order(s) - 1
             for s in execution_steps
-            if s.get('step_type') in ['ai_generation', 'webhook', 'html_patch', 'browser'] and normalize_step_order(s) > 0
+            if s.get('step_type') in ['ai_generation', 'webhook', 'workflow_handoff', 'html_patch', 'browser'] and normalize_step_order(s) > 0
         ]
         
         all_deps_completed = all(dep_index in completed_step_indices for dep_index in step_deps)

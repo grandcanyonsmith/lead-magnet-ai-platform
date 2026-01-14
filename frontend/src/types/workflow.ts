@@ -110,6 +110,21 @@ export interface WorkflowStep {
     exclude_step_indices?: number[]; // Steps to exclude (all included by default)
     include_job_info: boolean;
   };
+
+  /**
+   * Lead magnet handoff step fields
+   * Allows a step to send data to another workflow (lead magnet) as the next workflow's input.
+   */
+  handoff_workflow_id?: string;
+  handoff_payload_mode?: "previous_step_output" | "full_context" | "submission_only";
+  handoff_input_field?: string;
+  /**
+   * When true, the destination lead magnet's "required inputs" should not block execution.
+   * (Implementation: the handoff trigger path does not enforce form-required fields.)
+   */
+  handoff_bypass_required_inputs?: boolean;
+  handoff_include_submission_data?: boolean;
+  handoff_include_context?: boolean;
 }
 
 export type WorkflowTriggerType = "form" | "webhook";

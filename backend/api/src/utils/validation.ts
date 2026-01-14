@@ -105,6 +105,27 @@ export const workflowStepSchema = z
         include_job_info: z.boolean().optional().default(true),
       })
       .optional(),
+
+    /**
+     * Lead magnet handoff step fields
+     * Allows a step to send data to another workflow (lead magnet) as the next workflow's input.
+     */
+    handoff_workflow_id: z.preprocess(
+      (val) =>
+        val === "" || val === null || val === undefined ? undefined : val,
+      z.string().min(1).optional(),
+    ),
+    handoff_payload_mode: z
+      .enum(["previous_step_output", "full_context", "submission_only"])
+      .optional(),
+    handoff_input_field: z.preprocess(
+      (val) =>
+        val === "" || val === null || val === undefined ? undefined : val,
+      z.string().min(1).optional(),
+    ),
+    handoff_bypass_required_inputs: z.boolean().optional(),
+    handoff_include_submission_data: z.boolean().optional(),
+    handoff_include_context: z.boolean().optional(),
   })
   .refine(
     (data) => {

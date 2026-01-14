@@ -44,10 +44,18 @@ const getBasePosition = (index: number) => START_NODE_X + index * NODE_SPACING;
 const getStepWarnings = (step: WorkflowStep, index: number): string[] => {
   const warnings: string[] = [];
 
+  const isWebhookStep = Boolean(
+    (step.webhook_url && step.webhook_url.trim()) || step.step_type === "webhook",
+  );
+  const isHandoffStep = Boolean(
+    step.handoff_workflow_id && step.handoff_workflow_id.trim(),
+  );
+  const isAiStep = !isWebhookStep && !isHandoffStep;
+
   if (!step.step_name.trim()) {
     warnings.push(`Step ${index + 1} is missing a name.`);
   }
-  if (!step.instructions.trim()) {
+  if (isAiStep && !step.instructions.trim()) {
     warnings.push(`Add synthesis instructions so the model knows what to do.`);
   }
   if (
