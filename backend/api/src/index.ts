@@ -87,6 +87,14 @@ export const handler = async (
     // Router will extract auth context internally and use customerId as tenantId
     const result = await routerHandler(apiEvent, undefined);
 
+    // Check for "handled" flag (e.g. streaming response handled directly via context.res)
+    if (result.body && (result.body as any).handled) {
+      return {
+        statusCode: 200,
+        handled: true,
+      } as any;
+    }
+
     // Format response
     const contentType = result.headers?.['Content-Type'] || 'application/json';
     const isTextContent = contentType.startsWith('text/') || contentType.includes('markdown');

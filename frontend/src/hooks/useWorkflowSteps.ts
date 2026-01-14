@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { WorkflowStep } from "@/types/workflow";
 
 const defaultSteps: WorkflowStep[] = [
@@ -25,10 +25,55 @@ const defaultSteps: WorkflowStep[] = [
   },
 ];
 
-export function useWorkflowSteps(initialSteps?: WorkflowStep[]) {
+interface UseWorkflowStepsOptions {
+  initialSteps?: WorkflowStep[];
+  persistKey?: string;
+}
+
+export function useWorkflowSteps(optionsOrSteps?: WorkflowStep[] | UseWorkflowStepsOptions) {
+  // Handle both signatures for backward compatibility
+  const options: UseWorkflowStepsOptions = Array.isArray(optionsOrSteps) 
+    ? { initialSteps: optionsOrSteps } 
+    : (optionsOrSteps || {});
+    
+  const { initialSteps, persistKey } = options;
+
   const [steps, setSteps] = useState<WorkflowStep[]>(
     initialSteps || defaultSteps,
   );
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Load from localStorage on mount
+  useEffect(() => {
+    if (persistKey && typeof window !== "undefined") {
+      try {
+        const saved = window.localStorage.getItem(persistKey);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setSteps(parsed);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to load steps from localStorage", e);
+      } finally {
+        setIsLoaded(true);
+      }
+    } else {
+      setIsLoaded(true);
+    }
+  }, [persistKey]);
+
+  // Save to localStorage on change
+  useEffect(() => {
+    if (persistKey && isLoaded && typeof window !== "undefined") {
+      try {
+        window.localStorage.setItem(persistKey, JSON.stringify(steps));
+      } catch (e) {
+        console.error("Failed to save steps to localStorage", e);
+      }
+    }
+  }, [steps, persistKey, isLoaded]);
 
   const updateStep = useCallback((index: number, step: WorkflowStep) => {
     setSteps((prev) => {
@@ -84,6 +129,10 @@ export function useWorkflowSteps(initialSteps?: WorkflowStep[]) {
     });
   }, []);
 
+  const reorderSteps = useCallback((newSteps: WorkflowStep[]) => {
+    setSteps(newSteps.map((step, i) => ({ ...step, step_order: i })));
+  }, []);
+
   const setStepsFromAIGeneration = useCallback((aiSteps: WorkflowStep[]) => {
     if (aiSteps && Array.isArray(aiSteps) && aiSteps.length > 0) {
       setSteps(
@@ -126,8 +175,10 @@ export function useWorkflowSteps(initialSteps?: WorkflowStep[]) {
     deleteStep,
     moveStepUp,
     moveStepDown,
+    reorderSteps,
     setStepsFromAIGeneration,
     updateFirstStepInstructions,
     setSteps,
+    isLoaded,
   };
 }

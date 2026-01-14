@@ -36,7 +36,23 @@ def get_image_generation_defaults() -> Dict[str, Any]:
 
 def get_web_search_tool_definition() -> Dict[str, Any]:
     """Returns the definition for the web search tool."""
-    return {"type": "web_search"}
+    return {
+        "type": "function",
+        "function": {
+            "name": "web_search",
+            "description": "Search the web for information.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The search query."
+                    }
+                },
+                "required": ["query"]
+            }
+        }
+    }
 
 def get_file_search_tool_definition() -> Dict[str, Any]:
     """Returns the definition for the file search tool."""

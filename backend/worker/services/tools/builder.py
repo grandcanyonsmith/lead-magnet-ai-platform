@@ -66,6 +66,11 @@ class ToolBuilder:
                 if cleaned_tool.get("type") == "shell":
                     logger.info("Converting shell tool dict to function definition")
                     cleaned_tool = get_shell_tool_definition()
+                
+                # Convert web_search dict to function definition (required for OpenAI SDK compatibility)
+                if cleaned_tool.get("type") == "web_search":
+                    logger.info("Converting web_search tool dict to function definition")
+                    cleaned_tool = get_web_search_tool_definition()
 
                 # OpenAI rejects `container` on `computer_use_preview` (unknown_parameter).
                 if cleaned_tool.get("type") == "computer_use_preview" and "container" in cleaned_tool:
