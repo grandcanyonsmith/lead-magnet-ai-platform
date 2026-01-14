@@ -14,20 +14,14 @@ This document explains how image generation works in the workflow processing sys
    └─> WorkflowOrchestrator.execute_workflow()
        └─> StepProcessor.process_step_batch_mode()
            └─> AIService.generate_report()
-               ├─> OpenAIClient.build_api_params()
-               │   └─> Creates params with tools=[{"type": "image_generation"}]
-               │
-               ├─> OpenAIClient.make_api_call(params)
-               │   └─> OpenAIClient.create_response(**params)
-               │       └─> client.responses.create(**params)  ← ACTUAL API CALL HERE
-               │           └─> Returns Response object with output items
-               │
-               └─> OpenAIClient.process_api_response()
-                   ├─> Loops through response.output items
-                   ├─> Checks for ImageGenerationCall class
-                   ├─> Extracts base64 from item.result
-                   ├─> Converts base64 to URL via image_handler
-                   └─> Returns response_details with image_urls
+               ├─> Detects image_generation tool in step config
+               ├─> If image model is gpt-image-*:
+               │   └─> ImageGenerator.generate_images_via_api()
+               │       ├─> Planner call (Responses API) generates JSON prompts
+               │       ├─> Images API called per prompt (gpt-image-*)
+               │       ├─> Base64 images uploaded to S3 via ImageHandler
+               │       └─> Returns response_details.image_urls
+               └─> Otherwise: regular Responses API flow (non-image tools)
 
 3. StepProcessor receives response_details
    └─> Extracts image_urls from response_details
@@ -46,11 +40,10 @@ This document explains how image generation works in the workflow processing sys
 - **Method**: `create_response()` → `client.responses.create(**params)`
 - **Line**: ~146
 
-### Image Extraction Location  
-- **File**: `backend/worker/services/openai_client.py`
-- **Method**: `process_api_response()`
-- **Section**: Loops through `response.output` items, checks for `ImageGenerationCall` class
-- **Line**: ~505-577
+### Image Extraction Location
+- **File**: `backend/worker/services/ai/image_generator.py`
+- **Method**: `generate_images_via_api()`
+- **Section**: Uploads base64 to S3 and returns `image_urls`
 
 ### Workflow Processing Entry Point
 - **File**: `backend/worker/processor.py`
@@ -92,4 +85,7 @@ To see where API calls are made, check logs for:
    - Check if `image_handler` is passed to `process_api_response`
    - Check S3 permissions and bucket configuration
    - Check if base64 data is valid
+4. **Wrong asset domain**
+   - Ensure `CLOUDFRONT_DOMAIN=assets.mycoursecreator360.com` is set
+   - Verify CloudFront custom domain is attached to the distribution
 

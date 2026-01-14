@@ -23,21 +23,21 @@
 
 1. **Jobs List Page**:
    ```
-   https://dmydkyj79auy7.cloudfront.net/dashboard/jobs
+   https://forms.mycoursecreator360.com/dashboard/jobs
    ```
    - ✅ Click on a job card → Should navigate to job detail page
    - ✅ Click "View Document" link → Should open document in new tab (not redirect to dashboard)
 
 2. **Job Detail Page**:
    ```
-   https://dmydkyj79auy7.cloudfront.net/dashboard/jobs/{job_id}
+   https://forms.mycoursecreator360.com/dashboard/jobs/{job_id}
    ```
    - ✅ Page should load correctly
    - ✅ Job details should display
 
 3. **Public Form Page**:
    ```
-   https://dmydkyj79auy7.cloudfront.net/v1/forms/ai-personalized-resource-request
+   https://forms.mycoursecreator360.com/v1/forms/ai-personalized-resource-request
    ```
    - ✅ Form should load
    - ✅ Slug should be extracted from URL

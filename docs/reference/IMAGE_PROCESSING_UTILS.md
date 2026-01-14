@@ -99,6 +99,21 @@ python3 scripts/process_image.py -i image.png -p "Make this image more vibrant a
 python3 scripts/process_image.py -i image.png --keep-temp
 ```
 
+## OpenAI Image Inputs (Responses API)
+
+When you need to analyze or condition on images (vision), use the Responses API input
+format with `input_text` and `input_image` content items. Each `input_image` can be
+provided as either:
+
+- `image_url`: An HTTPS URL or a `data:image/...;base64,...` data URL
+- `file_id`: A file uploaded via the OpenAI Files API
+
+Reference: https://platform.openai.com/docs/guides/images-vision#analyze-images
+
+In this codebase, `OpenAIRequestBuilder._build_multimodal_input` builds the
+`input_image` items from `previous_image_urls` and converts problematic URLs to
+data URLs before sending them to OpenAI.
+
 ## Standalone Script Usage
 
 ### Command-Line Arguments
@@ -419,10 +434,17 @@ https://{bucket}.s3.{region}.amazonaws.com/{key}
 https://leadmagnet-artifacts-123456789.s3.us-east-1.amazonaws.com/generated-images/1703123456_output.png
 ```
 
+If `CLOUDFRONT_DOMAIN` is configured, public URLs should use that domain instead
+(production uses `assets.mycoursecreator360.com`):
+
+```
+https://assets.mycoursecreator360.com/cust_12345678/jobs/job_123/generated-images/1703123456_output.png
+```
+
 These URLs are:
 - **Permanent** - Do not expire
 - **Public** - Accessible without authentication
-- **Direct** - Serve directly from S3 (not through CloudFront)
+- **CDN-backed** - Served from CloudFront when configured, otherwise direct S3
 
 ### Bucket Permissions
 
@@ -634,6 +656,7 @@ ClientError: The specified bucket does not exist
 ## Additional Resources
 
 - [OpenAI Responses API Documentation](https://platform.openai.com/docs/api-reference/responses)
+- [OpenAI Images & Vision: Analyze Images](https://platform.openai.com/docs/guides/images-vision#analyze-images)
 - [AWS S3 Python SDK (boto3) Documentation](https://boto3.amazonaws.com/v1/documentation/api/latest/index.html)
 - [Requests Library Documentation](https://requests.readthedocs.io/)
 
