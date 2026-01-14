@@ -10,6 +10,7 @@ from services.api_key_manager import APIKeyManager
 from services.openai_image_retry_handler import OpenAIImageRetryHandler
 from services.openai_request_builder import OpenAIRequestBuilder
 from services.openai_response_service import OpenAIResponseService
+from utils.decimal_utils import convert_decimals_to_float
 
 # Suppress Pydantic serialization warnings globally
 warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
@@ -31,6 +32,7 @@ class OpenAIClient:
     def _sanitize_api_params(params: Dict[str, Any]) -> Dict[str, Any]:
         """
         Remove internal-only keys that should never be sent to OpenAI.
+        Also converts all Decimal values to float to prevent JSON serialization errors.
         """
         def _strip_key_recursive(obj: Any, key_to_strip: str) -> Any:
             if isinstance(obj, dict):
@@ -49,6 +51,11 @@ class OpenAIClient:
         # The Responses API rejects unknown fields on input items; we sometimes annotate
         # internal events with `is_error`, so strip it defensively before sending.
         api_params = _strip_key_recursive(api_params, "is_error")
+        
+        # Convert all Decimal values to float to prevent JSON serialization errors
+        # This handles Decimal values that might be present in input, instructions, tools, etc.
+        api_params = convert_decimals_to_float(api_params)
+        
         return api_params
 
     def generate_images(
