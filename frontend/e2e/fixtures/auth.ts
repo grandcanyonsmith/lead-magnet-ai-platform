@@ -32,32 +32,37 @@ export const test = base.extend<AuthFixtures>({
 
   logout: async ({ page }, use) => {
     await use(async () => {
-      // Ensure page is stable - wait for load state instead of networkidle
+      // Ensure page is stable - wait for load state
+      await page.waitForLoadState('load', { timeout: 10000 }).catch(() => {});
+      
+      // Wait for sidebar to be visible (ensures layout is loaded)
+      const sidebar = page.locator('aside');
       try {
-        await page.waitForLoadState('load', { timeout: 5000 });
-      } catch (e) {
-        // Ignore timeout, proceed
+        await sidebar.waitFor({ state: 'visible', timeout: 15000 });
+      } catch {
+        // If sidebar not found, wait a bit more for page to fully render
+        await page.waitForTimeout(2000);
       }
 
-      // Wait for user menu directly - it should be visible once the page loads
-      // The user menu button has aria-label="User menu" in the Sidebar component
-      // Try to wait for sidebar first, but if it fails, wait for user menu directly
-      const sidebar = page.locator('aside');
-      const userMenu = page.locator('[aria-label="User menu"]').first();
+      // Try getByRole first (most reliable)
+      let userMenu = page.getByRole('button', { name: /user menu/i });
+      const roleCount = await userMenu.count();
       
-      try {
-        // First try waiting for sidebar (more reliable)
-        await sidebar.waitFor({ state: 'visible', timeout: 10000 });
-        await userMenu.waitFor({ state: 'visible', timeout: 5000 });
-      } catch (e) {
-        // If sidebar wait fails, wait for user menu directly (might be in mobile view)
-        await userMenu.waitFor({ state: 'visible', timeout: 15000 });
+      if (roleCount === 0) {
+        // Fallback to aria-label selector
+        userMenu = page.locator('[aria-label="User menu"]').first();
       }
       
+      // Wait for user menu to be visible
+      await userMenu.waitFor({ state: 'visible', timeout: 15000 });
       await userMenu.click();
       
       // Wait for dropdown menu to appear before clicking logout
-      const logoutButton = page.locator('text=/sign\\s*out|log\\s*out|logout/i')
+      // Try menuitem role first, then fallback to text locator
+      let logoutButton = page.getByRole('menuitem', { name: /log\s*out|sign\s*out/i });
+      if (await logoutButton.count() === 0) {
+        logoutButton = page.locator('text=/sign\\s*out|log\\s*out|logout/i');
+      }
       await logoutButton.waitFor({ state: 'visible', timeout: 5000 });
       await logoutButton.click();
       
