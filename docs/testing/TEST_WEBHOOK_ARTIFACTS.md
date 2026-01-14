@@ -13,7 +13,7 @@ The webhook artifacts feature has been successfully deployed:
 ### Prerequisites
 
 1. **Get your webhook token:**
-   - Log in to https://dmydkyj79auy7.cloudfront.net
+   - Log in to https://forms.mycoursecreator360.com
    - Go to Settings
    - Copy your webhook URL
    - Extract the token (last part after `/v1/webhooks/`)
