@@ -87,7 +87,24 @@ class ToolValidator:
         Returns:
             Tuple of (validated_tools, normalized_tool_choice)
         """
+        # Check if this is a deep research model
+        is_deep_research_model = (
+            model and 
+            isinstance(model, str) and 
+            ('deep-research' in model.lower() or model == 'o4-mini-deep-research')
+        )
+        
+        # Deep research models require at least one of: web_search_preview, mcp, or file_search
+        required_tool_types = {'web_search_preview', 'mcp', 'file_search'}
+        
         if not tools:
+            # If no tools provided and it's a deep research model, add file_search
+            if is_deep_research_model:
+                logger.info(
+                    f"[ToolValidator] Deep research model '{model}' requires at least one of "
+                    "web_search_preview, mcp, or file_search. Adding file_search as default."
+                )
+                return [{"type": "file_search"}], tool_choice
             return [], "none"
         
         validated_tools = []
@@ -124,6 +141,22 @@ class ToolValidator:
                     )
             
             validated_tools.append(tool_dict)
+        
+        # For deep research models, ensure at least one required tool is present
+        if is_deep_research_model:
+            has_required_tool = any(
+                tool.get('type') in required_tool_types
+                for tool in validated_tools
+                if isinstance(tool, dict)
+            )
+            
+            if not has_required_tool:
+                logger.warning(
+                    f"[ToolValidator] Deep research model '{model}' requires at least one of "
+                    "web_search_preview, mcp, or file_search. Adding file_search.",
+                    extra={'model': model, 'validated_tools': [t.get('type') for t in validated_tools]}
+                )
+                validated_tools.append({"type": "file_search"})
         
         if not validated_tools:
             normalized_tool_choice = "none"
