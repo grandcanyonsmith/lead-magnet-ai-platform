@@ -44,6 +44,26 @@ def _to_dict(value: Any) -> Dict[str, Any]:
         return value.dict()
     return {}
 
+def _is_incomplete_openai_stream_error(err: Exception) -> bool:
+    """
+    The OpenAI Python SDK streaming iterator expects a terminal `response.completed`
+    event. If the underlying connection is interrupted, the SDK raises:
+      RuntimeError: Didn't receive a `response.completed` event.
+
+    This is typically transient; callers should retry or fall back to non-streaming.
+    """
+    try:
+        msg = str(err) or ""
+    except Exception:
+        msg = ""
+    lower = msg.lower()
+    if "response.completed" in lower and ("didn't receive" in lower or "did not receive" in lower):
+        return True
+    # Defensive: treat common network-ish exceptions as transient even without the exact message
+    if type(err).__name__ in ("APIConnectionError", "APITimeoutError", "ReadTimeout", "ConnectTimeout"):
+        return True
+    return False
+
 class CUAgent:
     """Agent for running the Computer Use API loop as a generator."""
     
@@ -428,29 +448,72 @@ class CUAgent:
 
                 # Stream model output live (delta events) and still capture the final response object
                 # for tool parsing and loop continuation.
-                buffer = ""
-                last_flush = time.time()
-                with openai_client.client.responses.stream(**api_params) as stream:
-                    for ev in stream:
-                        ev_type = getattr(ev, "type", "") or ""
-                        if ev_type == "response.output_text.delta":
-                            delta = getattr(ev, "delta", "") or ""
-                            if not delta:
-                                continue
-                            last_streamed_output_text += delta
-                            buffer += delta
-                            now = time.time()
-                            if "\n" in buffer or len(buffer) >= 80 or (now - last_flush) >= 0.2:
-                                yield LogEvent(
-                                    type="log",
-                                    timestamp=time.time(),
-                                    level="info",
-                                    message=f"__OUTPUT_DELTA__{buffer}",
-                                )
-                                buffer = ""
-                                last_flush = now
+                response = None
+                max_stream_attempts = 2
+                for attempt in range(1, max_stream_attempts + 1):
+                    buffer = ""
+                    last_flush = time.time()
+                    try:
+                        with openai_client.client.responses.stream(**api_params) as stream:
+                            for ev in stream:
+                                ev_type = getattr(ev, "type", "") or ""
+                                if ev_type == "response.output_text.delta":
+                                    delta = getattr(ev, "delta", "") or ""
+                                    if not delta:
+                                        continue
+                                    last_streamed_output_text += delta
+                                    buffer += delta
+                                    now = time.time()
+                                    if "\n" in buffer or len(buffer) >= 80 or (now - last_flush) >= 0.2:
+                                        yield LogEvent(
+                                            type="log",
+                                            timestamp=time.time(),
+                                            level="info",
+                                            message=f"__OUTPUT_DELTA__{buffer}",
+                                        )
+                                        buffer = ""
+                                        last_flush = now
 
-                    response = stream.get_final_response()
+                            response = stream.get_final_response()
+                        break
+                    except Exception as stream_err:
+                        # Flush any remaining buffered output before retry/fallback so the UI doesn't "lose" deltas.
+                        if buffer:
+                            yield LogEvent(
+                                type="log",
+                                timestamp=time.time(),
+                                level="info",
+                                message=f"__OUTPUT_DELTA__{buffer}",
+                            )
+                            buffer = ""
+
+                        if _is_incomplete_openai_stream_error(stream_err) and attempt < max_stream_attempts:
+                            yield LogEvent(
+                                type="log",
+                                timestamp=time.time(),
+                                level="warning",
+                                message=(
+                                    "⚠️ OpenAI stream ended early (missing `response.completed`). "
+                                    f"Retrying… ({attempt}/{max_stream_attempts})"
+                                ),
+                            )
+                            time.sleep(0.75 * attempt)
+                            continue
+
+                        if _is_incomplete_openai_stream_error(stream_err):
+                            yield LogEvent(
+                                type="log",
+                                timestamp=time.time(),
+                                level="warning",
+                                message=(
+                                    "⚠️ OpenAI stream ended early (missing `response.completed`). "
+                                    "Falling back to non-streaming call…"
+                                ),
+                            )
+                            response = openai_client.client.responses.create(**api_params)
+                            break
+
+                        raise
 
                 # Flush any remaining buffered output
                 if buffer:
@@ -1304,29 +1367,71 @@ class CUAgent:
                             else dict(next_params)
                         )
 
-                        buffer = ""
-                        last_flush = time.time()
-                        with openai_client.client.responses.stream(**api_params) as stream:
-                            for ev in stream:
-                                ev_type = getattr(ev, "type", "") or ""
-                                if ev_type == "response.output_text.delta":
-                                    delta = getattr(ev, "delta", "") or ""
-                                    if not delta:
-                                        continue
-                                    last_streamed_output_text += delta
-                                    buffer += delta
-                                    now = time.time()
-                                    if "\n" in buffer or len(buffer) >= 80 or (now - last_flush) >= 0.2:
-                                        yield LogEvent(
-                                            type="log",
-                                            timestamp=time.time(),
-                                            level="info",
-                                            message=f"__OUTPUT_DELTA__{buffer}",
-                                        )
-                                        buffer = ""
-                                        last_flush = now
+                        response = None
+                        max_stream_attempts = 2
+                        for attempt in range(1, max_stream_attempts + 1):
+                            buffer = ""
+                            last_flush = time.time()
+                            try:
+                                with openai_client.client.responses.stream(**api_params) as stream:
+                                    for ev in stream:
+                                        ev_type = getattr(ev, "type", "") or ""
+                                        if ev_type == "response.output_text.delta":
+                                            delta = getattr(ev, "delta", "") or ""
+                                            if not delta:
+                                                continue
+                                            last_streamed_output_text += delta
+                                            buffer += delta
+                                            now = time.time()
+                                            if "\n" in buffer or len(buffer) >= 80 or (now - last_flush) >= 0.2:
+                                                yield LogEvent(
+                                                    type="log",
+                                                    timestamp=time.time(),
+                                                    level="info",
+                                                    message=f"__OUTPUT_DELTA__{buffer}",
+                                                )
+                                                buffer = ""
+                                                last_flush = now
 
-                            response = stream.get_final_response()
+                                    response = stream.get_final_response()
+                                break
+                            except Exception as stream_err:
+                                if buffer:
+                                    yield LogEvent(
+                                        type="log",
+                                        timestamp=time.time(),
+                                        level="info",
+                                        message=f"__OUTPUT_DELTA__{buffer}",
+                                    )
+                                    buffer = ""
+
+                                if _is_incomplete_openai_stream_error(stream_err) and attempt < max_stream_attempts:
+                                    yield LogEvent(
+                                        type="log",
+                                        timestamp=time.time(),
+                                        level="warning",
+                                        message=(
+                                            "⚠️ OpenAI stream ended early (missing `response.completed`). "
+                                            f"Retrying… ({attempt}/{max_stream_attempts})"
+                                        ),
+                                    )
+                                    time.sleep(0.75 * attempt)
+                                    continue
+
+                                if _is_incomplete_openai_stream_error(stream_err):
+                                    yield LogEvent(
+                                        type="log",
+                                        timestamp=time.time(),
+                                        level="warning",
+                                        message=(
+                                            "⚠️ OpenAI stream ended early (missing `response.completed`). "
+                                            "Falling back to non-streaming call…"
+                                        ),
+                                    )
+                                    response = openai_client.client.responses.create(**api_params)
+                                    break
+
+                                raise
 
                         if buffer:
                             yield LogEvent(
