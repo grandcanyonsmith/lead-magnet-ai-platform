@@ -170,7 +170,9 @@ export default function FilesPage() {
               disabled={isUploading}
             />
           </label>
-          <span className="text-sm text-gray-500">Supports PDF, DOCX, TXT up to 10MB</span>
+          <span className="text-sm text-gray-500">
+            Supports PDF, DOCX, TXT, JSON up to 10MB
+          </span>
         </div>
       </div>
 

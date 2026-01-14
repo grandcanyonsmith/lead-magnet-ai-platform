@@ -26,6 +26,34 @@ export interface FileRecord {
 }
 
 export class FileService {
+  private inferContentTypeFromFilename(filename: string): string | undefined {
+    const lower = String(filename || "").toLowerCase();
+    const ext = lower.includes(".") ? lower.split(".").pop() || "" : "";
+
+    const map: Record<string, string> = {
+      json: "application/json",
+      csv: "text/csv",
+      txt: "text/plain",
+      md: "text/markdown",
+      html: "text/html",
+      htm: "text/html",
+      pdf: "application/pdf",
+      doc: "application/msword",
+      docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      ppt: "application/vnd.ms-powerpoint",
+      pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      xls: "application/vnd.ms-excel",
+      xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      png: "image/png",
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      gif: "image/gif",
+      webp: "image/webp",
+    };
+
+    return map[ext];
+  }
+
   async uploadFile(
     customerId: string,
     fileBuffer: Buffer,
@@ -39,7 +67,17 @@ export class FileService {
   ): Promise<FileRecord> {
     const category = options.category || "uploads";
     const fileType = options.fileType || "document";
-    const contentType = options.contentType || "application/octet-stream";
+    const providedContentType =
+      typeof options.contentType === "string" ? options.contentType.trim() : "";
+    const inferredContentType = this.inferContentTypeFromFilename(filename);
+    const contentType =
+      providedContentType && providedContentType !== "application/octet-stream"
+        ? providedContentType
+        : inferredContentType || "application/octet-stream";
+
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'test-json-1',hypothesisId:'H_file_content_type',location:'backend/api/src/services/files/fileService.ts:uploadFile',message:'Resolved upload content type',data:{ext:String(filename||'').toLowerCase().split('.').pop()||'',providedContentType:providedContentType||null,inferredContentType:inferredContentType||null,finalContentType:contentType,bufferBytes:fileBuffer?.length||0},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
 
     const maxSize = 10 * 1024 * 1024; // 10MB
     if (fileBuffer.length > maxSize) {

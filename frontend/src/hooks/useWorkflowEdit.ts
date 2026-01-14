@@ -101,6 +101,14 @@ export function useWorkflowEdit() {
               ? step.webhook_save_response
               : true,
           webhook_data_selection: step.webhook_data_selection || undefined,
+
+          // Lead magnet handoff step fields
+          handoff_workflow_id: step.handoff_workflow_id || "",
+          handoff_payload_mode: step.handoff_payload_mode,
+          handoff_input_field: step.handoff_input_field || "",
+          handoff_bypass_required_inputs: step.handoff_bypass_required_inputs,
+          handoff_include_submission_data: step.handoff_include_submission_data,
+          handoff_include_context: step.handoff_include_context,
         };
       });
       setSteps(loadedSteps);

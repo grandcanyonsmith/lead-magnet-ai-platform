@@ -6,6 +6,7 @@ Handles all DynamoDB operations for the worker.
 import os
 import logging
 import json
+import secrets
 from typing import Dict, Any, Optional, List
 import boto3
 from boto3.dynamodb.conditions import Key
@@ -373,6 +374,45 @@ class DynamoDBService:
         except Exception as e:
             logger.error(f"Error getting settings for tenant {tenant_id}: {e}")
             return None
+
+    def ensure_webhook_token(self, tenant_id: str) -> str:
+        """
+        Ensure a webhook_token exists for the tenant and return it.
+
+        The API generates this token lazily in SettingsController.get(), but worker-triggered
+        handoff steps may need it without a prior settings fetch. This helper mirrors the
+        API behavior at a minimum: generate once and persist.
+        """
+        settings = self.get_settings(tenant_id) or {}
+        token = settings.get('webhook_token')
+        if token:
+            return str(token)
+
+        # Generate a URL-safe token
+        webhook_token = secrets.token_urlsafe(24)
+        now = datetime.utcnow().isoformat(timespec='milliseconds') + "Z"
+
+        try:
+            if settings and settings.get('tenant_id') == tenant_id:
+                self.user_settings_table.update_item(
+                    Key={'tenant_id': tenant_id},
+                    UpdateExpression='SET webhook_token = :t, updated_at = :u',
+                    ExpressionAttributeValues={
+                        ':t': webhook_token,
+                        ':u': now
+                    }
+                )
+            else:
+                self.user_settings_table.put_item(Item={
+                    'tenant_id': tenant_id,
+                    'webhook_token': webhook_token,
+                    'created_at': now,
+                    'updated_at': now
+                })
+        except Exception as e:
+            logger.error(f"Error ensuring webhook_token for tenant {tenant_id}: {e}", exc_info=True)
+            # If we can't persist, still return a token so the caller can fail fast on webhook call.
+        return webhook_token
     
     def put_usage_record(self, usage_record: Dict[str, Any]):
         """Create usage record for billing tracking."""
