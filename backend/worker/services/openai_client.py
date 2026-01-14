@@ -124,9 +124,9 @@ class OpenAIClient:
             params["quality"] = quality
 
         if is_gpt_image:
-            if background is not None:
+            if background and background != "auto":
                 params["background"] = background
-            if output_format is not None:
+            if output_format and output_format != "auto":
                 params["output_format"] = output_format
             if output_compression is not None:
                 params["output_compression"] = output_compression

@@ -276,11 +276,93 @@ class OpenAIRequestBuilder:
             if fmt_type in ("text", "json_object"):
                 text_cfg["format"] = {"type": fmt_type}
                 
-                # Ensure "json" word appears in instructions if json_object is requested
+                # Ensure "json" word appears in input messages if json_object is requested
+                # OpenAI requires "json" to appear in the input messages (input field, not instructions)
                 if fmt_type == "json_object":
-                    current_instructions = params.get("instructions", "")
-                    if "json" not in current_instructions.lower():
-                        params["instructions"] = current_instructions + "\n\nIMPORTANT: Please output your response in JSON format."
+                    current_input = params.get("input", "")
+                    
+                    # Check if "json" appears in input
+                    has_json_in_input = False
+                    
+                    # Check input field - can be string or list (multimodal)
+                    if isinstance(current_input, str):
+                        has_json_in_input = "json" in current_input.lower()
+                    elif isinstance(current_input, list) and len(current_input) > 0:
+                        # For multimodal input, structure is: [{"role": "user", "content": [...]}]
+                        # or direct content list: [{"type": "input_text", "text": ...}, ...]
+                        for item in current_input:
+                            if isinstance(item, dict):
+                                # Check if this is a role-based message structure
+                                if "role" in item and "content" in item:
+                                    content = item.get("content", [])
+                                    if isinstance(content, list):
+                                        for content_item in content:
+                                            if isinstance(content_item, dict) and content_item.get("type") == "input_text":
+                                                text = content_item.get("text", "")
+                                                if "json" in text.lower():
+                                                    has_json_in_input = True
+                                                    break
+                                    elif isinstance(content, str) and "json" in content.lower():
+                                        has_json_in_input = True
+                                # Check if this is a direct content item
+                                elif item.get("type") == "input_text":
+                                    text = item.get("text", "")
+                                    if "json" in text.lower():
+                                        has_json_in_input = True
+                            if has_json_in_input:
+                                break
+                    
+                    # If "json" doesn't appear in input, add it to the input field
+                    # OpenAI requires "json" to be in the input messages (input field specifically)
+                    # We check instructions too, but prioritize ensuring it's in input
+                    if not has_json_in_input:
+                        if isinstance(current_input, str):
+                            # Simple string input - append JSON instruction
+                            params["input"] = current_input + "\n\nPlease output your response in JSON format."
+                        elif isinstance(current_input, list) and len(current_input) > 0:
+                            # Multimodal input - add to the first text content item
+                            text_added = False
+                            for item in current_input:
+                                if isinstance(item, dict):
+                                    # Handle role-based message structure
+                                    if "role" in item and "content" in item:
+                                        content = item.get("content", [])
+                                        if isinstance(content, list):
+                                            # Find first text item and append
+                                            for content_item in content:
+                                                if isinstance(content_item, dict) and content_item.get("type") == "input_text":
+                                                    existing_text = content_item.get("text", "")
+                                                    content_item["text"] = existing_text + "\n\nPlease output your response in JSON format."
+                                                    text_added = True
+                                                    break
+                                            # If no text item found, add one at the beginning
+                                            if not text_added:
+                                                content.insert(0, {
+                                                    "type": "input_text",
+                                                    "text": "Please output your response in JSON format."
+                                                })
+                                                text_added = True
+                                        elif isinstance(content, str):
+                                            # Convert string content to list format
+                                            item["content"] = [
+                                                {"type": "input_text", "text": content + "\n\nPlease output your response in JSON format."}
+                                            ]
+                                            text_added = True
+                                    # Handle direct content item structure
+                                    elif item.get("type") == "input_text":
+                                        existing_text = item.get("text", "")
+                                        item["text"] = existing_text + "\n\nPlease output your response in JSON format."
+                                        text_added = True
+                                if text_added:
+                                    break
+                            # If we couldn't modify the list, fallback to instructions
+                            if not text_added:
+                                current_instructions = params.get("instructions", "")
+                                params["instructions"] = current_instructions + "\n\nIMPORTANT: Please output your response in JSON format."
+                        else:
+                            # Fallback: add to instructions if input format is unexpected
+                            current_instructions = params.get("instructions", "")
+                            params["instructions"] = current_instructions + "\n\nIMPORTANT: Please output your response in JSON format."
             elif fmt_type == "json_schema":
                 name = output_format.get("name")
                 schema = output_format.get("schema")

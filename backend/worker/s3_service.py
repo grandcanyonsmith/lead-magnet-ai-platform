@@ -19,7 +19,7 @@ class S3Service:
         """Initialize S3 client."""
         region = os.environ.get('AWS_REGION', 'us-east-1')
         bucket_name = os.environ['ARTIFACTS_BUCKET']
-        cloudfront_domain = os.environ.get('CLOUDFRONT_DOMAIN', '').strip()
+        cloudfront_domain = os.environ.get('CLOUDFRONT_DOMAIN', 'assets.mycoursecreator360.com').strip()
         
         # If CloudFront domain not set, try to retrieve from CloudFormation
         if not cloudfront_domain:

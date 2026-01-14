@@ -33,11 +33,11 @@ npx cdk bootstrap aws://$AWS_ACCOUNT_ID/$AWS_REGION || true
 # - Deploy foundation stacks first to create the ECR repo (and other deps),
 #   then push the worker image, then deploy the application stacks.
 npx cdk deploy \
-  leadmagnet-database \
-  leadmagnet-auth \
-  leadmagnet-storage \
-  leadmagnet-worker \
-  leadmagnet-shell-executor \
+  LeadMagnetDatabaseStack \
+  LeadMagnetAuthStack \
+  LeadMagnetStorageStack \
+  LeadMagnetWorkerStack \
+  LeadMagnetShellExecutorStack \
   --require-approval never
 cd ..
 print_success "Foundation infrastructure deployed"
@@ -80,9 +80,9 @@ echo ""
 print_subsection "Step 4: Deploying CDK application stacks (compute + API + dashboard)"
 cd infrastructure
 npx cdk deploy \
-  leadmagnet-compute \
-  leadmagnet-api \
-  leadmagnet-dashboard \
+  LeadMagnetComputeStack \
+  LeadMagnetApiStack \
+  LeadMagnetDashboardStack \
   --require-approval never
 cd ..
 print_success "Application stacks deployed"

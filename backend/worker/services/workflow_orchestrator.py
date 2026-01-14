@@ -13,6 +13,7 @@ from services.step_processor import StepProcessor
 from services.field_label_service import FieldLabelService
 from services.job_completion_service import JobCompletionService
 from utils.html_utils import strip_html_tags
+from utils.content_detector import detect_content_type
 
 logger = logging.getLogger(__name__)
 
@@ -137,7 +138,7 @@ class WorkflowOrchestrator:
             
             accumulated_context += f"\n\n--- Step {step_index + 1}: {step_name} ---\n{step_output}"
             if image_urls:
-                accumulated_context += f"\n\nGenerated Images:\n" + "\n".join([f"- {url}" for url in image_urls])
+                accumulated_context += "\n\nGenerated Images:\n" + "\n".join([f"- {url}" for url in image_urls])
         
         # Generate final content using job completion service
         final_content, final_artifact_type, final_filename = self._generate_final_content(
@@ -212,7 +213,16 @@ class WorkflowOrchestrator:
         else:
             # Use last step output as final content
             final_content = step_outputs[-1]['output'] if step_outputs else accumulated_context
-            final_artifact_type = 'markdown_final'
-            final_filename = 'final.md'
+            last_step_name = step_outputs[-1].get('step_name', '') if step_outputs else ''
+            file_ext = detect_content_type(str(final_content or ""), str(last_step_name or ""))
+            if file_ext == '.html':
+                final_artifact_type = 'html_final'
+                final_filename = 'final.html'
+            elif file_ext == '.json':
+                final_artifact_type = 'json_final'
+                final_filename = 'final.json'
+            else:
+                final_artifact_type = 'markdown_final'
+                final_filename = 'final.md'
         
         return final_content, final_artifact_type, final_filename
