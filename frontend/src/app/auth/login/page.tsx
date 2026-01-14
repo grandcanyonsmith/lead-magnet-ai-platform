@@ -51,29 +51,41 @@ function LoginForm() {
   }, [router, searchParams]);
 
   const waitForCognitoTokens = useCallback(
-    async (maxAttempts = 10, delay = 100): Promise<boolean> => {
+    async (maxAttempts = 20, delay = 150): Promise<boolean> => {
       // Our app also stores tokens under custom keys (used by the API client).
       // Prefer those first so local/mock auth flows don't hang waiting for Cognito SDK keys.
-      const customIdToken = localStorage.getItem("id_token");
-      if (customIdToken) return true;
-
-      const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID || "";
-      if (!clientId) return false;
-
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
-        const lastAuthUser = localStorage.getItem(
-          `CognitoIdentityServiceProvider.${clientId}.LastAuthUser`,
-        );
-        if (lastAuthUser) {
-          const idToken = localStorage.getItem(
-            `CognitoIdentityServiceProvider.${clientId}.${lastAuthUser}.idToken`,
+        const customIdToken = localStorage.getItem("id_token");
+        const customAccessToken = localStorage.getItem("access_token");
+        
+        if (customIdToken || customAccessToken) {
+          logger.info("Tokens found in custom storage", {
+            context: "LoginPage",
+          });
+          return true;
+        }
+
+        const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID || "";
+        if (clientId) {
+          const lastAuthUser = localStorage.getItem(
+            `CognitoIdentityServiceProvider.${clientId}.LastAuthUser`,
           );
-          if (idToken) {
-            return true;
+          if (lastAuthUser) {
+            const idToken = localStorage.getItem(
+              `CognitoIdentityServiceProvider.${clientId}.${lastAuthUser}.idToken`,
+            );
+            if (idToken) {
+              logger.info("Tokens found in Cognito storage", {
+                context: "LoginPage",
+              });
+              return true;
+            }
           }
         }
+        
         await new Promise((resolve) => setTimeout(resolve, delay));
       }
+
       return false;
     },
     [],
@@ -87,17 +99,30 @@ function LoginForm() {
     try {
       const result = await authService.signIn(email, password);
       if (result.success) {
-        // Wait for Cognito tokens to be stored
+        logger.info("Sign in successful, waiting for tokens", {
+          context: "LoginPage",
+        });
+
+        // Wait for Cognito tokens to be stored in localStorage
         const tokensReady = await waitForCognitoTokens();
-        if (tokensReady) {
-          await checkOnboardingAndRedirect();
-        } else {
-          // If tokens aren't ready after max attempts, still try to redirect
-          logger.warn("Cognito tokens not ready after max attempts", {
+        
+        if (!tokensReady) {
+          logger.error("Tokens not ready after max attempts", {
             context: "LoginPage",
           });
-          await checkOnboardingAndRedirect();
+          setError("Authentication tokens not ready. Please try again.");
+          setLoading(false);
+          return;
         }
+
+        logger.info("Tokens ready, proceeding with redirect", {
+          context: "LoginPage",
+        });
+
+        // Give a small additional delay to ensure everything is settled
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        
+        await checkOnboardingAndRedirect();
       } else {
         setError(result.error || "Failed to sign in");
         setLoading(false);

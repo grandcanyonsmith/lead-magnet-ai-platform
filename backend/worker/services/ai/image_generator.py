@@ -51,9 +51,10 @@ class ImageGenerator:
         })
 
         # Remove the image_generation tool from the planner call (Images API handles generation).
+        # Also remove computer_use_preview since we want direct image generation, not browser automation.
         planner_tools = [
             t for t in validated_tools
-            if not (isinstance(t, dict) and t.get("type") == "image_generation")
+            if not (isinstance(t, dict) and t.get("type") in ("image_generation", "computer_use_preview", "computer_use"))
         ]
         planner_tool_choice = tool_choice
         if planner_tool_choice == "required" and (not planner_tools or len(planner_tools) == 0):
@@ -83,13 +84,14 @@ class ImageGenerator:
         )
 
         # Build planner params (Responses API) WITHOUT the image_generation tool.
+        # has_computer_use=False since we filtered out computer_use tools to prevent browser automation.
         planner_params = self.openai_client.build_api_params(
             model=model,
             instructions=planner_instructions,
             input_text=planner_input,
             tools=planner_tools,
             tool_choice=planner_tool_choice,
-            has_computer_use=has_computer_use,
+            has_computer_use=False,
             reasoning_level=None,
             previous_image_urls=None,
             job_id=job_id,

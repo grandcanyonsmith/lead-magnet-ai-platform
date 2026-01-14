@@ -261,6 +261,26 @@ class ApiClientImpl extends BaseApiClient implements ApiClient {
     return this.workflows.testStep(request);
   }
 
+  async testWorkflow(request: Parameters<WorkflowsClient["testWorkflow"]>[0]) {
+    return this.workflows.testWorkflow(request);
+  }
+
+  async streamTestWorkflow(
+    request: Parameters<WorkflowsClient["streamTestWorkflow"]>[0],
+    callbacks: Parameters<WorkflowsClient["streamTestWorkflow"]>[1],
+    signal?: AbortSignal
+  ) {
+    return this.workflows.streamTestWorkflow(request, callbacks, signal);
+  }
+
+  async streamTestStep(
+    request: Parameters<WorkflowsClient["streamTestStep"]>[0],
+    callbacks: Parameters<WorkflowsClient["streamTestStep"]>[1],
+    signal?: AbortSignal
+  ) {
+    return this.workflows.streamTestStep(request, callbacks, signal);
+  }
+
   // Folders - delegate to workflows client
   async getFolders() {
     return this.workflows.getFolders();

@@ -39,7 +39,7 @@ export class WorkflowAIController {
   /**
    * Test a single workflow step.
    */
-  async testStep(tenantId: string, body: any): Promise<RouteResponse> {
+  async testStep(tenantId: string, body: any, context?: any): Promise<RouteResponse> {
     const { db } = await import('@utils/db');
     const { env } = await import('@utils/env');
     const { JobProcessingUtils } = await import('@domains/workflows/services/workflow/workflowJobProcessingService');
@@ -104,7 +104,28 @@ export class WorkflowAIController {
 
       // 4. Trigger worker for single step
       if (env.isDevelopment()) {
-        await this.triggerLocalWorker(jobId, '0');
+        const res = context?.res;
+        if (res) {
+            // Streaming mode
+            res.writeHead(200, {
+                'Content-Type': 'text/event-stream',
+                'Cache-Control': 'no-cache',
+                'Connection': 'keep-alive',
+            });
+            
+            res.write(`data: ${JSON.stringify({ type: 'init', job_id: jobId })}\n\n`);
+
+            await this.triggerLocalWorker(jobId, '0', (log) => {
+                res.write(`data: ${JSON.stringify({ type: 'log', content: log })}\n\n`);
+            });
+            
+            res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
+            res.end();
+            return { statusCode: 200, body: { handled: true } };
+        } else {
+            // Non-streaming (fire and forget)
+            this.triggerLocalWorker(jobId, '0');
+        }
       } else {
         await JobProcessingUtils.triggerAsyncProcessing(
             jobId,
@@ -138,7 +159,7 @@ export class WorkflowAIController {
   /**
    * Test a full temporary workflow.
    */
-  async testWorkflow(tenantId: string, body: any): Promise<RouteResponse> {
+  async testWorkflow(tenantId: string, body: any, context?: any): Promise<RouteResponse> {
     const { db } = await import('@utils/db');
     const { env } = await import('@utils/env');
     const { JobProcessingUtils } = await import('@domains/workflows/services/workflow/workflowJobProcessingService');
@@ -203,7 +224,28 @@ export class WorkflowAIController {
 
       // 4. Trigger worker for full workflow
       if (env.isDevelopment()) {
-        await this.triggerLocalWorker(jobId);
+        const res = context?.res;
+        if (res) {
+            // Streaming mode
+            res.writeHead(200, {
+                'Content-Type': 'text/event-stream',
+                'Cache-Control': 'no-cache',
+                'Connection': 'keep-alive',
+            });
+            
+            res.write(`data: ${JSON.stringify({ type: 'init', job_id: jobId })}\n\n`);
+
+            await this.triggerLocalWorker(jobId, undefined, (log) => {
+                res.write(`data: ${JSON.stringify({ type: 'log', content: log })}\n\n`);
+            });
+            
+            res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
+            res.end();
+            return { statusCode: 200, body: { handled: true } };
+        } else {
+            // Non-streaming
+            this.triggerLocalWorker(jobId);
+        }
       } else {
         await JobProcessingUtils.triggerAsyncProcessing(
             jobId,
@@ -237,7 +279,7 @@ export class WorkflowAIController {
   /**
    * Helper to trigger local worker process
    */
-  private async triggerLocalWorker(jobId: string, stepIndex?: string) {
+  private async triggerLocalWorker(jobId: string, stepIndex?: string, onLog?: (log: string) => void): Promise<number> {
     const { spawn } = await import('child_process');
     const path = await import('path');
     const { env } = await import('@utils/env');
@@ -256,14 +298,15 @@ export class WorkflowAIController {
     
     if (!fs.existsSync(workerScript)) {
         logger.error('[Local Worker] Could not find worker script', { searchPath: workerScript });
-        return;
+        return 1;
     }
 
     const envVars = {
       ...process.env,
       JOB_ID: jobId,
       ...(stepIndex ? { STEP_INDEX: stepIndex } : {}),
-      PYTHONUNBUFFERED: '1'
+      PYTHONUNBUFFERED: '1',
+      LOG_FORMAT: 'json' // Force JSON logging for structured parsing in Playground
     };
 
     logger.info('[Local Worker] Spawning local worker', { script: workerScript, jobId, stepIndex });
@@ -275,46 +318,53 @@ export class WorkflowAIController {
       logger.warn('[Local Worker] Failed to mark job as processing', { jobId, error: e?.message || String(e) });
     }
 
-    const worker = spawn('python3', [workerScript], { env: envVars });
+    return new Promise((resolve) => {
+        const worker = spawn('python3', [workerScript], { env: envVars });
 
-    let stderrTail = '';
-    
-    worker.stdout.on('data', (data) => {
-      logger.info(`[Worker Output] ${data}`);
-    });
-    
-    worker.stderr.on('data', (data) => {
-      try {
-        stderrTail = (stderrTail + data.toString()).slice(-2000);
-      } catch {
-        // ignore
-      }
-      logger.error(`[Worker Error] ${data}`);
-    });
-    
-    worker.on('close', (code) => {
-      logger.info('[Local Worker] Worker finished', { code });
-
-      // Update job status based on local worker completion so the UI (and jobs list)
-      // doesn't show test jobs stuck in "pending"/"processing".
-      void (async () => {
-        const now = new Date().toISOString();
-        try {
-          if (code === 0) {
-            await db.update(JOBS_TABLE, { job_id: jobId }, { status: 'completed', updated_at: now, completed_at: now });
-          } else {
-            await db.update(JOBS_TABLE, { job_id: jobId }, {
-              status: 'failed',
-              updated_at: now,
-              completed_at: now,
-              error_message: stderrTail ? stderrTail.slice(-1000) : 'Local worker exited non-zero',
-              error_type: 'LocalWorkerError',
-            });
+        let stderrTail = '';
+        
+        worker.stdout.on('data', (data: Buffer) => {
+          const str = data.toString();
+          logger.info(`[Worker Output] ${str}`);
+          if (onLog) onLog(str);
+        });
+        
+        worker.stderr.on('data', (data: Buffer) => {
+          const str = data.toString();
+          try {
+            stderrTail = (stderrTail + str).slice(-2000);
+          } catch {
+            // ignore
           }
-        } catch (e: any) {
-          logger.error('[Local Worker] Failed to update test job status after worker finished', { jobId, code, error: e?.message || String(e) });
-        }
-      })();
+          logger.error(`[Worker Error] ${str}`);
+          if (onLog) onLog(str);
+        });
+        
+        worker.on('close', (code: number) => {
+          logger.info('[Local Worker] Worker finished', { code });
+
+          // Update job status based on local worker completion
+          void (async () => {
+            const now = new Date().toISOString();
+            try {
+              if (code === 0) {
+                await db.update(JOBS_TABLE, { job_id: jobId }, { status: 'completed', updated_at: now, completed_at: now });
+              } else {
+                await db.update(JOBS_TABLE, { job_id: jobId }, {
+                  status: 'failed',
+                  updated_at: now,
+                  completed_at: now,
+                  error_message: stderrTail ? stderrTail.slice(-1000) : 'Local worker exited non-zero',
+                  error_type: 'LocalWorkerError',
+                });
+              }
+            } catch (e: any) {
+              logger.error('[Local Worker] Failed to update test job status after worker finished', { jobId, code, error: e?.message || String(e) });
+            }
+          })();
+          
+          resolve(code);
+        });
     });
   }
 

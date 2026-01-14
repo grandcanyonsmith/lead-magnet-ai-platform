@@ -130,36 +130,53 @@ class OpenAIRequestBuilder:
                         logger.debug(f"Filtering out incompatible tool '{tool_type}' when computer_use_preview is present")
                 tools = filtered_tools
             
-            # Clean tools before sending to OpenAI API
-            cleaned_tools = ToolBuilder.clean_tools(tools)
-            
-            # #region agent log
+        # Clean tools before sending to OpenAI API
+        cleaned_tools = ToolBuilder.clean_tools(tools)
+        
+        # Log the full request payload for debugging
+        if logger.isEnabledFor(logging.INFO):
+            import json
             try:
-                import json
-                import time
-                # Filter out shell tool if computer_use_preview is present to avoid API error
-                # Note: ToolBuilder.clean_tools already handles the conversion of 'shell' to a function tool if needed
-                # So we just log what's happening here without removing it again
-                
-                with open('/Users/canyonsmith/lead-magnent-ai/.cursor/debug.log', 'a') as f:
-                    f.write(json.dumps({
-                        "sessionId": "debug-session",
-                        "runId": "repro-3",
-                        "hypothesisId": "check-tools-after-builder",
-                        "location": "openai_request_builder.py:build_api_params",
-                        "timestamp": int(time.time() * 1000),
-                        "message": "Tools after ToolBuilder.clean_tools",
-                        "data": {
-                            "model": model,
-                            "has_computer_use": has_computer_use,
-                            "final_tools_count": len(cleaned_tools),
-                            "final_tool_types": [t.get('type') for t in cleaned_tools],
-                            "final_tool_names": [t.get('name') for t in cleaned_tools if t.get('type') == 'function']
-                        }
-                    }) + '\n')
+                # Create a safe copy of params for logging (without api key which isn't here anyway)
+                debug_payload = {
+                    "model": params.get("model"),
+                    "tool_choice": params.get("tool_choice"),
+                    "tools": cleaned_tools,
+                    # Truncate input/instructions for readability
+                    "input_preview": str(params.get("input"))[:200] + "..." if params.get("input") else None,
+                    "instructions_preview": str(params.get("instructions"))[:200] + "..." if params.get("instructions") else None,
+                }
+                logger.info(f"[OpenAI Request Builder] Final API Payload: {json.dumps(debug_payload)}")
             except Exception:
                 pass
-            # #endregion
+        
+        # #region agent log
+        try:
+            import json
+            import time
+            # Filter out shell tool if computer_use_preview is present to avoid API error
+            # Note: ToolBuilder.clean_tools already handles the conversion of 'shell' to a function tool if needed
+            # So we just log what's happening here without removing it again
+            
+            with open('/Users/canyonsmith/lead-magnent-ai/.cursor/debug.log', 'a') as f:
+                f.write(json.dumps({
+                    "sessionId": "debug-session",
+                    "runId": "repro-3",
+                    "hypothesisId": "check-tools-after-builder",
+                    "location": "openai_request_builder.py:build_api_params",
+                    "timestamp": int(time.time() * 1000),
+                    "message": "Tools after ToolBuilder.clean_tools",
+                    "data": {
+                        "model": model,
+                        "has_computer_use": has_computer_use,
+                        "final_tools_count": len(cleaned_tools),
+                        "final_tool_types": [t.get('type') for t in cleaned_tools],
+                        "final_tool_names": [t.get('name') for t in cleaned_tools if t.get('type') == 'function']
+                    }
+                }) + '\n')
+        except Exception:
+            pass
+        # #endregion
 
             # Only add tools if we actually have any after cleaning/filtering
             if cleaned_tools:
@@ -209,6 +226,12 @@ class OpenAIRequestBuilder:
             fmt_type = output_format.get("type")
             if fmt_type in ("text", "json_object"):
                 text_cfg["format"] = {"type": fmt_type}
+                
+                # Ensure "json" word appears in instructions if json_object is requested
+                if fmt_type == "json_object":
+                    current_instructions = params.get("instructions", "")
+                    if "json" not in current_instructions.lower():
+                        params["instructions"] = current_instructions + "\n\nIMPORTANT: Please output your response in JSON format."
             elif fmt_type == "json_schema":
                 name = output_format.get("name")
                 schema = output_format.get("schema")

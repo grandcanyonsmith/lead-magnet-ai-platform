@@ -83,6 +83,7 @@ export function AuthProvider({
   );
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasInitialized, setHasInitialized] = useState(false);
 
   const refreshAuth = useCallback(async () => {
     try {
@@ -166,7 +167,73 @@ export function AuthProvider({
         setSession(currentSession);
 
         // Fetch user info from /me endpoint
-        await refreshAuth();
+        try {
+          const meResponse = await api.get<AuthMeResponse>("/me");
+
+          setRealUser(meResponse.realUser);
+          setActingUser(meResponse.actingUser);
+          setRole(meResponse.role);
+          setCustomerId(meResponse.customerId);
+          setIsImpersonating(meResponse.isImpersonating);
+
+          // Update view mode from response or localStorage
+          if (meResponse.viewMode) {
+            setViewModeState(meResponse.viewMode);
+            if (typeof window !== "undefined") {
+              localStorage.setItem("agency_view_mode", meResponse.viewMode);
+            }
+          }
+          if (meResponse.selectedCustomerId) {
+            setSelectedCustomerId(meResponse.selectedCustomerId);
+            if (typeof window !== "undefined") {
+              localStorage.setItem(
+                "agency_selected_customer_id",
+                meResponse.selectedCustomerId,
+              );
+            }
+          }
+
+          // Set user to acting user for backward compatibility
+          setUser(meResponse.actingUser);
+
+          // Store session ID if impersonating
+          if (meResponse.isImpersonating) {
+            // Session ID should be stored in localStorage by impersonation controller
+            const storedSessionId = localStorage.getItem(
+              "impersonation_session_id",
+            );
+            setSessionId(storedSessionId);
+          } else {
+            setSessionId(null);
+            localStorage.removeItem("impersonation_session_id");
+          }
+        } catch (error) {
+          console.error("Error fetching user info:", error);
+          // If /me fails, fall back to whatever token we have locally.
+          const storedIdToken = service.getTokenStorage().getIdToken();
+          const payload = storedIdToken ? decodeJwtPayload(storedIdToken) : null;
+
+          if (payload) {
+            const fallbackUser: AuthUser = {
+              user_id: (payload.sub as string) || "",
+              email: (payload.email as string) || "",
+              name: (payload.name as string) || undefined,
+              username:
+                (payload["cognito:username"] as string) ||
+                (payload.email as string) ||
+                "",
+              role: (payload["custom:role"] as string) || "USER",
+              customer_id: (payload["custom:customer_id"] as string) || undefined,
+            };
+
+            setUser(fallbackUser);
+            setRealUser(fallbackUser);
+            setActingUser(fallbackUser);
+            setRole(fallbackUser.role || "USER");
+            setCustomerId(fallbackUser.customer_id || null);
+            setIsImpersonating(false);
+          }
+        }
       } else {
         setUser(null);
         setRealUser(null);
@@ -191,16 +258,21 @@ export function AuthProvider({
     } finally {
       setIsLoading(false);
     }
-  }, [service, refreshAuth]);
+  }, [service]);
 
+  // Initialize auth check only once on mount
   useEffect(() => {
-    // Small delay to ensure localStorage and Cognito SDK are ready
-    const timer = setTimeout(() => {
-      checkAuth();
-    }, 100);
+    if (!hasInitialized) {
+      // Small delay to ensure localStorage and Cognito SDK are ready
+      const timer = setTimeout(() => {
+        checkAuth().then(() => {
+          setHasInitialized(true);
+        });
+      }, 100);
 
-    return () => clearTimeout(timer);
-  }, [checkAuth]);
+      return () => clearTimeout(timer);
+    }
+  }, [hasInitialized, checkAuth]);
 
   const signIn = useCallback(
     async (email: string, password: string): Promise<AuthResponse> => {
@@ -231,6 +303,7 @@ export function AuthProvider({
     setIsAuthenticated(false);
     setViewModeState(null);
     setSelectedCustomerId(null);
+    setHasInitialized(false);
     if (typeof window !== "undefined") {
       localStorage.removeItem("agency_view_mode");
       localStorage.removeItem("agency_selected_customer_id");
