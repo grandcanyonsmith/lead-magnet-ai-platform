@@ -299,7 +299,29 @@ class OpenAIRequestBuilder:
 
         # Maximum output tokens
         if max_output_tokens is not None:
-            params["max_output_tokens"] = max_output_tokens
+            # OpenAI requires an integer. DynamoDB often stores numbers as Decimal,
+            # and our sanitation may convert those to float (e.g., 2048.0).
+            # Coerce to int defensively; if invalid, omit the param rather than failing the request.
+            try:
+                if isinstance(max_output_tokens, bool):
+                    raise ValueError("max_output_tokens must be an int, not bool")
+                if isinstance(max_output_tokens, float):
+                    if not max_output_tokens.is_integer():
+                        logger.warning(
+                            "[OpenAI Request Builder] max_output_tokens was a non-integer float; truncating",
+                            extra={"max_output_tokens": max_output_tokens},
+                        )
+                    max_output_tokens = int(max_output_tokens)
+                else:
+                    max_output_tokens = int(max_output_tokens)
+
+                if max_output_tokens > 0:
+                    params["max_output_tokens"] = max_output_tokens
+            except Exception as e:
+                logger.warning(
+                    "[OpenAI Request Builder] Invalid max_output_tokens; omitting to avoid API error",
+                    extra={"max_output_tokens": str(max_output_tokens), "error": str(e)},
+                )
         
         return params
 
