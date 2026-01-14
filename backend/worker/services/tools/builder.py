@@ -5,9 +5,7 @@ from typing import Dict, List
 from utils.decimal_utils import convert_decimals_to_int
 from .validator import ToolValidator
 from .definitions import (
-    get_shell_tool_definition, 
     get_image_generation_defaults,
-    get_web_search_tool_definition,
     get_file_search_tool_definition,
     get_code_interpreter_tool_definition,
     get_computer_use_tool_definition
@@ -43,13 +41,13 @@ class ToolBuilder:
                     # Convert image_generation string to object with defaults
                     tool = get_image_generation_defaults()
                 elif tool == 'shell':
-                    # Always convert shell to function tool
-                    # This is required because OpenAI doesn't natively support 'shell' tool type
-                    # And even if it did, we want to enforce our custom execution logic via function call
-                    logger.info("Converting shell tool to function definition")
-                    tool = get_shell_tool_definition()
+                    # Use native Responses API tool type.
+                    tool = {"type": "shell"}
                 elif tool == 'web_search':
-                    tool = get_web_search_tool_definition()
+                    # Use native Responses API tool type.
+                    tool = {"type": "web_search"}
+                elif tool == 'web_search_preview':
+                    tool = {"type": "web_search_preview"}
                 elif tool == 'file_search':
                     tool = get_file_search_tool_definition()
                 elif tool == 'code_interpreter':
@@ -64,13 +62,14 @@ class ToolBuilder:
                 
                 # Also handle if it came in as a dict with type="shell"
                 if cleaned_tool.get("type") == "shell":
-                    logger.info("Converting shell tool dict to function definition")
-                    cleaned_tool = get_shell_tool_definition()
+                    # Keep native Responses API tool type.
+                    cleaned_tool = {"type": "shell"}
                 
-                # Convert web_search dict to function definition (required for OpenAI SDK compatibility)
+                # Keep native Responses API tool types for web search.
                 if cleaned_tool.get("type") == "web_search":
-                    logger.info("Converting web_search tool dict to function definition")
-                    cleaned_tool = get_web_search_tool_definition()
+                    cleaned_tool = {"type": "web_search"}
+                if cleaned_tool.get("type") == "web_search_preview":
+                    cleaned_tool = {"type": "web_search_preview"}
 
                 # OpenAI rejects `container` on `computer_use_preview` (unknown_parameter).
                 if cleaned_tool.get("type") == "computer_use_preview" and "container" in cleaned_tool:
