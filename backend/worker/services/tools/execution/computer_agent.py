@@ -361,26 +361,49 @@ class CUAgent:
                     pass
 
             # Include initial screenshot in the FIRST request so the model doesn't waste an iteration asking for it.
+            #
+            # Some models (notably computer-use-preview-*) reject image inputs entirely. In that case,
+            # send text-only input (but still include useful URL/navigation context).
             if initial_screenshot_b64_for_model:
                 user_text = (input_text or "").strip() or "Start the task."
                 if initial_current_url_for_model:
                     user_text = f"{user_text}\n\n(Current URL: {initial_current_url_for_model})"
-                
-                if initial_nav_error:
-                    user_text = f"{user_text}\n\nWARNING: Initial navigation to {target_url} failed with error: {initial_nav_error}. Please check the URL or try a different one."
 
-                initial_params["input"] = [
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "input_text", "text": user_text},
-                            {
-                                "type": "input_image",
-                                "image_url": f"data:image/jpeg;base64,{initial_screenshot_b64_for_model}",
-                            },
-                        ],
-                    }
-                ]
+                if initial_nav_error:
+                    user_text = (
+                        f"{user_text}\n\nWARNING: Initial navigation to {target_url} failed with error: "
+                        f"{initial_nav_error}. Please check the URL or try a different one."
+                    )
+
+                model_supports_image_inputs = not (
+                    isinstance(model, str)
+                    and (
+                        model.lower().startswith("computer-use-preview")
+                        or "deep-research" in model.lower()
+                    )
+                )
+
+                if model_supports_image_inputs:
+                    initial_params["input"] = [
+                        {
+                            "role": "user",
+                            "content": [
+                                {"type": "input_text", "text": user_text},
+                                {
+                                    "type": "input_image",
+                                    "image_url": f"data:image/jpeg;base64,{initial_screenshot_b64_for_model}",
+                                },
+                            ],
+                        }
+                    ]
+                else:
+                    # Text-only input (no input_image) for models that reject image inputs.
+                    initial_params["input"] = [
+                        {
+                            "role": "user",
+                            "content": [{"type": "input_text", "text": user_text}],
+                        }
+                    ]
             
             yield LogEvent(type='log', timestamp=time.time(), level='info', message='Sending initial request to model...')
             if instructions:
