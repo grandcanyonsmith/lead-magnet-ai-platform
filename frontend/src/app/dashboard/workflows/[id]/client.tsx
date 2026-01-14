@@ -360,19 +360,14 @@ export default function WorkflowDetailPage() {
                             toast.error("Unable to generate public form URL.");
                             return;
                           }
-                          // Valid URL - call window.open() synchronously BEFORE any async operations
-                          // This ensures popup blockers don't block it
-                          e.preventDefault();
-                          const openedWindow = window.open(url, '_blank', 'noopener,noreferrer');
+                          // Valid URL: allow the browser's normal <a target="_blank"> navigation.
+                          // (More reliable than window.open and avoids popup blockers.)
                           // #region agent log
-                          fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client.tsx:373',message:'window.open called',data:{url,openedWindow:!!openedWindow,wasBlocked:!openedWindow},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix-v2',hypothesisId:'A'})}).catch(()=>{});
+                          fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client.tsx:363',message:'Valid URL - allowing default navigation',data:{url},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix-v3',hypothesisId:'A'})}).catch(()=>{});
                           // #endregion
-                          if (!openedWindow) {
-                            toast.error("Popup blocked. Please allow popups for this site and try again.");
-                          }
                         } catch (error) {
                           // #region agent log
-                          fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client.tsx:380',message:'Error in onClick handler',data:{error:error instanceof Error?error.message:String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix-v2',hypothesisId:'E'})}).catch(()=>{});
+                          fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client.tsx:369',message:'Error in onClick handler',data:{error:error instanceof Error?error.message:String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix-v3',hypothesisId:'E'})}).catch(()=>{});
                           // #endregion
                           e.preventDefault();
                           toast.error("An error occurred while opening the form.");

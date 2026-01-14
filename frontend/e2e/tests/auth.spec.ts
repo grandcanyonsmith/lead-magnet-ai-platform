@@ -39,11 +39,23 @@ test.describe('Authentication', () => {
 
   test('should logout successfully', async ({ page, login, logout }) => {
     await login()
-    // Wait for dashboard to be fully loaded before attempting logout
-    await page.waitForURL(/\/dashboard/, { timeout: 15000 })
-    // Wait for main content to ensure page is ready
-    await page.locator('main').waitFor({ timeout: 10000, state: 'visible' }).catch(() => {
-      // Ignore if main is not found - might be onboarding page
+    // Wait for dashboard or onboarding page to be fully loaded
+    // Login can redirect to either dashboard or onboarding survey
+    await page.waitForURL(/\/dashboard|\/onboarding/, { timeout: 15000 })
+    
+    // If we're on onboarding, navigate to dashboard first (onboarding might not have logout)
+    const currentUrl = page.url()
+    if (currentUrl.includes('/onboarding')) {
+      await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
+      await page.waitForURL(/\/dashboard/, { timeout: 10000 })
+    }
+    
+    // Wait for main content or sidebar to ensure page is ready
+    await Promise.race([
+      page.locator('main').waitFor({ state: 'visible', timeout: 10000 }),
+      page.locator('aside').waitFor({ state: 'visible', timeout: 10000 })
+    ]).catch(() => {
+      // Ignore if neither found - proceed anyway
     })
     
     await logout()
