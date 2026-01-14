@@ -94,15 +94,15 @@ export function registerWorkflowRoutes(): void {
   });
 
   // Test workflow step
-  router.register('POST', '/admin/workflows/test-step', async (_params, body, _query, tenantId) => {
+  router.register('POST', '/admin/workflows/test-step', async (_params, body, _query, tenantId, context) => {
     logger.info('[Router] Matched /admin/workflows/test-step route');
-    return await workflowAIController.testStep(tenantId!, body);
+    return await workflowAIController.testStep(tenantId!, body, context);
   });
 
   // Test full workflow (Playground)
-  router.register('POST', '/admin/workflows/test-workflow', async (_params, body, _query, tenantId) => {
+  router.register('POST', '/admin/workflows/test-workflow', async (_params, body, _query, tenantId, context) => {
     logger.info('[Router] Matched /admin/workflows/test-workflow route');
-    return await workflowAIController.testWorkflow(tenantId!, body);
+    return await workflowAIController.testWorkflow(tenantId!, body, context);
   });
 
   // Get workflow

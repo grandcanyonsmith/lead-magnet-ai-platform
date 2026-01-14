@@ -112,6 +112,60 @@ export interface ApiClient {
     request: WorkflowRefineInstructionsRequest,
   ): Promise<WorkflowRefineInstructionsResponse>;
 
+  generateStepWithAI(
+    workflowId: string,
+    request: {
+      userPrompt: string;
+      action?: "update" | "add";
+      currentStep?: any;
+      currentStepIndex?: number;
+    },
+  ): Promise<{
+    action: "update" | "add";
+    step_index?: number;
+    step: any;
+  }>;
+
+  editWorkflowWithAI(
+    workflowId: string,
+    request: {
+      userPrompt: string;
+      contextJobId?: string;
+    },
+  ): Promise<{
+    job_id: string;
+    status: "pending" | "processing" | "completed" | "failed";
+    message?: string;
+  }>;
+
+  getWorkflowAIEditStatus(jobId: string): Promise<{
+    job_id: string;
+    status: "pending" | "processing" | "completed" | "failed";
+    result: {
+      workflow_name?: string;
+      workflow_description?: string;
+      html_enabled?: boolean;
+      steps: any[];
+      changes_summary: string;
+    } | null;
+    error_message?: string | null;
+    workflow_id?: string | null;
+    created_at?: string;
+    updated_at?: string;
+  }>;
+
+  testStep(request: { step: any; input?: any }): Promise<{
+    job_id: string;
+    status: string;
+    message: string;
+  }>;
+
+  testWorkflow(request: { steps: any[]; input?: any }): Promise<{
+    job_id: string;
+    status: string;
+    message: string;
+  }>;
+
   // Template AI
   generateTemplateWithAI(
     request: TemplateGenerateRequest,

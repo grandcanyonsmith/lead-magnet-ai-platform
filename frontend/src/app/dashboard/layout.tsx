@@ -25,8 +25,7 @@ export default function DashboardLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { role, user, signOut } = useAuth();
-  const [loading, setLoading] = useState(true);
+  const { role, user, signOut, isAuthenticated, isLoading: authLoading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [activeTourId, setActiveTourId] = useState<TourId | null>(null);
@@ -45,30 +44,23 @@ export default function DashboardLayout({
     }
   }, []);
 
+  // Use the auth context instead of making a separate auth check
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const authenticated = await authService.isAuthenticated();
-        if (!authenticated) {
-          logger.debug("Not authenticated, redirecting to login", {
-            context: "DashboardLayout",
-          });
-          router.push("/auth/login");
-        } else {
-          logger.debug("Authenticated, showing dashboard", {
-            context: "DashboardLayout",
-          });
-          setLoading(false);
-          // Load settings for onboarding checklist
-          await loadSettings();
-        }
-      } catch (error) {
-        logger.error("Auth check error", { error, context: "DashboardLayout" });
+    if (!authLoading) {
+      if (!isAuthenticated) {
+        logger.debug("Not authenticated, redirecting to login", {
+          context: "DashboardLayout",
+        });
         router.push("/auth/login");
+      } else {
+        logger.debug("Authenticated, showing dashboard", {
+          context: "DashboardLayout",
+        });
+        // Load settings for onboarding checklist
+        loadSettings();
       }
-    };
-    checkAuth();
-  }, [router, loadSettings]);
+    }
+  }, [isAuthenticated, authLoading, router, loadSettings]);
 
   const handleStartTour = (tourId: TourId) => {
     setActiveTourId(tourId);
@@ -128,10 +120,10 @@ export default function DashboardLayout({
       setSidebarOpen(false);
     },
     navItemsCount: navItems.length,
-    enabled: !loading,
+    enabled: !authLoading,
   });
 
-  if (loading) {
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">

@@ -165,6 +165,173 @@ export class WorkflowsClient extends BaseApiClient {
     return this.post("/admin/workflows/test-workflow", request);
   }
 
+  async streamTestWorkflow(
+    request: { steps: any[]; input?: any },
+    callbacks: {
+        onLog: (log: string) => void;
+        onComplete: (data?: any) => void;
+        onError: (error: string) => void;
+    },
+    signal?: AbortSignal
+  ): Promise<void> {
+    const token = this.tokenProvider.getToken();
+    const url = `${this.client.defaults.baseURL}/admin/workflows/test-workflow`;
+    
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                // Add common headers from interceptors if needed
+            },
+            body: JSON.stringify(request),
+            signal
+        });
+
+        if (!response.ok) {
+             const errorText = await response.text();
+             // If streaming not supported/handled, it might return regular JSON error or 202
+             if (response.status === 202) {
+                 // Fallback to polling if backend returns 202 (not streaming)
+                 try {
+                    const json = JSON.parse(errorText);
+                    callbacks.onLog(`[System] Streaming not active, polling job ${json.job_id}...`);
+                    // Here we could trigger a poller, but let's just complete for now or handle upstream
+                    callbacks.onComplete({ job_id: json.job_id, status: 'pending' });
+                 } catch (e) {
+                    callbacks.onError(`Started but failed to parse response: ${errorText}`);
+                 }
+                 return;
+             }
+             callbacks.onError(`Failed to start workflow test: ${response.status} ${errorText}`);
+             return;
+        }
+
+        const reader = response.body?.getReader();
+        if (!reader) {
+             callbacks.onError("Response body is not readable");
+             return;
+        }
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    const dataStr = line.substring(6);
+                    try {
+                        const data = JSON.parse(dataStr);
+                        if (data.type === 'log') {
+                            callbacks.onLog(data.content);
+                        } else if (data.type === 'done') {
+                            callbacks.onComplete(data);
+                        } else if (data.type === 'init') {
+                            callbacks.onLog(`[System] Job started: ${data.job_id}`);
+                        }
+                    } catch (e) {
+                        console.error('Failed to parse SSE data:', dataStr);
+                    }
+                }
+            }
+        }
+        
+        // Final flush if needed, but SSE usually ends with empty line
+        callbacks.onComplete();
+        
+    } catch (e: any) {
+        callbacks.onError(e.message);
+    }
+  }
+
+  async streamTestStep(
+    request: { step: any; input?: any },
+    callbacks: {
+        onLog: (log: string) => void;
+        onComplete: (data?: any) => void;
+        onError: (error: string) => void;
+    },
+    signal?: AbortSignal
+  ): Promise<void> {
+    const token = this.tokenProvider.getToken();
+    const url = `${this.client.defaults.baseURL}/admin/workflows/test-step`;
+    
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify(request),
+            signal
+        });
+
+        if (!response.ok) {
+             const errorText = await response.text();
+             if (response.status === 202) {
+                 try {
+                    const json = JSON.parse(errorText);
+                    callbacks.onLog(`[System] Streaming not active, polling job ${json.job_id}...`);
+                    callbacks.onComplete({ job_id: json.job_id, status: 'pending' });
+                 } catch (e) {
+                    callbacks.onError(`Started but failed to parse response: ${errorText}`);
+                 }
+                 return;
+             }
+             callbacks.onError(`Failed to start step test: ${response.status} ${errorText}`);
+             return;
+        }
+
+        const reader = response.body?.getReader();
+        if (!reader) {
+             callbacks.onError("Response body is not readable");
+             return;
+        }
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    const dataStr = line.substring(6);
+                    try {
+                        const data = JSON.parse(dataStr);
+                        if (data.type === 'log') {
+                            callbacks.onLog(data.content);
+                        } else if (data.type === 'done') {
+                            callbacks.onComplete(data);
+                        } else if (data.type === 'init') {
+                            callbacks.onLog(`[System] Job started: ${data.job_id}`);
+                        }
+                    } catch (e) {
+                        console.error('Failed to parse SSE data:', dataStr);
+                    }
+                }
+            }
+        }
+        callbacks.onComplete();
+    } catch (e: any) {
+        callbacks.onError(e.message);
+    }
+  }
+
   // Folder methods
   async getFolders(): Promise<FolderListResponse> {
     return this.get<FolderListResponse>("/admin/folders");
