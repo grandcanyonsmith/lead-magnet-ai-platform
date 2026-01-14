@@ -75,6 +75,10 @@ export class FileService {
         ? providedContentType
         : inferredContentType || "application/octet-stream";
 
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'test-json-1',hypothesisId:'H_file_content_type',location:'backend/api/src/services/files/fileService.ts:uploadFile',message:'Resolved upload content type',data:{ext:String(filename||'').toLowerCase().split('.').pop()||'',providedContentType:providedContentType||null,inferredContentType:inferredContentType||null,finalContentType:contentType,bufferBytes:fileBuffer?.length||0},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+
     const maxSize = 10 * 1024 * 1024; // 10MB
     if (fileBuffer.length > maxSize) {
       throw new ApiError("File size exceeds maximum allowed size (10MB)", 400);
