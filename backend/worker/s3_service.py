@@ -168,6 +168,7 @@ class S3Service:
             Tuple of (s3_url, public_url)
         """
         try:
+            region = os.environ.get('AWS_REGION', 'us-east-1')
             # Images are always public - bucket policy allows public read access
             # Note: We don't set ACL='public-read' because the bucket blocks public ACLs.
             put_params = {
@@ -192,7 +193,6 @@ class S3Service:
             else:
                 # Fallback: direct S3 public URL
                 # Format: https://{bucket}.s3.{region}.amazonaws.com/{key}
-                region = os.environ.get('AWS_REGION', 'us-east-1')
                 public_url = f"https://{self.bucket_name}.s3.{region}.amazonaws.com/{key}"
             
             logger.info(f"[S3] Uploaded image to S3 with public access", extra={

@@ -47,7 +47,7 @@ artifact_urls: [url1, url2, ...]
 ### Method 2: Check Frontend (Recommended)
 
 1. **Go to a job with a webhook step**: 
-   - Navigate to: `https://dmydkyj79auy7.cloudfront.net/dashboard/jobs/{job_id}`
+   - Navigate to: `https://forms.mycoursecreator360.com/dashboard/jobs/{job_id}`
    - Or use job: `job_01KAYDBYCJZX8VVD4C1F6W4YSJ` (currently processing)
 
 2. **Find the webhook step**:
@@ -123,7 +123,7 @@ When a webhook step executes, the payload will include:
       "artifact_id": "art_...",
       "artifact_type": "step_output",
       "artifact_name": "step_1_profile_normalization.md",
-      "public_url": "https://dmydkyj79auy7.cloudfront.net/...",
+      "public_url": "https://assets.mycoursecreator360.com/cust_.../jobs/job_.../step_1_profile_normalization.md",
       "file_size_bytes": 1234,
       "mime_type": "text/markdown",
       "created_at": "2025-11-25T..."
