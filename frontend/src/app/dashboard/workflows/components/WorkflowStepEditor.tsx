@@ -391,9 +391,11 @@ export default function WorkflowStepEditor({
   }, [localStep.tools]);
 
   const handleChange = (field: keyof WorkflowStep, value: any) => {
-    const updated = { ...localStep, [field]: value };
-    setLocalStep(updated);
-    onChange(index, updated);
+    setLocalStep((prev) => {
+      const updated = { ...prev, [field]: value };
+      onChange(index, updated);
+      return updated;
+    });
   };
 
   const isToolSelected = (toolValue: string): boolean => {
