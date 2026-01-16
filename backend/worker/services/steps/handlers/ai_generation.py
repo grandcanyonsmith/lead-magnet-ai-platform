@@ -144,6 +144,7 @@ class AIStepHandler(AbstractStepHandler):
                 )
 
             try:
+                previous_context = context if step_index > 0 else ""
                 # Execute AI step
                 step_output, usage_info, request_details, response_details, image_artifact_ids, step_artifact_id = self.ai_step_processor.process_ai_step(
                     step=step,
@@ -151,7 +152,7 @@ class AIStepHandler(AbstractStepHandler):
                     job_id=job_id,
                     tenant_id=tenant_id,
                     initial_context=context,
-                    previous_context=context, # In new flow, context passed in is already built from deps
+                    previous_context=previous_context,
                     current_step_context=current_step_context,
                     step_tools=step_tools,
                     step_tool_choice=step_tool_choice,

@@ -12,7 +12,7 @@ import { StepHeader } from "./StepHeader";
 import { StepInputOutput } from "./StepInputOutput";
 import { StepProgressBar } from "./StepProgressBar";
 import { ImagePreview } from "./ImagePreview";
-import { getStepStatus, getPreviousSteps, getFormSubmission } from "./utils";
+import { getStepStatus } from "./utils";
 import { Artifact } from "@/types/artifact";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { SubmissionSummary } from "@/components/jobs/detail/SubmissionSummary";
@@ -51,7 +51,6 @@ export function ExecutionSteps({
   jobStatus,
   liveStep,
   submission,
-  form,
   onResubmit,
   resubmitting,
   onRerunStep,
@@ -69,12 +68,6 @@ export function ExecutionSteps({
     }
     return [...steps].sort((a, b) => (a.step_order ?? 0) - (b.step_order ?? 0));
   }, [steps]);
-
-  // Compute form submission once (must be before early return)
-  const formSubmission = useMemo(
-    () => submission?.form_data ?? getFormSubmission(sortedSteps),
-    [submission?.form_data, sortedSteps],
-  );
 
   const stepsForTimeline = useMemo(
     () => sortedSteps.filter((step) => step.step_type !== "form_submission"),
@@ -215,12 +208,6 @@ export function ExecutionSteps({
                                   onCopy={onCopy}
                                   liveOutput={liveOutputForStep}
                                   liveUpdatedAt={liveUpdatedAtForStep}
-                                  previousSteps={getPreviousSteps(
-                                    step,
-                                    sortedSteps,
-                                  )}
-                                  formSubmission={formSubmission}
-                                  form={form}
                                   imageArtifacts={
                                     imageArtifactsByStep.get(stepOrder) || []
                                   }
