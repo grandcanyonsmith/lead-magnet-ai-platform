@@ -3,6 +3,7 @@
  * Displays step header with status, name, metrics, and action buttons
  */
 
+import { Fragment } from "react";
 import Link from "next/link";
 import { MergedStep, StepStatus } from "@/types/job";
 import { formatDurationMs } from "@/utils/jobFormatting";
@@ -10,11 +11,11 @@ import {
   PencilSquareIcon,
   ArrowPathIcon,
   ArrowTopRightOnSquareIcon,
-  CheckCircleIcon,
+  EllipsisVerticalIcon,
   XCircleIcon,
 } from "@heroicons/react/24/outline";
 import { CheckCircleIcon as CheckCircleIconSolid } from "@heroicons/react/24/solid";
-import { Tooltip } from "@/components/ui/Tooltip";
+import { Menu, Transition } from "@headlessui/react";
 
 const STEP_STATUS_BADGE: Record<
   StepStatus,
@@ -132,6 +133,30 @@ export function StepHeader({
   
   // Use status for coloring instead of step type
   const isSystemStep = step.step_type === "form_submission" || step.step_type === "final_output";
+  const canEditStep =
+    Boolean(canEdit && onEditStep) && !isSystemStep && step.step_order > 0;
+  const canRerunStep =
+    Boolean(onRerunStep || onRerunStepClick) &&
+    step.step_order > 0 &&
+    !isSystemStep;
+  const editDisabled = jobStatus === "processing";
+  const rerunDisabled =
+    rerunningStep === step.step_order - 1 ||
+    status === "pending" ||
+    status === "in_progress" ||
+    (!onRerunStep && !onRerunStepClick);
+  const hasActions = Boolean(detailsHref || canEditStep || canRerunStep);
+
+  const getMenuItemClass = (active: boolean, disabled?: boolean) => {
+    const base =
+      "group flex w-full items-center rounded-md px-2 py-2 text-sm transition-colors";
+    if (disabled) {
+      return `${base} text-gray-400 dark:text-gray-500 cursor-not-allowed`;
+    }
+    return active
+      ? `${base} bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300`
+      : `${base} text-gray-700 dark:text-gray-300`;
+  };
 
   return (
     <div className="flex flex-col gap-4 p-4 sm:p-5">
@@ -199,121 +224,106 @@ export function StepHeader({
         </div>
 
         <div className="flex items-center gap-3 self-end lg:self-auto">
-          {/* Action Buttons */}
-          <div className="flex items-center gap-1">
-            {detailsHref && (
-              <Tooltip content={detailsLabel} position="top">
-                <Link
-                  href={detailsHref}
-                  className="p-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors touch-target min-h-[44px] sm:min-h-0"
-                  aria-label={detailsLabel}
-                >
-                  <ArrowTopRightOnSquareIcon className="w-5 h-5" />
-                </Link>
-              </Tooltip>
-            )}
-            {/* Edit Step Button - Only for workflow template steps */}
-            {canEdit &&
-              onEditStep &&
-              !isSystemStep &&
-              step.step_order > 0 && (
-                <Tooltip
-                  content={
-                    jobStatus === "processing"
-                      ? "Editing disabled while run is in progress"
-                      : "Edit workflow step"
-                  }
-                  position="top"
-                >
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (jobStatus === "processing") {
-                        return;
-                      }
-                      const workflowStepIndex = step.step_order - 1;
-                      onEditStep(workflowStepIndex);
-                    }}
-                    disabled={jobStatus === "processing"}
-                    aria-label="Edit workflow step"
-                    className={`p-1.5 rounded transition-colors touch-target min-h-[44px] sm:min-h-0 ${
-                      jobStatus === "processing"
-                        ? "text-yellow-600 dark:text-yellow-500 cursor-not-allowed opacity-60"
-                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800"
-                    }`}
-                  >
-                    <PencilSquareIcon className="w-5 h-5" />
-                  </button>
-                </Tooltip>
-              )}
-
-            {/* Rerun Step Button - Available for all executable steps except form_submission (step 0) */}
-            {(onRerunStep || onRerunStepClick) &&
-              step.step_order > 0 &&
-              !isSystemStep && (
-                <Tooltip
-                  content={
-                    rerunningStep === step.step_order - 1
-                      ? "Rerunning step..."
-                      : status === "pending"
-                        ? "Step has not run yet"
-                        : status === "in_progress"
-                          ? "Step is currently running"
-                          : "Rerun this step"
-                  }
-                  position="top"
-                >
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      if (status === "pending" || status === "in_progress") {
-                        if (process.env.NODE_ENV === "development") {
-                          console.warn(
-                            `[StepHeader] Cannot rerun step: status is ${status}`,
-                          );
-                        }
-                        return;
-                      }
-                      const stepIndex = step.step_order - 1;
-                      if (process.env.NODE_ENV === "development") {
-                        console.log(
-                          `[StepHeader] Rerun button clicked for step ${step.step_order} (index ${stepIndex})`,
-                        );
-                      }
-                      // Use dialog callback if provided, otherwise fall back to direct rerun
-                      if (onRerunStepClick) {
-                        onRerunStepClick(stepIndex);
-                      } else if (onRerunStep) {
-                        // Fallback to direct rerun for backward compatibility
-                        onRerunStep(stepIndex).catch((error) => {
-                          if (process.env.NODE_ENV === "development") {
-                            console.error(
-                              "[StepHeader] Error in rerun handler:",
-                              error,
-                            );
-                          }
-                        });
-                      }
-                    }}
-                    disabled={
-                      rerunningStep === step.step_order - 1 ||
-                      status === "pending" ||
-                      status === "in_progress" ||
-                      (!onRerunStep && !onRerunStepClick)
-                    }
-                    className="p-1.5 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-target min-h-[44px] sm:min-h-0"
-                    aria-label="Rerun this step"
-                  >
-                    {rerunningStep === step.step_order - 1 ? (
-                      <ArrowPathIcon className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <ArrowPathIcon className="w-5 h-5" />
+          {hasActions && (
+            <Menu as="div" className="relative inline-block text-left">
+              <Menu.Button
+                aria-label="Step actions"
+                className="p-1.5 rounded transition-colors touch-target min-h-[44px] sm:min-h-0 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                <EllipsisVerticalIcon className="w-5 h-5" />
+              </Menu.Button>
+              <Transition
+                as={Fragment}
+                enter="transition ease-out duration-100"
+                enterFrom="transform opacity-0 scale-95"
+                enterTo="transform opacity-100 scale-100"
+                leave="transition ease-in duration-75"
+                leaveFrom="transform opacity-100 scale-100"
+                leaveTo="transform opacity-0 scale-95"
+              >
+                <Menu.Items className="absolute right-0 mt-2 w-52 origin-top-right divide-y divide-gray-100 dark:divide-gray-800 rounded-lg bg-white dark:bg-gray-900 shadow-lg ring-1 ring-black/5 dark:ring-white/10 focus:outline-none z-20">
+                  <div className="px-1 py-1">
+                    {detailsHref && (
+                      <Menu.Item>
+                        {({ active }) => (
+                          <Link
+                            href={detailsHref}
+                            onClick={(e) => e.stopPropagation()}
+                            className={getMenuItemClass(active)}
+                          >
+                            <ArrowTopRightOnSquareIcon className="mr-2 h-4 w-4" />
+                            {detailsLabel}
+                          </Link>
+                        )}
+                      </Menu.Item>
                     )}
-                  </button>
-                </Tooltip>
-              )}
-          </div>
+                    {canEditStep && (
+                      <Menu.Item disabled={editDisabled}>
+                        {({ active, disabled }) => (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (disabled) return;
+                              const workflowStepIndex = step.step_order - 1;
+                              onEditStep?.(workflowStepIndex);
+                            }}
+                            disabled={disabled}
+                            className={getMenuItemClass(active, disabled)}
+                          >
+                            <PencilSquareIcon className="mr-2 h-4 w-4" />
+                            {editDisabled
+                              ? "Editing locked"
+                              : "Edit workflow step"}
+                          </button>
+                        )}
+                      </Menu.Item>
+                    )}
+                    {canRerunStep && (
+                      <Menu.Item disabled={rerunDisabled}>
+                        {({ active, disabled }) => (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (disabled) return;
+                              const stepIndex = step.step_order - 1;
+                              if (process.env.NODE_ENV === "development") {
+                                console.log(
+                                  `[StepHeader] Rerun menu clicked for step ${step.step_order} (index ${stepIndex})`,
+                                );
+                              }
+                              if (onRerunStepClick) {
+                                onRerunStepClick(stepIndex);
+                              } else if (onRerunStep) {
+                                onRerunStep(stepIndex).catch((error) => {
+                                  if (process.env.NODE_ENV === "development") {
+                                    console.error(
+                                      "[StepHeader] Error in rerun handler:",
+                                      error,
+                                    );
+                                  }
+                                });
+                              }
+                            }}
+                            disabled={disabled}
+                            className={getMenuItemClass(active, disabled)}
+                          >
+                            <ArrowPathIcon
+                              className={`mr-2 h-4 w-4 ${rerunningStep === step.step_order - 1 ? "animate-spin" : ""}`}
+                            />
+                            {rerunningStep === step.step_order - 1
+                              ? "Rerunning step..."
+                              : "Rerun this step"}
+                          </button>
+                        )}
+                      </Menu.Item>
+                    )}
+                  </div>
+                </Menu.Items>
+              </Transition>
+            </Menu>
+          )}
         </div>
       </div>
     </div>

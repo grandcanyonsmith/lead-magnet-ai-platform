@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 import boto3
+from botocore.config import Config
 from botocore.exceptions import ClientError
 
 from core.config import settings
@@ -23,6 +24,20 @@ from core.config import settings
 logger = logging.getLogger(__name__)
 
 CONTRACT_VERSION = "2025-12-29"
+DEFAULT_LAMBDA_CONNECT_TIMEOUT_SECS = 10
+# Lambda max runtime is 900s; keep client read timeout above that.
+DEFAULT_LAMBDA_READ_TIMEOUT_SECS = 930
+
+
+def _read_positive_int_env(name: str, default: int) -> int:
+    value = (os.environ.get(name) or "").strip()
+    if not value:
+        return default
+    try:
+        parsed = int(value)
+    except Exception:
+        return default
+    return parsed if parsed > 0 else default
 
 
 class ShellExecutorService:
@@ -41,7 +56,25 @@ class ShellExecutorService:
         Args:
             lambda_client: Optional boto3 Lambda client
         """
-        self._lambda = lambda_client or boto3.client("lambda", region_name=settings.AWS_REGION)
+        if lambda_client is not None:
+            self._lambda = lambda_client
+        else:
+            connect_timeout = _read_positive_int_env(
+                "SHELL_EXECUTOR_CONNECT_TIMEOUT_SECS",
+                DEFAULT_LAMBDA_CONNECT_TIMEOUT_SECS,
+            )
+            read_timeout = _read_positive_int_env(
+                "SHELL_EXECUTOR_READ_TIMEOUT_SECS",
+                DEFAULT_LAMBDA_READ_TIMEOUT_SECS,
+            )
+            self._lambda = boto3.client(
+                "lambda",
+                region_name=settings.AWS_REGION,
+                config=Config(
+                    connect_timeout=connect_timeout,
+                    read_timeout=read_timeout,
+                ),
+            )
         # We now look for SHELL_EXECUTOR_FUNCTION_NAME instead of cluster ARNs
         self._function_name = os.environ.get("SHELL_EXECUTOR_FUNCTION_NAME")
 
