@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useRef, useMemo } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Tab, TabGroup, TabList, TabPanel, TabPanels } from "@headlessui/react";
 import { ClipboardDocumentIcon } from "@heroicons/react/24/outline";
@@ -25,9 +24,10 @@ import { SessionRecordings } from "@/components/jobs/SessionRecordings";
 import { ResubmitModal } from "@/components/jobs/ResubmitModal";
 import { RerunStepDialog } from "@/components/jobs/RerunStepDialog";
 import { ArtifactGallery } from "@/components/jobs/detail/ArtifactGallery";
+import { SubmissionSummary } from "@/components/jobs/detail/SubmissionSummary";
 import { WorkflowImprovePanel } from "@/components/jobs/detail/WorkflowImprovePanel";
 import { FullScreenPreviewModal } from "@/components/ui/FullScreenPreviewModal";
-import { LoadingState } from "@/components/ui/LoadingState";
+import { JobDetailSkeleton } from "@/components/jobs/detail/JobDetailSkeleton";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { JsonViewer } from "@/components/ui/JsonViewer";
@@ -47,7 +47,7 @@ import type {
 } from "@/types/job";
 import type { WorkflowStep } from "@/types";
 import type { Workflow } from "@/types/workflow";
-import type { FormSubmission, Form } from "@/types/form";
+import type { FormSubmission } from "@/types/form";
 import type { Artifact } from "@/types/artifact";
 
 // ---------------------------------------------------------------------------
@@ -121,6 +121,49 @@ export default function JobDetailClient() {
     () => summarizeStepProgress(mergedSteps),
     [mergedSteps],
   );
+
+  const totalCost = useMemo(() => {
+    if (!job?.execution_steps || !Array.isArray(job.execution_steps)) {
+      return null;
+    }
+
+    const aiSteps = job.execution_steps.filter(
+      (step) =>
+        step.step_type === "ai_generation" ||
+        step.step_type === "workflow_step",
+    );
+
+    if (aiSteps.length === 0) {
+      return null;
+    }
+
+    const sum = aiSteps.reduce((acc: number, step) => {
+      const cost = step.usage_info?.cost_usd;
+      if (cost === undefined || cost === null) {
+        return acc;
+      }
+      if (typeof cost === "number") {
+        return acc + cost;
+      }
+      if (typeof cost === "string") {
+        const parsed = parseFloat(cost);
+        return acc + (Number.isNaN(parsed) ? 0 : parsed);
+      }
+      return acc;
+    }, 0);
+
+    const hasCostData = aiSteps.some((step) => {
+      const cost = step.usage_info?.cost_usd;
+      if (cost === undefined || cost === null) return false;
+      return typeof cost === "number" ? cost > 0 : parseFloat(String(cost)) > 0;
+    });
+
+    if (!hasCostData) {
+      return null;
+    }
+
+    return sum;
+  }, [job?.execution_steps]);
 
   const jobDuration = useMemo(() => getJobDuration(job), [job]);
 
@@ -276,11 +319,19 @@ export default function JobDetailClient() {
   // ---------------------------------------------------------------------------
 
   if (loading) {
-    return <LoadingState />;
+    return <JobDetailSkeleton />;
   }
 
   if (error && !job) {
-    return <ErrorState message={error} />;
+    return (
+      <ErrorState
+        title="Unable to load job"
+        message={error}
+        onRetry={refreshJob}
+        retryLabel="Reload job"
+        className="dark:bg-red-900/20 dark:border-red-800"
+      />
+    );
   }
 
   if (!job) {
@@ -308,6 +359,12 @@ export default function JobDetailClient() {
           resubmitting={resubmitting}
           onResubmit={handleResubmitClick}
           job={job}
+          workflow={workflow}
+          submission={submission}
+          lastUpdatedLabel={lastUpdatedLabel}
+          lastRefreshedLabel={lastRefreshedLabel}
+          onRefresh={refreshJob}
+          refreshing={refreshing}
         />
 
         <JobOverviewSection
@@ -316,11 +373,8 @@ export default function JobDetailClient() {
           stepsSummary={stepsSummary}
           artifactCount={artifactGalleryItems.length}
           jobDuration={jobDuration}
-          lastUpdatedLabel={lastUpdatedLabel}
-          lastRefreshedLabel={lastRefreshedLabel}
-          onRefresh={refreshJob}
-          refreshing={refreshing}
-          onSelectArtifacts={() => setSelectedIndex(1)}
+          totalCost={totalCost}
+          onSelectExecutionTab={() => setSelectedIndex(0)}
         />
 
         <ResubmitModal
@@ -390,9 +444,10 @@ export default function JobDetailClient() {
           imageArtifactsByStep={imageArtifactsByStep}
           loadingArtifacts={loadingArtifacts}
           submission={submission}
-          form={form}
           onResubmit={handleResubmitClick}
           resubmitting={resubmitting}
+          onRefresh={refreshJob}
+          refreshing={refreshing}
           onCopy={copyToClipboard}
           onEditStep={handleEditStep}
           onRerunStepClick={handleRerunStepClick}
@@ -474,9 +529,10 @@ interface JobTabsProps {
   imageArtifactsByStep: Map<number, Artifact[]>;
   loadingArtifacts: boolean;
   submission?: FormSubmission | null;
-  form?: Form | null;
   onResubmit?: () => void;
   resubmitting?: boolean;
+  onRefresh?: () => void;
+  refreshing?: boolean;
   onCopy: (text: string) => void;
   onEditStep: (stepIndex: number) => void;
   onRerunStepClick: (stepIndex: number) => void;
@@ -500,15 +556,18 @@ function JobTabs({
   imageArtifactsByStep,
   loadingArtifacts,
   submission,
-  form,
   onResubmit,
   resubmitting,
+  onRefresh,
+  refreshing,
   onCopy,
   onEditStep,
   onRerunStepClick,
   rerunningStep,
   openPreview,
 }: JobTabsProps) {
+  const canRetryExecution = Boolean(onRefresh) && !refreshing;
+
   const tabs = [
     { name: "Report Generation", id: "execution" },
     { name: "Review & Improve", id: "improve" },
@@ -538,7 +597,28 @@ function JobTabs({
         <TabPanels className="mt-6">
           <TabPanel>
             <div className="space-y-8">
+              {submission && onResubmit && typeof resubmitting === "boolean" && (
+                <SubmissionSummary
+                  submission={submission}
+                  onResubmit={onResubmit}
+                  resubmitting={resubmitting}
+                  className="mb-0"
+                />
+              )}
+
+              {executionStepsError && (
+                <ErrorState
+                  title="Execution timeline unavailable"
+                  message={executionStepsError}
+                  onRetry={canRetryExecution ? onRefresh : undefined}
+                  retryLabel="Reload timeline"
+                  className="dark:bg-red-900/20 dark:border-red-800"
+                />
+              )}
+
               <ExecutionSteps
+                jobId={job.job_id}
+                variant="compact"
                 steps={mergedSteps}
                 expandedSteps={expandedSteps}
                 showExecutionSteps={showExecutionSteps}
@@ -547,10 +627,6 @@ function JobTabs({
                 onCopy={onCopy}
                 jobStatus={job.status}
                 liveStep={job.live_step}
-                submission={submission}
-                form={form}
-                onResubmit={onResubmit}
-                resubmitting={resubmitting}
                 onEditStep={onEditStep}
                 canEdit={true}
                 imageArtifactsByStep={imageArtifactsByStep}
@@ -559,13 +635,29 @@ function JobTabs({
                 rerunningStep={rerunningStep}
               />
 
-              <div id="job-tab-panel-artifacts">
+              <section id="job-tab-panel-artifacts" className="space-y-4">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      Outputs
+                    </h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Review the generated assets and reports.
+                    </p>
+                  </div>
+                  {artifactGalleryItems.length > 0 && (
+                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
+                      {artifactGalleryItems.length} item
+                      {artifactGalleryItems.length === 1 ? "" : "s"}
+                    </span>
+                  )}
+                </div>
                 <ArtifactGallery
                   items={artifactGalleryItems}
                   loading={loadingArtifacts}
                   onPreview={openPreview}
                 />
-              </div>
+              </section>
             </div>
           </TabPanel>
           <TabPanel>

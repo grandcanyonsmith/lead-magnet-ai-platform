@@ -42,6 +42,12 @@ export default function StepDiffPreview({
         },
         { field: "model", label: "Model", from: null, to: proposed.model },
         {
+          field: "service_tier",
+          label: "Service Tier",
+          from: null,
+          to: proposed.service_tier,
+        },
+        {
           field: "instructions",
           label: "Instructions",
           from: null,
@@ -82,6 +88,14 @@ export default function StepDiffPreview({
         label: "Model",
         from: original?.model,
         to: proposed.model,
+      });
+    }
+    if (original?.service_tier !== proposed.service_tier) {
+      diffs.push({
+        field: "service_tier",
+        label: "Service Tier",
+        from: original?.service_tier,
+        to: proposed.service_tier,
       });
     }
     if (original?.instructions !== proposed.instructions) {

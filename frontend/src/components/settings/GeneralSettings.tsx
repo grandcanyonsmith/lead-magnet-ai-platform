@@ -19,6 +19,12 @@ const AI_MODEL_OPTIONS = [
   { value: "gpt-5.2", label: "GPT-5.2" },
 ];
 
+const TOOL_CHOICE_OPTIONS = [
+  { value: "required", label: "Required" },
+  { value: "auto", label: "Auto" },
+  { value: "none", label: "None" },
+];
+
 export function GeneralSettings({
   settings,
   onChange,
@@ -86,6 +92,16 @@ export function GeneralSettings({
             onChange={(value) => onChange("default_ai_model", value)}
             options={AI_MODEL_OPTIONS}
             helpText="Default AI model used for generating lead magnets"
+          />
+
+          <FormField
+            label="Default Tool Usage"
+            name="default_tool_choice"
+            type="text"
+            value={settings.default_tool_choice || "required"}
+            onChange={(value) => onChange("default_tool_choice", value)}
+            options={TOOL_CHOICE_OPTIONS}
+            helpText="Default tool choice for new steps (you can override per-step)"
           />
         </div>
       </CardContent>

@@ -23,6 +23,7 @@ export interface Settings extends BaseEntity {
   contact_email?: string;
   website_url?: string;
   default_ai_model?: string;
+  default_tool_choice?: "auto" | "required" | "none";
   logo_url?: string;
   webhook_url?: string;
   ghl_webhook_url?: string;
@@ -52,6 +53,7 @@ export interface SettingsUpdateRequest {
   contact_email?: string;
   website_url?: string;
   default_ai_model?: string;
+  default_tool_choice?: "auto" | "required" | "none";
   logo_url?: string;
   ghl_webhook_url?: string;
   custom_domain?: string;
@@ -73,6 +75,7 @@ export interface SettingsFormData {
   contact_email: string;
   website_url: string;
   default_ai_model: string;
+  default_tool_choice: "auto" | "required" | "none";
   logo_url: string;
   ghl_webhook_url: string;
   custom_domain: string;

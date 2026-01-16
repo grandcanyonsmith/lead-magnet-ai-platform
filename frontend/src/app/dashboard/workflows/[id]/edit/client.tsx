@@ -33,8 +33,10 @@ export default function EditWorkflowPage() {
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
   const [templateId, setTemplateId] = useState<string | null>(null);
 
+  const { settings } = useSettings();
+
   // Main workflow hook
-  const workflowEdit = useWorkflowEdit();
+  const workflowEdit = useWorkflowEdit(settings?.default_tool_choice);
   const {
     workflowId,
     loading,
@@ -103,8 +105,6 @@ export default function EditWorkflowPage() {
     selectedSelectors,
     setSelectedSelectors,
   } = templateEdit;
-
-  const { settings } = useSettings();
 
   // Update templateId when formData.template_id changes
   useEffect(() => {
@@ -246,7 +246,8 @@ export default function EditWorkflowPage() {
             model: step.model as AIModel,
             tools:
               cleanedTools.length > 0 ? (cleanedTools as Tool[]) : undefined,
-            tool_choice: step.tool_choice || "auto",
+            tool_choice:
+              step.tool_choice || settings?.default_tool_choice || "required",
             depends_on:
               step.depends_on && step.depends_on.length > 0
                 ? step.depends_on

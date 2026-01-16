@@ -1,13 +1,19 @@
 import { formatAllModelDescriptionsMarkdown } from './modelDescriptions';
+import { ToolChoice } from '@utils/types';
 
 export interface WorkflowPromptContext {
   description: string;
   brandContext?: string;
   icpContext?: string;
+  defaultToolChoice?: ToolChoice;
 }
 
 export function buildWorkflowPrompt(context: WorkflowPromptContext): string {
-  const { description, brandContext, icpContext } = context;
+  const { description, brandContext, icpContext, defaultToolChoice } = context;
+  const resolvedDefaultToolChoice =
+    defaultToolChoice === "auto" || defaultToolChoice === "required" || defaultToolChoice === "none"
+      ? defaultToolChoice
+      : "required";
 
   let contextSection = '';
   if (brandContext) {
@@ -40,27 +46,31 @@ Create a sophisticated workflow that delivers *tangible value* to the user. The 
 ### web_search
 - **Purpose**: Gather real-time data, verify facts, research competitors/trends.
 - **Best For**: "Research [company]...", "Find latest trends in...", "Analyze market..."
-- **Tool Choice**: "auto"
 
 ### image_generation
 - **Purpose**: Create visual assets (charts, diagrams, cover images).
 - **Best For**: "Generate a cover image...", "Create a visual diagram of..."
-- **Tool Choice**: "auto"
 
 ### code_interpreter
 - **Purpose**: Precise calculations, data analysis, chart generation from data.
 - **Best For**: Financial projections, ROI calculators, statistical analysis.
-- **Tool Choice**: "auto"
 
 ### file_search
 - **Purpose**: Analyze uploaded reference documents.
 - **Best For**: "Analyze the uploaded PDF...", "Extract insights from..."
-- **Tool Choice**: "auto"
 
 ## Tool Choice Strategy
-- **"auto"**: Default. Allows the model to intelligently select tools.
-- **"required"**: Use ONLY if a step *cannot* function without the tool (e.g., "Search the web for...").
+- **Default tool_choice**: "${resolvedDefaultToolChoice}".
+- **"required"**: Use when a step *cannot* function without the tool (e.g., "Search the web for...").
+- **"auto"**: Let the model decide when to invoke tools.
 - **"none"**: Use for pure text processing, summarization, or HTML formatting.
+
+## Service Tiers (Optional)
+- **"auto"**: Let the platform choose.
+- **"default"**: Standard latency/cost balance.
+- **"flex"**: Lower cost, slower responses.
+- **"scale"**: Best for high-volume throughput.
+- **"priority"**: Fastest responses.
 
 ## Available Models
 ${formatAllModelDescriptionsMarkdown()}
@@ -136,6 +146,7 @@ Return ONLY valid JSON matching this structure:
       "step_name": "...",
       "step_description": "...",
       "model": "...",
+      "service_tier": "auto" | "default" | "flex" | "scale" | "priority",
       "reasoning_effort": "none" | "low" | "medium" | "high" | "xhigh",
       "text_verbosity": "low" | "medium" | "high",
       "max_output_tokens": 4000,

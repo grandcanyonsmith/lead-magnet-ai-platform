@@ -193,6 +193,7 @@ export interface UserSettings {
   webhook_url?: string;
   custom_domain?: string;
   lead_phone_field?: string;
+  default_tool_choice?: "auto" | "required" | "none";
   created_at: string;
   updated_at: string;
 }
