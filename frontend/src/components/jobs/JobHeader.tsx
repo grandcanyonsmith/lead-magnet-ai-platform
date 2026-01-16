@@ -1,119 +1,374 @@
 "use client";
 
 import { useMemo } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeftIcon,
+  ArrowPathIcon,
+  ArrowTopRightOnSquareIcon,
+  ArrowUturnLeftIcon,
   ClipboardDocumentIcon,
 } from "@heroicons/react/24/outline";
 import { toast } from "react-hot-toast";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { formatRelativeTime } from "@/utils/date";
 import type { Job } from "@/types/job";
+import type { Workflow } from "@/types/workflow";
+import type { FormSubmission } from "@/types/form";
 
 interface JobHeaderProps {
   error: string | null;
   resubmitting: boolean;
   onResubmit: () => void;
   job?: Job | null;
+  workflow?: Workflow | null;
+  submission?: FormSubmission | null;
+  lastUpdatedLabel?: string | null;
+  lastRefreshedLabel?: string | null;
+  refreshing?: boolean;
+  onRefresh?: () => void;
 }
 
-export function JobHeader({ error, job }: JobHeaderProps) {
+interface LeadHighlight {
+  label: string;
+  value: string;
+}
+
+export function JobHeader({
+  error,
+  resubmitting,
+  onResubmit,
+  job,
+  workflow,
+  submission,
+  lastUpdatedLabel,
+  lastRefreshedLabel,
+  refreshing,
+  onRefresh,
+}: JobHeaderProps) {
   const router = useRouter();
+  const isAutoUpdating = job?.status === "processing";
 
-  const totalCost = useMemo(() => {
-    if (!job?.execution_steps || !Array.isArray(job.execution_steps)) {
-      return null;
-    }
+  const { leadName, leadHighlights } = useMemo(
+    () => buildLeadHighlights(submission?.form_data),
+    [submission?.form_data],
+  );
 
-    // Filter to only AI generation steps (which have cost)
-    const aiSteps = job.execution_steps.filter(
-      (step) =>
-        step.step_type === "ai_generation" ||
-        step.step_type === "workflow_step",
-    );
+  const submittedLabel = submission?.created_at
+    ? formatRelativeTime(submission.created_at)
+    : null;
+  const updatedLabel =
+    lastUpdatedLabel ||
+    (job?.updated_at ? formatRelativeTime(job.updated_at) : null) ||
+    (job?.created_at ? formatRelativeTime(job.created_at) : null);
 
-    if (aiSteps.length === 0) {
-      return null;
-    }
+  const heading = leadName || workflow?.workflow_name || "Lead report";
+  const description = [
+    workflow?.workflow_name && heading !== workflow.workflow_name
+      ? `Workflow: ${workflow.workflow_name}`
+      : null,
+    submittedLabel ? `Submitted ${submittedLabel}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ") || "Generated lead report and execution details.";
 
-    const sum = aiSteps.reduce((acc: number, step) => {
-      const cost = step.usage_info?.cost_usd;
-      if (cost === undefined || cost === null) {
-        return acc;
-      }
-      if (typeof cost === "number") {
-        return acc + cost;
-      }
-      if (typeof cost === "string") {
-        const parsed = parseFloat(cost);
-        return acc + (Number.isNaN(parsed) ? 0 : parsed);
-      }
-      return acc;
-    }, 0);
+  const timelineLabel = [
+    updatedLabel ? `Updated ${updatedLabel}` : null,
+    lastRefreshedLabel ? `Viewed ${lastRefreshedLabel}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
-    // Only show cost if at least one step has usage_info with cost_usd
-    const hasCostData = aiSteps.some((step) => {
-      const cost = step.usage_info?.cost_usd;
-      if (cost === undefined || cost === null) return false;
-      return typeof cost === "number" ? cost > 0 : parseFloat(String(cost)) > 0;
-    });
-
-    // If no steps have cost data, return null to hide the display
-    if (!hasCostData) {
-      return null;
-    }
-
-    return sum;
-  }, [job?.execution_steps]);
-
-  const handleCopyJobId = async () => {
-    if (!job?.job_id) return;
+  const handleCopy = async (value: string, successMessage: string) => {
     try {
-      await navigator.clipboard.writeText(job.job_id);
-      toast.success("Job ID copied");
+      await navigator.clipboard.writeText(value);
+      toast.success(successMessage);
     } catch {
-      toast.error("Unable to copy job ID");
+      toast.error("Unable to copy");
     }
   };
 
   return (
-    <div className="mb-8">
+    <div className="mb-8 space-y-4">
       <button
         onClick={() => router.back()}
         className="group inline-flex items-center gap-2 rounded-lg px-2 py-2 text-sm font-medium text-gray-500 dark:text-muted-foreground hover:text-gray-900 dark:hover:text-foreground hover:bg-gray-50 dark:hover:bg-secondary transition-colors touch-target min-h-[44px] sm:min-h-0"
       >
         <ArrowLeftIcon className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-        Back to Lead Magnets
+        Back to Leads & Results
       </button>
+
       {error && (
-        <div className="mb-6 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-3 text-red-700 dark:text-red-400 shadow-sm">
-          {error}
+        <div className="rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-900/20 px-4 py-3 text-red-700 dark:text-red-200 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold">Unable to update this job</p>
+            <p className="text-sm text-red-700/90 dark:text-red-200/90">
+              {error}
+            </p>
+          </div>
+          {onRefresh && (
+            <button
+              type="button"
+              onClick={onRefresh}
+              disabled={refreshing}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 dark:border-red-800 bg-white dark:bg-red-950/40 px-3 py-2 text-sm font-semibold text-red-700 dark:text-red-200 transition-colors hover:bg-red-50 dark:hover:bg-red-900/40 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              <ArrowPathIcon
+                className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+              />
+              {refreshing ? "Retrying..." : "Retry"}
+            </button>
+          )}
         </div>
       )}
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-foreground tracking-tight">
-            Lead Report
-          </h1>
-          <p className="mt-2 text-sm text-gray-500 dark:text-muted-foreground leading-relaxed">
-            View the generated report and data for this lead.
-          </p>
-        </div>
 
-        {totalCost !== null && (
-          <div className="flex items-start justify-end">
-            <div className="inline-flex items-center gap-3 rounded-2xl border border-gray-300 dark:border-border bg-white dark:bg-card px-4 py-3 shadow">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-muted-foreground">
-                  Total cost
-                </p>
-                <p className="text-lg font-semibold text-gray-900 dark:text-foreground">
-                  ${totalCost.toFixed(4)}
-                </p>
-              </div>
+      <PageHeader
+        heading={heading}
+        description={description}
+        className="mb-0 pb-4"
+        bottomContent={
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {job?.status && (
+                <StatusBadge
+                  status={job.status}
+                  className="px-3 py-1 text-xs"
+                />
+              )}
+              {isAutoUpdating && (
+                <span className="inline-flex items-center rounded-full bg-primary-50 dark:bg-primary-900/20 px-3 py-1 text-xs font-semibold text-primary-700 dark:text-primary-300">
+                  Live updating
+                </span>
+              )}
+              {job?.job_id && (
+                <MetaPill
+                  label="Job ID"
+                  value={job.job_id}
+                  onCopy={() =>
+                    handleCopy(job.job_id, "Job ID copied to clipboard")
+                  }
+                  copyLabel="Copy job ID"
+                />
+              )}
+              {workflow?.workflow_id && (
+                <MetaPill
+                  label="Workflow"
+                  value={workflow.workflow_name || workflow.workflow_id}
+                  href={`/dashboard/workflows/${workflow.workflow_id}`}
+                />
+              )}
+              {submission?.submission_id && (
+                <MetaPill
+                  label="Submission"
+                  value={submission.submission_id}
+                  onCopy={() =>
+                    handleCopy(
+                      submission.submission_id,
+                      "Submission ID copied to clipboard",
+                    )
+                  }
+                  copyLabel="Copy submission ID"
+                />
+              )}
             </div>
+            {leadHighlights.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {leadHighlights.map((item) => (
+                  <div
+                    key={`${item.label}-${item.value}`}
+                    className="inline-flex items-center gap-2 rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 px-3 py-1 text-xs text-gray-600 dark:text-gray-300"
+                  >
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      {item.label}
+                    </span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100 truncate max-w-[220px]">
+                      {item.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {timelineLabel && (
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {timelineLabel}
+              </p>
+            )}
           </div>
+        }
+      >
+        {onRefresh && (
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={refreshing}
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-200 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <ArrowPathIcon
+              className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+            />
+            {refreshing ? "Refreshing..." : "Refresh data"}
+          </button>
         )}
-      </div>
+        <button
+          type="button"
+          onClick={onResubmit}
+          disabled={resubmitting}
+          className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <ArrowUturnLeftIcon className="h-4 w-4" />
+          {resubmitting ? "Resubmitting..." : "Resubmit"}
+        </button>
+      </PageHeader>
     </div>
   );
+}
+
+interface MetaPillProps {
+  label: string;
+  value: string;
+  href?: string;
+  onCopy?: () => void;
+  copyLabel?: string;
+}
+
+function MetaPill({ label, value, href, onCopy, copyLabel }: MetaPillProps) {
+  const content = href ? (
+    <Link
+      href={href}
+      className="inline-flex items-center gap-1 text-gray-900 dark:text-gray-100 hover:text-primary-600 dark:hover:text-primary-300 transition-colors"
+    >
+      <span className="truncate max-w-[180px]" title={value}>
+        {value}
+      </span>
+      <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" />
+    </Link>
+  ) : (
+    <span className="truncate max-w-[180px]" title={value}>
+      {value}
+    </span>
+  );
+
+  return (
+    <div className="inline-flex items-center gap-2 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900/40 px-3 py-1 text-xs text-gray-600 dark:text-gray-300">
+      <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+        {label}
+      </span>
+      {content}
+      {onCopy && (
+        <button
+          type="button"
+          onClick={onCopy}
+          aria-label={copyLabel || `Copy ${label}`}
+          className="inline-flex items-center justify-center rounded-full p-1 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-200 transition-colors"
+        >
+          <ClipboardDocumentIcon className="h-3.5 w-3.5" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function buildLeadHighlights(
+  formData?: Record<string, unknown> | null,
+): { leadName: string | null; leadHighlights: LeadHighlight[] } {
+  if (!formData || typeof formData !== "object") {
+    return { leadName: null, leadHighlights: [] };
+  }
+
+  const data = formData as Record<string, unknown>;
+  const usedKeys = new Set<string>();
+
+  const leadName = findValueForKeys(
+    data,
+    ["name", "full_name", "first_name", "submitter_name", "contact_name"],
+    usedKeys,
+  );
+
+  const highlights: LeadHighlight[] = [];
+  if (leadName) {
+    highlights.push({ label: "Lead", value: leadName });
+  }
+
+  const fields = [
+    {
+      label: "Company",
+      keys: ["company", "company_name", "organization", "business_name"],
+    },
+    { label: "Email", keys: ["email", "email_address", "work_email"] },
+    {
+      label: "Phone",
+      keys: ["phone", "phone_number", "mobile", "contact_number"],
+    },
+    { label: "Website", keys: ["website", "company_website", "url"] },
+  ];
+
+  fields.forEach((field) => {
+    const value = findValueForKeys(data, field.keys, usedKeys);
+    if (value) {
+      highlights.push({ label: field.label, value });
+    }
+  });
+
+  if (highlights.length === 0) {
+    const fallbackEntries = Object.entries(data).slice(0, 2);
+    fallbackEntries.forEach(([key, value]) => {
+      const formatted = formatFieldValue(value);
+      if (!formatted) return;
+      const label = key.replace(/_/g, " ");
+      highlights.push({ label, value: formatted });
+    });
+  }
+
+  return {
+    leadName,
+    leadHighlights: highlights.map((item) => ({
+      ...item,
+      value: truncateValue(item.value, 120),
+    })),
+  };
+}
+
+function findValueForKeys(
+  data: Record<string, unknown>,
+  keys: string[],
+  usedKeys: Set<string>,
+): string | null {
+  const keySet = new Set(keys.map((key) => key.toLowerCase()));
+  const entry = Object.entries(data).find(([key, value]) => {
+    if (usedKeys.has(key.toLowerCase())) return false;
+    if (!keySet.has(key.toLowerCase())) return false;
+    return value !== null && value !== undefined;
+  });
+
+  if (!entry) return null;
+
+  const [key, value] = entry;
+  const formatted = formatFieldValue(value);
+  if (!formatted) return null;
+
+  usedKeys.add(key.toLowerCase());
+  return formatted;
+}
+
+function formatFieldValue(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed ? trimmed : null;
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
+function truncateValue(value: string, maxLength: number) {
+  if (value.length <= maxLength) return value;
+  return `${value.slice(0, maxLength - 3)}...`;
 }

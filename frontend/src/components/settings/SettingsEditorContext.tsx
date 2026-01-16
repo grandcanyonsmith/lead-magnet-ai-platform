@@ -157,6 +157,7 @@ export function SettingsEditorProvider({
         contact_email: settings.contact_email || "",
         website_url: sanitizeUrl(settings.website_url) || "",
         default_ai_model: settings.default_ai_model || "gpt-5.2",
+        default_tool_choice: settings.default_tool_choice || "required",
         logo_url: sanitizeUrl(settings.logo_url) || "",
         ghl_webhook_url: sanitizeUrl(settings.ghl_webhook_url) || "",
         custom_domain: settings.custom_domain || "",
@@ -187,6 +188,7 @@ export function SettingsEditorProvider({
         contact_email: settings.contact_email || "",
         website_url: settings.website_url || "",
         default_ai_model: settings.default_ai_model || "gpt-5.2",
+        default_tool_choice: settings.default_tool_choice || "required",
         logo_url: settings.logo_url || "",
         ghl_webhook_url: settings.ghl_webhook_url || "",
         custom_domain: settings.custom_domain || "",
@@ -220,6 +222,8 @@ export function SettingsEditorProvider({
       formData.website_url !== (compareTo.website_url || "") ||
       formData.default_ai_model !==
         (compareTo.default_ai_model || "gpt-5.1-codex") ||
+      formData.default_tool_choice !==
+        (compareTo.default_tool_choice || "required") ||
       formData.logo_url !== (compareTo.logo_url || "") ||
       formData.ghl_webhook_url !== (compareTo.ghl_webhook_url || "") ||
       formDomain !== compareDomain ||
@@ -272,6 +276,7 @@ export function SettingsEditorProvider({
             contact_email: settings.contact_email || "",
             website_url: sanitizeUrl(settings.website_url) || "",
             default_ai_model: settings.default_ai_model || "gpt-5.2",
+          default_tool_choice: settings.default_tool_choice || "required",
             logo_url: sanitizeUrl(settings.logo_url) || "",
             ghl_webhook_url: sanitizeUrl(settings.ghl_webhook_url) || "",
             custom_domain: settings.custom_domain || "",
@@ -311,6 +316,7 @@ export function SettingsEditorProvider({
       contact_email: formData.contact_email?.trim() || undefined,
       website_url: sanitizeUrl(formData.website_url),
       default_ai_model: formData.default_ai_model,
+      default_tool_choice: formData.default_tool_choice,
       logo_url: sanitizeUrl(formData.logo_url),
       ghl_webhook_url: sanitizeUrl(formData.ghl_webhook_url),
       custom_domain: sanitizeDomain(formData.custom_domain),
@@ -334,6 +340,7 @@ export function SettingsEditorProvider({
       contact_email: payload.contact_email || "",
       website_url: payload.website_url || "",
       default_ai_model: payload.default_ai_model || "gpt-5.1-codex",
+      default_tool_choice: payload.default_tool_choice || "required",
       logo_url: payload.logo_url || "",
       ghl_webhook_url: payload.ghl_webhook_url || "",
       custom_domain: payload.custom_domain || "",

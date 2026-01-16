@@ -1,12 +1,16 @@
 import { logger } from '@utils/logger';
 import { ValidationError } from '@utils/errors';
 import { isArray, isString, validateWorkflowSteps as baseValidateWorkflowSteps } from '@utils/validators';
-import { WorkflowStep, ToolConfig } from '@utils/types';
+import { WorkflowStep, ToolConfig, ToolChoice } from '@utils/types';
 
 export interface ParsedWorkflowConfig {
   workflow_name: string;
   workflow_description: string;
   steps: WorkflowStep[];
+}
+
+interface WorkflowDefaults {
+  defaultToolChoice?: ToolChoice;
 }
 
 interface RawStep {
@@ -33,10 +37,22 @@ interface RawWorkflowData {
   [key: string]: unknown;
 }
 
-export function parseWorkflowConfig(content: string, description: string): ParsedWorkflowConfig {
+const DEFAULT_TOOL_CHOICE: ToolChoice = 'required';
+
+function resolveDefaultToolChoice(defaultToolChoice?: ToolChoice): ToolChoice {
+  return defaultToolChoice === 'auto' || defaultToolChoice === 'required' || defaultToolChoice === 'none'
+    ? defaultToolChoice
+    : DEFAULT_TOOL_CHOICE;
+}
+
+export function parseWorkflowConfig(
+  content: string,
+  description: string,
+  defaults?: WorkflowDefaults,
+): ParsedWorkflowConfig {
   if (!isString(content) || content.trim().length === 0) {
     logger.warn('[Workflow Config Parser] Empty content provided, using defaults');
-    return getDefaultConfig(description);
+    return getDefaultConfig(description, defaults);
   }
 
   if (!isString(description)) {
@@ -56,11 +72,11 @@ export function parseWorkflowConfig(content: string, description: string): Parse
       return {
         workflow_name: isString(parsed.workflow_name) ? parsed.workflow_name : 'Generated Lead Magnet',
         workflow_description: isString(parsed.workflow_description) ? parsed.workflow_description : description,
-        steps: parsed.steps.map((step: RawStep, index: number) => normalizeStep(step, index)),
+        steps: parsed.steps.map((step: RawStep, index: number) => normalizeStep(step, index, defaults)),
       };
     }
 
-    const defaultConfig = getDefaultConfig(description);
+    const defaultConfig = getDefaultConfig(description, defaults);
     return {
       ...defaultConfig,
       workflow_name: isString(parsed.workflow_name) ? parsed.workflow_name : defaultConfig.workflow_name,
@@ -70,11 +86,13 @@ export function parseWorkflowConfig(content: string, description: string): Parse
     logger.warn('[Workflow Config Parser] Failed to parse workflow JSON, using defaults', {
       error: error instanceof Error ? error.message : String(error),
     });
-    return getDefaultConfig(description);
+    return getDefaultConfig(description, defaults);
   }
 }
 
-function getDefaultConfig(description: string): ParsedWorkflowConfig {
+function getDefaultConfig(description: string, defaults?: WorkflowDefaults): ParsedWorkflowConfig {
+  const resolvedDefaultToolChoice = resolveDefaultToolChoice(defaults?.defaultToolChoice);
+
   return {
     workflow_name: 'Generated Lead Magnet',
     workflow_description: description,
@@ -87,7 +105,7 @@ function getDefaultConfig(description: string): ParsedWorkflowConfig {
         step_order: 0,
         depends_on: [],
         tools: ['web_search'],
-        tool_choice: 'auto',
+        tool_choice: resolvedDefaultToolChoice,
       },
       {
         step_name: 'HTML Rewrite',
@@ -103,7 +121,7 @@ function getDefaultConfig(description: string): ParsedWorkflowConfig {
   };
 }
 
-function normalizeStep(step: RawStep, index: number): WorkflowStep {
+function normalizeStep(step: RawStep, index: number, defaults?: WorkflowDefaults): WorkflowStep {
   const model = isString(step.model) && step.model.trim().length > 0 ? step.model : 'gpt-5.2';
   const shouldAddDefaultWebSearch = index === 0 && model !== 'o4-mini-deep-research';
 
@@ -138,11 +156,13 @@ function normalizeStep(step: RawStep, index: number): WorkflowStep {
       ? ['web_search']
       : [];
 
+  const resolvedDefaultToolChoice = resolveDefaultToolChoice(defaults?.defaultToolChoice);
+  const hasTools = tools.length > 0;
   const toolChoice =
     step.tool_choice === 'auto' || step.tool_choice === 'required' || step.tool_choice === 'none'
       ? step.tool_choice
-      : index === 0
-        ? 'auto'
+      : hasTools
+        ? resolvedDefaultToolChoice
         : 'none';
 
   // Structured Outputs / output format (Responses API text.format)
@@ -187,10 +207,22 @@ function normalizeStep(step: RawStep, index: number): WorkflowStep {
   };
 }
 
-export function ensureStepDefaults(steps: WorkflowStep[]): WorkflowStep[] {
+export function ensureStepDefaults(
+  steps: WorkflowStep[],
+  defaults?: WorkflowDefaults,
+): WorkflowStep[] {
   if (!Array.isArray(steps) || steps.length === 0) {
     throw new ValidationError('Steps must be a non-empty array');
   }
+
+  return ensureStepDefaultsWithOptions(steps, defaults);
+}
+
+function ensureStepDefaultsWithOptions(
+  steps: WorkflowStep[],
+  defaults?: WorkflowDefaults,
+): WorkflowStep[] {
+  const resolvedDefaultToolChoice = resolveDefaultToolChoice(defaults?.defaultToolChoice);
 
   return steps.map((step: Partial<WorkflowStep>, index: number) => {
     const stepOrder = step.step_order !== undefined ? step.step_order : index;
@@ -243,6 +275,12 @@ export function ensureStepDefaults(steps: WorkflowStep[]): WorkflowStep[] {
     const model = step.model || 'gpt-4';
     const shouldAddDefaultWebSearch = index === 0 && model !== 'o4-mini-deep-research';
     const defaultTools = shouldAddDefaultWebSearch ? ['web_search'] : [];
+    const resolvedTools = Array.isArray(step.tools) ? step.tools : defaultTools;
+    const hasTools = resolvedTools.length > 0;
+    const validToolChoice =
+      step.tool_choice === 'auto' || step.tool_choice === 'required' || step.tool_choice === 'none'
+        ? step.tool_choice
+        : undefined;
 
     return {
       ...step,
@@ -250,8 +288,8 @@ export function ensureStepDefaults(steps: WorkflowStep[]): WorkflowStep[] {
       step_order: stepOrder,
       step_description: step.step_description || step.step_name || `Step ${index + 1}`,
       depends_on: dependsOn,
-      tools: step.tools || defaultTools,
-      tool_choice: (step.tool_choice || (index === 0 ? 'auto' : 'none')) as 'auto' | 'required' | 'none',
+      tools: resolvedTools,
+      tool_choice: (validToolChoice || (hasTools ? resolvedDefaultToolChoice : 'none')) as ToolChoice,
       model,
       instructions: step.instructions || '',
     } as WorkflowStep;

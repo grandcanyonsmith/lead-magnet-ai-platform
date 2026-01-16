@@ -30,6 +30,7 @@ import { api } from "@/lib/api";
 import { JsonViewer } from "@/components/ui/JsonViewer";
 import toast from "react-hot-toast";
 import { WorkflowStep } from "@/types/workflow";
+import { useSettings } from "@/hooks/api/useSettings";
 
 import { LogViewer } from "./components/LogViewer";
 
@@ -50,6 +51,7 @@ type SidebarTab = "input" | "step-config" | "context" | "logs";
 
 export default function PlaygroundPage() {
   const router = useRouter();
+  const { settings } = useSettings();
   
   // State
   const {
@@ -62,7 +64,10 @@ export default function PlaygroundPage() {
     setStepsFromAIGeneration,
     reorderSteps,
     isLoaded: stepsLoaded
-  } = useWorkflowSteps({ persistKey: "playground-steps" });
+  } = useWorkflowSteps({
+    persistKey: "playground-steps",
+    defaultToolChoice: settings?.default_tool_choice,
+  });
   
   const [currentInput, setCurrentInput] = useState<string>("{}");
   const [accumulatedContext, setAccumulatedContext] = useState<AccumulatedContext>({});

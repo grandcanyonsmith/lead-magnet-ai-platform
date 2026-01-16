@@ -185,7 +185,7 @@ export function useMergedSteps({
           workflowStep.tool_choice ||
           existingStep.input?.tool_choice ||
           existingStep.tool_choice ||
-          "auto";
+          "required";
 
         mergedStepsMap.set(executionStepOrder, {
           ...existingStep,
@@ -257,7 +257,7 @@ export function useMergedSteps({
             workflowStep.tool_choice ||
             executingStep.input?.tool_choice ||
             executingStep.tool_choice ||
-            "auto";
+            "required";
 
           mergedStepsMap.set(executionStepOrder, {
             ...executingStep,
@@ -314,7 +314,7 @@ export function useMergedSteps({
               workflowStep.tool_choice ||
               executionStepForOrder.input?.tool_choice ||
               executionStepForOrder.tool_choice ||
-              "auto";
+              "required";
 
             mergedStepsMap.set(executionStepOrder, {
               ...executionStepForOrder,
@@ -350,11 +350,11 @@ export function useMergedSteps({
               step_type: "workflow_step",
               model: workflowStep.model,
               tools: workflowStep.tools || [],
-              tool_choice: workflowStep.tool_choice || "auto",
+              tool_choice: workflowStep.tool_choice || "required",
               instructions: workflowStep.instructions,
               input: {
                 tools: workflowStep.tools || [],
-                tool_choice: workflowStep.tool_choice || "auto",
+                tool_choice: workflowStep.tool_choice || "required",
               },
               output: null,
               _status: stepStatus,

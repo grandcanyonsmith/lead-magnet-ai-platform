@@ -12,6 +12,7 @@ import { db } from "../utils/db";
 import { env } from "../utils/env";
 
 const JOBS_TABLE = env.jobsTable;
+const RECORDINGS_BUCKET = "cc360-pages";
 
 class TrackingController {
   /**
@@ -37,7 +38,7 @@ class TrackingController {
     const tenantId = job.tenant_id;
     // Use fixed bucket as requested
     // Ensure this bucket is accessible by the lambda role
-    const bucket = "cc360-pages"; 
+    const bucket = RECORDINGS_BUCKET; 
     const timestamp = body.timestamp || Date.now();
     const contentType = body.content_type || "application/json";
     
@@ -311,11 +312,40 @@ class TrackingController {
           new Date(b.last_created_at).getTime() - new Date(a.last_created_at).getTime(),
       );
 
+    // Provide signed URLs for replay downloads (recordings bucket is private).
+    const sessionsWithUrls = await Promise.all(
+      sessions.map(async (session) => {
+        const partsWithUrls = await Promise.all(
+          session.parts.map(async (part) => {
+            if (!part.recording_key) return part;
+            try {
+              const signedUrl = await s3Service.getPresignedGetUrl(
+                RECORDINGS_BUCKET,
+                part.recording_key,
+                3600,
+              );
+              return { ...part, recording_url: signedUrl };
+            } catch (error) {
+              logger.warn("[Tracking Controller] Failed to sign recording URL", {
+                jobId,
+                sessionId: session.session_id,
+                recordingKey: part.recording_key,
+                error: error instanceof Error ? error.message : String(error),
+              });
+              return part;
+            }
+          }),
+        );
+
+        return { ...session, parts: partsWithUrls };
+      }),
+    );
+
     return {
       statusCode: 200,
       body: {
-        sessions,
-        count: sessions.length,
+        sessions: sessionsWithUrls,
+        count: sessionsWithUrls.length,
       },
     };
   }

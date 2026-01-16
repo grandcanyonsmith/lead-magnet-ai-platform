@@ -53,7 +53,7 @@ function renderTextWithImages(text: string): React.ReactNode {
     // Add the image
     parts.push(
       <div key={`image-${url}`} className="block">
-        <InlineImage url={url} alt={`Image`} />
+        <InlineImage url={url} alt={`Image`} size="compact" />
       </div>,
     );
 
@@ -123,7 +123,12 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
           Generated Images:
         </div>
         {imageUrls.map((url) => (
-          <InlineImage key={`inline-image-${url}`} url={url} alt={`Image`} />
+          <InlineImage
+            key={`inline-image-${url}`}
+            url={url}
+            alt={`Image`}
+            size="compact"
+          />
         ))}
       </div>
     );
@@ -212,6 +217,7 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
                   key={`json-image-${url}`}
                   url={url}
                   alt={`Image from JSON`}
+                  size="compact"
                 />
               ))}
             </div>
@@ -309,6 +315,7 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
                       key={`html-image-${url}`}
                       url={url}
                       alt={`Image from HTML`}
+                      size="compact"
                     />
                   ))}
                   {imageUrls.map((url) => (
@@ -316,6 +323,7 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
                       key={`html-prop-image-${url}`}
                       url={url}
                       alt={`Image`}
+                      size="compact"
                     />
                   ))}
                 </div>
@@ -366,6 +374,7 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
                     key={`md-image-${url}`}
                     url={url}
                     alt={`Image from markdown`}
+                    size="compact"
                   />
                 ))}
               </div>

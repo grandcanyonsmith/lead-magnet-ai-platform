@@ -88,9 +88,18 @@ export class WorkflowGenerationService {
     tenantId: string,
     jobId?: string,
     brandContext?: string,
-    icpContext?: string
+    icpContext?: string,
+    defaultToolChoice?: "auto" | "required" | "none"
   ): Promise<{ workflowData: any; usageInfo: UsageInfo }> {
-    return this.workflowConfigService.generateWorkflowConfig(description, model, tenantId, jobId, brandContext, icpContext);
+    return this.workflowConfigService.generateWorkflowConfig(
+      description,
+      model,
+      tenantId,
+      jobId,
+      brandContext,
+      icpContext,
+      defaultToolChoice,
+    );
   }
 
   /**

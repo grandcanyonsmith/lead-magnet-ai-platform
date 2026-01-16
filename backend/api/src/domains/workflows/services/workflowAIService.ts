@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import { WorkflowStep, ensureStepDefaults } from './workflow/workflowConfigSupport';
+import { ToolChoice } from '@utils/types';
 import { validateDependencies } from '@utils/dependencyResolver';
 import { logger } from '@utils/logger';
 import { stripMarkdownCodeFences, callResponsesWithTimeout } from '@utils/openaiHelpers';
@@ -7,6 +8,7 @@ import { retryWithBackoff } from '@utils/errorHandling';
 
 export interface WorkflowAIEditRequest {
   userPrompt: string;
+  defaultToolChoice?: ToolChoice;
   workflowContext: {
     workflow_id: string;
     workflow_name: string;
@@ -45,7 +47,11 @@ const AVAILABLE_TOOLS = [
   'shell',
 ];
 
-const WORKFLOW_AI_SYSTEM_PROMPT = `You are an expert AI Lead Magnet Architect and Workflow Optimizer. Your task is to refine, restructure, and optimize the user's lead magnet generation workflow.
+const DEFAULT_TOOL_CHOICE: ToolChoice = 'required';
+const VALID_TOOL_CHOICES = new Set<ToolChoice>(['auto', 'required', 'none']);
+const VALID_SERVICE_TIERS = new Set(['auto', 'default', 'flex', 'scale', 'priority']);
+
+const buildWorkflowAiSystemPrompt = (defaultToolChoice: ToolChoice) => `You are an expert AI Lead Magnet Architect and Workflow Optimizer. Your task is to refine, restructure, and optimize the user's lead magnet generation workflow.
 
 ## Your Goal
 Translate the user's natural language request into a precise, optimized JSON configuration. You should not just make the change, but *improve* the workflow where possible while respecting the user's intent.
@@ -85,6 +91,10 @@ ${AVAILABLE_MODELS.join(', ')}
 5. **Per-Step Output Controls**:
    - Choose \`reasoning_effort\` per step ("low" for simple transforms, "high/xhigh" for deep strategy/research/synthesis).
    - Choose \`text_verbosity\` per step ("low" for concise outputs, "high" for detailed reports).
+   - Choose \`service_tier\` per step when you need speed or cost control.
+
+## Default Tool Choice
+- Use \`${defaultToolChoice}\` as the default \`tool_choice\` when tools are present unless the user specifies otherwise.
 
 ## Response Format
 Return a JSON object:
@@ -96,6 +106,7 @@ Return a JSON object:
       "step_name": string,
       "step_description": string,
       "model": string,
+      "service_tier": "auto" | "default" | "flex" | "scale" | "priority",
       "reasoning_effort": "none" | "low" | "medium" | "high" | "xhigh",
       "text_verbosity": "low" | "medium" | "high",
       "max_output_tokens": number (optional),
@@ -113,7 +124,10 @@ export class WorkflowAIService {
   constructor(private openaiClient: OpenAI) {}
 
   async editWorkflow(request: WorkflowAIEditRequest): Promise<WorkflowAIEditResponse> {
-    const { userPrompt, workflowContext, executionHistory, referenceExamples } = request;
+    const { userPrompt, workflowContext, executionHistory, referenceExamples, defaultToolChoice } = request;
+    const resolvedDefaultToolChoice = VALID_TOOL_CHOICES.has(defaultToolChoice as ToolChoice)
+      ? (defaultToolChoice as ToolChoice)
+      : DEFAULT_TOOL_CHOICE;
 
     // Build context message for AI
     const contextParts: string[] = [
@@ -237,7 +251,7 @@ Please generate the updated workflow configuration with all necessary changes.`;
             () =>
               (this.openaiClient as any).responses.create({
                 model: 'gpt-5.2',
-                instructions: WORKFLOW_AI_SYSTEM_PROMPT,
+                instructions: buildWorkflowAiSystemPrompt(resolvedDefaultToolChoice),
                 input: userMessage,
                 reasoning: { effort: 'high' },
                 service_tier: 'priority',
@@ -305,8 +319,14 @@ Please generate the updated workflow configuration with all necessary changes.`;
         }
 
         // Validate tool_choice
-        if (!['auto', 'required', 'none'].includes(step.tool_choice || '')) {
-          step.tool_choice = 'auto';
+        const hasTools = Array.isArray(step.tools) && step.tools.length > 0;
+        if (!VALID_TOOL_CHOICES.has(step.tool_choice as ToolChoice)) {
+          step.tool_choice = hasTools ? resolvedDefaultToolChoice : 'none';
+        }
+
+        // Validate service_tier (optional)
+        if (step.service_tier && !VALID_SERVICE_TIERS.has(step.service_tier)) {
+          delete step.service_tier;
         }
 
       // Validate reasoning_effort (optional)
@@ -356,7 +376,9 @@ Please generate the updated workflow configuration with all necessary changes.`;
       });
 
       // Use ensureStepDefaults to add all required fields (step_id, step_group, etc.)
-      const normalizedSteps: WorkflowStep[] = ensureStepDefaults(validatedSteps);
+      const normalizedSteps: WorkflowStep[] = ensureStepDefaults(validatedSteps, {
+        defaultToolChoice: resolvedDefaultToolChoice,
+      });
 
       // Validate dependencies across all steps
       try {

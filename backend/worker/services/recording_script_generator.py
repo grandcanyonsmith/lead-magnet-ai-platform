@@ -67,7 +67,12 @@ class RecordingScriptGenerator:
 
     let events = [];
     let eventCount = 0;
-    let sessionId = localStorage.getItem('lm_session_id') || 'sess_' + Math.random().toString(36).substring(2, 15);
+    let sessionId = null;
+    try { sessionId = localStorage.getItem('lm_session_id'); } catch (_e) {{}}
+    if (!sessionId) {{
+        sessionId = 'sess_' + Math.random().toString(36).substring(2, 15);
+        try {{ localStorage.setItem('lm_session_id', sessionId); }} catch (_e) {{}}
+    }}
     
     // Helper to get upload URL
     async function getUploadUrl(partNumber) {{

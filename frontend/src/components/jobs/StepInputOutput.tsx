@@ -28,6 +28,7 @@ interface StepInputOutputProps {
   loadingImageArtifacts?: boolean;
   onEditStep?: (stepIndex: number) => void;
   canEdit?: boolean;
+  variant?: "compact" | "expanded";
 }
 
 // Type for tool - can be a string or an object with a type property
@@ -112,6 +113,7 @@ export function StepInputOutput({
   loadingImageArtifacts = false,
   onEditStep,
   canEdit = false,
+  variant = "compact",
 }: StepInputOutputProps) {
   const inputScrollRef = useRef<HTMLDivElement>(null);
   const outputScrollRef = useRef<HTMLDivElement>(null);
@@ -181,6 +183,12 @@ export function StepInputOutput({
     !hasImageGeneration(step, imageArtifacts) &&
     (step.output === null || step.output === undefined || step.output === "") &&
     (hasLiveOutput || Boolean(liveUpdatedAt));
+  const contentHeightClass =
+    variant === "expanded" ? "max-h-none" : "max-h-[350px] md:max-h-72";
+  const liveOutputHeightClass =
+    variant === "expanded" ? "max-h-96" : "max-h-48";
+  const layoutClass =
+    variant === "expanded" ? "grid grid-cols-1 gap-4" : "grid grid-cols-1 gap-3";
 
   // Show section if step is completed, in progress, or pending with instructions
   const shouldShow =
@@ -374,7 +382,7 @@ export function StepInputOutput({
           </div>
         ) : (
           /* For completed/in-progress steps, show Input and Output side by side on desktop, stacked on mobile */
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-3">
+          <div className={layoutClass}>
             {/* Input Section */}
             <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-card shadow-sm">
               <div className="bg-gray-50 dark:bg-gray-900/50 px-3 py-2 md:px-3 md:py-1.5 border-b border-gray-200 dark:border-gray-700">
@@ -437,7 +445,7 @@ export function StepInputOutput({
               </div>
               <div
                 ref={inputScrollRef}
-                className="p-3 md:p-2.5 bg-white dark:bg-card max-h-[350px] md:max-h-72 overflow-y-auto scrollbar-hide-until-hover"
+                className={`p-3 md:p-2.5 bg-white dark:bg-card ${contentHeightClass} overflow-y-auto scrollbar-hide-until-hover`}
               >
                 {/* Current Step Input */}
                 <StepContent formatted={formatStepInput(step)} />
@@ -481,7 +489,7 @@ export function StepInputOutput({
               </div>
               <div
                 ref={outputScrollRef}
-                className="p-3 md:p-2.5 bg-white dark:bg-card max-h-[350px] md:max-h-72 overflow-y-auto scrollbar-hide-until-hover"
+                className={`p-3 md:p-2.5 bg-white dark:bg-card ${contentHeightClass} overflow-y-auto scrollbar-hide-until-hover`}
               >
                 {usedImageGeneration ? (
                   /* For image generation steps, only show the image URL, not markdown preview */
@@ -510,7 +518,9 @@ export function StepInputOutput({
                             </span>
                           )}
                         </div>
-                        <pre className="text-sm md:text-xs text-gray-800 dark:text-gray-200 whitespace-pre-wrap font-mono max-h-48 overflow-y-auto scrollbar-hide-until-hover leading-relaxed">
+                        <pre
+                          className={`text-sm md:text-xs text-gray-800 dark:text-gray-200 whitespace-pre-wrap font-mono ${liveOutputHeightClass} overflow-y-auto scrollbar-hide-until-hover leading-relaxed`}
+                        >
                           {hasLiveOutput ? liveOutput : "Waiting for model output..."}
                         </pre>
                       </div>

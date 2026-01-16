@@ -1,10 +1,12 @@
 import OpenAI from 'openai';
 import { WorkflowStep } from './workflow/workflowConfigSupport';
+import { ToolChoice } from '@utils/types';
 import { stripMarkdownCodeFences } from '@utils/openaiHelpers';
 
 export interface AIStepGenerationRequest {
   userPrompt: string;
   action?: 'update' | 'add';
+  defaultToolChoice?: ToolChoice;
   workflowContext: {
     workflow_id: string;
     workflow_name: string;
@@ -36,7 +38,11 @@ const AVAILABLE_TOOLS = [
   'shell',
 ];
 
-const AI_STEP_SYSTEM_PROMPT = `You are an Expert Workflow Architect for an AI Lead Magnet platform.
+const DEFAULT_TOOL_CHOICE: ToolChoice = 'required';
+const VALID_TOOL_CHOICES = new Set<ToolChoice>(['auto', 'required', 'none']);
+const VALID_SERVICE_TIERS = new Set(['auto', 'default', 'flex', 'scale', 'priority']);
+
+const buildStepSystemPrompt = (defaultToolChoice: ToolChoice) => `You are an Expert Workflow Architect for an AI Lead Magnet platform.
     
 Your goal is to translate the user's natural language request into a precise, high-performance workflow step configuration.
 
@@ -73,9 +79,10 @@ Available Tools:
      - \`background\`: "opaque" or "transparent" (if logo/icon).
 
 4. **Tool Choice**:
-   - **auto**: Default. Model decides.
+   - **auto**: Model decides.
    - **required**: If the step's SOLE purpose is to use a tool (e.g. "Research X").
    - **none**: If the step is pure text processing or formatting.
+   - Default tool_choice: **${defaultToolChoice}** when tools are present.
 
 5. **Instruction Quality**:
    - Write instructions that are **specific** and **actionable**.
@@ -105,6 +112,7 @@ Available Tools:
     "step_name": "string",
     "step_description": "string",
     "model": "string",
+    "service_tier": "auto" | "default" | "flex" | "scale" | "priority",
     "reasoning_effort": "none" | "low" | "medium" | "high" | "xhigh",
     "text_verbosity": "low" | "medium" | "high",
     "max_output_tokens": number,
@@ -130,7 +138,10 @@ export class WorkflowStepAIService {
   constructor(private openaiClient: OpenAI) {}
 
   async generateStep(request: AIStepGenerationRequest): Promise<AIStepGenerationResponse> {
-    const { userPrompt, action, workflowContext, currentStep, currentStepIndex } = request;
+    const { userPrompt, action, workflowContext, currentStep, currentStepIndex, defaultToolChoice } = request;
+    const resolvedDefaultToolChoice = VALID_TOOL_CHOICES.has(defaultToolChoice as ToolChoice)
+      ? (defaultToolChoice as ToolChoice)
+      : DEFAULT_TOOL_CHOICE;
 
     // Build context message for AI
     const contextParts: string[] = [
@@ -185,7 +196,7 @@ Please generate the workflow step configuration.`;
     try {
       const completion = await (this.openaiClient as any).responses.create({
         model: 'gpt-5.2',
-        instructions: AI_STEP_SYSTEM_PROMPT,
+        instructions: buildStepSystemPrompt(resolvedDefaultToolChoice),
         input: userMessage,
         reasoning: { effort: 'high' },
         service_tier: 'priority',
@@ -242,8 +253,18 @@ Please generate the workflow step configuration.`;
       }
 
       // Validate tool_choice
-      if (!['auto', 'required', 'none'].includes(parsedResponse.step.tool_choice || '')) {
-        parsedResponse.step.tool_choice = 'auto';
+      const hasTools =
+        Array.isArray(parsedResponse.step.tools) && parsedResponse.step.tools.length > 0;
+      if (!VALID_TOOL_CHOICES.has(parsedResponse.step.tool_choice as ToolChoice)) {
+        parsedResponse.step.tool_choice = hasTools ? resolvedDefaultToolChoice : 'none';
+      }
+
+      // Validate service_tier (optional)
+      if (
+        (parsedResponse.step as any).service_tier &&
+        !VALID_SERVICE_TIERS.has((parsedResponse.step as any).service_tier)
+      ) {
+        delete (parsedResponse.step as any).service_tier;
       }
 
       // Validate reasoning_effort

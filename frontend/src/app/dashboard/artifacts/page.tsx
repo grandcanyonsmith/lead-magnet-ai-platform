@@ -9,6 +9,7 @@ import { PaginationControls } from "@/components/artifacts/PaginationControls";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { logger } from "@/utils/logger";
 import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -36,6 +37,7 @@ export default function ArtifactsPage() {
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState("");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
@@ -47,10 +49,23 @@ export default function ArtifactsPage() {
 
   const loadArtifacts = async () => {
     try {
+      setError(null);
       const data = await api.getArtifacts({ limit: 500 });
       const artifactsList = data.artifacts || [];
       setArtifacts(artifactsList);
     } catch (error) {
+      const err = error as {
+        response?: { status?: number; data?: { message?: string } };
+        message?: string;
+      };
+      const status = err.response?.status;
+      const message =
+        status === 429
+          ? "Too many requests. Please wait a moment and try again."
+          : err.response?.data?.message ||
+            err.message ||
+            "Unable to load downloads right now.";
+      setError(message);
       logger.error("Failed to load artifacts", {
         error,
         context: "ArtifactsPage",
@@ -203,6 +218,15 @@ export default function ArtifactsPage() {
         </div>
 
         <div className="lg:col-span-3 space-y-6">
+          {error && (
+            <ErrorState
+              title="Downloads unavailable"
+              message={error}
+              onRetry={refresh}
+              retryLabel={refreshing ? "Retrying..." : "Retry"}
+              className="dark:bg-red-900/20 dark:border-red-800"
+            />
+          )}
           {filteredArtifacts.length === 0 ? (
             <EmptyState
               title={
