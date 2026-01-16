@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
@@ -9,6 +9,7 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
   ClipboardDocumentIcon,
+  PencilSquareIcon,
 } from "@heroicons/react/24/outline";
 import { toast } from "react-hot-toast";
 import {
@@ -20,6 +21,7 @@ import {
 import { useJobDetail } from "@/hooks/useJobDetail";
 import { useMergedSteps } from "@/hooks/useMergedSteps";
 import { useImageArtifacts } from "@/hooks/useImageArtifacts";
+import { api } from "@/lib/api";
 import { getStepStatus } from "@/components/jobs/utils";
 import { StepContent } from "@/components/jobs/StepContent";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -36,14 +38,36 @@ import {
   isMarkdown,
 } from "@/utils/jobFormatting";
 import { PreviewRenderer } from "@/components/artifacts/PreviewRenderer";
+import FlowchartSidePanel from "@/app/dashboard/workflows/components/FlowchartSidePanel";
 
 import type { MergedStep } from "@/types/job";
 import type { Artifact } from "@/types/artifact";
+import type { WorkflowStep } from "@/types";
 
 type FormattedContent = {
   content: string | unknown;
   type: "json" | "markdown" | "text" | "html";
 };
+
+function coerceJsonContent(formatted: FormattedContent): FormattedContent {
+  if (formatted.type === "json") {
+    return formatted;
+  }
+  if (typeof formatted.content !== "string") {
+    return formatted;
+  }
+  const trimmed = formatted.content.trim();
+  if (!trimmed) return formatted;
+  if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) {
+    return formatted;
+  }
+  try {
+    const parsed = JSON.parse(trimmed);
+    return { content: parsed, type: "json" };
+  } catch {
+    return formatted;
+  }
+}
 
 function formatContentForDetail(value: unknown): FormattedContent {
   if (typeof value === "string") {
@@ -167,6 +191,10 @@ export default function StepDetailClient() {
     refreshing,
   } = useJobDetail();
 
+  const [editingStepIndex, setEditingStepIndex] = useState<number | null>(null);
+  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
+  const latestStepUpdateRef = useRef<WorkflowStep | null>(null);
+
   const mergedSteps = useMergedSteps({ job, workflow });
   const sortedSteps = useMemo(
     () =>
@@ -217,10 +245,13 @@ export default function StepDetailClient() {
         : null,
     [inputInstructions],
   );
-  const outputContent = formattedOutput ?? {
-    content: step?.output ?? null,
-    type: "json",
-  };
+  const outputContent = useMemo(() => {
+    const base = formattedOutput ?? {
+      content: step?.output ?? null,
+      type: "json",
+    };
+    return coerceJsonContent(base);
+  }, [formattedOutput, step?.output]);
   const outputPreview = toPreviewText(outputContent);
   const inputPreview = toPreviewText(formattedInputPayload);
   const instructionsPreview = formattedInstructions
@@ -369,6 +400,71 @@ export default function StepDetailClient() {
       : null,
   ].filter(Boolean) as { label: string; value: string }[];
 
+  const isSystemStep =
+    step.step_type === "form_submission" || step.step_type === "final_output";
+  const canEditStep =
+    Boolean(workflow?.steps && step.step_order !== undefined) &&
+    !isSystemStep &&
+    (step.step_order ?? 0) > 0;
+  const isEditingDisabled = job?.status === "processing";
+
+  const handleEditStep = () => {
+    if (!workflow || !canEditStep) return;
+    const index = (step.step_order ?? 1) - 1;
+    setEditingStepIndex(index);
+    setIsSidePanelOpen(true);
+    latestStepUpdateRef.current = null;
+  };
+
+  const handleSaveStep = async (updatedStep: WorkflowStep) => {
+    if (!workflow || editingStepIndex === null || !workflow.steps) {
+      toast.error("Unable to save: Workflow data not available");
+      return;
+    }
+
+    try {
+      const updatedSteps = [...workflow.steps];
+      const originalStep = updatedSteps[editingStepIndex];
+
+      updatedSteps[editingStepIndex] = {
+        ...originalStep,
+        ...updatedStep,
+      };
+
+      await api.updateWorkflow(workflow.workflow_id, {
+        steps: updatedSteps,
+      });
+
+      toast.success("Step updated successfully");
+      latestStepUpdateRef.current = null;
+      setEditingStepIndex(null);
+      setIsSidePanelOpen(false);
+      refreshJob();
+    } catch (saveError) {
+      console.error("Failed to save step:", saveError);
+      toast.error("Failed to save step. Please try again.");
+    }
+  };
+
+  const handleCancelEdit = async () => {
+    if (latestStepUpdateRef.current && editingStepIndex !== null) {
+      const currentStep = workflow?.steps?.[editingStepIndex];
+      const hasChanges =
+        currentStep &&
+        JSON.stringify(currentStep) !==
+          JSON.stringify(latestStepUpdateRef.current);
+
+      if (hasChanges) {
+        await handleSaveStep(latestStepUpdateRef.current);
+        return;
+      }
+    }
+
+    latestStepUpdateRef.current = null;
+    setEditingStepIndex(null);
+    setIsSidePanelOpen(false);
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -410,6 +506,17 @@ export default function StepDetailClient() {
           </div>
         }
       >
+        {canEditStep && (
+          <button
+            type="button"
+            onClick={handleEditStep}
+            disabled={isEditingDisabled}
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900/40 px-3 py-2 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <PencilSquareIcon className="h-4 w-4" />
+            {isEditingDisabled ? "Editing locked" : "Edit step"}
+          </button>
+        )}
         <Link
           href={jobHref}
           className="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900/40 px-3 py-2 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
@@ -659,6 +766,30 @@ export default function StepDetailClient() {
           </div>
         )}
       </div>
+
+      {editingStepIndex !== null && workflow?.steps?.[editingStepIndex] && (
+        <FlowchartSidePanel
+          step={workflow.steps[editingStepIndex]}
+          index={editingStepIndex}
+          totalSteps={workflow.steps.length}
+          allSteps={workflow.steps}
+          isOpen={isSidePanelOpen}
+          onClose={handleCancelEdit}
+          onChange={(index, updatedStep) => {
+            latestStepUpdateRef.current = updatedStep;
+          }}
+          onDelete={() =>
+            toast.error("Cannot delete steps from execution viewer.")
+          }
+          onMoveUp={() =>
+            toast.error("Cannot reorder steps from execution viewer.")
+          }
+          onMoveDown={() =>
+            toast.error("Cannot reorder steps from execution viewer.")
+          }
+          workflowId={workflow.workflow_id}
+        />
+      )}
     </div>
   );
 }

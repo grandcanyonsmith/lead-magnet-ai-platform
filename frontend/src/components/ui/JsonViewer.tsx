@@ -458,7 +458,6 @@ function JsonStringValue({ value }: { value: string }) {
           </button>
         </div>
       )}
-      )}
     </div>
   );
 }
