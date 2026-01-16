@@ -2,7 +2,12 @@
 
 import React, { useState } from "react";
 import clsx from "clsx";
-import { FiChevronRight, FiCopy } from "react-icons/fi";
+import {
+  FiChevronRight,
+  FiCopy,
+  FiExternalLink,
+  FiImage,
+} from "react-icons/fi";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
@@ -23,6 +28,43 @@ const MAX_SYNTAX_HIGHLIGHT_CHARS = 50_000;
 const MAX_CHILDREN_PREVIEW = 60;
 const MAX_STRING_PREVIEW = 280;
 const MAX_STRING_PREVIEW_LINES = 14;
+const URL_PATH_PREVIEW = 42;
+const URL_HOST_MAX = 32;
+
+function truncateMiddle(text: string, maxLength: number) {
+  if (text.length <= maxLength) return text;
+  const headLength = Math.max(6, Math.floor(maxLength * 0.6));
+  const tailLength = Math.max(4, maxLength - headLength - 3);
+  return `${text.slice(0, headLength)}...${text.slice(text.length - tailLength)}`;
+}
+
+function safeParseUrl(value: string): URL | null {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      return null;
+    }
+    return url;
+  } catch {
+    return null;
+  }
+}
+
+function isImageUrl(value: string) {
+  if (value.startsWith("data:image/")) return true;
+  const url = safeParseUrl(value);
+  if (!url) return false;
+  return /\.(png|jpe?g|gif|webp|svg)$/i.test(url.pathname);
+}
+
+function formatUrlLabel(url: URL) {
+  const host = url.hostname.replace(/^www\./, "");
+  const hostLabel = truncateMiddle(host, URL_HOST_MAX);
+  const path = url.pathname === "/" ? "" : url.pathname;
+  const query = url.search ? `?${url.searchParams.toString()}` : "";
+  const suffix = truncateMiddle(`${path}${query}`, URL_PATH_PREVIEW);
+  return { hostLabel, suffix };
+}
 
 function getLineCount(text: string): number {
   let count = 1;
@@ -110,9 +152,89 @@ function JsonLeafRow({
   return (
     <div className="flex items-start gap-2 py-0.5 min-w-0">
       {name !== undefined && (
-        <span className="text-sky-600 dark:text-sky-300 shrink-0">{name}:</span>
+        <span className="text-cyan-700 dark:text-cyan-300 shrink-0">
+          {name}:
+        </span>
       )}
       <div className="min-w-0 flex-1">{children}</div>
+    </div>
+  );
+}
+
+function UrlImageThumb({ url }: { url: string }) {
+  const [error, setError] = useState(false);
+
+  if (error) {
+    return (
+      <div className="h-8 w-8 rounded-md border border-gray-200 dark:border-gray-700/60 bg-gray-50 dark:bg-gray-900/50 flex items-center justify-center">
+        <FiImage className="h-4 w-4 text-gray-400" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-8 w-8 rounded-md border border-gray-200 dark:border-gray-700/60 bg-gray-50 dark:bg-gray-900/50 overflow-hidden">
+      <img
+        src={url}
+        alt="Image preview"
+        loading="lazy"
+        className="h-full w-full object-cover"
+        onError={() => setError(true)}
+      />
+    </div>
+  );
+}
+
+function UrlValue({
+  value,
+  onCopy,
+}: {
+  value: string;
+  onCopy: () => void;
+}) {
+  const url = safeParseUrl(value);
+  if (!url) {
+    return (
+      <span className="text-amber-700 dark:text-amber-200 whitespace-pre-wrap break-words">
+        &quot;{value}&quot;
+      </span>
+    );
+  }
+  const { hostLabel, suffix } = formatUrlLabel(url);
+  const showImageThumb = isImageUrl(value);
+
+  return (
+    <div className="inline-flex items-center gap-2 rounded-md border border-gray-200 dark:border-gray-700/60 bg-gray-50 dark:bg-gray-900/60 px-2 py-1 text-xs text-gray-600 dark:text-gray-300 max-w-full">
+      {showImageThumb ? (
+        <UrlImageThumb url={value} />
+      ) : (
+        <FiExternalLink className="h-4 w-4 text-gray-400" />
+      )}
+      <a
+        href={value}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-1 min-w-0 hover:text-gray-900 dark:hover:text-white"
+        title={value}
+      >
+        <span className="font-semibold text-cyan-700 dark:text-cyan-200">
+          {hostLabel}
+        </span>
+        {suffix ? (
+          <span className="text-gray-500 dark:text-gray-400 truncate">
+            {suffix}
+          </span>
+        ) : null}
+      </a>
+      <button
+        type="button"
+        onClick={onCopy}
+        className="ml-auto text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+        title="Copy URL"
+        aria-label="Copy URL"
+      >
+        <FiCopy className="h-3.5 w-3.5" />
+      </button>
     </div>
   );
 }
@@ -144,6 +266,10 @@ function JsonStringValue({ value }: { value: string }) {
   const displayValue =
     !expanded && shouldCollapse ? `${previewText}…` : value;
 
+  const trimmedValue = value.trim();
+  const urlCandidate =
+    !isMultiline && trimmedValue ? safeParseUrl(trimmedValue) : null;
+
   const shouldRenderMarkdown =
     canRenderMarkdown && view === "rendered" && (!shouldCollapse || expanded);
 
@@ -172,9 +298,11 @@ function JsonStringValue({ value }: { value: string }) {
 
   return (
     <div className="min-w-0">
-      {isMultiline || value.length > MAX_STRING_PREVIEW ? (
-        <div className="rounded-lg border border-gray-200 dark:border-gray-700/40 bg-gray-50 dark:bg-black/20">
-          <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 border-b border-gray-200 dark:border-gray-700/30">
+      {urlCandidate ? (
+        <UrlValue value={trimmedValue} onCopy={copyValue} />
+      ) : isMultiline || value.length > MAX_STRING_PREVIEW ? (
+        <div className="rounded-lg border border-gray-200 dark:border-slate-700/60 bg-gray-50 dark:bg-slate-950/60">
+          <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 border-b border-gray-200 dark:border-slate-700/40">
             <span className="text-[11px] text-gray-500 dark:text-gray-400">
               {isMultiline ? `${lineCount.toLocaleString()} lines • ` : ""}
               {value.length.toLocaleString()} chars
@@ -189,7 +317,7 @@ function JsonStringValue({ value }: { value: string }) {
                     className={clsx(
                       "px-2 py-1 text-[11px] font-semibold transition-colors",
                       view === "rendered"
-                        ? "bg-sky-600 text-white"
+                        ? "bg-cyan-600 text-white"
                         : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-black/20",
                     )}
                     title="Render markdown"
@@ -202,7 +330,7 @@ function JsonStringValue({ value }: { value: string }) {
                     className={clsx(
                       "px-2 py-1 text-[11px] font-semibold transition-colors border-l border-gray-200 dark:border-gray-700/40",
                       view === "text"
-                        ? "bg-gray-800 text-white"
+                        ? "bg-gray-900 text-white"
                         : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-black/20",
                     )}
                     title="Show plain text"
@@ -223,7 +351,7 @@ function JsonStringValue({ value }: { value: string }) {
               {shouldCollapse && (
                 <button
                   type="button"
-                  className="text-[11px] text-sky-600 dark:text-sky-300 hover:text-sky-500 dark:hover:text-sky-200 active:text-sky-700 dark:active:text-sky-100 underline underline-offset-2"
+                  className="text-[11px] text-cyan-600 dark:text-cyan-300 hover:text-cyan-500 dark:hover:text-cyan-200 active:text-cyan-700 dark:active:text-cyan-100 underline underline-offset-2"
                   onClick={() => setExpanded((v) => !v)}
                 >
                   {expanded ? "less" : "more"}
@@ -236,7 +364,7 @@ function JsonStringValue({ value }: { value: string }) {
             {shouldRenderMarkdown ? (
               <div
                 className={clsx(
-                  "font-sans text-sm text-gray-900 dark:text-gray-100",
+                  "font-sans text-sm text-gray-900 dark:text-slate-100",
                   shouldScrollExpanded && "max-h-[60vh] overflow-auto",
                 )}
               >
@@ -255,7 +383,7 @@ function JsonStringValue({ value }: { value: string }) {
                       const text = String(children).replace(/\n$/, "");
                       return (
                         <pre className="rounded-md border border-gray-200 dark:border-gray-700/40 bg-gray-100 dark:bg-black/25 p-3 overflow-auto" {...props}>
-                          <code className="font-mono text-xs leading-relaxed text-gray-800 dark:text-gray-100 whitespace-pre">
+                          <code className="font-mono text-xs leading-relaxed text-gray-800 dark:text-slate-100 whitespace-pre">
                             {text}
                           </code>
                         </pre>
@@ -290,7 +418,7 @@ function JsonStringValue({ value }: { value: string }) {
                 ) : null}
                 <pre
                   className={clsx(
-                    "rounded-md border border-gray-200 dark:border-gray-700/40 bg-gray-100 dark:bg-black/25 p-3 text-gray-800 dark:text-gray-100 whitespace-pre-wrap break-words leading-relaxed",
+                    "rounded-md border border-gray-200 dark:border-slate-700/50 bg-gray-100 dark:bg-slate-950/50 p-3 text-gray-800 dark:text-slate-100 whitespace-pre-wrap break-words leading-relaxed",
                     shouldScrollExpanded && "max-h-[60vh] overflow-auto",
                   )}
                 >
@@ -330,6 +458,7 @@ function JsonStringValue({ value }: { value: string }) {
           </button>
         </div>
       )}
+      )}
     </div>
   );
 }
@@ -345,13 +474,25 @@ function JsonPrimitiveValue({ value }: { value: unknown }) {
     return <JsonStringValue value={value} />;
   }
   if (typeof value === "number") {
-    return <span className="text-emerald-600 dark:text-emerald-200">{String(value)}</span>;
+    return (
+      <span className="text-emerald-600 dark:text-emerald-300">
+        {String(value)}
+      </span>
+    );
   }
   if (typeof value === "boolean") {
-    return <span className="text-purple-600 dark:text-purple-200">{value ? "true" : "false"}</span>;
+    return (
+      <span className="text-purple-600 dark:text-purple-300">
+        {value ? "true" : "false"}
+      </span>
+    );
   }
   if (typeof value === "bigint") {
-    return <span className="text-emerald-600 dark:text-emerald-200">{String(value)}n</span>;
+    return (
+      <span className="text-emerald-600 dark:text-emerald-300">
+        {String(value)}n
+      </span>
+    );
   }
   return <span className="text-gray-700 dark:text-gray-200">{String(value)}</span>;
 }
@@ -411,7 +552,7 @@ function JsonNode({
             )}
           />
           <div className="min-w-0 flex-1">
-            <span className="text-sky-600 dark:text-sky-300">{name ?? "(root)"}</span>
+            <span className="text-cyan-700 dark:text-cyan-300">{name ?? "(root)"}</span>
             <span className="text-gray-500 dark:text-gray-400">: </span>
             <span className="text-gray-700 dark:text-gray-200">[</span>
             <span className="text-gray-500 dark:text-gray-400">{formatItemCount(total)}</span>
@@ -433,7 +574,7 @@ function JsonNode({
           {remaining > 0 && (
             <button
               type="button"
-              className="mt-1 text-[11px] text-sky-600 dark:text-sky-300 hover:text-sky-500 dark:hover:text-sky-200 active:text-sky-700 dark:active:text-sky-100 underline underline-offset-2"
+              className="mt-1 text-[11px] text-cyan-600 dark:text-cyan-300 hover:text-cyan-500 dark:hover:text-cyan-200 active:text-cyan-700 dark:active:text-cyan-100 underline underline-offset-2"
               onClick={() => setShowAllChildren(true)}
             >
               Show {remaining.toLocaleString()} more…
@@ -468,7 +609,7 @@ function JsonNode({
             )}
           />
           <div className="min-w-0 flex-1">
-            <span className="text-sky-600 dark:text-sky-300">{name ?? "(root)"}</span>
+            <span className="text-cyan-700 dark:text-cyan-300">{name ?? "(root)"}</span>
             <span className="text-gray-500 dark:text-gray-400">: </span>
             <span className="text-gray-700 dark:text-gray-200">{"{"}</span>
             <span className="text-gray-500 dark:text-gray-400">{formatKeyCount(total)}</span>
@@ -497,7 +638,7 @@ function JsonNode({
           {remaining > 0 && (
             <button
               type="button"
-              className="mt-1 text-[11px] text-sky-600 dark:text-sky-300 hover:text-sky-500 dark:hover:text-sky-200 active:text-sky-700 dark:active:text-sky-100 underline underline-offset-2"
+              className="mt-1 text-[11px] text-cyan-600 dark:text-cyan-300 hover:text-cyan-500 dark:hover:text-cyan-200 active:text-cyan-700 dark:active:text-cyan-100 underline underline-offset-2"
               onClick={() => setShowAllChildren(true)}
             >
               Show {remaining.toLocaleString()} more…
@@ -534,8 +675,8 @@ function JsonTree({
   defaultExpandedDepth?: number;
 }) {
   return (
-    <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
-      <div className="bg-gray-50 dark:bg-[#1e1e1e] text-gray-900 dark:text-gray-100 font-mono text-xs leading-relaxed p-4">
+      <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-slate-700/60">
+        <div className="bg-gray-50 dark:bg-slate-950/70 text-gray-900 dark:text-slate-100 font-mono text-xs leading-relaxed p-4">
         <JsonNode
           value={value}
           depth={0}
@@ -654,7 +795,7 @@ export function JsonViewer({
               </SyntaxHighlighter>
             </div>
           ) : (
-            <pre className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1e1e1e] text-gray-900 dark:text-gray-100 font-mono text-xs leading-relaxed p-4 whitespace-pre-wrap break-words">
+            <pre className="rounded-xl border border-gray-200 dark:border-slate-700/60 bg-gray-50 dark:bg-slate-950/70 text-gray-900 dark:text-slate-100 font-mono text-xs leading-relaxed p-4 whitespace-pre-wrap break-words">
               {raw}
             </pre>
           )}

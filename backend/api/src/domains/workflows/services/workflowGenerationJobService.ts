@@ -147,6 +147,12 @@ class WorkflowGenerationJobService {
 
       const settings = await db.get(USER_SETTINGS_TABLE, { tenant_id: tenantId });
       const brandContext = settings ? buildBrandContext(settings) : '';
+      const defaultToolChoice =
+        settings?.default_tool_choice === 'auto' ||
+        settings?.default_tool_choice === 'required' ||
+        settings?.default_tool_choice === 'none'
+          ? settings.default_tool_choice
+          : undefined;
 
       let icpContext: string | null = null;
       if (settings?.icp_document_url) {
@@ -165,7 +171,8 @@ class WorkflowGenerationJobService {
         tenantId,
         jobId,
         brandContext || undefined,
-        icpContext || undefined
+        icpContext || undefined,
+        defaultToolChoice
       );
 
       const [templateHtmlResult, templateMetadataResult, formFieldsResult] = await Promise.all([
@@ -226,7 +233,8 @@ class WorkflowGenerationJobService {
         },
         result.template.html_content,
         result.template.template_name,
-        result.template.template_description
+        result.template.template_description,
+        defaultToolChoice
       );
 
       logger.info('[Workflow Generation] Workflow saved as active', {

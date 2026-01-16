@@ -378,6 +378,7 @@ export const updateSettingsSchema = z.object({
     })
     .optional(),
   default_ai_model: z.string().optional(),
+  default_tool_choice: z.enum(["auto", "required", "none"]).optional(),
   custom_domain: z.preprocess((val) => {
     if (val === "" || val === null || val === undefined) return undefined;
     const strVal = String(val).trim();

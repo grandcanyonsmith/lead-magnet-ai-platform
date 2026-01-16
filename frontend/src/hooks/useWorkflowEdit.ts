@@ -15,9 +15,18 @@ export interface WorkflowFormData {
   trigger?: WorkflowTrigger;
 }
 
-export function useWorkflowEdit() {
+const DEFAULT_TOOL_CHOICE: WorkflowStep["tool_choice"] = "required";
+
+const resolveToolChoice = (value?: string): WorkflowStep["tool_choice"] => {
+  return value === "auto" || value === "required" || value === "none"
+    ? value
+    : DEFAULT_TOOL_CHOICE;
+};
+
+export function useWorkflowEdit(defaultToolChoice?: WorkflowStep["tool_choice"]) {
   const router = useRouter();
   const workflowId = useWorkflowId();
+  const resolvedDefaultToolChoice = resolveToolChoice(defaultToolChoice);
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -86,7 +95,7 @@ export function useWorkflowEdit() {
           instructions: step.instructions?.trim() || defaultInstructions,
           step_order: step.step_order !== undefined ? step.step_order : index,
           tools: step.tools || ["web_search"],
-          tool_choice: step.tool_choice || "auto",
+          tool_choice: step.tool_choice || resolvedDefaultToolChoice,
           // Webhook step fields
           webhook_url: step.webhook_url || "",
           webhook_method: step.webhook_method || "POST",
@@ -154,7 +163,7 @@ export function useWorkflowEdit() {
         instructions: "",
         step_order: prev.length,
         tools: ["web_search"],
-        tool_choice: "auto",
+        tool_choice: resolvedDefaultToolChoice,
       },
     ]);
   };

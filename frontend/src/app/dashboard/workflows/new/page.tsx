@@ -30,7 +30,10 @@ export default function NewWorkflowPage() {
   // Hooks
   const aiGeneration = useAIGeneration();
   const workflowForm = useWorkflowForm();
-  const workflowSteps = useWorkflowSteps();
+  const { settings } = useSettings();
+  const workflowSteps = useWorkflowSteps({
+    defaultToolChoice: settings?.default_tool_choice,
+  });
   const validation = useWorkflowValidation(
     workflowForm.formData,
     workflowSteps.steps,
@@ -38,8 +41,6 @@ export default function NewWorkflowPage() {
   );
   const submission = useWorkflowSubmission();
   const generationStatus = useWorkflowGenerationStatus(generationJobId);
-  const { settings } = useSettings();
-
   // Handle AI generation result
   useEffect(() => {
     if (aiGeneration.result) {

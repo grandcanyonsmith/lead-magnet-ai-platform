@@ -94,6 +94,17 @@ class JobCompletionService:
                         api_url=job.get('api_url') or None
                     )
 
+                # Ensure session recording script is injected for replay support.
+                if 'Session Recording Script' not in final_content:
+                    from services.recording_script_generator import RecordingScriptGenerator
+                    recording_generator = RecordingScriptGenerator()
+                    final_content = recording_generator.inject_recording_script(
+                        html_content=final_content,
+                        job_id=job_id,
+                        tenant_id=job.get('tenant_id', ''),
+                        api_url=job.get('api_url') or None
+                    )
+
                 # Guarantee editor overlay injection for editMode=true visual editing.
                 if 'Lead Magnet Editor Overlay' not in final_content:
                     from services.editor_overlay_generator import EditorOverlayGenerator

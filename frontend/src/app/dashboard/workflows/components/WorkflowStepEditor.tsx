@@ -1280,7 +1280,7 @@ export default function WorkflowStepEditor({
               </label>
               <select
                 id={`tool-choice-${index}`}
-                value={localStep.tool_choice || "auto"}
+                value={localStep.tool_choice || "required"}
                 onChange={(e) =>
                   handleChange(
                     "tool_choice",

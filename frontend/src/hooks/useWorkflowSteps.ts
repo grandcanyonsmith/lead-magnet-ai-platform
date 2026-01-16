@@ -3,7 +3,17 @@
 import { useState, useCallback, useEffect } from "react";
 import { WorkflowStep } from "@/types/workflow";
 
-const defaultSteps: WorkflowStep[] = [
+const DEFAULT_TOOL_CHOICE: WorkflowStep["tool_choice"] = "required";
+
+const resolveToolChoice = (value?: string): WorkflowStep["tool_choice"] => {
+  return value === "auto" || value === "required" || value === "none"
+    ? value
+    : DEFAULT_TOOL_CHOICE;
+};
+
+const buildDefaultSteps = (
+  defaultToolChoice: WorkflowStep["tool_choice"],
+): WorkflowStep[] => [
   {
     step_name: "Deep Research",
     step_description: "Generate comprehensive research report",
@@ -11,7 +21,7 @@ const defaultSteps: WorkflowStep[] = [
     instructions: "",
     step_order: 0,
     tools: ["web_search"],
-    tool_choice: "auto",
+    tool_choice: defaultToolChoice,
   },
   {
     step_name: "HTML Rewrite",
@@ -21,13 +31,14 @@ const defaultSteps: WorkflowStep[] = [
       "Rewrite the research content into styled HTML matching the provided template. Ensure the output is complete, valid HTML that matches the template's design and structure.",
     step_order: 1,
     tools: [],
-    tool_choice: "none",
+    tool_choice: defaultToolChoice,
   },
 ];
 
 interface UseWorkflowStepsOptions {
   initialSteps?: WorkflowStep[];
   persistKey?: string;
+  defaultToolChoice?: WorkflowStep["tool_choice"];
 }
 
 export function useWorkflowSteps(optionsOrSteps?: WorkflowStep[] | UseWorkflowStepsOptions) {
@@ -36,10 +47,11 @@ export function useWorkflowSteps(optionsOrSteps?: WorkflowStep[] | UseWorkflowSt
     ? { initialSteps: optionsOrSteps } 
     : (optionsOrSteps || {});
     
-  const { initialSteps, persistKey } = options;
+  const { initialSteps, persistKey, defaultToolChoice } = options;
+  const resolvedDefaultToolChoice = resolveToolChoice(defaultToolChoice);
 
   const [steps, setSteps] = useState<WorkflowStep[]>(
-    initialSteps || defaultSteps,
+    initialSteps || buildDefaultSteps(resolvedDefaultToolChoice),
   );
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -93,10 +105,10 @@ export function useWorkflowSteps(optionsOrSteps?: WorkflowStep[] | UseWorkflowSt
         instructions: "",
         step_order: prev.length,
         tools: [],
-        tool_choice: "auto",
+        tool_choice: resolvedDefaultToolChoice,
       },
     ]);
-  }, []);
+  }, [resolvedDefaultToolChoice]);
 
   const deleteStep = useCallback((index: number) => {
     setSteps((prev) => {
@@ -148,12 +160,12 @@ export function useWorkflowSteps(optionsOrSteps?: WorkflowStep[] | UseWorkflowSt
           instructions: step.instructions || "",
           step_order: step.step_order !== undefined ? step.step_order : 0,
           tools: step.tools || [],
-          tool_choice: step.tool_choice || "auto",
+          tool_choice: step.tool_choice || resolvedDefaultToolChoice,
           depends_on: step.depends_on,
         })),
       );
     }
-  }, []);
+  }, [resolvedDefaultToolChoice]);
 
   const updateFirstStepInstructions = useCallback((instructions: string) => {
     setSteps((prev) => {

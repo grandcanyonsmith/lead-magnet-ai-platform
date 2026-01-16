@@ -41,7 +41,7 @@ export function StepEditModal({
     model: "gpt-5.2",
     reasoning_effort: "high",
     tools: [],
-    tool_choice: "auto",
+    tool_choice: "required",
     depends_on: [],
   });
   const [saving, setSaving] = useState(false);
@@ -58,7 +58,7 @@ export function StepEditModal({
         reasoning_effort: "high",
         step_order: step.step_order,
         tools: step.tools || [],
-        tool_choice: step.tool_choice || "auto",
+        tool_choice: step.tool_choice || "required",
         depends_on: step.depends_on || [],
       });
       setError(null);
@@ -313,7 +313,7 @@ export function StepEditModal({
                 Tool Choice
               </label>
               <select
-                value={formData.tool_choice || "auto"}
+                value={formData.tool_choice || "required"}
                 onChange={(e) =>
                   setFormData({
                     ...formData,

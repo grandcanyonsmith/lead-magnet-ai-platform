@@ -513,6 +513,7 @@ export class WorkflowAIController {
     const { db } = await import('@utils/db');
     const { env } = await import('@utils/env');
     const WORKFLOWS_TABLE = env.workflowsTable;
+    const USER_SETTINGS_TABLE = env.userSettingsTable;
 
     // Validate required fields
     if (!body.userPrompt || typeof body.userPrompt !== 'string') {
@@ -539,6 +540,16 @@ export class WorkflowAIController {
     });
 
     try {
+      const settings = USER_SETTINGS_TABLE
+        ? await db.get(USER_SETTINGS_TABLE, { tenant_id: tenantId })
+        : null;
+      const defaultToolChoice =
+        settings?.default_tool_choice === 'auto' ||
+        settings?.default_tool_choice === 'required' ||
+        settings?.default_tool_choice === 'none'
+          ? settings.default_tool_choice
+          : undefined;
+
       // Get OpenAI client
       const openai = await getOpenAIClient();
       const aiService = new WorkflowStepAIService(openai);
@@ -547,6 +558,7 @@ export class WorkflowAIController {
       const aiRequest: AIStepGenerationRequest = {
         userPrompt: body.userPrompt,
         action: body.action,
+        defaultToolChoice,
         workflowContext: {
           workflow_id: workflowId,
           workflow_name: workflow.workflow_name || 'Untitled Workflow',

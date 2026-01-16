@@ -76,7 +76,9 @@ class AIStepHandler(AbstractStepHandler):
                 )
                 step_tools.append({"type": "file_search"})
         
-        step_tool_choice = step.get('tool_choice', 'auto')
+        step_tool_choice = step.get('tool_choice')
+        if step_tool_choice not in ('auto', 'required', 'none'):
+            step_tool_choice = 'required' if len(step_tools) > 0 else 'none'
         
         # Filter code_interpreter if S3 upload requested in instructions
         instructions = step.get("instructions", "")
@@ -89,6 +91,13 @@ class AIStepHandler(AbstractStepHandler):
                 step_tool_choice = "none"
         
         return step_model, step_tools, step_tool_choice
+
+    @staticmethod
+    def _split_step_context(step_index: int, full_context: str) -> Tuple[str, str]:
+        """Return (previous_context, current_step_context) based on step index."""
+        current_step_context = ContextBuilder.get_current_step_context(step_index, full_context)
+        previous_context = full_context if step_index > 0 else ""
+        return previous_context, current_step_context
 
     def execute(
         self,
@@ -114,8 +123,7 @@ class AIStepHandler(AbstractStepHandler):
             # Check dependency steps to build context
             # Note: dependency resolution happens in step_processor main loop now
             
-            # Current step context
-            current_step_context = ContextBuilder.get_current_step_context(step_index, context)
+            previous_context, current_step_context = self._split_step_context(step_index, context)
             current_step_context = self.s3_context_service.maybe_inject_s3_upload_context(
                 step=step,
                 step_index=step_index,
@@ -131,20 +139,21 @@ class AIStepHandler(AbstractStepHandler):
             )
             
             # Collect previous image URLs
-            previous_image_urls = None
             has_image_generation = any(
-                isinstance(t, dict) and t.get('type') == 'image_generation' 
-                for t in step_tools
-            ) if step_tools else False
+                isinstance(tool, dict) and tool.get('type') == 'image_generation'
+                for tool in (step_tools or [])
+            )
             
-            if has_image_generation:
-                previous_image_urls = ContextBuilder.collect_previous_image_urls(
+            previous_image_urls = (
+                ContextBuilder.collect_previous_image_urls(
                     execution_steps=execution_steps,
                     current_step_order=step_index + 1
                 )
+                if has_image_generation
+                else None
+            )
 
             try:
-                previous_context = context if step_index > 0 else ""
                 # Execute AI step
                 step_output, usage_info, request_details, response_details, image_artifact_ids, step_artifact_id = self.ai_step_processor.process_ai_step(
                     step=step,

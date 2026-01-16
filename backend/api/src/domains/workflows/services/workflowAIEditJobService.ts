@@ -331,11 +331,22 @@ class WorkflowAIEditJobService {
       // ---------------------------------------------------------
       // OPENAI CALL
       // ---------------------------------------------------------
+      const settings = env.userSettingsTable
+        ? await db.get(env.userSettingsTable, { tenant_id: tenantId })
+        : null;
+      const defaultToolChoice =
+        settings?.default_tool_choice === "auto" ||
+        settings?.default_tool_choice === "required" ||
+        settings?.default_tool_choice === "none"
+          ? settings.default_tool_choice
+          : undefined;
+
       const openai = await getOpenAIClient();
       const aiService = new WorkflowAIService(openai);
 
       const aiRequest: WorkflowAIEditRequest = {
         userPrompt: userPrompt,
+        defaultToolChoice,
         workflowContext: {
           workflow_id: workflowId,
           workflow_name: workflow.workflow_name || "Untitled Workflow",

@@ -3,11 +3,13 @@
  * Displays step header with status, name, metrics, and action buttons
  */
 
+import Link from "next/link";
 import { MergedStep, StepStatus } from "@/types/job";
 import { formatDurationMs } from "@/utils/jobFormatting";
 import {
   PencilSquareIcon,
   ArrowPathIcon,
+  ArrowTopRightOnSquareIcon,
   CheckCircleIcon,
   XCircleIcon,
 } from "@heroicons/react/24/outline";
@@ -52,6 +54,8 @@ interface StepHeaderProps {
   onEditStep?: (stepIndex: number) => void;
   onRerunStep?: (stepIndex: number) => Promise<void>;
   onRerunStepClick?: (stepIndex: number) => void;
+  detailsHref?: string;
+  detailsLabel?: string;
 }
 
 // Type for tool - can be a string or an object with a type property
@@ -118,6 +122,8 @@ export function StepHeader({
   onEditStep,
   onRerunStep,
   onRerunStepClick,
+  detailsHref,
+  detailsLabel = "View step details",
 }: StepHeaderProps) {
   const isPending = status === "pending";
   const isCompleted = status === "completed";
@@ -178,7 +184,16 @@ export function StepHeader({
             <h3
               className={`text-base sm:text-lg font-semibold break-words ${isPending ? "text-gray-500 dark:text-gray-500" : "text-gray-900 dark:text-white"}`}
             >
-              {step.step_name || `Step ${step.step_order ?? 0}`}
+              {detailsHref ? (
+                <Link
+                  href={detailsHref}
+                  className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                >
+                  {step.step_name || `Step ${step.step_order ?? 0}`}
+                </Link>
+              ) : (
+                step.step_name || `Step ${step.step_order ?? 0}`
+              )}
             </h3>
           </div>
         </div>
@@ -186,6 +201,17 @@ export function StepHeader({
         <div className="flex items-center gap-3 self-end lg:self-auto">
           {/* Action Buttons */}
           <div className="flex items-center gap-1">
+            {detailsHref && (
+              <Tooltip content={detailsLabel} position="top">
+                <Link
+                  href={detailsHref}
+                  className="p-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors touch-target min-h-[44px] sm:min-h-0"
+                  aria-label={detailsLabel}
+                >
+                  <ArrowTopRightOnSquareIcon className="w-5 h-5" />
+                </Link>
+              </Tooltip>
+            )}
             {/* Edit Step Button - Only for workflow template steps */}
             {canEdit &&
               onEditStep &&

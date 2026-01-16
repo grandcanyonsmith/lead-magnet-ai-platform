@@ -335,7 +335,7 @@ export default function StepTester({ step, index }: StepTesterProps) {
                     
                     const instructions = step.instructions || "";
                     const tools = step.tools || [];
-                    const toolChoice = step.tool_choice || "auto";
+                    const toolChoice = step.tool_choice || "required";
                     
                     // Enforce computer-use-preview model when computer_use_preview tool is present
                     let model = step.model || "computer-use-preview";

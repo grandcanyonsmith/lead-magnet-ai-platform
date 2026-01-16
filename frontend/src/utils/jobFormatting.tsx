@@ -136,6 +136,30 @@ export function isHTML(str: string): boolean {
   );
 }
 
+function stripHtmlToText(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n")
+    .replace(/<\/div>/gi, "\n")
+    .replace(/<\/li>/gi, "\n")
+    .replace(/<li[^>]*>/gi, "- ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function hasStructuredHtmlTags(html: string): boolean {
+  return /<(table|img|svg|canvas|video|audio|iframe|form|input|button|a|ul|ol|li|h1|h2|h3|h4|h5|h6|blockquote|code|pre)\b/i.test(
+    html,
+  );
+}
+
 interface WebhookInput {
   webhook_url?: string;
   method?: string;
@@ -249,6 +273,16 @@ export function formatStepOutput(step: ExecutionStep): {
   if (typeof step.output === "string") {
     // Check if it's HTML first (before JSON, as HTML might contain JSON-like syntax)
     if (isHTML(step.output)) {
+      const strippedText = stripHtmlToText(step.output);
+      const shouldUseMarkdown =
+        strippedText.length > 0 &&
+        isMarkdown(strippedText) &&
+        !hasStructuredHtmlTags(step.output);
+
+      if (shouldUseMarkdown) {
+        return { content: strippedText, type: "markdown" };
+      }
+
       return { content: step.output, type: "html" };
     }
     // Check if it's JSON

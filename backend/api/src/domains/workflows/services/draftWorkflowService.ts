@@ -32,7 +32,8 @@ export async function saveDraftWorkflow(
   draftData: DraftWorkflowData,
   templateHtml?: string,
   templateName?: string,
-  templateDescription?: string
+  templateDescription?: string,
+  defaultToolChoice?: "auto" | "required" | "none"
 ): Promise<{ workflow_id: string; form_id: string | null }> {
   if (!WORKFLOWS_TABLE) {
     throw new Error('WORKFLOWS_TABLE environment variable is not configured');
@@ -47,7 +48,9 @@ export async function saveDraftWorkflow(
   // Ensure step_order is set for each step
   const workflowData = {
     ...draftData,
-    steps: ensureStepDefaults(draftData.steps || []) as WorkflowStep[],
+    steps: ensureStepDefaults(draftData.steps || [], {
+      defaultToolChoice,
+    }) as WorkflowStep[],
   };
 
   const workflowId = `wf_${ulid()}`;

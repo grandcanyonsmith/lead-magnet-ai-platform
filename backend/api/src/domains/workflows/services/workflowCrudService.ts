@@ -6,11 +6,30 @@ import { ensureStepDefaults, WorkflowStep } from './workflow/workflowConfigSuppo
 import { logger } from '@utils/logger';
 import { env } from '@utils/env';
 import { validate, createWorkflowSchema, updateWorkflowSchema } from '@utils/validation';
+import { ToolChoice } from '@utils/types';
 
 const WORKFLOWS_TABLE = env.workflowsTable;
+const USER_SETTINGS_TABLE = env.userSettingsTable;
 
 if (!WORKFLOWS_TABLE) {
   logger.error('[WorkflowCrudService] WORKFLOWS_TABLE environment variable is not set');
+}
+
+async function loadDefaultToolChoice(tenantId: string): Promise<ToolChoice | undefined> {
+  if (!USER_SETTINGS_TABLE) return undefined;
+  try {
+    const settings = await db.get(USER_SETTINGS_TABLE, { tenant_id: tenantId });
+    const choice = settings?.default_tool_choice;
+    return choice === 'auto' || choice === 'required' || choice === 'none'
+      ? choice
+      : undefined;
+  } catch (error: any) {
+    logger.warn('[WorkflowCrudService] Failed to load default tool choice', {
+      tenantId,
+      error: error?.message || String(error),
+    });
+    return undefined;
+  }
 }
 
 export class WorkflowCrudService {
@@ -182,9 +201,12 @@ export class WorkflowCrudService {
     }
 
     // Ensure step_order is set for each step and add defaults for tools/tool_choice/step_description
+    const defaultToolChoice = await loadDefaultToolChoice(tenantId);
     const workflowData = {
       ...data,
-      steps: ensureStepDefaults(data.steps as any[]) as WorkflowStep[]
+      steps: ensureStepDefaults(data.steps as any[], {
+        defaultToolChoice,
+      }) as WorkflowStep[]
     };
 
     const workflowId = `wf_${ulid()}`;
@@ -308,7 +330,10 @@ export class WorkflowCrudService {
     
     // If steps are being updated, ensure they have proper defaults
     if (hasStepsInUpdate) {
-      updateData.steps = ensureStepDefaults(data.steps);
+      const defaultToolChoice = await loadDefaultToolChoice(tenantId);
+      updateData.steps = ensureStepDefaults(data.steps, {
+        defaultToolChoice,
+      });
       logger.info('[Workflows Update] After ensureStepDefaults', {
         workflowId,
         stepsToSave: updateData.steps?.length || 0,
