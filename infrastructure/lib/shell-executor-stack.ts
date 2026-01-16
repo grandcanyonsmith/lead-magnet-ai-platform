@@ -74,10 +74,11 @@ export class ShellExecutorStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    // Access point ensures a stable root directory and correct ownership
+    // Access point ensures a stable root directory and correct ownership.
+    // Use a versioned path to avoid stale permissions from previous deployments.
     const accessPoint = new efs.AccessPoint(this, 'ShellExecutorEfsAccessPoint', {
       fileSystem: this.fileSystem,
-      path: '/shell-executor',
+      path: '/shell-executor-v2',
       posixUser: { uid: '1000', gid: '1000' },
       createAcl: {
         ownerUid: '1000',

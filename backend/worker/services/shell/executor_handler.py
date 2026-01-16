@@ -1,15 +1,17 @@
 import os
 import subprocess
 import logging
-import json
 import time
-from typing import Dict, Any, List, Optional
+import errno
+from typing import Dict, Any, Optional, Tuple
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 # Default configuration
 MOUNT_POINT = os.environ.get("EFS_MOUNT_POINT", "/mnt/shell-executor")
+# Fallback if EFS is not writable (e.g., permissions/mount issues)
+FALLBACK_ROOT = os.environ.get("SHELL_EXECUTOR_FALLBACK_ROOT", "/tmp/leadmagnet-shell-executor")
 # Lambda max timeout is 15 min (900s), but we default to 5 min per command
 DEFAULT_TIMEOUT_MS = 300000 
 DEFAULT_MAX_OUTPUT_LENGTH = 100000  # 100KB
@@ -21,6 +23,31 @@ def truncate(text: Optional[str], max_len: int) -> str:
     if len(text) <= max_len:
         return text
     return text[:max_len] + "\n... [truncated]"
+
+def _prepare_workspace_path(workspace_id: str) -> Tuple[str, bool]:
+    """
+    Create a workspace directory, falling back to /tmp if EFS is not writable.
+    Returns (workspace_path, used_fallback).
+    """
+    safe_workspace_id = "".join(c for c in workspace_id if c.isalnum() or c in "-_") or "default"
+    primary_base = os.path.join(MOUNT_POINT, "sessions")
+    primary_path = os.path.join(primary_base, safe_workspace_id)
+
+    try:
+        os.makedirs(primary_path, exist_ok=True)
+        return primary_path, False
+    except OSError as e:
+        if e.errno not in (errno.EACCES, errno.EPERM, errno.EROFS):
+            raise
+        logger.error(
+            "EFS workspace not writable; falling back to /tmp",
+            extra={"mount_point": MOUNT_POINT, "error": str(e)},
+        )
+
+    fallback_base = os.path.join(FALLBACK_ROOT, "sessions")
+    fallback_path = os.path.join(fallback_base, safe_workspace_id)
+    os.makedirs(fallback_path, exist_ok=True)
+    return fallback_path, True
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
@@ -38,12 +65,24 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         Dict containing execution results
     """
     # Log event keys for debugging (avoid logging potentially sensitive command content globally)
-    logger.info(f"Received shell execution request", extra={"event_keys": list(event.keys())})
+    logger.info("Received shell execution request", extra={"event_keys": list(event.keys())})
     
     commands = event.get("commands", [])
     workspace_id = event.get("workspace_id", "default")
     timeout_ms = event.get("timeout_ms", DEFAULT_TIMEOUT_MS)
     max_output_length = event.get("max_output_length", DEFAULT_MAX_OUTPUT_LENGTH)
+    try:
+        timeout_ms = int(timeout_ms)
+    except Exception:
+        timeout_ms = DEFAULT_TIMEOUT_MS
+    if timeout_ms <= 0:
+        timeout_ms = DEFAULT_TIMEOUT_MS
+    try:
+        max_output_length = int(max_output_length)
+    except Exception:
+        max_output_length = DEFAULT_MAX_OUTPUT_LENGTH
+    if max_output_length <= 0:
+        max_output_length = DEFAULT_MAX_OUTPUT_LENGTH
     env_vars = event.get("env", {})
     
     if not commands:
@@ -52,22 +91,17 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             "error": "No commands provided"
         }
         
-    # Setup workspace
-    # Ensure workspace_id is safe (alphanumeric + dashes/underscores)
-    safe_workspace_id = "".join(c for c in workspace_id if c.isalnum() or c in "-_")
-    if not safe_workspace_id:
-        safe_workspace_id = "default"
-        
-    workspace_path = os.path.join(MOUNT_POINT, "sessions", safe_workspace_id)
-    
+    # Setup workspace (EFS preferred; /tmp fallback if EFS not writable)
     try:
-        os.makedirs(workspace_path, exist_ok=True)
+        workspace_path, used_fallback = _prepare_workspace_path(workspace_id)
     except Exception as e:
-        logger.error(f"Failed to create workspace directory at {workspace_path}: {e}")
+        logger.error(f"Failed to create workspace directory: {e}")
         return {
             "statusCode": 500,
             "error": f"Failed to create workspace: {str(e)}"
         }
+    if used_fallback:
+        logger.warning("Shell executor using /tmp fallback workspace", extra={"workspace_path": workspace_path})
         
     # Prepare environment
     # Inherit current env but allow overrides
