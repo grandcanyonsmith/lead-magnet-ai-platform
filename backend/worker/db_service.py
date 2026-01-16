@@ -11,7 +11,10 @@ from typing import Dict, Any, Optional, List
 import boto3
 from boto3.dynamodb.conditions import Key
 from datetime import datetime
-from ulid import new as ulid
+try:
+    from ulid import new as ulid
+except ImportError:
+    from ulid import ULID as ulid
 
 logger = logging.getLogger(__name__)
 

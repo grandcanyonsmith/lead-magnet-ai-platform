@@ -55,7 +55,10 @@ logger = logging.getLogger(__name__)
 from db_service import DynamoDBService
 from s3_service import S3Service
 from processor import JobProcessor
-from ulid import new as ulid
+try:
+    from ulid import new as ulid
+except ImportError:
+    from ulid import ULID as ulid
 import boto3
 from boto3.dynamodb.conditions import Key
 

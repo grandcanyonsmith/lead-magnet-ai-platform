@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { Fragment, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -9,7 +9,10 @@ import {
   ArrowTopRightOnSquareIcon,
   ArrowUturnLeftIcon,
   ClipboardDocumentIcon,
+  PencilSquareIcon,
+  EllipsisVerticalIcon,
 } from "@heroicons/react/24/outline";
+import { Menu, Transition } from "@headlessui/react";
 import { toast } from "react-hot-toast";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -89,6 +92,19 @@ export function JobHeader({
       toast.error("Unable to copy");
     }
   };
+
+  const getMenuItemClass = (active: boolean, disabled?: boolean) => {
+    const base =
+      "group flex w-full items-center rounded-md px-2 py-2 text-sm transition-colors";
+    if (disabled) {
+      return `${base} text-gray-400 dark:text-gray-500 cursor-not-allowed`;
+    }
+    return active
+      ? `${base} bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300`
+      : `${base} text-gray-700 dark:text-gray-300`;
+  };
+
+  const hasActions = Boolean(workflow?.workflow_id || onRefresh || onResubmit);
 
   return (
     <div className="mb-8 space-y-4">
@@ -198,28 +214,78 @@ export function JobHeader({
           </div>
         }
       >
-        {onRefresh && (
-          <button
-            type="button"
-            onClick={onRefresh}
-            disabled={refreshing}
-            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-200 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <ArrowPathIcon
-              className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
-            />
-            {refreshing ? "Refreshing..." : "Refresh data"}
-          </button>
+        {hasActions && (
+          <Menu as="div" className="relative inline-block text-left">
+            <Menu.Button
+              aria-label="Job actions"
+              className="inline-flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm font-semibold text-gray-700 dark:text-gray-200 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              <EllipsisVerticalIcon className="h-5 w-5" />
+            </Menu.Button>
+            <Transition
+              as={Fragment}
+              enter="transition ease-out duration-100"
+              enterFrom="transform opacity-0 scale-95"
+              enterTo="transform opacity-100 scale-100"
+              leave="transition ease-in duration-75"
+              leaveFrom="transform opacity-100 scale-100"
+              leaveTo="transform opacity-0 scale-95"
+            >
+              <Menu.Items className="absolute right-0 mt-2 w-52 origin-top-right divide-y divide-gray-100 dark:divide-gray-800 rounded-lg bg-white dark:bg-gray-900 shadow-lg ring-1 ring-black/5 dark:ring-white/10 focus:outline-none z-20">
+                <div className="px-1 py-1">
+                  {workflow?.workflow_id && (
+                    <Menu.Item>
+                      {({ active }) => (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            router.push(
+                              `/dashboard/workflows/${workflow.workflow_id}/edit`,
+                            )
+                          }
+                          className={getMenuItemClass(active)}
+                        >
+                          <PencilSquareIcon className="mr-2 h-4 w-4" />
+                          Edit lead magnet
+                        </button>
+                      )}
+                    </Menu.Item>
+                  )}
+                  {onRefresh && (
+                    <Menu.Item disabled={refreshing}>
+                      {({ active, disabled }) => (
+                        <button
+                          type="button"
+                          onClick={onRefresh}
+                          disabled={disabled}
+                          className={getMenuItemClass(active, disabled)}
+                        >
+                          <ArrowPathIcon
+                            className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+                          />
+                          {refreshing ? "Refreshing..." : "Refresh data"}
+                        </button>
+                      )}
+                    </Menu.Item>
+                  )}
+                  <Menu.Item disabled={resubmitting}>
+                    {({ active, disabled }) => (
+                      <button
+                        type="button"
+                        onClick={onResubmit}
+                        disabled={disabled}
+                        className={getMenuItemClass(active, disabled)}
+                      >
+                        <ArrowUturnLeftIcon className="mr-2 h-4 w-4" />
+                        {resubmitting ? "Resubmitting..." : "Resubmit"}
+                      </button>
+                    )}
+                  </Menu.Item>
+                </div>
+              </Menu.Items>
+            </Transition>
+          </Menu>
         )}
-        <button
-          type="button"
-          onClick={onResubmit}
-          disabled={resubmitting}
-          className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          <ArrowUturnLeftIcon className="h-4 w-4" />
-          {resubmitting ? "Resubmitting..." : "Resubmit"}
-        </button>
       </PageHeader>
     </div>
   );
