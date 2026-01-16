@@ -119,10 +119,12 @@ class StepProcessor:
 
             # Build context
             # For AI steps, we build full context. For webhooks, it might be unused but passed for consistency.
+            # Only include form submission in the first step (step_index 0)
             all_previous_context = ContextBuilder.build_previous_context_from_step_outputs(
                 initial_context=initial_context,
                 step_outputs=step_outputs,
-                sorted_steps=sorted_steps
+                sorted_steps=sorted_steps,
+                include_form_submission=(step_index == 0)
             )
             
             # Execute handler
@@ -202,11 +204,13 @@ class StepProcessor:
                  step_order = step.get('step_order', step_index)
                  step_deps = [i for i, s in enumerate(steps) if s.get('step_order', i) < step_order]
 
+            # Only include form submission in the first step (step_index 0)
             context = ContextBuilder.build_previous_context_from_execution_steps(
                 initial_context=initial_context,
                 execution_steps=execution_steps,
                 current_step_order=step_index + 1,
-                dependency_indices=step_deps
+                dependency_indices=step_deps,
+                include_form_submission=(step_index == 0)
             )
             
             # Execute handler

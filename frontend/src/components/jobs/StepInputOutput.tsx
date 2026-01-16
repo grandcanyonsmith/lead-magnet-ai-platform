@@ -14,13 +14,9 @@ import {
 } from "react-icons/fi";
 import { formatStepInput, formatStepOutput } from "@/utils/jobFormatting";
 import { StepContent } from "./StepContent";
-import { MergedStep, StepStatus, ExecutionStep } from "@/types/job";
+import { MergedStep, StepStatus } from "@/types/job";
 import { PreviewRenderer } from "@/components/artifacts/PreviewRenderer";
 import { Artifact } from "@/types/artifact";
-import { extractImageUrls } from "@/utils/imageUtils";
-import { InlineImage } from "./InlineImage";
-import { ArtifactPreview } from "./ArtifactPreview";
-import type { Form } from "@/types/form";
 
 interface StepInputOutputProps {
   step: MergedStep;
@@ -28,9 +24,6 @@ interface StepInputOutputProps {
   onCopy: (text: string) => void;
   liveOutput?: string;
   liveUpdatedAt?: string;
-  previousSteps: ExecutionStep[];
-  formSubmission: Record<string, unknown> | null | undefined;
-  form?: Form | null;
   imageArtifacts?: Artifact[];
   loadingImageArtifacts?: boolean;
   onEditStep?: (stepIndex: number) => void;
@@ -109,182 +102,12 @@ function renderToolBadges(
   );
 }
 
-// Render text with inline images
-function renderTextWithImages(text: string): React.ReactNode {
-  const imageUrls = extractImageUrls(text);
-
-  if (imageUrls.length === 0) {
-    return <>{text}</>;
-  }
-
-  // Split text by image URLs and render images inline
-  let remainingText = text;
-  const parts: React.ReactNode[] = [];
-  let partIndex = 0;
-
-  imageUrls.forEach((url, idx) => {
-    const urlIndex = remainingText.indexOf(url);
-    if (urlIndex === -1) return;
-
-    // Add text before the URL
-    if (urlIndex > 0) {
-      parts.push(
-        <span key={`text-${partIndex++}`}>
-          {remainingText.substring(0, urlIndex)}
-        </span>,
-      );
-    }
-
-    // Add the image
-    parts.push(
-      <div key={`image-${url}`} className="block my-2">
-        <InlineImage url={url} alt={`Image`} />
-      </div>,
-    );
-
-    // Update remaining text
-    remainingText = remainingText.substring(urlIndex + url.length);
-  });
-
-  // Add any remaining text
-  if (remainingText.length > 0) {
-    parts.push(<span key={`text-${partIndex}`}>{remainingText}</span>);
-  }
-
-  return <>{parts}</>;
-}
-
-// Render previous steps context inline
-function renderPreviousStepsContext(
-  previousSteps: ExecutionStep[],
-  formSubmission: Record<string, unknown> | null | undefined,
-  currentStepOrder: number,
-  form?: Form | null,
-) {
-  if ((!previousSteps || previousSteps.length === 0) && !formSubmission) {
-    return null;
-  }
-
-  return (
-    <div className="mb-5 md:mb-4 pb-5 md:pb-4 border-b border-gray-200 dark:border-gray-700">
-      <div className="text-sm md:text-xs font-medium text-gray-700 dark:text-gray-300 mb-3 md:mb-2">
-        Context from Previous Steps:
-      </div>
-
-      {/* Form Submission - Show inline */}
-      {formSubmission &&
-        (() => {
-          const formText =
-            typeof formSubmission === "object"
-              ? Object.entries(formSubmission)
-                  .map(([key, value]) => {
-                    // Try to resolve field label if form schema is available
-                    let label = key;
-                    if (form?.form_fields_schema?.fields) {
-                      const field = form.form_fields_schema.fields.find(
-                        (f) => f.field_id === key,
-                      );
-                      if (field) {
-                        label = field.label;
-                      }
-                    }
-                    return `${label}: ${value}`;
-                  })
-                  .join("\n")
-              : String(formSubmission);
-          const formImageUrls = extractImageUrls(formText);
-
-          return (
-            <div className="mb-2">
-              <div className="text-sm md:text-xs font-medium text-gray-600 dark:text-gray-400 mb-2 md:mb-1">
-                Form Submission <span className="text-gray-500 dark:text-gray-500">(Step 0)</span>
-              </div>
-              <div className="text-sm md:text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono overflow-x-auto bg-gray-50 dark:bg-gray-900/50 p-3 md:p-2.5 rounded-lg border border-gray-200 dark:border-gray-700 max-h-32 overflow-y-auto scrollbar-hide-until-hover leading-relaxed">
-                {renderTextWithImages(formText)}
-              </div>
-              {/* Render images found in form submission */}
-              {formImageUrls.length > 0 && (
-                <div className="mt-4 space-y-4 md:space-y-2">
-                  {formImageUrls.map((url) => (
-                    <InlineImage
-                      key={`form-image-${url}`}
-                      url={url}
-                      alt={`Form submission image`}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })()}
-
-      {/* Previous Workflow Steps - Show inline */}
-      {previousSteps.map((step, index) => {
-        const stepOutput =
-          typeof step.output === "string"
-            ? step.output
-            : step.output !== null && step.output !== undefined
-              ? JSON.stringify(step.output, null, 2)
-              : "";
-        const stepImageUrls = extractImageUrls(stepOutput);
-
-        return (
-          <div
-            key={`${currentStepOrder}-prev-${step.step_order}-${index}`}
-            className="mb-2 last:mb-0"
-          >
-            <div className="text-sm md:text-xs font-medium text-gray-600 dark:text-gray-400 mb-2 md:mb-1">
-              {step.step_name || `Step ${step.step_order}`}{" "}
-              <span className="text-gray-500 dark:text-gray-500">(Step {step.step_order})</span>
-            </div>
-            <div className="text-sm md:text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono overflow-x-auto bg-gray-50 dark:bg-gray-900/50 p-3 md:p-2.5 rounded-lg border border-gray-200 dark:border-gray-700 max-h-32 overflow-y-auto scrollbar-hide-until-hover leading-relaxed">
-              {renderTextWithImages(stepOutput)}
-            </div>
-            {/* Render images found in step output */}
-            {stepImageUrls.length > 0 && (
-              <div className="mt-4 md:mt-2 space-y-4 md:space-y-2">
-                {stepImageUrls.map((url) => (
-                  <InlineImage
-                    key={`step-output-image-${url}`}
-                    url={url}
-                    alt={`Step ${step.step_order} output image`}
-                  />
-                ))}
-              </div>
-            )}
-            {/* Also show image_urls if they exist (for backwards compatibility) */}
-            {step.image_urls && step.image_urls.length > 0 && (
-              <div className="mt-4 md:mt-2">
-                <div className="text-sm md:text-xs font-medium text-gray-600 dark:text-gray-400 mb-3 md:mb-1">
-                  Generated Images:
-                </div>
-                <div className="space-y-4 md:space-y-2">
-                  {step.image_urls.map((url: string) => (
-                    <InlineImage
-                      key={`step-image-url-${url}`}
-                      url={url}
-                      alt={`Generated image`}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 export function StepInputOutput({
   step,
   status,
   onCopy,
   liveOutput,
   liveUpdatedAt,
-  previousSteps,
-  formSubmission,
-  form,
   imageArtifacts = [],
   loadingImageArtifacts = false,
   onEditStep,
@@ -616,14 +439,6 @@ export function StepInputOutput({
                 ref={inputScrollRef}
                 className="p-3 md:p-2.5 bg-white dark:bg-card max-h-[350px] md:max-h-72 overflow-y-auto scrollbar-hide-until-hover"
               >
-                {/* Previous Steps Context */}
-                {renderPreviousStepsContext(
-                  previousSteps,
-                  formSubmission,
-                  step.step_order ?? 0,
-                  form,
-                )}
-
                 {/* Current Step Input */}
                 <StepContent formatted={formatStepInput(step)} />
 

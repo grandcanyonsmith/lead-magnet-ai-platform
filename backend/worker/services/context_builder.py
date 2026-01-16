@@ -40,7 +40,8 @@ class ContextBuilder:
     def build_previous_context_from_step_outputs(
         initial_context: str,
         step_outputs: List[Dict[str, Any]],
-        sorted_steps: List[Dict[str, Any]]
+        sorted_steps: List[Dict[str, Any]],
+        include_form_submission: bool = True
     ) -> str:
         """
         Build previous context string from step outputs.
@@ -49,12 +50,14 @@ class ContextBuilder:
             initial_context: Formatted submission context
             step_outputs: List of step output dictionaries
             sorted_steps: List of step configurations sorted by order
+            include_form_submission: Whether to include form submission (only True for first step)
             
         Returns:
             Combined previous context string
         """
         all_previous_outputs = []
-        all_previous_outputs.append(f"=== Form Submission ===\n{initial_context}")
+        if include_form_submission:
+            all_previous_outputs.append(f"=== Form Submission ===\n{initial_context}")
         
         # Include all previous step outputs explicitly (with image URLs if present)
         for prev_idx, prev_step_output in enumerate(step_outputs):
@@ -97,7 +100,8 @@ class ContextBuilder:
         initial_context: str,
         execution_steps: List[Dict[str, Any]],
         current_step_order: int,
-        dependency_indices: List[int] = None
+        dependency_indices: List[int] = None,
+        include_form_submission: bool = True
     ) -> str:
         """
         Build previous context from execution_steps.
@@ -110,6 +114,7 @@ class ContextBuilder:
             execution_steps: List of execution step dictionaries (loaded from S3)
             current_step_order: Order of current step (1-indexed)
             dependency_indices: Optional list of step indices to include (if None, includes all previous steps)
+            include_form_submission: Whether to include form submission (only True for first step)
             
         Returns:
             Combined previous context string
@@ -117,7 +122,8 @@ class ContextBuilder:
         from utils.step_utils import normalize_step_order
         
         all_previous_outputs = []
-        all_previous_outputs.append(f"=== Form Submission ===\n{initial_context}")
+        if include_form_submission:
+            all_previous_outputs.append(f"=== Form Submission ===\n{initial_context}")
         
         # Load previous step outputs from execution_steps
         # Filter to only include steps with step_order < current_step_order OR in dependency_indices
