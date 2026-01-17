@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import {
   ArrowPathIcon,
   ArrowUturnLeftIcon,
@@ -59,6 +60,7 @@ export function JobHeader({
   refreshing,
   onRefresh,
 }: JobHeaderProps) {
+  const router = useRouter();
   const { leadName } = useMemo(
     () => buildLeadHighlights(submission?.form_data),
     [submission?.form_data],
