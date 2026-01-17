@@ -1,6 +1,7 @@
 import { workflowsController } from '../controllers/workflows.controller';
 import { workflowAIController } from '../controllers/workflowAIController';
 import { workflowValidationController } from '../controllers/workflowValidationController';
+import { workflowVersionsController } from '../controllers/workflowVersionsController';
 import { router } from '@routes/router';
 import { logger } from '@utils/logger';
 import { workflowGenerationJobService } from '../services/workflowGenerationJobService';
@@ -103,6 +104,21 @@ export function registerWorkflowRoutes(): void {
   router.register('POST', '/admin/workflows/test-workflow', async (_params, body, _query, tenantId, context) => {
     logger.info('[Router] Matched /admin/workflows/test-workflow route');
     return await workflowAIController.testWorkflow(tenantId!, body, context);
+  });
+
+  // List workflow versions
+  router.register('GET', '/admin/workflows/:id/versions', async (params, _body, query, tenantId) => {
+    return await workflowVersionsController.list(tenantId!, params.id, query);
+  });
+
+  // Get specific workflow version
+  router.register('GET', '/admin/workflows/:id/versions/:version', async (params, _body, _query, tenantId) => {
+    return await workflowVersionsController.get(tenantId!, params.id, params.version);
+  });
+
+  // Restore workflow version
+  router.register('POST', '/admin/workflows/:id/versions/:version/restore', async (params, _body, _query, tenantId) => {
+    return await workflowVersionsController.restore(tenantId!, params.id, params.version);
   });
 
   // Get workflow

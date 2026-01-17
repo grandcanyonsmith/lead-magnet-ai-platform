@@ -12,6 +12,8 @@ import {
   WorkflowGenerationResponse,
   WorkflowRefineInstructionsRequest,
   WorkflowRefineInstructionsResponse,
+  WorkflowVersionListResponse,
+  WorkflowVersionRecord,
   Folder,
   FolderListResponse,
   FolderCreateRequest,
@@ -51,6 +53,35 @@ export class WorkflowsClient extends BaseApiClient {
 
   async deleteWorkflow(id: string): Promise<void> {
     return this.delete<void>(`/admin/workflows/${id}`);
+  }
+
+  async getWorkflowVersions(
+    id: string,
+    params?: Record<string, unknown>,
+  ): Promise<WorkflowVersionListResponse> {
+    return this.get<WorkflowVersionListResponse>(
+      `/admin/workflows/${id}/versions`,
+      { params },
+    );
+  }
+
+  async getWorkflowVersion(
+    id: string,
+    version: number,
+  ): Promise<WorkflowVersionRecord> {
+    return this.get<WorkflowVersionRecord>(
+      `/admin/workflows/${id}/versions/${version}`,
+    );
+  }
+
+  async restoreWorkflowVersion(
+    id: string,
+    version: number,
+  ): Promise<Workflow> {
+    return this.post<Workflow>(
+      `/admin/workflows/${id}/versions/${version}/restore`,
+      {},
+    );
   }
 
   async generateWorkflowWithAI(

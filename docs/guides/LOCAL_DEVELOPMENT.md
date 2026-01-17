@@ -61,6 +61,7 @@ You can override these by setting environment variables:
 ```bash
 export AWS_REGION=us-east-1
 export WORKFLOWS_TABLE=leadmagnet-workflows
+export WORKFLOW_VERSIONS_TABLE=leadmagnet-workflow-versions
 # ... etc
 ```
 

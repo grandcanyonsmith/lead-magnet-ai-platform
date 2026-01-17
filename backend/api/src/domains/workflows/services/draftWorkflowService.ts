@@ -9,6 +9,7 @@ import { logger } from '@utils/logger';
 import { env } from '@utils/env';
 import { FormService } from '@domains/forms/services/formService';
 import { ensureStepDefaults, WorkflowStep } from './workflow/workflowConfigSupport';
+import { createWorkflowVersion } from './workflowVersionService';
 
 const WORKFLOWS_TABLE = env.workflowsTable;
 const formService = new FormService();
@@ -62,12 +63,14 @@ export async function saveDraftWorkflow(
     steps: workflowData.steps,
     template_id: workflowData.template_id,
     template_version: workflowData.template_version || 0,
+    version: 1,
     status: 'active', // Save as active (AI-generated workflows are always active)
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
 
   await db.put(WORKFLOWS_TABLE, workflow);
+  await createWorkflowVersion(workflow, 1);
   logger.info('[Draft Workflow Service] AI-generated workflow saved as active', { workflowId });
 
   // Create template if HTML content is provided

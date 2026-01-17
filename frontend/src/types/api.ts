@@ -11,6 +11,8 @@ import {
   WorkflowGenerationResponse,
   WorkflowRefineInstructionsRequest,
   WorkflowRefineInstructionsResponse,
+  WorkflowVersionListResponse,
+  WorkflowVersionRecord,
   AIModelConfig,
 } from "./workflow";
 import {
@@ -65,6 +67,12 @@ export interface ApiClient {
   createWorkflow(data: WorkflowCreateRequest): Promise<Workflow>;
   updateWorkflow(id: string, data: WorkflowUpdateRequest): Promise<Workflow>;
   deleteWorkflow(id: string): Promise<void>;
+  getWorkflowVersions(
+    id: string,
+    params?: Record<string, unknown>,
+  ): Promise<WorkflowVersionListResponse>;
+  getWorkflowVersion(id: string, version: number): Promise<WorkflowVersionRecord>;
+  restoreWorkflowVersion(id: string, version: number): Promise<Workflow>;
   getModels(): Promise<{ models: AIModelConfig[] }>;
 
   // Forms

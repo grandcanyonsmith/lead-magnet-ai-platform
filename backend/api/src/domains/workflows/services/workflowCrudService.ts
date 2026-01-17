@@ -7,6 +7,7 @@ import { logger } from '@utils/logger';
 import { env } from '@utils/env';
 import { validate, createWorkflowSchema, updateWorkflowSchema } from '@utils/validation';
 import { ToolChoice } from '@utils/types';
+import { createWorkflowVersion, resolveWorkflowVersion } from './workflowVersionService';
 
 const WORKFLOWS_TABLE = env.workflowsTable;
 const USER_SETTINGS_TABLE = env.userSettingsTable;
@@ -116,6 +117,7 @@ export class WorkflowCrudService {
             
             return {
               ...workflow,
+              version: resolveWorkflowVersion(workflow),
               form: activeForm ? {
                 form_id: activeForm.form_id,
                 form_name: activeForm.form_name,
@@ -130,6 +132,7 @@ export class WorkflowCrudService {
             });
             return {
               ...workflow,
+              version: resolveWorkflowVersion(workflow),
               form: null,
             };
           }
@@ -181,6 +184,7 @@ export class WorkflowCrudService {
 
     return {
       ...workflow,
+      version: resolveWorkflowVersion(workflow),
       form,
     };
   }
@@ -214,12 +218,14 @@ export class WorkflowCrudService {
       workflow_id: workflowId,
       tenant_id: tenantId,
       ...workflowData,
+      version: 1,
       status: 'active',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
 
     await db.put(WORKFLOWS_TABLE, workflow);
+    await createWorkflowVersion(workflow, 1);
 
     // Auto-create form for the workflow
     let formId: string | null = null;
@@ -285,6 +291,15 @@ export class WorkflowCrudService {
       throw new ApiError('You don\'t have permission to access this lead magnet', 403);
     }
 
+    const currentVersion = resolveWorkflowVersion(existing);
+    if (
+      typeof existing.version !== "number" ||
+      !Number.isFinite(existing.version) ||
+      existing.version <= 0
+    ) {
+      await createWorkflowVersion(existing, currentVersion);
+    }
+
     // Normalize steps BEFORE validation to clean up dependencies
     // This prevents validation errors from invalid dependency indices
     let normalizedBody = { ...body };
@@ -341,10 +356,13 @@ export class WorkflowCrudService {
       });
     }
 
+    const nextVersion = currentVersion + 1;
     const updated = await db.update(WORKFLOWS_TABLE, { workflow_id: workflowId }, {
       ...updateData,
+      version: nextVersion,
       updated_at: new Date().toISOString(),
     });
+    await createWorkflowVersion(updated, nextVersion);
     
     if (updated) {
       logger.info('[Workflows Update] After DB update', {
