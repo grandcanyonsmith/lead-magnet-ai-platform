@@ -11,6 +11,10 @@ from datetime import datetime
 from typing import Dict, Any, Optional, List
 import boto3
 import requests
+try:
+    from ulid import new as ulid
+except ImportError:
+    from ulid import ULID as ulid
 
 from ai_service import AIService
 from db_service import DynamoDBService
@@ -608,7 +612,6 @@ Generate ONLY the SMS message text, no explanations, no markdown."""
             
             # Store usage record
             from decimal import Decimal
-            from ulid import new as ulid
             
             usage_id = f"usage_{ulid()}"
             cost_usd = usage_info.get('cost_usd', 0.0)

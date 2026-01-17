@@ -69,6 +69,35 @@ function renderTextWithImages(text: string): React.ReactNode {
   return <>{parts}</>;
 }
 
+function renderImageStrip(
+  urls: string[],
+  options?: { label?: string; altPrefix?: string; keyPrefix?: string },
+) {
+  if (!urls || urls.length === 0) return null;
+  const { label, altPrefix = "Image", keyPrefix = "image" } = options || {};
+
+  return (
+    <div className={`mt-5 md:mt-4 ${label ? "space-y-2" : ""}`}>
+      {label && (
+        <div className="text-sm md:text-xs font-medium text-gray-600">
+          {label}
+        </div>
+      )}
+      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide-until-hover">
+        {urls.map((url, index) => (
+          <InlineImage
+            key={`${keyPrefix}-${index}`}
+            url={url}
+            alt={`${altPrefix}${urls.length > 1 ? ` ${index + 1}` : ""}`}
+            size="compact"
+            className="shrink-0 my-0"
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
   const [showRendered, setShowRendered] = useState(true);
 
@@ -117,21 +146,11 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
       );
     }
 
-    return (
-      <div className="mt-5 md:mt-4 space-y-4 md:space-y-2">
-        <div className="text-sm md:text-xs font-medium text-gray-600 mb-3 md:mb-2">
-          Generated Images:
-        </div>
-        {imageUrls.map((url) => (
-          <InlineImage
-            key={`inline-image-${url}`}
-            url={url}
-            alt={`Image`}
-            size="compact"
-          />
-        ))}
-      </div>
-    );
+    return renderImageStrip(imageUrls, {
+      label: "Generated Images:",
+      altPrefix: "Generated image",
+      keyPrefix: "inline-image",
+    });
   };
 
   // Render metadata section for AI input structure
@@ -210,18 +229,10 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
           />
 
           {/* Render images found in JSON */}
-          {extractedImageUrls.length > 0 && (
-            <div className="mt-5 md:mt-4 space-y-4 md:space-y-2">
-              {extractedImageUrls.map((url) => (
-                <InlineImage
-                  key={`json-image-${url}`}
-                  url={url}
-                  alt={`Image from JSON`}
-                  size="compact"
-                />
-              ))}
-            </div>
-          )}
+          {renderImageStrip(extractedImageUrls, {
+            altPrefix: "Image from JSON",
+            keyPrefix: "json-image",
+          })}
           {/* Render images from imageUrls prop */}
           {renderInlineImages()}
         </div>
@@ -308,26 +319,11 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
             {/* Extract and render images from HTML source */}
             {(() => {
               const extractedUrls = extractImageUrls(htmlContent);
-              return extractedUrls.length > 0 || imageUrls.length > 0 ? (
-                <div className="mt-5 md:mt-4 space-y-4 md:space-y-2">
-                  {extractedUrls.map((url) => (
-                    <InlineImage
-                      key={`html-image-${url}`}
-                      url={url}
-                      alt={`Image from HTML`}
-                      size="compact"
-                    />
-                  ))}
-                  {imageUrls.map((url) => (
-                    <InlineImage
-                      key={`html-prop-image-${url}`}
-                      url={url}
-                      alt={`Image`}
-                      size="compact"
-                    />
-                  ))}
-                </div>
-              ) : null;
+              const combinedUrls = [...extractedUrls, ...imageUrls];
+              return renderImageStrip(combinedUrls, {
+                altPrefix: "Image from HTML",
+                keyPrefix: "html-image",
+              });
             })()}
           </>
         )}
@@ -367,18 +363,10 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
               </ReactMarkdown>
             </div>
             {/* Render plain image URLs that aren't in markdown format */}
-            {extractedImageUrls.length > 0 && (
-              <div className="mt-5 md:mt-4 space-y-4 md:space-y-2">
-                {extractedImageUrls.map((url) => (
-                  <InlineImage
-                    key={`md-image-${url}`}
-                    url={url}
-                    alt={`Image from markdown`}
-                    size="compact"
-                  />
-                ))}
-              </div>
-            )}
+            {renderImageStrip(extractedImageUrls, {
+              altPrefix: "Image from markdown",
+              keyPrefix: "md-image",
+            })}
             {/* Render images from imageUrls prop */}
             {renderInlineImages()}
           </>

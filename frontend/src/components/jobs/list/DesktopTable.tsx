@@ -1,11 +1,10 @@
 import React, { useState } from "react";
 import {
-  getStatusIcon,
   getStatusBadge,
-  getStepDisplayMeta,
   getJobSubmissionPreview,
 } from "@/utils/jobs/listHelpers";
 import { formatRelativeTime, formatDuration } from "@/utils/date";
+import { truncate } from "@/utils/formatting";
 import type { SortField } from "@/hooks/useJobFilters";
 import {
   ChevronDownIcon,
@@ -23,17 +22,17 @@ import clsx from "clsx";
 interface JobsTableProps {
   jobs: Job[];
   workflowMap: Record<string, string>;
-  workflowStepCounts: Record<string, number>;
   onNavigate: (jobId: string) => void;
   sortField: SortField;
   sortDirection: "asc" | "desc";
   onSort: (field: SortField) => void;
 }
 
+const WORKFLOW_NAME_MAX_LENGTH = 36;
+
 export function JobsDesktopTable({
   jobs,
   workflowMap,
-  workflowStepCounts,
   onNavigate,
   sortField,
   sortDirection,
@@ -122,10 +121,15 @@ export function JobsDesktopTable({
                   ? `${job.error_message.substring(0, 80)}...`
                   : job.error_message
                 : null;
-            const stepMeta = getStepDisplayMeta(job, workflowStepCounts);
             const submissionPreview = getJobSubmissionPreview(job);
             const isOpening = openingJobId === job.job_id;
             const disableView = openingJobId !== null;
+            const workflowName =
+              workflowMap[job.workflow_id] || job.workflow_id || "-";
+            const displayWorkflowName = truncate(
+              workflowName,
+              WORKFLOW_NAME_MAX_LENGTH,
+            );
 
             return (
               <React.Fragment key={job.job_id}>
@@ -138,16 +142,13 @@ export function JobsDesktopTable({
                 >
                   <td className="px-6 py-4">
                     <div className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
-                      {workflowMap[job.workflow_id] || job.workflow_id || "-"}
+                      <span className="block truncate" title={workflowName}>
+                        {displayWorkflowName}
+                      </span>
                     </div>
                     {submissionPreview && (
                       <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium truncate max-w-xs">
                         {submissionPreview}
-                      </div>
-                    )}
-                    {stepMeta.label && (
-                      <div className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">
-                        {stepMeta.label}
                       </div>
                     )}
                   </td>
@@ -159,12 +160,6 @@ export function JobsDesktopTable({
                           {getStatusBadge(job.status)}
                         </div>
                       </div>
-                      {stepMeta.isActive && stepMeta.label && (
-                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-primary-600 dark:text-primary">
-                          <ArrowPathIcon className="h-3 w-3 animate-spin" />
-                          {stepMeta.label}
-                        </div>
-                      )}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
