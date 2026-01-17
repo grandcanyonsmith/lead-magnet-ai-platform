@@ -5,11 +5,9 @@ import { logger } from '@utils/logger';
 import { ApiError } from '@utils/errors';
 import { processJobLocally } from '@services/jobProcessor';
 import { env } from '@utils/env';
-import { resolveWorkflowVersion } from '@domains/workflows/services/workflowVersionService';
 
 const SUBMISSIONS_TABLE = env.submissionsTable;
 const JOBS_TABLE = env.jobsTable;
-const WORKFLOWS_TABLE = env.workflowsTable;
 const STEP_FUNCTIONS_ARN = env.stepFunctionsArn;
 const USER_SETTINGS_TABLE = env.userSettingsTable;
 
@@ -73,23 +71,6 @@ export class FormSubmissionService {
 
     await db.put(SUBMISSIONS_TABLE, submission);
 
-    let workflowVersion: number | undefined;
-    try {
-      if (WORKFLOWS_TABLE) {
-        const workflowRecord = await db.get(WORKFLOWS_TABLE, {
-          workflow_id: form.workflow_id,
-        });
-        if (workflowRecord) {
-          workflowVersion = resolveWorkflowVersion(workflowRecord);
-        }
-      }
-    } catch (error: any) {
-      logger.warn('[FormSubmission] Failed to resolve workflow version', {
-        workflowId: form.workflow_id,
-        error: error?.message || String(error),
-      });
-    }
-
     // Create job record
     const jobId = `job_${ulid()}`;
     const apiUrl = (env.apiGatewayUrl || env.apiUrl || '').replace(/\/$/, '');
@@ -97,7 +78,6 @@ export class FormSubmissionService {
       job_id: jobId,
       tenant_id: form.tenant_id,
       workflow_id: form.workflow_id,
-      ...(typeof workflowVersion === 'number' ? { workflow_version: workflowVersion } : {}),
       submission_id: submissionId,
       status: 'pending',
       created_at: new Date().toISOString(),

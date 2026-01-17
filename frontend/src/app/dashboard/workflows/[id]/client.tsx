@@ -22,7 +22,6 @@ import {
   ChatBubbleLeftRightIcon,
   ArrowPathIcon,
   PlusIcon,
-  Square2StackIcon,
 } from "@heroicons/react/24/outline";
 import toast from "react-hot-toast";
 import clsx from "clsx";
@@ -77,7 +76,6 @@ export default function WorkflowDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [creatingForm, setCreatingForm] = useState(false);
-  const [duplicating, setDuplicating] = useState(false);
   const { settings } = useSettings();
 
   useEffect(() => {
@@ -151,29 +149,6 @@ export default function WorkflowDetailPage() {
           error.message ||
           "Failed to delete lead magnet",
       );
-    }
-  };
-
-  const handleDuplicate = async () => {
-    if (!workflowId) return;
-    setDuplicating(true);
-    try {
-      const duplicated = await api.duplicateWorkflow(workflowId);
-      toast.success("Lead magnet duplicated");
-      if (duplicated?.workflow_id) {
-        router.push(`/dashboard/workflows/${duplicated.workflow_id}/edit`);
-      } else {
-        await loadWorkflow();
-      }
-    } catch (error: any) {
-      console.error("Failed to duplicate workflow:", error);
-      toast.error(
-        error.response?.data?.message ||
-          error.message ||
-          "Failed to duplicate lead magnet",
-      );
-    } finally {
-      setDuplicating(false);
     }
   };
 
@@ -300,14 +275,6 @@ export default function WorkflowDetailPage() {
             >
               <PencilIcon className="w-4 h-4 mr-2" />
               Edit
-            </button>
-            <button
-              onClick={handleDuplicate}
-              disabled={duplicating}
-              className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-border text-gray-700 dark:text-foreground font-bold rounded-lg hover:bg-gray-50 dark:hover:bg-secondary transition-all shadow-sm text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Square2StackIcon className="w-4 h-4 mr-2" />
-              {duplicating ? "Duplicating..." : "Duplicate"}
             </button>
             <button
               onClick={handleDelete}

@@ -165,51 +165,7 @@ export function useJobResource(
         if (data.workflow_id) {
           try {
             const workflowData = await api.getWorkflow(data.workflow_id);
-            let resolvedWorkflow = workflowData;
-            const workflowVersion =
-              typeof data.workflow_version === "number" &&
-              Number.isFinite(data.workflow_version)
-                ? data.workflow_version
-                : null;
-
-            if (workflowVersion) {
-              try {
-                const versionRecord = await api.getWorkflowVersion(
-                  data.workflow_id,
-                  workflowVersion,
-                );
-                const snapshot = versionRecord?.snapshot;
-                if (snapshot) {
-                  resolvedWorkflow = {
-                    ...workflowData,
-                    workflow_name: snapshot.workflow_name || workflowData.workflow_name,
-                    workflow_description:
-                      snapshot.workflow_description || workflowData.workflow_description,
-                    steps: snapshot.steps || workflowData.steps,
-                    template_id: snapshot.template_id ?? workflowData.template_id,
-                    template_version:
-                      typeof snapshot.template_version === "number"
-                        ? snapshot.template_version
-                        : workflowData.template_version,
-                    trigger: snapshot.trigger ?? workflowData.trigger,
-                    status: snapshot.status ?? workflowData.status,
-                    folder_id: snapshot.folder_id ?? workflowData.folder_id,
-                    version: workflowVersion,
-                  };
-                }
-              } catch (versionError) {
-                logger.warn("Failed to load workflow version snapshot", {
-                  workflowId: data.workflow_id,
-                  workflowVersion,
-                  error:
-                    versionError instanceof Error
-                      ? versionError.message
-                      : String(versionError),
-                });
-              }
-            }
-
-            setWorkflow(resolvedWorkflow);
+            setWorkflow(workflowData);
           } catch (err) {
             console.error("Failed to load workflow:", err);
           }

@@ -8,7 +8,6 @@ import { logger } from "../utils/logger";
 import { processJobLocally } from "../services/jobProcessor";
 import { env } from "../utils/env";
 import { webhookLogService } from "../services/webhookLogService";
-import { resolveWorkflowVersion } from "@domains/workflows/services/workflowVersionService";
 
 const USER_SETTINGS_TABLE = env.userSettingsTable;
 const WORKFLOWS_TABLE = env.workflowsTable;
@@ -144,7 +143,6 @@ class WebhooksController {
         job_id: jobId,
         tenant_id: tenantId,
         workflow_id: workflow.workflow_id,
-        workflow_version: resolveWorkflowVersion(workflow),
         submission_id: submissionId,
         status: "pending",
         created_at: new Date().toISOString(),

@@ -159,13 +159,6 @@ export default function WorkflowVersionsClient() {
     });
 
     const resolveVersionForJob = (job: Job) => {
-      if (
-        typeof job.workflow_version === "number" &&
-        Number.isFinite(job.workflow_version) &&
-        job.workflow_version > 0
-      ) {
-        return job.workflow_version;
-      }
       const jobTime = new Date(job.created_at).getTime();
       if (Number.isNaN(jobTime)) return null;
 

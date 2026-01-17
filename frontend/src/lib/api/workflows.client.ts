@@ -58,10 +58,6 @@ export class WorkflowsClient extends BaseApiClient {
     return this.delete<void>(`/admin/workflows/${id}`);
   }
 
-  async duplicateWorkflow(id: string): Promise<Workflow> {
-    return this.post<Workflow>(`/admin/workflows/${id}/duplicate`, {});
-  }
-
   async getWorkflowVersions(
     id: string,
     params?: Record<string, unknown>,
