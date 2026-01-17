@@ -1,16 +1,109 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
+import React, { useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import {
   extractImageUrls,
   extractImageUrlsFromObject,
 } from "@/utils/imageUtils";
 import { InlineImage } from "./InlineImage";
 import { JsonViewer } from "@/components/ui/JsonViewer";
+
+const MarkdownRenderer = dynamic(() => import("react-markdown"), {
+  ssr: false,
+});
+
+function LazyMarkdown({
+  children,
+  className,
+}: {
+  children: string;
+  className?: string;
+}) {
+  const [remarkGfm, setRemarkGfm] = useState<any>(null);
+
+  useEffect(() => {
+    let active = true;
+    import("remark-gfm")
+      .then((mod) => {
+        if (active) setRemarkGfm(() => mod.default ?? mod);
+      })
+      .catch(() => {
+        if (active) setRemarkGfm(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (!remarkGfm) {
+    return (
+      <pre className={className ?? "whitespace-pre-wrap break-words"}>
+        {children}
+      </pre>
+    );
+  }
+
+  return (
+    <div className={className}>
+      <MarkdownRenderer remarkPlugins={[remarkGfm]}>
+        {children}
+      </MarkdownRenderer>
+    </div>
+  );
+}
+
+function LazySyntaxHighlighter({
+  value,
+  language,
+  className,
+  ...props
+}: {
+  value: string;
+  language?: string;
+  className?: string;
+  [key: string]: any;
+}) {
+  const [SyntaxHighlighter, setSyntaxHighlighter] =
+    useState<React.ComponentType<any> | null>(null);
+  const [style, setStyle] = useState<unknown | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      import("react-syntax-highlighter"),
+      import("react-syntax-highlighter/dist/esm/styles/prism"),
+    ])
+      .then(([syntaxModule, styleModule]) => {
+        if (!active) return;
+        setSyntaxHighlighter(() => syntaxModule.Prism);
+        setStyle(styleModule.vscDarkPlus);
+      })
+      .catch(() => {
+        if (active) {
+          setSyntaxHighlighter(null);
+          setStyle(null);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (!SyntaxHighlighter || !style) {
+    return (
+      <pre className={className ?? "whitespace-pre-wrap break-words"}>
+        {value}
+      </pre>
+    );
+  }
+
+  return (
+    <SyntaxHighlighter language={language} style={style} {...props}>
+      {value}
+    </SyntaxHighlighter>
+  );
+}
 
 interface StepContentProps {
   formatted: {
@@ -292,9 +385,9 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
         ) : (
           <>
             <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
-              <SyntaxHighlighter
+              <LazySyntaxHighlighter
+                value={htmlContent}
                 language="html"
-                style={vscDarkPlus}
                 customStyle={{
                   margin: 0,
                   padding: "16px",
@@ -312,9 +405,7 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
                 }}
                 wrapLongLines
                 showLineNumbers={htmlContent.length > 500}
-              >
-                {htmlContent}
-              </SyntaxHighlighter>
+              />
             </div>
             {/* Extract and render images from HTML source */}
             {(() => {
@@ -358,9 +449,7 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
           )}
           <>
             <div className="prose prose-sm dark:prose-invert max-w-none bg-white dark:bg-card p-4 md:p-4 rounded-xl border border-gray-200 dark:border-gray-700 leading-relaxed break-words">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {markdownText}
-              </ReactMarkdown>
+              <LazyMarkdown>{markdownText}</LazyMarkdown>
             </div>
             {/* Render plain image URLs that aren't in markdown format */}
             {renderImageStrip(extractedImageUrls, {

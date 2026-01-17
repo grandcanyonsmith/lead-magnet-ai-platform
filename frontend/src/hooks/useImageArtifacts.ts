@@ -10,13 +10,15 @@ import { MergedStep } from "@/types/job";
 interface UseImageArtifactsOptions {
   jobId?: string;
   steps: MergedStep[];
+  enabled?: boolean;
 }
 
 /**
  * Fetch and organize image artifacts by step order
  */
 export function useImageArtifacts(options: UseImageArtifactsOptions) {
-  const { jobId, steps } = options;
+  const { jobId, steps, enabled = true } = options;
+  const isEnabled = enabled !== false;
   const [imageArtifactsByStep, setImageArtifactsByStep] = useState<
     Map<number, Artifact[]>
   >(new Map());
@@ -31,9 +33,10 @@ export function useImageArtifacts(options: UseImageArtifactsOptions) {
   // Create a stable reference for steps by serializing key properties
   // This prevents re-fetching when steps array reference changes but content is the same
   const stepsKey = useMemo(() => {
+    if (!isEnabled) return "";
     if (!steps || steps.length === 0) return "";
     return steps.map((s) => `${s.step_order}-${s.started_at || ""}`).join(",");
-  }, [steps]);
+  }, [steps, isEnabled]);
 
   // Keep steps ref updated
   useEffect(() => {
@@ -43,6 +46,7 @@ export function useImageArtifacts(options: UseImageArtifactsOptions) {
   // Fetch artifacts only when jobId changes
   useEffect(() => {
     const fetchImageArtifacts = async () => {
+      if (!isEnabled) return;
       if (!jobId) return;
 
       // Skip if we already fetched artifacts for this jobId
@@ -52,6 +56,8 @@ export function useImageArtifacts(options: UseImageArtifactsOptions) {
 
       try {
         setLoading(true);
+        setArtifacts([]);
+        setImageArtifactsByStep(new Map());
         const response = await api.getArtifacts({
           job_id: jobId,
           limit: 200,
@@ -69,10 +75,17 @@ export function useImageArtifacts(options: UseImageArtifactsOptions) {
     };
 
     fetchImageArtifacts();
-  }, [jobId]);
+  }, [jobId, isEnabled]);
+
+  useEffect(() => {
+    if (!isEnabled && loading) {
+      setLoading(false);
+    }
+  }, [isEnabled, loading]);
 
   // Re-organize artifacts by step when steps change (but don't re-fetch)
   useEffect(() => {
+    if (!isEnabled) return;
     const currentSteps = stepsRef.current || [];
     if (artifacts.length === 0 || currentSteps.length === 0) {
       setImageArtifactsByStep(new Map());
@@ -134,7 +147,7 @@ export function useImageArtifacts(options: UseImageArtifactsOptions) {
     });
 
     setImageArtifactsByStep(artifactsByStep);
-  }, [artifacts, stepsKey]);
+  }, [artifacts, stepsKey, isEnabled]);
 
   return {
     imageArtifactsByStep,

@@ -1,10 +1,7 @@
 import { SubHeaderTabs } from "@/components/ui/SubHeaderTabs";
-import { JobExecutionTab } from "@/components/jobs/detail/JobExecutionTab";
+import type { ComponentProps } from "react";
+import dynamic from "next/dynamic";
 import { JobSummaryTab } from "@/components/jobs/detail/JobSummaryTab";
-import { JobImproveTab } from "@/components/jobs/detail/JobImproveTab";
-import { JobTrackingTab } from "@/components/jobs/detail/JobTrackingTab";
-import { JobTechnicalTab } from "@/components/jobs/detail/JobTechnicalTab";
-import { JobDebugTab } from "@/components/jobs/detail/JobDebugTab";
 import type { JobDurationInfo } from "@/components/jobs/detail/JobOverviewSection";
 import type {
   ArtifactGalleryItem,
@@ -17,6 +14,68 @@ import type { Form, FormSubmission } from "@/types/form";
 import type { Artifact } from "@/types/artifact";
 
 type TabGroupId = "general" | "workflow" | "insights" | "advanced";
+
+const TabFallback = ({ label }: { label: string }) => (
+  <div className="rounded-xl border border-border bg-card/60 p-6 text-sm text-muted-foreground">
+    Loading {label}...
+  </div>
+);
+
+type JobExecutionTabProps = ComponentProps<
+  typeof import("@/components/jobs/detail/JobExecutionTab").JobExecutionTab
+>;
+type JobImproveTabProps = ComponentProps<
+  typeof import("@/components/jobs/detail/JobImproveTab").JobImproveTab
+>;
+type JobTrackingTabProps = ComponentProps<
+  typeof import("@/components/jobs/detail/JobTrackingTab").JobTrackingTab
+>;
+type JobTechnicalTabProps = ComponentProps<
+  typeof import("@/components/jobs/detail/JobTechnicalTab").JobTechnicalTab
+>;
+type JobDebugTabProps = ComponentProps<
+  typeof import("@/components/jobs/detail/JobDebugTab").JobDebugTab
+>;
+
+const JobExecutionTab = dynamic<JobExecutionTabProps>(
+  () =>
+    import("@/components/jobs/detail/JobExecutionTab").then(
+      (mod) => mod.JobExecutionTab,
+    ),
+  { loading: () => <TabFallback label="execution details" /> },
+);
+
+const JobImproveTab = dynamic<JobImproveTabProps>(
+  () =>
+    import("@/components/jobs/detail/JobImproveTab").then(
+      (mod) => mod.JobImproveTab,
+    ),
+  { loading: () => <TabFallback label="improvement insights" /> },
+);
+
+const JobTrackingTab = dynamic<JobTrackingTabProps>(
+  () =>
+    import("@/components/jobs/detail/JobTrackingTab").then(
+      (mod) => mod.JobTrackingTab,
+    ),
+  { loading: () => <TabFallback label="activity data" /> },
+);
+
+const JobTechnicalTab = dynamic<JobTechnicalTabProps>(
+  () =>
+    import("@/components/jobs/detail/JobTechnicalTab").then(
+      (mod) => mod.JobTechnicalTab,
+    ),
+  { loading: () => <TabFallback label="technical details" /> },
+);
+
+const JobDebugTab = dynamic<JobDebugTabProps>(
+  () =>
+    import("@/components/jobs/detail/JobDebugTab").then(
+      (mod) => mod.JobDebugTab,
+    ),
+  { loading: () => <TabFallback label="debug payload" /> },
+);
 
 const TAB_CONFIG = [
   {

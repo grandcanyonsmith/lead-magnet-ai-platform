@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import clsx from "clsx";
 import {
   FiChevronRight,
@@ -8,10 +8,7 @@ import {
   FiExternalLink,
   FiImage,
 } from "react-icons/fi";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { vscDarkPlus, vs } from "react-syntax-highlighter/dist/esm/styles/prism";
+import dynamic from "next/dynamic";
 import { useTheme } from "next-themes";
 
 type JsonViewMode = "tree" | "raw";
@@ -30,6 +27,121 @@ const MAX_STRING_PREVIEW = 280;
 const MAX_STRING_PREVIEW_LINES = 14;
 const URL_PATH_PREVIEW = 42;
 const URL_HOST_MAX = 32;
+
+const MarkdownRenderer = dynamic(() => import("react-markdown"), {
+  ssr: false,
+});
+
+type PrismStyles = {
+  dark: unknown;
+  light: unknown;
+};
+
+function LazyMarkdown({
+  children,
+  components,
+  className,
+}: {
+  children: string;
+  components?: Record<string, React.ComponentType<any>>;
+  className?: string;
+}) {
+  const [remarkGfm, setRemarkGfm] = useState<any>(null);
+
+  useEffect(() => {
+    let active = true;
+    import("remark-gfm")
+      .then((mod) => {
+        if (active) setRemarkGfm(() => mod.default ?? mod);
+      })
+      .catch(() => {
+        if (active) setRemarkGfm(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (!remarkGfm) {
+    return (
+      <pre className={clsx("whitespace-pre-wrap break-words", className)}>
+        {children}
+      </pre>
+    );
+  }
+
+  return (
+    <div className={className}>
+      <MarkdownRenderer remarkPlugins={[remarkGfm]} components={components}>
+        {children}
+      </MarkdownRenderer>
+    </div>
+  );
+}
+
+function LazySyntaxHighlighter({
+  value,
+  language,
+  themeMode,
+  className,
+  ...props
+}: {
+  value: string;
+  language?: string;
+  themeMode?: string;
+  className?: string;
+  [key: string]: any;
+}) {
+  const [SyntaxHighlighter, setSyntaxHighlighter] =
+    useState<React.ComponentType<any> | null>(null);
+  const [styles, setStyles] = useState<PrismStyles | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      import("react-syntax-highlighter"),
+      import("react-syntax-highlighter/dist/esm/styles/prism"),
+    ])
+      .then(([syntaxModule, styleModule]) => {
+        if (!active) return;
+        setSyntaxHighlighter(() => syntaxModule.Prism);
+        setStyles({
+          dark: styleModule.vscDarkPlus,
+          light: styleModule.vs,
+        });
+      })
+      .catch(() => {
+        if (active) {
+          setSyntaxHighlighter(null);
+          setStyles(null);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (!SyntaxHighlighter || !styles) {
+    return (
+      <pre className={clsx("whitespace-pre-wrap break-words", className)}>
+        {value}
+      </pre>
+    );
+  }
+
+  const theme = themeMode === "dark" ? styles.dark : styles.light;
+
+  return (
+    <SyntaxHighlighter
+      language={language}
+      style={theme}
+      className={className}
+      {...props}
+    >
+      {value}
+    </SyntaxHighlighter>
+  );
+}
 
 function truncateMiddle(text: string, maxLength: number) {
   if (text.length <= maxLength) return text;
@@ -368,8 +480,7 @@ function JsonStringValue({ value }: { value: string }) {
                   shouldScrollExpanded && "max-h-[60vh] overflow-auto",
                 )}
               >
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
+                <LazyMarkdown
                   components={{
                     pre: ({ children }) => <>{children}</>,
                     code: ({ inline, children, ...props }: any) => {
@@ -407,7 +518,7 @@ function JsonStringValue({ value }: { value: string }) {
                   }}
                 >
                   {value}
-                </ReactMarkdown>
+                </LazyMarkdown>
               </div>
             ) : displayFenced ? (
               <div className="space-y-2">
@@ -769,9 +880,10 @@ export function JsonViewer({
         <div className="space-y-2">
           {shouldHighlight ? (
             <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
-              <SyntaxHighlighter
+              <LazySyntaxHighlighter
+                value={raw}
                 language="json"
-                style={resolvedTheme === "dark" ? vscDarkPlus : vs}
+                themeMode={resolvedTheme}
                 customStyle={{
                   margin: 0,
                   padding: "16px",
@@ -789,9 +901,7 @@ export function JsonViewer({
                 }}
                 wrapLongLines={wrapLongLines}
                 showLineNumbers={raw.length > 500}
-              >
-                {raw}
-              </SyntaxHighlighter>
+              />
             </div>
           ) : (
             <pre className="rounded-xl border border-gray-200 dark:border-slate-700/60 bg-gray-50 dark:bg-slate-950/70 text-gray-900 dark:text-slate-100 font-mono text-xs leading-relaxed p-4 whitespace-pre-wrap break-words">

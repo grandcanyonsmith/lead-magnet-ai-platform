@@ -53,6 +53,15 @@ export default function JobDetailClient() {
     null,
   );
 
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const tabParam = searchParams.get("tab");
+  const activeTab = resolveJobTabId(tabParam);
+  const shouldLoadExecutionSteps =
+    activeTab === "overview" ||
+    activeTab === "execution" ||
+    activeTab === "improve";
+
   const latestStepUpdateRef = useRef<WorkflowStep | null>(null);
 
   const {
@@ -70,7 +79,10 @@ export default function JobDetailClient() {
     refreshJob,
     refreshing,
     lastLoadedAt,
-  } = useJobDetail();
+  } = useJobDetail({
+    loadExecutionSteps: shouldLoadExecutionSteps,
+    pollExecutionSteps: shouldLoadExecutionSteps,
+  });
 
   const { expandedSteps, toggleStep } = useJobExecutionSteps();
 
@@ -83,12 +95,8 @@ export default function JobDetailClient() {
   } = useImageArtifacts({
     jobId: job?.job_id,
     steps: mergedSteps,
+    enabled: shouldLoadExecutionSteps,
   });
-
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
-  const tabParam = searchParams.get("tab");
-  const activeTab = resolveJobTabId(tabParam);
 
   const buildTabHref = (tabId: JobTabId) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -103,15 +111,14 @@ export default function JobDetailClient() {
   const { previewItem, openPreview, closePreview } =
     usePreviewModal<ArtifactGalleryItem>();
 
-  const artifactGalleryItems = useMemo(
-    () =>
-      buildArtifactGalleryItems({
-        job,
-        artifacts: jobArtifacts,
-        steps: mergedSteps,
-      }),
-    [job, jobArtifacts, mergedSteps],
-  );
+  const artifactGalleryItems = useMemo(() => {
+    if (!shouldLoadExecutionSteps) return [];
+    return buildArtifactGalleryItems({
+      job,
+      artifacts: jobArtifacts,
+      steps: mergedSteps,
+    });
+  }, [job, jobArtifacts, mergedSteps, shouldLoadExecutionSteps]);
 
   const stepsSummary = useMemo<JobStepSummary>(
     () => summarizeStepProgress(mergedSteps),
@@ -119,6 +126,9 @@ export default function JobDetailClient() {
   );
 
   const totalCost = useMemo(() => {
+    if (!shouldLoadExecutionSteps) {
+      return null;
+    }
     if (!job?.execution_steps || !Array.isArray(job.execution_steps)) {
       return null;
     }
@@ -159,7 +169,7 @@ export default function JobDetailClient() {
     }
 
     return sum;
-  }, [job?.execution_steps]);
+  }, [job?.execution_steps, shouldLoadExecutionSteps]);
 
   const jobDuration = useMemo(() => getJobDuration(job), [job]);
 

@@ -83,7 +83,6 @@ export default function WorkflowDetailPage() {
 
   const [workflow, setWorkflow] = useState<any>(null);
   const [jobs, setJobs] = useState<any[]>([]);
-  const [submissions, setSubmissions] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [creatingForm, setCreatingForm] = useState(false);
@@ -116,30 +115,13 @@ export default function WorkflowDetailPage() {
     try {
       const data = await api.getJobs({
         workflow_id: workflowId,
-        all: true,
+        limit: 25,
       });
       const jobsList = data.jobs || [];
       const sortedJobs = [...jobsList].sort(
         (a, b) => getJobSortKey(b) - getJobSortKey(a),
       );
-      setJobs(sortedJobs);
-
-      // Load submissions for each job
-      const submissionsMap: Record<string, any> = {};
-      for (const job of sortedJobs) {
-        if (job.submission_id) {
-          try {
-            const submission = await api.getSubmission(job.submission_id);
-            submissionsMap[job.job_id] = submission;
-          } catch (error) {
-            console.error(
-              `Failed to load submission for job ${job.job_id}:`,
-              error,
-            );
-          }
-        }
-      }
-      setSubmissions(submissionsMap);
+      setJobs(sortedJobs.slice(0, 25));
     } catch (error) {
       console.error("Failed to load jobs:", error);
     } finally {
@@ -565,11 +547,15 @@ export default function WorkflowDetailPage() {
                 </div>
               ) : (
                 jobs.map((job) => {
-                  const submission = submissions[job.job_id];
+                  const submissionPreview = (job as any).submission_preview || {};
+                  const formPreview = submissionPreview.form_data_preview || {};
                   const submitterName =
-                    submission?.submission_data?.name ||
-                    submission?.submitter_name ||
-                    submission?.submitter_email ||
+                    submissionPreview.submitter_name ||
+                    formPreview.name ||
+                    formPreview.full_name ||
+                    formPreview.first_name ||
+                    submissionPreview.submitter_email ||
+                    submissionPreview.submitter_phone ||
                     job.job_id.slice(-8).toUpperCase();
 
                   const durationSeconds = job.completed_at

@@ -11,15 +11,24 @@ import type { FormSubmission, Form } from "@/types/form";
 
 type RouterInstance = ReturnType<typeof useRouter>;
 
-export function useJobDetail() {
+interface UseJobDetailOptions {
+  loadExecutionSteps?: boolean;
+  pollExecutionSteps?: boolean;
+}
+
+export function useJobDetail(options: UseJobDetailOptions = {}) {
   const router = useRouter();
   const jobId = useJobIdentifier();
+  const loadExecutionSteps = options.loadExecutionSteps ?? true;
+  const pollExecutionSteps = options.pollExecutionSteps ?? loadExecutionSteps;
   const jobResource = useJobResource(jobId, router);
   const execution = useJobExecution({
     jobId,
     job: jobResource.job,
     setJob: jobResource.setJob,
     loadJob: jobResource.loadJob,
+    enableExecutionSteps: loadExecutionSteps,
+    enablePolling: pollExecutionSteps,
   });
 
   return {
@@ -129,10 +138,83 @@ export function useJobResource(
   const loadingPromiseRef = useRef<Promise<void> | null>(null);
   // Track latest job value to avoid stale closures
   const jobRef = useRef<Job | null>(null);
+  const jobIdRef = useRef(jobId);
+
+  const loadRelatedResources = useCallback(
+    async (jobSnapshot: Job, jobIdSnapshot: string) => {
+      const isStale = () => jobIdRef.current !== jobIdSnapshot;
+
+      const workflowPromise = (async () => {
+        if (!jobSnapshot.workflow_id) {
+          if (!isStale()) setWorkflow(null);
+          return;
+        }
+        try {
+          const workflowData = await api.getWorkflow(jobSnapshot.workflow_id);
+          if (!isStale()) {
+            setWorkflow(workflowData);
+          }
+        } catch (err) {
+          console.error("Failed to load workflow:", err);
+          if (!isStale()) setWorkflow(null);
+        }
+      })();
+
+      const submissionPromise = (async () => {
+        if (!jobSnapshot.submission_id) {
+          if (!isStale()) {
+            setSubmission(null);
+            setForm(null);
+          }
+          return;
+        }
+        try {
+          const submissionData = await api.getSubmission(
+            jobSnapshot.submission_id,
+          );
+          if (!isStale()) {
+            setSubmission(submissionData);
+          }
+
+          if (!submissionData.form_id) {
+            if (!isStale()) setForm(null);
+            return;
+          }
+
+          try {
+            const formData = await api.getForm(submissionData.form_id);
+            if (!isStale()) {
+              setForm(formData);
+            }
+          } catch (err) {
+            console.error("Failed to load form:", err);
+            if (!isStale()) setForm(null);
+          }
+        } catch (err) {
+          console.error("Failed to load submission:", err);
+          if (!isStale()) {
+            setSubmission(null);
+            setForm(null);
+          }
+        }
+      })();
+
+      await Promise.all([workflowPromise, submissionPromise]);
+    },
+    [],
+  );
+
+  useEffect(() => {
+    jobIdRef.current = jobId;
+  }, [jobId]);
 
   const loadJob = useCallback(async () => {
     if (!jobId || jobId.trim() === "" || jobId === "_") {
       setError("Invalid job ID. Please select a job from the list.");
+      setJob(null);
+      setWorkflow(null);
+      setSubmission(null);
+      setForm(null);
       setLoading(false);
       return;
     }
@@ -157,48 +239,13 @@ export function useJobResource(
     // Now start the async work
     (async () => {
       try {
-        const data = await api.getJob(jobId);
+        const jobIdSnapshot = jobId;
+        const data = await api.getJob(jobIdSnapshot);
         setJob(data);
         jobRef.current = data; // Update ref with latest job value
         setLastLoadedAt(new Date());
-
-        if (data.workflow_id) {
-          try {
-            const workflowData = await api.getWorkflow(data.workflow_id);
-            setWorkflow(workflowData);
-          } catch (err) {
-            console.error("Failed to load workflow:", err);
-          }
-        } else {
-          setWorkflow(null);
-        }
-
-        if (data.submission_id) {
-          try {
-            const submissionData = await api.getSubmission(data.submission_id);
-            setSubmission(submissionData);
-
-            if (submissionData.form_id) {
-              try {
-                const formData = await api.getForm(submissionData.form_id);
-                setForm(formData);
-              } catch (err) {
-                console.error("Failed to load form:", err);
-                setForm(null);
-              }
-            } else {
-              setForm(null);
-            }
-          } catch (err) {
-            console.error("Failed to load submission:", err);
-            setSubmission(null);
-            setForm(null);
-          }
-        } else {
-          setSubmission(null);
-          setForm(null);
-        }
-
+        setLoading(false);
+        void loadRelatedResources(data, jobIdSnapshot);
         setError(null);
         promiseResolve?.();
       } catch (error: unknown) {
@@ -212,6 +259,10 @@ export function useJobResource(
             err.message ||
             "Failed to load lead magnet",
         );
+        setJob(null);
+        setWorkflow(null);
+        setSubmission(null);
+        setForm(null);
         setLoading(false);
         promiseReject?.(error);
       } finally {
@@ -224,7 +275,7 @@ export function useJobResource(
     })();
 
     return loadPromise;
-  }, [jobId]);
+  }, [jobId, loadRelatedResources]);
 
   const refreshJob = useCallback(async () => {
     setRefreshing(true);
@@ -279,12 +330,22 @@ export function useJobResource(
       loadingPromiseRef.current = null;
       lastClearedJobIdRef.current = jobId;
       jobRef.current = null; // Clear job ref when jobId changes
+      setJob(null);
+      setWorkflow(null);
+      setSubmission(null);
+      setForm(null);
+      setError(null);
+      setLoading(true);
     }
 
     if (jobId && jobId.trim() !== "" && jobId !== "_") {
       loadJob();
     } else {
       setError("Invalid job ID. Please select a job from the list.");
+      setJob(null);
+      setWorkflow(null);
+      setSubmission(null);
+      setForm(null);
       setLoading(false);
       jobRef.current = null;
     }
@@ -313,6 +374,8 @@ interface UseJobExecutionArgs {
   job: Job | null;
   setJob: React.Dispatch<React.SetStateAction<Job | null>>;
   loadJob: () => Promise<void>;
+  enableExecutionSteps?: boolean;
+  enablePolling?: boolean;
 }
 
 interface UseJobExecutionResult {
@@ -329,6 +392,8 @@ export function useJobExecution({
   job,
   setJob,
   loadJob,
+  enableExecutionSteps = true,
+  enablePolling = true,
 }: UseJobExecutionArgs): UseJobExecutionResult {
   const [executionStepsError, setExecutionStepsError] = useState<string | null>(
     null,
@@ -363,7 +428,7 @@ export function useJobExecution({
 
   const loadExecutionSteps = useCallback(
     async (jobSnapshot?: Job | null) => {
-      if (!jobId) return;
+      if (!jobId || !enableExecutionSteps) return;
 
       // If there's already a load in progress for this jobId, return the existing promise
       if (loadingExecutionStepsPromiseRef.current) {
@@ -441,10 +506,13 @@ export function useJobExecution({
 
       return loadPromise;
     },
-    [jobId, job, setJob], // Include job to satisfy hook deps; main input still jobSnapshot
+    [jobId, job, setJob, enableExecutionSteps], // Include job to satisfy hook deps; main input still jobSnapshot
   );
 
   useEffect(() => {
+    if (!enableExecutionSteps) {
+      return;
+    }
     if (!jobId || !job) {
       return;
     }
@@ -464,9 +532,12 @@ export function useJobExecution({
       loadExecutionSteps(job);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [jobId, executionStepsS3Key, hasLoadedExecutionSteps]); // Use memoized S3 key value instead of job reference
+  }, [jobId, executionStepsS3Key, hasLoadedExecutionSteps, enableExecutionSteps]); // Use memoized S3 key value instead of job reference
 
   useEffect(() => {
+    if (!enableExecutionSteps || !enablePolling) {
+      return;
+    }
     if (!job || !jobId) {
       return;
     }
@@ -480,13 +551,15 @@ export function useJobExecution({
     const pollInterval = setInterval(async () => {
       try {
         const now = Date.now();
-        const data = await api.getJob(jobId);
+        const data = await api.getJobStatus(jobId);
         setJob((prevJob) =>
           prevJob
             ? {
                 ...prevJob,
                 status: data.status,
-                updated_at: data.updated_at,
+                updated_at: data.updated_at ?? prevJob.updated_at,
+                completed_at: data.completed_at ?? prevJob.completed_at,
+                failed_at: data.failed_at ?? prevJob.failed_at,
                 live_step: data.live_step ?? null,
               }
             : prevJob,
@@ -494,7 +567,7 @@ export function useJobExecution({
         // Execution steps come from S3 and are more expensive to fetch; keep them at ~3s cadence.
         if (now - lastStepsFetchAt > 2500) {
           lastStepsFetchAt = now;
-          await loadExecutionSteps(data);
+          await loadExecutionSteps(jobRef.current ?? job);
         }
 
         if (rerunningStep !== null && data.status !== "processing") {
@@ -511,7 +584,15 @@ export function useJobExecution({
     return () => {
       clearInterval(pollInterval);
     };
-  }, [job, jobId, loadExecutionSteps, rerunningStep, setJob]);
+  }, [
+    job,
+    jobId,
+    loadExecutionSteps,
+    rerunningStep,
+    setJob,
+    enableExecutionSteps,
+    enablePolling,
+  ]);
 
   const handleRerunStep = useCallback(
     async (stepIndex: number, continueAfter: boolean = false) => {

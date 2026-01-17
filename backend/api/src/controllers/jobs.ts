@@ -44,6 +44,33 @@ class JobsController {
     };
   }
 
+  async getStatus(tenantId: string, jobId: string): Promise<RouteResponse> {
+    const job = await db.get(JOBS_TABLE, { job_id: jobId });
+
+    if (!job) {
+      throw new ApiError("This generated lead magnet doesn't exist", 404);
+    }
+
+    if (job.tenant_id !== tenantId) {
+      throw new ApiError(
+        "You don't have permission to access this lead magnet",
+        403,
+      );
+    }
+
+    return {
+      statusCode: 200,
+      body: {
+        job_id: job.job_id,
+        status: job.status,
+        updated_at: job.updated_at,
+        completed_at: job.completed_at || null,
+        failed_at: job.failed_at || null,
+        live_step: job.live_step ?? null,
+      },
+    };
+  }
+
 
   /**
    * Get the final document for a job by serving the final artifact content.

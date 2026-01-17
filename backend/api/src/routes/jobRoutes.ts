@@ -90,10 +90,17 @@ export function registerJobRoutes(): void {
   router.register(
     "GET",
     "/admin/jobs/:id/execution-steps",
-    async (params, _body, _query, tenantId) => {
-      return await executionStepsController.getExecutionSteps(
-        tenantId!,
-        params.id,
+    async (params, _body, _query, tenantId, context) => {
+      // Cache execution steps briefly to reduce S3 load during polling.
+      const cacheHandler = cacheMiddleware(5 * 1000);
+      return await cacheHandler(
+        context?.event,
+        tenantId,
+        async () =>
+          await executionStepsController.getExecutionSteps(
+            tenantId!,
+            params.id,
+          ),
       );
     },
   );
@@ -111,6 +118,15 @@ export function registerJobRoutes(): void {
         tenantId,
         async () => await jobsController.get(tenantId!, params.id),
       );
+    },
+  );
+
+  // Get job status (lightweight polling)
+  router.register(
+    "GET",
+    "/admin/jobs/:id/status",
+    async (params, _body, _query, tenantId) => {
+      return await jobsController.getStatus(tenantId!, params.id);
     },
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import {
   FiAlertCircle,
@@ -21,7 +22,16 @@ import {
   FiX,
 } from "react-icons/fi";
 import { useWorkflowSteps } from "@/hooks/useWorkflowSteps";
-import WorkflowFlowchart from "../workflows/components/WorkflowFlowchart";
+const WorkflowFlowchart = dynamic(
+  () => import("../workflows/components/WorkflowFlowchart"),
+  {
+    loading: () => (
+      <div className="h-[600px] w-full rounded-3xl border border-slate-200 dark:border-border bg-slate-50/70 dark:bg-card/60 flex items-center justify-center text-sm text-muted-foreground">
+        Loading flowchart...
+      </div>
+    ),
+  },
+);
 import WorkflowStepEditor from "../workflows/components/WorkflowStepEditor";
 import { api } from "@/lib/api";
 import toast from "react-hot-toast";

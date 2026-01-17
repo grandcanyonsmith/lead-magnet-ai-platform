@@ -67,6 +67,22 @@ export interface JobLiveStep {
   error?: string;
 }
 
+export interface JobStatusResponse {
+  job_id: string;
+  status: Status;
+  updated_at?: string;
+  completed_at?: string | null;
+  failed_at?: string | null;
+  live_step?: JobLiveStep | null;
+}
+
+export interface JobSubmissionPreview {
+  submitter_name?: string | null;
+  submitter_email?: string | null;
+  submitter_phone?: string | null;
+  form_data_preview?: Record<string, unknown> | null;
+}
+
 export interface Job extends BaseEntity {
   job_id: string;
   tenant_id: string;
@@ -83,6 +99,7 @@ export interface Job extends BaseEntity {
   execution_steps_s3_key?: string;
   execution_steps_s3_url?: string;
   execution_steps?: ExecutionStep[];
+  submission_preview?: JobSubmissionPreview;
   /**
    * Best-effort live output preview for the currently running step.
    * Populated by the worker while streaming output and cleared when the step completes.

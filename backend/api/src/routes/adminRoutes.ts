@@ -12,6 +12,7 @@ import { httpRequestTestController } from "../controllers/httpRequestTest";
 import { clientErrorsController } from "../controllers/clientErrors";
 import { router } from "./router";
 import { logger } from "../utils/logger";
+import { cacheMiddleware } from "../utils/cache";
 
 /**
  * Other admin routes (submissions, artifacts, settings, billing, analytics, notifications).
@@ -153,15 +154,18 @@ export function registerAdminRoutes(): void {
   router.register(
     "GET",
     "/admin/analytics",
-    async (_params, _body, query, tenantId) => {
-      logger.info("[Router] Matched /admin/analytics GET route");
-      const result = await analyticsController.getAnalytics(tenantId!, query);
-      logger.info("[Router] Analytics result", {
-        statusCode: result.statusCode,
-        hasBody: !!result.body,
-        bodyKeys: result.body ? Object.keys(result.body) : null,
+    async (_params, _body, query, tenantId, context) => {
+      const cacheHandler = cacheMiddleware(60 * 1000);
+      return await cacheHandler(context?.event, tenantId, async () => {
+        logger.info("[Router] Matched /admin/analytics GET route");
+        const result = await analyticsController.getAnalytics(tenantId!, query);
+        logger.info("[Router] Analytics result", {
+          statusCode: result.statusCode,
+          hasBody: !!result.body,
+          bodyKeys: result.body ? Object.keys(result.body) : null,
+        });
+        return result;
       });
-      return result;
     },
   );
 

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { useWorkflowAI } from "@/hooks/useWorkflowAI";
 import { WorkflowStep, WorkflowFormData } from "@/types/workflow";
 import { toast } from "react-hot-toast";
@@ -10,7 +11,16 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Separator } from "@/components/ui/Separator";
 import { Sparkles, Zap, ChevronDown, ChevronUp, LayoutTemplate } from "lucide-react";
-import WorkflowFlowchart from "@/app/dashboard/workflows/components/WorkflowFlowchart";
+const WorkflowFlowchart = dynamic(
+  () => import("@/app/dashboard/workflows/components/WorkflowFlowchart"),
+  {
+    loading: () => (
+      <div className="h-[600px] w-full rounded-3xl border border-slate-200 dark:border-border bg-slate-50/70 dark:bg-card/60 flex items-center justify-center text-sm text-muted-foreground">
+        Loading flowchart...
+      </div>
+    ),
+  },
+);
 import FlowchartSidePanel from "@/app/dashboard/workflows/components/FlowchartSidePanel";
 import WorkflowTriggerSidePanel from "@/app/dashboard/workflows/components/WorkflowTriggerSidePanel";
 import { WorkflowDiffPreview } from "./WorkflowDiffPreview";
