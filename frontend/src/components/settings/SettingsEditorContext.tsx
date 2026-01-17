@@ -166,6 +166,7 @@ export function SettingsEditorProvider({
         default_ai_model: settings.default_ai_model || "gpt-5.2",
         default_tool_choice: settings.default_tool_choice || "required",
         default_service_tier: settings.default_service_tier || "auto",
+        default_text_verbosity: settings.default_text_verbosity || "",
         default_workflow_improvement_user_id: normalizeReviewUserId(
           settings.default_workflow_improvement_user_id,
         ),
@@ -205,6 +206,7 @@ export function SettingsEditorProvider({
         default_ai_model: settings.default_ai_model || "gpt-5.2",
         default_tool_choice: settings.default_tool_choice || "required",
         default_service_tier: settings.default_service_tier || "auto",
+        default_text_verbosity: settings.default_text_verbosity || "",
         default_workflow_improvement_user_id: normalizeReviewUserId(
           settings.default_workflow_improvement_user_id,
         ),
@@ -249,6 +251,8 @@ export function SettingsEditorProvider({
         (compareTo.default_tool_choice || "required") ||
       formData.default_service_tier !==
         (compareTo.default_service_tier || "auto") ||
+      formData.default_text_verbosity !==
+        (compareTo.default_text_verbosity || "") ||
       formData.default_workflow_improvement_user_id !==
         normalizeReviewUserId(
           compareTo.default_workflow_improvement_user_id as string | undefined,
@@ -311,6 +315,7 @@ export function SettingsEditorProvider({
             default_ai_model: settings.default_ai_model || "gpt-5.2",
             default_tool_choice: settings.default_tool_choice || "required",
             default_service_tier: settings.default_service_tier || "auto",
+            default_text_verbosity: settings.default_text_verbosity || "",
             default_workflow_improvement_user_id: normalizeReviewUserId(
               settings.default_workflow_improvement_user_id,
             ),
@@ -364,6 +369,7 @@ export function SettingsEditorProvider({
       default_ai_model: formData.default_ai_model,
       default_tool_choice: formData.default_tool_choice,
       default_service_tier: formData.default_service_tier || "auto",
+      default_text_verbosity: formData.default_text_verbosity || undefined,
       default_workflow_improvement_user_id: normalizedReviewUserId,
       default_workflow_improvement_service_tier:
         formData.default_workflow_improvement_service_tier || "priority",
@@ -394,6 +400,7 @@ export function SettingsEditorProvider({
       default_ai_model: payload.default_ai_model || "gpt-5.1-codex",
       default_tool_choice: payload.default_tool_choice || "required",
       default_service_tier: payload.default_service_tier || "auto",
+      default_text_verbosity: payload.default_text_verbosity || "",
       default_workflow_improvement_user_id:
         payload.default_workflow_improvement_user_id || "",
       default_workflow_improvement_service_tier:

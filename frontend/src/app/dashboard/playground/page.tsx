@@ -68,6 +68,7 @@ export default function PlaygroundPage() {
     persistKey: "playground-steps",
     defaultToolChoice: settings?.default_tool_choice,
     defaultServiceTier: settings?.default_service_tier,
+    defaultTextVerbosity: settings?.default_text_verbosity || undefined,
   });
   
   const [currentInput, setCurrentInput] = useState<string>("{}");

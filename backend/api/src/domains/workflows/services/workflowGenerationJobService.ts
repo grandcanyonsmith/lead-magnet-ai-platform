@@ -277,7 +277,8 @@ class WorkflowGenerationJobService {
         result.template.template_name,
         result.template.template_description,
         defaultToolChoice,
-        defaultServiceTier
+        defaultServiceTier,
+        defaultTextVerbosity
       );
 
       logger.info('[Workflow Generation] Workflow saved as active', {

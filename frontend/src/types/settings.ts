@@ -3,7 +3,7 @@
  */
 
 import { BaseEntity } from "./common";
-import { ReasoningEffort, ServiceTier } from "./workflow";
+import { ReasoningEffort, ServiceTier, TextVerbosity } from "./workflow";
 
 export interface OnboardingChecklist {
   complete_profile?: boolean;
@@ -26,6 +26,7 @@ export interface Settings extends BaseEntity {
   default_ai_model?: string;
   default_tool_choice?: "auto" | "required" | "none";
   default_service_tier?: ServiceTier;
+  default_text_verbosity?: TextVerbosity | "";
   default_workflow_improvement_user_id?: string;
   default_workflow_improvement_service_tier?: ServiceTier;
   default_workflow_improvement_reasoning_effort?: ReasoningEffort;
@@ -60,6 +61,7 @@ export interface SettingsUpdateRequest {
   default_ai_model?: string;
   default_tool_choice?: "auto" | "required" | "none";
   default_service_tier?: ServiceTier;
+  default_text_verbosity?: TextVerbosity;
   default_workflow_improvement_user_id?: string;
   default_workflow_improvement_service_tier?: ServiceTier;
   default_workflow_improvement_reasoning_effort?: ReasoningEffort;
@@ -86,6 +88,7 @@ export interface SettingsFormData {
   default_ai_model: string;
   default_tool_choice: "auto" | "required" | "none";
   default_service_tier: ServiceTier;
+  default_text_verbosity: TextVerbosity | "";
   default_workflow_improvement_user_id: string;
   default_workflow_improvement_service_tier: ServiceTier;
   default_workflow_improvement_reasoning_effort: ReasoningEffort;
