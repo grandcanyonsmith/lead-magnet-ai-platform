@@ -1,8 +1,5 @@
 import { useState } from "react";
-import {
-  getStatusBadge,
-  getJobSubmissionPreview,
-} from "@/utils/jobs/listHelpers";
+import { getStatusDot, getJobSubmissionPreview } from "@/utils/jobs/listHelpers";
 import { formatRelativeTime, formatDuration } from "@/utils/date";
 import { truncate } from "@/utils/formatting";
 import {
@@ -58,6 +55,8 @@ export function JobsMobileList({
                   1000,
               )
             : null;
+        const durationLabel =
+          duration !== null ? formatDuration(duration) : null;
         const hasError = job.status === "failed" && job.error_message;
         const submissionPreview = getJobSubmissionPreview(job);
         const workflowName =
@@ -66,6 +65,10 @@ export function JobsMobileList({
           workflowName,
           WORKFLOW_NAME_MAX_LENGTH,
         );
+        const secondaryLine =
+          submissionPreview && durationLabel
+            ? `${submissionPreview} | ${durationLabel}`
+            : submissionPreview || durationLabel;
 
         return (
           <div
@@ -79,43 +82,37 @@ export function JobsMobileList({
             <div className="p-4">
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="min-w-0 flex-1">
-                  <h3
-                    className="text-sm font-bold text-gray-900 dark:text-foreground truncate"
-                    title={workflowName}
-                  >
-                    {displayWorkflowName}
-                  </h3>
-                  {submissionPreview && (
-                    <p className="text-xs text-gray-500 dark:text-muted-foreground mt-1 font-medium truncate">
-                      {submissionPreview}
-                    </p>
-                  )}
-                </div>
-                <div
-                  className="shrink-0 flex flex-col items-end gap-1.5"
-                  data-tour="job-status"
-                >
-                  <div className="scale-90 origin-right">
-                    {getStatusBadge(job.status)}
+                  <div className="flex items-start gap-2">
+                    <span className="mt-1.5" data-tour="job-status">
+                      {getStatusDot(job.status)}
+                    </span>
+                    <div className="min-w-0">
+                      <h3
+                        className="text-sm font-bold text-gray-900 dark:text-foreground truncate"
+                        title={workflowName}
+                      >
+                        {displayWorkflowName}
+                      </h3>
+                      {secondaryLine && (
+                        <p
+                          className="text-xs text-gray-500 dark:text-muted-foreground mt-1 font-medium truncate"
+                          title={secondaryLine}
+                        >
+                          {secondaryLine}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between py-3 border-y border-gray-50 dark:border-border">
+              <div className="flex items-center py-3 border-y border-gray-50 dark:border-border">
                 <div className="flex flex-col gap-0.5">
                   <span className="text-[11px] font-bold text-gray-400 dark:text-muted-foreground/70 uppercase tracking-tight">
                     Started
                   </span>
                   <span className="text-xs font-medium text-gray-700 dark:text-foreground">
                     {formatRelativeTime(job.created_at)}
-                  </span>
-                </div>
-                <div className="flex flex-col items-end gap-0.5 text-right">
-                  <span className="text-[11px] font-bold text-gray-400 dark:text-muted-foreground/70 uppercase tracking-tight">
-                    Duration
-                  </span>
-                  <span className="text-xs font-medium text-gray-700 dark:text-foreground">
-                    {duration !== null ? formatDuration(duration) : "—"}
                   </span>
                 </div>
               </div>

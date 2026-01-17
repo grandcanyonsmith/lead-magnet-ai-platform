@@ -11,10 +11,8 @@ from typing import Dict, Any, Optional, List
 import boto3
 from boto3.dynamodb.conditions import Key
 from datetime import datetime
-try:
-    from ulid import new as ulid
-except ImportError:
-    from ulid import ULID as ulid
+
+from utils.ulid_utils import new_ulid
 
 logger = logging.getLogger(__name__)
 
@@ -443,7 +441,7 @@ class DynamoDBService:
             if related_resource_id and related_resource_type:
                 notification_id = f"notif_{tenant_id}_{notification_type}_{related_resource_type}_{related_resource_id}"
             else:
-                notification_id = f"notif_{ulid()}"
+                notification_id = f"notif_{new_ulid()}"
 
             # Use an ISO timestamp that JS can reliably parse (milliseconds + UTC Z suffix).
             now = datetime.utcnow().isoformat(timespec='milliseconds') + "Z"

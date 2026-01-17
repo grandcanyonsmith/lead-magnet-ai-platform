@@ -55,10 +55,7 @@ logger = logging.getLogger(__name__)
 from db_service import DynamoDBService
 from s3_service import S3Service
 from processor import JobProcessor
-try:
-    from ulid import new as ulid
-except ImportError:
-    from ulid import ULID as ulid
+from utils.ulid_utils import new_ulid
 import boto3
 from boto3.dynamodb.conditions import Key
 
@@ -67,7 +64,7 @@ def create_test_workflow_with_images():
     """Create a test workflow with visual asset generation step."""
     logger.info("Creating test workflow with visual asset generation...")
     
-    workflow_id = f"wf_{ulid()}"
+    workflow_id = f"wf_{new_ulid()}"
     tenant_id = "84c8e438-0061-70f2-2ce0-7cb44989a329"  # Default test tenant
     
     workflow = {
@@ -148,7 +145,7 @@ Write 2-3 paragraphs about how to use visual assets in lead magnets. Reference t
 
 def create_test_submission():
     """Create test submission data."""
-    submission_id = f"sub_{ulid()}"
+    submission_id = f"sub_{new_ulid()}"
     tenant_id = "84c8e438-0061-70f2-2ce0-7cb44989a329"
     
     submission = {
@@ -168,7 +165,7 @@ def create_test_submission():
 
 def create_test_job(workflow_id, submission_id):
     """Create test job."""
-    job_id = f"job_{ulid()}"
+    job_id = f"job_{new_ulid()}"
     tenant_id = "84c8e438-0061-70f2-2ce0-7cb44989a329"
     
     job = {

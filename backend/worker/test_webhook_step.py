@@ -10,10 +10,7 @@ import logging
 from datetime import datetime
 from typing import Dict, Any
 import boto3
-try:
-    from ulid import new as ulid
-except ImportError:
-    from ulid import ULID as ulid
+from utils.ulid_utils import new_ulid
 
 # Add the worker directory to Python path so imports work
 from pathlib import Path
@@ -38,7 +35,7 @@ TEST_WEBHOOK_URL = "https://httpbin.org/post"
 
 def create_test_workflow_with_webhook_step(tenant_id: str) -> Dict[str, Any]:
     """Create a test workflow with a webhook step."""
-    workflow_id = f"wf_test_webhook_{ulid()}"
+    workflow_id = f"wf_test_webhook_{new_ulid()}"
     
     workflow = {
         'workflow_id': workflow_id,
@@ -86,12 +83,12 @@ def create_test_workflow_with_webhook_step(tenant_id: str) -> Dict[str, Any]:
 
 def create_test_submission(tenant_id: str, workflow_id: str) -> Dict[str, Any]:
     """Create a test submission."""
-    submission_id = f"sub_test_webhook_{ulid()}"
+    submission_id = f"sub_test_webhook_{new_ulid()}"
     
     submission = {
         'submission_id': submission_id,
         'tenant_id': tenant_id,
-        'form_id': f"form_test_{ulid()}",
+        'form_id': f"form_test_{new_ulid()}",
         'workflow_id': workflow_id,
         'submission_data': {
             'name': 'Test User',
@@ -109,7 +106,7 @@ def create_test_submission(tenant_id: str, workflow_id: str) -> Dict[str, Any]:
 
 def create_test_job(tenant_id: str, workflow_id: str, submission_id: str) -> Dict[str, Any]:
     """Create a test job."""
-    job_id = f"job_test_webhook_{ulid()}"
+    job_id = f"job_test_webhook_{new_ulid()}"
     
     job = {
         'job_id': job_id,

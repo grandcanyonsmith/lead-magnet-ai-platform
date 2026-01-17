@@ -20,23 +20,16 @@ import {
   MagnifyingGlassIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  ChevronDownIcon,
   FunnelIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
-import {
-  Listbox,
-  ListboxButton,
-  ListboxOption,
-  ListboxOptions,
-  Transition,
-} from "@headlessui/react";
 import { useJobFilters, useJobSorting } from "@/hooks/useJobFilters";
 import { JobFiltersProvider } from "@/contexts/JobFiltersContext";
-import { formatRelativeTime, formatDuration } from "@/utils/date";
+import { formatRelativeTime } from "@/utils/date";
 import {
   SummarySection,
   SummaryCard,
-  StatusQuickFilter,
 } from "@/components/jobs/list/SummarySection";
 import { JobsMobileList } from "@/components/jobs/list/MobileList";
 import { JobsDesktopTable } from "@/components/jobs/list/DesktopTable";
@@ -160,40 +153,15 @@ function JobsContent() {
     [lastLoadedAt],
   );
 
-  const statusQuickFilters = useMemo<StatusQuickFilter[]>(
+  const statusFilterOptions = useMemo(
     () => [
-      {
-        label: "All Leads",
-        value: "all",
-        count: totalJobs,
-        description: "Show everything",
-      },
-      {
-        label: "Waiting",
-        value: "pending",
-        count: statusCounts.pending,
-        description: "Waiting to start",
-      },
-      {
-        label: "In Progress",
-        value: "processing",
-        count: statusCounts.processing,
-        description: "Generating now",
-      },
-      {
-        label: "Completed",
-        value: "completed",
-        count: statusCounts.completed,
-        description: "Reports sent",
-      },
-      {
-        label: "Issues",
-        value: "failed",
-        count: statusCounts.failed,
-        description: "Needs attention",
-      },
+      { label: "All statuses", value: "all" },
+      { label: "Waiting", value: "pending" },
+      { label: "In progress", value: "processing" },
+      { label: "Completed", value: "completed" },
+      { label: "Issues", value: "failed" },
     ],
-    [totalJobs, statusCounts],
+    [],
   );
 
   const summaryCards = useMemo<SummaryCard[]>(
@@ -225,14 +193,6 @@ function JobsContent() {
       },
     ],
     [summaryStats, statusCounts, jobs.length],
-  );
-
-  const handleQuickFilter = useCallback(
-    (value: string) => {
-      setStatusFilter(value);
-      setCurrentPage(1);
-    },
-    [setStatusFilter],
   );
 
   const handleClearFilters = useCallback(() => {
@@ -428,10 +388,6 @@ function JobsContent() {
           refreshing={refreshing}
           onRefresh={() => loadJobs(true)}
           summaryCards={summaryCards}
-          quickFilters={statusQuickFilters}
-          activeFilter={statusFilter}
-          onQuickFilterChange={handleQuickFilter}
-          onClearFilters={handleClearFilters}
         />
 
         <div className="mb-6 flex flex-col md:flex-row gap-4 items-center">
@@ -470,6 +426,25 @@ function JobsContent() {
               </select>
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-400">
                 <FunnelIcon className="h-4 w-4" />
+              </div>
+            </div>
+            <div className="relative inline-block w-full md:w-52">
+              <select
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="appearance-none block w-full px-4 py-2.5 pr-10 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-card text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 transition-all cursor-pointer shadow-sm"
+              >
+                {statusFilterOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-400">
+                <ChevronDownIcon className="h-4 w-4" />
               </div>
             </div>
           </div>
