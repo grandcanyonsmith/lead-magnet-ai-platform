@@ -2,14 +2,32 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import {
+  FiAlertCircle,
+  FiCheck,
+  FiCheckCircle,
+  FiCode,
+  FiDatabase,
+  FiEdit2,
+  FiFileText,
+  FiLoader,
+  FiPlay,
+  FiRotateCcw,
+  FiSave,
+  FiSettings,
+  FiSkipForward,
+  FiTerminal,
+  FiUpload,
+  FiX,
+} from "react-icons/fi";
 import { useWorkflowSteps } from "@/hooks/useWorkflowSteps";
 import WorkflowFlowchart from "../workflows/components/WorkflowFlowchart";
+import WorkflowStepEditor from "../workflows/components/WorkflowStepEditor";
 import { api } from "@/lib/api";
 import toast from "react-hot-toast";
 import { useSettings } from "@/hooks/api/useSettings";
-import { PlaygroundTopBar } from "./components/PlaygroundTopBar";
-import { PlaygroundSidebar } from "./components/PlaygroundSidebar";
-import { PlaygroundImportModal } from "./components/PlaygroundImportModal";
+import { JsonViewer } from "@/components/ui/JsonViewer";
+import { LogViewer } from "./components/LogViewer";
 import type { AccumulatedContext, SidebarTab, StepResult } from "./types";
 
 export default function PlaygroundPage() {
