@@ -40,6 +40,7 @@ export default function EditWorkflowPage() {
   const workflowEdit = useWorkflowEdit(
     settings?.default_tool_choice,
     settings?.default_service_tier,
+    settings?.default_text_verbosity || undefined,
   );
   const {
     workflowId,
