@@ -444,23 +444,23 @@ export default function PlaygroundPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-65px)] overflow-hidden flex-col bg-muted/30">
+    <div className="flex h-[calc(100vh-65px)] flex-col overflow-hidden bg-muted/30">
       
       {/* Top Bar */}
-      <div className="flex items-center justify-between px-6 py-3 bg-background border-b border-border shadow-sm z-10 shrink-0">
-           <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-3 px-4 py-3 bg-background border-b border-border shadow-sm z-10 shrink-0 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+           <div className="flex flex-wrap items-center gap-3 sm:gap-4">
               <h1 className="text-lg font-bold flex items-center gap-2">
                  <FiCode className="text-primary" />
                  Playground
               </h1>
-              <div className="h-6 w-px bg-border/60" />
-              <div className="flex items-center gap-2">
+              <div className="hidden h-6 w-px bg-border/60 sm:block" />
+              <div className="flex flex-wrap items-center gap-2">
                  {!isExecuting ? (
                      <>
                         <button 
                             onClick={handleRunAll}
                             disabled={steps.length === 0}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                            className="flex items-center gap-2 px-2.5 py-1.5 bg-primary text-primary-foreground rounded-md text-xs font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors sm:px-3 sm:text-sm"
                             title="Command+Enter"
                         >
                             <FiPlay className="w-4 h-4" />
@@ -469,7 +469,7 @@ export default function PlaygroundPage() {
                         <button 
                             onClick={handleRunNextStep}
                             disabled={steps.length === 0}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-background border border-border hover:bg-muted text-foreground rounded-md text-sm font-medium transition-colors disabled:opacity-50"
+                            className="flex items-center gap-2 px-2.5 py-1.5 bg-background border border-border hover:bg-muted text-foreground rounded-md text-xs font-medium transition-colors disabled:opacity-50 sm:px-3 sm:text-sm"
                         >
                             <FiSkipForward className="w-4 h-4" />
                             Run Step
@@ -478,7 +478,7 @@ export default function PlaygroundPage() {
                  ) : (
                      <button 
                         onClick={handleStop}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-destructive text-destructive-foreground rounded-md text-sm font-medium hover:bg-destructive/90 transition-colors animate-pulse"
+                        className="flex items-center gap-2 px-2.5 py-1.5 bg-destructive text-destructive-foreground rounded-md text-xs font-medium hover:bg-destructive/90 transition-colors animate-pulse sm:px-3 sm:text-sm"
                      >
                         <FiLoader className="w-4 h-4 animate-spin" />
                         Stop
@@ -488,7 +488,7 @@ export default function PlaygroundPage() {
                  <button 
                     onClick={handleReset}
                     disabled={isExecuting}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-background border border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 text-muted-foreground rounded-md text-sm font-medium transition-colors"
+                    className="flex items-center gap-2 px-2.5 py-1.5 bg-background border border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 text-muted-foreground rounded-md text-xs font-medium transition-colors sm:px-3 sm:text-sm"
                  >
                     <FiRotateCcw className="w-4 h-4" />
                     Reset
@@ -514,9 +514,9 @@ export default function PlaygroundPage() {
            </div>
         </div>
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden lg:flex-row">
         {/* Left Panel: Flowchart Visualizer */}
-        <div className="flex-1 min-w-0 bg-slate-50 dark:bg-black/20 relative flex flex-col">
+        <div className="flex-1 min-w-0 min-h-[240px] bg-slate-50 dark:bg-black/20 relative flex flex-col lg:min-h-0">
             <div className="flex-1 relative">
                 <WorkflowFlowchart
                     steps={steps}
@@ -530,7 +530,7 @@ export default function PlaygroundPage() {
         </div>
 
         {/* Right Panel: Tabs */}
-        <div className="w-[450px] bg-background border-l border-border flex flex-col shadow-xl z-20">
+        <div className="flex-1 w-full min-h-[260px] bg-background border-t border-border flex flex-col shadow-xl z-20 lg:min-h-0 lg:flex-none lg:w-[450px] lg:border-l lg:border-t-0">
             {/* Tab Header */}
             <div className="flex border-b border-border bg-muted/5">
                 <button 
