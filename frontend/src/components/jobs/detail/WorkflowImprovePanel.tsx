@@ -325,9 +325,9 @@ export function WorkflowImprovePanel({
       description="AI will review the final deliverable, artifacts, and execution results, then propose better step instructions/models/tools for future runs."
       icon={<SparklesIcon className="h-5 w-5" />}
     >
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,0.9fr)]">
         <div className="space-y-4">
-          <div>
+          <div className="rounded-xl border border-border bg-muted/20 p-4">
             <label className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               What should be better next time? (optional)
             </label>
@@ -343,27 +343,87 @@ export function WorkflowImprovePanel({
                 {error}
               </p>
             ) : null}
+
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <Button
+                type="button"
+                onClick={handleGenerate}
+                disabled={!canGenerate}
+                title={
+                  workflowId
+                    ? "Generate workflow improvements"
+                    : "Workflow not loaded"
+                }
+              >
+                {isGenerating || isBuildingPrompt
+                  ? "Generating…"
+                  : "Generate improvements"}
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Uses the current job artifacts and step outputs as context.
+              </p>
+            </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              onClick={handleGenerate}
-              disabled={!canGenerate}
-              title={
-                workflowId
-                  ? "Generate workflow improvements"
-                  : "Workflow not loaded"
-              }
-            >
-              {isGenerating || isBuildingPrompt
-                ? "Generating…"
-                : "Generate improvements"}
-            </Button>
-            <p className="text-xs text-muted-foreground">
-              Uses the current job artifacts and step outputs as context.
-            </p>
-          </div>
+          <SectionCard
+            title={selectedImprovement ? "Selected improvement" : "Review an improvement"}
+            description={
+              selectedImprovement
+                ? "Compare the proposed workflow edits before approving."
+                : "Select an item from history to review and apply."
+            }
+            padding="sm"
+            actions={
+              selectedStatusMeta ? (
+                <span
+                  className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${selectedStatusMeta.chip}`}
+                >
+                  {selectedStatusMeta.label}
+                </span>
+              ) : null
+            }
+          >
+            {selectedImprovement?.result ? (
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <span>
+                    Created {formatRelativeTime(selectedImprovement.created_at)}
+                  </span>
+                  {selectedImprovement.user_prompt ? (
+                    <span className="truncate" title={selectedImprovement.user_prompt}>
+                      • Prompt: {truncate(selectedImprovement.user_prompt, 140)}
+                    </span>
+                  ) : null}
+                </div>
+
+                <WorkflowDiffPreview
+                  currentWorkflow={currentWorkflowForDiff}
+                  proposal={selectedImprovement.result}
+                  onAccept={handleApply}
+                  onReject={handleReject}
+                  isApplying={isApplying}
+                  showActions={isPendingReview}
+                  acceptLabel="Approve & apply"
+                  rejectLabel={isReviewing ? "Denying..." : "Deny"}
+                  actionsDisabled={isReviewing}
+                />
+
+                {!isPendingReview &&
+                selectedImprovement.reviewed_at &&
+                selectedStatusMeta ? (
+                  <p className="text-xs text-muted-foreground">
+                    {selectedStatusMeta.label}{" "}
+                    {formatRelativeTime(selectedImprovement.reviewed_at)}
+                  </p>
+                ) : null}
+              </div>
+            ) : (
+              <div className="rounded-lg border border-dashed border-border bg-muted/30 px-4 py-6 text-sm text-muted-foreground">
+                No improvement selected yet. Choose one from the history list to
+                review details and apply changes.
+              </div>
+            )}
+          </SectionCard>
         </div>
 
         <div className="space-y-4">
@@ -457,20 +517,71 @@ export function WorkflowImprovePanel({
 
           <SectionCard
             title={`Improvements history (${improvements.length})`}
-            description="Saved AI suggestions ready for review."
+            description={historyDescription}
             padding="sm"
+            actions={
+              <div className="flex flex-wrap items-center gap-2">
+                {[
+                  { value: "all", label: "All", count: improvementCounts.total },
+                  {
+                    value: "pending",
+                    label: "Pending",
+                    count: improvementCounts.pending,
+                  },
+                  {
+                    value: "approved",
+                    label: "Approved",
+                    count: improvementCounts.approved,
+                  },
+                  {
+                    value: "denied",
+                    label: "Denied",
+                    count: improvementCounts.denied,
+                  },
+                ].map((option) => {
+                  const isActive = statusFilter === option.value;
+                  const badgeClass = isActive
+                    ? "bg-background text-foreground"
+                    : "bg-muted text-muted-foreground";
+
+                  return (
+                    <Button
+                      key={option.value}
+                      type="button"
+                      size="sm"
+                      variant={isActive ? "secondary" : "outline"}
+                      onClick={() =>
+                        setStatusFilter(
+                          option.value as WorkflowImprovementStatus | "all",
+                        )
+                      }
+                      className="gap-1"
+                    >
+                      {option.label}
+                      <span
+                        className={`ml-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1 text-[10px] font-semibold ${badgeClass}`}
+                      >
+                        {option.count}
+                      </span>
+                    </Button>
+                  );
+                })}
+              </div>
+            }
           >
             {improvementsLoading ? (
               <div className="rounded-lg border border-dashed border-border bg-muted/30 px-4 py-6 text-sm text-muted-foreground">
                 Loading improvements…
               </div>
-            ) : improvements.length === 0 ? (
+            ) : filteredImprovements.length === 0 ? (
               <div className="rounded-lg border border-dashed border-border bg-muted/30 px-4 py-6 text-sm text-muted-foreground">
-                No improvements yet. Generate one to start a review queue.
+                {improvements.length === 0
+                  ? "No improvements yet. Generate one to start a review queue."
+                  : "No improvements match this filter."}
               </div>
             ) : (
               <div className="space-y-2">
-                {improvements.map((improvement) => {
+                {filteredImprovements.map((improvement) => {
                   const isSelected =
                     improvement.job_id === selectedImprovementId;
                   const statusMeta =
@@ -527,44 +638,6 @@ export function WorkflowImprovePanel({
               </div>
             )}
           </SectionCard>
-
-          {selectedImprovement?.result ? (
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h4 className="text-sm font-semibold text-foreground">
-                  Selected improvement
-                </h4>
-                {selectedStatusMeta ? (
-                  <span
-                    className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${selectedStatusMeta.chip}`}
-                  >
-                    {selectedStatusMeta.label}
-                  </span>
-                ) : null}
-              </div>
-
-              <WorkflowDiffPreview
-                currentWorkflow={currentWorkflowForDiff}
-                proposal={selectedImprovement.result}
-                onAccept={handleApply}
-                onReject={handleReject}
-                isApplying={isApplying}
-                showActions={isPendingReview}
-                acceptLabel="Approve & apply"
-                rejectLabel={isReviewing ? "Denying..." : "Deny"}
-                actionsDisabled={isReviewing}
-              />
-
-              {!isPendingReview &&
-              selectedImprovement.reviewed_at &&
-              selectedStatusMeta ? (
-                <p className="text-xs text-muted-foreground">
-                  {selectedStatusMeta.label}{" "}
-                  {formatRelativeTime(selectedImprovement.reviewed_at)}
-                </p>
-              ) : null}
-            </div>
-          ) : null}
         </div>
       </div>
     </SectionCard>
