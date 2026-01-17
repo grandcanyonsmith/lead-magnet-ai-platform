@@ -1,14 +1,4 @@
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { createPortal } from "react-dom";
-import { ChevronDown } from "lucide-react";
-import { cn } from "@/lib/utils";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/DropdownMenu";
+import { SubHeaderTabs } from "@/components/ui/SubHeaderTabs";
 import { JobExecutionTab } from "@/components/jobs/detail/JobExecutionTab";
 import { JobSummaryTab } from "@/components/jobs/detail/JobSummaryTab";
 import { JobImproveTab } from "@/components/jobs/detail/JobImproveTab";
@@ -72,14 +62,7 @@ const TAB_CONFIG = [
 
 export type JobTabId = (typeof TAB_CONFIG)[number]["id"];
 
-type TabBadgeLabel = {
-  singular: string;
-  plural: string;
-};
-
 const DEFAULT_TAB: JobTabId = "overview";
-const MOBILE_VISIBLE_TABS: JobTabId[] = ["overview", "execution", "improve"];
-const COMPACT_VISIBLE_TABS: JobTabId[] = ["overview", "execution"];
 
 const LEGACY_TAB_ALIASES: Record<string, JobTabId> = {
   summary: "overview",
@@ -177,177 +160,30 @@ export function JobTabs({
     tracking: trackingBadge,
   };
 
-  const formatBadgeText = (
-    value: number | string | null | undefined,
-    label?: TabBadgeLabel,
-  ) => {
-    if (value === null || value === undefined || !label) return null;
-    if (typeof value === "number") {
-      return String(value);
-    }
-    if (value === "…") {
-      return value;
-    }
+  const formatBadgeText = (value: number | string | null | undefined) => {
+    if (value === null || value === undefined) return null;
     return String(value);
   };
 
-  const [isCompact, setIsCompact] = useState(false);
-  const [mobileVisibleTabs, setMobileVisibleTabs] =
-    useState<JobTabId[]>(MOBILE_VISIBLE_TABS);
-
-  const swapIntoMobileTabs = (tabs: JobTabId[], tabId: JobTabId) => {
-    if (tabs.includes(tabId)) return tabs;
-    if (tabs.length === 0) return [tabId];
-    const swapIndex = Math.max(tabs.length - 2, 0);
-    const next = [...tabs];
-    next[swapIndex] = tabId;
-    return next;
-  };
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const mediaQuery = window.matchMedia("(max-width: 420px)");
-    const update = () => setIsCompact(mediaQuery.matches);
-    update();
-    mediaQuery.addEventListener("change", update);
-    return () => mediaQuery.removeEventListener("change", update);
-  }, []);
-
-  useEffect(() => {
-    setMobileVisibleTabs((prev) => {
-      const target = isCompact ? COMPACT_VISIBLE_TABS : MOBILE_VISIBLE_TABS;
-      return target.map((tabId) => prev.find((id) => id === tabId) || tabId);
-    });
-  }, [isCompact]);
-
-  useEffect(() => {
-    setMobileVisibleTabs((prev) => swapIntoMobileTabs(prev, activeTab));
-  }, [activeTab]);
-
-  const effectiveVisibleTabs = isCompact
-    ? mobileVisibleTabs.slice(0, COMPACT_VISIBLE_TABS.length)
-    : mobileVisibleTabs;
-  const mobileTabs = TAB_CONFIG.filter((tab) =>
-    effectiveVisibleTabs.includes(tab.id),
-  );
-  const overflowTabs = TAB_CONFIG.filter(
-    (tab) => !effectiveVisibleTabs.includes(tab.id),
-  );
-
-  const renderTabLink = (tab: (typeof TAB_CONFIG)[number]) => {
-    const isActive = activeTab === tab.id;
-    const badgeValue = badgeValues[tab.id];
-    const badgeText =
-      "badgeLabel" in tab ? formatBadgeText(badgeValue, tab.badgeLabel) : null;
-
-    const tabClasses = cn(
-      "relative flex items-center gap-2 pb-2 text-xs font-semibold text-muted-foreground transition-all duration-150 ease-out sm:text-sm",
-      "after:absolute after:inset-x-0 after:-bottom-[1px] after:h-0.5 after:origin-left after:scale-x-0 after:bg-primary after:transition-transform after:duration-200",
-      isActive
-        ? "text-foreground after:scale-x-100"
-        : "hover:text-foreground hover:after:scale-x-100 hover:-translate-y-0.5"
-    );
-
-    return (
-      <Link
-        key={tab.id}
-        href={buildTabHref(tab.id)}
-        aria-current={isActive ? "page" : undefined}
-        role="tab"
-        aria-selected={isActive}
-        className={tabClasses}
-      >
-        <span>{tab.label}</span>
-        {badgeText && (
-          <span
-            className={cn(
-              "whitespace-nowrap rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground sm:text-[11px]",
-              isActive && "bg-primary/10 text-primary-700 dark:text-primary-300"
-            )}
-          >
-            {badgeText}
-          </span>
-        )}
-      </Link>
-    );
-  };
-
-  const subHeaderTarget =
-    typeof document === "undefined"
-      ? null
-      : document.getElementById("dashboard-subheader");
-  const shouldPortal = Boolean(subHeaderTarget);
-  const tabNav = (
-    <div
-      className={cn(
-        "border-b border-border/60 bg-muted/20",
-        shouldPortal ? "" : "-mx-3 sm:-mx-4 md:-mx-6 lg:-mx-8"
-      )}
-    >
-      <div className="px-6 sm:px-8 lg:px-12">
-        <nav
-          role="tablist"
-          aria-label="Job detail sections"
-          className="flex w-full items-center overflow-x-auto py-2 scrollbar-hide"
-        >
-          <div className="inline-flex items-center gap-6 sm:hidden">
-            {mobileTabs.map(renderTabLink)}
-            {overflowTabs.length > 0 && (
-              <>
-                <span className="h-5 w-px bg-border/60" aria-hidden="true" />
-                <div className="relative">
-                  <DropdownMenu>
-                  <DropdownMenuTrigger className="inline-flex items-center gap-1 pb-2 text-xs font-semibold text-muted-foreground transition-all duration-150 ease-out hover:text-foreground hover:-translate-y-0.5">
-                    <span>More</span>
-                    <ChevronDown className="h-3 w-3" />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" side="bottom" className="w-44">
-                    {overflowTabs.map((tab) => {
-                      const badgeValue = badgeValues[tab.id];
-                      const badgeText =
-                        "badgeLabel" in tab
-                          ? formatBadgeText(badgeValue, tab.badgeLabel)
-                          : null;
-                      return (
-                        <DropdownMenuItem key={tab.id} className="transition-colors">
-                          <Link
-                            href={buildTabHref(tab.id)}
-                            className="flex w-full items-center justify-between gap-2"
-                            onClick={() =>
-                              setMobileVisibleTabs((prev) =>
-                                swapIntoMobileTabs(prev, tab.id),
-                              )
-                            }
-                          >
-                            <span>{tab.label}</span>
-                            {badgeText && (
-                              <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
-                                {badgeText}
-                              </span>
-                            )}
-                          </Link>
-                        </DropdownMenuItem>
-                      );
-                    })}
-                  </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </>
-            )}
-          </div>
-          <div className="hidden sm:inline-flex items-center gap-6">
-            {TAB_CONFIG.map(renderTabLink)}
-          </div>
-        </nav>
-      </div>
-    </div>
-  );
+  const tabs = TAB_CONFIG.map((tab) => ({
+    id: tab.id,
+    label: tab.label,
+    href: buildTabHref(tab.id),
+    badge:
+      "badgeLabel" in tab ? formatBadgeText(badgeValues[tab.id]) : null,
+  }));
 
   return (
     <section className="mt-6">
-      {shouldPortal && subHeaderTarget
-        ? createPortal(tabNav, subHeaderTarget)
-        : tabNav}
+      <SubHeaderTabs
+        tabs={tabs}
+        activeId={activeTab}
+        portalTargetId="dashboard-subheader"
+        enableOverflowMenu
+        mobileMaxVisible={3}
+        compactMaxVisible={2}
+        compactBreakpointPx={420}
+      />
       <div className="min-w-0 pt-6">
         {activeTab === "overview" && (
           <JobSummaryTab

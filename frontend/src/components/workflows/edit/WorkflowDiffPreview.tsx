@@ -37,7 +37,7 @@ export function WorkflowDiffPreview({
     proposal.workflow_description !== currentWorkflow.workflow_description;
 
   return (
-    <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 space-y-4">
+    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 sm:p-6 space-y-4">
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <h3 className="text-lg font-semibold text-blue-900 mb-2">
@@ -146,7 +146,7 @@ export function WorkflowDiffPreview({
                         </div>
                       )}
 
-                      <div className="flex items-center gap-3 text-xs text-gray-500">
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
                         <span className="px-2 py-1 bg-white rounded border">
                           {proposedStep.model}
                         </span>

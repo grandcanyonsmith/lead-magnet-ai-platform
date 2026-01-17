@@ -14,6 +14,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth/context";
 import { authService } from "@/lib/auth";
 import { useJobFiltersContext } from "@/contexts/JobFiltersContext";
+import { Avatar } from "@/components/ui/Avatar";
 
 export const UserMenu: React.FC = () => {
   const router = useRouter();
@@ -85,13 +86,18 @@ export const UserMenu: React.FC = () => {
         className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors touch-target"
         aria-label="User menu"
       >
-        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white text-sm font-semibold">
-          {isLoading ? (
+        {isLoading ? (
+          <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white text-sm font-semibold">
             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-          ) : (
-            initials
-          )}
-        </div>
+          </div>
+        ) : (
+          <Avatar
+            src={user?.profile_photo_url}
+            alt={user?.name || "User"}
+            fallback={initials}
+            className="h-8 w-8"
+          />
+        )}
         {!isLoading && (
           <span className="hidden sm:block text-sm font-medium text-gray-700 max-w-[120px] truncate">
             {displayName}
@@ -106,13 +112,18 @@ export const UserMenu: React.FC = () => {
         <div className="absolute right-0 mt-2 w-64 max-w-[calc(100vw-1rem)] bg-white rounded-lg shadow-xl border border-gray-200 z-50">
           <div className="p-4 border-b border-gray-200">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white text-sm font-semibold">
-                {isLoading ? (
+              {isLoading ? (
+                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white text-sm font-semibold">
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  initials
-                )}
-              </div>
+                </div>
+              ) : (
+                <Avatar
+                  src={user?.profile_photo_url}
+                  alt={user?.name || "User"}
+                  fallback={initials}
+                  className="h-10 w-10"
+                />
+              )}
               <div className="flex-1 min-w-0">
                 {isLoading ? (
                   <>

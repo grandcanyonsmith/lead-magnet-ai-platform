@@ -1,10 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
-import clsx from "clsx";
-import { cn } from "@/lib/utils";
+import { SubHeaderTabs } from "@/components/ui/SubHeaderTabs";
 
 const NAV_ITEMS = [
   {
@@ -31,46 +28,21 @@ const NAV_ITEMS = [
 
 export function SettingsNav() {
   const pathname = usePathname();
-  const subHeaderTarget =
-    typeof document === "undefined"
-      ? null
-      : document.getElementById("dashboard-subheader");
-  const shouldPortal = Boolean(subHeaderTarget);
-  const navContent = (
-    <div className={cn("border-b border-border/60 bg-muted/20", shouldPortal ? "" : "mb-8")}>
-      <div className="px-6 sm:px-8 lg:px-12">
-        <nav
-          aria-label="Settings navigation"
-          className="flex gap-1 overflow-x-auto py-2 scrollbar-hide"
-        >
-          {NAV_ITEMS.map((item) => {
-            const isActive = pathname?.startsWith(item.href) || false;
-            return (
-              <Link
-                key={item.id}
-                href={item.href}
-                className={clsx(
-                  "group relative flex items-center pb-2 text-sm font-semibold transition-all duration-150 ease-out whitespace-nowrap",
-                  "after:absolute after:inset-x-0 after:-bottom-[1px] after:h-0.5 after:origin-left after:scale-x-0 after:bg-primary after:transition-transform after:duration-200",
-                  isActive
-                    ? "text-foreground after:scale-x-100"
-                    : "text-muted-foreground hover:text-foreground hover:-translate-y-0.5 hover:after:scale-x-100",
-                )}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
-    </div>
+  const activeId =
+    NAV_ITEMS.find((item) => pathname?.startsWith(item.href))?.id ||
+    NAV_ITEMS[0].id;
+
+  return (
+    <SubHeaderTabs
+      tabs={NAV_ITEMS}
+      activeId={activeId}
+      portalTargetId="dashboard-subheader"
+      enableOverflowMenu
+      mobileMaxVisible={3}
+      compactMaxVisible={2}
+      compactBreakpointPx={420}
+    />
   );
-
-  if (shouldPortal && subHeaderTarget) {
-    return createPortal(navContent, subHeaderTarget);
-  }
-
-  return navContent;
 }
 
 

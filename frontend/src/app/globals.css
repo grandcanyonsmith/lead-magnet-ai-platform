@@ -173,6 +173,17 @@
     scrollbar-width: none; /* Firefox - hidden by default */
     -ms-overflow-style: none; /* IE and Edge */
   }
+
+  /* Always hide scrollbars */
+  .scrollbar-hide {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
   
   .scrollbar-hide-until-hover::-webkit-scrollbar {
     width: 8px;
