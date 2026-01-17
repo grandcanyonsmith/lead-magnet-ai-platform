@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
-import { ChartBarIcon, QueueListIcon } from "@heroicons/react/24/outline";
+import { cn } from "@/lib/utils";
 
 interface LeadMagnetsTabsProps {
   className?: string;
@@ -14,59 +15,71 @@ const tabs = [
     key: "builder",
     label: "My Magnets",
     href: "/dashboard/workflows",
-    icon: QueueListIcon,
     activePrefixes: ["/dashboard/workflows"],
   },
   {
     key: "generated",
     label: "Leads & Results",
     href: "/dashboard/jobs",
-    icon: ChartBarIcon,
     activePrefixes: ["/dashboard/jobs"],
   },
 ] as const;
 
 export function LeadMagnetsTabs({ className }: LeadMagnetsTabsProps) {
   const pathname = usePathname();
+  const subHeaderTarget =
+    typeof document === "undefined"
+      ? null
+      : document.getElementById("dashboard-subheader");
+  const shouldPortal = Boolean(subHeaderTarget);
 
-  return (
+  const navContent = (
     <div
-      className={clsx(
-        "inline-flex items-center gap-1 rounded-xl border border-gray-200 bg-white dark:bg-card dark:border-gray-700 p-1 shadow-sm",
+      className={cn(
+        "border-b border-border/60 bg-muted/20",
+        shouldPortal ? "" : "mb-6",
         className,
       )}
-      role="tablist"
-      aria-label="Lead magnets views"
     >
-      {tabs.map((tab) => {
-        const isActive = tab.activePrefixes.some(
-          (prefix) => pathname === prefix || pathname?.startsWith(prefix + "/"),
-        );
-        const Icon = tab.icon;
+      <div className="px-6 sm:px-8 lg:px-12">
+        <nav
+          role="tablist"
+          aria-label="Lead magnets views"
+          className="flex w-full items-center gap-6 overflow-x-auto py-2 scrollbar-hide"
+        >
+          <div className="inline-flex items-center gap-6">
+            {tabs.map((tab) => {
+              const isActive = tab.activePrefixes.some(
+                (prefix) => pathname === prefix || pathname?.startsWith(prefix + "/"),
+              );
 
-        return (
-          <Link
-            key={tab.key}
-            href={tab.href}
-            role="tab"
-            aria-selected={isActive}
-            className={clsx(
-              "inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition",
-              isActive
-                ? "bg-primary-600 text-white shadow-sm"
-                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white",
-            )}
-          >
-            <Icon
-              className={clsx(
-                "h-4 w-4",
-                isActive ? "text-white" : "text-gray-400",
-              )}
-            />
-            <span className="whitespace-nowrap">{tab.label}</span>
-          </Link>
-        );
-      })}
+              return (
+                <Link
+                  key={tab.key}
+                  href={tab.href}
+                  role="tab"
+                  aria-selected={isActive}
+                  className={clsx(
+                    "relative flex items-center gap-2 pb-2 text-sm font-semibold text-muted-foreground transition-all duration-150 ease-out",
+                    "after:absolute after:inset-x-0 after:-bottom-[1px] after:h-0.5 after:origin-left after:scale-x-0 after:bg-primary after:transition-transform after:duration-200",
+                    isActive
+                      ? "text-foreground after:scale-x-100"
+                      : "hover:text-foreground hover:after:scale-x-100 hover:-translate-y-0.5",
+                  )}
+                >
+                  <span className="whitespace-nowrap">{tab.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
+      </div>
     </div>
   );
+
+  if (shouldPortal && subHeaderTarget) {
+    return createPortal(navContent, subHeaderTarget);
+  }
+
+  return navContent;
 }

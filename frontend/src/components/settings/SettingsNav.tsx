@@ -1,83 +1,76 @@
 "use client";
 
 import Link from "next/link";
+import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
-import {
-  Cog6ToothIcon,
-  PhotoIcon,
-  PaperAirplaneIcon,
-  CurrencyDollarIcon,
-} from "@heroicons/react/24/outline";
+import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   {
     id: "general",
     label: "General",
     href: "/dashboard/settings/general",
-    icon: Cog6ToothIcon,
   },
   {
     id: "branding",
     label: "Branding",
     href: "/dashboard/settings/branding",
-    icon: PhotoIcon,
   },
   {
     id: "delivery",
     label: "Email Settings",
     href: "/dashboard/settings/delivery",
-    icon: PaperAirplaneIcon,
   },
   {
     id: "billing",
     label: "Billing & Usage",
     href: "/dashboard/settings/billing",
-    icon: CurrencyDollarIcon,
   },
 ] as const;
 
 export function SettingsNav() {
   const pathname = usePathname();
-
-  return (
-    <nav
-      aria-label="Settings navigation"
-      className="border-b border-gray-200 dark:border-border mb-8"
-    >
-      <div className="flex gap-1 overflow-x-auto scrollbar-hide">
-        {NAV_ITEMS.map((item) => {
-          const isActive = pathname?.startsWith(item.href) || false;
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.id}
-              href={item.href}
-              className={clsx(
-                "group relative flex items-center gap-2 py-4 px-4 text-sm font-bold transition-all focus:outline-none whitespace-nowrap",
-                isActive
-                  ? "text-primary-600 dark:text-primary"
-                  : "text-gray-400 dark:text-muted-foreground hover:text-gray-600 dark:hover:text-foreground",
-              )}
-            >
-              <Icon
+  const subHeaderTarget =
+    typeof document === "undefined"
+      ? null
+      : document.getElementById("dashboard-subheader");
+  const shouldPortal = Boolean(subHeaderTarget);
+  const navContent = (
+    <div className={cn("border-b border-border/60 bg-muted/20", shouldPortal ? "" : "mb-8")}>
+      <div className="px-6 sm:px-8 lg:px-12">
+        <nav
+          aria-label="Settings navigation"
+          className="flex gap-1 overflow-x-auto py-2 scrollbar-hide"
+        >
+          {NAV_ITEMS.map((item) => {
+            const isActive = pathname?.startsWith(item.href) || false;
+            return (
+              <Link
+                key={item.id}
+                href={item.href}
                 className={clsx(
-                  "h-5 w-5 transition-colors",
+                  "group relative flex items-center pb-2 text-sm font-semibold transition-all duration-150 ease-out whitespace-nowrap",
+                  "after:absolute after:inset-x-0 after:-bottom-[1px] after:h-0.5 after:origin-left after:scale-x-0 after:bg-primary after:transition-transform after:duration-200",
                   isActive
-                    ? "text-primary-600 dark:text-primary"
-                    : "text-gray-400 dark:text-muted-foreground group-hover:text-gray-500 dark:group-hover:text-foreground",
+                    ? "text-foreground after:scale-x-100"
+                    : "text-muted-foreground hover:text-foreground hover:-translate-y-0.5 hover:after:scale-x-100",
                 )}
-              />
-              {item.label}
-              {isActive && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600 dark:bg-primary" />
-              )}
-            </Link>
-          );
-        })}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
       </div>
-    </nav>
+    </div>
   );
+
+  if (shouldPortal && subHeaderTarget) {
+    return createPortal(navContent, subHeaderTarget);
+  }
+
+  return navContent;
 }
 
 
