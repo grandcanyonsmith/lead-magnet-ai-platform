@@ -9,6 +9,7 @@ import { TABLE_NAMES } from './config/constants';
  */
 export enum TableKey {
   WORKFLOWS = 'workflows',
+  WORKFLOW_VERSIONS = 'workflowVersions',
   FORMS = 'forms',
   SUBMISSIONS = 'submissions',
   JOBS = 'jobs',
@@ -34,6 +35,7 @@ export enum TableKey {
  */
 export interface TableMap {
   [TableKey.WORKFLOWS]: dynamodb.ITable;
+  [TableKey.WORKFLOW_VERSIONS]: dynamodb.ITable;
   [TableKey.FORMS]: dynamodb.ITable;
   [TableKey.SUBMISSIONS]: dynamodb.ITable;
   [TableKey.JOBS]: dynamodb.ITable;

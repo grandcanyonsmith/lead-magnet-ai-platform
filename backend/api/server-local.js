@@ -21,6 +21,7 @@ try {
 // Set environment variables FIRST, before importing any modules
 // This ensures they're available when modules are loaded
 process.env.WORKFLOWS_TABLE = process.env.WORKFLOWS_TABLE || 'leadmagnet-workflows';
+process.env.WORKFLOW_VERSIONS_TABLE = process.env.WORKFLOW_VERSIONS_TABLE || 'leadmagnet-workflow-versions';
 process.env.FORMS_TABLE = process.env.FORMS_TABLE || 'leadmagnet-forms';
 process.env.SUBMISSIONS_TABLE = process.env.SUBMISSIONS_TABLE || 'leadmagnet-submissions';
 process.env.JOBS_TABLE = process.env.JOBS_TABLE || 'leadmagnet-jobs';

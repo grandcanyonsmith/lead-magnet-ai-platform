@@ -21,6 +21,7 @@ exports.SECRET_NAMES = {
  */
 exports.TABLE_NAMES = {
     WORKFLOWS: 'leadmagnet-workflows',
+    WORKFLOW_VERSIONS: 'leadmagnet-workflow-versions',
     FORMS: 'leadmagnet-forms',
     SUBMISSIONS: 'leadmagnet-submissions',
     JOBS: 'leadmagnet-jobs',
@@ -143,6 +144,7 @@ exports.ECR_CONFIG = {
  */
 exports.TABLE_ENV_VAR_MAP = {
     workflows: 'WORKFLOWS_TABLE',
+    workflowVersions: 'WORKFLOW_VERSIONS_TABLE',
     forms: 'FORMS_TABLE',
     submissions: 'SUBMISSIONS_TABLE',
     jobs: 'JOBS_TABLE',

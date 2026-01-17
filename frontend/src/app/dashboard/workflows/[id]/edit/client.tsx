@@ -10,6 +10,7 @@ import { useTemplateEdit } from "@/hooks/useTemplateEdit";
 import { WorkflowTab } from "@/components/workflows/edit/WorkflowTab";
 import { FormTab } from "@/components/workflows/edit/FormTab";
 import { TemplateTab } from "@/components/workflows/edit/TemplateTab";
+import { WorkflowVersionModal } from "@/components/workflows/edit/WorkflowVersionModal";
 import { extractPlaceholders } from "@/utils/templateUtils";
 import { formatHTML } from "@/utils/templateUtils";
 import { useSettings } from "@/hooks/api/useSettings";
@@ -32,6 +33,7 @@ export default function EditWorkflowPage() {
   );
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
   const [templateId, setTemplateId] = useState<string | null>(null);
+  const [isVersionModalOpen, setIsVersionModalOpen] = useState(false);
 
   const { settings } = useSettings();
 
@@ -44,12 +46,14 @@ export default function EditWorkflowPage() {
     setSubmitting,
     error,
     setError,
+    workflowVersion,
     formData,
     setFormData,
     steps,
     setSteps,
     formId,
     workflowForm,
+    reloadWorkflow,
     handleChange,
     handleStepChange,
     handleAddStep,
@@ -328,6 +332,7 @@ export default function EditWorkflowPage() {
               <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
                 Edit Lead Magnet
               </h1>
+              <Badge variant="secondary">v{workflowVersion}</Badge>
             </div>
             <p className="hidden sm:block text-sm text-muted-foreground">
               Configure your workflow logic, intake form, and output design.
@@ -341,6 +346,13 @@ export default function EditWorkflowPage() {
             disabled={submitting}
           >
             Cancel
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setIsVersionModalOpen(true)}
+            disabled={submitting || !workflowId}
+          >
+            Version History
           </Button>
           <Button onClick={() => handleSubmit()} disabled={submitting} isLoading={submitting}>
             <Save className="mr-2 h-4 w-4" />
@@ -480,6 +492,17 @@ export default function EditWorkflowPage() {
           />
         </TabsContent>
       </Tabs>
+
+      <WorkflowVersionModal
+        isOpen={isVersionModalOpen}
+        workflowId={workflowId || ""}
+        currentVersion={workflowVersion}
+        onClose={() => setIsVersionModalOpen(false)}
+        onRestored={async () => {
+          await reloadWorkflow();
+          setIsVersionModalOpen(false);
+        }}
+      />
     </div>
   );
 }

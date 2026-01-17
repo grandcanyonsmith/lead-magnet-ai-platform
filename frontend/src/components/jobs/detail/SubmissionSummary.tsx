@@ -205,7 +205,7 @@ export function SubmissionSummary({
 
   return (
     <section className={`mb-4 sm:mb-6 ${className}`}>
-      <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-card shadow-sm overflow-hidden">
+      <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-card shadow-sm overflow-visible">
         <div className="flex flex-col gap-3 p-4 sm:p-6 md:flex-row md:items-center md:justify-between bg-gradient-to-r from-gray-50 to-white dark:from-gray-800/50 dark:to-transparent">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">
@@ -232,7 +232,7 @@ export function SubmissionSummary({
                 leaveFrom="transform opacity-100 scale-100"
                 leaveTo="transform opacity-0 scale-95"
               >
-                <Menu.Items className="absolute right-0 mt-2 w-52 origin-top-right divide-y divide-gray-100 dark:divide-gray-800 rounded-lg bg-white dark:bg-gray-900 shadow-lg ring-1 ring-black/5 dark:ring-white/10 focus:outline-none z-20">
+                <Menu.Items className="absolute right-0 mt-2 w-52 origin-top-right divide-y divide-gray-100 dark:divide-gray-800 rounded-lg bg-white dark:bg-gray-900 shadow-lg ring-1 ring-black/5 dark:ring-white/10 focus:outline-none z-50">
                   <div className="px-1 py-1">
                     <Menu.Item>
                       {({ active }) => (
@@ -298,7 +298,7 @@ export function SubmissionSummary({
           </div>
         </div>
         {showAnswers && (
-          <div className="border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-card">
+          <div className="border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-card overflow-hidden">
             {entries.length === 0 ? (
               <p className="px-4 py-6 text-sm text-gray-500 dark:text-gray-400">
                 No submission data available

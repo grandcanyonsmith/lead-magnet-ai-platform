@@ -103,6 +103,21 @@ class ApiClientImpl extends BaseApiClient implements ApiClient {
     return this.workflows.deleteWorkflow(id);
   }
 
+  async getWorkflowVersions(
+    id: string,
+    params?: Record<string, unknown>,
+  ) {
+    return this.workflows.getWorkflowVersions(id, params);
+  }
+
+  async getWorkflowVersion(id: string, version: number) {
+    return this.workflows.getWorkflowVersion(id, version);
+  }
+
+  async restoreWorkflowVersion(id: string, version: number) {
+    return this.workflows.restoreWorkflowVersion(id, version);
+  }
+
   async getModels() {
     return this.workflows.getModels();
   }

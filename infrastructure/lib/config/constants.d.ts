@@ -19,6 +19,7 @@ export declare const SECRET_NAMES: {
  */
 export declare const TABLE_NAMES: {
     readonly WORKFLOWS: "leadmagnet-workflows";
+    readonly WORKFLOW_VERSIONS: "leadmagnet-workflow-versions";
     readonly FORMS: "leadmagnet-forms";
     readonly SUBMISSIONS: "leadmagnet-submissions";
     readonly JOBS: "leadmagnet-jobs";

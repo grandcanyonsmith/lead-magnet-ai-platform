@@ -26,6 +26,7 @@ This document outlines the environment variables and configuration settings for 
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `WORKFLOWS_TABLE` | DynamoDB table for workflows | `leadmagnet-workflows` |
+| `WORKFLOW_VERSIONS_TABLE` | DynamoDB table for workflow versions | `leadmagnet-workflow-versions` |
 | `JOBS_TABLE` | DynamoDB table for jobs | `leadmagnet-jobs` |
 | `ACCOUNTS_TABLE` | DynamoDB table for accounts | `leadmagnet-accounts` |
 | `BODY_LIMIT` | Max request body size | `20mb` |

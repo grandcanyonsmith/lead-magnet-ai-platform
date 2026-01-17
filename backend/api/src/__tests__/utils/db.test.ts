@@ -15,6 +15,7 @@ jest.unmock("@aws-sdk/lib-dynamodb");
 
 // Set env vars before importing db
 process.env.WORKFLOWS_TABLE = "workflows";
+process.env.WORKFLOW_VERSIONS_TABLE = "workflow-versions";
 process.env.FORMS_TABLE = "forms";
 process.env.TEMPLATES_TABLE = "templates";
 process.env.SUBMISSIONS_TABLE = "submissions";

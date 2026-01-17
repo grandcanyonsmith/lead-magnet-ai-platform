@@ -173,6 +173,7 @@ export interface Workflow extends BaseEntity {
   workflow_description: string;
   template_id: string;
   template_version: number;
+  version?: number;
   steps?: WorkflowStep[];
   status: "active" | "inactive" | "draft";
   folder_id?: string | null; // Folder this workflow belongs to
@@ -200,6 +201,35 @@ export interface WorkflowUpdateRequest extends Partial<WorkflowCreateRequest> {}
 export interface WorkflowListResponse {
   workflows: Workflow[];
   total?: number;
+}
+
+export interface WorkflowVersionSummary {
+  workflow_id: string;
+  version: number;
+  created_at: string;
+  workflow_name: string;
+  workflow_description?: string;
+  step_count: number;
+  template_id?: string;
+  template_version?: number;
+}
+
+export interface WorkflowVersionListResponse {
+  versions: WorkflowVersionSummary[];
+  count: number;
+  current_version: number;
+}
+
+export interface WorkflowVersionSnapshot extends WorkflowCreateRequest {
+  status?: "active" | "inactive" | "draft";
+}
+
+export interface WorkflowVersionRecord {
+  workflow_id: string;
+  tenant_id: string;
+  version: number;
+  snapshot: WorkflowVersionSnapshot;
+  created_at: string;
 }
 
 export interface WorkflowGenerationRequest {
