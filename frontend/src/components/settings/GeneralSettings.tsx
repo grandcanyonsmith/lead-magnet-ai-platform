@@ -36,6 +36,13 @@ const SERVICE_TIER_OPTIONS = [
   { value: "scale", label: "Scale (High Volume)" },
 ];
 
+const OUTPUT_VERBOSITY_OPTIONS = [
+  { value: "", label: "Default (Model decides)" },
+  { value: "low", label: "Low - Concise" },
+  { value: "medium", label: "Medium - Balanced" },
+  { value: "high", label: "High - Detailed" },
+];
+
 const REVIEW_REASONING_OPTIONS = [
   { value: "high", label: "High (Default)" },
   { value: "xhigh", label: "Extra High" },
@@ -204,6 +211,16 @@ export function GeneralSettings({
             onChange={(value) => onChange("default_service_tier", value)}
             options={SERVICE_TIER_OPTIONS}
             helpText="Default service tier for new AI steps (override per-step if needed)"
+          />
+
+          <FormField
+            label="Default Output Verbosity"
+            name="default_text_verbosity"
+            type="text"
+            value={settings.default_text_verbosity || ""}
+            onChange={(value) => onChange("default_text_verbosity", value)}
+            options={OUTPUT_VERBOSITY_OPTIONS}
+            helpText="Default output verbosity for new AI steps (override per-step if needed)"
           />
         </div>
 

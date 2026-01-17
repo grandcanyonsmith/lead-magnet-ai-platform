@@ -25,9 +25,18 @@ const resolveServiceTier = (
   return undefined;
 };
 
+const resolveTextVerbosity = (
+  value?: string,
+): WorkflowStep["text_verbosity"] | undefined => {
+  return value === "low" || value === "medium" || value === "high"
+    ? value
+    : undefined;
+};
+
 const buildDefaultSteps = (
   defaultToolChoice: WorkflowStep["tool_choice"],
   defaultServiceTier?: WorkflowStep["service_tier"],
+  defaultTextVerbosity?: WorkflowStep["text_verbosity"],
 ): WorkflowStep[] => [
   {
     step_name: "Deep Research",
@@ -38,6 +47,7 @@ const buildDefaultSteps = (
     tools: ["web_search"],
     tool_choice: defaultToolChoice,
     service_tier: defaultServiceTier,
+    text_verbosity: defaultTextVerbosity,
   },
   {
     step_name: "HTML Rewrite",
@@ -49,6 +59,7 @@ const buildDefaultSteps = (
     tools: [],
     tool_choice: defaultToolChoice,
     service_tier: defaultServiceTier,
+    text_verbosity: defaultTextVerbosity,
   },
 ];
 
@@ -57,6 +68,7 @@ interface UseWorkflowStepsOptions {
   persistKey?: string;
   defaultToolChoice?: WorkflowStep["tool_choice"];
   defaultServiceTier?: WorkflowStep["service_tier"];
+  defaultTextVerbosity?: WorkflowStep["text_verbosity"];
 }
 
 export function useWorkflowSteps(optionsOrSteps?: WorkflowStep[] | UseWorkflowStepsOptions) {
@@ -65,13 +77,24 @@ export function useWorkflowSteps(optionsOrSteps?: WorkflowStep[] | UseWorkflowSt
     ? { initialSteps: optionsOrSteps } 
     : (optionsOrSteps || {});
     
-  const { initialSteps, persistKey, defaultToolChoice, defaultServiceTier } = options;
+  const {
+    initialSteps,
+    persistKey,
+    defaultToolChoice,
+    defaultServiceTier,
+    defaultTextVerbosity,
+  } = options;
   const resolvedDefaultToolChoice = resolveToolChoice(defaultToolChoice);
   const resolvedDefaultServiceTier = resolveServiceTier(defaultServiceTier);
+  const resolvedDefaultTextVerbosity = resolveTextVerbosity(defaultTextVerbosity);
 
   const [steps, setSteps] = useState<WorkflowStep[]>(
     initialSteps ||
-      buildDefaultSteps(resolvedDefaultToolChoice, resolvedDefaultServiceTier),
+      buildDefaultSteps(
+        resolvedDefaultToolChoice,
+        resolvedDefaultServiceTier,
+        resolvedDefaultTextVerbosity,
+      ),
   );
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -127,9 +150,10 @@ export function useWorkflowSteps(optionsOrSteps?: WorkflowStep[] | UseWorkflowSt
         tools: [],
         tool_choice: resolvedDefaultToolChoice,
         service_tier: resolvedDefaultServiceTier,
+        text_verbosity: resolvedDefaultTextVerbosity,
       },
     ]);
-  }, [resolvedDefaultToolChoice, resolvedDefaultServiceTier]);
+  }, [resolvedDefaultToolChoice, resolvedDefaultServiceTier, resolvedDefaultTextVerbosity]);
 
   const deleteStep = useCallback((index: number) => {
     setSteps((prev) => {
@@ -175,7 +199,8 @@ export function useWorkflowSteps(optionsOrSteps?: WorkflowStep[] | UseWorkflowSt
           model: step.model || "gpt-5.2",
           reasoning_effort: step.reasoning_effort,
           service_tier: resolvedDefaultServiceTier ?? step.service_tier,
-          text_verbosity: step.text_verbosity,
+          text_verbosity:
+            resolvedDefaultTextVerbosity ?? resolveTextVerbosity(step.text_verbosity),
           max_output_tokens: step.max_output_tokens,
           output_format: step.output_format,
           instructions: step.instructions || "",
@@ -186,7 +211,7 @@ export function useWorkflowSteps(optionsOrSteps?: WorkflowStep[] | UseWorkflowSt
         })),
       );
     }
-  }, [resolvedDefaultToolChoice, resolvedDefaultServiceTier]);
+  }, [resolvedDefaultToolChoice, resolvedDefaultServiceTier, resolvedDefaultTextVerbosity]);
 
   const updateFirstStepInstructions = useCallback((instructions: string) => {
     setSteps((prev) => {

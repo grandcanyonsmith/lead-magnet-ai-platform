@@ -34,6 +34,7 @@ export default function NewWorkflowPage() {
   const workflowSteps = useWorkflowSteps({
     defaultToolChoice: settings?.default_tool_choice,
     defaultServiceTier: settings?.default_service_tier,
+    defaultTextVerbosity: settings?.default_text_verbosity || undefined,
   });
   const validation = useWorkflowValidation(
     workflowForm.formData,

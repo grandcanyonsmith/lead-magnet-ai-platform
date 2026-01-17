@@ -571,7 +571,7 @@ export default function WorkflowVersionsClient() {
             )}
           </SectionCard>
 
-          <div className="space-y-4">
+          <div className="space-y-4 lg:col-span-8 xl:col-span-9">
             <div className="grid gap-4 xl:grid-cols-[minmax(0,0.65fr)_minmax(0,0.35fr)] xl:items-start">
               <SectionCard
                 title="Selected version"
