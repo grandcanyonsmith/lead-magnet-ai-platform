@@ -10,6 +10,7 @@ export interface WorkflowAIEditRequest {
   userPrompt: string;
   defaultToolChoice?: ToolChoice;
   defaultServiceTier?: string;
+  defaultTextVerbosity?: string;
   reviewServiceTier?: string;
   reviewReasoningEffort?: string;
   reviewerUser?: {
@@ -60,10 +61,12 @@ const DEFAULT_TOOL_CHOICE: ToolChoice = 'required';
 const VALID_TOOL_CHOICES = new Set<ToolChoice>(['auto', 'required', 'none']);
 const VALID_SERVICE_TIERS = new Set(['auto', 'default', 'flex', 'scale', 'priority']);
 const VALID_REASONING_EFFORTS = new Set(['none', 'low', 'medium', 'high', 'xhigh']);
+const VALID_TEXT_VERBOSITIES = new Set(['low', 'medium', 'high']);
 
 const buildWorkflowAiSystemPrompt = (
   defaultToolChoice: ToolChoice,
   defaultServiceTier?: string,
+  defaultTextVerbosity?: string,
 ) => `You are an expert AI Lead Magnet Architect and Workflow Optimizer. Your task is to refine, restructure, and optimize the user's lead magnet generation workflow.
 
 ## Your Goal
@@ -112,6 +115,9 @@ ${AVAILABLE_MODELS.join(', ')}
 ## Default Service Tier
 - Use \`${defaultServiceTier || "auto"}\` for each step unless the user explicitly asks for a different tier.
 
+## Default Output Verbosity
+- Use \`${defaultTextVerbosity || "model default"}\` verbosity unless the user explicitly asks for a different level.
+
 ## Response Format
 Return a JSON object:
 {
@@ -147,6 +153,7 @@ export class WorkflowAIService {
       referenceExamples,
       defaultToolChoice,
       defaultServiceTier,
+      defaultTextVerbosity,
       reviewServiceTier,
       reviewReasoningEffort,
       reviewerUser,
@@ -157,6 +164,10 @@ export class WorkflowAIService {
     const resolvedDefaultServiceTier =
       defaultServiceTier && VALID_SERVICE_TIERS.has(defaultServiceTier)
         ? defaultServiceTier
+        : undefined;
+    const resolvedDefaultTextVerbosity =
+      defaultTextVerbosity && VALID_TEXT_VERBOSITIES.has(defaultTextVerbosity)
+        ? defaultTextVerbosity
         : undefined;
     const shouldOverrideServiceTier =
       resolvedDefaultServiceTier !== undefined &&
@@ -310,6 +321,7 @@ Please generate the updated workflow configuration with all necessary changes.`;
                 instructions: buildWorkflowAiSystemPrompt(
                   resolvedDefaultToolChoice,
                   resolvedDefaultServiceTier,
+                  resolvedDefaultTextVerbosity,
                 ),
                 input: userMessage,
                 reasoning: { effort: resolvedReviewReasoningEffort },
@@ -444,6 +456,7 @@ Please generate the updated workflow configuration with all necessary changes.`;
       const normalizedSteps: WorkflowStep[] = ensureStepDefaults(validatedSteps, {
         defaultToolChoice: resolvedDefaultToolChoice,
         defaultServiceTier: resolvedDefaultServiceTier,
+        defaultTextVerbosity: resolvedDefaultTextVerbosity,
       });
 
       // Validate dependencies across all steps

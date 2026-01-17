@@ -382,6 +382,7 @@ export const updateSettingsSchema = z.object({
   default_service_tier: z
     .enum(["auto", "default", "flex", "scale", "priority"])
     .optional(),
+  default_text_verbosity: z.enum(["low", "medium", "high"]).optional(),
   default_workflow_improvement_user_id: z.string().optional(),
   default_workflow_improvement_service_tier: z
     .enum(["auto", "default", "flex", "scale", "priority"])

@@ -38,6 +38,7 @@ export class FolderService {
         contact_email: "",
         default_ai_model: "gpt-5.2",
         default_service_tier: "auto",
+        default_text_verbosity: "",
         default_workflow_improvement_user_id: "",
         default_workflow_improvement_service_tier: "priority",
         default_workflow_improvement_reasoning_effort: "high",

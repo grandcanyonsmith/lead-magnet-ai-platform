@@ -356,6 +356,11 @@ class WorkflowAIEditJobService {
         )
           ? settings.default_service_tier
           : undefined;
+      const defaultTextVerbosity =
+        settings?.default_text_verbosity &&
+        ["low", "medium", "high"].includes(settings.default_text_verbosity)
+          ? settings.default_text_verbosity
+          : undefined;
       const reviewServiceTier =
         settings?.default_workflow_improvement_service_tier &&
         ["auto", "default", "flex", "scale", "priority"].includes(
@@ -413,6 +418,7 @@ class WorkflowAIEditJobService {
         userPrompt: userPrompt,
         defaultToolChoice,
         defaultServiceTier,
+        defaultTextVerbosity,
         reviewServiceTier,
         reviewReasoningEffort,
         reviewerUser: reviewerUser || undefined,

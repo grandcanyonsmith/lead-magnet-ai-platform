@@ -8,6 +8,7 @@ export interface AIStepGenerationRequest {
   action?: 'update' | 'add';
   defaultToolChoice?: ToolChoice;
   defaultServiceTier?: string;
+  defaultTextVerbosity?: string;
   workflowContext: {
     workflow_id: string;
     workflow_name: string;
@@ -42,10 +43,12 @@ const AVAILABLE_TOOLS = [
 const DEFAULT_TOOL_CHOICE: ToolChoice = 'required';
 const VALID_TOOL_CHOICES = new Set<ToolChoice>(['auto', 'required', 'none']);
 const VALID_SERVICE_TIERS = new Set(['auto', 'default', 'flex', 'scale', 'priority']);
+const VALID_TEXT_VERBOSITIES = new Set(['low', 'medium', 'high']);
 
 const buildStepSystemPrompt = (
   defaultToolChoice: ToolChoice,
   defaultServiceTier?: string,
+  defaultTextVerbosity?: string,
 ) => `You are an Expert Workflow Architect for an AI Lead Magnet platform.
     
 Your goal is to translate the user's natural language request into a precise, high-performance workflow step configuration.
@@ -91,13 +94,16 @@ Available Tools:
 5. **Default Service Tier**:
    - Use **${defaultServiceTier || "auto"}** for this step unless the user explicitly asks for a different tier.
 
-6. **Instruction Quality**:
+6. **Default Output Verbosity**:
+   - Use **${defaultTextVerbosity || "model default"}** verbosity unless the user explicitly asks for a different level.
+
+7. **Instruction Quality**:
    - Write instructions that are **specific** and **actionable**.
    - Assign a **role** (e.g., "Act as a Senior Analyst").
    - Explicitly mention what input data to use.
    - **CRITICAL AUTONOMY RULE**: The workflow runs with **no user interaction between steps**. Do **NOT** ask questions, request confirmation, or wait for user input. Make reasonable assumptions and proceed.
 
-7. **Response Format**:
+8. **Response Format**:
    - Return a JSON object matching the schema below.
    - \`step_name\` should be professional and concise.
    - \`step_description\` should clearly state the *value* of the step.
@@ -108,7 +114,7 @@ Available Tools:
      - If this is the first step, use \`[]\`.
      - If inserting a step, ensure dependencies make sense.
 
-8. **Instruction Hygiene**:
+9. **Instruction Hygiene**:
    - Do NOT include "safety disclaimers" about PII (e.g. "Note: you included a phone number...") in the step instructions. The system handles PII securely.
    - Do NOT instruct the model to use [bracketed_placeholders] for missing information in its output. If information is missing, it should be omitted or handled gracefully without placeholders.
 
@@ -153,6 +159,7 @@ export class WorkflowStepAIService {
       currentStepIndex,
       defaultToolChoice,
       defaultServiceTier,
+      defaultTextVerbosity,
     } = request;
     const resolvedDefaultToolChoice = VALID_TOOL_CHOICES.has(defaultToolChoice as ToolChoice)
       ? (defaultToolChoice as ToolChoice)
@@ -164,6 +171,10 @@ export class WorkflowStepAIService {
     const shouldOverrideServiceTier =
       resolvedDefaultServiceTier !== undefined &&
       resolvedDefaultServiceTier !== "auto";
+    const resolvedDefaultTextVerbosity =
+      defaultTextVerbosity && VALID_TEXT_VERBOSITIES.has(defaultTextVerbosity)
+        ? defaultTextVerbosity
+        : undefined;
 
     // Build context message for AI
     const contextParts: string[] = [
@@ -221,6 +232,7 @@ Please generate the workflow step configuration.`;
         instructions: buildStepSystemPrompt(
           resolvedDefaultToolChoice,
           resolvedDefaultServiceTier,
+          resolvedDefaultTextVerbosity,
         ),
         input: userMessage,
         reasoning: { effort: 'high' },
@@ -301,12 +313,22 @@ Please generate the workflow step configuration.`;
         parsedResponse.step.reasoning_effort = 'high';
       }
 
+      const actionToApply = parsedResponse.action || suggestedAction;
+
       // Validate text_verbosity (optional)
       if (
         parsedResponse.step.text_verbosity &&
         !['low', 'medium', 'high'].includes(parsedResponse.step.text_verbosity)
       ) {
         delete (parsedResponse.step as any).text_verbosity;
+      }
+      const shouldApplyDefaultTextVerbosity =
+        resolvedDefaultTextVerbosity !== undefined &&
+        (actionToApply === 'add' || !currentStep?.text_verbosity);
+      if (shouldApplyDefaultTextVerbosity) {
+        parsedResponse.step.text_verbosity = resolvedDefaultTextVerbosity as any;
+      } else if (!parsedResponse.step.text_verbosity && currentStep?.text_verbosity) {
+        parsedResponse.step.text_verbosity = currentStep.text_verbosity as any;
       }
 
       // Validate max_output_tokens (optional)
@@ -320,7 +342,7 @@ Please generate the workflow step configuration.`;
       }
 
       // Set action
-      parsedResponse.action = parsedResponse.action || suggestedAction;
+      parsedResponse.action = actionToApply;
 
       // Set step_index for updates
       if (parsedResponse.action === 'update' && currentStepIndex !== undefined) {
