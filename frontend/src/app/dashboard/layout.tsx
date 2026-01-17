@@ -148,6 +148,7 @@ export default function DashboardLayout({
           role={role}
           signOut={signOut}
         />
+        <div id="dashboard-subheader" className="relative z-20" />
 
         <Sidebar
           isOpen={sidebarOpen}
@@ -164,13 +165,15 @@ export default function DashboardLayout({
             className={
               isEditorRoute
                 ? "p-0 bg-[#0c0d10] min-h-screen"
-                : "p-3 sm:p-4 md:p-6 lg:p-8 bg-muted/30 min-h-screen"
+                : "py-6 sm:py-8 lg:py-10 bg-muted/30 min-h-screen"
             }
           >
             {isEditorRoute ? (
               <div className="w-full">{children}</div>
             ) : (
-              <div className="mx-auto max-w-[1600px] w-full">{children}</div>
+              <div className="mx-auto w-full max-w-[1440px] px-6 sm:px-8 lg:px-12">
+                {children}
+              </div>
             )}
           </main>
         </div>
