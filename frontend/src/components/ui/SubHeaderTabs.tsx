@@ -20,7 +20,7 @@ export type SubHeaderTab = {
 };
 
 interface SubHeaderTabsProps {
-  tabs: SubHeaderTab[];
+  tabs: readonly SubHeaderTab[];
   activeId: string;
   onSelect?: (id: string) => void;
   portalTargetId?: string;
