@@ -75,21 +75,6 @@ export default function PlaygroundPage() {
     }
   }, [currentInput, inputLoaded]);
 
-  // Keyboard Shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Command/Ctrl + Enter to Run All
-      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-        if (!isExecuting && steps.length > 0) {
-            e.preventDefault();
-            handleRunAll();
-        }
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isExecuting, steps]);
-
   // Scroll to logs when executing
   useEffect(() => {
       if (isExecuting) {
@@ -279,6 +264,21 @@ export default function PlaygroundPage() {
        }
     }
   };
+
+  // Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Command/Ctrl + Enter to Run All
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        if (!isExecuting && steps.length > 0) {
+          e.preventDefault();
+          handleRunAll();
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleRunAll, isExecuting, steps]);
 
   const handleStop = () => {
     if (abortControllerRef.current) {
