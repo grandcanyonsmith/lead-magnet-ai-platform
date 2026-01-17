@@ -10,8 +10,6 @@ interface JobExecutionTabProps {
   job: Job;
   mergedSteps: MergedStep[];
   expandedSteps: Set<number>;
-  showExecutionSteps: boolean;
-  onToggleShowExecutionSteps: () => void;
   onToggleStep: (stepOrder: number) => void;
   executionStepsError: string | null;
   onRefresh?: () => void;
@@ -33,8 +31,6 @@ export function JobExecutionTab({
   job,
   mergedSteps,
   expandedSteps,
-  showExecutionSteps,
-  onToggleShowExecutionSteps,
   onToggleStep,
   executionStepsError,
   onRefresh,
@@ -70,8 +66,6 @@ export function JobExecutionTab({
         variant="compact"
         steps={mergedSteps}
         expandedSteps={expandedSteps}
-        showExecutionSteps={showExecutionSteps}
-        onToggleShow={onToggleShowExecutionSteps}
         onToggleStep={onToggleStep}
         onCopy={onCopy}
         jobStatus={job.status}

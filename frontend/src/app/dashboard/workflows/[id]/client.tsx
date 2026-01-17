@@ -48,6 +48,17 @@ const formatDuration = (seconds: number) => {
   return `${minutes}m ${remainingSeconds}s`;
 };
 
+const getJobSortKey = (job: { created_at?: string; updated_at?: string; completed_at?: string; started_at?: string }) => {
+  const timestamp =
+    job.created_at ||
+    job.updated_at ||
+    job.completed_at ||
+    job.started_at;
+  if (!timestamp) return 0;
+  const parsed = new Date(timestamp).getTime();
+  return Number.isNaN(parsed) ? 0 : parsed;
+};
+
 export default function WorkflowDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -103,13 +114,19 @@ export default function WorkflowDetailPage() {
 
   const loadJobs = async () => {
     try {
-      const data = await api.getJobs({ workflow_id: workflowId, limit: 10 });
+      const data = await api.getJobs({
+        workflow_id: workflowId,
+        all: true,
+      });
       const jobsList = data.jobs || [];
-      setJobs(jobsList);
+      const sortedJobs = [...jobsList].sort(
+        (a, b) => getJobSortKey(b) - getJobSortKey(a),
+      );
+      setJobs(sortedJobs);
 
       // Load submissions for each job
       const submissionsMap: Record<string, any> = {};
-      for (const job of jobsList) {
+      for (const job of sortedJobs) {
         if (job.submission_id) {
           try {
             const submission = await api.getSubmission(job.submission_id);
@@ -242,14 +259,6 @@ export default function WorkflowDetailPage() {
     <div className="max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-8">
-        <button
-          onClick={() => router.back()}
-          className="group flex items-center text-sm font-medium text-gray-500 dark:text-muted-foreground hover:text-gray-900 dark:hover:text-foreground mb-4 transition-colors"
-        >
-          <ArrowLeftIcon className="w-4 h-4 mr-1 group-hover:-translate-x-0.5 transition-transform" />
-          Back to Workflows
-        </button>
-
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="flex-1 min-w-0">
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-foreground tracking-tight truncate">
@@ -333,17 +342,11 @@ export default function WorkflowDetailPage() {
                               settings?.custom_domain,
                             )
                           : "#";
-                        // #region agent log
-                        fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client.tsx:329',message:'href attribute computed',data:{href,hasPublicSlug:!!workflow.form?.public_slug,publicSlug:workflow.form?.public_slug},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-                        // #endregion
                         return href;
                       })()}
                       onClick={(e) => {
                         try {
                           if (!workflow.form.public_slug) {
-                            // #region agent log
-                            fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client.tsx:346',message:'No public_slug - preventing navigation',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix-v2',hypothesisId:'C'})}).catch(()=>{});
-                            // #endregion
                             e.preventDefault();
                             toast.error("Public form URL not available. Please configure the form first.");
                             return;
@@ -353,22 +356,13 @@ export default function WorkflowDetailPage() {
                             settings?.custom_domain,
                           );
                           if (!url || url === "#") {
-                            // #region agent log
-                            fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client.tsx:361',message:'Invalid URL - preventing navigation',data:{url},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix-v2',hypothesisId:'D'})}).catch(()=>{});
-                            // #endregion
                             e.preventDefault();
                             toast.error("Unable to generate public form URL.");
                             return;
                           }
                           // Valid URL: allow the browser's normal <a target="_blank"> navigation.
                           // (More reliable than window.open and avoids popup blockers.)
-                          // #region agent log
-                          fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client.tsx:363',message:'Valid URL - allowing default navigation',data:{url},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix-v3',hypothesisId:'A'})}).catch(()=>{});
-                          // #endregion
                         } catch (error) {
-                          // #region agent log
-                          fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client.tsx:369',message:'Error in onClick handler',data:{error:error instanceof Error?error.message:String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix-v3',hypothesisId:'E'})}).catch(()=>{});
-                          // #endregion
                           e.preventDefault();
                           toast.error("An error occurred while opening the form.");
                         }

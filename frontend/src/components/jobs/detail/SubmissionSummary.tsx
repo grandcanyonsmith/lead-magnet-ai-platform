@@ -215,8 +215,8 @@ export function SubmissionSummary({
               {displayName || "Submitted Answers"}
             </h2>
           </div>
-          <div className="flex items-center gap-2">
-            <Menu as="div" className="relative inline-block text-left">
+          <div className="flex w-full items-center justify-end gap-2 md:w-auto">
+            <Menu as="div" className="relative inline-flex w-full justify-end text-left md:w-auto">
               <Menu.Button
                 aria-label="Submission actions"
                 className="inline-flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-2 text-gray-600 dark:text-gray-200 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-400 dark:hover:border-gray-500"
@@ -232,7 +232,7 @@ export function SubmissionSummary({
                 leaveFrom="transform opacity-100 scale-100"
                 leaveTo="transform opacity-0 scale-95"
               >
-                <Menu.Items className="absolute right-0 mt-2 w-52 origin-top-right divide-y divide-gray-100 dark:divide-gray-800 rounded-lg bg-white dark:bg-gray-900 shadow-lg ring-1 ring-black/5 dark:ring-white/10 focus:outline-none z-50">
+              <Menu.Items className="absolute right-0 mt-2 w-52 max-w-[calc(100vw-2rem)] origin-top-right divide-y divide-gray-100 dark:divide-gray-800 rounded-lg bg-white dark:bg-gray-900 shadow-lg ring-1 ring-black/5 dark:ring-white/10 focus:outline-none z-50">
                   <div className="px-1 py-1">
                     <Menu.Item>
                       {({ active }) => (

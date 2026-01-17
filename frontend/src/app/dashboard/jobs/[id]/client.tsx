@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useRef, useMemo } from "react";
-import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "react-hot-toast";
 
@@ -23,42 +22,17 @@ import { FullScreenPreviewModal } from "@/components/ui/FullScreenPreviewModal";
 import { JobDetailSkeleton } from "@/components/jobs/detail/JobDetailSkeleton";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
-import { JobExecutionTab } from "@/components/jobs/detail/JobExecutionTab";
-import { JobSummaryTab } from "@/components/jobs/detail/JobSummaryTab";
-import { JobImproveTab } from "@/components/jobs/detail/JobImproveTab";
-import { JobTrackingTab } from "@/components/jobs/detail/JobTrackingTab";
-import { JobTechnicalTab } from "@/components/jobs/detail/JobTechnicalTab";
-import { JobDebugTab } from "@/components/jobs/detail/JobDebugTab";
+import {
+  JobTabs,
+  resolveJobTabId,
+  type JobTabId,
+} from "@/components/jobs/detail/JobTabs";
 
 import FlowchartSidePanel from "@/app/dashboard/workflows/components/FlowchartSidePanel";
 import type { JobDurationInfo } from "@/components/jobs/detail/JobOverviewSection";
 
-import type {
-  ArtifactGalleryItem,
-  Job,
-  JobStepSummary,
-  MergedStep,
-} from "@/types/job";
+import type { ArtifactGalleryItem, Job, JobStepSummary } from "@/types/job";
 import type { WorkflowStep } from "@/types";
-import type { Workflow } from "@/types/workflow";
-import type { Form, FormSubmission } from "@/types/form";
-import type { Artifact } from "@/types/artifact";
-
-const TAB_CONFIG = [
-  { id: "execution", name: "Report Generation" },
-  { id: "summary", name: "Job Summary" },
-  { id: "improve", name: "Review & Improve" },
-  { id: "tracking", name: "Lead Activity" },
-  { id: "technical", name: "Technical Details" },
-  { id: "raw", name: "Debug Data" },
-] as const;
-
-type JobTabId = (typeof TAB_CONFIG)[number]["id"];
-
-const DEFAULT_TAB: JobTabId = "execution";
-
-const isJobTabId = (value: string | null): value is JobTabId =>
-  TAB_CONFIG.some((tab) => tab.id === value);
 
 // ---------------------------------------------------------------------------
 // Main Component
@@ -98,12 +72,7 @@ export default function JobDetailClient() {
     lastLoadedAt,
   } = useJobDetail();
 
-  const {
-    showExecutionSteps,
-    setShowExecutionSteps,
-    expandedSteps,
-    toggleStep,
-  } = useJobExecutionSteps();
+  const { expandedSteps, toggleStep } = useJobExecutionSteps();
 
   const mergedSteps = useMergedSteps({ job, workflow });
 
@@ -119,7 +88,7 @@ export default function JobDetailClient() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const tabParam = searchParams.get("tab");
-  const activeTab = isJobTabId(tabParam) ? tabParam : DEFAULT_TAB;
+  const activeTab = resolveJobTabId(tabParam);
 
   const buildTabHref = (tabId: JobTabId) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -460,8 +429,6 @@ export default function JobDetailClient() {
           onSelectExecutionTab={handleSelectExecutionTab}
           expandedSteps={expandedSteps}
           toggleStep={toggleStep}
-          showExecutionSteps={showExecutionSteps}
-          setShowExecutionSteps={setShowExecutionSteps}
           executionStepsError={executionStepsError}
           imageArtifactsByStep={imageArtifactsByStep}
           loadingArtifacts={loadingArtifacts}
@@ -533,201 +500,3 @@ function getJobDuration(job?: Job | null): JobDurationInfo | null {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Job Tabs Component
-// ---------------------------------------------------------------------------
-
-interface JobTabsProps {
-  job: Job;
-  activeTab: JobTabId;
-  buildTabHref: (tabId: JobTabId) => string;
-  mergedSteps: MergedStep[];
-  artifactGalleryItems: ArtifactGalleryItem[];
-  workflow: Workflow | null;
-  artifacts: Artifact[];
-  stepsSummary: JobStepSummary;
-  jobDuration?: JobDurationInfo | null;
-  totalCost?: number | null;
-  form: Form | null;
-  onSelectExecutionTab: () => void;
-  expandedSteps: Set<number>;
-  toggleStep: (stepOrder: number) => void;
-  showExecutionSteps: boolean;
-  setShowExecutionSteps: (show: boolean) => void;
-  executionStepsError: string | null;
-  imageArtifactsByStep: Map<number, Artifact[]>;
-  loadingArtifacts: boolean;
-  submission?: FormSubmission | null;
-  onResubmit?: () => void;
-  resubmitting?: boolean;
-  onRefresh?: () => void;
-  refreshing?: boolean;
-  onCopy: (text: string) => void;
-  onEditStep: (stepIndex: number) => void;
-  onRerunStepClick: (stepIndex: number) => void;
-  rerunningStep: number | null;
-  openPreview: (item: ArtifactGalleryItem) => void;
-  trackingSessionCount?: number | null;
-  trackingSessionsLoading?: boolean;
-  onTrackingSessionsLoaded?: (count: number) => void;
-  onTrackingSessionsLoadingChange?: (loading: boolean) => void;
-}
-
-function JobTabs({
-  job,
-  activeTab,
-  buildTabHref,
-  mergedSteps,
-  artifactGalleryItems,
-  workflow,
-  artifacts,
-  stepsSummary,
-  jobDuration,
-  totalCost,
-  form,
-  onSelectExecutionTab,
-  expandedSteps,
-  toggleStep,
-  showExecutionSteps,
-  setShowExecutionSteps,
-  executionStepsError,
-  imageArtifactsByStep,
-  loadingArtifacts,
-  submission,
-  onResubmit,
-  resubmitting,
-  onRefresh,
-  refreshing,
-  onCopy,
-  onEditStep,
-  onRerunStepClick,
-  rerunningStep,
-  openPreview,
-  trackingSessionCount,
-  trackingSessionsLoading,
-  onTrackingSessionsLoaded,
-  onTrackingSessionsLoadingChange,
-}: JobTabsProps) {
-  const stepsBadge = stepsSummary.total;
-  const artifactsBadge = artifactGalleryItems.length;
-  const trackingBadge =
-    trackingSessionsLoading && trackingSessionCount === null
-      ? "…"
-      : trackingSessionCount;
-
-  return (
-    <div className="mt-8 space-y-6">
-      <div className="rounded-xl border border-border bg-card p-1 shadow-sm">
-        <nav className="flex flex-wrap gap-1">
-          {TAB_CONFIG.map((tab) => {
-            const isActive = activeTab === tab.id;
-            const badgeValue =
-              tab.id === "execution"
-                ? stepsBadge
-                : tab.id === "summary"
-                  ? artifactsBadge
-                  : tab.id === "tracking"
-                    ? trackingBadge
-                    : null;
-            const badgeLabel =
-              tab.id === "execution"
-                ? "Steps"
-                : tab.id === "summary"
-                  ? "Outputs"
-                  : tab.id === "tracking"
-                    ? "Sessions"
-                    : undefined;
-            return (
-              <Link
-                key={tab.id}
-                href={buildTabHref(tab.id)}
-                aria-current={isActive ? "page" : undefined}
-                className={`inline-flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold outline-none transition-colors ${
-                  isActive
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-                }`}
-              >
-                <span>{tab.name}</span>
-                {badgeValue !== null && badgeValue !== undefined && (
-                  <span
-                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                      isActive
-                        ? "bg-primary/10 text-primary-700 dark:text-primary-300"
-                        : "bg-muted text-muted-foreground"
-                    }`}
-                    title={badgeLabel}
-                  >
-                    {badgeValue}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
-      <div>
-        {activeTab === "execution" && (
-          <JobExecutionTab
-            job={job}
-            mergedSteps={mergedSteps}
-            expandedSteps={expandedSteps}
-            showExecutionSteps={showExecutionSteps}
-            onToggleShowExecutionSteps={() =>
-              setShowExecutionSteps(!showExecutionSteps)
-            }
-            onToggleStep={toggleStep}
-            executionStepsError={executionStepsError}
-            onRefresh={onRefresh}
-            refreshing={refreshing}
-            onCopy={onCopy}
-            imageArtifactsByStep={imageArtifactsByStep}
-            loadingArtifacts={loadingArtifacts}
-            submission={submission}
-            onResubmit={onResubmit}
-            resubmitting={resubmitting}
-            onEditStep={onEditStep}
-            onRerunStepClick={onRerunStepClick}
-            rerunningStep={rerunningStep}
-            artifactGalleryItems={artifactGalleryItems}
-            onPreview={openPreview}
-          />
-        )}
-        {activeTab === "summary" && (
-          <JobSummaryTab
-            job={job}
-            workflow={workflow}
-            stepsSummary={stepsSummary}
-            artifactCount={artifactGalleryItems.length}
-            jobDuration={jobDuration}
-            totalCost={totalCost}
-            onSelectExecutionTab={onSelectExecutionTab}
-          />
-        )}
-        {activeTab === "improve" && (
-          <JobImproveTab
-            job={job}
-            workflow={workflow}
-            mergedSteps={mergedSteps}
-            artifacts={artifacts}
-          />
-        )}
-        {activeTab === "tracking" && (
-          <JobTrackingTab
-            jobId={job.job_id}
-            onSessionsLoaded={onTrackingSessionsLoaded}
-            onSessionsLoadingChange={onTrackingSessionsLoadingChange}
-          />
-        )}
-        {activeTab === "technical" && (
-          <JobTechnicalTab
-            job={job}
-            form={form}
-            submission={submission}
-          />
-        )}
-        {activeTab === "raw" && <JobDebugTab data={job} />}
-      </div>
-    </div>
-  );
-}

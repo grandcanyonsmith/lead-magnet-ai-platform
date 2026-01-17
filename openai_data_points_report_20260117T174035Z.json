@@ -1,0 +1,170 @@
+{
+  "generated_at": "2026-01-17T17:40:33.633666+00:00",
+  "data_sources": {
+    "users": {
+      "count": 5,
+      "data": [
+        {
+          "id": "user-VPnycjPaZWMumN3BEHwzMDlR",
+          "object": "organization.user",
+          "added_at": 1643945239,
+          "email": "themorningmarketnews@gmail.com",
+          "name": "Canyon Smith",
+          "role": "owner"
+        },
+        {
+          "id": "user-Ro7A5sIAqwNcKlzNY4j2ChaX",
+          "object": "organization.user",
+          "added_at": 1720218707,
+          "email": "carlsokaitlyn@gmail.com",
+          "name": "Kaitlyn Carlson",
+          "role": "reader"
+        },
+        {
+          "id": "user-oM9Xt6nBwLt2hEtbyUXE8ipp",
+          "object": "organization.user",
+          "added_at": 1720541954,
+          "email": "jack@coursecreator360.com",
+          "name": "Jack Crandall",
+          "role": "reader"
+        },
+        {
+          "id": "user-9Yx4nBvbrCXdizkdBH78Cd2V",
+          "object": "organization.user",
+          "added_at": 1722194581,
+          "email": "carlsoaustin@gmail.com",
+          "name": "Austin Carlson",
+          "role": "reader"
+        },
+        {
+          "id": "user-Yojks6cdKhUTL8o31tzRltfE",
+          "object": "organization.user",
+          "added_at": 1726263983,
+          "email": "marquez.joselitoken@gmail.com",
+          "name": "Ken Marquez",
+          "role": "owner"
+        }
+      ],
+      "summary": {
+        "owners": [
+          {
+            "id": "user-VPnycjPaZWMumN3BEHwzMDlR",
+            "object": "organization.user",
+            "added_at": 1643945239,
+            "email": "themorningmarketnews@gmail.com",
+            "name": "Canyon Smith",
+            "role": "owner"
+          },
+          {
+            "id": "user-Yojks6cdKhUTL8o31tzRltfE",
+            "object": "organization.user",
+            "added_at": 1726263983,
+            "email": "marquez.joselitoken@gmail.com",
+            "name": "Ken Marquez",
+            "role": "owner"
+          }
+        ],
+        "readers": [
+          {
+            "id": "user-Ro7A5sIAqwNcKlzNY4j2ChaX",
+            "object": "organization.user",
+            "added_at": 1720218707,
+            "email": "carlsokaitlyn@gmail.com",
+            "name": "Kaitlyn Carlson",
+            "role": "reader"
+          },
+          {
+            "id": "user-oM9Xt6nBwLt2hEtbyUXE8ipp",
+            "object": "organization.user",
+            "added_at": 1720541954,
+            "email": "jack@coursecreator360.com",
+            "name": "Jack Crandall",
+            "role": "reader"
+          },
+          {
+            "id": "user-9Yx4nBvbrCXdizkdBH78Cd2V",
+            "object": "organization.user",
+            "added_at": 1722194581,
+            "email": "carlsoaustin@gmail.com",
+            "name": "Austin Carlson",
+            "role": "reader"
+          }
+        ],
+        "by_email": {
+          "themorningmarketnews@gmail.com": "Canyon Smith",
+          "carlsokaitlyn@gmail.com": "Kaitlyn Carlson",
+          "jack@coursecreator360.com": "Jack Crandall",
+          "carlsoaustin@gmail.com": "Austin Carlson",
+          "marquez.joselitoken@gmail.com": "Ken Marquez"
+        }
+      }
+    },
+    "audit_logs": {
+      "count": 0,
+      "analysis": {
+        "total_events": 0,
+        "event_types": {},
+        "actors": {},
+        "time_range": {},
+        "projects": "set()",
+        "api_keys_created": [],
+        "logins": {
+          "total": 0,
+          "by_user": {},
+          "by_ip": {}
+        },
+        "project_changes": [],
+        "workflow_changes": []
+      },
+      "sample_logs": []
+    }
+  },
+  "available_data_points": {
+    "organization_users": {
+      "endpoint": "/v1/organization/users",
+      "status": "\u2705 Available",
+      "data_points": [
+        "User ID",
+        "Email address",
+        "Name",
+        "Role (owner/reader)",
+        "Added at timestamp"
+      ],
+      "count": 5
+    },
+    "audit_logs": {
+      "endpoint": "/v1/organization/audit_logs",
+      "status": "\u2705 Available",
+      "data_points": [
+        "Event type",
+        "Timestamp (effective_at)",
+        "Actor information (user, API key, session)",
+        "IP address (for sessions)",
+        "User agent (for sessions)",
+        "Project information",
+        "Event-specific details (API keys, projects, workflows, etc.)"
+      ],
+      "count": 0,
+      "event_types": {}
+    },
+    "fine_tuning_jobs": {
+      "endpoint": "/v1/fine_tuning/jobs",
+      "status": "\u2705 Available",
+      "data_points": [
+        "Fine-tuning job IDs",
+        "Model information",
+        "Training status",
+        "Created/updated timestamps"
+      ],
+      "note": "Requires project-scoped access"
+    }
+  },
+  "insights": {
+    "most_active_users": [],
+    "most_common_ips": [],
+    "api_key_creation_activity": 0,
+    "project_activity": 0,
+    "workflow_activity": 0,
+    "time_range": {}
+  }
+}

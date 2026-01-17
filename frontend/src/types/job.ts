@@ -104,6 +104,7 @@ export interface JobListParams {
   workflow_id?: string;
   limit?: number;
   offset?: number;
+  all?: boolean;
 }
 
 export interface JobResubmitResponse {

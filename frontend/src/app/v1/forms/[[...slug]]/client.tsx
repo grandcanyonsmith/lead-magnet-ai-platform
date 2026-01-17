@@ -115,13 +115,7 @@ export default function PublicFormPage() {
       setLogoError(false);
 
       const apiUrl = `${API_URL}/v1/forms/${slug}`;
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client.tsx:117',message:'Loading public form',data:{slug,apiUrl,API_URL,windowLocation:typeof window!=='undefined'?window.location.href:undefined},timestamp:Date.now(),sessionId:'debug-session',runId:'form-load-debug',hypothesisId:'G'})}).catch(()=>{});
-      // #endregion
       const response = await axios.get(apiUrl);
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client.tsx:120',message:'Public form loaded successfully',data:{status:response.status,hasData:!!response.data},timestamp:Date.now(),sessionId:'debug-session',runId:'form-load-debug',hypothesisId:'G'})}).catch(()=>{});
-      // #endregion
       setForm(response.data);
 
       // Initialize form data with empty values
@@ -137,10 +131,6 @@ export default function PublicFormPage() {
       });
       setFormData(initialData);
     } catch (error) {
-      // #region agent log
-      const errorData = error && typeof error === "object" && "response" in error ? (error as any).response : null;
-      fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client.tsx:132',message:'Failed to load public form',data:{slug,apiUrl:`${API_URL}/v1/forms/${slug}`,errorMessage:error instanceof Error?error.message:String(error),status:errorData?.status,statusText:errorData?.statusText,responseData:errorData?.data,windowLocation:typeof window!=='undefined'?window.location.href:undefined},timestamp:Date.now(),sessionId:'debug-session',runId:'form-load-debug',hypothesisId:'G'})}).catch(()=>{});
-      // #endregion
       logger.debug("Failed to load public form", {
         context: "PublicForm",
         error,

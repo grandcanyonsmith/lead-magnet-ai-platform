@@ -43,7 +43,7 @@ export default function WorkflowTriggerSidePanel({
           <div className="flex items-center justify-between">
             <div>
               <div className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-gray-400 select-none">
-                Configuration
+                Editing Trigger
               </div>
               <h2 className="mt-1 text-2xl font-semibold text-slate-900 dark:text-white">
                 Workflow Trigger

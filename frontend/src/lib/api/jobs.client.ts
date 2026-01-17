@@ -22,6 +22,7 @@ export class JobsClient extends BaseApiClient {
     if (params?.limit) queryParams.limit = params.limit.toString();
     if (params?.offset !== undefined)
       queryParams.offset = params.offset.toString();
+    if (params?.all) queryParams.all = "true";
 
     return this.get<JobListResponse>("/admin/jobs", { params: queryParams });
   }

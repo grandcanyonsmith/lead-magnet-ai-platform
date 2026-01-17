@@ -62,11 +62,11 @@ export function KeyValueList({
             {item.icon && <span className="text-muted-foreground">{item.icon}</span>}
             {item.label}
           </dt>
-          <dd className="mt-1 flex items-start justify-between gap-3">
-            <div className="text-sm text-foreground">
+          <dd className="mt-1 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+            <div className="min-w-0 text-sm text-foreground break-words">
               {item.value}
               {item.helperText && (
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="mt-1 text-xs text-muted-foreground break-words">
                   {item.helperText}
                 </p>
               )}
@@ -74,7 +74,7 @@ export function KeyValueList({
             {item.copyValue && (
               <button
                 type="button"
-                className="rounded-full border border-input bg-background p-2 text-muted-foreground transition hover:text-foreground"
+                className="shrink-0 rounded-full border border-input bg-background p-2 text-muted-foreground transition hover:text-foreground"
                 onClick={() => {
                   if (onCopy) {
                     onCopy(item.copyValue!);

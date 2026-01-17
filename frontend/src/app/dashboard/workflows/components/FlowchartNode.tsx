@@ -179,15 +179,15 @@ function FlowchartNode({ data, selected }: NodeProps<FlowchartNodeData>) {
             aria-label={`Drag step ${index + 1}`}
           >
             <FiMove className="h-4 w-4" aria-hidden />
-            Drag
+            <span className="sr-only">Drag</span>
           </button>
         </div>
 
         <div className="space-y-1">
-          <h3 className="line-clamp-2 text-base font-semibold text-slate-900 dark:text-foreground">
+          <h3 className="line-clamp-1 text-base font-semibold text-slate-900 dark:text-foreground">
             {step.step_name || `Step ${index + 1}`}
           </h3>
-          <p className="line-clamp-2 text-sm text-slate-500 dark:text-muted-foreground">
+          <p className="line-clamp-1 text-sm text-slate-500 dark:text-muted-foreground">
             {step.step_description || "No description provided yet."}
           </p>
         </div>
@@ -200,18 +200,11 @@ function FlowchartNode({ data, selected }: NodeProps<FlowchartNodeData>) {
               ? "Computer Use Preview"
               : step.model.replace("gpt-", "GPT-").replace("turbo", "Turbo")}
           </span>
-          {step.tool_choice && step.tool_choice !== "none" && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-primary-50 dark:bg-primary/20 px-2 py-0.5 text-[11px] font-medium text-primary-700 dark:text-primary-300">
-              {step.tool_choice === "required"
-                ? "Tools Required"
-                : "Tools Auto"}
-            </span>
-          )}
         </div>
 
         {hasTools && (
-          <div className="flex flex-wrap items-center gap-2 rounded-xl bg-slate-50/80 dark:bg-secondary/50 px-3 py-2 text-[11px] text-slate-500 dark:text-muted-foreground">
-            {tools.slice(0, 3).map((tool, idx) => {
+          <div className="flex items-center gap-1 rounded-xl bg-slate-50/80 dark:bg-secondary/50 px-2.5 py-2 text-[11px] text-slate-500 dark:text-muted-foreground">
+            {tools.slice(0, 4).map((tool, idx) => {
               const toolKey = typeof tool === "string" ? tool : tool.type;
               const toolMeta = TOOL_ICONS[toolKey] || {
                 icon: FiZap,
@@ -222,32 +215,20 @@ function FlowchartNode({ data, selected }: NodeProps<FlowchartNodeData>) {
               return (
                 <span
                   key={`${toolKey}-${idx}`}
-                  className={`inline-flex items-center gap-1 rounded-full px-2 py-1 font-medium ${toolMeta.tint}`}
+                  className={`inline-flex items-center justify-center rounded-full px-2 py-1 font-medium ${toolMeta.tint}`}
                   title={toolMeta.label}
                 >
                   <Icon className="h-3.5 w-3.5" aria-hidden />
-                  {toolMeta.label}
                 </span>
               );
             })}
-            {tools.length > 3 && (
+            {tools.length > 4 && (
               <span className="inline-flex items-center gap-1 rounded-full bg-slate-200/70 dark:bg-secondary px-2 py-1 font-medium text-slate-600 dark:text-muted-foreground">
-                +{tools.length - 3} more
+                +{tools.length - 4}
               </span>
             )}
           </div>
         )}
-
-        <div className="flex items-center justify-between text-[11px] text-slate-400 dark:text-muted-foreground/70">
-          <span>
-            {step.instructions?.trim()
-              ? `${step.instructions.trim().split(" ").length} words`
-              : "No instructions yet"}
-          </span>
-          <span>
-            {step.tools?.length ? `${step.tools.length} tools` : "No tools"}
-          </span>
-        </div>
 
         {hasWarnings && (
           <div className="space-y-1 rounded-xl bg-rose-50 dark:bg-rose-900/20 px-3 py-2 text-[11px] text-rose-600 dark:text-rose-400 shadow-inner shadow-rose-100/60 dark:shadow-rose-900/30">
@@ -255,11 +236,12 @@ function FlowchartNode({ data, selected }: NodeProps<FlowchartNodeData>) {
               <FiAlertCircle className="h-4 w-4" aria-hidden />
               Attention Needed
             </div>
-            <ul className="ml-5 list-disc space-y-1 marker:text-rose-400 dark:marker:text-rose-500">
-              {warnings.map((warning, idx) => (
-                <li key={idx}>{warning}</li>
-              ))}
-            </ul>
+            <p className="text-[11px]">{warnings[0]}</p>
+            {warnings.length > 1 && (
+              <p className="text-[10px] text-rose-400">
+                +{warnings.length - 1} more
+              </p>
+            )}
           </div>
         )}
       </div>

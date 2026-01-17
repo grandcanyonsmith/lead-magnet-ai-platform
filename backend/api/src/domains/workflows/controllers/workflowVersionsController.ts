@@ -42,8 +42,8 @@ class WorkflowVersionsController {
     versionParam: string,
   ): Promise<RouteResponse> {
     const version = parseInt(versionParam, 10);
-    if (!Number.isFinite(version)) {
-      throw new ApiError("Version must be a number", 400);
+    if (!Number.isFinite(version) || version < 1) {
+      throw new ApiError("Version must be a positive number", 400);
     }
 
     const workflow = await workflowCrudService.getWorkflow(tenantId, workflowId);
@@ -62,8 +62,8 @@ class WorkflowVersionsController {
     versionParam: string,
   ): Promise<RouteResponse> {
     const version = parseInt(versionParam, 10);
-    if (!Number.isFinite(version)) {
-      throw new ApiError("Version must be a number", 400);
+    if (!Number.isFinite(version) || version < 1) {
+      throw new ApiError("Version must be a positive number", 400);
     }
 
     const workflow = await workflowCrudService.getWorkflow(tenantId, workflowId);

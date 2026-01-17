@@ -10,6 +10,21 @@ const ARTIFACTS_TABLE = env.artifactsTable;
 
 const s3Client = new S3Client({ region: env.awsRegion });
 
+const INTERNAL_JOB_TYPES = new Set(["workflow_generation", "workflow_ai_edit"]);
+const INTERNAL_JOB_PREFIXES = ["wfgen_", "wfaiedit_"];
+
+const isInternalWorkflowJob = (job: any): boolean => {
+  const jobType = typeof job?.job_type === "string" ? job.job_type : "";
+  if (jobType && INTERNAL_JOB_TYPES.has(jobType)) {
+    return true;
+  }
+  const jobId = typeof job?.job_id === "string" ? job.job_id : "";
+  return INTERNAL_JOB_PREFIXES.some((prefix) => jobId.startsWith(prefix));
+};
+
+const filterRunJobs = (jobs: any[]) =>
+  jobs.filter((job) => !isInternalWorkflowJob(job));
+
 export class JobService {
   async listJobs(
     tenantId: string,
@@ -17,34 +32,60 @@ export class JobService {
   ): Promise<any> {
     const workflowId = queryParams.workflow_id;
     const status = queryParams.status;
+    const includeAll =
+      queryParams.all === true ||
+      queryParams.all === "true" ||
+      queryParams.all === "1";
     const pageSize = queryParams.limit ? parseInt(queryParams.limit) : 20;
     const offset = queryParams.offset ? parseInt(queryParams.offset) : 0;
     const fetchLimit = pageSize + offset;
 
     let jobs;
     let totalCount = 0;
+    let lastEvaluatedKey: Record<string, any> | undefined;
+    const queryAll = async (
+      indexName: string | undefined,
+      keyCondition: string,
+      expressionAttributeValues: Record<string, any>,
+      expressionAttributeNames?: Record<string, string>,
+    ) => {
+      const collected: any[] = [];
+      let lastKey: Record<string, any> | undefined;
+      const pageLimit = 200;
 
-    if (workflowId && status) {
-      const result = await db.query(
-        JOBS_TABLE,
+      do {
+        const result = await db.query(
+          JOBS_TABLE,
+          indexName,
+          keyCondition,
+          expressionAttributeValues,
+          expressionAttributeNames,
+          pageLimit,
+          lastKey,
+        );
+        collected.push(...result.items);
+        lastKey = result.lastEvaluatedKey;
+      } while (lastKey);
+
+      return collected;
+    };
+
+    if (workflowId) {
+      const keyCondition = status
+        ? "workflow_id = :workflow_id AND #status = :status"
+        : "workflow_id = :workflow_id";
+      const expressionAttributeValues = status
+        ? { ":workflow_id": workflowId, ":status": status }
+        : { ":workflow_id": workflowId };
+      const expressionAttributeNames = status ? { "#status": "status" } : undefined;
+
+      jobs = await queryAll(
         "gsi_workflow_status",
-        "workflow_id = :workflow_id AND #status = :status",
-        { ":workflow_id": workflowId, ":status": status },
-        { "#status": "status" },
-        fetchLimit
+        keyCondition,
+        expressionAttributeValues,
+        expressionAttributeNames,
       );
-      jobs = result.items;
-      totalCount = jobs.length;
-    } else if (workflowId) {
-      const result = await db.query(
-        JOBS_TABLE,
-        "gsi_workflow_status",
-        "workflow_id = :workflow_id",
-        { ":workflow_id": workflowId },
-        undefined,
-        fetchLimit
-      );
-      jobs = result.items;
+      jobs = filterRunJobs(jobs);
       totalCount = jobs.length;
     } else {
       const result = await db.query(
@@ -55,7 +96,7 @@ export class JobService {
         undefined,
         fetchLimit
       );
-      jobs = result.items;
+      jobs = filterRunJobs(result.items || []);
       
       const countResult = await db.query(
         JOBS_TABLE,
@@ -65,8 +106,9 @@ export class JobService {
         undefined,
         1000
       );
-      const countJobs = countResult.items;
+      const countJobs = filterRunJobs(countResult.items || []);
       totalCount = countJobs.length >= 1000 ? 1000 : countJobs.length;
+      lastEvaluatedKey = result.lastEvaluatedKey;
     }
 
     jobs.sort((a: any, b: any) => {
@@ -75,13 +117,21 @@ export class JobService {
       return dateB - dateA;
     });
 
-    const paginatedJobs = jobs.slice(offset, offset + pageSize);
-    const hasMore = jobs.length > offset + pageSize;
+    const paginatedJobs = includeAll
+      ? jobs
+      : jobs.slice(offset, offset + pageSize);
+    const hasMore = includeAll
+      ? false
+      : workflowId
+        ? offset + pageSize < totalCount
+        : Boolean(lastEvaluatedKey);
     
     return {
       jobs: paginatedJobs,
       totalCount,
-      hasMore
+      hasMore,
+      offset,
+      limit: includeAll ? totalCount : pageSize,
     };
   }
 

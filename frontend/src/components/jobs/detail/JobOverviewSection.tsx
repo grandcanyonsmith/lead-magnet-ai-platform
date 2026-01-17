@@ -163,13 +163,23 @@ export function JobOverviewSection({
   return (
     <section className="mb-4 sm:mb-6 space-y-6">
       <div className="space-y-1">
-        <h2 className="text-lg font-semibold text-foreground">Job summary</h2>
+        <h2 className="text-lg font-semibold text-foreground">Overview</h2>
         <p className="text-sm text-muted-foreground">
-          Key metrics and quick actions for this run.
+          Status, outputs, and quick actions for this run.
         </p>
       </div>
 
-      <div className={`grid gap-3 md:grid-cols-2 ${gridColumns}`}>
+      <div className={`grid gap-3 sm:grid-cols-2 ${gridColumns}`}>
+        <StatPill
+          label="Outputs"
+          value={artifactCount}
+          helperText={
+            artifactCount
+              ? "Results ready to review"
+              : "Generated reports will appear here"
+          }
+          icon={<PhotoIcon className="h-4 w-4" />}
+        />
         <StatPill
           label="Step progress"
           value={`${stepsSummary.completed}/${stepsSummary.total || "--"}`}
@@ -198,16 +208,6 @@ export function JobOverviewSection({
           icon={<ClockIcon className="h-4 w-4" />}
         />
         <StatPill
-          label="Outputs"
-          value={artifactCount}
-          helperText={
-            artifactCount
-              ? "Results ready to review"
-              : "Generated reports will appear here"
-          }
-          icon={<PhotoIcon className="h-4 w-4" />}
-        />
-        <StatPill
           label="Workflow"
           value={workflow?.workflow_name || "Workflow template"}
           helperText={
@@ -233,8 +233,13 @@ export function JobOverviewSection({
           description="Jump to details or export results."
           className="lg:col-span-2"
         >
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="outline" onClick={handleViewTimeline}>
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleViewTimeline}
+              className="w-full sm:w-auto"
+            >
               <ArrowTopRightOnSquareIcon className="h-4 w-4" />
               View timeline
             </Button>
@@ -243,6 +248,7 @@ export function JobOverviewSection({
               variant="outline"
               onClick={handleViewArtifacts}
               disabled={artifactCount === 0}
+              className="w-full sm:w-auto"
             >
               <ArrowTopRightOnSquareIcon className="h-4 w-4" />
               View results
@@ -252,7 +258,7 @@ export function JobOverviewSection({
                 href={job.output_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground sm:w-auto"
               >
                 <ArrowDownTrayIcon className="h-4 w-4" />
                 Download output
@@ -261,7 +267,7 @@ export function JobOverviewSection({
             {workflow?.workflow_id && (
               <Link
                 href={`/dashboard/workflows/${workflow.workflow_id}`}
-                className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground sm:w-auto"
               >
                 <ArrowTopRightOnSquareIcon className="h-4 w-4" />
                 View template

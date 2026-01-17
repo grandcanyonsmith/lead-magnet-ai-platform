@@ -532,7 +532,7 @@ export default function PlaygroundPage() {
         </div>
 
         {/* Right Panel: Tabs */}
-        <div className="flex-1 w-full min-h-[260px] bg-background border-t border-border flex flex-col shadow-xl z-20 lg:min-h-0 lg:flex-none lg:w-[450px] lg:border-l lg:border-t-0">
+        <div className="flex-1 w-full min-h-[260px] bg-background border-t border-border flex flex-col shadow-xl z-20 lg:min-h-0 lg:flex-none lg:w-[520px] xl:w-[600px] lg:border-l lg:border-t-0">
             {/* Tab Header */}
             <div className="flex border-b border-border bg-muted/5">
                 <button 

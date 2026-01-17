@@ -13,15 +13,22 @@ interface ComputerUseConfigProps {
     value: number | string
   ) => void;
   index: number;
+  variant?: "panel" | "inline";
 }
 
 export default function ComputerUseConfig({
   config,
   onChange,
   index,
+  variant = "panel",
 }: ComputerUseConfigProps) {
+  const containerClass =
+    variant === "inline"
+      ? "mt-3 rounded-lg border border-border/60 bg-muted/30 p-3"
+      : "mt-4 p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg";
+
   return (
-    <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
+    <div className={containerClass}>
       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
         Computer Use Preview Configuration
       </label>

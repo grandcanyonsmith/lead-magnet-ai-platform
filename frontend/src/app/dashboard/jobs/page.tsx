@@ -32,12 +32,35 @@ import type { Workflow } from "@/types/workflow";
 import toast from "react-hot-toast";
 import clsx from "clsx";
 
+const TEST_WORKFLOW_REGEX = /(^|[\s-_])test([\s-_]|$)/i;
+
+const isTestWorkflow = (workflow: Workflow) => {
+  const flagged = Boolean((workflow as { is_test?: boolean }).is_test);
+  const name = workflow.workflow_name || "";
+  const id = workflow.workflow_id || "";
+  return flagged || TEST_WORKFLOW_REGEX.test(name) || TEST_WORKFLOW_REGEX.test(id);
+};
+
+const isTestJob = (
+  job: Job,
+  workflowMap: Record<string, string>,
+  testWorkflowIds: Set<string>,
+) => {
+  if (testWorkflowIds.has(job.workflow_id)) return true;
+  const workflowName = workflowMap[job.workflow_id] || "";
+  return (
+    TEST_WORKFLOW_REGEX.test(workflowName) ||
+    TEST_WORKFLOW_REGEX.test(job.workflow_id)
+  );
+};
+
 function JobsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [workflowMap, setWorkflowMap] = useState<Record<string, string>>({});
+  const [testWorkflowIds, setTestWorkflowIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -49,7 +72,11 @@ function JobsContent() {
   const prevFiltersRef = useRef({ statusFilter: "all", workflowFilter: "all" });
   const currentPageRef = useRef(currentPage);
 
-  const filters = useJobFilters(jobs, workflowMap);
+  const visibleJobs = useMemo(
+    () => jobs.filter((job) => !isTestJob(job, workflowMap, testWorkflowIds)),
+    [jobs, workflowMap, testWorkflowIds],
+  );
+  const filters = useJobFilters(visibleJobs, workflowMap);
   const {
     statusFilter,
     workflowFilter,
@@ -73,7 +100,7 @@ function JobsContent() {
   );
 
   const statusCounts = useMemo(() => {
-    return jobs.reduce(
+    return visibleJobs.reduce(
       (acc, job) => {
         if (job.status in acc) {
           acc[job.status as keyof typeof acc] += 1;
@@ -82,7 +109,7 @@ function JobsContent() {
       },
       { pending: 0, processing: 0, completed: 0, failed: 0 },
     );
-  }, [jobs]);
+  }, [visibleJobs]);
 
   const statusFilterOptions = useMemo(
     () => [
@@ -118,12 +145,22 @@ function JobsContent() {
     const loadWorkflows = async () => {
       try {
         const data = await api.getWorkflows();
-        setWorkflows(data.workflows || []);
         const map: Record<string, string> = {};
+        const testIds = new Set<string>();
+        const visibleWorkflows: Workflow[] = [];
+
         data.workflows?.forEach((wf: Workflow) => {
           map[wf.workflow_id] = wf.workflow_name || wf.workflow_id;
+          if (isTestWorkflow(wf)) {
+            testIds.add(wf.workflow_id);
+            return;
+          }
+          visibleWorkflows.push(wf);
         });
+
+        setWorkflows(visibleWorkflows);
         setWorkflowMap(map);
+        setTestWorkflowIds(testIds);
       } catch (error) {
         if (process.env.NODE_ENV === "development") {
           console.error("Failed to load workflows:", error);
@@ -212,7 +249,7 @@ function JobsContent() {
 
   // Poll for updates when there are processing jobs
   useEffect(() => {
-    const hasProcessingJobs = jobs.some(
+    const hasProcessingJobs = visibleJobs.some(
       (job) => job.status === "processing" || job.status === "pending",
     );
     if (!hasProcessingJobs) {
@@ -228,9 +265,9 @@ function JobsContent() {
     return () => {
       clearInterval(interval);
     };
-  }, [jobs]);
+  }, [visibleJobs]);
 
-  const hasProcessingJobs = jobs.some(
+  const hasProcessingJobs = visibleJobs.some(
     (job) => job.status === "processing" || job.status === "pending",
   );
 
