@@ -428,30 +428,33 @@ export default function WorkflowStepEditor({
     }
   }, [step, onChange, index]);
 
+  const outputFormatType = localStep.output_format?.type;
+  const outputFormatSchema =
+    outputFormatType === "json_schema" &&
+    localStep.output_format &&
+    "schema" in localStep.output_format
+      ? localStep.output_format.schema
+      : undefined;
+
   // Keep the JSON Schema editor text in sync when the underlying schema changes.
   // We only update the actual schema in `localStep` when JSON parses successfully,
   // so this won't overwrite user typing for invalid JSON.
   useEffect(() => {
-    if (localStep.output_format?.type === "json_schema") {
-      const schemaObj = localStep.output_format.schema || {};
+    if (outputFormatType === "json_schema") {
+      const schemaObj = outputFormatSchema || {};
       setOutputSchemaJson(JSON.stringify(schemaObj, null, 2));
       setOutputSchemaError(null);
     } else {
       setOutputSchemaJson("");
       setOutputSchemaError(null);
     }
-  }, [
-    localStep.output_format?.type,
-    localStep.output_format?.type === "json_schema"
-      ? localStep.output_format.schema
-      : undefined,
-  ]);
+  }, [outputFormatType, outputFormatSchema]);
 
   useEffect(() => {
-    if (localStep.output_format?.type !== "json_schema") {
+    if (outputFormatType !== "json_schema") {
       setIsOutputSchemaCollapsed(true);
     }
-  }, [localStep.output_format?.type]);
+  }, [outputFormatType]);
 
   // Ensure image generation config is initialized when tool is selected
   // Using functional setState form to avoid needing imageGenerationConfig in dependencies
