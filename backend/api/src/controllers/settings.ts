@@ -18,7 +18,17 @@ const API_URL = env.apiUrl || env.apiGatewayUrl;
 class SettingsController {
   private normalizeOrigin(value: unknown): string {
     const raw = (value == null ? "" : String(value)).trim();
-    return raw.replace(/\/+$/g, "");
+    if (!raw) return "";
+    const cleaned = raw.replace(/\/+$/g, "");
+    try {
+      return new URL(cleaned).origin.toLowerCase();
+    } catch {
+      try {
+        return new URL(`https://${cleaned}`).origin.toLowerCase();
+      } catch {
+        return cleaned.toLowerCase();
+      }
+    }
   }
 
   private async assertCustomDomainAvailable(

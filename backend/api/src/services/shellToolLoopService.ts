@@ -182,6 +182,7 @@ export async function runShellToolLoop(
     response = await callResponsesWithTimeout(
       () =>
         openai.responses.create({
+          model: model, // Model is required even for follow-up calls
           previous_response_id: (response as any).id,
           input: toolOutputs,
         } as any),

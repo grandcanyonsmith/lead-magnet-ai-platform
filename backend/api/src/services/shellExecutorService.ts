@@ -1,4 +1,5 @@
 import { ECSClient, RunTaskCommand, DescribeTasksCommand } from "@aws-sdk/client-ecs";
+import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
 import {
   DeleteObjectCommand,
   GetObjectCommand,
@@ -19,6 +20,7 @@ import {
 } from "./shellExecutorContract";
 
 const ecsClient = new ECSClient({ region: env.awsRegion });
+const lambdaClient = new LambdaClient({ region: env.awsRegion });
 const s3Client = new S3Client({ region: env.awsRegion });
 
 async function readBodyAsString(body: any): Promise<string> {
@@ -54,7 +56,20 @@ export type RunShellExecutorJobArgs = {
 };
 
 class ShellExecutorService {
+  private useLambda(): boolean {
+    // Prefer Lambda if function name is configured (newer implementation)
+    return !!env.shellExecutorFunctionName;
+  }
+
   private validateConfig() {
+    if (this.useLambda()) {
+      if (!env.shellExecutorFunctionName) {
+        throw new ApiError("Shell executor function name is not configured", 500);
+      }
+      return; // Lambda doesn't need ECS/S3 config
+    }
+    
+    // ECS Fargate configuration (legacy)
     if (!env.shellExecutorResultsBucket) {
       throw new ApiError("Shell executor results bucket is not configured", 500);
     }
@@ -141,29 +156,36 @@ class ShellExecutorService {
     return jobRequestGetUrl;
   }
 
-  private async launchTask(jobId: string, jobRequestGetUrl: string): Promise<string> {
+  private async launchTask(jobId: string, jobRequestGetUrl: string, jobRequestJson?: string): Promise<string> {
     const getUrlSize = jobRequestGetUrl.length;
     logger.info("[ShellExecutor] Launching task", {
       jobId,
       clusterArn: env.shellExecutorClusterArn,
       jobRequestGetUrlSize: getUrlSize,
+      usingDirectJson: !!jobRequestJson,
     });
+
+    // Build environment variables - try direct JSON first if small enough, otherwise use URL
+    const envVars: Array<{ name: string; value: string }> = [];
+    
+    if (jobRequestJson && jobRequestJson.length < 8000) {
+      // Pass job data directly as JSON (container expects SHELL_EXECUTOR_JOB_JSON)
+      envVars.push({ name: "SHELL_EXECUTOR_JOB_JSON", value: jobRequestJson });
+    } else {
+      // Fall back to URL if JSON is too large
+      envVars.push({ name: "SHELL_EXECUTOR_JOB_GET_URL", value: jobRequestGetUrl });
+    }
 
     const runResp = await ecsClient.send(
       new RunTaskCommand({
         cluster: env.shellExecutorClusterArn,
         taskDefinition: env.shellExecutorTaskDefinitionArn,
-        // Use Fargate Spot for cost savings
-        capacityProviderStrategy: [
-          {
-            capacityProvider: "FARGATE_SPOT",
-            weight: 1,
-          },
-        ],
+        // Use Fargate launch type (capacity provider strategy requires association with cluster)
+        launchType: "FARGATE",
         platformVersion: "LATEST",
         networkConfiguration: {
           awsvpcConfiguration: {
-            assignPublicIp: "DISABLED",
+            assignPublicIp: "ENABLED", // Enable public IP for internet access to pull images and access S3
             subnets: env.shellExecutorSubnetIds,
             securityGroups: [env.shellExecutorSecurityGroupId!],
           },
@@ -172,9 +194,7 @@ class ShellExecutorService {
           containerOverrides: [
             {
               name: "runner",
-              environment: [
-                { name: "SHELL_EXECUTOR_JOB_GET_URL", value: jobRequestGetUrl },
-              ],
+              environment: envVars,
             },
           ],
         },
@@ -315,14 +335,99 @@ class ShellExecutorService {
   }
 
   /**
-   * Launches an ECS Fargate task to execute shell commands, then polls S3 for the
-   * result JSON uploaded via presigned PUT URL.
+   * Executes shell commands via Lambda (preferred) or ECS Fargate (legacy).
    */
   public async runShellExecutorJob(
     args: RunShellExecutorJobArgs,
   ): Promise<ShellExecutorJobResult> {
     this.validateConfig();
 
+    // Use Lambda if available (newer, more reliable)
+    if (this.useLambda()) {
+      return await this.runShellExecutorJobLambda(args);
+    }
+
+    // Fall back to ECS Fargate (legacy)
+    return await this.runShellExecutorJobECS(args);
+  }
+
+  /**
+   * Execute shell commands via Lambda function (preferred method).
+   */
+  private async runShellExecutorJobLambda(
+    args: RunShellExecutorJobArgs,
+  ): Promise<ShellExecutorJobResult> {
+    const functionName = env.shellExecutorFunctionName!.replace(/:$LATEST$/, "");
+    
+    // Lambda expects: { commands, workspace_id, reset_workspace, timeout_ms, max_output_length, env }
+    const lambdaPayload = {
+      commands: args.commands,
+      workspace_id: args.workspaceId,
+      reset_workspace: args.resetWorkspace,
+      timeout_ms: args.timeoutMs || 120000,
+      max_output_length: args.maxOutputLength || 4096,
+      env: {},
+    };
+
+    logger.info("[ShellExecutor] Invoking Lambda function", {
+      functionName,
+      commandsCount: args.commands.length,
+    });
+
+    const response = await lambdaClient.send(
+      new InvokeCommand({
+        FunctionName: functionName,
+        Payload: JSON.stringify(lambdaPayload),
+      })
+    );
+
+    if (response.FunctionError) {
+      const errorPayload = response.Payload
+        ? JSON.parse(Buffer.from(response.Payload).toString("utf-8"))
+        : {};
+      throw new ApiError(
+        `Lambda execution failed: ${errorPayload.errorMessage || response.FunctionError}`,
+        500
+      );
+    }
+
+    const responsePayload = response.Payload
+      ? JSON.parse(Buffer.from(response.Payload).toString("utf-8"))
+      : {};
+
+    if (responsePayload.statusCode !== 200) {
+      throw new ApiError(
+        `Shell executor failed: ${responsePayload.error || "Unknown error"}`,
+        500
+      );
+    }
+
+    // Map Lambda response to ShellExecutorJobResult format
+    const results = responsePayload.results || [];
+    const output = results.map((res: any) => ({
+      stdout: res.stdout || "",
+      stderr: res.stderr || "",
+      outcome: {
+        type: res.status === "timeout" ? "timeout" : "exit",
+        exit_code: res.exit_code || (res.status === "timeout" ? undefined : 0),
+      },
+    }));
+
+    return {
+      version: SHELL_EXECUTOR_CONTRACT_VERSION,
+      job_id: ulid(),
+      commands: args.commands,
+      max_output_length: args.maxOutputLength,
+      output,
+    };
+  }
+
+  /**
+   * Execute shell commands via ECS Fargate (legacy method).
+   */
+  private async runShellExecutorJobECS(
+    args: RunShellExecutorJobArgs,
+  ): Promise<ShellExecutorJobResult> {
     const jobId = ulid();
     const resultKey = `shell-results/${jobId}.json`;
     const jobRequestKey = `shell-jobs/${jobId}.json`;
@@ -351,7 +456,10 @@ class ShellExecutorService {
       args.commands.length
     );
 
-    const taskArn = await this.launchTask(jobId, jobRequestGetUrl);
+    // Pass job request JSON directly for containers that expect SHELL_EXECUTOR_JOB_JSON
+    const jobRequestJson = JSON.stringify(jobRequest);
+
+    const taskArn = await this.launchTask(jobId, jobRequestGetUrl, jobRequestJson);
 
     return await this.pollForResult(
       bucket,
