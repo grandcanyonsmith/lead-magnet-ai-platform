@@ -12,6 +12,7 @@ export interface ParsedWorkflowConfig {
 interface WorkflowDefaults {
   defaultToolChoice?: ToolChoice;
   defaultServiceTier?: string;
+  defaultTextVerbosity?: string;
 }
 
 interface RawStep {
@@ -40,6 +41,7 @@ interface RawWorkflowData {
 
 const DEFAULT_TOOL_CHOICE: ToolChoice = 'required';
 const VALID_SERVICE_TIERS = new Set(['auto', 'default', 'flex', 'scale', 'priority']);
+const VALID_TEXT_VERBOSITIES = new Set(['low', 'medium', 'high']);
 
 function resolveDefaultToolChoice(defaultToolChoice?: ToolChoice): ToolChoice {
   return defaultToolChoice === 'auto' || defaultToolChoice === 'required' || defaultToolChoice === 'none'
@@ -56,6 +58,15 @@ function resolveDefaultServiceTier(
   return defaultServiceTier === "auto"
     ? undefined
     : (defaultServiceTier as WorkflowStep["service_tier"]);
+}
+
+function resolveDefaultTextVerbosity(
+  defaultTextVerbosity?: string,
+): WorkflowStep["text_verbosity"] | undefined {
+  if (!defaultTextVerbosity || !VALID_TEXT_VERBOSITIES.has(defaultTextVerbosity)) {
+    return undefined;
+  }
+  return defaultTextVerbosity as WorkflowStep["text_verbosity"];
 }
 
 export function parseWorkflowConfig(
@@ -106,6 +117,7 @@ export function parseWorkflowConfig(
 function getDefaultConfig(description: string, defaults?: WorkflowDefaults): ParsedWorkflowConfig {
   const resolvedDefaultToolChoice = resolveDefaultToolChoice(defaults?.defaultToolChoice);
   const resolvedDefaultServiceTier = resolveDefaultServiceTier(defaults?.defaultServiceTier);
+  const resolvedDefaultTextVerbosity = resolveDefaultTextVerbosity(defaults?.defaultTextVerbosity);
 
   return {
     workflow_name: 'Generated Lead Magnet',
@@ -121,6 +133,7 @@ function getDefaultConfig(description: string, defaults?: WorkflowDefaults): Par
         tools: ['web_search'],
         tool_choice: resolvedDefaultToolChoice,
         service_tier: resolvedDefaultServiceTier,
+        text_verbosity: resolvedDefaultTextVerbosity,
       },
       {
         step_name: 'HTML Rewrite',
@@ -132,6 +145,7 @@ function getDefaultConfig(description: string, defaults?: WorkflowDefaults): Par
         tools: [],
         tool_choice: 'none',
         service_tier: resolvedDefaultServiceTier,
+        text_verbosity: resolvedDefaultTextVerbosity,
       },
     ],
   };
@@ -154,11 +168,12 @@ function normalizeStep(step: RawStep, index: number, defaults?: WorkflowDefaults
       : undefined;
   const service_tier = normalizedServiceTier ?? resolvedDefaultServiceTier;
 
+  const resolvedDefaultTextVerbosity = resolveDefaultTextVerbosity(defaults?.defaultTextVerbosity);
   const text_verbosity =
     isString(step.text_verbosity) &&
     ['low', 'medium', 'high'].includes(step.text_verbosity)
       ? (step.text_verbosity as any)
-      : undefined;
+      : resolvedDefaultTextVerbosity;
 
   const max_output_tokens =
     typeof step.max_output_tokens === 'number' &&
@@ -241,6 +256,7 @@ function ensureStepDefaultsWithOptions(
 ): WorkflowStep[] {
   const resolvedDefaultToolChoice = resolveDefaultToolChoice(defaults?.defaultToolChoice);
   const resolvedDefaultServiceTier = resolveDefaultServiceTier(defaults?.defaultServiceTier);
+  const resolvedDefaultTextVerbosity = resolveDefaultTextVerbosity(defaults?.defaultTextVerbosity);
 
   return steps.map((step: Partial<WorkflowStep>, index: number) => {
     const stepOrder = step.step_order !== undefined ? step.step_order : index;
@@ -304,6 +320,10 @@ function ensureStepDefaultsWithOptions(
       step.service_tier && VALID_SERVICE_TIERS.has(String(step.service_tier))
         ? (step.service_tier as WorkflowStep["service_tier"])
         : undefined;
+    const normalizedTextVerbosity =
+      isString(step.text_verbosity) && VALID_TEXT_VERBOSITIES.has(step.text_verbosity)
+        ? (step.text_verbosity as WorkflowStep["text_verbosity"])
+        : undefined;
 
     return {
       ...step,
@@ -314,6 +334,7 @@ function ensureStepDefaultsWithOptions(
       tools: resolvedTools,
       tool_choice: (validToolChoice || (hasTools ? resolvedDefaultToolChoice : 'none')) as ToolChoice,
       service_tier: normalizedServiceTier ?? resolvedDefaultServiceTier,
+      text_verbosity: normalizedTextVerbosity ?? resolvedDefaultTextVerbosity,
       model,
       instructions: step.instructions || '',
     } as WorkflowStep;

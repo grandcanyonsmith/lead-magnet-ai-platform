@@ -53,6 +53,25 @@ async function loadDefaultServiceTier(
   }
 }
 
+async function loadDefaultTextVerbosity(
+  tenantId: string,
+): Promise<string | undefined> {
+  if (!USER_SETTINGS_TABLE) return undefined;
+  try {
+    const settings = await db.get(USER_SETTINGS_TABLE, { tenant_id: tenantId });
+    const verbosity = settings?.default_text_verbosity;
+    return verbosity && ['low', 'medium', 'high'].includes(verbosity)
+      ? verbosity
+      : undefined;
+  } catch (error: any) {
+    logger.warn('[WorkflowCrudService] Failed to load default text verbosity', {
+      tenantId,
+      error: error?.message || String(error),
+    });
+    return undefined;
+  }
+}
+
 export class WorkflowCrudService {
   async listWorkflows(tenantId: string, queryParams: Record<string, any>): Promise<{ workflows: any[], count: number }> {
     if (!WORKFLOWS_TABLE) {
@@ -225,15 +244,18 @@ export class WorkflowCrudService {
     }
 
     // Ensure step_order is set for each step and add defaults for tools/tool_choice/step_description
-    const [defaultToolChoice, defaultServiceTier] = await Promise.all([
-      loadDefaultToolChoice(tenantId),
-      loadDefaultServiceTier(tenantId),
-    ]);
+    const [defaultToolChoice, defaultServiceTier, defaultTextVerbosity] =
+      await Promise.all([
+        loadDefaultToolChoice(tenantId),
+        loadDefaultServiceTier(tenantId),
+        loadDefaultTextVerbosity(tenantId),
+      ]);
     const workflowData = {
       ...data,
       steps: ensureStepDefaults(data.steps as any[], {
         defaultToolChoice,
         defaultServiceTier,
+        defaultTextVerbosity,
       }) as WorkflowStep[]
     };
 
@@ -369,13 +391,16 @@ export class WorkflowCrudService {
     
     // If steps are being updated, ensure they have proper defaults
     if (hasStepsInUpdate) {
-      const [defaultToolChoice, defaultServiceTier] = await Promise.all([
-        loadDefaultToolChoice(tenantId),
-        loadDefaultServiceTier(tenantId),
-      ]);
+      const [defaultToolChoice, defaultServiceTier, defaultTextVerbosity] =
+        await Promise.all([
+          loadDefaultToolChoice(tenantId),
+          loadDefaultServiceTier(tenantId),
+          loadDefaultTextVerbosity(tenantId),
+        ]);
       updateData.steps = ensureStepDefaults(data.steps, {
         defaultToolChoice,
         defaultServiceTier,
+        defaultTextVerbosity,
       });
       logger.info('[Workflows Update] After ensureStepDefaults', {
         workflowId,

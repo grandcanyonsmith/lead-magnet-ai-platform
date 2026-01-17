@@ -615,6 +615,11 @@ export class WorkflowAIController {
         )
           ? settings.default_service_tier
           : undefined;
+      const defaultTextVerbosity =
+        settings?.default_text_verbosity &&
+        ["low", "medium", "high"].includes(settings.default_text_verbosity)
+          ? settings.default_text_verbosity
+          : undefined;
 
       // Get OpenAI client
       const openai = await getOpenAIClient();
@@ -626,6 +631,7 @@ export class WorkflowAIController {
         action: body.action,
         defaultToolChoice,
         defaultServiceTier,
+        defaultTextVerbosity,
         workflowContext: {
           workflow_id: workflowId,
           workflow_name: workflow.workflow_name || 'Untitled Workflow',

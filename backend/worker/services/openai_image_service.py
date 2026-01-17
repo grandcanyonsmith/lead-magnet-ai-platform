@@ -1,6 +1,47 @@
 """OpenAI Images API helper functions."""
 
-from typing import Any, Dict, Optional
+import inspect
+import logging
+import re
+from typing import Any, Dict, Optional, Tuple, List
+
+logger = logging.getLogger(__name__)
+
+
+def _filter_generate_params(client: Any, params: Dict[str, Any]) -> Tuple[Dict[str, Any], List[str]]:
+    """
+    Remove params not supported by client.images.generate if the signature is strict.
+    Returns (filtered_params, dropped_param_names).
+    """
+    try:
+        sig = inspect.signature(client.images.generate)
+    except Exception:
+        return params, []
+
+    if any(p.kind == p.VAR_KEYWORD for p in sig.parameters.values()):
+        return params, []
+
+    allowed = set(sig.parameters.keys())
+    dropped = [key for key in params.keys() if key not in allowed]
+    if not dropped:
+        return params, []
+    filtered = {key: value for key, value in params.items() if key in allowed}
+    return filtered, dropped
+
+
+def _remove_unexpected_param(params: Dict[str, Any], error_message: str) -> bool:
+    match = re.search(r"unexpected keyword argument '([^']+)'", error_message)
+    if not match:
+        return False
+    bad_param = match.group(1)
+    if bad_param not in params:
+        return False
+    params.pop(bad_param, None)
+    logger.warning(
+        "[OpenAI Images] Removed unsupported param after TypeError",
+        extra={"param": bad_param},
+    )
+    return True
 
 
 def generate_images(
@@ -53,12 +94,33 @@ def generate_images(
     if user is not None:
         params["user"] = user
 
+    params, dropped = _filter_generate_params(client, params)
+    if dropped:
+        logger.info(
+            "[OpenAI Images] Dropped unsupported images.generate params",
+            extra={"dropped_params": dropped, "model": model},
+        )
+
     try:
         return client.images.generate(**params)
+    except TypeError as e:
+        msg = str(e)
+        if _remove_unexpected_param(params, msg):
+            return client.images.generate(**params)
+        raise
     except Exception as e:
         # Defensive fallback for real-world OpenAI param differences.
         msg = str(e)
         if "Unknown parameter: 'response_format'" in msg and "response_format" in params:
             params.pop("response_format", None)
             return client.images.generate(**params)
+        logger.error(
+            "[OpenAI Images] Images API call failed",
+            extra={
+                "model": model,
+                "params_keys": list(params.keys()),
+                "prompt_length": len(prompt) if isinstance(prompt, str) else None,
+                "error": msg,
+            },
+        )
         raise
