@@ -1,22 +1,16 @@
 "use client";
 
 import { Fragment, useMemo } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
-  ArrowLeftIcon,
   ArrowPathIcon,
-  ArrowTopRightOnSquareIcon,
   ArrowUturnLeftIcon,
-  ClipboardDocumentIcon,
   PencilSquareIcon,
   EllipsisVerticalIcon,
 } from "@heroicons/react/24/outline";
 import { Menu, Transition } from "@headlessui/react";
-import { toast } from "react-hot-toast";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { StatusBadge } from "@/components/ui/StatusBadge";
 import { formatRelativeTime } from "@/utils/date";
+import type { Status } from "@/types/common";
 import type { Job } from "@/types/job";
 import type { Workflow } from "@/types/workflow";
 import type { FormSubmission } from "@/types/form";
@@ -39,6 +33,20 @@ interface LeadHighlight {
   value: string;
 }
 
+const STATUS_DOT_CLASS: Record<Status, string> = {
+  pending: "bg-gray-400",
+  processing: "bg-blue-500",
+  completed: "bg-green-500",
+  failed: "bg-red-500",
+};
+
+const STATUS_LABELS: Record<Status, string> = {
+  pending: "Pending",
+  processing: "Processing",
+  completed: "Completed",
+  failed: "Failed",
+};
+
 export function JobHeader({
   error,
   resubmitting,
@@ -51,10 +59,7 @@ export function JobHeader({
   refreshing,
   onRefresh,
 }: JobHeaderProps) {
-  const router = useRouter();
-  const isAutoUpdating = job?.status === "processing";
-
-  const { leadName, leadHighlights } = useMemo(
+  const { leadName } = useMemo(
     () => buildLeadHighlights(submission?.form_data),
     [submission?.form_data],
   );
@@ -77,21 +82,32 @@ export function JobHeader({
     .filter(Boolean)
     .join(" · ") || "Generated lead report and execution details.";
 
+  const statusLabel = job?.status ? STATUS_LABELS[job.status] : null;
+  const statusDotClass = job?.status ? STATUS_DOT_CLASS[job.status] : null;
+  const headingMaxLength = 60;
+  const truncatedHeading = truncateValue(heading, headingMaxLength);
+  const headingContent = (
+    <span className="flex items-center gap-2 min-w-0">
+      {statusDotClass && statusLabel && (
+        <span
+          className={`h-2.5 w-2.5 rounded-full ${statusDotClass}`}
+          role="img"
+          aria-label={`Status: ${statusLabel}`}
+          title={statusLabel}
+        />
+      )}
+      <span className="min-w-0 truncate" title={heading}>
+        {truncatedHeading}
+      </span>
+    </span>
+  );
+
   const timelineLabel = [
     updatedLabel ? `Updated ${updatedLabel}` : null,
     lastRefreshedLabel ? `Viewed ${lastRefreshedLabel}` : null,
   ]
     .filter(Boolean)
     .join(" · ");
-
-  const handleCopy = async (value: string, successMessage: string) => {
-    try {
-      await navigator.clipboard.writeText(value);
-      toast.success(successMessage);
-    } catch {
-      toast.error("Unable to copy");
-    }
-  };
 
   const getMenuItemClass = (active: boolean, disabled?: boolean) => {
     const base =
@@ -108,14 +124,6 @@ export function JobHeader({
 
   return (
     <div className="mb-8 space-y-4">
-      <button
-        onClick={() => router.back()}
-        className="group inline-flex items-center gap-2 rounded-lg px-2 py-2 text-sm font-medium text-gray-500 dark:text-muted-foreground hover:text-gray-900 dark:hover:text-foreground hover:bg-gray-50 dark:hover:bg-secondary transition-colors touch-target min-h-[44px] sm:min-h-0"
-      >
-        <ArrowLeftIcon className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-        Back to Leads & Results
-      </button>
-
       {error && (
         <div className="rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-900/20 px-4 py-3 text-red-700 dark:text-red-200 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
@@ -141,77 +149,15 @@ export function JobHeader({
       )}
 
       <PageHeader
-        heading={heading}
+        heading={headingContent}
         description={description}
         className="mb-0 pb-4"
         bottomContent={
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              {job?.status && (
-                <StatusBadge
-                  status={job.status}
-                  className="px-3 py-1 text-xs"
-                />
-              )}
-              {isAutoUpdating && (
-                <span className="inline-flex items-center rounded-full bg-primary-50 dark:bg-primary-900/20 px-3 py-1 text-xs font-semibold text-primary-700 dark:text-primary-300">
-                  Live updating
-                </span>
-              )}
-              {job?.job_id && (
-                <MetaPill
-                  label="Job ID"
-                  value={job.job_id}
-                  onCopy={() =>
-                    handleCopy(job.job_id, "Job ID copied to clipboard")
-                  }
-                  copyLabel="Copy job ID"
-                />
-              )}
-              {workflow?.workflow_id && (
-                <MetaPill
-                  label="Workflow"
-                  value={workflow.workflow_name || workflow.workflow_id}
-                  href={`/dashboard/workflows/${workflow.workflow_id}`}
-                />
-              )}
-              {submission?.submission_id && (
-                <MetaPill
-                  label="Submission"
-                  value={submission.submission_id}
-                  onCopy={() =>
-                    handleCopy(
-                      submission.submission_id,
-                      "Submission ID copied to clipboard",
-                    )
-                  }
-                  copyLabel="Copy submission ID"
-                />
-              )}
-            </div>
-            {leadHighlights.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {leadHighlights.map((item) => (
-                  <div
-                    key={`${item.label}-${item.value}`}
-                    className="inline-flex items-center gap-2 rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 px-3 py-1 text-xs text-gray-600 dark:text-gray-300"
-                  >
-                    <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                      {item.label}
-                    </span>
-                    <span className="font-medium text-gray-900 dark:text-gray-100 truncate max-w-[220px]">
-                      {item.value}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-            {timelineLabel && (
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                {timelineLabel}
-              </p>
-            )}
-          </div>
+          timelineLabel ? (
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {timelineLabel}
+            </p>
+          ) : null
         }
       >
         {hasActions && (
@@ -287,51 +233,6 @@ export function JobHeader({
           </Menu>
         )}
       </PageHeader>
-    </div>
-  );
-}
-
-interface MetaPillProps {
-  label: string;
-  value: string;
-  href?: string;
-  onCopy?: () => void;
-  copyLabel?: string;
-}
-
-function MetaPill({ label, value, href, onCopy, copyLabel }: MetaPillProps) {
-  const content = href ? (
-    <Link
-      href={href}
-      className="inline-flex items-center gap-1 text-gray-900 dark:text-gray-100 hover:text-primary-600 dark:hover:text-primary-300 transition-colors"
-    >
-      <span className="truncate max-w-[180px]" title={value}>
-        {value}
-      </span>
-      <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" />
-    </Link>
-  ) : (
-    <span className="truncate max-w-[180px]" title={value}>
-      {value}
-    </span>
-  );
-
-  return (
-    <div className="inline-flex items-center gap-2 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900/40 px-3 py-1 text-xs text-gray-600 dark:text-gray-300">
-      <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-        {label}
-      </span>
-      {content}
-      {onCopy && (
-        <button
-          type="button"
-          onClick={onCopy}
-          aria-label={copyLabel || `Copy ${label}`}
-          className="inline-flex items-center justify-center rounded-full p-1 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-200 transition-colors"
-        >
-          <ClipboardDocumentIcon className="h-3.5 w-3.5" />
-        </button>
-      )}
     </div>
   );
 }

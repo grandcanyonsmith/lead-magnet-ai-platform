@@ -483,27 +483,10 @@ export default function StepDetailClient() {
                 status={stepStatus}
                 className="px-3 py-1 text-xs"
               />
-              <span className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900/40 px-3 py-1 text-xs text-gray-600 dark:text-gray-300">
-                {step.step_type.replace(/_/g, " ")}
-              </span>
               {step.model && (
                 <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800/40 bg-purple-50/60 dark:bg-purple-900/20 px-3 py-1 text-xs text-purple-700 dark:text-purple-300">
                   {step.model}
                 </span>
-              )}
-              {step.step_order !== undefined && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleCopy(
-                      String(step.step_order),
-                      "Step number copied",
-                    )
-                  }
-                  className="inline-flex items-center gap-2 rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 px-3 py-1 text-xs text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
-                >
-                  Step #{step.step_order}
-                </button>
               )}
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400">
