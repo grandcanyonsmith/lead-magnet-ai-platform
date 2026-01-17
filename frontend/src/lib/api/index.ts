@@ -78,6 +78,14 @@ class ApiClientImpl extends BaseApiClient implements ApiClient {
     return super.put<T>(url, data, config);
   }
 
+  async patch<T>(
+    url: string,
+    data?: unknown,
+    config?: AxiosRequestConfig,
+  ): Promise<T> {
+    return super.patch<T>(url, data, config);
+  }
+
   async delete<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
     return super.delete<T>(url, config);
   }
