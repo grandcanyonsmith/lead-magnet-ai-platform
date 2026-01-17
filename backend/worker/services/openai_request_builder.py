@@ -22,6 +22,16 @@ class OpenAIRequestBuilder:
         "Do NOT pause waiting for responses. "
         "If information is missing or ambiguous, make reasonable assumptions and proceed.\n\n"
     )
+
+    @staticmethod
+    def _model_supports_reasoning(model: str) -> bool:
+        """Return True if the model supports the reasoning parameter."""
+        if not isinstance(model, str):
+            return False
+        normalized = model.strip().lower()
+        if normalized.startswith("gpt-5"):
+            return True
+        return normalized.startswith(("o1", "o3", "o4", "o5"))
     
     @staticmethod
     def build_input_text(context: str, previous_context: str = "") -> str:
@@ -245,17 +255,25 @@ class OpenAIRequestBuilder:
                 },
             )
 
-        # Reasoning + speed controls (Responses API) 
+        # Reasoning + speed controls (Responses API)
         # Map deprecated reasoning_level to reasoning_effort if provided
         if reasoning_level and not reasoning_effort:
             reasoning_effort = reasoning_level
 
+        supports_reasoning = OpenAIRequestBuilder._model_supports_reasoning(model)
+
         # Default to "high" reasoning for GPT-5 family unless explicitly overridden
-        if reasoning_effort is None and isinstance(model, str) and model.startswith('gpt-5'):
+        if reasoning_effort is None and supports_reasoning and isinstance(model, str) and model.startswith('gpt-5'):
             reasoning_effort = 'high'
 
         if reasoning_effort:
-            params["reasoning"] = {"effort": reasoning_effort}
+            if supports_reasoning:
+                params["reasoning"] = {"effort": reasoning_effort}
+            else:
+                logger.info(
+                    "[OpenAI Request Builder] Skipping reasoning effort for unsupported model",
+                    extra={"model": model, "reasoning_effort": reasoning_effort},
+                )
 
         # Prefer the priority tier for fastest responses on supported models (best-effort; we retry without if unsupported)
         if service_tier is None and isinstance(model, str) and model.startswith('gpt-5'):

@@ -9,6 +9,7 @@ import {
   DisclosurePanel,
 } from "@headlessui/react";
 import { MergedStep } from "@/types/job";
+import type { FormSubmission } from "@/types/form";
 import { StepHeader } from "./StepHeader";
 import { StepInputOutput } from "./StepInputOutput";
 import { StepProgressBar } from "./StepProgressBar";
@@ -16,6 +17,7 @@ import { ImagePreview } from "./ImagePreview";
 import { getStepStatus } from "./utils";
 import { Artifact } from "@/types/artifact";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
+import { SubmissionSummary } from "@/components/jobs/detail/SubmissionSummary";
 import type { JobLiveStep } from "@/types/job";
 
 interface ExecutionStepsProps {
@@ -36,6 +38,9 @@ interface ExecutionStepsProps {
   imageArtifactsByStep?: Map<number, Artifact[]>;
   loadingImageArtifacts?: boolean;
   onRerunStepClick?: (stepIndex: number) => void;
+  submission?: FormSubmission | null;
+  onResubmit?: () => void;
+  resubmitting?: boolean;
 }
 
 export function ExecutionSteps({
@@ -56,6 +61,9 @@ export function ExecutionSteps({
   imageArtifactsByStep = new Map(),
   loadingImageArtifacts = false,
   onRerunStepClick,
+  submission,
+  onResubmit,
+  resubmitting,
 }: ExecutionStepsProps) {
   // Sort steps by step_order once (must be before early return)
   const sortedSteps = useMemo(() => {
@@ -69,6 +77,11 @@ export function ExecutionSteps({
     () => sortedSteps.filter((step) => step.step_type !== "form_submission"),
     [sortedSteps],
   );
+  const showSubmissionSummary =
+    Boolean(submission) &&
+    typeof onResubmit === "function" &&
+    typeof resubmitting === "boolean";
+  const hasTimelineSteps = stepsForTimeline.length > 0;
 
   // Helper function for step status (not memoized - simple computation)
   const getStepStatusForStep = (step: MergedStep) => {
@@ -151,6 +164,22 @@ export function ExecutionSteps({
             {/* Vertical timeline line */}
             <div className="absolute left-4 sm:left-6 top-4 bottom-4 w-px bg-gray-200 dark:bg-gray-700" />
 
+            {showSubmissionSummary && submission && (
+              <div
+                className={`relative ${hasTimelineSteps ? "pb-8" : "pb-0"}`}
+              >
+                <div className="absolute left-[-5px] top-6 h-2.5 w-2.5 rounded-full ring-4 ring-white dark:ring-gray-900 bg-green-500" />
+                <div className="ml-6">
+                  <SubmissionSummary
+                    submission={submission}
+                    onResubmit={onResubmit}
+                    resubmitting={resubmitting}
+                    className="mb-0 sm:mb-0"
+                  />
+                </div>
+              </div>
+            )}
+
             {stepsForTimeline.map((step, index) => {
               const stepOrder = step.step_order ?? 0;
               const isExpanded = expandedSteps.has(stepOrder);
@@ -198,9 +227,11 @@ export function ExecutionSteps({
                     />
                     {variant === "compact" ? (
                       <div className="border-t border-gray-100 dark:border-gray-700 px-4 pb-4 pt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400">
-                        <span className="inline-flex items-center gap-2">
-                          {step.step_type.replace(/_/g, " ")}
-                        </span>
+                        {step.step_type !== "workflow_step" && (
+                          <span className="inline-flex items-center gap-2">
+                            {step.step_type.replace(/_/g, " ")}
+                          </span>
+                        )}
                         {detailsHref && (
                           <Link
                             href={detailsHref}

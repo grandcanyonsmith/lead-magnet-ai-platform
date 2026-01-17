@@ -10,7 +10,10 @@ import json
 import argparse
 from pathlib import Path
 from datetime import datetime
-from ulid import new as ulid
+try:
+    from ulid import new as ulid
+except ImportError:
+    from ulid import ULID as ulid
 
 # Add lib directory to path
 sys.path.insert(0, str(Path(__file__).parent))

@@ -18,7 +18,10 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 from datetime import datetime
 import boto3
-from ulid import new as ulid
+try:
+    from ulid import new as ulid
+except ImportError:
+    from ulid import ULID as ulid
 
 # NOTE:
 # This file is intended to be run manually (see Usage above). It depends on real AWS resources

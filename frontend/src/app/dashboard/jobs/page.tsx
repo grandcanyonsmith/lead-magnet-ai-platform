@@ -52,9 +52,6 @@ function JobsContent() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [workflowMap, setWorkflowMap] = useState<Record<string, string>>({});
-  const [workflowStepCounts, setWorkflowStepCounts] = useState<
-    Record<string, number>
-  >({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -263,17 +260,10 @@ function JobsContent() {
         const data = await api.getWorkflows();
         setWorkflows(data.workflows || []);
         const map: Record<string, string> = {};
-        const counts: Record<string, number> = {};
         data.workflows?.forEach((wf: Workflow) => {
           map[wf.workflow_id] = wf.workflow_name || wf.workflow_id;
-          if (Array.isArray(wf.steps)) {
-            counts[wf.workflow_id] = wf.steps.length;
-          } else {
-            counts[wf.workflow_id] = 0;
-          }
         });
         setWorkflowMap(map);
-        setWorkflowStepCounts(counts);
       } catch (error) {
         if (process.env.NODE_ENV === "development") {
           console.error("Failed to load workflows:", error);
@@ -516,13 +506,11 @@ function JobsContent() {
             <JobsMobileList
               jobs={sorting.sortedJobs}
               workflowMap={workflowMap}
-              workflowStepCounts={workflowStepCounts}
               onNavigate={handleNavigate}
             />
             <JobsDesktopTable
               jobs={sorting.sortedJobs}
               workflowMap={workflowMap}
-              workflowStepCounts={workflowStepCounts}
               onNavigate={handleNavigate}
               sortField={sorting.sortField}
               sortDirection={sorting.sortDirection}

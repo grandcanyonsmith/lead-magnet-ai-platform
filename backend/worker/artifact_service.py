@@ -8,7 +8,10 @@ import os
 import requests
 from datetime import datetime
 from typing import Dict, Any, Optional
-from ulid import new as ulid
+try:
+    from ulid import new as ulid
+except ImportError:
+    from ulid import ULID as ulid
 
 from db_service import DynamoDBService
 from s3_service import S3Service

@@ -24,7 +24,6 @@ import { SessionRecordings } from "@/components/jobs/SessionRecordings";
 import { ResubmitModal } from "@/components/jobs/ResubmitModal";
 import { RerunStepDialog } from "@/components/jobs/RerunStepDialog";
 import { ArtifactGallery } from "@/components/jobs/detail/ArtifactGallery";
-import { SubmissionSummary } from "@/components/jobs/detail/SubmissionSummary";
 import { WorkflowImprovePanel } from "@/components/jobs/detail/WorkflowImprovePanel";
 import { FullScreenPreviewModal } from "@/components/ui/FullScreenPreviewModal";
 import { JobDetailSkeleton } from "@/components/jobs/detail/JobDetailSkeleton";
@@ -597,15 +596,6 @@ function JobTabs({
         <TabPanels className="mt-6">
           <TabPanel>
             <div className="space-y-8">
-              {submission && onResubmit && typeof resubmitting === "boolean" && (
-                <SubmissionSummary
-                  submission={submission}
-                  onResubmit={onResubmit}
-                  resubmitting={resubmitting}
-                  className="mb-0"
-                />
-              )}
-
               {executionStepsError && (
                 <ErrorState
                   title="Execution timeline unavailable"
@@ -633,6 +623,9 @@ function JobTabs({
                 loadingImageArtifacts={loadingArtifacts}
                 onRerunStepClick={onRerunStepClick}
                 rerunningStep={rerunningStep}
+                submission={submission}
+                onResubmit={onResubmit}
+                resubmitting={resubmitting}
               />
 
               <section id="job-tab-panel-artifacts" className="space-y-4">
