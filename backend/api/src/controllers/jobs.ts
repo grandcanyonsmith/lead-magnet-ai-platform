@@ -8,9 +8,11 @@ import { env } from "../utils/env";
 import { jobExecutionService } from "../services/jobExecutionService";
 import { jobService } from "../services/jobs/jobService";
 import { submissionPreviewService } from "../services/jobs/submissionPreviewService";
+import { resolveWorkflowVersion } from "@domains/workflows/services/workflowVersionService";
 
 const JOBS_TABLE = env.jobsTable;
 const SUBMISSIONS_TABLE = env.submissionsTable;
+const WORKFLOWS_TABLE = env.workflowsTable;
 
 class JobsController {
   async list(
@@ -197,10 +199,28 @@ class JobsController {
     // Create new job record
     const newJobId = `job_${ulid()}`;
     const apiUrl = (env.apiGatewayUrl || env.apiUrl || "").replace(/\/$/, "");
+    let workflowVersion: number | undefined;
+    try {
+      if (WORKFLOWS_TABLE) {
+        const workflowRecord = await db.get(WORKFLOWS_TABLE, {
+          workflow_id: originalJob.workflow_id,
+        });
+        if (workflowRecord) {
+          workflowVersion = resolveWorkflowVersion(workflowRecord);
+        }
+      }
+    } catch (error: any) {
+      logger.warn("[Jobs Resubmit] Failed to resolve workflow version", {
+        workflowId: originalJob.workflow_id,
+        error: error?.message || String(error),
+      });
+    }
+
     const newJob = {
       job_id: newJobId,
       tenant_id: originalJob.tenant_id,
       workflow_id: originalJob.workflow_id,
+      ...(typeof workflowVersion === "number" ? { workflow_version: workflowVersion } : {}),
       submission_id: newSubmissionId,
       status: "pending",
       created_at: new Date().toISOString(),

@@ -138,6 +138,11 @@ export function registerWorkflowRoutes(): void {
     return await workflowVersionsController.restore(tenantId!, params.id, params.version);
   });
 
+  // Duplicate workflow
+  router.register('POST', '/admin/workflows/:id/duplicate', async (params, _body, _query, tenantId) => {
+    return await workflowsController.duplicate(tenantId!, params.id);
+  });
+
   // Get workflow
   router.register('GET', '/admin/workflows/:id', async (params, _body, _query, tenantId) => {
     return await workflowsController.get(tenantId!, params.id);

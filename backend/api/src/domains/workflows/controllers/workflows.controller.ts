@@ -49,6 +49,15 @@ class WorkflowsController {
       body: {},
     };
   }
+
+  async duplicate(tenantId: string, workflowId: string): Promise<RouteResponse> {
+    const workflow = await workflowCrudService.duplicateWorkflow(tenantId, workflowId);
+
+    return {
+      statusCode: 201,
+      body: workflow,
+    };
+  }
 }
 
 export const workflowsController = new WorkflowsController();

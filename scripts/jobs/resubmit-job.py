@@ -9,7 +9,7 @@ import argparse
 from pathlib import Path
 from datetime import datetime
 from botocore.exceptions import ClientError
-import ulid
+from typing import Callable
 
 # Add lib directory to path
 sys.path.insert(0, str(Path(__file__).parent))
@@ -23,6 +23,28 @@ from lib.common import (
     get_step_functions_arn,
     print_section,
 )
+
+def _get_ulid_factory() -> Callable[[], str]:
+    """
+    Return a ULID generator compatible with common ulid packages.
+    Supports:
+      - ulid.new() (ulid-py)
+      - ulid.ULID() (python-ulid)
+    """
+    try:
+        from ulid import new as _new_ulid  # type: ignore
+        return lambda: str(_new_ulid())
+    except Exception:
+        try:
+            from ulid import ULID as _ULID  # type: ignore
+        except Exception as exc:
+            raise RuntimeError(
+                "ULID dependency is missing. Install 'ulid-py' or 'ulid'."
+            ) from exc
+        return lambda: str(_ULID())
+
+
+_new_ulid = _get_ulid_factory()
 
 
 def resubmit_job(job_id: str, tenant_id: str):
@@ -68,14 +90,19 @@ def resubmit_job(job_id: str, tenant_id: str):
         return None
     
     # Create a new submission record (copy of the original)
-    new_submission_id = f"sub_{ulid.new()}"
+    new_submission_id = f"sub_{_new_ulid()}"
     print(f"Creating new submission {new_submission_id}...")
     
+    workflow_id = submission.get("workflow_id") or original_job.get("workflow_id")
+    if not workflow_id:
+        print("✗ Submission and original job both missing workflow_id")
+        return None
+
     new_submission = {
         "submission_id": new_submission_id,
         "tenant_id": submission["tenant_id"],
         "form_id": submission["form_id"],
-        "workflow_id": submission["workflow_id"],
+        "workflow_id": workflow_id,
         "submission_data": submission["submission_data"],
         "submitter_ip": submission.get("submitter_ip"),
         "submitter_email": submission.get("submitter_email"),
@@ -93,7 +120,7 @@ def resubmit_job(job_id: str, tenant_id: str):
         return None
     
     # Create new job record
-    new_job_id = f"job_{ulid.new()}"
+    new_job_id = f"job_{_new_ulid()}"
     print(f"Creating new job {new_job_id}...")
     
     new_job = {

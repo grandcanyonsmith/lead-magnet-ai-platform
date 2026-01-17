@@ -67,6 +67,17 @@ export default function WorkflowsPage() {
     }
   };
 
+  const handleDuplicate = async (id: string) => {
+    try {
+      await api.duplicateWorkflow(id);
+      await refetchWorkflows();
+      toast.success("Lead magnet duplicated");
+    } catch (error) {
+      console.error("Failed to duplicate workflow:", error);
+      toast.error("Failed to duplicate lead magnet");
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -124,6 +135,7 @@ export default function WorkflowsPage() {
         sortDirection={sortDirection}
         handleSort={handleSort}
         handleDelete={handleDelete}
+        handleDuplicate={handleDuplicate}
         handleMove={setShowMoveFolderModal}
         customDomain={settings?.custom_domain}
         hasWorkflows={workflows.length > 0}

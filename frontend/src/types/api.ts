@@ -70,6 +70,7 @@ export interface ApiClient {
   createWorkflow(data: WorkflowCreateRequest): Promise<Workflow>;
   updateWorkflow(id: string, data: WorkflowUpdateRequest): Promise<Workflow>;
   deleteWorkflow(id: string): Promise<void>;
+  duplicateWorkflow(id: string): Promise<Workflow>;
   getWorkflowVersions(
     id: string,
     params?: Record<string, unknown>,

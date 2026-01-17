@@ -13,6 +13,7 @@ import {
   PencilIcon,
   FolderArrowDownIcon,
   ClipboardIcon,
+  Square2StackIcon,
   TrashIcon,
   ChevronUpIcon,
   ChevronDownIcon,
@@ -33,6 +34,7 @@ interface WorkflowListTableProps {
   sortDirection: "asc" | "desc";
   handleSort: (field: string) => void;
   handleDelete: (id: string) => void;
+  handleDuplicate: (id: string) => void;
   handleMove: (id: string) => void;
   customDomain?: string;
   hasWorkflows: boolean; // Total workflows count (unfiltered) to show different empty states
@@ -47,6 +49,7 @@ export function WorkflowListTable({
   sortDirection,
   handleSort,
   handleDelete,
+  handleDuplicate,
   handleMove,
   customDomain,
   hasWorkflows,
@@ -458,6 +461,28 @@ export function WorkflowListTable({
                                     aria-hidden="true"
                                   />
                                   Edit Lead Magnet
+                                </button>
+                              )}
+                            </MenuItem>
+                            <MenuItem>
+                              {({ active }) => (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDuplicate(workflow.workflow_id);
+                                  }}
+                                  className={clsx(
+                                    active
+                                      ? "bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300"
+                                      : "text-gray-700 dark:text-gray-300",
+                                    "group flex w-full items-center rounded-md px-2 py-2 text-sm",
+                                  )}
+                                >
+                                  <Square2StackIcon
+                                    className="mr-2 h-4 w-4"
+                                    aria-hidden="true"
+                                  />
+                                  Duplicate Lead Magnet
                                 </button>
                               )}
                             </MenuItem>

@@ -11,6 +11,8 @@ import { createWorkflowVersion, resolveWorkflowVersion } from './workflowVersion
 
 const WORKFLOWS_TABLE = env.workflowsTable;
 const USER_SETTINGS_TABLE = env.userSettingsTable;
+const MAX_WORKFLOW_NAME_LENGTH = 200;
+const DUPLICATE_NAME_SUFFIX = " (Copy)";
 
 if (!WORKFLOWS_TABLE) {
   logger.error('[WorkflowCrudService] WORKFLOWS_TABLE environment variable is not set');
@@ -70,6 +72,16 @@ async function loadDefaultTextVerbosity(
     });
     return undefined;
   }
+}
+
+function buildDuplicateWorkflowName(name?: string): string {
+  const baseName = String(name || "Untitled Workflow").trim() || "Untitled Workflow";
+  const suffix = DUPLICATE_NAME_SUFFIX;
+  if (baseName.length + suffix.length <= MAX_WORKFLOW_NAME_LENGTH) {
+    return `${baseName}${suffix}`;
+  }
+  const truncated = baseName.slice(0, MAX_WORKFLOW_NAME_LENGTH - suffix.length).trimEnd();
+  return `${truncated}${suffix}`;
 }
 
 export class WorkflowCrudService {
@@ -476,6 +488,116 @@ export class WorkflowCrudService {
       });
       // Continue even if form deletion fails
     }
+  }
+
+  async duplicateWorkflow(tenantId: string, workflowId: string): Promise<any> {
+    if (!WORKFLOWS_TABLE) {
+      throw new ApiError('WORKFLOWS_TABLE environment variable is not configured', 500);
+    }
+
+    const existing = await db.get(WORKFLOWS_TABLE, { workflow_id: workflowId });
+
+    if (!existing || existing.deleted_at) {
+      throw new ApiError('This lead magnet doesn\'t exist or has been removed', 404);
+    }
+
+    if (existing.tenant_id !== tenantId) {
+      throw new ApiError('You don\'t have permission to access this lead magnet', 403);
+    }
+
+    const now = new Date().toISOString();
+    const newWorkflowId = `wf_${ulid()}`;
+    const duplicatedName = buildDuplicateWorkflowName(existing.workflow_name);
+
+    const duplicatedWorkflow: any = {
+      ...existing,
+      workflow_id: newWorkflowId,
+      tenant_id: tenantId,
+      workflow_name: duplicatedName,
+      version: 1,
+      created_at: now,
+      updated_at: now,
+    };
+
+    delete duplicatedWorkflow.form_id;
+    delete duplicatedWorkflow.form;
+    delete duplicatedWorkflow.deleted_at;
+
+    await db.put(WORKFLOWS_TABLE, duplicatedWorkflow);
+    await createWorkflowVersion(duplicatedWorkflow, 1);
+
+    let form: any = null;
+    try {
+      const originalForm = await formService.getFormForWorkflow(workflowId);
+      const formId = await formService.createFormForWorkflow(
+        tenantId,
+        newWorkflowId,
+        duplicatedName,
+        originalForm?.form_fields_schema?.fields,
+      );
+
+      await db.update(WORKFLOWS_TABLE, { workflow_id: newWorkflowId }, {
+        form_id: formId,
+      });
+      duplicatedWorkflow.form_id = formId;
+
+      if (originalForm) {
+        const formUpdate: Record<string, any> = {};
+        if (originalForm.form_fields_schema) {
+          formUpdate.form_fields_schema = originalForm.form_fields_schema;
+        }
+        if (typeof originalForm.rate_limit_enabled === "boolean") {
+          formUpdate.rate_limit_enabled = originalForm.rate_limit_enabled;
+        }
+        if (typeof originalForm.rate_limit_per_hour === "number") {
+          formUpdate.rate_limit_per_hour = originalForm.rate_limit_per_hour;
+        }
+        if (typeof originalForm.captcha_enabled === "boolean") {
+          formUpdate.captcha_enabled = originalForm.captcha_enabled;
+        }
+        if (originalForm.custom_css) {
+          formUpdate.custom_css = originalForm.custom_css;
+        }
+        if (originalForm.thank_you_message) {
+          formUpdate.thank_you_message = originalForm.thank_you_message;
+        }
+        if (originalForm.redirect_url) {
+          formUpdate.redirect_url = originalForm.redirect_url;
+        }
+
+        if (Object.keys(formUpdate).length > 0) {
+          const { formManagementService } = await import('@domains/forms/services/formManagementService');
+          await formManagementService.updateForm(tenantId, formId, formUpdate);
+        }
+      }
+
+      form = await formService.getFormForWorkflow(newWorkflowId);
+    } catch (error) {
+      logger.error('[Workflows Duplicate] Error duplicating form', {
+        workflowId,
+        duplicatedWorkflowId: newWorkflowId,
+        error: (error as any).message,
+      });
+    }
+
+    try {
+      const { notificationsController } = await import('@controllers/notifications');
+      await notificationsController.create(
+        tenantId,
+        'workflow_created',
+        'New lead magnet created',
+        `Your lead magnet "${duplicatedName}" has been created successfully.`,
+        newWorkflowId,
+        'workflow'
+      );
+    } catch (error) {
+      logger.error('[Workflows Duplicate] Error creating notification', error);
+    }
+
+    return {
+      ...duplicatedWorkflow,
+      form,
+    };
   }
 }
 
