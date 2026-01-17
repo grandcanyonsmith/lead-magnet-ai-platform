@@ -67,6 +67,7 @@ export default function PlaygroundPage() {
   } = useWorkflowSteps({
     persistKey: "playground-steps",
     defaultToolChoice: settings?.default_tool_choice,
+    defaultServiceTier: settings?.default_service_tier,
   });
   
   const [currentInput, setCurrentInput] = useState<string>("{}");

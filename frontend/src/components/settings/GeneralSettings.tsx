@@ -25,6 +25,14 @@ const TOOL_CHOICE_OPTIONS = [
   { value: "none", label: "None" },
 ];
 
+const SERVICE_TIER_OPTIONS = [
+  { value: "auto", label: "Auto (AI decides)" },
+  { value: "priority", label: "Priority (Fastest)" },
+  { value: "default", label: "Default (Standard)" },
+  { value: "flex", label: "Flex (Lower Cost)" },
+  { value: "scale", label: "Scale (High Volume)" },
+];
+
 export function GeneralSettings({
   settings,
   onChange,
@@ -102,6 +110,16 @@ export function GeneralSettings({
             onChange={(value) => onChange("default_tool_choice", value)}
             options={TOOL_CHOICE_OPTIONS}
             helpText="Default tool choice for new steps (you can override per-step)"
+          />
+
+          <FormField
+            label="Default Service Tier"
+            name="default_service_tier"
+            type="text"
+            value={settings.default_service_tier || "auto"}
+            onChange={(value) => onChange("default_service_tier", value)}
+            options={SERVICE_TIER_OPTIONS}
+            helpText="Default service tier for new AI steps (override per-step if needed)"
           />
         </div>
       </CardContent>

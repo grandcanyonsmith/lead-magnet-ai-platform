@@ -38,7 +38,10 @@ export default function EditWorkflowPage() {
   const { settings } = useSettings();
 
   // Main workflow hook
-  const workflowEdit = useWorkflowEdit(settings?.default_tool_choice);
+  const workflowEdit = useWorkflowEdit(
+    settings?.default_tool_choice,
+    settings?.default_service_tier,
+  );
   const {
     workflowId,
     loading,
