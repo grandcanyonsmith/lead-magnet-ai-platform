@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Settings, FileText, LayoutTemplate, ChevronLeft, Save, AlertCircle, ArrowLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { AIModel, Tool } from "@/types";
 import { useWorkflowEdit } from "@/hooks/useWorkflowEdit";
@@ -10,7 +11,6 @@ import { useTemplateEdit } from "@/hooks/useTemplateEdit";
 import { WorkflowTab } from "@/components/workflows/edit/WorkflowTab";
 import { FormTab } from "@/components/workflows/edit/FormTab";
 import { TemplateTab } from "@/components/workflows/edit/TemplateTab";
-import { WorkflowVersionModal } from "@/components/workflows/edit/WorkflowVersionModal";
 import { extractPlaceholders } from "@/utils/templateUtils";
 import { formatHTML } from "@/utils/templateUtils";
 import { useSettings } from "@/hooks/api/useSettings";
@@ -22,7 +22,6 @@ import { Badge } from "@/components/ui/Badge";
 import { Separator } from "@/components/ui/Separator";
 import { Card } from "@/components/ui/Card";
 import { LoadingState } from "@/components/ui/LoadingState";
-import { useRouter } from "next/navigation";
 
 export default function EditWorkflowPage() {
   const [activeTab, setActiveTab] = useState<"workflow" | "form" | "template">(
@@ -33,7 +32,7 @@ export default function EditWorkflowPage() {
   );
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
   const [templateId, setTemplateId] = useState<string | null>(null);
-  const [isVersionModalOpen, setIsVersionModalOpen] = useState(false);
+  const router = useRouter();
 
   const { settings } = useSettings();
 
@@ -63,7 +62,6 @@ export default function EditWorkflowPage() {
     handleDeleteStep,
     handleMoveStepUp,
     handleMoveStepDown,
-    router,
   } = workflowEdit;
 
   // Form edit hook
@@ -352,7 +350,11 @@ export default function EditWorkflowPage() {
           </Button>
           <Button
             variant="outline"
-            onClick={() => setIsVersionModalOpen(true)}
+            onClick={() =>
+              workflowId
+                ? router.push(`/dashboard/workflows/${workflowId}/versions`)
+                : null
+            }
             disabled={submitting || !workflowId}
           >
             Version History
@@ -496,16 +498,6 @@ export default function EditWorkflowPage() {
         </TabsContent>
       </Tabs>
 
-      <WorkflowVersionModal
-        isOpen={isVersionModalOpen}
-        workflowId={workflowId || ""}
-        currentVersion={workflowVersion}
-        onClose={() => setIsVersionModalOpen(false)}
-        onRestored={async () => {
-          await reloadWorkflow();
-          setIsVersionModalOpen(false);
-        }}
-      />
     </div>
   );
 }
