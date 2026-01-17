@@ -9,6 +9,7 @@ import { retryWithBackoff } from '@utils/errorHandling';
 export interface WorkflowAIEditRequest {
   userPrompt: string;
   defaultToolChoice?: ToolChoice;
+  defaultServiceTier?: string;
   workflowContext: {
     workflow_id: string;
     workflow_name: string;
@@ -51,7 +52,10 @@ const DEFAULT_TOOL_CHOICE: ToolChoice = 'required';
 const VALID_TOOL_CHOICES = new Set<ToolChoice>(['auto', 'required', 'none']);
 const VALID_SERVICE_TIERS = new Set(['auto', 'default', 'flex', 'scale', 'priority']);
 
-const buildWorkflowAiSystemPrompt = (defaultToolChoice: ToolChoice) => `You are an expert AI Lead Magnet Architect and Workflow Optimizer. Your task is to refine, restructure, and optimize the user's lead magnet generation workflow.
+const buildWorkflowAiSystemPrompt = (
+  defaultToolChoice: ToolChoice,
+  defaultServiceTier?: string,
+) => `You are an expert AI Lead Magnet Architect and Workflow Optimizer. Your task is to refine, restructure, and optimize the user's lead magnet generation workflow.
 
 ## Your Goal
 Translate the user's natural language request into a precise, optimized JSON configuration. You should not just make the change, but *improve* the workflow where possible while respecting the user's intent.
@@ -96,6 +100,9 @@ ${AVAILABLE_MODELS.join(', ')}
 ## Default Tool Choice
 - Use \`${defaultToolChoice}\` as the default \`tool_choice\` when tools are present unless the user specifies otherwise.
 
+## Default Service Tier
+- Use \`${defaultServiceTier || "auto"}\` for each step unless the user explicitly asks for a different tier.
+
 ## Response Format
 Return a JSON object:
 {
@@ -124,10 +131,24 @@ export class WorkflowAIService {
   constructor(private openaiClient: OpenAI) {}
 
   async editWorkflow(request: WorkflowAIEditRequest): Promise<WorkflowAIEditResponse> {
-    const { userPrompt, workflowContext, executionHistory, referenceExamples, defaultToolChoice } = request;
+    const {
+      userPrompt,
+      workflowContext,
+      executionHistory,
+      referenceExamples,
+      defaultToolChoice,
+      defaultServiceTier,
+    } = request;
     const resolvedDefaultToolChoice = VALID_TOOL_CHOICES.has(defaultToolChoice as ToolChoice)
       ? (defaultToolChoice as ToolChoice)
       : DEFAULT_TOOL_CHOICE;
+    const resolvedDefaultServiceTier =
+      defaultServiceTier && VALID_SERVICE_TIERS.has(defaultServiceTier)
+        ? defaultServiceTier
+        : undefined;
+    const shouldOverrideServiceTier =
+      resolvedDefaultServiceTier !== undefined &&
+      resolvedDefaultServiceTier !== "auto";
 
     // Build context message for AI
     const contextParts: string[] = [
@@ -251,7 +272,10 @@ Please generate the updated workflow configuration with all necessary changes.`;
             () =>
               (this.openaiClient as any).responses.create({
                 model: 'gpt-5.2',
-                instructions: buildWorkflowAiSystemPrompt(resolvedDefaultToolChoice),
+                instructions: buildWorkflowAiSystemPrompt(
+                  resolvedDefaultToolChoice,
+                  resolvedDefaultServiceTier,
+                ),
                 input: userMessage,
                 reasoning: { effort: 'high' },
                 service_tier: 'priority',
@@ -329,6 +353,10 @@ Please generate the updated workflow configuration with all necessary changes.`;
           delete step.service_tier;
         }
 
+        if (shouldOverrideServiceTier) {
+          step.service_tier = resolvedDefaultServiceTier;
+        }
+
       // Validate reasoning_effort (optional)
       if (
         step.reasoning_effort &&
@@ -378,6 +406,7 @@ Please generate the updated workflow configuration with all necessary changes.`;
       // Use ensureStepDefaults to add all required fields (step_id, step_group, etc.)
       const normalizedSteps: WorkflowStep[] = ensureStepDefaults(validatedSteps, {
         defaultToolChoice: resolvedDefaultToolChoice,
+        defaultServiceTier: resolvedDefaultServiceTier,
       });
 
       // Validate dependencies across all steps
