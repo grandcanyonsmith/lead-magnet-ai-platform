@@ -50,7 +50,7 @@ export function GeneralSettings({
           </CardTitle>
         </div>
         <CardDescription className="ml-12">
-          Configure your organization details and default AI model preferences.
+          Configure your organization details and default AI preferences.
         </CardDescription>
       </CardHeader>
 

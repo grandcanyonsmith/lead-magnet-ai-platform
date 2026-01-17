@@ -91,13 +91,13 @@ Available Tools:
 5. **Default Service Tier**:
    - Use **${defaultServiceTier || "auto"}** for this step unless the user explicitly asks for a different tier.
 
-5. **Instruction Quality**:
+6. **Instruction Quality**:
    - Write instructions that are **specific** and **actionable**.
    - Assign a **role** (e.g., "Act as a Senior Analyst").
    - Explicitly mention what input data to use.
    - **CRITICAL AUTONOMY RULE**: The workflow runs with **no user interaction between steps**. Do **NOT** ask questions, request confirmation, or wait for user input. Make reasonable assumptions and proceed.
 
-6. **Response Format**:
+7. **Response Format**:
    - Return a JSON object matching the schema below.
    - \`step_name\` should be professional and concise.
    - \`step_description\` should clearly state the *value* of the step.
@@ -108,7 +108,7 @@ Available Tools:
      - If this is the first step, use \`[]\`.
      - If inserting a step, ensure dependencies make sense.
 
-7. **Instruction Hygiene**:
+8. **Instruction Hygiene**:
    - Do NOT include "safety disclaimers" about PII (e.g. "Note: you included a phone number...") in the step instructions. The system handles PII securely.
    - Do NOT instruct the model to use [bracketed_placeholders] for missing information in its output. If information is missing, it should be omitted or handled gracefully without placeholders.
 
