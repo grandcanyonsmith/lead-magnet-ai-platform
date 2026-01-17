@@ -1,6 +1,7 @@
 import { ExecutionSteps } from "@/components/jobs/ExecutionSteps";
 import { ArtifactGallery } from "@/components/jobs/detail/ArtifactGallery";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { SectionCard } from "@/components/ui/SectionCard";
 import type { Artifact } from "@/types/artifact";
 import type { FormSubmission } from "@/types/form";
 import type { ArtifactGalleryItem, Job, MergedStep } from "@/types/job";
@@ -86,29 +87,26 @@ export function JobExecutionTab({
         resubmitting={resubmitting}
       />
 
-      <section id="job-tab-panel-artifacts" className="space-y-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Outputs
-            </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Review the generated assets and reports.
-            </p>
-          </div>
-          {artifactGalleryItems.length > 0 && (
-            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
+      <SectionCard
+        title="Outputs"
+        description="Review the generated assets and reports."
+        actions={
+          artifactGalleryItems.length > 0 ? (
+            <span className="text-xs font-semibold text-muted-foreground">
               {artifactGalleryItems.length} item
               {artifactGalleryItems.length === 1 ? "" : "s"}
             </span>
-          )}
+          ) : null
+        }
+      >
+        <div id="job-tab-panel-artifacts" className="space-y-4">
+          <ArtifactGallery
+            items={artifactGalleryItems}
+            loading={loadingArtifacts}
+            onPreview={onPreview}
+          />
         </div>
-        <ArtifactGallery
-          items={artifactGalleryItems}
-          loading={loadingArtifacts}
-          onPreview={onPreview}
-        />
-      </section>
+      </SectionCard>
     </div>
   );
 }

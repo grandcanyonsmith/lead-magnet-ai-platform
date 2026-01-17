@@ -2,7 +2,7 @@
  * Workflow-related types
  */
 
-import { BaseEntity } from "./common";
+import { BaseEntity, Status } from "./common";
 import { FormField } from "./form";
 
 export type AIModel =
@@ -276,4 +276,29 @@ export interface WorkflowRefineInstructionsRequest {
 
 export interface WorkflowRefineInstructionsResponse {
   refined_instructions: string;
+}
+
+export interface WorkflowAIEditResponse {
+  workflow_name?: string;
+  workflow_description?: string;
+  html_enabled?: boolean;
+  steps: any[];
+  changes_summary: string;
+}
+
+export type WorkflowImprovementStatus = "pending" | "approved" | "denied";
+
+export interface WorkflowAIImprovement {
+  job_id: string;
+  workflow_id: string;
+  status: Status;
+  improvement_status: WorkflowImprovementStatus;
+  created_at: string;
+  updated_at?: string;
+  reviewed_at?: string;
+  approved_at?: string;
+  denied_at?: string;
+  user_prompt?: string;
+  context_job_id?: string | null;
+  result?: WorkflowAIEditResponse | null;
 }

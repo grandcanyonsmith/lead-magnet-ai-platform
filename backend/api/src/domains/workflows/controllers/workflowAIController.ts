@@ -481,8 +481,66 @@ export class WorkflowAIController {
         result: job.result,
         error_message: job.error_message,
         workflow_id: job.workflow_id,
+        improvement_status:
+          job.improvement_status ||
+          (job.status === "completed" && job.result ? "pending" : null),
+        reviewed_at: job.reviewed_at,
         created_at: job.created_at,
         updated_at: job.updated_at,
+      },
+    };
+  }
+
+  /**
+   * List workflow AI improvements for review.
+   */
+  async listAIImprovements(
+    tenantId: string,
+    workflowId: string,
+  ): Promise<RouteResponse> {
+    const improvements =
+      await workflowAIEditJobService.listWorkflowAIImprovements(
+        tenantId,
+        workflowId,
+      );
+
+    return {
+      statusCode: 200,
+      body: {
+        improvements,
+      },
+    };
+  }
+
+  /**
+   * Review a workflow AI improvement (approve/deny).
+   */
+  async reviewAIImprovement(
+    tenantId: string,
+    jobId: string,
+    body: any,
+  ): Promise<RouteResponse> {
+    const status = typeof body?.status === "string" ? body.status : null;
+
+    if (!status) {
+      throw new ApiError("status is required", 400);
+    }
+
+    if (status !== "pending" && status !== "approved" && status !== "denied") {
+      throw new ApiError("Invalid improvement status", 400);
+    }
+
+    const improvement =
+      await workflowAIEditJobService.updateImprovementStatus(
+        tenantId,
+        jobId,
+        status,
+      );
+
+    return {
+      statusCode: 200,
+      body: {
+        improvement,
       },
     };
   }

@@ -6,10 +6,13 @@ import clsx from "clsx";
 type StatTone = "neutral" | "positive" | "warning" | "danger";
 
 const toneClasses: Record<StatTone, string> = {
-  neutral: "bg-gray-50 text-gray-900 border-gray-100",
-  positive: "bg-green-50 text-green-900 border-green-100",
-  warning: "bg-amber-50 text-amber-900 border-amber-100",
-  danger: "bg-red-50 text-red-900 border-red-100",
+  neutral: "bg-muted/40 text-foreground border-border",
+  positive:
+    "bg-emerald-50 text-emerald-900 border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-200 dark:border-emerald-900/40",
+  warning:
+    "bg-amber-50 text-amber-900 border-amber-100 dark:bg-amber-900/20 dark:text-amber-200 dark:border-amber-900/40",
+  danger:
+    "bg-red-50 text-red-900 border-red-100 dark:bg-red-900/20 dark:text-red-200 dark:border-red-900/40",
 };
 
 interface StatPillProps {
@@ -42,11 +45,13 @@ export function StatPill({
     >
       {icon && <div className="text-base">{icon}</div>}
       <div>
-        <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           {label}
         </p>
         <p className="text-base font-semibold leading-6">{value}</p>
-        {helperText && <p className="text-xs text-gray-500">{helperText}</p>}
+        {helperText && (
+          <p className="text-xs text-muted-foreground">{helperText}</p>
+        )}
       </div>
     </div>
   );

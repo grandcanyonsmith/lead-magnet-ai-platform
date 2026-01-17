@@ -2,12 +2,14 @@ import { ulid } from "ulid";
 import { db } from "@utils/db";
 import { logger } from "@utils/logger";
 import { env } from "@utils/env";
+import { ApiError } from "@utils/errors";
 import { JobProcessingUtils } from "./workflow/workflowJobProcessingService";
 import { getOpenAIClient } from "@services/openaiService";
 import { WorkflowAIService, WorkflowAIEditRequest } from "./workflowAIService";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 
 const JOBS_TABLE = env.jobsTable;
+const WORKFLOWS_TABLE = env.workflowsTable;
 
 type StartWorkflowAIEditInput = {
   tenantId: string;
@@ -15,6 +17,8 @@ type StartWorkflowAIEditInput = {
   userPrompt: string;
   contextJobId?: string;
 };
+
+type ImprovementStatus = "pending" | "approved" | "denied";
 
 class WorkflowAIEditJobService {
   async startWorkflowAIEdit({
@@ -363,6 +367,7 @@ class WorkflowAIEditJobService {
       await db.update(JOBS_TABLE, { job_id: jobId }, {
         status: "completed",
         result,
+        improvement_status: "pending",
         updated_at: new Date().toISOString(),
       });
 
@@ -388,6 +393,134 @@ class WorkflowAIEditJobService {
 
       throw error;
     }
+  }
+
+  async listWorkflowAIImprovements(
+    tenantId: string,
+    workflowId: string,
+  ): Promise<Record<string, any>[]> {
+    if (!WORKFLOWS_TABLE) {
+      throw new ApiError(
+        "WORKFLOWS_TABLE environment variable is not configured",
+        500,
+      );
+    }
+
+    if (!JOBS_TABLE) {
+      throw new ApiError(
+        "JOBS_TABLE environment variable is not configured",
+        500,
+      );
+    }
+
+    const workflow = await db.get(WORKFLOWS_TABLE, { workflow_id: workflowId });
+    if (!workflow || workflow.deleted_at) {
+      throw new ApiError("This lead magnet doesn't exist or has been removed", 404);
+    }
+    if (workflow.tenant_id !== tenantId) {
+      throw new ApiError("Unauthorized", 403);
+    }
+
+    const result = await db.query(
+      JOBS_TABLE,
+      "gsi_workflow_status",
+      "workflow_id = :workflow_id",
+      { ":workflow_id": workflowId },
+    );
+
+    const improvements = (result.items || [])
+      .filter(
+        (job: any) =>
+          job.job_type === "workflow_ai_edit" &&
+          job.status === "completed" &&
+          job.result,
+      )
+      .sort((a: any, b: any) => {
+        const dateA = new Date(a.created_at || 0).getTime();
+        const dateB = new Date(b.created_at || 0).getTime();
+        return dateB - dateA;
+      });
+
+    return improvements.map((job: any) => ({
+      job_id: job.job_id,
+      workflow_id: job.workflow_id,
+      status: job.status,
+      improvement_status: (job.improvement_status as ImprovementStatus) || "pending",
+      created_at: job.created_at,
+      updated_at: job.updated_at,
+      reviewed_at: job.reviewed_at,
+      approved_at: job.approved_at,
+      denied_at: job.denied_at,
+      user_prompt: job.user_prompt,
+      context_job_id: job.context_job_id,
+      result: job.result,
+    }));
+  }
+
+  async updateImprovementStatus(
+    tenantId: string,
+    jobId: string,
+    status: ImprovementStatus,
+  ): Promise<Record<string, any>> {
+    if (!JOBS_TABLE) {
+      throw new ApiError(
+        "JOBS_TABLE environment variable is not configured",
+        500,
+      );
+    }
+
+    const validStatuses: ImprovementStatus[] = ["pending", "approved", "denied"];
+    if (!validStatuses.includes(status)) {
+      throw new ApiError("Invalid improvement status", 400);
+    }
+
+    const job = await db.get(JOBS_TABLE, { job_id: jobId });
+    if (!job) {
+      throw new ApiError("Improvement not found", 404);
+    }
+    if (job.tenant_id !== tenantId) {
+      throw new ApiError("Unauthorized", 403);
+    }
+    if (job.job_type !== "workflow_ai_edit") {
+      throw new ApiError("Invalid improvement record", 400);
+    }
+    if (!job.result) {
+      throw new ApiError("Improvement has no result to review", 409);
+    }
+
+    const now = new Date().toISOString();
+    const updates: Record<string, any> = {
+      improvement_status: status,
+      updated_at: now,
+    };
+
+    if (status === "approved") {
+      updates.reviewed_at = now;
+      updates.approved_at = now;
+    }
+
+    if (status === "denied") {
+      updates.reviewed_at = now;
+      updates.denied_at = now;
+    }
+
+    const updated = await db.update(JOBS_TABLE, { job_id: jobId }, updates);
+
+    return {
+      job_id: updated.job_id,
+      workflow_id: updated.workflow_id,
+      status: updated.status,
+      improvement_status:
+        (updated.improvement_status as ImprovementStatus) || "pending",
+      created_at: updated.created_at,
+      updated_at: updated.updated_at,
+      reviewed_at: updated.reviewed_at,
+      approved_at: updated.approved_at,
+      denied_at: updated.denied_at,
+      user_prompt: updated.user_prompt,
+      context_job_id: updated.context_job_id,
+      result: updated.result,
+    };
   }
 }
 

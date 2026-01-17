@@ -136,6 +136,10 @@ export interface Job {
   description?: string;
   model?: string;
   job_type?: string;
+  improvement_status?: "pending" | "approved" | "denied";
+  reviewed_at?: string;
+  approved_at?: string;
+  denied_at?: string;
 }
 
 export interface Submission {

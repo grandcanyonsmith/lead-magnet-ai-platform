@@ -272,6 +272,19 @@ class ApiClientImpl extends BaseApiClient implements ApiClient {
     return this.workflows.getWorkflowAIEditStatus(jobId);
   }
 
+  async getWorkflowAIImprovements(
+    workflowId: string,
+  ) {
+    return this.workflows.getWorkflowAIImprovements(workflowId);
+  }
+
+  async reviewWorkflowAIImprovement(
+    jobId: string,
+    status: Parameters<WorkflowsClient["reviewWorkflowAIImprovement"]>[1],
+  ) {
+    return this.workflows.reviewWorkflowAIImprovement(jobId, status);
+  }
+
   async testStep(request: Parameters<WorkflowsClient["testStep"]>[0]) {
     return this.workflows.testStep(request);
   }
