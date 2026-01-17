@@ -153,6 +153,15 @@ class WorkflowGenerationJobService {
         settings?.default_tool_choice === 'none'
           ? settings.default_tool_choice
           : undefined;
+      const defaultServiceTier =
+        settings?.default_service_tier &&
+        ['auto', 'default', 'flex', 'scale', 'priority'].includes(
+          settings.default_service_tier,
+        )
+          ? settings.default_service_tier
+          : undefined;
+      const shouldOverrideServiceTier =
+        defaultServiceTier !== undefined && defaultServiceTier !== "auto";
 
       let icpContext: string | null = null;
       if (settings?.icp_document_url) {
@@ -172,8 +181,22 @@ class WorkflowGenerationJobService {
         jobId,
         brandContext || undefined,
         icpContext || undefined,
-        defaultToolChoice
+        defaultToolChoice,
+        defaultServiceTier
       );
+
+      if (
+        shouldOverrideServiceTier &&
+        workflowResult?.workflowData?.steps &&
+        Array.isArray(workflowResult.workflowData.steps)
+      ) {
+        workflowResult.workflowData.steps = workflowResult.workflowData.steps.map(
+          (step: any) => ({
+            ...step,
+            service_tier: defaultServiceTier,
+          }),
+        );
+      }
 
       const [templateHtmlResult, templateMetadataResult, formFieldsResult] = await Promise.all([
         generationService.generateTemplateHTML(
@@ -234,7 +257,8 @@ class WorkflowGenerationJobService {
         result.template.html_content,
         result.template.template_name,
         result.template.template_description,
-        defaultToolChoice
+        defaultToolChoice,
+        defaultServiceTier
       );
 
       logger.info('[Workflow Generation] Workflow saved as active', {

@@ -71,6 +71,9 @@ export function WorkflowImprovePanel({
   >(null);
   const [improvementsLoading, setImprovementsLoading] = useState(false);
   const [isReviewing, setIsReviewing] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<
+    WorkflowImprovementStatus | "all"
+  >("all");
 
   const { generateWorkflowEdit, isGenerating, error } =
     useWorkflowAI(workflowId);
@@ -136,11 +139,49 @@ export function WorkflowImprovePanel({
     );
   }, [improvements, selectedImprovementId]);
 
+  const improvementCounts = useMemo(() => {
+    const counts = {
+      total: improvements.length,
+      pending: 0,
+      approved: 0,
+      denied: 0,
+    };
+
+    improvements.forEach((item) => {
+      if (item.improvement_status === "approved") counts.approved += 1;
+      if (item.improvement_status === "denied") counts.denied += 1;
+      if (item.improvement_status === "pending") counts.pending += 1;
+    });
+
+    return counts;
+  }, [improvements]);
+
+  const filteredImprovements = useMemo(() => {
+    if (statusFilter === "all") return improvements;
+    return improvements.filter((item) => item.improvement_status === statusFilter);
+  }, [improvements, statusFilter]);
+
   const selectedStatus = selectedImprovement?.improvement_status || null;
   const selectedStatusMeta = selectedStatus
     ? IMPROVEMENT_STATUS_STYLES[selectedStatus]
     : null;
   const isPendingReview = selectedImprovement?.improvement_status === "pending";
+
+  useEffect(() => {
+    if (!filteredImprovements.length) {
+      setSelectedImprovementId(null);
+      return;
+    }
+
+    if (
+      selectedImprovementId &&
+      filteredImprovements.some((item) => item.job_id === selectedImprovementId)
+    ) {
+      return;
+    }
+
+    setSelectedImprovementId(filteredImprovements[0]?.job_id ?? null);
+  }, [filteredImprovements, selectedImprovementId]);
 
   const handleGenerate = async () => {
     if (!workflow || !workflow.workflow_id) {
