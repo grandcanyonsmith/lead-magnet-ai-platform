@@ -90,6 +90,40 @@ class OpenAIRequestBuilder:
         """
         # Enforce autonomous execution: never ask for user confirmation mid-workflow.
         instructions_text = instructions or ""
+        if not isinstance(instructions_text, str):
+            logger.warning(
+                "[OpenAI Request Builder] instructions was not a string; coercing to string",
+                extra={
+                    "model": model,
+                    "job_id": job_id,
+                    "tenant_id": tenant_id,
+                    "instructions_type": type(instructions_text).__name__,
+                },
+            )
+            try:
+                instructions_text = str(instructions_text)
+            except Exception:
+                instructions_text = ""
+        if input_text is None:
+            logger.warning(
+                "[OpenAI Request Builder] input_text was None; defaulting to empty string",
+                extra={"model": model, "job_id": job_id, "tenant_id": tenant_id},
+            )
+            input_text = ""
+        elif not isinstance(input_text, str):
+            logger.warning(
+                "[OpenAI Request Builder] input_text was not a string; coercing to string",
+                extra={
+                    "model": model,
+                    "job_id": job_id,
+                    "tenant_id": tenant_id,
+                    "input_text_type": type(input_text).__name__,
+                },
+            )
+            try:
+                input_text = str(input_text)
+            except Exception:
+                input_text = ""
         instructions_lower = instructions_text.lower()
         if (
             "ask for confirmation" not in instructions_lower
@@ -117,7 +151,7 @@ class OpenAIRequestBuilder:
         # Build input: if image_generation tool is present and we have previous image URLs,
         # AND the model supports images, use list format with text and images; 
         # otherwise use string format (backward compatible)
-        if (has_image_generation and previous_image_urls and len(previous_image_urls) > 0 
+        if (has_image_generation and previous_image_urls and len(previous_image_urls) > 0
             and model_supports_images):
             api_input = OpenAIRequestBuilder._build_multimodal_input(
                 input_text, previous_image_urls, job_id, tenant_id
@@ -134,6 +168,13 @@ class OpenAIRequestBuilder:
                     )
                 else:
                     logger.debug("[OpenAI Request Builder] Image generation tool present but no previous image URLs to include")
+
+        if api_input is None:
+            logger.warning(
+                "[OpenAI Request Builder] api_input was None; defaulting to empty string",
+                extra={"model": model, "job_id": job_id, "tenant_id": tenant_id},
+            )
+            api_input = ""
         
         params = {
             "model": model,

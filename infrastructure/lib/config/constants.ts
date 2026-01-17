@@ -22,6 +22,7 @@ export const SECRET_NAMES = {
  */
 export const TABLE_NAMES = {
   WORKFLOWS: 'leadmagnet-workflows',
+  WORKFLOW_VERSIONS: 'leadmagnet-workflow-versions',
   FORMS: 'leadmagnet-forms',
   SUBMISSIONS: 'leadmagnet-submissions',
   JOBS: 'leadmagnet-jobs',
@@ -155,6 +156,7 @@ export const ECR_CONFIG = {
  */
 export const TABLE_ENV_VAR_MAP: Record<TableKey, string> = {
   workflows: 'WORKFLOWS_TABLE',
+  workflowVersions: 'WORKFLOW_VERSIONS_TABLE',
   forms: 'FORMS_TABLE',
   submissions: 'SUBMISSIONS_TABLE',
   jobs: 'JOBS_TABLE',

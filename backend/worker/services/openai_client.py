@@ -213,6 +213,23 @@ class OpenAIClient:
 
         api_params = self._sanitize_api_params(params)
 
+        has_previous_response = bool(api_params.get("previous_response_id"))
+        input_value = api_params.get("input", None)
+        has_input = "input" in api_params and input_value is not None
+        if has_input and isinstance(input_value, list) and len(input_value) == 0:
+            has_input = False
+
+        if not has_input and not has_previous_response:
+            logger.warning(
+                "[OpenAI Client] Missing input and previous_response_id; defaulting input to empty string",
+                extra={
+                    "job_id": job_id,
+                    "tenant_id": tenant_id,
+                    "model": api_params.get("model"),
+                },
+            )
+            api_params["input"] = ""
+
         # #region agent log
         try:
             import json
