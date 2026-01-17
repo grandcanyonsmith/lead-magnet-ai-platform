@@ -252,6 +252,15 @@ export class BaseApiClient {
     return response.data;
   }
 
+  protected async patch<T>(
+    url: string,
+    data?: unknown,
+    config?: AxiosRequestConfig,
+  ): Promise<T> {
+    const response: AxiosResponse<T> = await this.client.patch(url, data, config);
+    return response.data;
+  }
+
   protected async delete<T>(
     url: string,
     config?: AxiosRequestConfig,
