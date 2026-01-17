@@ -12,6 +12,8 @@ import { BuildingOfficeIcon } from "@heroicons/react/24/outline";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
+import { AvatarUpload } from "./AvatarUpload";
+
 interface GeneralSettingsProps {
   settings: Settings;
   onChange: (field: keyof Settings, value: string) => void;
@@ -146,6 +148,10 @@ export function GeneralSettings({
       </CardHeader>
 
       <CardContent className="space-y-8 pt-6">
+        <div className="border-b border-gray-100 dark:border-border pb-8">
+          <AvatarUpload />
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             label="Company Name"

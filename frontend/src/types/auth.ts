@@ -17,6 +17,7 @@ export interface AuthUser {
   username?: string;
   role?: string;
   customer_id?: string;
+  profile_photo_url?: string;
 }
 
 export interface AuthMeResponse {

@@ -16,4 +16,38 @@ export function registerAuthRoutes(): void {
     },
     true,
   );
+
+  // Update user profile
+  router.register(
+    "PATCH",
+    "/me",
+    async (params, body, query, tenantId, context) => {
+      logger.info("[Auth Routes] PATCH /me");
+      return await authController.updateProfile(
+        params,
+        body,
+        query,
+        tenantId,
+        context,
+      );
+    },
+    true,
+  );
+
+  // Get avatar upload URL
+  router.register(
+    "POST",
+    "/me/avatar-upload-url",
+    async (params, body, query, tenantId, context) => {
+      logger.info("[Auth Routes] POST /me/avatar-upload-url");
+      return await authController.getAvatarUploadUrl(
+        params,
+        body,
+        query,
+        tenantId,
+        context,
+      );
+    },
+    true,
+  );
 }

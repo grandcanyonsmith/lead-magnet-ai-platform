@@ -1,10 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { FileText, ChevronLeft, Save, AlertCircle, ArrowLeft } from "lucide-react";
+import { FileText, Save, AlertCircle, ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { createPortal } from "react-dom";
-import clsx from "clsx";
 import { api } from "@/lib/api";
 import { AIModel, Tool } from "@/types";
 import { useWorkflowEdit } from "@/hooks/useWorkflowEdit";
@@ -18,7 +16,8 @@ import { formatHTML } from "@/utils/templateUtils";
 import { useSettings } from "@/hooks/api/useSettings";
 
 // UI Components
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/Tabs";
+import { Tabs, TabsContent } from "@/components/ui/Tabs";
+import { SubHeaderTabs } from "@/components/ui/SubHeaderTabs";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Separator } from "@/components/ui/Separator";
@@ -132,15 +131,6 @@ export default function EditWorkflowPage() {
   const hasTemplateTab = Boolean(
     templateId || (templateData.html_content?.trim() || ""),
   );
-  const subHeaderTarget =
-    typeof document === "undefined"
-      ? null
-      : document.getElementById("dashboard-subheader");
-  const shouldPortal = Boolean(subHeaderTarget);
-  const tabTriggerClass =
-    "relative !bg-transparent !shadow-none !rounded-none !px-0 !py-0 text-xs font-semibold text-muted-foreground transition-all duration-150 ease-out sm:text-sm " +
-    "after:absolute after:inset-x-0 after:-bottom-[1px] after:h-0.5 after:origin-left after:scale-x-0 after:bg-primary after:transition-transform after:duration-200 " +
-    "data-[state=active]:text-foreground data-[state=active]:after:scale-x-100 hover:text-foreground hover:-translate-y-0.5 hover:after:scale-x-100";
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -393,51 +383,25 @@ export default function EditWorkflowPage() {
       )}
 
       {/* Tabs */}
+      <SubHeaderTabs
+        tabs={[
+          { id: "workflow", label: "Settings" },
+          { id: "form", label: "Form" },
+          ...(hasTemplateTab ? [{ id: "template", label: "Design" }] : []),
+        ]}
+        activeId={activeTab}
+        onSelect={(id) => setActiveTab(id as "workflow" | "form" | "template")}
+        portalTargetId="dashboard-subheader"
+        enableOverflowMenu
+        mobileMaxVisible={3}
+        compactMaxVisible={2}
+        compactBreakpointPx={420}
+      />
       <Tabs
         value={activeTab}
         onValueChange={(value) => setActiveTab(value as any)}
         className="w-full"
       >
-        {shouldPortal && subHeaderTarget
-          ? createPortal(
-              <div className="border-b border-border/60 bg-muted/20">
-                <div className="px-6 sm:px-8 lg:px-12">
-                  <TabsList className="flex w-full items-center gap-6 overflow-x-auto py-2 !bg-transparent !p-0 !h-auto !rounded-none !justify-start scrollbar-hide">
-                    <TabsTrigger value="workflow" className={tabTriggerClass}>
-                      Settings
-                    </TabsTrigger>
-                    <TabsTrigger value="form" className={tabTriggerClass}>
-                      Form
-                    </TabsTrigger>
-                    {hasTemplateTab && (
-                      <TabsTrigger value="template" className={tabTriggerClass}>
-                        Design
-                      </TabsTrigger>
-                    )}
-                  </TabsList>
-                </div>
-              </div>,
-              subHeaderTarget,
-            )
-          : (
-              <div className="-mx-3 border-b border-border/60 bg-muted/20 sm:-mx-4 md:-mx-6 lg:-mx-8">
-                <div className="px-3 sm:px-4 md:px-6 lg:px-8">
-                  <TabsList className="flex w-full items-center gap-6 overflow-x-auto py-2 !bg-transparent !p-0 !h-auto !rounded-none !justify-start scrollbar-hide">
-                    <TabsTrigger value="workflow" className={tabTriggerClass}>
-                      Settings
-                    </TabsTrigger>
-                    <TabsTrigger value="form" className={tabTriggerClass}>
-                      Form
-                    </TabsTrigger>
-                    {hasTemplateTab && (
-                      <TabsTrigger value="template" className={tabTriggerClass}>
-                        Design
-                      </TabsTrigger>
-                    )}
-                  </TabsList>
-                </div>
-              </div>
-            )}
 
         <TabsContent value="workflow" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
           <WorkflowTab

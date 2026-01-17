@@ -95,7 +95,7 @@ export function DashboardTopBar({
                   >
                     <Avatar
                       className="h-9 w-9 rounded-full border border-border/60 bg-background shadow-sm"
-                      src={user?.image}
+                      src={user?.profile_photo_url || user?.image}
                       alt={user?.name || "User avatar"}
                       fallback={fallbackInitial}
                     />
