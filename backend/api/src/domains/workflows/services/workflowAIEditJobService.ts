@@ -344,6 +344,13 @@ class WorkflowAIEditJobService {
         settings?.default_tool_choice === "none"
           ? settings.default_tool_choice
           : undefined;
+      const defaultServiceTier =
+        settings?.default_service_tier &&
+        ["auto", "default", "flex", "scale", "priority"].includes(
+          settings.default_service_tier,
+        )
+          ? settings.default_service_tier
+          : undefined;
 
       const openai = await getOpenAIClient();
       const aiService = new WorkflowAIService(openai);
@@ -351,6 +358,7 @@ class WorkflowAIEditJobService {
       const aiRequest: WorkflowAIEditRequest = {
         userPrompt: userPrompt,
         defaultToolChoice,
+        defaultServiceTier,
         workflowContext: {
           workflow_id: workflowId,
           workflow_name: workflow.workflow_name || "Untitled Workflow",
